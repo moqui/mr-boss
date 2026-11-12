@@ -12,9 +12,10 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The import wizard's projections (design-admin §11.1, Imports and DataImport; impl-admin P15, F12): what
-    Shared/DataImport and Admin's Imports show and post, for any registered import target, generalized from Products' catalog
-    import (shared/DataImport.js). The work is the framework's org.moqui.admin.DataTransferServices, which dispatches by the
+<!-- The import wizard's projections (design-admin §11.1, DataImport; impl-admin P15, F12): what Shared/DataImport shows
+    and posts, and Admin's ImportDetail reads, for any registered import target, generalized from Products' catalog
+    import (shared/DataImport.js). Admin's Imports list is the framework's (org.moqui.admin.DataTransferServices.find#ImportRuns;
+    mr-moqui plans/Admin-Screens-Down.md A5). The work is the framework's org.moqui.admin.DataTransferServices, which dispatches by the
     target's registration and calls its owner as the user; these services call it with authorization as it is and add no
     right. The mount is the app root the wizard is opened under: a catalog app's is the catalog target only; Admin's the
     target named, for a holder of ADMIN_TRANSFER_RUN. No group is authorized to call them but through the screens that do. -->
@@ -53,6 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="hasTarget" type="Boolean"/>
             <parameter name="wizardElsewhere" type="Boolean"/>
             <parameter name="ownerUrl"/>
+            <parameter name="ownerPath"/>
             <parameter name="operationKey"/>
             <parameter name="kindId"/>
             <parameter name="kindDescription"/>
@@ -135,33 +137,5 @@ along with this software (see the LICENSE.md file). If not, see
         <description>One change of the mapping form (mappingAction column, default, value, formats or option), saved
             through configure#Import at the mappingRevision the form read.</description>
         <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/shared/DataImport.js').execute('mapping', context))</script></actions>
-    </service>
-    <service verb="find" noun="ImportRuns" allow-remote="false">
-        <description>Admin's Imports: the runs of every import target the user may view (find#Transfers), each with its
-            owner's place, and the registered targets (find#ImportTargets). ADMIN_TRANSFER_VIEW, checked by the
-            framework's services.</description>
-        <in-parameters>
-            <parameter name="appRoot"/>
-            <parameter name="targetId"/>
-            <parameter name="organizationPartyId"/>
-            <parameter name="state"/>
-            <parameter name="fromDate"/>
-            <parameter name="thruDate"/>
-            <parameter name="pageIndex" type="Integer"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="transferList" type="List"/>
-            <parameter name="transferCount" type="Integer"/>
-            <parameter name="pageIndex" type="Integer"/>
-            <parameter name="pageSize" type="Integer"/>
-            <parameter name="unansweredTargetList" type="List"/>
-            <parameter name="stateList" type="List"/>
-            <parameter name="targetList" type="List"/>
-            <parameter name="defaultDays" type="Integer"/>
-            <parameter name="rangeDays" type="Integer"/>
-            <parameter name="timeZone"/>
-            <parameter name="canRun" type="Boolean"/>
-        </out-parameters>
-        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/shared/DataImport.js').execute('runs', context))</script></actions>
     </service>
 </services>

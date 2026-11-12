@@ -104,8 +104,9 @@ along with this software (see the LICENSE.md file). If not, see
             position's), jobClasses (the current job classes), payGrades (the pay grades by name, never an amount), staff (P5:
             organizationPartyId's employees and agents), positions (P6: organizationPartyId's seats in effect and not inactive,
             vacant ones first, narrowed to departmentPartyId), workLocations (P6: organizationPartyId's facilities) and
-            terminationReasons and terminationTypes (P6: People's lookups, ended values left out). Refuses a user without People
-            and an unknown choice.</description>
+            terminationReasons and terminationTypes (P6: People's lookups, ended values left out), leaveTypes and leavePolicies (P11:
+            People's leave types; an HR reader's policies not closed, of organizationPartyId when given). Refuses a user without
+            People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>

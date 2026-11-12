@@ -14,15 +14,17 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Monitoring (design-admin §10 Monitoring): the landing that opens the framework's operational tools under their own grants,
     not a second incident or alert application. MonitoringDestinations lists Monitor's and Dashboards' destinations the user's
-    own groups open (ironstone.admin.ContextServices.get#AppAccess), and for those who open Monitor the telemetry sources
+    own groups open (ec.artifactExecution.isPermittedOwn on each app's root), and for those who open Monitor the telemetry sources
     (org.moqui.monitor.MonitorServices.get#SourceStatus, which checks the telemetry dataset's own grant) and the open incidents
     (list#Incidents, MONITOR_INCIDENT), each opening Monitor; a summary that cannot be read is left out and the others still
     show. SYSTEM_APP (Monitor is a section of System), MONITOR_INCIDENT, MONITOR_RECOVER and MONITOR_REPLAY stay independent: an Admin grant opens none. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Monitoring" menu-image="sym_o_monitoring" menu-image-type="icon">
     <actions>
-        <service-call name="ironstone.admin.ContextServices.get#AppAccess" in-map="{appRoot:appRoot}" out-map="appAccess"/>
-        <set field="apps" from="appAccess.apps || {}"/>
+        <!-- each framework app by the user's own grant on its root, asked of their own authorization records: this area's
+            inheritable grant would answer the stack's question for everyone -->
+        <set field="apps" from="{system: ec.artifactExecution.isPermittedOwn('component://tools/screen/System.xml'),
+                dashboards: ec.artifactExecution.isPermittedOwn('component://tools/screen/Dashboards.xml')}"/>
         <set field="destinations" from="[
                 {name: 'Overview', purpose: 'Service health, throughput and errors', app: 'system', url: '/qapps/system/Monitor'},
                 {name: 'Operations', purpose: 'Business operations and their outcomes', app: 'system', url: '/qapps/system/Monitor/Operations'},

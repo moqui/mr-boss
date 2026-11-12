@@ -13,11 +13,10 @@
 // margin fields in Explore and a direct query, since a dataset has no field classes; Assist, MCP and drill refuse them.
 // Run: ./moq accept mr-boss --spec InsightsReviewWalk
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
-const {ids, users, asUser, system, invoke} = lib
+const {ids, users, asUser, system, invoke, transition} = lib
 const R = "org.moqui.report.ReportServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
-const D = "ironstone.insights.DeliveryServices."
 const F = "ironstone.insights.FlowMapServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const range = {from: "now-10y", thru: "now+1d"}
@@ -118,16 +117,27 @@ feature("rows: Explore, its suggestions, the direct query, aggregates and export
             const explore = page(user, "ReportBuilder/Explore", Object.assign({datasetId: salesId}, range))
             if (explore.status != 200 || explore.errors) problems.push(`${user}'s Explore: ${explore.status} ${explore.errors}`)
             else if (explore.output.includes(notTheirs)) problems.push(`${user}'s Explore shows ${notTheirs}`)
-            // the export: the author's and the steward's, the same rows; the others refused
-            const exported = attempt(
-                user,
-                "ironstone.insights.DatasetServices.export#Dataset",
-                Object.assign({datasetId: salesId, format: "csv", requestedRowLimit: 10000}, range)
-            )
+            // the export, DatasetView's transition (the framework's screen at Insights' location): the author's and the
+            // steward's, the same rows; the others refused the screen
+            const exported = asUser(user, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen(webroot)
+                    .render(
+                        "apps/Insights/ReportBuilder/DatasetView/exportDocuments",
+                        Object.assign({datasetId: salesId, format: "csv", requestedRowLimit: 10000}, range),
+                        null
+                    )
+                const errors = Array.from(result.errorMessages || []).join(" | ")
+                return {
+                    refused: errors || (result.status == 200 ? "" : String(result.status)),
+                    content: String(result.output || "")
+                }
+            })
             const exports = user === users.author || user === users.steward
             if (exports && exported.refused) problems.push(`${user} is refused the export: ${exported.refused}`)
             if (!exports && !exported.refused) problems.push(`${user} exports the dataset`)
-            if (!exported.refused && String(exported.content || "").includes(notTheirs)) problems.push(`${user}'s export holds ${notTheirs}`)
+            if (exported.content.includes(notTheirs)) problems.push(`${user}'s export holds ${notTheirs}`)
         }
         return {problems}
     },
@@ -248,47 +258,47 @@ feature("Assist answers from the same scoped query as the page; another organiza
 
 feature("schedules and alerts reach only owner-equivalent recipients, each refusal named without the other's data", {
     when() {
-        const audience = attempt(users.distributor, D + "check#Audience", {
+        // the engine's own audience check, which Scheduled reports' screens (the framework's) ask as the viewer: the
+        // distributor's, and not a reader's
+        const audience = attempt(users.distributor, R + "check#ReportAudience", {
             definitionId: "mantle-sales",
             recipientUserIds: [people.reader, people.services]
         })
-        const readerAudience = attempt(users.reader, D + "check#Audience", {definitionId: "mantle-sales", recipientUserIds: [people.services]})
+        const readerAudience = attempt(users.reader, R + "check#ReportAudience", {definitionId: "mantle-sales", recipientUserIds: [people.services]})
         const title = "Review walk breaches " + run
-        const copied = attempt(users.distributor, "ironstone.insights.AlertServices.copy#Alert", {definitionId: "boss-service-sla-breach", title})
+        // Business alerts' screens (the framework's, at Insights' locations), by the transitions a browser posts
+        const post = (path, parameters) => transition(users.distributor, webroot, "apps/Insights/Alerts/" + path, parameters)
+        const copied = post("Rules/copyAlert", {sourceDefinitionId: "boss-service-sla-breach", title})
+        const copiedId = String(
+            system(() => ec.entity.find("moqui.report.Definition").condition({title, definitionType: "alert"}).one())?.definitionId || ""
+        )
         let draft = {}
         let alert = {}
         let stored = {}
         try {
             // a copy is paused (not validated): its audience is a draft that tells nobody, and activating it is the engine's
-            // check of every recipient (AlertServices pause#Alerts), which refuses the Services reader
-            draft = attempt(users.distributor, "ironstone.insights.AlertServices.store#Alert", {
-                definitionId: copied.definitionId,
-                audienceGiven: "Y",
+            // check of every recipient, which refuses the Services reader
+            draft = post("AlertDetail/storeAudience", {
+                definitionId: copiedId,
                 audienceKind: "group",
-                recipientUserIds: [people.reader, people.services],
+                recipientUserIds: [people.reader, people.services].join(","),
                 userGroupId: "BOSS_INSIGHTS"
             })
-            const activated = attempt(users.distributor, "ironstone.insights.AlertServices.pause#Alerts", {
-                definitionIds: [copied.definitionId],
-                paused: "false"
-            })
-            alert = Array.from(activated.results || [])[0] || activated
-            stored = system(() => JSON.parse(String(ec.entity.find("moqui.report.Definition").condition("definitionId", copied.definitionId).one().bodyJson)))
+            alert = post("AlertDetail/pauseAlert", {definitionId: copiedId, paused: "false"})
+            stored = system(() => JSON.parse(String(ec.entity.find("moqui.report.Definition").condition("definitionId", copiedId).one().bodyJson)))
         } finally {
-            if (copied.definitionId)
-                attempt(users.distributor, "ironstone.insights.AlertServices.delete#Alert", {definitionId: copied.definitionId})
+            if (copiedId) post("AlertDetail/deleteAlert", {definitionId: copiedId})
         }
-        return {audience, readerAudience, copied, draft, alert, stored}
+        return {audience, readerAudience, copied, copiedId, draft, alert, stored}
     },
-    then({audience, readerAudience, copied, draft, alert, stored}) {
+    then({audience, readerAudience, copied, copiedId, draft, alert, stored}) {
         audience.eligibleCount == 1 && audience.refusedCount == 1
         !JSON.stringify(audience).includes(ids.otherOrganizationId)
         !!readerAudience.refused
-        copied.applied == true
-        draft.applied == true && draft.paused == true
-        alert.applied == false && alert.reasonCode == "RECIPIENT_REFUSED"
-        alert.reason.includes("Insights Services reader (scope-differs)")
-        !alert.reason.includes(ids.otherOrganizationId)
+        copied.errors == "" && copiedId != ""
+        draft.errors == ""
+        alert.errors.includes("Insights Services reader (scope-differs)")
+        !alert.errors.includes(ids.otherOrganizationId)
         // the refused activation left the rule paused: it tells nobody
         stored.paused == true
     }
@@ -358,14 +368,14 @@ feature("a wall display opens its registered playlist alone, as its display acco
         const playlistId = "REVIEW_WALL_" + run
         const boardId = "REVIEW_WALL_BOARD_" + run
         asUser(users.system, () => {
-            invoke(R + "save#Definition", {definition: {id: boardId, type: "dashboard", title: "Review wall " + run, body: {
+            // shared with the wall displays as they are saved (the instance administrator names any group; an author shares
+            // through Dashboard's and Playlists' share)
+            invoke(R + "save#Definition", {definition: {id: boardId, type: "dashboard", title: "Review wall " + run, userGroupId: "BOSS_INSIGHTS_DISPLAY", body: {
                 panels: {orders: {title: "Orders by vendor", visualization: "table", queries: [{datasetId: salesId,
                     aggregations: [{id: "v", type: "terms", role: "group", params: {field: "vendorPartyId", size: 20}}, {id: "n", type: "count", role: "metric"}]}]}},
                 layout: {type: "autoGrid"}}}, note: "Review walk"})
-            invoke(R + "save#Definition", {definition: {id: playlistId, type: "report", title: "Review wall " + run,
+            invoke(R + "save#Definition", {definition: {id: playlistId, type: "report", title: "Review wall " + run, userGroupId: "BOSS_INSIGHTS_DISPLAY",
                 body: {kind: "playlist", seconds: 30, playlist: [{definitionId: boardId}]}}, note: "Review walk"})
-            for (const definitionId of [boardId, playlistId])
-                invoke("ironstone.insights.DashboardServices.share#Dashboard", {definitionId, userGroupId: "BOSS_INSIGHTS_DISPLAY"})
         })
         const display = invoke("mantle.party.IdentityServices.create#DisplayAccount", {displayName: "Review wall display " + run,
             organizationPartyId: own, bundleGroupIdList: ["BOSS_INSIGHTS_READ", "BOSS_INSIGHTS_DISPLAY"]})

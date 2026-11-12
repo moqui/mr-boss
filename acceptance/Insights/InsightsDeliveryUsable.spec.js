@@ -6,6 +6,8 @@
 // LifecycleDetail for a new owner, is refused to one who may not deliver to a group, and is delivered again only once a second
 // distributor has taken it and resumed it; and john.doe's copied scheduled find is still his own, personal, with no group. The
 // distributor who leaves and the one who takes over are made here, so the demo's insights.distributor is left as it is. The
+// screens of Scheduled reports are the framework's Dashboards screens, mounted by location (mr-moqui
+// plans/Admin-Screens-Down.md, Track I), so every step is a transition of theirs through Insights' route. The
 // rules are the framework's ReportAudience and the regression InsightsDelivery; Mantle's sales datasets, which the suite
 // dashboard of the digest reads, are admitted by InsightsDatasetsUsable first. Written with P7, not run as part of it.
 // Run: ./moq accept mr-boss --spec InsightsDeliveryUsable
@@ -13,7 +15,6 @@ const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLi
 const adminLib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, invoke} = lib
 const R = "org.moqui.report.ReportServices."
-const D = "ironstone.insights.DeliveryServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const capture = ec.factory.getTool("MailCapture")
 const run = String(Date.now()).slice(-7)
@@ -165,14 +166,6 @@ feature("a distributor schedules the weekly digest to two Retail colleagues; the
             "post"
         )
         const afterRefusal = schedulesOf(leaver.userId).length
-        const refusal = asUser(leaver.username, () =>
-            invoke(D + "store#Schedule", {
-                definitionId: digestId,
-                cronSelected: "0 0 6 ? * MON",
-                renderMode: "csv",
-                recipientUserIds: [people.reader, people.services]
-            })
-        )
         const saved = insights(
             leaver.username,
             "ScheduledReports/Schedules/createSchedule",
@@ -194,7 +187,6 @@ feature("a distributor schedules the weekly digest to two Retail colleagues; the
         return {
             refusedPost,
             afterRefusal,
-            refusal,
             saved,
             mode: schedule?.deliveryMode,
             recipients: list("moqui.report.ReportScheduleRecipient", {screenScheduledId: scheduleId})
@@ -209,12 +201,9 @@ feature("a distributor schedules the weekly digest to two Retail colleagues; the
             readerList
         }
     },
-    then({refusedPost, afterRefusal, refusal, saved, mode, recipients, detail, personal, readerOwn, readerList}) {
-        refusedPost.errors == ""
+    then({refusedPost, afterRefusal, saved, mode, recipients, detail, personal, readerOwn, readerList}) {
+        refusedPost.errors.includes("Insights Services reader (scope-differs)")
         afterRefusal == 0
-        refusal.applied == false
-        refusal.reasonCode == "RECIPIENT_REFUSED"
-        refusal.reason.includes("Insights Services reader (scope-differs)")
         saved.errors == ""
         mode == "group"
         recipients == [people.author, people.reader].sort().join(",")
@@ -388,7 +377,12 @@ feature("disabling the distributor in Admin pauses the schedule until a second d
         const accepted = transfer(successor.userId)
         const pending = one("moqui.screen.ScreenScheduled", {screenScheduledId: scheduleId})
         // the new owner: the schedule is theirs under Shared administration, paused; Send now is refused until they resume it
-        const sendPaused = asUser(successor.username, () => invoke(D + "send#Schedule", {screenScheduledId: scheduleId}))
+        const sendPaused = insights(
+            successor.username,
+            "ScheduledReports/ScheduledReportDetail/sendNow",
+            {screenScheduledId: scheduleId},
+            "post"
+        )
         const resumed = insights(
             successor.username,
             "ScheduledReports/ScheduledReportDetail/pauseSchedule",
@@ -445,7 +439,7 @@ feature("disabling the distributor in Admin pauses the schedule until a second d
         unqualified.reason.includes("may not deliver reports to other users")
         accepted.applied == true
         pending == successor.userId + ",Y,transfer-pending"
-        sendPaused.applied == false
+        sendPaused.errors.includes("until its new owner resumes it")
         resumed.errors == ""
         after == successor.userId + ",N,"
         sentAgain.errors == ""
@@ -460,14 +454,13 @@ feature("a copied scheduled find stays its user's own: listed under Mine, person
         const mine = insights(users.system, "ScheduledReports/Schedules", {view: "mine"})
         const detail = insights(users.system, "ScheduledReports/ScheduledReportDetail", {screenScheduledId: "BOSS_DEMO_MY_TASKS"})
         const others = insights(users.reader, "ScheduledReports/ScheduledReportDetail", {screenScheduledId: "BOSS_DEMO_MY_TASKS"})
-        // a group cannot be put on it from Insights: a saved list's schedule is personal
-        const withGroup = asUser(users.system, () =>
-            invoke(D + "store#Schedule", {
-                screenScheduledId: "BOSS_DEMO_MY_TASKS",
-                cronSelected: "0 0 6 ? * MON",
-                recipientsGiven: "Y",
-                recipientGroupIds: ["BOSS_USERS"]
-            })
+        // a group cannot be put on it from Insights: a saved list's schedule is personal, and no report schedule's
+        // recipients are saved on it
+        const withGroup = insights(
+            users.system,
+            "ScheduledReports/ScheduledReportDetail/storeAudience",
+            {screenScheduledId: "BOSS_DEMO_MY_TASKS", recipientGroupIds: "BOSS_USERS"},
+            "post"
         )
         const row = one("moqui.screen.ScreenScheduled", {screenScheduledId: "BOSS_DEMO_MY_TASKS"})
         return {
@@ -483,8 +476,7 @@ feature("a copied scheduled find stays its user's own: listed under Mine, person
         detail.errors == "" && detail.output.includes("Timing and output")
         !detail.output.includes("Change recipients")
         others.output.includes("Schedule not available")
-        withGroup.applied == false
-        withGroup.reasonCode == "LEGACY_PERSONAL"
+        withGroup.errors.includes("schedule not found for this owner")
         // its row kept: the same screen and find, its user alone, no group
         row == "EX_JOHN_DOE,,/apps/Commons/Tasks,BOSS_DEMO_MY_TASKS"
     }

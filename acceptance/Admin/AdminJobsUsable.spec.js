@@ -142,6 +142,20 @@ feature("a run's trace opens in Monitor only by System's own grant", {
         if (!walk.run) return out
         out.operator = asUser(users.operations, () => page("Operations/JobRunDetail", {jobRunId: walk.run.jobRunId}))
         out.administrator = asUser(users.system, () => page("Operations/JobRunDetail", {jobRunId: walk.run.jobRunId}))
+        // the trace link is a screen path of System's (//apps/system/...), which resolves under the web root, as a
+        // browser asks for the page, and not under Admin as a spec's root
+        const underWebroot = user =>
+            asUser(user, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .renderMode("html")
+                    .render("apps/Admin/Operations/JobRunDetail", {jobRunId: walk.run.jobRunId}, null)
+                ec.message.clearErrors()
+                return {status: result.status, output: String(result.output || "")}
+            })
+        out.operatorWeb = underWebroot(users.operations)
+        out.administratorWeb = underWebroot(users.system)
         // the page grants nothing: Monitor's own screen refuses the operator
         out.operatorMonitor = appPage(users.operations, "apps/system/Monitor/TraceDetail", {traceId: walk.run.traceId})
         out.administratorMonitor = appPage(users.system, "apps/system/Monitor/TraceDetail", {traceId: walk.run.traceId})
@@ -151,7 +165,9 @@ feature("a run's trace opens in Monitor only by System's own grant", {
         out.run != null && out.run.hasError == "Y" && /^[0-9a-f]{32}$/.test(out.run.traceId)
         opened(out.operator) && out.operator.output.includes("Failed")
         out.operator.output.includes(out.run.traceId) && !out.operator.output.includes("Monitor/TraceDetail")
-        opened(out.administrator) && out.administrator.output.includes("/qapps/system/Monitor/TraceDetail")
+        opened(out.administrator)
+        out.operatorWeb.output.includes(out.run.traceId) && !out.operatorWeb.output.includes("Monitor/TraceDetail")
+        out.administratorWeb.output.includes("system/Monitor/TraceDetail")
         out.operatorMonitor.status != 200
         out.administratorMonitor.status == 200
     }
@@ -212,7 +228,7 @@ feature("the failing job runs alert is a template until an owner copies it; the 
         out.template.template === true && out.templateInstances.length == 0
         // shipped read only, on job-run telemetry, with no contact point
         out.definition.body.query.datasetId == "otel_spans" && out.definition.body.contactPoints == null
-        opened(out.jobs) && out.jobs.output.includes("Failing job runs") && !out.jobs.output.includes("/qapps/dashboards/Alerts")
+        opened(out.jobs) && out.jobs.output.includes("Failing job runs") && !out.jobs.output.includes("dashboards/Alerts")
         out.operatorCopy != ""
         out.copy.definition != null && out.state.own === true && out.state.template !== true
         out.evaluated.failed == 0

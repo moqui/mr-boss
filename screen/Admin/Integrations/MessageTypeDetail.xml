@@ -12,176 +12,19 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- MessageTypeDetail (design-admin §8 MessageTypeDetail, §14; style-guide §3.3 Detail; impl-admin P13): one message type's
-    contract and use, from the framework's org.moqui.admin.ConfigurationServices.get#MessageTypeUse. MessageContract: its
-    name, content type, the handler that sends and the handler that consumes it, each chosen only among the handlers its
-    owner registered for this type (never a service name typed here; the service that receives it is never chosen here), and
-    its file transport options; saved at the revision read with a reason (store#MessageType). A type whose owner registered
-    no handler is shown read only, with why. MessageContractUse: its handlers by role with what is registered, the remotes
-    of this type, what its owner registered for the recovery of its messages (who acts, with which permission, and what
-    makes a repeat safe) and its messages of the last days by status. Reading needs ADMIN_CONNECTION_VIEW and a change
-    ADMIN_CONNECTION_MANAGE, checked by the services; a refusal comes back as a reason shown here. -->
+<!-- MessageTypeDetail (design-admin §8 MessageTypeDetail, §14; mr-moqui plans/Admin-Screens-Down.md): the framework's
+    System › Integrations message type screen at this location, with the one transition an integration administrator
+    uses: saveType, through org.moqui.admin.ConfigurationServices.store#MessageType, which checks ADMIN_CONNECTION_MANAGE
+    and what the type's owner registered. The System screen's own part for the instance administrator (any field of the
+    type, its service names typed) is not shown under a mount and its transition is not taken in, so it does not exist on
+    this route. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Message type" default-menu-include="false">
     <parameter name="systemMessageTypeId" required="true"/>
 
-    <transition name="saveType">
-        <actions>
-            <service-call name="org.moqui.admin.ConfigurationServices.store#MessageType" out-map="stored"
-                    in-map="{systemMessageTypeId:systemMessageTypeId, expectedRevision:expectedRevision, description:description, contentType:(contentType ?? ''),
-                        sendHandlerKey:(sendHandlerKey || null), consumeHandlerKey:(consumeHandlerKey || null), sendPath:(sendPath ?? ''),
-                        receivePath:(receivePath ?? ''), receiveFilePattern:(receiveFilePattern ?? ''), receiveMovePath:(receiveMovePath ?? ''),
-                        receiveResponseEnumId:(receiveResponseEnumId ?? ''), reason:reason}"/>
-            <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(!stored.applied ? stored.reason : stored.changed ? 'Message type saved' : 'Nothing changed', stored.applied ? 'success' : 'warning')</script>
-            </if>
-        </actions>
-        <default-response url="."><parameter name="systemMessageTypeId"/></default-response>
-        <error-response url="."><parameter name="systemMessageTypeId"/></error-response>
-    </transition>
+    <transition-include name="saveType" location="component://tools/screen/System/Integrations/MessageTypeDetail.xml"/>
 
-    <actions>
-        <service-call name="org.moqui.admin.ConfigurationServices.get#MessageTypeUse" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{systemMessageTypeId:systemMessageTypeId}"/>
-        <!-- ignore-error clears a refusal's message -->
-        <set field="recordFound" from="!!found?.messageType"/>
-        <script><![CDATA[
-            ec.message.clearErrors()
-            messageType = found?.messageType || {}
-            const role = name => Array.from(found?.handlerList || []).find(row => row.handlerRole === name) || {choiceList: []}
-            const options = name => Array.from(role(name).choiceList || []).map(row => ({value: row.handlerKey,
-                label: row.title + (row.ownerApp ? ' (' + row.ownerApp + ')' : '')}))
-            sendOptions = options('send')
-            consumeOptions = options('consume')
-            responseOptions = Array.from(found?.receiveResponseList || []).map(row => ({value: row.enumId, label: row.description}))
-            contractValues = {systemMessageTypeId: messageType.systemMessageTypeId, expectedRevision: messageType.revision, description: messageType.description,
-                contentType: messageType.contentType, sendHandlerKey: role('send').currentHandlerKey, consumeHandlerKey: role('consume').currentHandlerKey,
-                sendPath: messageType.sendPath, receivePath: messageType.receivePath, receiveFilePattern: messageType.receiveFilePattern,
-                receiveMovePath: messageType.receiveMovePath, receiveResponseEnumId: messageType.receiveResponseEnumId}
-            contractRows = recordFound ? [
-                {label: 'Name', value: messageType.description},
-                {label: 'Content type', value: messageType.contentType},
-                {label: 'Direction', value: messageType.directionText},
-                {label: 'Put files at', value: messageType.sendPath},
-                {label: 'Look for files at', value: messageType.receivePath},
-                {label: 'File pattern', value: messageType.receiveFilePattern},
-                {label: 'Move received files to', value: messageType.receiveMovePath},
-                {label: 'Documented producer', value: found.producerText}
-            ].filter(row => row.value) : []
-            handlerRows = Array.from(found?.handlerList || []).map(row => ({roleText: row.roleText, currentText: row.currentService || 'None',
-                registeredText: Array.from(row.choiceList || []).map(choice => choice.title + (choice.current ? ' (current)' : '')).join(', ') || row.note || ''}))
-            remoteRows = Array.from(found?.remoteList || []).map(row => Object.assign({}, row, {stateText: row.disabled ? 'Disabled until its test passes' : 'In use'}))
-            recoveryRows = Array.from(found?.recoveryList || []).map(row => Object.assign({}, row, {
-                actionText: ['Retry: ' + row.retryText, 'Settle: ' + row.reconcileText, 'Cancel: ' + row.cancelText].join(' · '),
-                permissionText: ['ADMIN_OPERATION_MANAGE', row.ownerPermission].filter(Boolean).join(' and ')}))
-            countText = Array.from(found?.countList || []).map(row => row.messageCount + ' ' + row.statusText.toLowerCase()).join(', ')
-            canOpenMessages = !!admin.capabilities.operationView
-        ]]></script>
-    </actions>
     <widgets>
-        <section name="TypeUnavailable" condition="!recordFound">
-            <widgets>
-                <label type="p" style="text-negative" text="This message type is not available to you, or there is no such type."/>
-                <link url="../MessageTypes" text="Message types" link-type="anchor"/>
-            </widgets>
-        </section>
-        <section name="TypeFound" condition="recordFound">
-            <widgets>
-                <container style="row items-center q-col-gutter-sm q-mb-sm">
-                    <container style="col">
-                        <label text="${messageType.description}" type="h5"/>
-                        <label text="${messageType.systemMessageTypeId} · ${messageType.directionText}${messageType.ownerText ? ' · ' + messageType.ownerText : ''}"
-                                type="p" style="text-caption m-muted q-mb-none"/>
-                    </container>
-                    <container style="col-auto"><link url="../MessageTypes" text="Message types" icon="sym_o_arrow_back"/></container>
-                </container>
-
-                <container-box>
-                    <box-header title="Contract"/>
-                    <box-body>
-                        <label type="p" style="m-muted" condition="!messageType.configurable" text="${messageType.readOnlyReason}."/>
-                        <section name="ContractRead" condition="!messageType.canChange">
-                            <widgets>
-                                <form-list name="MessageContractRead" list="contractRows" skip-form="true" paginate="false">
-                                    <field name="label"><default-field title=""><display/></default-field></field>
-                                    <field name="value"><default-field title=""><display/></default-field></field>
-                                </form-list>
-                            </widgets>
-                            <fail-widgets>
-                                <form-single name="MessageContract" transition="saveType" map="contractValues">
-                                    <field name="systemMessageTypeId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="description"><default-field title="Name"><text-line size="50"/></default-field></field>
-                                    <field name="contentType"><default-field title="Content type"><text-line size="40"/></default-field></field>
-                                    <field name="sendHandlerKey">
-                                        <conditional-field condition="sendOptions.length" title="Sent by">
-                                            <drop-down><list-options list="sendOptions" key="${value}" text="${label}"/></drop-down>
-                                        </conditional-field>
-                                        <default-field><hidden default-value=""/></default-field>
-                                    </field>
-                                    <field name="consumeHandlerKey">
-                                        <conditional-field condition="consumeOptions.length" title="Consumed by">
-                                            <drop-down><list-options list="consumeOptions" key="${value}" text="${label}"/></drop-down>
-                                        </conditional-field>
-                                        <default-field><hidden default-value=""/></default-field>
-                                    </field>
-                                    <field name="sendPath">
-                                        <default-field title="Put files at" tooltip="On the remote's file server. It may hold the names the sender fills in, each written as a dollar sign and the name in braces: systemMessageId, remoteMessageId, systemMessageTypeId, systemMessageRemoteId, date and dateTime.">
-                                            <text-line size="60"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="receivePath"><default-field title="Look for files at"><text-line size="60"/></default-field></field>
-                                    <field name="receiveFilePattern"><default-field title="File pattern" tooltip="A regular expression the file names match"><text-line size="40"/></default-field></field>
-                                    <field name="receiveResponseEnumId">
-                                        <default-field title="A received file is">
-                                            <drop-down allow-empty="true"><list-options list="responseOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="receiveMovePath"><default-field title="Move received files to"><text-line size="60"/></default-field></field>
-                                    <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log beside the change"><text-line size="50"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                </form-single>
-                            </fail-widgets>
-                        </section>
-                    </box-body>
-                </container-box>
-
-                <container-box>
-                    <box-header title="Use"/>
-                    <box-body>
-                        <form-list name="MessageContractUse" list="handlerRows" skip-form="true" paginate="false">
-                            <field name="roleText"><default-field title="Step"><display/></default-field></field>
-                            <field name="currentText"><default-field title="Service now"><display/></default-field></field>
-                            <field name="registeredText"><default-field title="Registered handlers"><display/></default-field></field>
-                        </form-list>
-                        <label type="p" style="text-caption m-muted q-mt-sm" text="Remotes of this type"/>
-                        <label type="p" style="m-muted" condition="!remoteRows.length" text="No remote is of this type alone; any remote may carry it."/>
-                        <form-list name="MessageTypeRemotes" list="remoteRows" skip-form="true" paginate="false">
-                            <field name="description">
-                                <default-field title="Remote">
-                                    <link url="../ConnectionDetail" text="${description}" link-type="anchor" parameter-map="{adapterKey:'remote', connectionKey:systemMessageRemoteId}"/>
-                                </default-field>
-                            </field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                        </form-list>
-                        <label type="p" style="text-caption m-muted q-mt-sm" text="Recovery of its messages"/>
-                        <label type="p" style="m-muted" condition="!recoveryRows.length"
-                                text="No owner has registered a recovery for this type: its failed messages are read in System messages and recovered by its owner, or by an instance administrator."/>
-                        <form-list name="MessageTypeRecovery" list="recoveryRows" skip-form="true" paginate="false">
-                            <field name="ownerApp"><default-field title="Owner"><display/></default-field></field>
-                            <field name="title"><default-field title="For"><display text="${title} (${directionText})"/></default-field></field>
-                            <field name="actionText"><default-field title="Who acts"><display/></default-field></field>
-                            <field name="permissionText"><default-field title="Needs"><display/></default-field></field>
-                            <field name="idempotencyNote"><default-field title="What makes a repeat safe"><display/></default-field></field>
-                        </form-list>
-                        <container style="q-mt-sm">
-                            <label text="Messages of the last ${found.countDays} days: ${countText || 'none'}." style="q-mr-sm"/>
-                            <link url="../SystemMessages" text="Open them" link-type="anchor" condition="canOpenMessages"
-                                    parameter-map="{systemMessageTypeId:systemMessageTypeId, state:'all'}"/>
-                        </container>
-                    </box-body>
-                </container-box>
-            </widgets>
-        </section>
+        <include-screen location="component://tools/screen/System/Integrations/MessageTypeDetail.xml" share-scope="true"/>
     </widgets>
 </screen>

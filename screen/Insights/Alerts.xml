@@ -13,12 +13,25 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Business alerts (design-insights §8 Alerts, AlertDetail; impl-insights P8, INS-07): the list (Rules, the default:
-    Mine, Received and Templates) with the hidden AlertDetail. Every Insights user opens it (Received and one's own state are
-    every reader's); each transition reaches ironstone.insights.AlertServices, which checks INSIGHTS_AUTHOR or
-    INSIGHTS_DISTRIBUTE itself, and the report engine checks its own grants, the rule's sources and each recipient. Tools'
-    Alerts, its contact points, webhooks and addresses are not mounted. -->
+    Mine, Received and Templates) with the hidden AlertDetail. The two screens are the framework's Dashboards alert screens
+    (Alerts and AlertRule), each included at its own location with the transitions Insights offers (mr-moqui
+    plans/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"). Every Insights user opens
+    the area (Received and one's own state are every reader's); what each is offered follows Insights' policy and their own
+    grant of the report engine's operations (data/BossSetupData.xml), which BOSS_INS_REPORT_ENGINE refuses to anyone else,
+    and the engine checks its own grants, the rule's sources and each recipient. The screens read Insights' policy, which
+    the root and this area set and no request supplies: who may set an alert (features.alert: an author or a distributor),
+    the fixed parts of a rule (alertAudience: Insights' topic, message and link, in place of contact points), the people a
+    distributor may name (recipientPermissionId: Insights' readers), and the recipient cap, the organization's setting,
+    added here, where it is used: reading it costs more than the root should pay on every request. Tools' contact points,
+    silences, mute timings, shared items and evaluation are not on these routes. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Business alerts" default-menu-index="10" menu-image="sym_o_notifications_active" menu-image-type="icon">
+    <always-actions>
+        <!-- the area's addition to the root's reportPolicy, through the framework's one reader of the map; in always-actions,
+            so the included screens' transitions save and check with it too -->
+        <service-call name="ironstone.insights.ContextServices.get#DeliveryPolicy" out-map="deliveryPolicy"/>
+        <set field="reportPolicy" from="ec.resource.script('component://tools/template/ReportMount.js').policyWith({recipientCap:deliveryPolicy.recipientCap})"/>
+    </always-actions>
     <subscreens default-item="Rules" always-use-full-path="true">
         <subscreens-item name="Rules" location="component://mr-boss/screen/Insights/Alerts/Rules.xml" menu-include="false"/>
         <subscreens-item name="AlertDetail" location="component://mr-boss/screen/Insights/Alerts/AlertDetail.xml" menu-include="false"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     administers, from Mantle's mantle.party.IdentityServices.find#InternalOrganizations (ADMIN_SETTINGS_VIEW; the organization
     entity filters of the area's grant: a delegate's organization and its child organizations, the administrator's every one with
     none active). OrganizationFind narrows by name or identifier and parent; OrganizationList shows each with its parent and its
-    setup checks still to do (ironstone.admin.RegistryServices.get#Readiness, the checks the user may read), and opens
+    setup checks still to do (org.moqui.admin.ReadinessServices.get#Readiness, the checks the user may read), and opens
     OrganizationDetail. CreateOrganization (create#InternalOrganization, ADMIN_SETTINGS_MANAGE) makes the party, its OrgInternal role
     and its parent, which must be one of the user's organizations unless they administer every one; it sets up no accounting,
     membership or secret (Accounting's setup is a SetupLink on OrganizationDetail). Departments and teams are People's. -->
@@ -50,11 +50,11 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#InternalOrganizations', {text:(text || null), parentPartyId:(parentPartyId || null), pageIndex:(pageIndex || 0), pageSize:50}, 'The organizations are not available to you.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#InternalOrganizations', {text:(text || null), parentPartyId:(parentPartyId || null), pageIndex:(pageIndex || 0), pageSize:50}, 'The organizations are not available to you.')"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <!-- the setup checks still to do of each organization, of those the user may read; none read when it cannot be checked -->
-        <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="readiness" transaction="force-new" ignore-error="true"/>
+        <set field="readiness" from="ec.resource.script('component://mr-boss/template/AdminRegistry.js').readiness({}).out"/>
         <script><![CDATA[
             ec.message.clearErrors()
             const toDo = new Map()

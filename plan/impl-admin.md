@@ -1,5 +1,9 @@
 # IronStone BOSS — Admin implementation
 
+Nov 11, 2026 — screens moved to the framework (§9): after gate 5 the generic screens of Admin became the framework's
+System screens, which Admin shows under its root, and the readiness, refresh and settings registries the framework's
+(mr-moqui `plans/Admin-Screens-Down.md`, phases A0 to A6). The phase entries below stay as the record of the build;
+§9 says where a file or a service they name is now.
 Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
 and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
 results go in a Final suites note under P19.
@@ -86,7 +90,7 @@ Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-compon
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
-[8 verification](#8-verification)
+[8 verification](#8-verification) · [9 moved to the framework](#9-screens-moved-to-the-framework-nov-11-2026)
 
 ---
 
@@ -104,7 +108,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     books (F31), and the gateway connection adapters;
   - `runtime/component/mr-boss`: the Admin app, AcceptInvitation, Shared/DataImport, `ironstone.admin`
     (ContextServices, RegistryServices, LifecycleServices) and its registry entities (F32), the registrations of the
-    built apps, Admin's `report/` and `skill/` files.
+    built apps, Admin's `report/` and `skill/` files. Since Nov 11 the readiness, refresh and settings registry
+    records and the generic screens are the framework's (§9).
 
   `runtime/component/mr-marble` is read only, for the baseline Gateway, Vendor and Party/EditParty forms that
   ss-inventory maps. mr-pass is not changed: the PASS Account privacy page is later (§7).
@@ -199,8 +204,10 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     devices), with no Mantle or BOSS dependency.
   - Mantle `mantle.party.IdentityServices`: identity scoped to an organization through PartyRelationship and PartyRole
     (users in scope, invitations, organization membership, lifecycle operations), calling the framework guards.
-  - BOSS `ironstone.admin`: ContextServices (scope, choices, links), RegistryServices (readiness, refresh, settings,
-    tool links) and LifecycleServices (the lifecycle coordinator's participants and transfers), and the screens.
+  - BOSS `ironstone.admin`: ContextServices (scope, choices, links, the mount's routes), RegistryServices (the
+    readiness contract over the owners' services for the viewer's organizations, and which places open to the
+    viewer; the registries themselves are the framework's `org.moqui.admin.ReadinessServices` since Nov 11, §9) and
+    LifecycleServices (the lifecycle coordinator's participants and transfers), and the screens.
 
   No same-named `ironstone` pass-through over a framework or Mantle service is built.
 - **Permissions, not group names.** Services check `ec.user.hasPermission` and scope, never a BOSS group name, a calling
@@ -238,7 +245,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   membership, an import, bulk recovery, a refresh of many sources) names each failure and goes on.
 - **Delegated screens only where a role without `ADMIN` needs them** (design §13). `ADMIN` keeps the Tools System
   screens through Admin › System; Admin builds Jobs, JobRuns, SystemMessages, MessageTypes, Localization, AuditChanges,
-  Users, Groups and Sessions for the delegated roles, and does not re-specify a Tools form it mounts.
+  Users, Groups and Sessions for the delegated roles, and does not re-specify a Tools form it mounts. Since Nov 11
+  the two are one set of screens, the framework's, which Admin shows without the instance administrator's parts
+  (§9; design §1.4).
 - **Owner contracts.** A registration or change built here for another app (§1 scope; the registries' rows) follows
   that app's design and is written into it. The owner's screens and services stay the owner's; a registration names
   them and adds no right.
@@ -5369,6 +5378,7 @@ the owner's design.
 | Nov 11, 2026 | In BOSS the data operator exports only a contact book they may themselves view: an export target adds no right to read | The user's call (Nov 11), confirming F249 (P16) |
 | Nov 11, 2026 | The access log dataset's artifact is granted to no group: `ironstone.admin.AuditServices.get#AccessLog` checks `ADMIN_AUDIT_VIEW` and reads the one dataset itself, under both row filters, so a line is never read whole through the engine (a dataset has no field list, and a holder with an Insights group read recipient addresses and setting values). The audit reader therefore cannot chart the access log in Insights | P17 review, F272; over the plan's and design §12's grant to `BOSS_ADMIN_AUDIT`; design §12 changed |
 | Nov 11, 2026 | An app's own import target names an import permission of that app (`PEOPLE_IMPORT`, `MAINTENANCE_IMPORT`, `SALES_IMPORT`, `MARKETING_AUDIENCE_IMPORT`) beside the app's edit permission, and no `ADMIN_*` permission. Admin's Imports lists such a run for a data operator who also holds the app's view permission | The user's call (Nov 11; impl-sales §4, and §4 of impl-people, impl-maintenance and impl-marketing). A rows-mode target requires every permission it lists (framework service/org/moqui/admin/DataTransferImports.js:37-41, DataTransferBatch.js:82), so `ADMIN_TRANSFER_RUN` beside them, as staff invitations have, would shut the app's own users out of their import; a wizard-mode target's permission is checked by its owner's wizard services. Design §11.1 |
+| Nov 11, 2026 | The generic screens of Admin are the framework's System screens, which Admin mounts by location, wraps, or builds its own screens around; the readiness, refresh and settings registries are framework records and `org.moqui.admin.ReadinessServices`, with `check#OwnerReadiness` and its organization scope kept here; the Developer tools area is removed | The user's call (Nov 11). It reverses the Nov 7 row on the §14 registries for these three (LifecycleParticipant stays a BOSS record); §9; mr-moqui `plans/Admin-Screens-Down.md`; design §1.4, §13, §14 and §18 changed |
 
 ## 5. Open questions
 
@@ -5586,3 +5596,49 @@ Designed, not in this build:
 
 - **Walks.** One golden-path client walk for Admin in the regression suite (AdminUsersWalk, from P4); the others are
   acceptance tests. No screenshots.
+
+## 9. Screens moved to the framework (Nov 11, 2026)
+
+After gate 5 the screens of Admin that have no business model in them moved to the framework's System app
+(`runtime/base-component/tools/screen/System/`), with the old raw System screens folded in as parts for the instance
+administrator, and Admin shows them under its own root. The plan and the record of each phase, with its findings and
+tests, are mr-moqui's [plans/Admin-Screens-Down.md](../../../../plans/Admin-Screens-Down.md) (Track A, phases A0 to
+A6). How an app mounts the screens is in the tools component's
+[README](../../../../runtime/base-component/tools/README.md#mounting-the-administration-screens), and what each Admin
+screen is now in [design-admin §1.4](design-admin.md#14-screens-that-are-the-frameworks). The phase entries of §3 are
+left as the record of the build as it was; this section says where what they name is now.
+
+| Phase | Moved to the framework | In mr-boss after it |
+| --- | --- | --- |
+| A0 Contract | `AdminCalls.js`; the mount contract (`adminMount`, read by `tools/template/AdminMount.js`) | `get#SharedContext` answers `mount` and `Admin.xml` sets `adminMount`; `get#AppAccess`, `find#ToolLinks`, the Developer tools area and `BOSS_ADM_DEVELOPER` are removed |
+| A1 Operations | Jobs, JobDetail, JobRuns, JobRunDetail, Topics, TopicDetail | Jobs, JobRuns and JobRunDetail mounted by location; JobDetail, Topics and TopicDetail wrappers |
+| A2 Integrations, Mail | Connections, ConnectionDetail, MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail; Protocols › Home, MailRelays, MailRelayDetail, MailQueue, ServerConfiguration; the connection parts | MailRelays and MailRelayDetail by location; the four message screens, MailQueue and ServerConfiguration wrappers; Connections, ConnectionDetail and Protocols › Home Admin's own screens around the framework's sections |
+| A3 Access, Security | Groups, GroupDetail, Capabilities, RowRules, AccessReview; SignInPolicy, IdentityProviders, IdentityProviderDetail, Sessions; the matrix services | Capabilities, RowRules and the three sign-in screens by location; Groups a wrapper; GroupDetail, AccessReview and Users › Sessions Admin's own screens |
+| A4 Settings, Audit | InstanceSettings, Localization, AuditChanges | InstanceSettings and Localization wrappers; AuditChanges by location |
+| A5 Data | Imports, ImportDetail, Exports, DataExport, Backups; the lists' and the export wizard's services | Exports and DataExport by location; Backups a wrapper; Imports and ImportDetail Admin's own screens; the shared wizard stays here |
+| A6 Registries | the readiness, refresh and settings records and services; Health, SupportSummary, SettingsHome | SupportSummary by location; SettingsHome a wrapper; Health Admin's own screen; the rows re-seeded with route keys |
+
+What the phase entries name, and where it is now:
+
+| Named in the phases | Phase | Now |
+| --- | --- | --- |
+| `Admin/Developer.xml`, `Developer/DeveloperHome.xml`, `RegistryServices.find#ToolLinks`, `BOSS_ADM_DEVELOPER` | P1 | removed: Tools' own home lists the tools, and Admin's Home links Tools for a user whose own grant opens it |
+| `ContextServices.get#AppAccess` | P1, P14 | removed: a screen asks `ec.artifactExecution.isPermittedOwn` of an app's root |
+| `ironstone.admin.ReadinessProvider`, `RefreshOperation`, `SettingsEntry` in `entity/AdminEntities.xml` | P2 | the framework's `moqui.server.ReadinessProvider`, `RefreshOperation` and `SettingsEntry`; a `fixPath` is `fixRoute` and `fixId`, a `screenPath` is `destinationRoute` and `screenLocation`. `AdminEntities.xml` keeps `LifecycleParticipant` and Insights' records |
+| `RegistryServices.get#Readiness`, `request#Refresh`, `get#Overview`, `find#Settings`, `get#SupportSummary`; the eight setup checks in `Registry.js` | P2, P19 | `org.moqui.admin.ReadinessServices` (`Readiness.js`), with `check#InstanceSetup` for the instance's own checks, now the framework's providers. `RegistryServices` keeps `check#OwnerReadiness` (the Accounting, Products, Commerce and organization Constitution adapters) and gains `get#OpenPaths`; Admin's screens read through `template/AdminRegistry.js` |
+| `Admin/Operations/SupportSummary.xml` | P19 | the framework's `System/Operations/SupportSummary.xml`, mounted by location |
+| `service/ironstone/admin/AdminCalls.js` | P19 | the framework's `service/org/moqui/admin/AdminCalls.js` |
+| `CapabilityServices.get#MatrixContext`, `apply#MatrixChanges` (`Capabilities.js`) | P9 | `org.moqui.admin.AccessServices` (`AccessMatrix.js`); `CapabilityServices` keeps `get#AccessReview` |
+| `template/AdminConnectionParts.xml` | P11 | the framework's `tools/template/ConnectionParts.xml` |
+| `AuditServices.find#ChangeEvidence` and the record routes of `Audit.js` | P17 | gone: the screen reads the framework's `find#Changes`, which carries the organization scope, and the routes are `mountRoutes` in `Admin.js`. `AuditServices` and `Audit.js` keep the access log |
+| `service/ironstone/admin/DataServices.xml`, `Data.js` | P16 | deleted: `org.moqui.admin.DataTransferServices.find#ExportRuns`, `get#ExportContext` and `run#ExportRequest` |
+| `DataImportServices.find#ImportRuns`; the owners' places in `Data.js` and `DataImport.js` | P15, P16 | the framework's `find#ImportRuns` and `get#ImportDetail`; the places are `mountRoutes` entries. `DataImportServices` keeps `get#ImportMount`, `get#ImportContext` and `map#Import` |
+| The Admin screen files of Jobs, JobRuns, JobRunDetail, MailRelays, MailRelayDetail, Capabilities, RowRules, SignInPolicy, IdentityProviders, IdentityProviderDetail, AuditChanges, Exports and DataExport | P9 to P17 | deleted: the area files name the System screens |
+| Tools `System/ServiceJob`, `System/SystemMessage`, `System/Localization`, `System/AuditLog`, `Security/UserGroup`, `Security/ArtifactGroup`, `Security/ActiveUsers` | P0, P1 | deleted or moved: their functions are the instance administrator's parts of System › Operations, Integrations, Settings, Audit, Access (with ArtifactGroups and ArtifactGroupDetail) and Security › Sessions |
+
+Where the rules are tested now: the mount's rules in the tools component's `test/AdminMounts.spec.js`; the matrix, the
+export list and wizard, the import list and detail, and the registries' generic rules in the framework's
+`AdminAccessCapabilities`, `AdminDataExport`, `AdminDataTransfer` and `AdminReadiness` specs. The `test/Admin/` specs
+keep Admin's part: each moved screen's one render through Admin's route, the organization scope, and posts of
+transitions Admin does not take in (a job's, a message's, a group's and a translation's direct change), which change
+nothing for a delegate and for `ADMIN`.

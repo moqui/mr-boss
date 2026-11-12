@@ -2199,9 +2199,9 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Admin areas for their capability groups only (impl-admin P1; impl-commerce F45's pattern): each denies the root user group
         BOSS_ADMIN and allows its groups, with the root's filter sets. Home is every Admin user's; Operations (Monitoring in P1)
-        the administrative reader's, the operations operator's and the administrator's; Agents and Developer tools the
-        administrator's (AgentsHome and DeveloperHome then check AgentAdmin and each tool's own grant). Admin.js reads these
-        authorizations as the operations, agents and developer capabilities. A later phase that adds an area, or opens one to
+        the administrative reader's, the operations operator's and the administrator's; Agents the
+        administrator's (AgentsHome then checks AgentAdmin). Admin.js reads these
+        authorizations as the operations and agents capabilities. A later phase that adds an area, or opens one to
         another group, adds its rows here. -->
     <artifactGroups artifactGroupId="BOSS_ADM_OPERATIONS">
         <artifacts artifactName="component://mr-boss/screen/Admin/Operations.xml" artifactTypeEnumId="AT_XML_SCREEN"
@@ -2227,16 +2227,6 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ADM_AGENTS_DENY" userGroupId="BOSS_ADMIN"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ADM_AGENTS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
-                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-    </artifactGroups>
-    <artifactGroups artifactGroupId="BOSS_ADM_DEVELOPER">
-        <artifacts artifactName="component://mr-boss/screen/Admin/Developer.xml" artifactTypeEnumId="AT_XML_SCREEN"
-                inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_ADM_DEVELOPER_DENY" userGroupId="BOSS_ADMIN"
-                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_ADM_DEVELOPER_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
@@ -2437,10 +2427,23 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.copy#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.restore#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- the groups a saver may share a definition with, by name (their own, and those their own grant lets them name):
+            what the framework's share dialogs ask (mr-moqui plans/Admin-Screens-Down.md, Track I, I4) -->
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ShareGroups" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_DATA" userGroupId="BOSS_INSIGHTS_DATA"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Sharing with the wall displays (the author): the engine's save takes a group the saver is not in only from one whose own
+        grant holds that group's share artifact (org.moqui.report.share.<userGroupId>, definitions.rs, checked by its own rows
+        whatever screen asks). No person is in BOSS_INSIGHTS_DISPLAY, so the author, who shares a dashboard or a playlist with
+        the wall displays (the root's reportPolicy offers the group, features.share is the author's), holds its artifact; a
+        steward and a distributor, who also hold the engine's save, do not, and no Insights group holds any other group's. -->
+    <artifactGroups artifactGroupId="BOSS_INS_SHARE_DISPLAY" description="Insights: sharing a definition with the wall displays">
+        <artifacts artifactName="org.moqui.report.share.BOSS_INSIGHTS_DISPLAY" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_SHARE_DISPLAY_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <!-- Saving a dataset definition (the steward): the engine's own check (definitions.rs, org.moqui.report.dataset update), which
         reads no dataset; P3 guards index#BusinessDataset by the dataset's update artifact. -->
@@ -2477,74 +2480,33 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_REPORT_TOOLS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
-    <!-- Admin P2 (impl-admin P2, §4, F9, F16, F21, F22, F44, F46; design-admin §3, §7, §10, §14, §14.2): the registries' kinds, Admin's
-        own readiness providers, the settings index's grant to every BOSS user and the readiness exposure. Each owner's
-        registrations follow in a block of its own. -->
-    <moqui.basic.EnumerationType enumTypeId="AdminHealthGroup" description="Admin Health group"/>
-    <moqui.basic.Enumeration enumId="AdmHgIdentity" enumTypeId="AdminHealthGroup" description="Identity" sequenceNum="1"/>
-    <moqui.basic.Enumeration enumId="AdmHgBusiness" enumTypeId="AdminHealthGroup" description="Business setup" sequenceNum="2"/>
-    <moqui.basic.Enumeration enumId="AdmHgTransport" enumTypeId="AdminHealthGroup" description="Transport" sequenceNum="3"/>
-    <moqui.basic.Enumeration enumId="AdmHgStorage" enumTypeId="AdminHealthGroup" description="Storage and backup" sequenceNum="4"/>
-    <moqui.basic.Enumeration enumId="AdmHgObservability" enumTypeId="AdminHealthGroup" description="Observability" sequenceNum="5"/>
-    <moqui.basic.EnumerationType enumTypeId="AdminRegistryScope" description="Admin registration scope"/>
-    <moqui.basic.Enumeration enumId="AdmScInstance" enumTypeId="AdminRegistryScope" description="Instance" sequenceNum="1"/>
+    <!-- Admin P2 (impl-admin P2, §4, F9, F16, F21, F22, F44, F46; design-admin §3, §7, §10, §14, §14.2): the registries are the
+        framework's (moqui.server ReadinessProvider, RefreshOperation and SettingsEntry, read by
+        org.moqui.admin.ReadinessServices; mr-moqui plans/Admin-Screens-Down.md A6), which seeds their kinds, the instance's
+        own checks (mail, backup, report delivery, administrator factors, job runs, cluster, telemetry, protocols, the
+        instance's Constitution) and the settings entries of its System screens. Here: the scopes and the settings group that
+        are BOSS's, the settings index's grant to every BOSS user and the readiness exposure. Each owner's registrations
+        follow in a block of its own; a place is a key Admin's mount resolves (Admin.js mountRoutes). -->
     <moqui.basic.Enumeration enumId="AdmScOrganization" enumTypeId="AdminRegistryScope" description="Organization" sequenceNum="2"/>
     <moqui.basic.Enumeration enumId="AdmScStore" enumTypeId="AdminRegistryScope" description="Store" sequenceNum="3"/>
     <moqui.basic.Enumeration enumId="AdmScFacility" enumTypeId="AdminRegistryScope" description="Facility" sequenceNum="4"/>
-    <moqui.basic.EnumerationType enumTypeId="AdminSettingsGroup" description="Admin settings index group"/>
     <moqui.basic.Enumeration enumId="AdmSgCompany" enumTypeId="AdminSettingsGroup" description="Company" sequenceNum="1"/>
-    <moqui.basic.Enumeration enumId="AdmSgApplications" enumTypeId="AdminSettingsGroup" description="Applications" sequenceNum="2"/>
-    <moqui.basic.Enumeration enumId="AdmSgInstance" enumTypeId="AdminSettingsGroup" description="Instance" sequenceNum="3"/>
-    <moqui.basic.EnumerationType enumTypeId="AdminRefreshSource" description="Admin refresh source kind"/>
-    <moqui.basic.Enumeration enumId="AdmRsIndex" enumTypeId="AdminRefreshSource" description="Index" sequenceNum="1"/>
-    <moqui.basic.Enumeration enumId="AdmRsFeed" enumTypeId="AdminRefreshSource" description="Feed" sequenceNum="2"/>
-    <moqui.basic.Enumeration enumId="AdmRsProjection" enumTypeId="AdminRefreshSource" description="Projection" sequenceNum="3"/>
-    <!-- Admin's own readiness providers (design §3's first-release checks), each a function of RegistryServices behind
-        check#AdminSetup, for an administrative reader; the backup check has the freshness facet of its last finished run -->
-    <ironstone.admin.ReadinessProvider providerKey="admin.mailServer" version="1" ownerApp="Admin" title="Outgoing mail"
-            healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.basic.email.EmailServer" sequenceNum="10"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.backup" version="1" ownerApp="Admin" title="Database backup"
-            healthGroupEnumId="AdmHgStorage" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/ServiceJob/Jobs/ServiceJobDetail?jobName=backup_EmbeddedDatabase_daily"
-            expectedFrequencyMinutes="1440" maxLagMinutes="2880" sequenceNum="20"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.reportMail" version="1" ownerApp="Admin" title="Report mail"
-            healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.basic.email.EmailTemplate" sequenceNum="30"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.reportAlertTopic" version="1" ownerApp="Admin" title="Report alerts"
-            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.security.user.NotificationTopic" sequenceNum="40"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.adminFactors" version="1" ownerApp="Admin" title="Administrator factors"
-            healthGroupEnumId="AdmHgIdentity" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/Security/UserAccount" sequenceNum="50"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.jobRuns" version="1" ownerApp="Admin" title="Job runs"
-            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/ServiceJob/JobRuns" sequenceNum="60"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.cluster" version="1" ownerApp="Admin" title="Cluster"
-            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/Operations/Monitoring" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="admin.telemetry" version="1" ownerApp="Admin" title="Telemetry"
-            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="system/Monitor/Sources" sequenceNum="80"/>
-    <!-- The Constitution's source diagnostics (impl-admin P2): the framework's document for the instance and Mantle's for each
-        organization, read as the viewer (get#Constitution needs a signed-in user, get#OrganizationConstitution a member or an
-        editor of the organization) -->
-    <ironstone.admin.ReadinessProvider providerKey="constitution.global" version="1" ownerApp="Admin" title="Instance Constitution"
-            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScInstance" serviceName="org.moqui.admin.ConstitutionServices.get#Constitution"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/Constitution" sequenceNum="140"/>
-    <ironstone.admin.ReadinessProvider providerKey="constitution.organization" version="1" ownerApp="Admin" title="Organization Constitution"
-            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
-            serviceName="mantle.party.ConstitutionServices.get#OrganizationConstitution" requiredPermission="ADMIN_OVERVIEW_VIEW"
-            sequenceNum="150"/>
-    <!-- The settings index alone for every BOSS user (impl-admin F46; design §7, §13): a non-inheritable ALLOW on SettingsHome,
-        the root's context (which answers such a user the index's link and nothing else) and find#Settings, which lists only
-        the entries whose destination the user opens. The Admin root and every other Admin screen and service still refuse
-        them (impl-admin F34: an inheritable grant here would open what is below it). -->
+    <!-- The Constitution of each organization (impl-admin P2): Mantle's document, read as the viewer by Admin's contract
+        service (check#OwnerReadiness, which answers the readiness contract over each owner's own service for the
+        organizations the viewer administers); the instance's is the framework's own provider -->
+    <moqui.server.ReadinessProvider providerKey="constitution.organization" version="1" ownerApp="Admin"
+            title="Organization Constitution" healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="ironstone.admin.RegistryServices.check#OwnerReadiness" scopeParameters="organizationPartyId"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" sequenceNum="150"/>
+    <!-- The settings index alone for every BOSS user (impl-admin F46; design §7, §13): a non-inheritable ALLOW on SettingsHome
+        and the root's context (which answers such a user the index's link, the settings' routes and nothing else). The
+        index itself is the framework's org.moqui.admin.ReadinessServices.find#Settings, any signed-in user's, which lists
+        only the entries whose screen the user's own groups open. The Admin root and every other Admin screen and service
+        still refuse them (impl-admin F34: an inheritable grant here would open what is below it). -->
     <artifactGroups artifactGroupId="BOSS_ADM_SETTINGS_INDEX" description="Admin settings index for BOSS users">
         <artifacts artifactName="component://mr-boss/screen/Admin/Settings/SettingsHome.xml" artifactTypeEnumId="AT_XML_SCREEN"
                 inheritAuthz="N"/>
         <artifacts artifactName="ironstone.admin.ContextServices.get#SharedContext" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
-        <artifacts artifactName="ironstone.admin.RegistryServices.find#Settings" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_ADM_SETTINGS_INDEX_USERS" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
@@ -2552,73 +2514,86 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Assist (design §1.2, §14): the readiness checks as a read tool for the Assistant and MCP, run with the user's own
         permissions; Health's "What is failing?" prompt is in the Admin root's shell-providers -->
-    <moqui.agent.AgentToolExposure toolName="admin_get_readiness" serviceName="ironstone.admin.RegistryServices.get#Readiness"
+    <moqui.agent.AgentToolExposure toolName="admin_get_readiness" serviceName="org.moqui.admin.ReadinessServices.get#Readiness"
             title="Setup and health readiness"
-            description="get#Readiness: the setup and health checks the user may read (mail, backup, report delivery, administrator factors, job runs, cluster, telemetry, accounting setup, catalog quality, store readiness, the Constitution), each with its state (ready, warning, failed, unavailable), message, organization or store and the owner's fix link; narrow by providerKey, ownerApp, organizationPartyId or state. A provider that could not be checked is named in failedProviders."
+            description="get#Readiness: the setup and health checks the user may read (mail, backup, report delivery, administrator factors, job runs, cluster, telemetry, accounting setup, catalog quality, store readiness, the Constitution), each with its state (ready, warning, failed, unavailable), message, the organization or store it is for (subject) and the key of the owner's fix place; narrow by providerKey, ownerApp, state, or an organization as scopeParameters {organizationPartyId}. A provider that could not be checked is named in failedProviders."
             classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
     <!-- Accounting's registrations (owner contract, impl-admin F16; design-accounting): its setup readiness for finance readers,
         called as the viewer, and its settings landing -->
-    <ironstone.admin.ReadinessProvider providerKey="accounting.setup" version="1" ownerApp="Accounting" title="Accounting setup"
-            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization" serviceName="mantle.ledger.SetupServices.get#Readiness"
-            requiredPermission="ACCOUNTING_VIEW" fixPath="Accounting/Settings/Setup" sequenceNum="110"/>
-    <ironstone.admin.SettingsEntry settingsKey="accounting.settings" version="1" ownerApp="Accounting" title="Accounting settings"
+    <moqui.server.ReadinessProvider providerKey="accounting.setup" version="1" ownerApp="Accounting" title="Accounting setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="ironstone.admin.RegistryServices.check#OwnerReadiness" scopeParameters="organizationPartyId"
+            fixRoute="accountingSetup" sequenceNum="110"/>
+    <moqui.server.SettingsEntry settingsKey="accounting.settings" version="1" ownerApp="Accounting" title="Accounting settings"
             description="Preferences, posting defaults, payment terms, currencies, payment methods, collection, documents and matching"
-            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/Settings"
-            configuredBy="Finance administrator" providerKey="accounting.setup" sequenceNum="10"/>
+            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" destinationRoute="accountingSettings"
+            screenLocation="component://mr-boss/screen/Accounting/Settings/Settings.xml" configuredBy="Finance administrator"
+            providerKey="accounting.setup" sequenceNum="10"/>
     <!-- Products' registrations (owner contract, impl-admin F16; design-products): catalog quality (CatalogChecks) for catalog
         readers, and its settings landing -->
-    <ironstone.admin.ReadinessProvider providerKey="products.catalogChecks" version="1" ownerApp="Products" title="Catalog quality"
+    <moqui.server.ReadinessProvider providerKey="products.catalogChecks" version="1" ownerApp="Products" title="Catalog quality"
             healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
-            serviceName="mantle.product.CatalogCheckServices.validate#Catalog" requiredPermission="PRODUCT_CATALOG_VIEW"
-            fixPath="Products/CatalogChecks" sequenceNum="120"/>
-    <ironstone.admin.SettingsEntry settingsKey="products.settings" version="1" ownerApp="Products" title="Catalog settings"
+            serviceName="ironstone.admin.RegistryServices.check#OwnerReadiness" scopeParameters="organizationPartyId"
+            fixRoute="productsCatalogChecks" sequenceNum="120"/>
+    <moqui.server.SettingsEntry settingsKey="products.settings" version="1" ownerApp="Products" title="Catalog settings"
             description="Variants, pricing and identification types" settingsGroupEnumId="AdmSgApplications"
-            scopeEnumId="AdmScOrganization" screenPath="Products/Settings/Index" configuredBy="Catalog administrator"
+            scopeEnumId="AdmScOrganization" destinationRoute="productsSettings"
+            screenLocation="component://mr-boss/screen/Products/Settings/Index.xml" configuredBy="Catalog administrator"
             providerKey="products.catalogChecks" sequenceNum="40"/>
     <!-- Commerce's registrations (owner contract, impl-commerce §7, impl-admin F27; design-commerce): store readiness, its
         findings for a Commerce reader and its summary for an administrative reader, and its checkout settings -->
-    <ironstone.admin.ReadinessProvider providerKey="commerce.storeReadiness" version="1" ownerApp="Commerce" title="Store readiness"
-            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScStore" serviceName="mantle.product.StoreAdminServices.check#StoreReadiness"
+    <moqui.server.ReadinessProvider providerKey="commerce.storeReadiness" version="1" ownerApp="Commerce"
+            title="Store readiness" healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScStore"
+            serviceName="ironstone.admin.RegistryServices.check#OwnerReadiness" scopeParameters="organizationPartyId"
             requiredPermission="ADMIN_OVERVIEW_VIEW" sequenceNum="130"/>
-    <ironstone.admin.SettingsEntry settingsKey="commerce.checkout" version="1" ownerApp="Commerce" title="Checkout settings"
-            description="Checkout, carriers, payment methods and tax authorities of the stores" settingsGroupEnumId="AdmSgApplications"
-            scopeEnumId="AdmScStore" screenPath="Commerce/Settings/CheckoutSettings" configuredBy="Store manager"
+    <moqui.server.SettingsEntry settingsKey="commerce.checkout" version="1" ownerApp="Commerce" title="Checkout settings"
+            description="Checkout, carriers, payment methods and tax authorities of the stores"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScStore" destinationRoute="commerceCheckoutSettings"
+            screenLocation="component://mr-boss/screen/Commerce/Settings/CheckoutSettings.xml" configuredBy="Store manager"
             providerKey="commerce.storeReadiness" sequenceNum="30"/>
     <!-- Customer Service's settings landing (owner contract; design-customer-service) -->
-    <ironstone.admin.SettingsEntry settingsKey="customerService.settings" version="1" ownerApp="Customer Service"
+    <moqui.server.SettingsEntry settingsKey="customerService.settings" version="1" ownerApp="Customer Service"
             title="Customer service settings"
             description="Queues, teams, assignment rules, service levels, case types and templates, saved replies, channel routing, return policies and knowledge sources"
-            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/SettingsHome"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="customerServiceSettings"
+            screenLocation="component://mr-boss/screen/CustomerService/Settings/SettingsHome.xml"
             configuredBy="Customer service administrator or manager" sequenceNum="20"/>
     <!-- Purchasing's settings landing (owner contract; design-purchasing) -->
-    <ironstone.admin.SettingsEntry settingsKey="purchasing.settings" version="1" ownerApp="Purchasing" title="Purchasing settings"
+    <moqui.server.SettingsEntry settingsKey="purchasing.settings" version="1" ownerApp="Purchasing" title="Purchasing settings"
             description="Purchase policy, approval policies and supplier scorecards" settingsGroupEnumId="AdmSgApplications"
-            scopeEnumId="AdmScOrganization" screenPath="Purchasing/Settings/SettingsHome" configuredBy="Purchase administrator"
-            sequenceNum="50"/>
+            scopeEnumId="AdmScOrganization" destinationRoute="purchasingSettings"
+            screenLocation="component://mr-boss/screen/Purchasing/Settings/SettingsHome.xml"
+            configuredBy="Purchase administrator" sequenceNum="50"/>
     <!-- Warehouse's settings landing (owner contract; design-warehouse) -->
-    <ironstone.admin.SettingsEntry settingsKey="warehouse.settings" version="1" ownerApp="Warehouse" title="Warehouse settings"
+    <moqui.server.SettingsEntry settingsKey="warehouse.settings" version="1" ownerApp="Warehouse" title="Warehouse settings"
             description="Stock policies, reservation policies and asset pools" settingsGroupEnumId="AdmSgApplications"
-            scopeEnumId="AdmScFacility" screenPath="Warehouse/Settings/Index" configuredBy="Warehouse manager" sequenceNum="60"/>
+            scopeEnumId="AdmScFacility" destinationRoute="warehouseSettings"
+            screenLocation="component://mr-boss/screen/Warehouse/Settings/Index.xml" configuredBy="Warehouse manager"
+            sequenceNum="60"/>
     <!-- Manufacturing's settings landing (owner contract, impl-admin F21: its ProductionSettings; design-manufacturing) -->
-    <ironstone.admin.SettingsEntry settingsKey="manufacturing.settings" version="1" ownerApp="Manufacturing"
-            title="Production settings" description="Production settings and reason codes" settingsGroupEnumId="AdmSgApplications"
-            scopeEnumId="AdmScOrganization" screenPath="Manufacturing/Settings/ProductionSettings"
+    <moqui.server.SettingsEntry settingsKey="manufacturing.settings" version="1" ownerApp="Manufacturing"
+            title="Production settings" description="Production settings and reason codes"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="manufacturingSettings"
+            screenLocation="component://mr-boss/screen/Manufacturing/Settings/ProductionSettings.xml"
             configuredBy="Production or resource administrator" sequenceNum="70"/>
     <!-- Projects' settings landing (owner contract; design-projects) -->
-    <ironstone.admin.SettingsEntry settingsKey="projects.settings" version="1" ownerApp="Projects" title="Projects settings"
-            description="Work item types, workflows, labels, templates, time, billing, code and intake" settingsGroupEnumId="AdmSgApplications"
-            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/Index" configuredBy="Projects managers" sequenceNum="80"/>
+    <moqui.server.SettingsEntry settingsKey="projects.settings" version="1" ownerApp="Projects" title="Projects settings"
+            description="Work item types, workflows, labels, templates, time, billing, code and intake"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="projectsSettings"
+            screenLocation="component://mr-boss/screen/Projects/Settings/Index.xml" configuredBy="Projects managers"
+            sequenceNum="80"/>
     <!-- Comms' entry (owner contract, impl-admin F44): Consent, for contact admins; Comms' own Settings are personal, and its
         shared templates, sending profiles and suppressions are its later work -->
-    <ironstone.admin.SettingsEntry settingsKey="comms.consent" version="1" ownerApp="Comms" title="Consent and subscriptions"
+    <moqui.server.SettingsEntry settingsKey="comms.consent" version="1" ownerApp="Comms" title="Consent and subscriptions"
             description="Whether contacts may be solicited, their list subscriptions and the history behind them"
-            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScInstance" screenPath="Comms/Consent/List"
-            viewPermission="CONTACT_ADMIN" configuredBy="Contact admins" sequenceNum="90"/>
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScInstance" destinationRoute="commsConsent"
+            screenLocation="component://mr-boss/screen/Comms/Consent/List.xml" viewPermission="CONTACT_ADMIN"
+            configuredBy="Contact admins" sequenceNum="90"/>
     <!-- Voice (BasicComms System › Voice, VoiceAdmin): the phone system, in the Tools System app -->
-    <ironstone.admin.SettingsEntry settingsKey="voice.system" version="1" ownerApp="Voice" title="Voice"
+    <moqui.server.SettingsEntry settingsKey="voice.system" version="1" ownerApp="Voice" title="Voice"
             description="Trunks, numbers, caller IDs, ring groups, IVR menus and queues" settingsGroupEnumId="AdmSgInstance"
-            scopeEnumId="AdmScInstance" screenPath="system/Voice" viewPermission="VoiceAdmin" configuredBy="Phone system administrator"
-            sequenceNum="100"/>
+            scopeEnumId="AdmScInstance" destinationRoute="voice" screenLocation="component://tools/screen/System.xml"
+            viewPermission="VoiceAdmin" configuredBy="Phone system administrator" sequenceNum="100"/>
     <!-- Insights P2 (impl-insights P2, F32; the P1 review's "For the lead"): every ReportServices operation is denied to the root
         user group and the administrator, so an operation the framework adds is refused from any Insights screen until a capability
         group is granted it (fail closed); the reading (BOSS_INS_REPORT_READ), authoring, scheduling and dataset grants above are
@@ -3301,6 +3276,11 @@ along with this software (see the LICENSE.md file). If not, see
         ALWAYS so they pass BOSS_INS_REPORT_ENGINE's deny, and each also checks the dataset's own artifact in the engine. -->
     <artifactGroups artifactGroupId="BOSS_INS_DATASET_READ" description="Insights: listing business datasets">
         <artifacts artifactName="org.moqui.report.ReportServices.find#BusinessDatasets" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- what the framework's dataset screens read beside it, shown under Insights' mount (mr-moqui
+            plans/Admin-Screens-Down.md, Track I): one dataset the viewer reads or stewards, its document's fields and
+            conditions for its steward only, and what a dataset form offers, the sources for one who may create only -->
+        <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDatasetOptions" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_DATASET_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_DATASET_READ_DATA" userGroupId="BOSS_INSIGHTS_DATA"
@@ -3355,96 +3335,85 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Readiness (design §5, §11; impl-admin F50, F53): each business dataset's freshness provider (its last index build, the
         lag since and the admission state) and its index refresh in Admin's registries. The provider answers only a dataset the viewer
         may read or steward (an instance check: the dataset's row filter scopes its rows, the index is one for every organization);
-        the refresh runs index#BusinessDataset as the viewer, guarded by the dataset's own update artifact. The Insights groups that
-        use DataReadiness (the author, the steward, the administrator) are granted Admin's two registry services. -->
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.mantle-sales-orders" version="1" ownerApp="Insights" title="Sales orders index"
-            description="The sales orders dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=mantle-sales-orders"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.mantle-sales-items" version="1" ownerApp="Insights" title="Sales items index"
-            description="The sales items dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=mantle-sales-items"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.mantle-inventory" version="1" ownerApp="Insights" title="Inventory index"
-            description="The inventory dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=mantle-inventory"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.boss-commerce-checkouts" version="1" ownerApp="Insights" title="Store checkouts index"
-            description="The store checkouts dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=boss-commerce-checkouts"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.boss-commerce-payment-attempts" version="1" ownerApp="Insights" title="Store payment attempts index"
-            description="The store payment attempts dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=boss-commerce-payment-attempts"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.boss-commerce-feed-builds" version="1" ownerApp="Insights" title="Store feed builds index"
-            description="The store feed builds dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=boss-commerce-feed-builds"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.boss-service-clocks" version="1" ownerApp="Insights" title="Service clocks index"
-            description="The service clocks dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=boss-service-clocks"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.ReadinessProvider providerKey="insights.dataset.boss-service-breaches" version="1" ownerApp="Insights" title="Service level breaches index"
-            description="The service level breaches dataset's admission and its index's last build" healthGroupEnumId="AdmHgObservability"
-            scopeEnumId="AdmScInstance" serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness"
-            requiredPermission="INSIGHTS_VIEW" fixPath="Insights/ReportBuilder/DatasetDetail?datasetId=boss-service-breaches"
-            expectedFrequencyMinutes="1440" sequenceNum="70"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.mantle-sales-orders.index" version="1" ownerApp="Insights"
+        the refresh runs index#BusinessDataset as the viewer, guarded by the dataset's own update artifact. The registries'
+        services are the framework's (org.moqui.admin.ReadinessServices, any signed-in user's, their grant not inheritable):
+        the provider and the refresh are Insights' own services, which an Insights user calls by the root group's grant. -->
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-sales-orders" version="1" ownerApp="Insights"
+            title="Sales orders index" description="The sales orders dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-sales-orders" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-sales-items" version="1" ownerApp="Insights"
+            title="Sales items index" description="The sales items dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-sales-items" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-inventory" version="1" ownerApp="Insights"
+            title="Inventory index" description="The inventory dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-inventory" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-commerce-checkouts" version="1" ownerApp="Insights"
+            title="Store checkouts index" description="The store checkouts dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-commerce-checkouts" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-commerce-payment-attempts" version="1"
+            ownerApp="Insights" title="Store payment attempts index"
+            description="The store payment attempts dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-commerce-payment-attempts" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-commerce-feed-builds" version="1" ownerApp="Insights"
+            title="Store feed builds index" description="The store feed builds dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-commerce-feed-builds" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-service-clocks" version="1" ownerApp="Insights"
+            title="Service clocks index" description="The service clocks dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-service-clocks" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-service-breaches" version="1" ownerApp="Insights"
+            title="Service level breaches index"
+            description="The service level breaches dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-service-breaches" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-sales-orders.index" version="1" ownerApp="Insights"
             title="Rebuild the sales orders index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
             sourceKindEnumId="AdmRsIndex" sourceName="mantle-sales-orders" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.mantle-sales-orders"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.mantle-sales-items.index" version="1" ownerApp="Insights"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-sales-items.index" version="1" ownerApp="Insights"
             title="Rebuild the sales items index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
             sourceKindEnumId="AdmRsIndex" sourceName="mantle-sales-items" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.mantle-sales-items"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.mantle-inventory.index" version="1" ownerApp="Insights"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-inventory.index" version="1" ownerApp="Insights"
             title="Rebuild the inventory index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
             sourceKindEnumId="AdmRsIndex" sourceName="mantle-inventory" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.mantle-inventory"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.boss-commerce-checkouts.index" version="1" ownerApp="Insights"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-commerce-checkouts.index" version="1" ownerApp="Insights"
             title="Rebuild the store checkouts index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
             sourceKindEnumId="AdmRsIndex" sourceName="boss-commerce-checkouts" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.boss-commerce-checkouts"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.boss-commerce-payment-attempts.index" version="1" ownerApp="Insights"
-            title="Rebuild the store payment attempts index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
-            sourceKindEnumId="AdmRsIndex" sourceName="boss-commerce-payment-attempts" requiredPermission="INSIGHTS_DATASET_EDIT"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-commerce-payment-attempts.index" version="1"
+            ownerApp="Insights" title="Rebuild the store payment attempts index"
+            serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex" sourceKindEnumId="AdmRsIndex"
+            sourceName="boss-commerce-payment-attempts" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.boss-commerce-payment-attempts"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.boss-commerce-feed-builds.index" version="1" ownerApp="Insights"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-commerce-feed-builds.index" version="1" ownerApp="Insights"
             title="Rebuild the store feed builds index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
             sourceKindEnumId="AdmRsIndex" sourceName="boss-commerce-feed-builds" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.boss-commerce-feed-builds"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.boss-service-clocks.index" version="1" ownerApp="Insights"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-service-clocks.index" version="1" ownerApp="Insights"
             title="Rebuild the service clocks index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
             sourceKindEnumId="AdmRsIndex" sourceName="boss-service-clocks" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.boss-service-clocks"/>
-    <ironstone.admin.RefreshOperation refreshKey="insights.dataset.boss-service-breaches.index" version="1" ownerApp="Insights"
-            title="Rebuild the service level breaches index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
-            sourceKindEnumId="AdmRsIndex" sourceName="boss-service-breaches" requiredPermission="INSIGHTS_DATASET_EDIT"
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-service-breaches.index" version="1" ownerApp="Insights"
+            title="Rebuild the service level breaches index"
+            serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex" sourceKindEnumId="AdmRsIndex"
+            sourceName="boss-service-breaches" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.boss-service-breaches"/>
-    <artifactGroups artifactGroupId="BOSS_INS_READINESS" description="Insights: Admin's readiness and refresh registry services">
-        <artifacts artifactName="ironstone.admin.RegistryServices.get#Readiness" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone.admin.RegistryServices.request#Refresh" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_INS_READINESS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-        <authz artifactAuthzId="BOSS_INS_READINESS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-        <authz artifactAuthzId="BOSS_INS_READINESS_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-    </artifactGroups>
     <!-- Insights P4 (impl-insights P4, §4; design-insights §6.1, §6.2): the report catalog and the metric registrations, each owner's
         rows in a block of its own (owner contracts: each is written into the owner's design). An entry holds navigation only:
         whether a viewer reads it is its owner's catalogue service where one is registered, else the route's own screen
@@ -4133,13 +4102,15 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ORG_CONSTITUTION_EDIT" capabilityKindEnumId="CpkEdit"/>
     <!-- Admin's own settings index entries (impl-admin P2's "For the lead"): organizations and the Constitution, each shown to a user
         Admin › Settings opens them to -->
-    <ironstone.admin.SettingsEntry settingsKey="admin.organizations" version="1" ownerApp="Admin" title="Organizations"
-            description="Internal organizations: profile, contacts, members, defaults and setup links" settingsGroupEnumId="AdmSgCompany"
-            scopeEnumId="AdmScOrganization" screenPath="Admin/Settings/Organizations" viewPermission="ADMIN_SETTINGS_VIEW"
+    <moqui.server.SettingsEntry settingsKey="admin.organizations" version="1" ownerApp="Admin" title="Organizations"
+            description="Internal organizations: profile, contacts, members, defaults and setup links"
+            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" destinationRoute="adminOrganizations"
+            screenLocation="component://mr-boss/screen/Admin/Settings/Organizations.xml" viewPermission="ADMIN_SETTINGS_VIEW"
             configuredBy="Configuration administrator" sequenceNum="5"/>
-    <ironstone.admin.SettingsEntry settingsKey="admin.constitution" version="1" ownerApp="Admin" title="Constitution"
-            description="The shared guidance for people and agent runs, for the instance and each organization" settingsGroupEnumId="AdmSgCompany"
-            scopeEnumId="AdmScOrganization" screenPath="Admin/Settings/Constitution" viewPermission="ADMIN_SETTINGS_VIEW"
+    <moqui.server.SettingsEntry settingsKey="admin.constitution" version="1" ownerApp="Admin" title="Constitution"
+            description="The shared guidance for people and agent runs, for the instance and each organization"
+            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" destinationRoute="adminConstitution"
+            screenLocation="component://mr-boss/screen/Admin/Settings/Constitution.xml" viewPermission="ADMIN_SETTINGS_VIEW"
             configuredBy="Configuration administrator" sequenceNum="6"/>
 
     <!-- Admin P8 (impl-admin P8; design-admin §7 InstanceSettings, Localization and ReferenceData, §1.1): InstanceSettings and
@@ -4155,70 +4126,84 @@ along with this software (see the LICENSE.md file). If not, see
                 inheritAuthz="Y"/>
     </artifactGroups>
     <!-- Admin's own settings index entries of P8, each shown to a user Admin › Settings opens them to -->
-    <ironstone.admin.SettingsEntry settingsKey="admin.instanceSettings" version="1" ownerApp="Admin" title="Instance settings"
+    <moqui.server.SettingsEntry settingsKey="admin.instanceSettings" version="1" ownerApp="Admin" title="Instance settings"
             description="What the instance is called, its default locale and time zone, the new-device sign-in window, the group recipient ceiling, and where each deployment value comes from"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/InstanceSettings"
-            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="101"/>
-    <ironstone.admin.SettingsEntry settingsKey="admin.localization" version="1" ownerApp="Admin" title="Localization"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminInstanceSettings" screenLocation="component://mr-boss/screen/Admin/Settings/InstanceSettings.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="101"/>
+    <moqui.server.SettingsEntry settingsKey="admin.localization" version="1" ownerApp="Admin" title="Localization"
             description="Translations of messages and of the names of statuses, options, units and places"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/Localization"
-            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="102"/>
-    <ironstone.admin.SettingsEntry settingsKey="admin.referenceData" version="1" ownerApp="Admin" title="Reference data"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminLocalization" screenLocation="component://mr-boss/screen/Admin/Settings/Localization.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="102"/>
+    <moqui.server.SettingsEntry settingsKey="admin.referenceData" version="1" ownerApp="Admin" title="Reference data"
             description="Where units, currencies, tax, types, statuses and workflows are changed, each by its owner"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/ReferenceData"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" destinationRoute="adminReferenceData"
+            screenLocation="component://mr-boss/screen/Admin/Settings/ReferenceData.xml"
             configuredBy="Each owner's administrators" sequenceNum="103"/>
     <!-- The reference kinds of ReferenceData (design §7 ReferenceOwners, §14.2: a deep link inside an owner's settings is a
         further entry with the owner's permission): a group of the settings index, each entry its owner's screen and shown only
         to a viewer that screen opens to. Each owner's rows follow its design; Admin changes none of these records. -->
     <moqui.basic.Enumeration enumId="AdmSgReference" enumTypeId="AdminSettingsGroup" description="Reference data" sequenceNum="4"/>
     <!-- Products (design-products: it owns units and conversions; changing a unit is an instance administrator's write) -->
-    <ironstone.admin.SettingsEntry settingsKey="reference.units" version="1" ownerApp="Products" title="Units of measure"
+    <moqui.server.SettingsEntry settingsKey="reference.units" version="1" ownerApp="Products" title="Units of measure"
             description="Units, their conversions and barcodes; a unit a document already uses keeps its meaning"
-            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="Products/Units"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" destinationRoute="productsUnits"
+            screenLocation="component://mr-boss/screen/Products/Units.xml"
             configuredBy="Catalog administrator; unit changes an instance administrator" sequenceNum="210"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.identificationTypes" version="1" ownerApp="Products"
+    <moqui.server.SettingsEntry settingsKey="reference.identificationTypes" version="1" ownerApp="Products"
             title="Product identification types" description="The kinds of product identifier (SKU, GTIN, supplier code)"
-            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="Products/Settings/IdentificationTypes"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" destinationRoute="productsIdentificationTypes"
+            screenLocation="component://mr-boss/screen/Products/Settings/IdentificationTypes.xml"
             configuredBy="Catalog administrator" sequenceNum="220"/>
     <!-- Accounting (design-accounting: currencies, tax, terms and posting policy are its own) -->
-    <ironstone.admin.SettingsEntry settingsKey="reference.currencies" version="1" ownerApp="Accounting" title="Currencies"
+    <moqui.server.SettingsEntry settingsKey="reference.currencies" version="1" ownerApp="Accounting" title="Currencies"
             description="The currencies in use and their exchange rates" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/Currencies" configuredBy="Finance administrator"
+            scopeEnumId="AdmScOrganization" destinationRoute="accountingCurrencies"
+            screenLocation="component://mr-boss/screen/Accounting/Settings/Currencies.xml" configuredBy="Finance administrator"
             sequenceNum="230"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.paymentTerms" version="1" ownerApp="Accounting" title="Payment terms"
+    <moqui.server.SettingsEntry settingsKey="reference.paymentTerms" version="1" ownerApp="Accounting" title="Payment terms"
             description="Settlement terms offered to customers and taken from suppliers" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/PaymentTerms" configuredBy="Finance administrator"
-            sequenceNum="240"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.tax" version="1" ownerApp="Accounting" title="Tax authorities and rates"
+            scopeEnumId="AdmScOrganization" destinationRoute="accountingPaymentTerms"
+            screenLocation="component://mr-boss/screen/Accounting/Settings/PaymentTerms.xml"
+            configuredBy="Finance administrator" sequenceNum="240"/>
+    <moqui.server.SettingsEntry settingsKey="reference.tax" version="1" ownerApp="Accounting" title="Tax authorities and rates"
             description="Tax authorities, their rates and what they apply to" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="Accounting/Tax/TaxAuthorities" configuredBy="Finance administrator"
+            scopeEnumId="AdmScOrganization" destinationRoute="accountingTaxAuthorities"
+            screenLocation="component://mr-boss/screen/Accounting/Tax/TaxAuthorities.xml" configuredBy="Finance administrator"
             sequenceNum="250"/>
     <!-- Customer Service, Projects and Manufacturing: their own types, statuses and reasons -->
-    <ironstone.admin.SettingsEntry settingsKey="reference.caseTypes" version="1" ownerApp="Customer Service" title="Case types"
+    <moqui.server.SettingsEntry settingsKey="reference.caseTypes" version="1" ownerApp="Customer Service" title="Case types"
             description="The kinds of case and what each asks for" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/CaseTypes"
+            scopeEnumId="AdmScOrganization" destinationRoute="customerServiceCaseTypes"
+            screenLocation="component://mr-boss/screen/CustomerService/Settings/CaseTypes.xml"
             configuredBy="Customer service administrator or manager" sequenceNum="260"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.caseStatusCategories" version="1" ownerApp="Customer Service"
+    <moqui.server.SettingsEntry settingsKey="reference.caseStatusCategories" version="1" ownerApp="Customer Service"
             title="Case status categories" description="How case statuses are grouped for queues and reports"
-            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/StatusCategories"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization"
+            destinationRoute="customerServiceStatusCategories"
+            screenLocation="component://mr-boss/screen/CustomerService/Settings/StatusCategories.xml"
             configuredBy="Customer service administrator or manager" sequenceNum="270"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.workItemTypes" version="1" ownerApp="Projects" title="Work item types"
+    <moqui.server.SettingsEntry settingsKey="reference.workItemTypes" version="1" ownerApp="Projects" title="Work item types"
             description="The kinds of work item and their fields" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/WorkItemTypes" configuredBy="Projects managers"
+            scopeEnumId="AdmScOrganization" destinationRoute="projectsWorkItemTypes"
+            screenLocation="component://mr-boss/screen/Projects/Settings/WorkItemTypes.xml" configuredBy="Projects managers"
             sequenceNum="280"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.workflows" version="1" ownerApp="Projects" title="Work item workflows"
+    <moqui.server.SettingsEntry settingsKey="reference.workflows" version="1" ownerApp="Projects" title="Work item workflows"
             description="The statuses a work item moves through and the moves allowed" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/Workflows" configuredBy="Projects managers"
+            scopeEnumId="AdmScOrganization" destinationRoute="projectsWorkflows"
+            screenLocation="component://mr-boss/screen/Projects/Settings/Workflows.xml" configuredBy="Projects managers"
             sequenceNum="290"/>
-    <ironstone.admin.SettingsEntry settingsKey="reference.reasonCodes" version="1" ownerApp="Manufacturing" title="Production reason codes"
-            description="Reasons for scrap, downtime and rework" settingsGroupEnumId="AdmSgReference"
-            scopeEnumId="AdmScOrganization" screenPath="Manufacturing/Settings/ReasonCodes"
+    <moqui.server.SettingsEntry settingsKey="reference.reasonCodes" version="1" ownerApp="Manufacturing"
+            title="Production reason codes" description="Reasons for scrap, downtime and rework"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization" destinationRoute="manufacturingReasonCodes"
+            screenLocation="component://mr-boss/screen/Manufacturing/Settings/ReasonCodes.xml"
             configuredBy="Production or resource administrator" sequenceNum="300"/>
     <!-- Tools (the framework's generic editors, an instance administrator's): status flows, and every message and label -->
-    <ironstone.admin.SettingsEntry settingsKey="reference.statusFlows" version="1" ownerApp="Tools" title="Status flows"
+    <moqui.server.SettingsEntry settingsKey="reference.statusFlows" version="1" ownerApp="Tools" title="Status flows"
             description="The generic status-flow editor; an app's own workflow screen is the place to change its flow"
-            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="tools/StatusFlows"
-            configuredBy="Instance administrator" sequenceNum="310"/>
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" destinationRoute="toolsStatusFlows"
+            screenLocation="component://tools/screen/Tools.xml" configuredBy="Instance administrator" sequenceNum="310"/>
     <!-- Insights P6 (impl-insights P6; design-insights §4 Drill and business annotations, §5 Analysis, §10): drill, Analysis, the
         record contexts and business events.
         Drill: the report engine's get#Drill, a reading operation (it reads a saved panel as the viewer and each dataset by its own
@@ -4318,9 +4303,12 @@ along with this software (see the LICENSE.md file). If not, see
         The copied ScheduledReports (BOSS_INS_LEGACY, impl-insights F20) is replaced by Insights' own list, every Insights user's to
         open (Received is every reader's): the group's last pattern row is reloaded as a plain name, which no screen location
         equals, so it denies nothing (as F65's rows), on a fresh load and an existing instance alike. No screen grant is added:
-        the root's ALLOW opens Scheduled reports and Management digest, each transition reaches an ironstone.insights
-        DeliveryServices operation that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself, and the report engine's
-        operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. -->
+        the root's ALLOW opens Scheduled reports and Management digest. Scheduled reports' three screens are the framework's
+        Dashboards screens, mounted by location (mr-moqui plans/Admin-Screens-Down.md, Track I): no row names them or a
+        transition of theirs, each transition reaches the report engine's operations as the viewer, and those stay denied
+        (BOSS_INS_REPORT_ENGINE) but for the grants below, which are therefore who may schedule, deliver to others and read
+        deliveries. Management digest's transitions reach ironstone.insights DeliveryServices, which checks the INSIGHTS_*
+        permissions itself. -->
     <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
         <artifacts artifactName="component://mr-boss/screen/Insights/ScheduledReports\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
@@ -4339,7 +4327,12 @@ along with this software (see the LICENSE.md file). If not, see
         recipient; a recipient other than the owner also needs the group delivery artifact below), the owner's list, pause,
         Send now, retry and reconciliation. P1's BOSS_INS_REPORT_SCHEDULE keeps the distributor's create#Schedule (owner mode),
         which no Insights screen calls; a schedule it makes over a business dataset is held to the same recipient check at
-        each run (mr-moqui crates/moqui-report/src/delivery.rs). -->
+        each run (mr-moqui crates/moqui-report/src/delivery.rs). And what the framework's schedule screens read and write
+        beside the engine's own: the screen schedules a user set up for themselves (the copied scheduled finds, listed under
+        Mine and changed in their timing: find#ScreenSchedules, store#ScreenSchedule, each the caller's own rows alone), and
+        find#ReportRecipients, which the list asks at every render and which answers an account or a group only to a caller
+        who holds the group delivery artifact below (the distributor), and then only Insights' readers (the root's
+        reportPolicy names INSIGHTS_VIEW). -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_OWN" description="Insights: scheduling reports for oneself">
         <artifacts artifactName="org.moqui.report.ReportServices.store#Schedule" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.list#Schedules" artifactTypeEnumId="AT_SERVICE"/>
@@ -4347,6 +4340,9 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.send#Report" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.retry#ReportRecipients" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.reconcile#ReportRecipient" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ScreenSchedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.store#ScreenSchedule" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ReportRecipients" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_OWN_READ" userGroupId="BOSS_INSIGHTS_READ"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_OWN_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
@@ -4458,19 +4454,21 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- Admin's settings index entries of P11 (design §14.2), each shown to a user its screen opens to -->
-    <ironstone.admin.SettingsEntry settingsKey="admin.connections" version="1" ownerApp="Admin" title="Connections"
+    <moqui.server.SettingsEntry settingsKey="admin.connections" version="1" ownerApp="Admin" title="Connections"
             description="The payment, shipping and tax gateways, remote systems, mail sign-in providers and printers this instance reaches, with their addresses and credentials, and the organizations a payment gateway is permitted for"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Integrations/Connections"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminConnection" screenLocation="component://mr-boss/screen/Admin/Integrations/Connections.xml"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="111"/>
-    <ironstone.admin.SettingsEntry settingsKey="admin.mailRelays" version="1" ownerApp="Admin" title="Mail relays"
-            description="The outgoing mail servers the instance sends its own mail through"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/MailRelays"
+    <moqui.server.SettingsEntry settingsKey="admin.mailRelays" version="1" ownerApp="Admin" title="Mail relays"
+            description="The outgoing mail servers the instance sends its own mail through" settingsGroupEnumId="AdmSgInstance"
+            scopeEnumId="AdmScInstance" destinationRoute="adminMailRelay" screenLocation="component://mr-boss/screen/Admin/Protocols/MailRelays.xml"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
     <!-- Insights P8 (impl-insights P8; design-insights §8, §1.1; INS-07): business alerts. No screen grant is added: the root's
-        ALLOW opens Business alerts (the list and AlertDetail), each transition reaches an ironstone.insights AlertServices
-        operation that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself (reading one's own state and deliveries is every
-        reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. A rule is
-        saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
+        ALLOW opens Business alerts (the list and AlertDetail, the framework's alert screens included at Insights' own
+        locations: mr-moqui plans/Admin-Screens-Down.md, Track I), each transition they take in is refused unless Insights'
+        policy lets the caller set an alert (INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE; reading one's own state and deliveries
+        is every reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below.
+        A rule is saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
         (BOSS_INS_REPORT_DISTRIBUTE): the engine holds a rule over business data to an audience in place of contact points and
         checks every recipient (mr-moqui crates/moqui-report/src/alert_delivery.rs); telling anyone but oneself needs the
         engine's group delivery artifact, the distributor's (BOSS_INS_GROUP_DELIVERY). Alert evaluation stays the engine's job
@@ -4705,15 +4703,12 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- The protocols in Health (design §14 readiness): the framework's protocol readiness, read as the viewer, a check for
         each protocol that is turned on and failing or running without its trust -->
-    <ironstone.admin.ReadinessProvider providerKey="admin.protocols" version="1" ownerApp="Admin" title="Protocols"
-            healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance"
-            serviceName="org.moqui.admin.ConfigurationServices.get#ProtocolReadiness"
-            requiredPermission="ADMIN_CONNECTION_VIEW" fixPath="Admin/Protocols/Home" sequenceNum="35"/>
     <!-- Admin's settings index entry of P12 (design §14.2), shown to a user its screen opens to -->
-    <ironstone.admin.SettingsEntry settingsKey="admin.protocols" version="1" ownerApp="Admin" title="Mail and protocols"
+    <moqui.server.SettingsEntry settingsKey="admin.protocols" version="1" ownerApp="Admin" title="Mail and protocols"
             description="What the server speaks besides the web (mail reception, SSH and Git, chat, calls and phones), the configuration each runs with and the checks of it"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/Home"
-            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Whoever operates the server" sequenceNum="113"/>
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminProtocols" screenLocation="component://mr-boss/screen/Admin/Protocols/Home.xml" viewPermission="ADMIN_CONNECTION_VIEW"
+            configuredBy="Whoever operates the server" sequenceNum="113"/>
     <!-- Insights P10 (impl-insights P10, §4; design-insights §11 Settings, DataReadiness, §1.2 "Assist and MCP analytics"; INS-01,
         INS-09, INS-10): Settings, data readiness and Assist. -->
     <!-- The organization's analytics defaults (impl-insights §4): PartySetting types registered for internal organizations, so
@@ -4752,28 +4747,14 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Insights' row in Admin's settings index (owner contract, design-admin §14.2): shown to a viewer whose own groups open the
         route and who holds INSIGHTS_SETTINGS_VIEW. Its sources' readiness is Data readiness (one provider per source, so the
         entry names none). -->
-    <ironstone.admin.SettingsEntry settingsKey="insights.settings" version="1" ownerApp="Insights" title="Insights settings"
+    <moqui.server.SettingsEntry settingsKey="insights.settings" version="1" ownerApp="Insights" title="Insights settings"
             description="Analytics defaults by organization: the Home dashboard, flow map and digest, display time zone and week, source freshness and the group recipient cap; data readiness of the business datasets"
-            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="Insights/Settings/AnalyticsSettings"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="insightsSettings"
+            screenLocation="component://mr-boss/screen/Insights/Settings/AnalyticsSettings.xml"
             viewPermission="INSIGHTS_SETTINGS_VIEW" configuredBy="Insights administrator" sequenceNum="95"/>
-    <!-- Data readiness for every Insights reader (design §11 DataReadiness; §13.3 "Source quality"): Admin's get#Readiness alone,
-        beside BOSS_INS_READINESS (the author, the steward and the administrator, who also hold request#Refresh). Each provider's
-        own permission and its owner's check still decide what a reader sees; the reader requests no refresh. -->
-    <artifactGroups artifactGroupId="BOSS_INS_READINESS_READ" description="Insights: reading Admin's readiness registry">
-        <artifacts artifactName="ironstone.admin.RegistryServices.get#Readiness" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_INS_READINESS_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-        <authz artifactAuthzId="BOSS_INS_READINESS_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-        <authz artifactAuthzId="BOSS_INS_READINESS_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-    </artifactGroups>
+    <!-- Data readiness for every Insights reader (design §11 DataReadiness; §13.3 "Source quality"): the framework's
+        get#Readiness, any signed-in user's. Each provider's own permission and its owner's check decide what a reader sees;
+        a refresh asks its registration's permission (INSIGHTS_DATASET_EDIT), which a reader does not hold. -->
     <!-- and the engine's listing of the business datasets a viewer reads (find#BusinessDatasets, which answers a non-steward only
         the admitted datasets they read): each source's readiness check and Assist's choice of datasets read it, so the reading
         groups hold it as the author and the steward do (BOSS_INS_DATASET_READ above), ALWAYS past BOSS_INS_REPORT_ENGINE's
@@ -4862,9 +4843,10 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- Admin's settings index entry of P13 (design §14.2), shown to a user its screen opens to -->
-    <ironstone.admin.SettingsEntry settingsKey="admin.messageTypes" version="1" ownerApp="Admin" title="Message types"
+    <moqui.server.SettingsEntry settingsKey="admin.messageTypes" version="1" ownerApp="Admin" title="Message types"
             description="The kinds of message exchanged with other systems: what sends and consumes each, among the handlers its owner registered, and its transport options"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Integrations/MessageTypes"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminMessageTypes" screenLocation="component://mr-boss/screen/Admin/Integrations/MessageTypes.xml"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="114"/>
 
     <!-- Admin P14 (impl-admin P14; design-admin §2, §10): notification topics for the configuration administrator. The
@@ -4888,10 +4870,11 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- Admin's settings index entry of P14 (design §14.2), shown to a user its screen opens to -->
-    <ironstone.admin.SettingsEntry settingsKey="admin.topics" version="1" ownerApp="Admin" title="Notification topics"
+    <moqui.server.SettingsEntry settingsKey="admin.topics" version="1" ownerApp="Admin" title="Notification topics"
             description="What people are notified about and how each topic is delivered when a person chose nothing, for the topics their owners registered"
-            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Operations/Topics"
-            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="116"/>
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminTopics" screenLocation="component://mr-boss/screen/Admin/Operations/Topics.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="116"/>
 
     <!-- Admin P15 (impl-admin P15; design-admin §2, §11): the Data area (Imports, DataImport, ImportDetail) for the data
         operator and the administrator. The area is denied to the root group and opened whole to the two, with the root's
@@ -5147,13 +5130,21 @@ along with this software (see the LICENSE.md file). If not, see
         §14.2): the setup checks of each employer for the People administrator, called as the viewer, organization by
         organization. get#Readiness answers the registry's contract with no adapter, refusing an organization outside the
         viewer's scope by reason code. -->
-    <ironstone.admin.ReadinessProvider providerKey="people.setup" version="1" ownerApp="People" title="People setup"
-            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization" serviceName="mantle.humanres.PeopleServices.get#Readiness"
-            requiredPermission="PEOPLE_CONFIGURE" fixPath="People/Settings" sequenceNum="150"/>
-    <ironstone.admin.SettingsEntry settingsKey="people.settings" version="1" ownerApp="People" title="People settings"
+    <moqui.server.ReadinessProvider providerKey="people.setup" version="1" ownerApp="People" title="People setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.humanres.PeopleServices.get#Readiness" scopeParameters="organizationPartyId"
+            requiredPermission="PEOPLE_CONFIGURE" fixRoute="peopleSettings" sequenceNum="150"/>
+    <moqui.server.SettingsEntry settingsKey="people.settings" version="1" ownerApp="People" title="People settings"
             description="Each employer's setup checks: departments, and a manager for every employee"
-            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="People/Settings"
-            viewPermission="PEOPLE_CONFIGURE" configuredBy="People administrator" providerKey="people.setup" sequenceNum="85"/>
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="peopleSettings"
+            screenLocation="component://mr-boss/screen/People/Settings.xml" viewPermission="PEOPLE_CONFIGURE"
+            configuredBy="People administrator" providerKey="people.setup" sequenceNum="85"/>
+    <!-- The provider's service for Admin's users, as a direct call (the framework's registry calls a registered service as
+        the viewer, and its own grant is not inheritable: mr-moqui plans/Admin-Screens-Down.md A6): Mantle's get#Readiness
+        checks PEOPLE_CONFIGURE and the employer's scope itself. Under People its screens' grant covers it. -->
+    <artifactGroups artifactGroupId="BOSS_ADMIN" description="IronStone Admin App (via root screen)">
+        <artifacts artifactName="mantle.humanres.PeopleServices.get#Readiness" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+    </artifactGroups>
     <!-- impl-people P5: a position's activation to approve (Mantle's PeoplePositionApproval topic, PeopleApprovalSetupData.xml) opens
         the position under People, decided there, from People's Approvals or from the notification tray -->
     <moqui.security.user.NotificationTopic topic="PeoplePositionApproval"
@@ -5306,6 +5297,56 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_PAYROLL_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- impl-people P11 (design-people §7 LeavePolicies, LeavePolicyDetail, LeaveAllocations and LeaveBalances, §1.2, §1.4): HR's
+        leave editors (policies, a policy's detail and allocations) under Time & leave rather than Settings, as Holidays (the user's
+        call of Nov 11 put HR's own editors out of Settings): denied to the root user group, opened to the HR officers (ALWAYS) and to
+        the People administrator and ADMIN through their ALWAYS on the root. Leave balances are HR's and the managers' (an HR
+        reader's employers' employees, a manager's live reports, balances alone), denied to the root user group and to self-service.
+        Mantle's LeaveServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and PEOPLE_SELF_SERVICE and the employer or line
+        again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE" description="People leave policies and allocations">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(LeavePolicies|LeavePolicyDetail|LeaveAllocations)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- a self-service employee is not in the root user group; denied here too, so a grant of the Time area to them (their own
+            time and leave) never opens HR's editors -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_BALANCES" description="People leave balances">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/LeaveBalances.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- P11's review: the Time area is a self-service employee's by its inheritable ALLOW (BOSS_PPL_TIME, P10), so Leave
+            balances is denied to them here too; their own balances are SelfService's (get#MyBalances) -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P11: an employee's own leave balances, on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is
+        non-inheritable, so the service it calls needs its own) and as the Assistant's tool: get#MyBalances, which takes no party and
+        answers the caller's own employments alone (PEOPLE_SELF_SERVICE) -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_SELF" description="People own leave balances">
+        <artifacts artifactName="mantle.humanres.LeaveServices.get#MyBalances" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P11 (design-people §1.4 Assist: a self-scope read no screen of the Assistant's covers; exposeMcp N, as no HR service is
+        offered to MCP): the user's own leave balances. The tool is get#MyBalances, the self-scope form of get#Balances, since a tool's
+        parameters are the model's to fill and get#Balances answers an HR officer's or a manager's question about other people. -->
+    <moqui.agent.AgentToolExposure toolName="people_my_leave_balances" serviceName="mantle.humanres.LeaveServices.get#MyBalances"
+            title="My leave balances"
+            description="get#MyBalances: the signed-in user's own leave balances (never anyone else's), for each of their employments and leave types: the policy, what was granted, accrued, taken, expired and adjusted, the balance, what is pending and what is available, in days or hours; narrow by leaveTypeEnumId or give asOfDate for a past or future date. No leave reason is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
     <!-- Maintenance P1 (impl-maintenance P1, F1, F35, F50; design-maintenance §1.1, design-crosscut §1.4): the root user group and
         the capability groups; the administrator group BOSS_MAINTENANCE_ADMIN is above, with its ALWAYS on the root (F1). Groups are
         not nested: a Maintenance user is in BOSS_USERS, BOSS_MAINTENANCE and a capability group, the administrator in BOSS_USERS

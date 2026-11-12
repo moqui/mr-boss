@@ -113,8 +113,11 @@ function shell(user, menuOnly = false) {
 }
 
 // The screen sweeps' screens (P19; acceptance AdminTui and AdminServerStatic): [path under Admin, location] of every screen file
-// under screen/Admin and the shared screens its areas mount (Data/DataImport), but System, which is Tools' screens for ADMIN,
-// swept with Tools.
+// under screen/Admin, the shared screens its areas mount (Data/DataImport) and the framework's System screens its areas mount
+// by location (mr-moqui plans/Admin-Screens-Down.md: Operations' Jobs, JobRuns and JobRunDetail, Mail and protocols' MailRelays
+// and MailRelayDetail, Access' Capabilities and RowRules, Security's SignInPolicy, IdentityProviders and
+// IdentityProviderDetail, Audit's AuditChanges, Data's Exports and DataExport), but System, which is Tools' screens for
+// ADMIN, swept with Tools.
 function sweepScreens() {
     const base = "component://mr-boss/screen/"
     const found = []
@@ -127,7 +130,7 @@ function sweepScreens() {
         if (!/\.xml$/.test(area.location)) continue
         const areaName = area.location.substring(area.location.lastIndexOf("/") + 1).replace(/\.xml$/, "")
         for (const match of String(area.getText()).matchAll(
-            /<subscreens-item name="([A-Za-z0-9]+)" location="(component:\/\/mr-boss\/screen\/Shared\/[A-Za-z0-9]+\.xml)"/g
+            /<subscreens-item name="([A-Za-z0-9]+)" location="(component:\/\/(?:mr-boss\/screen\/Shared|tools\/screen\/System\/[A-Za-z0-9]+)\/[A-Za-z0-9]+\.xml)"/g
         ))
             if (!found.some(([known]) => known === areaName + "/" + match[1])) found.push([areaName + "/" + match[1], match[2]])
     }

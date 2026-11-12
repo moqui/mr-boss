@@ -25,15 +25,21 @@ along with this software (see the LICENSE.md file). If not, see
         <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ADMIN_OVERVIEW_VIEW') &amp;&amp; !ec.user.hasPermission('ADMIN_OPERATION_VIEW') &amp;&amp; ec.user.hasPermission('ADMIN_SETTINGS_VIEW')"
                 item="Topics"/>
         <subscreens-item name="Health" location="component://mr-boss/screen/Admin/Operations/Health.xml" menu-title="Health" menu-index="1"/>
-        <subscreens-item name="Jobs" location="component://mr-boss/screen/Admin/Operations/Jobs.xml" menu-title="Jobs" menu-index="2"/>
+        <!-- the framework's System › Operations screens (mr-moqui plans/Admin-Screens-Down.md): Jobs, JobRuns and JobRunDetail
+            by location, since no grant names them, they have no instance administrator's transition and Admin adds nothing;
+            JobDetail, Topics and TopicDetail are included in screens at their own locations here (JobDetail for the
+            transitions it takes in, the topics for BOSS_ADM_OPERATIONS_TOPICS) -->
+        <subscreens-item name="Jobs" location="component://tools/screen/System/Operations/Jobs.xml" menu-title="Jobs" menu-index="2"/>
         <subscreens-item name="JobDetail" location="component://mr-boss/screen/Admin/Operations/JobDetail.xml" menu-include="false"/>
-        <subscreens-item name="JobRuns" location="component://mr-boss/screen/Admin/Operations/JobRuns.xml" menu-title="Job runs" menu-index="3"/>
-        <subscreens-item name="JobRunDetail" location="component://mr-boss/screen/Admin/Operations/JobRunDetail.xml" menu-include="false"/>
+        <subscreens-item name="JobRuns" location="component://tools/screen/System/Operations/JobRuns.xml" menu-title="Job runs" menu-index="3"/>
+        <subscreens-item name="JobRunDetail" location="component://tools/screen/System/Operations/JobRunDetail.xml" menu-include="false"/>
         <subscreens-item name="Monitoring" location="component://mr-boss/screen/Admin/Operations/Monitoring.xml" menu-title="Monitoring" menu-index="4"/>
         <subscreens-item name="Topics" location="component://mr-boss/screen/Admin/Operations/Topics.xml" menu-title="Notification topics" menu-index="5"/>
         <subscreens-item name="TopicDetail" location="component://mr-boss/screen/Admin/Operations/TopicDetail.xml" menu-include="false"/>
-        <!-- P19: the readiness and support summary (design §16), opened from Health and ServerConfiguration -->
-        <subscreens-item name="SupportSummary" location="component://mr-boss/screen/Admin/Operations/SupportSummary.xml" menu-include="false"/>
+        <!-- P19: the readiness and support summary (design §16), opened from Health and ServerConfiguration: the framework's
+            System › Operations › SupportSummary by location (no grant names it, its one transition answers the redacted JSON
+            through org.moqui.admin.ReadinessServices, which asks ADMIN_OVERVIEW_VIEW, and Admin adds nothing) -->
+        <subscreens-item name="SupportSummary" location="component://tools/screen/System/Operations/SupportSummary.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminOperationsPanel" type="tab"/>

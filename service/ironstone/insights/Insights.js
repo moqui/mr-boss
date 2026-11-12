@@ -275,9 +275,12 @@ const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Pr
 // The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
 // (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
 // authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or
-// save; a panel's New alert rule opens Insights' own AlertDetail (P8) for one who may set an alert (INSIGHTS_AUTHOR or
-// INSIGHTS_DISTRIBUTE), never Tools' AlertRule with its contact points; Insights mounts no log context or definition import
-// (P12), and shares from its Dashboard (ShareDashboard), so the editor keeps a definition's group as it is.
+// save; an alert rule opens in Insights' AlertDetail (P8; the framework's AlertRule there, without its contact points), for
+// every reader, since the alerts one receives link it, and a panel's New alert rule is offered only to one who may set an
+// alert (reportPolicy's features.alert below); Insights mounts no log context or definition import
+// (P12), and shares from its Dashboard (the framework's ShareDashboard), so the editor keeps a definition's group as it
+// is. The alert list is
+// Insights' Rules (alerts); Insights has no shared contact points, silences or mute timings (alertShared).
 function reportLinks(capabilities) {
     const authors = capabilities.author || capabilities.datasetEdit
     return {
@@ -287,12 +290,65 @@ function reportLinks(capabilities) {
         panel: authors ? "//Insights/PanelDetail" : null,
         explore: "//Insights/ReportBuilder/Explore",
         split: "//Insights/ReportBuilder/Split",
+        // the playlists, one played in the app (the same screen with a playlist chosen) and one played full screen
+        playlists: "//Insights/Playlists",
         playlist: "//Insights/Playlists",
-        alertRule: capabilities.author || capabilities.distribute ? "//Insights/Alerts/AlertDetail" : null,
+        wallDisplay: "//Insights/WallDisplay",
+        alerts: "//Insights/Alerts/Rules",
+        alertRule: "//Insights/Alerts/AlertDetail",
+        alertShared: null,
         logContext: null,
         share: "//Insights/Dashboard",
-        // P6: each panel's menu offers Drill, Insights' own screen over the engine's get#Drill
-        drill: "//Insights/Drill"
+        // P6: each panel's menu offers Drill, Insights' own screen over the engine's get#Drill; Analysis is the author's
+        // and the steward's
+        drill: "//Insights/Drill",
+        analysis: authors ? "//Insights/ReportBuilder/Analysis" : null
+    }
+}
+// Insights' policy for the framework report screens it shows, the reportPolicy map they read beside reportLinks (mr-moqui
+// docs/tools/Monitoring.md, "Mounting the report screens"; tools/template/ReportMount.js). Data only, which the root sets and
+// no request supplies: the framework's transitions read it, and the engine's operation that acts still decides.
+// - features: who may set an alert (an author or a distributor: the framework's alert transitions refuse anyone else, a
+//   dataset steward too, who holds the engine's save) and who may share a dashboard or a playlist of their own (an
+//   author: the framework's share transitions refuse anyone else, a steward and a distributor too, who hold the save);
+// - range: the default reporting range (get#Context's defaults);
+// - datasetIdPrefix: what a dataset created in Insights is named with; written here only: the steward group's grant is on
+//   org.moqui.report.dataset.insights-* (BossSetupData), and the engine creates a dataset only under an id its creator's
+//   own grant names;
+// - datasetScopeLabel and datasetScopeHelp: the words of the dataset forms' scope field under Insights, the field that
+//   carries a row's organization (the rowFilterParameters entry it is sent in is the scope policy's own, which Mantle's
+//   organization policy registers as organizationField);
+// - recipientPermissionId: whom a distributor may propose and name, Insights' readers: the framework's schedule and alert
+//   screens ask find#ReportRecipients with it;
+// - reportEmailTemplateId: the message of a schedule saved under Insights, written here only;
+// - alertAudience: the fixed parts of an alert rule set under Insights, written here only: Insights' private topic, the
+//   message sent to a recipient's own address and the link a notification opens, which the framework's alert
+//   transitions write into every rule in place of contact points;
+// - shareGroups: the wall displays, offered beside the sharer's own groups. Being here gives no right: the engine's save
+//   accepts the group only from a sharer whose own grant holds its share artifact
+//   (org.moqui.report.share.BOSS_INSIGHTS_DISPLAY: the author's, BossSetupData BOSS_INS_SHARE_DISPLAY);
+// - calendar: the display zone and week start of the organization in scope (calendarParameters), nothing where it set none.
+// The recipient cap (recipientCap above) is not read for every request: the areas that deliver add it (deliveryPolicy
+// below, set by Scheduled reports and by Business alerts through the framework's ReportMount.js policyWith).
+function reportPolicy(capabilities, settings) {
+    const weekOffset = settings.weekStart
+        ? one("moqui.basic.Enumeration", {enumId: settings.weekStart, enumTypeId: "InsightsWeekStart"})?.enumCode || null
+        : null
+    return {
+        features: {alert: !!(capabilities.author || capabilities.distribute), share: !!capabilities.author},
+        range: {from: defaultRange.from, thru: defaultRange.thru},
+        datasetIdPrefix: "insights-",
+        datasetScopeLabel: "Organization field",
+        datasetScopeHelp: "The field that carries each row's organization",
+        recipientPermissionId: capabilityPermissions.view,
+        reportEmailTemplateId: "BOSS_INSIGHTS_REPORT",
+        alertAudience: {
+            topic: "InsightsBusinessAlert",
+            emailTemplateId: "BOSS_INSIGHTS_ALERT",
+            detailLink: "/qapps/Insights/Alerts/AlertDetail"
+        },
+        shareGroups: [{value: wallDisplayGroupId, label: "Wall displays"}],
+        calendar: settings.displayTimeZone || weekOffset ? {timeZone: settings.displayTimeZone || null, weekOffset} : null
     }
 }
 // The variables a dashboard's panels are fixed to under Insights, as Insights › Dashboard fixes them (design §4 Dashboard):
@@ -345,31 +401,31 @@ function context(p) {
         sharedLinks: Object.fromEntries(
             linkPaths.map(path => [path, "//Insights/" + path + (tabbedRecords.includes(path) ? "/InsightsRecord" : "")])
         ),
-        reportLinks: reportLinks(userScope.capabilities)
+        reportLinks: reportLinks(userScope.capabilities),
+        reportPolicy: reportPolicy(userScope.capabilities, settings)
     }
 }
 
 // ===== sharing (design §4 ShareDashboard) =====
-// The groups an author may share a dashboard with: their own groups, by name, never the implicit ALL_USERS. Sharing gives the
-// group the definition only; each viewer's queries still run with their own dataset grants.
-// P11 (design §4 Playlists): and the wall displays, every display account's group (BOSS_INSIGHTS_DISPLAY), which no person is
-// in: a playlist and its dashboards shared with it are read by the registered displays, each showing only what its own display
-// account's grants and organizations give.
+// A dashboard and a playlist are shared on the framework's screens (Dashboard's share and Playlists' sharePlaylist, taken in
+// by Insights' own: the policy's features.share and shareGroups above, and the report engine's save, which accepts only a
+// group of the sharer's own or one whose share artifact their own grant holds). What stays here is the group choice of
+// Insights' own forms (a saved report's copy, an analysis, a flow map, a digest): the user's own groups, by name, never the
+// implicit ALL_USERS. Sharing gives the group the definition only; each viewer's queries still run with their own dataset grants.
+// The wall displays' group (P11, design §4 Playlists), every display account's group (BOSS_INSIGHTS_DISPLAY), which no person
+// is in, is not among them: a playlist and its dashboards are shared with it on the framework's screens (the policy's
+// shareGroups), and are then read by the registered displays, each showing only what its own display account's grants and
+// organizations give.
 const wallDisplayGroupId = "BOSS_INSIGHTS_DISPLAY"
 function shareGroupIds() {
     return Array.from(ec.user.getUserGroupIdSet() || []).filter(groupId => groupId !== "ALL_USERS")
 }
 function shareGroups() {
     required()
-    const groups = Array.from(
-        find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds().concat([wallDisplayGroupId])).list()
-    )
+    const groups = Array.from(find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds()).list())
     return {
         groups: groups
-            .map(group => ({
-                value: group.userGroupId,
-                label: group.userGroupId === wallDisplayGroupId ? "Wall displays" : group.description || group.userGroupId
-            }))
+            .map(group => ({value: group.userGroupId, label: group.description || group.userGroupId}))
             .sort((a, b) => a.label.localeCompare(b.label))
     }
 }
@@ -386,35 +442,6 @@ function asViewerApart(name, parameters) {
     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
     return out
 }
-// share#Dashboard: the owner, an author, shares their dashboard with one of their own groups or makes it private again; the
-// engine's save checks the owner and the version read (expectedVersion) as for any save.
-function shareDashboard(p) {
-    const userScope = required()
-    if (!userScope.capabilities.author) denied("INSIGHTS_AUTHOR_REQUIRED", "Sharing a dashboard needs Insights authoring")
-    const group = p.userGroupId || null
-    if (group && group !== wallDisplayGroupId && !shareGroupIds().includes(group))
-        denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
-    const definition = asViewer("org.moqui.report.ReportServices.get#Definition", {definitionId: p.definitionId}).definition
-    // a dashboard, or (P11) a wall display playlist
-    const playlist = definition.type === "report" && definition.body?.kind === "playlist"
-    if (definition.type !== "dashboard" && !playlist) denied("DASHBOARD_REQUIRED", "Choose a dashboard or a playlist")
-    if (definition.readOnly || definition.ownerId !== ec.user.userId)
-        denied("DASHBOARD_NOT_OWNED", "Only the owner shares a dashboard; save a copy first")
-    const version = p.expectedVersion != null && p.expectedVersion !== "" ? Number(p.expectedVersion) : definition.version
-    const saved = asViewer("org.moqui.report.ReportServices.save#Definition", {
-        definition: {
-            id: definition.id,
-            type: definition.type,
-            title: definition.title,
-            body: definition.body,
-            version,
-            userGroupId: group
-        },
-        note: group ? "Shared with " + group : "Made private"
-    }).definition
-    return {definitionId: saved.id, userGroupId: saved.userGroupId || null, version: saved.version}
-}
-
 // A screen's read with its refusal as an answer (P12, impl-admin F129): a service-call with ignore-error clears the message, so
 // a screen cannot read a refusal's reason after it. With answerRefusal the read's refusal (a "CODE: text" error) is answered as
 // {refusalCode, refusal}; any other failure is logged and answered as FAILED with a plain sentence, never its text. Without
@@ -439,7 +466,12 @@ function answering(parameters, read) {
     }
 }
 
-const operations = {context, shareGroups, shareDashboard}
+// get#DeliveryPolicy: what a delivering area adds to the root's reportPolicy, the recipient cap of the caller's scope.
+function deliveryPolicy() {
+    return {recipientCap: recipientCap(required())}
+}
+
+const operations = {context, shareGroups, deliveryPolicy}
 ;({
     // the scope for a later phase's own module: the user's scope, the same refusing a user without Insights
     scope,

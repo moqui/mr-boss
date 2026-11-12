@@ -1,10 +1,8 @@
-// Admin's audit projections, ironstone.admin.AuditServices (design-admin §12 AuditChanges and AccessLog, §16 "Audit
-// evidence"; impl-admin P17): what Admin › Audit's two screens show, and their print and CSV, which are the same lists.
-//
-// Change evidence is the framework's org.moqui.admin.AuditServices.find#Changes: only registered projections of the audit
-// log, a record of an organization found by its owner (Mantle) within the user's organizations, a secret never a value.
-// Nothing here reads the audit log or runs with authorization off; this adds a record's place in Admin as a route, only when
-// that screen opens to the user.
+// Admin's access evidence, ironstone.admin.AuditServices (design-admin §12 AccessLog, §16 "Audit evidence"; impl-admin
+// P17): what Admin › Audit's AccessLog shows, and its print and CSV, which are the same list. Change evidence, the area's
+// other screen, is the framework's (System › Audit's AuditChanges mounted by location, over
+// org.moqui.admin.AuditServices.find#Changes; mr-moqui plans/Admin-Screens-Down.md): nothing of it is here, and a
+// record's place in Admin is a route of the mount (Admin.js mountRoutes).
 //
 // Access evidence is the report engine's own read of the shipped dataset admin-access-log (report/admin-access-log.json: the
 // log lines of the two audit targets, moqui.report.audit and moqui.monitor.audit, by the dataset's fixed row filter). The
@@ -31,19 +29,12 @@ const lineText = (value, maxLength = 255) =>
     text(value)
         .replace(/[\u0000-\u001f\u007f]+/g, " ")
         .slice(0, maxLength)
-function call(name, parameters = {}) {
-    const out = ec.service.sync().name(name).parameters(parameters).call() || {}
-    if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-    return out
-}
 // The user's Admin scope, refusing one who may not read audit evidence.
 function auditScope() {
     const userScope = adminLib().required()
     if (!userScope.capabilities.auditView) throw new Error("ADMIN_AUDIT_VIEW is required")
     return userScope
 }
-const scopeText = userScope =>
-    userScope.ownerIds ? "The organizations you administer" : "Every organization, and what belongs to the whole instance"
 const pagingOf = (name, count, pageIndex, size, shownCount) => ({
     [name + "Count"]: count,
     [name + "PageIndex"]: pageIndex,
@@ -52,79 +43,6 @@ const pagingOf = (name, count, pageIndex, size, shownCount) => ({
     [name + "PageRangeLow"]: shownCount ? pageIndex * size + 1 : 0,
     [name + "PageRangeHigh"]: pageIndex * size + shownCount
 })
-
-// ===== change evidence =====
-// A registration's linkKey as a route under Admin, with the parameter its record's key goes in (none: the list or the area).
-const recordRoutes = {
-    adminGroup: ["Access/GroupDetail", "userGroupId"],
-    adminUser: ["Users/UserDetail", "userId"],
-    adminInvitations: ["Users/Invitations"],
-    adminLifecycle: ["Users/LifecycleDetail", "operationId"],
-    adminOrganization: ["Settings/OrganizationDetail", "organizationPartyId"],
-    adminIdentityProvider: ["Security/IdentityProviderDetail", "authFlowId"],
-    adminInstanceSettings: ["Settings/InstanceSettings"],
-    adminLocalization: ["Settings/Localization"],
-    adminMessageType: ["Integrations/MessageTypeDetail", "systemMessageTypeId"],
-    adminConnection: ["Integrations/Connections"],
-    adminMailRelay: ["Protocols/MailRelays"],
-    adminSystemMessage: ["Integrations/SystemMessageDetail", "systemMessageId"],
-    adminJob: ["Operations/JobDetail", "jobName"],
-    adminTopic: ["Operations/TopicDetail", "topic"],
-    adminExports: ["Data/Exports"],
-    adminImport: ["Data/Imports"],
-    adminBackups: ["Data/Backups"]
-}
-function changeEvidence(p) {
-    const userScope = auditScope()
-    const filters = {}
-    for (const name of ["category", "auditProjectionId", "changedByUserId", "recordKey", "correlation", "fromDate", "thruDate"])
-        if (text(p[name])) filters[name] = text(p[name])
-    // by default what people changed: a data load's own rows, which name no user, are shown only when asked for
-    if (text(p.madeBy) !== "all") filters.actorOnly = true
-    const forExport = p.forExport === true
-    const found = call(
-        "org.moqui.admin.AuditServices.find#Changes",
-        Object.assign(filters, forExport ? {forExport: true} : {pageIndex: Math.max(Number(p.pageIndex) || 0, 0), pageSize})
-    )
-    // a record's place only when its screen opens to the user: an audit reader is given no way into a screen they cannot open
-    const opens = {}
-    const recordUrl = change => {
-        const route = Object.hasOwn(recordRoutes, text(change.linkKey)) ? recordRoutes[change.linkKey] : null
-        if (!route) return ""
-        if (!Object.hasOwn(opens, route[0])) opens[route[0]] = adminLib().destinationOpens(userScope.grants, "Admin/" + route[0])
-        if (!opens[route[0]]) return ""
-        return (
-            "/qapps/Admin/" +
-            route[0] +
-            (route[1] && change.linkId ? "?" + route[1] + "=" + encodeURIComponent(change.linkId) : "")
-        )
-    }
-    return {
-        changeList: Array.from(found.changeList || []).map(change =>
-            Object.assign({}, change, {
-                recordUrl: recordUrl(change),
-                beforeText: change.masked ? change.before || "" : (change.before ?? ""),
-                afterText: change.masked ? change.after || "(" + change.marker + "; not shown)" : (change.after ?? "")
-            })
-        ),
-        changeListCount: found.changeListCount,
-        changeListPageIndex: found.changeListPageIndex,
-        changeListPageSize: found.changeListPageSize,
-        changeListPageMaxIndex: found.changeListPageMaxIndex,
-        changeListPageRangeLow: found.changeListPageRangeLow,
-        changeListPageRangeHigh: found.changeListPageRangeHigh,
-        truncated: found.truncated === true,
-        notice: found.notice || null,
-        sourceProblems: Array.from(found.sourceProblems || []),
-        projectionOptions: Array.from(found.projectionList || []).map(row => ({
-            value: row.auditProjectionId,
-            label: row.description
-        })),
-        categoryOptions: Array.from(found.categoryList || []).map(row => ({value: row.category, label: row.description})),
-        exportRows: found.exportRows,
-        scopeText: scopeText(userScope)
-    }
-}
 
 // ===== access evidence =====
 const sources = {reports: ["moqui.report.audit", "Reports"], monitoring: ["moqui.monitor.audit", "Monitoring"]}
@@ -348,7 +266,7 @@ function accessLogRowFilter(p) {
     return {filter: {field: {name: "user.id", op: "in", values: lines.userIds}}}
 }
 
-const operations = {changeEvidence, accessLog, accessLogRowFilter}
+const operations = {accessLog, accessLogRowFilter}
 ;({
     execute: (op, parameters) => {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown audit operation " + op)

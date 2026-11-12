@@ -500,11 +500,13 @@ seeds); stage M0.
   `mantle.marketing.MarketingWorkspaceServices.get#Home`, `get#Upcoming` and `get#Attention`, each source answering
   by name and showing "Not available" until its phase; a failing source is named and the others shown.
 - **Settings** (design §12): SettingsIndex over `get#Settings`, listing the entries built so far; Marketing's row in
-  Admin's settings index (`ironstone.admin.SettingsEntry`, as Commerce's at BossSetupData.xml:2572), group
+  Admin's settings index (`moqui.server.SettingsEntry`, the framework's since Nov 11, 2026, impl-admin §9; as
+  Commerce's row in BossSetupData.xml), group
   Applications, scope organization, `MARKETING_CONFIGURE`, naming the readiness provider below.
 - **Readiness** (§4; F59): `MarketingWorkspaceServices.get#Readiness`, the checks of what is built, each with its
-  fix link, and the provider `marketing.setup` in Admin's registry (`ironstone.admin.ReadinessProvider`, as
-  Products' at BossSetupData.xml:2559), scope organization, `MARKETING_CONFIGURE`, fix path Marketing/Settings. P1
+  fix link, and the provider `marketing.setup` in the readiness registry (`moqui.server.ReadinessProvider`, the
+  framework's since Nov 11, 2026; as Products' row in BossSetupData.xml), scope organization,
+  `MARKETING_CONFIGURE`, fix place Marketing/Settings as a `fixRoute` key of Admin's mount. P1
   answers unowned lists and segments awaiting adoption; later phases add theirs (no policy, P2; no ready sending
   profile, P6; a mount with nothing published, P7; failed jobs and captures, P9–P17).
 - **Demo data.** BossUsersDemoData gains a user per group (`marketing.author`, `.audience`, `.approver`,

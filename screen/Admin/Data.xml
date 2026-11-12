@@ -12,18 +12,24 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Data area of IronStone Admin (design-admin §1.2, §11; impl-admin P15): Imports, the runs of every registered import
-    target (the default), DataImport, the shared import wizard mounted for the target a request names (Shared/DataImport), and
-    ImportDetail, one import's summary and results with the retry of failed rows. For the data operator and the administrator
-    (BOSS_ADM_DATA, the whole area). The area's grant is an inheritable ALWAYS, as every app area's: it authorizes the
-    artifacts below it, an owner's registered services too, so it is not what decides an import. Every read and step is the
-    framework's org.moqui.admin.DataTransferServices, which checks ADMIN_TRANSFER_VIEW, each target's own permissions and
-    scope, and calls an owner's service as the user; that service checks its own permission and scope itself (a target
-    whose services did not would be open to this area's users: impl-admin P15 Review). P16 adds Exports (the exports made and
-    the deliveries of scheduled reports as status), DataExport (the export of a registered format, by the same services) and
-    Backups (the framework's org.moqui.admin.BackupServices, which check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN): the backup
-    operator opens only Backups here (BOSS_ADM_DATA_BACKUPS: the area's screen without its other subscreens) and lands on
-    it; the data operator opens Backups too and is told it is not available. -->
+<!-- The Data area of IronStone Admin (design-admin §1.2, §11; impl-admin P15, P16; mr-moqui plans/Admin-Screens-Down.md A5):
+    the framework's System › Data screens under this root, with what Admin adds. Imports, the runs of every registered
+    import target (the default), and ImportDetail, one import's summary and results with the retry of failed rows, are
+    Admin's own screens around the System screens' parts: the organization as a filter, and the import read with the
+    wizard's context (an organization by its name). DataImport is the shared import wizard mounted for the target a
+    request names (Shared/DataImport), which the System screens link by the mount's dataImport route. Exports (the
+    exports made and the deliveries of scheduled reports as status) and DataExport (the export of a registered format)
+    are the System screens mounted by location: no grant names them, they have no part for the instance administrator,
+    and Admin adds nothing to them. Backups is the System screen in a wrapper at Admin's location, which
+    BOSS_ADM_DATA_BACKUPS names. For the data operator and the administrator (BOSS_ADM_DATA, the whole area). The area's
+    grant is an inheritable ALWAYS, as every app area's: it authorizes the artifacts below it, an owner's registered
+    services too, so it is not what decides an import or an export. Every read and step is the framework's
+    org.moqui.admin.DataTransferServices, which check ADMIN_TRANSFER_VIEW and ADMIN_TRANSFER_RUN, each target's own
+    permissions and scope, and call an owner's service as the user; that service checks its own permission and scope
+    itself (a target whose services did not would be open to this area's users: impl-admin P15 Review). The backups are
+    org.moqui.admin.BackupServices', which check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN: the backup operator opens only
+    Backups here (BOSS_ADM_DATA_BACKUPS: the area's screen without its other subscreens) and lands on it; the data
+    operator opens Backups too and is told it is not available. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Data" default-menu-index="9" menu-image="sym_o_swap_vert" menu-image-type="icon">
     <subscreens default-item="Imports" always-use-full-path="true">
@@ -33,8 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Imports" location="component://mr-boss/screen/Admin/Data/Imports.xml" menu-title="Imports" menu-index="1"/>
         <subscreens-item name="DataImport" location="component://mr-boss/screen/Shared/DataImport.xml" menu-title="Import" menu-index="2"/>
         <subscreens-item name="ImportDetail" location="component://mr-boss/screen/Admin/Data/ImportDetail.xml" menu-include="false"/>
-        <subscreens-item name="Exports" location="component://mr-boss/screen/Admin/Data/Exports.xml" menu-title="Exports" menu-index="3"/>
-        <subscreens-item name="DataExport" location="component://mr-boss/screen/Admin/Data/DataExport.xml" menu-title="Export data" menu-index="4"/>
+        <subscreens-item name="Exports" location="component://tools/screen/System/Data/Exports.xml" menu-title="Exports" menu-index="3"/>
+        <subscreens-item name="DataExport" location="component://tools/screen/System/Data/DataExport.xml" menu-title="Export data" menu-index="4"/>
         <subscreens-item name="Backups" location="component://mr-boss/screen/Admin/Data/Backups.xml" menu-title="Backups" menu-index="5"/>
     </subscreens>
     <widgets>

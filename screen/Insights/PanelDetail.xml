@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     Dashboards/Definition.xml) for one library panel, hidden from the menu. P4 adds BusinessMeasure (the panel's registered
     measure, its version and read-only basis: RegistryServices.store#PanelMeasure), Target (design §4's typed input:
     store#PanelTarget; a money target needs the panel filtered to that one currency, and a missing or zero target is an
-    unavailable comparison) and Dependencies (the definitions that use the panel, find#DefinitionUses).
+    unavailable comparison). Dependencies (the definitions that use the panel) is the framework editor's own "Used in" list,
+    with each definition's link.
     The author and the dataset steward open it (BOSS_INS_AUTHORING); save, copy, restore and delete run here and return here
     or to Insights' lists (the root's reportLinks), the dataset choices are the datasets the author may read, and sharing is
     Insights › Dashboard's ShareDashboard, so the editor's save keeps the group as it is (a posted group is not taken); save and
@@ -50,7 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <!-- BusinessMeasure, Target and Dependencies: a saved library panel only (a new one is saved first) -->
+        <!-- BusinessMeasure and Target: a saved library panel only (a new one is saved first) -->
         <if condition="definitionId">
             <service-call name="org.moqui.report.ReportServices.get#Definition" in-map="{definitionId:definitionId}"
                     out-map="panelFound" transaction="force-new" ignore-error="true"/>
@@ -74,10 +75,6 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="targetText" from="!panelTarget.targetKind ? 'No target: the comparison is unavailable.' :
                     (panelTarget.targetKind === 'constant' ? 'Target ' + panelTarget.targetValue + (panelTarget.targetUnitId ? ' ' + panelTarget.targetUnitId : '')
                     : 'Target measure ' + panelTarget.targetMetricId) + ', better ' + panelTarget.betterDirection + ', over ' + panelTarget.periodBinding"/>
-            <service-call name="org.moqui.report.ReportServices.find#DefinitionUses" in-map="{definitionId:definitionId}"
-                    out-map="panelUsesFound" transaction="force-new" ignore-error="true"/>
-            <script>ec.message.clearErrors()</script>
-            <set field="panelUses" from="panelUsesFound?.usedIn || []"/>
         </if>
     </actions>
     <widgets>
@@ -141,17 +138,6 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                         </container-dialog>
                     </box-body>
-                </container-box>
-                <container-box>
-                    <box-header title="Used in"/>
-                    <box-body-nopad>
-                        <form-list name="Dependencies" list="panelUses" skip-form="true" paginate="false">
-                            <field name="title"><default-field title="Definition"><display/></default-field></field>
-                            <field name="type"><default-field title="Kind"><display/></default-field></field>
-                            <field name="readOnly"><default-field title="Shipped"><display text="${readOnly ? 'Yes' : ''}"/></default-field></field>
-                        </form-list>
-                        <label text="Nothing you can read uses this panel." type="p" style="q-pa-md m-muted" condition="!panelUses.length"/>
-                    </box-body-nopad>
                 </container-box>
             </widgets>
         </section>

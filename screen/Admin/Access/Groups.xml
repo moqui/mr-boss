@@ -12,13 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Groups (design-admin §5 Groups; style-guide §3.2 List): the grant bundles and their use, from the framework's
-    org.moqui.admin.AccessServices.find#Groups (ADMIN_ACCESS_VIEW). GroupFind narrows by name, app, kind (registered bundles,
-    custom groups, the others) and a permission granted now; GroupList shows each group's members, app gates and the markers
-    read from the effective lists: privileged (only a member changes its members) and the sealed permissions it grants (only a
-    holder grants them), so a refusal is explained before it happens. CreateGroup (create#Group, ADMIN_ACCESS_MANAGE) makes a
-    custom group of a registered purpose, never privileged. No "administrator" shortcut: ADMIN users keep Tools System › Security
-    for what this delegated screen does not offer. -->
+<!-- Groups (design-admin §5 Groups; mr-moqui plans/Admin-Screens-Down.md): the framework's System › Access groups list at
+    this location, with the one transition an access administrator uses: createGroup, through
+    org.moqui.admin.AccessServices.create#Group, which checks ADMIN_ACCESS_MANAGE and makes a custom group of a registered
+    purpose, never privileged. The System screen's own part for the instance administrator (a group of any id and type
+    created directly) is not shown under a mount and its transition is not taken in, so it does not exist on this route. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Groups" menu-image="sym_o_group" menu-image-type="icon">
     <parameter name="text"/>
@@ -26,127 +24,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="kind"/>
     <parameter name="userPermissionId"/>
 
-    <transition name="createGroup">
-        <actions>
-            <service-call name="org.moqui.admin.AccessServices.create#Group" out-map="created"
-                    in-map="{userGroupId:userGroupId, description:description, groupTypeEnumId:groupTypeEnumId}"/>
-            <if condition="!ec.message.hasError() &amp;&amp; !created.applied">
-                <script>ec.message.addMessage(created.reason, 'warning')</script>
-            </if>
-            <if condition="!ec.message.hasError() &amp;&amp; created.applied">
-                <message type="success">Group ${created.userGroupId} created; add its grants and members</message>
-            </if>
-        </actions>
-        <conditional-response url="../GroupDetail" condition="created?.applied">
-            <parameter name="userGroupId" from="created.userGroupId"/></conditional-response>
-        <default-response url="."/>
-        <error-response url="."/>
-    </transition>
+    <transition-include name="createGroup" location="component://tools/screen/System/Access/Groups.xml"/>
 
-    <actions>
-        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.find#Groups', {text:(text || null), appName:(appName || null), kind:(kind || null), userPermissionId:(userPermissionId || null)}, 'The groups are not available to you.')"/>
-        <set field="found" from="called.out"/>
-        <set field="failure" from="called.failure"/>
-        <set field="groups" from="(found?.groupList || []).map(row => Object.assign({}, row, {
-                kindName: row.kind === 'registered' ? 'Registered' : row.kind === 'custom' ? 'Custom' : 'Other',
-                gatesText: row.appGates.join(', '),
-                sealedText: row.sealedPermissionIds.join(', '),
-                policyText: [row.requireAuthcFactor ? 'Factor required' : '', row.ipLimited ? 'IP limited' : ''].filter(Boolean).join(', ')}))"/>
-        <set field="appOptions" from="(found?.appNames || []).map(name => ({value: name, label: name}))"/>
-        <set field="purposeOptions" from="found?.purposeOptions || []"/>
-        <set field="canManage" from="!!found?.canManage"/>
-        <set field="filtered" from="!!(text || appName || kind || userPermissionId)"/>
-        <set field="findValues" from="{text:text, appName:appName, kind:kind, userPermissionId:userPermissionId}"/>
-    </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col">
-                <label text="Groups" type="h5"/>
-                <label text="Groups are grant bundles: a member gets the group's permissions and app gates. Privileged groups change only by their members; sealed permissions are granted only by their holders."
-                        type="p" style="text-caption m-muted q-mb-none"/>
-            </container>
-            <container style="col-auto">
-                <container-dialog id="CreateGroupDialog" button-text="New group" icon="sym_o_group_add" width="560" title="New custom group"
-                        condition="canManage">
-                    <label type="p" text="A custom group starts with no members or grants and is never privileged. Grant it permissions from the registered bundles."/>
-                    <form-single name="CreateGroup" transition="createGroup" focus-field="userGroupId">
-                        <field name="userGroupId">
-                            <default-field title="Identifier" tooltip="Capital letters, digits and underscores, starting with a letter">
-                                <text-line size="30" maxlength="60"/>
-                            </default-field>
-                        </field>
-                        <field name="description"><default-field title="Description"><text-line size="50"/></default-field></field>
-                        <field name="groupTypeEnumId">
-                            <default-field title="Purpose">
-                                <drop-down><list-options list="purposeOptions" key="${value}" text="${label}"/></drop-down>
-                            </default-field>
-                        </field>
-                        <field name="submitButton"><default-field title="Create group"><submit/></default-field></field>
-                    </form-single>
-                </container-dialog>
-            </container>
-        </container>
-        <form-single name="GroupFind" transition="." map="findValues">
-            <field name="text"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
-            <field name="appName">
-                <default-field title="App">
-                    <drop-down allow-empty="true"><list-options list="appOptions" key="${value}" text="${label}"/></drop-down>
-                </default-field>
-            </field>
-            <field name="kind">
-                <default-field title="Type">
-                    <drop-down allow-empty="true">
-                        <option key="registered" text="Registered bundles"/><option key="custom" text="Custom groups"/>
-                        <option key="supported" text="Registered and custom"/><option key="other" text="Other groups"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="userPermissionId"><default-field title="Permission"><text-line size="20"/></default-field></field>
-            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
-            <field-layout>
-                <field-row-big>
-                    <field-ref name="text"/>
-                    <field-ref name="appName"/>
-                    <field-ref name="kind"/>
-                    <field-ref name="userPermissionId"/>
-                    <field-ref name="submitButton"/>
-                </field-row-big>
-            </field-layout>
-        </form-single>
-        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
-        <container-box>
-            <box-body-nopad>
-                <form-list name="GroupList" list="groups" skip-form="true" paginate="true">
-                    <field name="userGroupId">
-                        <default-field title="Group">
-                            <link url="../GroupDetail" text="${description || userGroupId}" link-type="anchor"
-                                    parameter-map="{userGroupId:userGroupId}"/>
-                        </default-field>
-                    </field>
-                    <field name="userGroupIdText"><default-field title="ID"><display text="${userGroupId}" style="text-mono"/></default-field></field>
-                    <field name="appName"><default-field title="App"><display/></default-field></field>
-                    <field name="kindName"><default-field title="Type"><display text="${kindName}${purposeName ? ' · ' + purposeName : ''}"/></default-field></field>
-                    <field name="memberCount"><default-field title="Members"><display/></default-field></field>
-                    <field name="gatesText"><default-field title="App gates"><display/></default-field></field>
-                    <field name="markers">
-                        <default-field title="Markers">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[${privileged ? '<q-chip dense square class="q-ma-none q-mr-xs m-tonal text-negative">Privileged</q-chip>' : ''}${hasSealed ? '<q-chip dense square class="q-ma-none m-tonal text-warning" title="' + WebUtilities.encodeHtml(sealedText) + '">Sealed grants</q-chip>' : ''}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: [privileged ? 'Privileged' : '', hasSealed ? 'Sealed: ' + sealedText : ''].filter(Boolean).join('; ')})}]]></text>
-                                <text type="html">${[privileged ? 'Privileged' : '', hasSealed ? 'Sealed: ' + sealedText : ''].filter(Boolean).join('; ')}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="policyText"><default-field title="Sign-in"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="userGroupId"/><field-ref name="appName"/></column>
-                        <column><field-ref name="memberCount"/><field-ref name="markers"/></column>
-                    </columns>
-                </form-list>
-                <label type="p" style="q-pa-md m-muted" condition="!groups.length &amp;&amp; filtered" text="No group matches."/>
-                <label type="p" style="q-pa-md m-muted" condition="!groups.length &amp;&amp; !filtered &amp;&amp; !failure" text="No groups yet."/>
-            </box-body-nopad>
-        </container-box>
+        <include-screen location="component://tools/screen/System/Access/Groups.xml" share-scope="true"/>
     </widgets>
 </screen>

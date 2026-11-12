@@ -145,9 +145,14 @@ feature("the audit reader follows both with the actor and the reason, and no sec
         out.otherReader = asUser(users.audit, () => page("Audit/AuditChanges", {recordKey: ids.otherUserId}, "html"))
         out.otherAdmin = asUser(users.admin, () => page("Audit/AuditChanges", {recordKey: ids.otherUserId}, "html"))
         // what stays closed to the audit reader
-        out.closed = ["Access/Groups", "Protocols/MailRelays", "Users/Users", "Data/Exports", "System", "System/AuditLog"].map(
-            path => [path, asUser(users.audit, () => page(path))]
-        )
+        out.closed = [
+            "Access/Groups",
+            "Protocols/MailRelays",
+            "Users/Users",
+            "Data/Exports",
+            "System",
+            "System/Audit/AuditChanges"
+        ].map(path => [path, asUser(users.audit, () => page(path))])
         return out
     },
     then(out) {
@@ -175,6 +180,11 @@ feature("the audit reader follows both with the actor and the reason, and no sec
             "the audit reader reads Services' change"
         )
         assert(opened(out.otherAdmin) && out.otherAdmin.output.includes(otherReason), "the administrator does not")
+        // a record's place (the route of its registration's linkKey: a membership's is its group, the framework's
+        // adminGroup route) is a link for the administrator, whom Access › GroupDetail opens to, and only the record's
+        // name for the audit reader
+        assert(out.otherAdmin.output.includes("GroupDetail?userGroupId="), "the administrator has no link to the group")
+        assert(!out.grant.output.includes("GroupDetail?") && !out.relay.output.includes("MailRelays"), "the audit reader is given a link")
         for (const [path, rendered] of out.closed) assert(!opened(rendered), "the audit reader opened " + path)
     }
 })

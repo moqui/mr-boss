@@ -1,5 +1,8 @@
 # IronStone BOSS — Insights implementation
 
+Nov 11, 2026 — after the build, the screens with no business model in them moved to the framework's Dashboards app and
+Insights shows them under its root (mr-moqui `plans/Admin-Screens-Down.md`, Track I). The phase entries below are the
+record of what was built then; §9 says what they name that is gone or is the framework's now.
 Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
 and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
 results go in a Final suites note under P12.
@@ -83,7 +86,7 @@ Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-compon
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
-[8 verification](#8-verification)
+[8 verification](#8-verification) · [9 moved to the framework](#9-screens-moved-to-the-framework-nov-11-2026)
 
 ---
 
@@ -93,12 +96,14 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - `mr-moqui` (`crates/moqui-report`, `crates/moqui-tui`, `runtime/base-component`): the Dashboards screens mountable
     under an app root (INS-04), dataset admission and its row-filter parameters (INS-03), owner-equivalent delivery
     with occurrences and recipient deliveries and the ownership services (INS-06), owner-equivalent business alerts
-    (INS-07), drill resolution and the business annotation source;
+    (INS-07), drill resolution and the business annotation source; since Nov 11, 2026 also the generic screens
+    themselves, in Dashboards (§9);
   - `runtime/component/mr-mantle`: the organization row filter, the row filters of its shipped datasets, an inventory
     dataset, and the post-commit annotations of its owners' events;
   - `runtime/component/mr-boss`: the Insights app, `ironstone.insights` (ContextServices, RegistryServices,
     FlowMapServices), the catalog, metric, attention and flow-target registrations of the built apps, the Insights
-    context on the shared record screens, Insights' `report/` and `skill/` files.
+    context on the shared record screens, Insights' `report/` and `skill/` files. Its wrappers of the framework's
+    screens and what its services keep are in §9.
 
   `runtime/component/mr-marble` is read only, for the SimpleReport and MyAccount scheduled-find forms ss-inventory maps.
 - **Scope.**
@@ -133,13 +138,15 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 - **One engine, the framework's.** Definitions, panels, queries, transformations, schedules, alerts, annotations and
   renderers stay in `moqui-report` and the shared widgets; Insights adds no BOSS analytics engine (design §15.2),
   private renderer (INS-04), layout format (DashboardEditor), formula store (§6.1) or second readiness registry (§11).
-  An extension the design needs is made in the framework, for every app root, with Tools' own mounts unchanged.
+  An extension the design needs is made in the framework, for every app root, with Tools' own mounts unchanged. Since
+  Nov 11, 2026 a screen with no business model in it is the framework's too, shown under Insights' root (§9).
 - **Viewer execution and two kinds of grant.** Live results run as the viewer. `ironstone.insights` services and
   screens check the `INSIGHTS_*` permissions; the engine checks its own artifacts: the ReportServices operations, each
   dataset's `org.moqui.report.dataset.<id>` artifact and its documents' DataDocumentUserGroup rows (F4). BossSetupData
   grants the Insights groups exactly the artifacts their capability needs, never `DASHBOARDS_APP` or
   `REPORT_DATASETS_ADMIN` (F2; §4). A definition share, a catalog entry, a supplied organization or another app's edit
-  permission grants no data.
+  permission grants no data. Under the framework's screens (§9) what an `INSIGHTS_*` permission decided is a feature of
+  the root's `reportPolicy` (setting an alert, sharing) or the user's own grant of the engine's operation.
 - **Admitted business data only.** A business dataset reaches an Insights user only once admitted: on a registered
   DataFeed, with its index built and a registered `rowFilterService` bound (design §5). Until then it stays as shipped
   (`ADMIN`'s, F9, F10) and shows as needs review, never as an empty source.
@@ -3380,3 +3387,47 @@ Designed, not in this build:
 
 - **Walks.** One golden-path client walk for Insights in the regression suite (InsightsDashboardsWalk, from P2); the
   others are acceptance tests. No screenshots.
+
+## 9. Screens moved to the framework (Nov 11, 2026)
+
+After both apps were built, the screens with no business model in them moved from Insights into the framework's
+Dashboards app (mr-moqui `runtime/base-component/tools/screen/Dashboards/`), and Insights shows them under its root. The
+plan, the record of each phase with its findings, and the tables of where each deleted service's work went are mr-moqui
+[plans/Admin-Screens-Down.md](../../../../plans/Admin-Screens-Down.md) (Track I, I0 to I4; A6 for the registries); how a
+screen is shown under another root is in mr-moqui
+[docs/tools/Monitoring.md](../../../../docs/tools/Monitoring.md#mounting-the-report-screens) and the
+[tools README](../../../../runtime/base-component/tools/README.md). [design-insights.md](design-insights.md) §4.2 has
+the screens as they are now. The phase entries of §3 are left as they were written; this section is for a reader who
+follows one and looks for what it names.
+
+| Phase | What moved |
+| --- | --- |
+| I0 Contract | The root sets `reportPolicy` beside `reportLinks` (`get#Context` answers both). Panels, Explore and Split are the framework's screens, mounted by location. |
+| I1 Datasets | Datasets, DatasetDetail, DatasetFields and DatasetView are thin wrappers over the framework's screens, taking in eight transitions; the screens' six services leave `DatasetServices`. |
+| I2 Delivery | Schedules, ScheduledReportDetail and ReportDelivery are the framework's, mounted by location; the Scheduled reports area adds the recipient cap to the policy; eleven services leave `DeliveryServices`. |
+| I3 Alerts | Rules and AlertDetail are thin wrappers over the framework's one alert list and one editor (Alerts, AlertRule), taking in ten transitions; the Alerts area adds the recipient cap; Insights' alert services are deleted. |
+| I4 Share, playlists, the wall display, drill and analysis | Dashboard takes in the framework's `share`; WallDisplay is a thin wrapper; Playlists, Drill and Analysis are Insights' own screens around the framework's sections; `DashboardServices` is deleted. |
+| A6 Registries | The readiness, refresh and settings registries Insights registers in are the framework's. |
+
+| Named in the phases | Now |
+| --- | --- |
+| P2: `screen/Insights/Panels.xml`, `ReportBuilder/Explore.xml` and `ReportBuilder/Split.xml`, wrappers of the framework's screens | Deleted. The items of `Insights.xml` and `ReportBuilder.xml` name the framework's files; the sentence for a viewer who reads no dataset and the default range are the framework screens' own, under the root's policy |
+| P2: `reportLinks` set by the root | Still the root's, with `reportPolicy` beside it (the features, the range, the dataset prefix and scope words, the recipients' permission, the email template, the alert audience, the wall displays' share group, the calendar); the keys `playlists`, `wallDisplay`, `alerts`, `alertShared`, `drill` and `analysis` are in the contract. The framework's `tools/template/ReportMount.js` is the one reader of both maps |
+| P2, P11, P12: `DashboardServices.xml` (`share#Dashboard`, `get#ShareGroups`), `Insights.js` `shareDashboard`, Dashboard's own share dialog | Deleted. The framework Dashboard's `share` and Playlists' `sharePlaylist` (`tools/template/ReportShare.js`), offered by `reportPolicy.features.share`; the groups by name from `ReportServices.find#ShareGroups` (a row of `BOSS_INS_REPORT_AUTHOR`). `ContextServices.get#ShareGroups` answers the caller's own groups for Insights' own forms (a saved report's copy, an analysis, a flow map, a digest), without the wall displays |
+| P2, P11: the share group rule in `share#Dashboard` (the sharer's own groups, or the wall displays) | The engine's, at every `save#Definition`: a group the saver belongs to by their own membership (never `ALL_USERS`), or one whose share artifact `org.moqui.report.share.<userGroupId>` their own grant holds; `BOSS_INS_SHARE_DISPLAY` gives the author the wall displays'. `SHARE_GROUP_UNAVAILABLE` is the engine's; the other reason codes of `share#Dashboard` are gone |
+| P3: `DatasetServices` and `Datasets.js` `find#Datasets`, `get#Dataset`, `get#DatasetChoices`, `create#Dataset`, `get#DatasetView`, `export#Dataset` | Deleted. The framework's `tools/template/ReportDatasets.js` over `find#BusinessDatasets`, `get#BusinessDataset`, `get#BusinessDatasetOptions`, `create#BusinessDataset`, `query#Documents` and `audit#Export`; the export is DatasetView's `exportDocuments` transition. `DatasetServices` keeps `check#DatasetReadiness` and `refresh#DatasetIndex` |
+| P3: the `insights-` prefix written in `Datasets.js`; New dataset by `INSIGHTS_DATASET_EDIT` | The prefix is `reportPolicy.datasetIdPrefix`, written once in `Insights.js`, and gives no right: `create#BusinessDataset` asks the update artifact of the dataset named. New dataset is offered by the engine's answer (the dataset-save artifact by the caller's own grant) |
+| P3, P10: the `ReadinessProvider`, `RefreshOperation` and `SettingsEntry` rows of Admin's registries; `ironstone.admin.RegistryServices.get#Readiness`, `request#Refresh` and `find#Settings`; `BOSS_INS_READINESS`, `BOSS_INS_READINESS_READ` | The rows are the framework's `moqui.server` entities, a fix place and a destination named as route keys (`insightsDataset`, `insightsSettings`) that Admin's mount resolves. The services are `org.moqui.admin.ReadinessServices`, any signed-in user's by a grant that is not inheritable, so the two artifact groups are deleted, a registered service is authorized for its caller as a direct call is, and `refresh#DatasetIndex` asks its registration's permission itself. A refresh takes `refreshKey`, `scopeParameters`, `reason` and `operationKey` |
+| P6: `Drill.js`, `Analysis.js` and the Drill and Analysis screens | Insights' own screens around the framework's sections. `Drill.js` keeps the reader check, the scope, the default range, the cost filter, the meaning and the record screens over `tools/template/ReportDrill.js`; `Analysis.js` keeps the author check, the admitted datasets, the organization's calendar, the narrowing for Assist, its reason codes and `store#Analysis` over `ReportAnalysis.js`. Insights' own `saveAnalysis` stays (`BOSS_INS_ANALYSIS` names it) |
+| P7: `screen/Insights/ScheduledReports/Schedules.xml`, `ScheduledReportDetail.xml`, `ReportDelivery.xml` | Deleted. The area's items name the framework's files, and its `always-actions` add the recipient cap (`ContextServices.get#DeliveryPolicy`, then the framework's `policyWith`) |
+| P7, P12: `DeliveryServices` and `Delivery.js` `find#Schedules`, `get#Schedule`, `store#Schedule`, `pause#Schedules`, `send#Schedule`, `check#Audience`, `get#Delivery`, `export#DeliveryAudit`, `retry#Recipients`, `reconcile#Recipient`, `get#OwnReport`, and (with I3) `find#RecipientChoices` | Deleted. The framework's `tools/template/ReportDelivery.js` over the engine's `list#Schedules`, `store#Schedule`, `pause#Schedule`, `send#Report`, `check#ReportAudience`, `find#ReportOccurrences`, `get#ReportOccurrence`, `retry#ReportRecipients`, `reconcile#ReportRecipient`, `get#RecipientReport` and the three added for the screens, `find#ReportRecipients`, `find#ScreenSchedules` and `store#ScreenSchedule` (rows of `BOSS_INS_REPORT_OWN`). `DeliveryServices` keeps `preview#Report`, `get#Digest`, `store#Digest`, `store#DefaultDigest` and `get#DigestPreview` |
+| P7: `template/InsightsDeliveryTransitions.xml` (the recipient choices, the preview file, the own report file) | Keeps `previewFile`, for ManagementDigest |
+| P7, P8: the `INSIGHTS_SCHEDULE`, `INSIGHTS_DISTRIBUTE` and `INSIGHTS_AUTHOR` checks of the delivery and alert services; "an Insights reader" and "a group the distributor belongs to" as Insights' rules for recipients | What a viewer is offered is their own grant of each engine operation, and setting an alert is `reportPolicy.features.alert`, which every transition that sets a rule holds first. The recipients are accepted by `find#ReportRecipients` under `reportPolicy.recipientPermissionId` (`INSIGHTS_VIEW`), the caller's own groups always |
+| P7, P8: the email template, the alert topic, template and link, and the cap, sent by Insights' services with every save | Written once, in `Insights.js` `reportPolicy`, and put on every save by the framework's transitions; the cap is the area's addition. A posted value is not read |
+| P7, P8: a write answering `applied` false with a `reasonCode` and `reason` | A refusal is the transition's error, the engine's sentence. The reason codes of the deleted services are gone |
+| P8: `AlertServices.xml` and `Alerts.js` (`find#Alerts`, `get#Alert`, `store#Alert`, `copy#Alert`, `pause#Alerts`, `test#Alert`, `delete#Alert`) | Deleted. The framework's `tools/template/ReportAlerts.js` over `list#Definitions`, `save#Definition`, `get#AlertState` (which answers the owner's name), `find#AlertDeliveries`, `check#ReportAudience` and `run#Query` |
+| P8: "Tools' Alerts, AlertRule and AlertShared are not mounted" | Rules and AlertDetail are wrappers over the framework's Alerts and AlertRule, which under Insights' policy show business rules only; AlertShared is not mounted, and the contact point, silence, mute timing, shared item and evaluation transitions are not taken in. `reportLinks.alertRule` is where a rule opens for any reader |
+| P11: WallDisplay's own page and `data` transition | The framework's `WallDisplay.xml` and `tools/template/ReportPlaylists.js`, included at Insights' own location with `data`, which `BOSS_DEV_INS_WALL` and `BOSS_INS_WALL_DISPLAY` still name; the range is the root's policy's, never the request's |
+| P11: Playlists' list, its share with the wall displays and its devices | Insights' own screen around the framework's Playlists, with Playlist included when one is chosen: the list, New playlist and the share are the framework's; the wall displays' share links, the devices and Register as display stay |
+| P12: the legacy mapping's reading of an Insights list (`migrate#LegacySavedFinds`) | It reads the framework screen a wrapper includes too; the entry for the copied scheduled list is dropped, so such a saved find shows as not valid |
+| P12: the sweeps' screen lists (InsightsTui, InsightsServerStatic) | They take the screens mounted by location from `InsightsSpecLib.mountedScreens` |

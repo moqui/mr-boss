@@ -28,6 +28,11 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the operations operator opens no connection: the area starts at the messages -->
         <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ADMIN_CONNECTION_VIEW') &amp;&amp; ec.user.hasPermission('ADMIN_OPERATION_VIEW')"
                 item="SystemMessages"/>
+        <!-- the framework's System › Integrations screens (mr-moqui plans/Admin-Screens-Down.md), each at its own location
+            here: Connections and ConnectionDetail are Admin's own screens around the framework's parts (the organizations a
+            payment gateway is permitted for); MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail
+            include the System screens with the transitions Admin takes in (BOSS_ADM_INTEGRATIONS_OPS names the two message
+            screens, and each has an instance administrator's part that is not on this route) -->
         <subscreens-item name="Connections" location="component://mr-boss/screen/Admin/Integrations/Connections.xml" menu-title="Connections"
                 menu-index="1"/>
         <subscreens-item name="ConnectionDetail" location="component://mr-boss/screen/Admin/Integrations/ConnectionDetail.xml"

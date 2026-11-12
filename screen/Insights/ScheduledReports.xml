@@ -15,15 +15,28 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Insights › Scheduled reports (design-insights §7 ScheduledReports, ScheduledReportDetail, ReportDelivery; impl-insights P7,
     INS-06, INS-11): the list (Schedules, the default: Mine, Shared administration and Received) with the hidden
     ScheduledReportDetail and ReportDelivery, replacing the copied personal scheduled finds (impl-insights F20; design §13.2),
-    whose rows are kept and listed under Mine. Every Insights user opens it (Received is every reader's); each transition
-    reaches ironstone.insights.DeliveryServices, which checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself, and the report
-    engine checks its own grants and each recipient. -->
+    whose rows are kept and listed under Mine. The three screens are the framework's Dashboards screens, mounted by location
+    (mr-moqui plans/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"): no grant names
+    them or a transition of theirs, and Insights adds nothing but its policy. Every Insights user opens the area (Received is
+    every reader's); what each is offered follows their own grant of the report engine's operations (data/BossSetupData.xml:
+    reading deliveries, scheduling for oneself, delivering to others), which BOSS_INS_REPORT_ENGINE refuses to anyone else,
+    and the engine checks each recipient. The screens read Insights' policy, which the root and this area set and no request
+    supplies: the recipients proposed and accepted are Insights' readers (recipientPermissionId), a schedule is delivered
+    with Insights' message (reportEmailTemplateId), Tools' dashboards are not scheduled (reportHiddenComponents), and the
+    recipient cap, the organization's setting, is added here, where it is used: reading it costs more than the root should
+    pay on every request. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Scheduled reports" default-menu-index="8" menu-image="sym_o_schedule" menu-image-type="icon">
+    <always-actions>
+        <!-- the area's addition to the root's reportPolicy, through the framework's one reader of the map; in always-actions,
+            so the mounted screens' transitions save and check with it too -->
+        <service-call name="ironstone.insights.ContextServices.get#DeliveryPolicy" out-map="deliveryPolicy"/>
+        <set field="reportPolicy" from="ec.resource.script('component://tools/template/ReportMount.js').policyWith({recipientCap:deliveryPolicy.recipientCap})"/>
+    </always-actions>
     <subscreens default-item="Schedules" always-use-full-path="true">
-        <subscreens-item name="Schedules" location="component://mr-boss/screen/Insights/ScheduledReports/Schedules.xml" menu-include="false"/>
-        <subscreens-item name="ScheduledReportDetail" location="component://mr-boss/screen/Insights/ScheduledReports/ScheduledReportDetail.xml" menu-include="false"/>
-        <subscreens-item name="ReportDelivery" location="component://mr-boss/screen/Insights/ScheduledReports/ReportDelivery.xml" menu-include="false"/>
+        <subscreens-item name="Schedules" location="component://tools/screen/Dashboards/Schedules.xml" menu-include="false"/>
+        <subscreens-item name="ScheduledReportDetail" location="component://tools/screen/Dashboards/ScheduledReportDetail.xml" menu-include="false"/>
+        <subscreens-item name="ReportDelivery" location="component://tools/screen/Dashboards/ReportDelivery.xml" menu-include="false"/>
     </subscreens>
     <widgets><subscreens-active/></widgets>
 </screen>

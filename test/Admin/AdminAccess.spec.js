@@ -1,8 +1,8 @@
 // Admin access (impl-admin §2, P1, P2, P3; design-admin §1.1, §5, §7, §13): who may open Admin, the menu (P3: the Access area
 // for the access administrators and the administrator), providers and launcher (the
 // reader, the administrator and an instance administrator), each group's capabilities from its permissions and
-// the area authorizations, Admin › System refused to the Admin administrator and opened to ADMIN with the developer tool links
-// each by its own grant, the seals mr-boss and the framework add (a privileged group's membership and a sealed grant through a
+// the area authorizations, Admin › System refused to the Admin administrator and opened to ADMIN,
+// the seals mr-boss and the framework add (a privileged group's membership and a sealed grant through a
 // direct entity call) beside the refused raw security mutators, and the organization scope of a record (another organization's
 // identity refused, a shared identity shown only by the organization in scope; P6: what an identity owns by the same scope), and the
 // settings index a BOSS user without Admin opens alone (P2, F46), and P7's organizations area (the configuration administrator's
@@ -116,9 +116,7 @@ feature(
                 for (const [service, parameters] of [
                     ...(user === "customerservice.read" ? [] : [[context + "get#SharedContext", {}]]),
                     [context + "check#Record", {recordType: "organization", recordId: ids.organizationId}],
-                    [context + "get#Choices", {choice: "organizations"}],
-                    [context + "get#AppAccess", {}],
-                    ["ironstone.admin.RegistryServices.find#ToolLinks", {}]
+                    [context + "get#Choices", {choice: "organizations"}]
                 ]) {
                     const message = asUser(user, () => refusal(service, parameters))
                     if (!refused(message)) problems.push(`${user} gets ${service}: ${message || "accepted"}`)
@@ -139,7 +137,7 @@ feature(
 )
 
 // the menu of design §1.2 built so far: Home and Settings every Admin user's, Operations the reader's, the operations operator's
-// and the administrator's, Agents and Developer tools the administrator's, System ADMIN's alone
+// and the administrator's, Agents the administrator's, System ADMIN's alone
 feature("the Admin menu and keys follow the areas' groups and System's own grant; the launcher shows it to its users only", {
     when() {
         const rows = [
@@ -166,10 +164,9 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
                     "Data",
                     // P17: Audit (AuditChanges, AccessLog), the audit reader's and the administrator's
                     "Audit",
-                    "Agents",
-                    "Developer"
+                    "Agents"
                 ],
-                keys: ["g a", "g o", "g n", "g d"],
+                keys: ["g a", "g o", "g n"],
                 quick: ["adminInviteUsers"]
             }
         ]
@@ -203,8 +200,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
                 "Data",
                 "Audit",
                 "Agents",
-                "System",
-                "Developer"
+                "System"
             ])
         )
             problems.push(`ADMIN's menu is ${systemMenu}`)
@@ -258,7 +254,6 @@ const capabilityNames = [
     // P17: Audit's AuditChanges and AccessLog (BOSS_ADM_AUDIT)
     "audit",
     "agents",
-    "developer",
     "system"
 ]
 // design §1.1's table; the administrator holds every group's permission, not the sealed ones the operators "additionally
@@ -312,7 +307,7 @@ feature("each group holds exactly the capabilities of its permissions and areas;
     }
 })
 
-feature("Admin › System is refused to the Admin groups and opens to ADMIN; developer tools each by their own grant", {
+feature("Admin › System is refused to the Admin groups and opens to ADMIN", {
     when() {
         const problems = []
         // the administrator (BOSS_ADMIN_ADMIN) and an ordinary Admin user (the root user group BOSS_ADMIN's ALLOW): the root,
@@ -325,14 +320,6 @@ feature("Admin › System is refused to the Admin groups and opens to ADMIN; dev
             }
         const opened = screenRefusal(users.system, "System/Security/UserAccount")
         if (opened !== "") problems.push(`ADMIN is refused Admin › System: ${opened}`)
-        const tools = user => asUser(user, () => invoke("ironstone.admin.RegistryServices.find#ToolLinks", {}).links || [])
-        const adminTools = tools(users.admin)
-        if (adminTools.length) problems.push(`the administrator gets tool links: ${adminTools.map(link => link.tool)}`)
-        const systemTools = tools(users.system)
-        const caches = systemTools.find(link => link.tool === "Caches")
-        if (caches?.url !== "/qapps/Admin/System/Cache") problems.push(`ADMIN's Caches link: ${caches?.url}`)
-        if (!systemTools.some(link => link.tool === "Entity data" && link.url === "/qapps/tools/Data/Grid"))
-            problems.push("ADMIN has no Entity data link")
         return {problems}
     },
     then({problems}) {
@@ -560,12 +547,20 @@ feature("a BOSS user without Admin opens the settings index alone", {
         for (const [service, parameters] of [
             [context + "get#Choices", {choice: "organizations"}],
             [context + "check#Record", {recordType: "organization", recordId: ids.organizationId}],
-            ["ironstone.admin.RegistryServices.get#Readiness", {}],
-            ["ironstone.admin.RegistryServices.find#ToolLinks", {}]
+            ["ironstone.admin.RegistryServices.check#OwnerReadiness", {providerKey: "commerce.storeReadiness"}],
+            ["ironstone.admin.RegistryServices.get#OpenPaths", {paths: ["Admin/Home"]}]
         ]) {
             const message = asUser(user, () => refusal(service, parameters))
             if (!refused(message)) problems.push(`the manager gets ${service}: ${message || "accepted"}`)
         }
+        // the framework's readiness is any signed-in user's: it answers the manager no check of the instance or of an owner
+        // Admin's contract service reads (each needs a permission or Admin's grant)
+        const readiness = asUser(user, () => invoke("org.moqui.admin.ReadinessServices.get#Readiness", {}))
+        const theirs = Array.from(readiness.checks || []).filter(row =>
+            ["System", "Admin", "Accounting", "Products", "Commerce"].includes(row.ownerApp)
+        )
+        if (theirs.length || Array.from(readiness.failedProviders || []).length)
+            problems.push(`the manager's readiness: ${JSON.stringify(theirs)} ${readiness.failedProviders}`)
         // the launcher still has no Admin for them
         if (shell(user, false).apps.includes("Admin")) problems.push("the manager's launcher has Admin")
         return {problems}

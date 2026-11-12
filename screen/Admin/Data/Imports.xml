@@ -12,16 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Imports (design-admin §11 Imports; style-guide §3.2 List; impl-admin P15): the import runs of every registered target,
-    newest first, from the framework's org.moqui.admin.DataTransferServices.find#Transfers through
-    ironstone.shared.DataImportServices.find#ImportRuns. ImportFind: target, organization, state and a bounded range of dates.
-    ImportList: each run with its target and owner, the file's label, the organization, the state and the rows applied, in
-    need of attention and skipped. A run kept here, or by an owner that keeps the import contract's batch (Products' catalog),
-    opens ImportDetail; an owner wizard's run (Accounting's statement imports and opening open items, Commerce's channel
-    orders) is what its owner answers for this user, by the owner's own permission and scope, and opens the owner's place:
-    never a row of it here. ImportTargets: the registered targets, each started here in the shared wizard or opened in its
-    owner's own wizard; one that keeps no runs (Commons' contacts, Projects' work items) says so. Reading needs
-    ADMIN_TRANSFER_VIEW, checked by the service. -->
+<!-- Imports (design-admin §11 Imports; style-guide §3.2 List; impl-admin P15; mr-moqui plans/Admin-Screens-Down.md): the
+    framework's System › Data imports list, as Admin's own screen for what Admin adds: the organization an import is for,
+    as a filter (the organizations the administrator administers, ironstone.admin.ContextServices.get#Choices) and the
+    name of its column. The runs and the targets are read here from org.moqui.admin.DataTransferServices.find#ImportRuns
+    with the organization as the scope; the display values, the heading, the notes and the targets are the System
+    screen's (ImportsPrepare, ImportsHeader, ImportNotes, ImportTargetsBox, and ImportFind and ImportList extended here).
+    A run kept here, or by an owner that keeps the import contract's batch (Products' catalog), opens ImportDetail; an
+    owner wizard's run (Accounting's statement imports and opening open items, Commerce's channel orders) opens its
+    owner's place, and a target started here opens the shared wizard (DataImport), each by the mount's routes (Admin.js
+    mountRoutes). Reading needs ADMIN_TRANSFER_VIEW or ADMIN_TRANSFER_RUN, checked by the service. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Imports" menu-image="sym_o_upload_file" menu-image-type="icon">
     <parameter name="targetId"/>
@@ -41,47 +41,20 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="ironstone.shared.DataImportServices.find#ImportRuns" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{appRoot:appRoot, targetId:(targetId || null), organizationPartyId:(organizationPartyId || null), state:(state || null),
-                    fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:(pageIndex || 0)}"/>
-        <!-- ignore-error clears a refusal's message -->
-        <set field="available" from="!!found?.transferList"/>
-        <script><![CDATA[
-            ec.message.clearErrors()
-            const colors = {complete: 'positive', partial: 'deep-orange', failed: 'negative', applying: 'info', running: 'info', open: 'info'}
-            runs = Array.from(found?.transferList || []).map(row => Object.assign({}, row, {
-                stateColor: colors[row.state] || 'grey-7',
-                targetText: row.targetTitle + (row.ownerApp ? ' · ' + row.ownerApp : ''),
-                ownerText: row.ownerUrl ? 'Open in ' + (row.ownerApp || 'its app') : ''}))
-            runsCount = Number(found?.transferCount || 0)
-            runsPageIndex = Number(found?.pageIndex || 0)
-            runsPageSize = Number(found?.pageSize || 50)
-            runsPageMaxIndex = Math.max(Math.ceil(runsCount / runsPageSize) - 1, 0)
-            runsPageRangeLow = runsCount ? runsPageIndex * runsPageSize + 1 : 0
-            runsPageRangeHigh = Math.min((runsPageIndex + 1) * runsPageSize, runsCount)
-            targets = Array.from(found?.targetList || []).map(target => Object.assign({}, target, {
-                startHere: !!found.canRun && target.wizardHere && target.importAllowed,
-                howText: target.wizardHere
-                    ? (target.importAllowed ? (found.canRun ? 'The shared wizard' : 'The shared wizard, with ADMIN_TRANSFER_RUN') : 'The shared wizard, with ' + (target.importPermission || 'its owner\'s permission').split(',').join(' and '))
-                    : (target.ownerApp || 'Its owner') + '\'s own wizard',
-                runsText: target.runsKept ? 'Listed here' : 'Keeps no runs yet'}))
-            targetOptions = targets.map(target => ({value: target.targetId, label: target.title}))
-            stateOptions = Array.from(found?.stateList || []).map(row => ({value: row.state, label: row.text}))
-            unansweredText = Array.from(found?.unansweredTargetList || []).map(target => target.title + (target.ownerApp ? ' (' + target.ownerApp + ')' : '')).join(', ')
-            findValues = {targetId: targetId, organizationPartyId: organizationPartyId, state: state, fromDate: fromDate, thruDate: thruDate}
-        ]]></script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it) -->
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.DataTransferServices.find#ImportRuns',
+                {targetId:(targetId || null), scopeKey:(organizationPartyId || null), state:(state || null), fromDate:(fromDate || null),
+                    thruDate:(thruDate || null), pageIndex:Math.max(Number(pageIndex) || 0, 0)}, 'they could not be read')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
+        <set field="findValues" from="{targetId:targetId, organizationPartyId:organizationPartyId, state:state, fromDate:fromDate, thruDate:thruDate}"/>
     </actions>
     <widgets>
-        <label text="Imports" type="h5"/>
-        <label text="What each import came to, for every registered target. An owner's own imports are listed as far as you may read them in its app, and open there. Times are in ${found?.timeZone || 'the server time zone'}."
-                type="p" style="text-caption m-muted q-mb-none"/>
-        <label type="p" style="text-negative" condition="!available" text="Imports are not available to you: reading them needs ADMIN_TRANSFER_VIEW."/>
+        <section-include name="ImportsPrepare" location="component://tools/screen/System/Data/Imports.xml"/>
+        <section-include name="ImportsHeader" location="component://tools/screen/System/Data/Imports.xml"/>
         <section name="ImportsSection" condition="available">
             <widgets>
-                <form-single name="ImportFind" transition="." map="findValues">
-                    <field name="targetId">
-                        <default-field title="Target"><drop-down allow-empty="true"><list-options list="targetOptions" key="${value}" text="${label}"/></drop-down></default-field>
-                    </field>
+                <form-single name="ImportFind" extends="component://tools/screen/System/Data/Imports.xml#ImportFind" transition="." map="findValues">
                     <field name="organizationPartyId">
                         <default-field title="Organization">
                             <drop-down allow-empty="true">
@@ -89,76 +62,15 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
-                    <field name="state">
-                        <default-field title="State"><drop-down allow-empty="true"><list-options list="stateOptions" key="${value}" text="${label}"/></drop-down></default-field>
-                    </field>
-                    <field name="fromDate"><default-field title="From" tooltip="Empty shows the last ${found.defaultDays} days; at most ${found.rangeDays} days at a time"><date-time type="date"/></default-field></field>
-                    <field name="thruDate"><default-field title="Before"><date-time type="date"/></default-field></field>
-                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
                     <field-layout>
                         <field-row-big><field-ref name="targetId"/><field-ref name="organizationPartyId"/><field-ref name="state"/><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="submitButton"/></field-row-big>
                     </field-layout>
                 </form-single>
-                <label type="p" style="text-warning" condition="!!unansweredText" text="Not answered just now, so their imports are not listed: ${unansweredText}."/>
-                <label type="p" style="m-muted" condition="!runs.length" text="No import matches."/>
-                <form-list name="ImportList" list="runs" skip-form="true" paginate="true">
-                    <field name="startedText"><default-field title="Started"><display/></default-field></field>
-                    <field name="targetText"><default-field title="Target"><display/></default-field></field>
-                    <field name="fileLabel">
-                        <conditional-field condition="detail" title="Import">
-                            <link url="../ImportDetail" text="${fileLabel || runId}" link-type="anchor" parameter-map="{targetId:targetId, operationKey:runId}"/>
-                        </conditional-field>
-                        <default-field title="Import"><display/></default-field>
-                    </field>
+                <section-include name="ImportNotes" location="component://tools/screen/System/Data/Imports.xml"/>
+                <form-list name="ImportList" extends="component://tools/screen/System/Data/Imports.xml#ImportList" list="runs" skip-form="true" paginate="true">
                     <field name="scopeTitle"><default-field title="Organization"><display/></default-field></field>
-                    <field name="stateText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${stateText}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                <text type="html">${stateText}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="countText"><default-field title="Rows"><display/></default-field></field>
-                    <field name="userName"><default-field title="By"><display/></default-field></field>
-                    <field name="ownerText">
-                        <conditional-field condition="!!ownerUrl" title="Owner">
-                            <link url="${ownerUrl}" url-type="plain" text="${ownerText}" link-type="anchor" icon="sym_o_open_in_new"/>
-                        </conditional-field>
-                        <default-field title="Owner"><display text=""/></default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="startedText"/><field-ref name="targetText"/><field-ref name="fileLabel"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="countText"/><field-ref name="ownerText"/></column>
-                    </columns>
                 </form-list>
-                <container-box>
-                    <box-header title="Import targets"/>
-                    <box-body>
-                        <label type="p" style="text-caption m-muted" text="What can be imported, each by its owner's own rules. Starting one here opens the shared wizard for it; an owner's own wizard opens in its app."/>
-                        <form-list name="ImportTargets" list="targets" skip-form="true" paginate="false">
-                            <field name="title">
-                                <conditional-field condition="startHere" title="Target">
-                                    <link url="../DataImport" text="${title}" link-type="anchor" icon="sym_o_upload_file" parameter-map="{targetId:targetId}"/>
-                                </conditional-field>
-                                <conditional-field condition="!wizardHere &amp;&amp; !!ownerUrl" title="Target">
-                                    <link url="${ownerUrl}" url-type="plain" text="${title}" link-type="anchor" icon="sym_o_open_in_new"/>
-                                </conditional-field>
-                                <default-field title="Target"><display/></default-field>
-                            </field>
-                            <field name="ownerApp"><default-field title="Owner"><display/></default-field></field>
-                            <field name="description"><default-field title="What it imports"><display/></default-field></field>
-                            <field name="effectsNote"><default-field title="What applying it does"><display/></default-field></field>
-                            <field name="howText"><default-field title="Imported in"><display/></default-field></field>
-                            <field name="runsText"><default-field title="Runs"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/><field-ref name="ownerApp"/></column>
-                                <column><field-ref name="howText"/><field-ref name="runsText"/></column>
-                            </columns>
-                        </form-list>
-                    </box-body>
-                </container-box>
+                <section-include name="ImportTargetsBox" location="component://tools/screen/System/Data/Imports.xml"/>
             </widgets>
         </section>
     </widgets>

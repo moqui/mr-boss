@@ -118,5 +118,41 @@ function shell(user, menuOnly = false) {
         }
     })
 }
+// A transition of an Insights screen asked as the user through a root (Insights' own, or webroot for another app's route),
+// posted unless it is a read (method null); no page is rendered. Where it sends the browser, its errors and what it
+// answered.
+function transition(user, root, path, parameters, method = "post") {
+    return asUser(user, () => {
+        const result = ec.screen.makeTest().rootScreen(root).render(path, parameters, method)
+        const out = {
+            status: result.status,
+            location: String(result.header("Location") || ""),
+            errors: Array.from(result.errorMessages || []).join(" | "),
+            output: String(result.output || "")
+        }
+        ec.message.clearErrors()
+        return out
+    })
+}
+// The framework's report screens Insights mounts by location (mr-moqui plans/Admin-Screens-Down.md, Track I: Library panels,
+// Report builder's Explore and Compare, and Scheduled reports' three screens), as [path under Insights, location], read from the subscreens items of the root
+// and of each area: the screen sweeps (acceptance InsightsTui and InsightsServerStatic) list Insights' screens from its own
+// files, which these have left.
+function mountedScreens() {
+    const base = "component://mr-boss/screen/"
+    const found = []
+    const read = (reference, prefix) => {
+        for (const match of String(reference.getText()).matchAll(
+            /<subscreens-item name="([A-Za-z0-9]+)" location="(component:\/\/tools\/screen\/Dashboards\/[A-Za-z0-9]+\.xml)"/g
+        ))
+            found.push([prefix + match[1], match[2]])
+    }
+    read(ec.resource.getLocationReference(base + "Insights.xml"), "")
+    for (const area of ec.resource.getLocationReference(base + "Insights").getDirectoryEntries()) {
+        if (!/\.xml$/.test(area.location)) continue
+        read(area, area.location.substring(area.location.lastIndexOf("/") + 1).replace(/\.xml$/, "") + "/")
+    }
+    return found
+}
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell})
+;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell, transition, mountedScreens})

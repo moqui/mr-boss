@@ -203,7 +203,7 @@ feature(
                 const organization = page(user, "Settings/OrganizationDetail", {organizationPartyId: ids.otherOrganizationId})
                 if (organization.output.includes("Ziziwork Services") && !organization.output.includes("is not available"))
                     problems.push(`${user}: OrganizationDetail shows Ziziwork Services`)
-                const exported = call(user, "ironstone.admin.DataServices.run#AdminExport", {
+                const exported = call(user, "org.moqui.admin.DataTransferServices.run#ExportRequest", {
                     targetId: "contactBookVCard",
                     scopeKey: bookId
                 })
@@ -250,9 +250,9 @@ feature("no Admin group's user is given a secret, on a page, a print, the suppor
                 providers: JSON.stringify(call(user, C + "find#IdentityProviders", {authFlowId: flowId}).out),
                 settings: JSON.stringify(call(user, C + "get#EffectiveSettings").out),
                 summaryJson: JSON.stringify(
-                    call(user, "ironstone.admin.RegistryServices.get#SupportSummary", {redacted: true}).out
+                    call(user, "org.moqui.admin.ReadinessServices.get#SupportSummary", {redacted: true}).out
                 ),
-                readiness: JSON.stringify(call(user, "ironstone.admin.RegistryServices.get#Readiness").out)
+                readiness: JSON.stringify(call(user, "org.moqui.admin.ReadinessServices.get#Readiness").out)
             }
             for (const [where, text] of Object.entries(seen)) if (holds(text)) problems.push(`${user}: a secret in ${where}`)
         }
@@ -361,11 +361,7 @@ feature("no Admin group's user opens the System mount, by URL or the menu", {
     when() {
         const problems = []
         for (const user of groupUsers) {
-            for (const path of [
-                "System",
-                "System/Security/UserGroup/UserGroupDetail",
-                "System/Security/UserAccount/UserAccountDetail"
-            ]) {
+            for (const path of ["System", "System/Access/GroupDetail", "System/Security/UserAccount/UserAccountDetail"]) {
                 const rendered = page(user, path, {userGroupId: "ADMIN", userId: ids.otherUserId}, "html")
                 if (rendered.status == 200 && rendered.errors.length == 0) problems.push(`${user}: ${path} opened`)
             }

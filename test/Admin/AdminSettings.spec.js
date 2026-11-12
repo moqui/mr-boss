@@ -3,13 +3,17 @@
 // with their values and sources, the deployment values with their restart effect); a preference and a translation changed
 // through the screens' transitions by the configuration administrator, who is not an instance administrator, an unregistered
 // key and a dropped placeholder refused with their reasons; the administrative reader, without ADMIN_SETTINGS_VIEW, opens
-// neither screen; ReferenceData links a kind's owner only for a viewer the owner's screen opens to. The framework's rules
-// (types, limits, revisions, secrets, label targets) are the framework's AdminConfiguration spec.
+// neither screen; ReferenceData links a kind's owner only for a viewer the owner's screen opens to. InstanceSettings and
+// Localization are over the framework's System › Settings screens (mr-moqui plans/Admin-Screens-Down.md): a transition of
+// Localization's instance administrator's part (a stored row created or deleted directly) is not on Admin's route, for the
+// configuration administrator and for ADMIN. The framework's rules (types, limits, revisions, secrets, label targets) are
+// the framework's AdminConfiguration spec.
 // Run: ./moq test mr-boss --spec AdminSettings
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {users, asUser, invoke, page} = lib
 const C = "org.moqui.admin.ConfigurationServices."
 const original = "Spec settings ${count} open"
+const directOriginal = "Spec settings created directly"
 const preference = key => lib.system(() => invoke(C + "get#InstancePreference", {settingKey: key}))
 const translation = () =>
     lib.system(() => ec.entity.find("moqui.basic.LocalizedMessage").condition({original, locale: "es"}).disableAuthz().one())
@@ -24,6 +28,7 @@ spec({
         ec.artifactExecution.disableAuthz()
         ec.entity.find("moqui.server.InstancePreference").condition({settingKey: "instance.displayName"}).deleteAll()
         ec.entity.find("moqui.basic.LocalizedMessage").condition({original}).deleteAll()
+        ec.entity.find("moqui.basic.LocalizedMessage").condition({original: directOriginal}).deleteAll()
         ec.artifactExecution.enableAuthz()
     }
 })
@@ -47,6 +52,30 @@ feature("InstanceSettings shows the configuration administrator the preferences 
 
 feature("the configuration administrator changes a preference and a translation; the reader opens neither screen", {
     when() {
+        // the System screen's own transitions for an instance administrator (a stored row created or deleted directly, with
+        // no placeholder check) are not taken in here, so they do not exist on Admin's route: for the configuration
+        // administrator, whose area grant is an inheritable always-allow, and for ADMIN
+        const directRows = () =>
+            lib.system(
+                () =>
+                    ec.entity
+                        .find("moqui.basic.LocalizedMessage")
+                        .condition({original: directOriginal})
+                        .disableAuthz()
+                        .list().length
+            )
+        const direct = () => {
+            for (const user of [users.configure, users.system])
+                asUser(user, () => {
+                    page(
+                        "Settings/Localization/createLocalizedMessage",
+                        {original: directOriginal, locale: "es", localized: "Creado directamente"},
+                        "html"
+                    )
+                    page("Settings/Localization/deleteLocalizedMessage", {original, locale: "es"}, "html")
+                })
+            return directRows()
+        }
         return {
             stored: asUser(users.configure, () =>
                 page(
@@ -89,7 +118,9 @@ feature("the configuration administrator changes a preference and a translation;
                 page("Settings/InstanceSettings/storePreference", {settingKey: "instance.displayName", value: "Reader"}, "html")
             ),
             readerLocalization: asUser(users.reader, () => page("Settings/Localization", {}, "html")),
-            after: preference("instance.displayName").value
+            after: preference("instance.displayName").value,
+            directRows: direct(),
+            keptRow: translation()
         }
     },
     then({
@@ -105,7 +136,9 @@ feature("the configuration administrator changes a preference and a translation;
         reader,
         readerStore,
         readerLocalization,
-        after
+        after,
+        directRows,
+        keptRow
     }) {
         stored.errors.length == 0 && name == "Ziziwork"
         // refused with its reason, nothing written
@@ -116,6 +149,8 @@ feature("the configuration administrator changes a preference and a translation;
         reader.status != 200 || reader.errors.length > 0
         readerLocalization.status != 200 || readerLocalization.errors.length > 0
         after == "Ziziwork"
+        // nothing created and nothing deleted directly through Admin
+        directRows == 0 && keptRow != null
     }
 })
 
@@ -126,7 +161,7 @@ feature("ReferenceData links a kind to its owner only for a viewer the owner's s
             // the screen's list is the settings index's Reference data group: what it gives the configuration administrator
             configure: asUser(users.configure, () =>
                 Array.from(
-                    invoke("ironstone.admin.RegistryServices.find#Settings", {settingsGroupEnumId: "AdmSgReference"}).entries ||
+                    invoke("org.moqui.admin.ReadinessServices.find#Settings", {settingsGroupEnumId: "AdmSgReference"}).entries ||
                         []
                 ).map(entry => entry.settingsKey)
             )

@@ -16,14 +16,21 @@ along with this software (see the LICENSE.md file). If not, see
     recorded of the registered administrative records (the default), and AccessLog, who requested or received report
     output and what was done in monitoring. For the audit reader and the administrator (BOSS_ADM_AUDIT, the whole area);
     the audit reader needs no other Admin group, no System and no Dashboards grant. The area's grant is an inheritable
-    ALWAYS, as every app area's, so it is not what decides a read: ironstone.admin.AuditServices check ADMIN_AUDIT_VIEW,
-    the framework's org.moqui.admin.AuditServices answers only registered projections within the user's scope and never
-    a secret's value, and the access log is the report engine's read of the dataset admin-access-log for get#AccessLog alone
-    (the dataset is granted to no group), under its row filters. Nothing is changed here: the area has no transition that writes. -->
+    ALWAYS, as every app area's, so it is not what decides a read: the framework's org.moqui.admin.AuditServices checks
+    ADMIN_AUDIT_VIEW, answers only registered projections within the user's scope (a record of an organization through
+    its owner, Mantle, by the filter sets of this area's grant) and never a secret's value; ironstone.admin.AuditServices
+    checks ADMIN_AUDIT_VIEW under Admin, and the access log is the report engine's read of the dataset admin-access-log
+    for get#AccessLog alone (the dataset is granted to no group), under its row filters. Nothing is changed here: the
+    area has no transition that writes. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Audit" default-menu-index="10" menu-image="sym_o_policy" menu-image-type="icon">
     <subscreens default-item="AuditChanges" always-use-full-path="true">
-        <subscreens-item name="AuditChanges" location="component://mr-boss/screen/Admin/Audit/AuditChanges.xml" menu-title="Changes" menu-index="1"/>
+        <!-- the framework's System › Audit changes list (mr-moqui plans/Admin-Screens-Down.md) by location: no grant names
+            it, it has no transition (its part for the instance administrator, the whole audit log, is read only and never
+            shown under a mount) and Admin adds nothing, since find#Changes carries the organization scope itself. A
+            record's place is a route of the mount (Admin.js mountRoutes), a screen path the link widget disables for a
+            user that screen does not open to -->
+        <subscreens-item name="AuditChanges" location="component://tools/screen/System/Audit/AuditChanges.xml" menu-title="Changes" menu-index="1"/>
         <subscreens-item name="AccessLog" location="component://mr-boss/screen/Admin/Audit/AccessLog.xml" menu-title="Access log" menu-index="2"/>
     </subscreens>
     <widgets>

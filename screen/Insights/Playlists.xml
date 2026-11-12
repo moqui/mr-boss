@@ -14,15 +14,20 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Insights › Wall display (design-insights §4 Playlists; impl-insights P2, INS-04): the dashboard playlists the viewer may read (a
     report definition of kind playlist), and one played in kiosk mode by the framework Playlist screen (Tools
-    Dashboards/Playlist.xml) when one is chosen. The display runs as the signed-in viewer: a dashboard they cannot read is skipped
-    and its failure logged by name, and its dashboard links open Insights › Dashboard. An author creates a playlist here (the
-    framework Reports screen's createPlaylist) and orders it in DashboardEditor.
+    Dashboards/Playlist.xml) when one is chosen. It is Insights' own screen around the framework's Playlists (Tools
+    Dashboards/Playlists.xml, mr-moqui docs/tools/Monitoring.md "Playlists and the wall display"): its list of playlists
+    (template/ReportPlaylists.js, read through the report engine as the viewer, Tools' own left out), its New playlist and its
+    transitions createPlaylist, play, edit and sharePlaylist, taken in here; what Insights adds is the wall displays and their
+    devices. The display runs as the signed-in viewer: a dashboard they cannot read is skipped and its failure logged by
+    name, and its dashboard links open Insights › Dashboard. An author creates a playlist here and orders it in DashboardEditor.
     P11 (design §4 Playlists, CX-DEVICE): a registered wall display plays its playlist on WallDisplay as its display account, which
-    reads a playlist and its dashboards when they are shared with the wall displays (BOSS_INSIGHTS_DISPLAY; the owner's Share with
-    wall displays here, share#Dashboard); Play full screen opens WallDisplay for the viewer; Register as display opens Admin's
-    RegisterDevice for the playlist (a holder of ADMIN_ACCESS_MANAGE, whose service checks it); the devices showing each playlist
-    are listed, read only, to a holder of ADMIN_ACCESS_VIEW or ADMIN_ACCESS_MANAGE (Mantle's find#SharedDevices, within their
-    identity scope; another organization's device is not named). -->
+    reads a playlist and its dashboards when they are shared with the wall displays (BOSS_INSIGHTS_DISPLAY). The owner's Share
+    with wall displays and Stop sharing post the framework's sharePlaylist with that group or none: the transition holds the
+    root's reportPolicy (features.share, the author's; the wall displays among its shareGroups) and the report engine's save
+    takes the group only from one whose own grant holds its share artifact. Play full screen opens WallDisplay for the viewer;
+    Register as display opens Admin's RegisterDevice for the playlist (a holder of ADMIN_ACCESS_MANAGE, whose service checks
+    it); the devices showing each playlist are listed, read only, to a holder of ADMIN_ACCESS_VIEW or ADMIN_ACCESS_MANAGE
+    (Mantle's find#SharedDevices, within their identity scope; another organization's device is not named). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Wall display" default-menu-index="4" menu-image="sym_o_slideshow" menu-image-type="icon">
 
@@ -31,42 +36,26 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="thru"/>
 
     <transition-include name="data" location="component://tools/screen/Dashboards/Playlist.xml"/>
-    <transition-include name="createPlaylist" location="component://tools/screen/Dashboards/Reports.xml"/>
-    <transition name="play"><default-response url="."/></transition>
-    <transition name="edit"><default-response url="${reportLinks.definition}"/></transition>
-    <!-- the owner shares the playlist with the wall displays, or makes it private (share#Dashboard checks the owner and authoring) -->
-    <transition name="sharePlaylist" method="post">
-        <service-call name="ironstone.insights.DashboardServices.share#Dashboard"
-                in-map="{definitionId:definitionId, userGroupId:(shareWithDisplays == 'Y' ? 'BOSS_INSIGHTS_DISPLAY' : null)}"/>
-        <default-response url="."/>
-    </transition>
+    <transition-include name="createPlaylist" location="component://tools/screen/Dashboards/Playlists.xml"/>
+    <transition-include name="play" location="component://tools/screen/Dashboards/Playlists.xml"/>
+    <transition-include name="edit" location="component://tools/screen/Dashboards/Playlists.xml"/>
+    <!-- the owner shares the playlist with the wall displays, or makes it private (the framework's: features.share, the
+        owner and the group checked there and by the engine's save) -->
+    <transition-include name="sharePlaylist" location="component://tools/screen/Dashboards/Playlists.xml"/>
 
     <actions>
-        <set field="canAuthor" from="!!reportLinks.definition"/>
-        <set field="from" from="from || insights.defaults.from"/>
-        <set field="thru" from="thru || insights.defaults.thru"/>
         <if condition="!definitionId">
-            <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'report'}" out-map="found"/>
-            <set field="playlists" from="Array.from(found.definitions || []).filter(row => row.body?.kind === 'playlist')
-                    .map(row => ({id: row.id, title: row.title || row.id, count: (row.body.playlist || []).length, seconds: row.body.seconds || 30,
-                        owned: !row.readOnly &amp;&amp; row.ownerId === ec.user.userId, onDisplays: row.userGroupId === 'BOSS_INSIGHTS_DISPLAY',
-                        otherGroupId: (row.userGroupId &amp;&amp; row.userGroupId !== 'BOSS_INSIGHTS_DISPLAY' ? row.userGroupId : null)}))"/>
-            <!-- a definition has one group (P12): a playlist shared with another group is moved to the wall displays only after
-                the owner is told so -->
-            <script><![CDATA[
-                const otherIds = Array.from(new Set(playlists.map(row => row.otherGroupId).filter(Boolean)))
-                const names = {}
-                if (otherIds.length) for (const group of Array.from(ec.entity.find('moqui.security.UserGroup').condition('userGroupId', 'in', otherIds).disableAuthz().list()))
-                    names[group.userGroupId] = group.description || group.userGroupId
-                for (const row of playlists) row.otherGroupName = row.otherGroupId ? (names[row.otherGroupId] || row.otherGroupId) : ''
-            ]]></script>
-            <!-- P11: the devices showing each playlist, read only, for an access administrator (within their identity scope) -->
+            <!-- the framework's list: the playlists, New playlist for one who may save where there is an editor, and whether
+                sharing is the viewer's here -->
+            <set field="playlistView" from="ec.resource.script('component://tools/template/ReportPlaylists.js').list()"/>
             <set field="wallDisplayPath" from="sri.buildUrl('../WallDisplay').path"/>
+            <set field="displayGroupId" value="BOSS_INSIGHTS_DISPLAY"/>
+            <!-- P11: the devices showing each playlist, read only, for an access administrator (within their identity scope) -->
             <set field="canRegister" from="ec.user.hasPermission('ADMIN_ACCESS_MANAGE')"/>
             <set field="seesDevices" from="canRegister || ec.user.hasPermission('ADMIN_ACCESS_VIEW')"/>
             <script><![CDATA[
                 const shownOn = {}
-                if (seesDevices && playlists.length) {
+                if (seesDevices && playlistView.playlists.length) {
                     ec.message.pushErrors()
                     try {
                         const out = ec.service.sync().name('mantle.party.IdentityServices.find#SharedDevices')
@@ -76,50 +65,31 @@ along with this software (see the LICENSE.md file). If not, see
                     } catch (error) { ec.logger.warn('Wall display devices not read: ' + String(error)) }
                     finally { ec.message.clearErrors(); ec.message.popErrors() }
                 }
-                for (const row of playlists) row.devices = (shownOn[row.id] || []).join(', ')
+                // a definition has one group (P12): a playlist shared with another group is moved to the wall displays only
+                // after the owner is told so
+                for (const row of playlistView.playlists) {
+                    row.devices = (shownOn[row.id] || []).join(', ')
+                    row.onDisplays = row.userGroupId === displayGroupId
+                    row.otherGroupName = row.userGroupId && !row.onDisplays ? (row.sharedWith || 'another group') : ''
+                }
             ]]></script>
-            <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'dashboard'}" out-map="dashboards"/>
-            <set field="dashboardChoices" from="Array.from(dashboards.definitions || []).filter(row => !reportHiddenComponents.includes(row.component))
-                    .map(row => ({id: row.id, title: row.title || row.id}))"/>
         </if>
     </actions>
     <widgets>
         <section name="PlayPlaylist" condition="definitionId"><widgets>
-            <link url="." text="All playlists" link-type="anchor"/>
             <include-screen location="component://tools/screen/Dashboards/Playlist.xml" share-scope="true"/>
         </widgets><fail-widgets>
-            <container style="row items-center q-col-gutter-sm">
-                <container style="col"><label text="Wall display" type="h5"/></container>
-                <container style="col-auto">
-                    <container-dialog id="NewPlaylist" button-text="New playlist" type="primary" condition="canAuthor">
-                        <form-single name="NewPlaylistForm" transition="createPlaylist">
-                            <field name="playlistId"><default-field title="ID"><text-line/></default-field></field>
-                            <field name="playlistTitle"><default-field title="Title"><text-line/></default-field></field>
-                            <field name="playlistDashboardIds"><default-field title="Dashboards">
-                                <drop-down allow-multiple="true"><list-options list="dashboardChoices" key="${id}" text="${title}"/></drop-down>
-                            </default-field></field>
-                            <field name="playlistSeconds"><default-field title="Seconds per dashboard"><text-line default-value="30"/></default-field></field>
-                            <field name="create"><default-field><submit text="Save playlist"/></default-field></field>
-                        </form-single>
-                    </container-dialog>
-                </container>
-            </container>
-            <section name="PlaylistList" condition="playlists.length"><widgets>
-                <form-list name="Playlists" list="playlists" skip-form="true" paginate="false">
-                    <field name="title"><default-field title="Playlist"><link url="play" text="${title}" link-type="anchor" parameter-map="{definitionId:id}"/></default-field></field>
-                    <field name="count"><default-field title="Dashboards"><display/></default-field></field>
-                    <field name="seconds"><default-field title="Seconds each"><display/></default-field></field>
-                    <field name="edit"><conditional-field condition="canAuthor"><link url="edit" text="Edit" link-type="anchor" parameter-map="{definitionId:id}"/></conditional-field>
-                        <default-field><display text=""/></default-field></field>
-                    <field name="fullScreen"><default-field title=""><link url="${wallDisplayPath}" url-type="plain" target-window="_blank" text="Play full screen" parameter-map="{definitionId:id}"/></default-field></field>
-                    <field name="onDisplays"><conditional-field condition="canAuthor &amp;&amp; owned &amp;&amp; otherGroupId" title="Wall displays">
+            <section-include name="PlaylistsHeader" location="component://tools/screen/Dashboards/Playlists.xml"/>
+            <section name="PlaylistList" condition="playlistView.playlists.length"><widgets>
+                <form-list name="Playlists" extends="component://tools/screen/Dashboards/Playlists.xml#Playlists" list="playlistView.playlists" skip-form="true" paginate="false">
+                    <field name="sharedText"><conditional-field condition="playlistView.mayShare &amp;&amp; owned &amp;&amp; otherGroupName" title="Wall displays">
                             <link url="sharePlaylist" text="Share with wall displays" link-type="hidden-form-link"
                                     confirmation="It is shared with ${otherGroupName} now. A playlist is shared with one group at a time, so sharing it with the wall displays takes it from ${otherGroupName}."
-                                    parameter-map="{definitionId:id, shareWithDisplays:'Y'}"/>
+                                    parameter-map="{shareDefinitionId:id, userGroupId:displayGroupId}"/>
                             <label text="Shared with ${otherGroupName}" type="p" style="text-caption m-muted q-mb-none"/></conditional-field>
-                        <conditional-field condition="canAuthor &amp;&amp; owned" title="Wall displays">
+                        <conditional-field condition="playlistView.mayShare &amp;&amp; owned" title="Wall displays">
                             <link url="sharePlaylist" text="${onDisplays ? 'Stop sharing with wall displays' : 'Share with wall displays'}" link-type="hidden-form-link"
-                                    parameter-map="{definitionId:id, shareWithDisplays:(onDisplays ? 'N' : 'Y')}"/></conditional-field>
+                                    parameter-map="{shareDefinitionId:id, userGroupId:(onDisplays ? '' : displayGroupId)}"/></conditional-field>
                         <default-field title="Wall displays"><display text="${onDisplays ? 'Shared' : ''}"/></default-field></field>
                     <field name="devices"><conditional-field condition="seesDevices" title="Devices showing it"><display/></conditional-field>
                         <default-field title=""><display text=""/></default-field></field>

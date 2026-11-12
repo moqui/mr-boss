@@ -3,22 +3,43 @@
 // ORG_ZIZI_SERVICES then reads only its own organization's sales rows and a Retail reader only Retail's, whatever filter either
 // sends; DatasetView's one qvt render (the author's, Retail's rows only) and its scoped export, the same rows; the dataset's
 // readiness and its index refresh through Admin's registries, the refresh the steward's; the steward's own dataset names
-// neither the log index nor the sales document without its filter (impl-admin F277). The engine's admission rules are the
-// framework's BusinessDatasets and the organization filter Mantle's OrganizationRowFilter; the screens' access is InsightsAccess's.
+// neither the log index nor the sales document without its filter (impl-admin F277). The four dataset screens are the
+// framework's Dashboards screens at Insights' locations (mr-moqui plans/Admin-Screens-Down.md, Track I): through Insights'
+// route a dataset the steward creates is named insights- and scoped on its organization field (Insights' reportPolicy), an
+// author creates none, and the Dashboards screens' own transitions, which Insights does not take in, are not on the route.
+// The engine's admission rules and what the screens read are the framework's BusinessDatasets, and the organization filter
+// Mantle's OrganizationRowFilter; the screens' access is InsightsAccess's.
 // The "usable when" scenario is the acceptance InsightsDatasetsUsable. Run: ./moq test mr-boss --spec InsightsDatasets
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke} = lib
 const R = "org.moqui.report.ReportServices."
-const D = "ironstone.insights.DatasetServices."
 const salesId = "mantle-sales-orders"
 const orders = {retail: "INS_DS_O1", services: "INS_DS_O2"}
 const range = {from: "now-1d", thru: "now+1d"}
 const webroot = "component://webroot/screen/webroot.xml"
+const insightsRoot = "component://mr-boss/screen/Insights.xml"
+// the dataset the steward creates through Insights' route, by its form's short name
+const created = {name: "INS DS route", datasetId: "insights-ins-ds-route"}
 
 function make(entityName, fields) {
     const row = ec.entity.makeValue(entityName)
     row.setFields(fields, true, null, null)
     row.create()
+}
+// A transition asked as the user (no page is rendered), posted unless it is a read: where it sends the browser, its errors
+// and what it answered.
+function transition(user, root, path, parameters, method = "post") {
+    return asUser(user, () => {
+        const result = ec.screen.makeTest().rootScreen(root).render(path, parameters, method)
+        const out = {
+            status: result.status,
+            location: String(result.header("Location") || ""),
+            errors: Array.from(result.errorMessages || []).join(" | "),
+            output: String(result.output || "")
+        }
+        ec.message.clearErrors()
+        return out
+    })
 }
 // the spec's orders of a sales dataset the user reads, by id
 function orderIds(user, extra) {
@@ -143,35 +164,119 @@ feature("DatasetView's one qvt render shows the author Retail's rows and its exp
                 .withStaticData()
                 .render(
                     "apps/Insights/ReportBuilder/DatasetView",
-                    Object.assign({lastStandalone: "true", datasetId: salesId, queryString: "orderId:INS_DS_*"}, range),
+                    // a page of this list, which the link to Explore does not carry (Explore's list has its own)
+                    Object.assign(
+                        {lastStandalone: "true", datasetId: salesId, queryString: "orderId:INS_DS_*", pageIndex: "0"},
+                        range
+                    ),
                     null
                 )
             const output = String(result.output || "")
             const failed = output.match(/(Error rendering|Exception in render)[^\n<]*/g) || []
             return {status: result.status, output, errors: Array.from(result.errorMessages || []).concat(failed)}
         })
-        const exported = asUser(users.author, () =>
-            invoke(
-                D + "export#Dataset",
-                Object.assign({datasetId: salesId, queryString: "orderId:INS_DS_*", format: "csv"}, range)
+        // the export is the screen's transition, through Insights' route: the author's rows as CSV, and refused to a reader
+        const exportOf = user =>
+            transition(
+                user,
+                insightsRoot,
+                "ReportBuilder/DatasetView/exportDocuments",
+                Object.assign({datasetId: salesId, queryString: "orderId:INS_DS_*", format: "csv"}, range),
+                null
             )
-        )
-        const readerExport = asUser(users.reader, () => refusal(D + "export#Dataset", Object.assign({datasetId: salesId}, range)))
-        return {rendered, exported, readerExport}
+        const exported = exportOf(users.author)
+        const readerExport = exportOf(users.reader)
+        const explore = (rendered.output.match(/href="([^"]*ReportBuilder\/Explore\?[^"]*)"/) || [])[1] || ""
+        return {rendered, explore, exported, exportedRows: exported.output.trim().split(/\r?\n/).length - 1, readerExport}
     },
-    then({rendered, exported, readerExport}) {
+    then({rendered, explore, exported, exportedRows, readerExport}) {
         rendered.status == 200
         rendered.errors.length == 0
         rendered.output.includes("Sales orders")
         rendered.output.includes(orders.retail)
         !rendered.output.includes(orders.services)
         rendered.output.includes("Export")
-        exported.rowCount == 1
-        exported.content.includes(orders.retail)
-        !exported.content.includes(orders.services)
-        readerExport.includes("INSIGHTS_DATASETS_UNAVAILABLE") || readerExport.includes("authoring or stewardship")
+        // the dataset opens in Insights' Explore with the range and the query, without this list's page
+        explore.includes("datasetId=" + salesId) && explore.includes("queryString=")
+        !explore.includes("pageIndex")
+        exported.errors == ""
+        exportedRows == 1
+        exported.output.includes(orders.retail)
+        !exported.output.includes(orders.services)
+        readerExport.errors.includes("is not authorized")
+        !readerExport.output.includes(orders.retail)
     }
 })
+
+feature(
+    "through Insights' route the steward's new dataset is named insights- and scoped on its organization field; the Dashboards screens' own transitions are not there",
+    {
+        when() {
+            const form = {
+                title: "Spec route orders",
+                name: created.name,
+                dataDocumentId: "MantleSalesOrderPart",
+                scopePolicyId: "MantleOrganization",
+                scopeField: "vendorPartyId"
+            }
+            const stored = () =>
+                system(() => {
+                    const row = ec.entity.find("moqui.report.Definition").condition("definitionId", created.datasetId).one()
+                    return row ? JSON.parse(row.bodyJson) : null
+                })
+            // an author opens the list and reaches its transition, and is not granted the engine's create
+            const author = transition(users.author, insightsRoot, "ReportBuilder/Datasets/createDataset", form)
+            const authorMade = stored()
+            const made = transition(users.steward, insightsRoot, "ReportBuilder/Datasets/createDataset", form)
+            const first = stored()
+            const state = asUser(
+                users.steward,
+                () => invoke(R + "find#BusinessDatasets", {datasetId: created.datasetId}).datasets[0]
+            )
+            // the organization field changed in DatasetDetail's form: the same parameter of Mantle's policy
+            const changed = transition(users.steward, insightsRoot, "ReportBuilder/DatasetDetail/storeDataset", {
+                datasetId: created.datasetId,
+                title: form.title,
+                scopePolicyId: form.scopePolicyId,
+                scopeField: "customerPartyId",
+                expectedVersion: state?.version
+            })
+            const second = stored()
+            // the Dashboards screens' own transitions (the other datasets' Explore and definition editor, a dataset's
+            // definition) are not taken in, so they are not on Insights' route: for the steward and for ADMIN
+            const trims = []
+            for (const user of [users.steward, users.system])
+                for (const [path, parameters] of [
+                    ["ReportBuilder/Datasets/definition", {definitionType: "dataset"}],
+                    ["ReportBuilder/Datasets/explore", {datasetId: created.datasetId}],
+                    ["ReportBuilder/DatasetDetail/definition", {datasetId: created.datasetId, definitionId: created.datasetId}]
+                ]) {
+                    const asked = transition(user, insightsRoot, path, parameters)
+                    if (asked.location || !asked.errors.includes("screen path not found"))
+                        trims.push(`${user} ${path}: ${asked.location} ${asked.errors}`)
+                }
+            // and the same post under Tools' own root goes to its definition editor
+            const tools = transition(users.system, webroot, "apps/dashboards/Datasets/definition", {definitionType: "dataset"})
+            asUser(users.steward, () => invoke(R + "delete#Definition", {definitionId: created.datasetId}))
+            return {author, authorMade, made, first, state, changed, second, trims, tools, after: stored()}
+        },
+        then({author, authorMade, made, first, state, changed, second, trims, tools, after}) {
+            author.errors.includes("is not authorized")
+            authorMade == null
+            made.errors == ""
+            made.location.includes("ReportBuilder/DatasetDetail?datasetId=" + created.datasetId)
+            first.signal == "business"
+            JSON.stringify(first.rowFilterParameters) == '{"organizationField":"vendorPartyId"}'
+            state.status == "review"
+            state.stewarded == true
+            changed.errors == ""
+            JSON.stringify(second.rowFilterParameters) == '{"organizationField":"customerPartyId"}'
+            trims.join("\n") == ""
+            tools.location.includes("/apps/dashboards/Definition")
+            after == null
+        }
+    }
+)
 
 feature("the steward's own dataset is no way to the log index or past the sales rows' filter (impl-admin F277)", {
     when() {
@@ -204,13 +309,13 @@ feature("the dataset's readiness and index refresh are in Admin's registries, th
     when() {
         const providerKey = "insights.dataset." + salesId
         const readiness = asUser(users.steward, () =>
-            Array.from(invoke("ironstone.admin.RegistryServices.get#Readiness", {providerKey}).checks || [])
+            Array.from(invoke("org.moqui.admin.ReadinessServices.get#Readiness", {providerKey}).checks || [])
         )
         const refused = asUser(users.author, () =>
-            refusal("ironstone.admin.RegistryServices.request#Refresh", {refreshKey: providerKey + ".index"})
+            refusal("org.moqui.admin.ReadinessServices.request#Refresh", {refreshKey: providerKey + ".index"})
         )
         const refreshed = asUser(users.steward, () =>
-            invoke("ironstone.admin.RegistryServices.request#Refresh", {refreshKey: providerKey + ".index", reason: "spec"})
+            invoke("org.moqui.admin.ReadinessServices.request#Refresh", {refreshKey: providerKey + ".index", reason: "spec"})
         )
         const indexed = system(() => ec.entity.find("moqui.report.BusinessDataset").condition("datasetId", salesId).one())
         return {readiness, refused, refreshed, indexed: indexed?.lastIndexedCount}

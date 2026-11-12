@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     which reads Admin's readiness registry as the viewer; there is no second registry). Ready, stale (older than the
     organization's freshness policy allows, with its lag), needs review, failed and unavailable are told apart, and a provider
     that could not be checked is named while the others answer. RefreshRequest asks the owner's registered refresh
-    (ironstone.admin.RegistryServices.request#Refresh: the registration's own permission and the source's own grant decide; the
+    (org.moqui.admin.ReadinessServices.request#Refresh: the registration's own permission and the source's own grant decide; the
     request names one of Insights' registrations, never a service or an index, and gives its reason) and is offered only where
     the viewer may run it. It is not
     a replacement for Monitor. -->
@@ -36,7 +36,7 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- Insights' own registered refreshes only: another owner's is requested from its owner's screen or Admin's Health -->
             <if condition="!String(refreshKey || '').startsWith('insights.')"><return error="true" message="That refresh is not one of Insights' sources"/></if>
             <if condition="!String(reason || '').trim()"><return error="true" message="Say why the refresh is needed"/></if>
-            <service-call name="ironstone.admin.RegistryServices.request#Refresh" out-map="refreshed"
+            <service-call name="org.moqui.admin.ReadinessServices.request#Refresh" out-map="refreshed"
                     in-map="{refreshKey:refreshKey, reason:reason, operationKey:(operationKey || null)}"/>
             <if condition="!ec.message.hasError()">
                 <script>ec.message.addMessage(refreshed.message, refreshed.state === 'failed' ? 'warning' : 'success')</script>

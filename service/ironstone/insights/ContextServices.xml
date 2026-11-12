@@ -25,7 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
             and whether the copied report screens open), the organization choices (theirs, or every internal organization for the
             Insights administrator with none active), the organization in scope (the requested one, else the active one, else the
             only one), the safe defaults (a relative reporting range, currencies kept apart), the canonical links and the
-            framework report screens' links under Insights (reportLinks, with no editor for a user who does not author). Refuses a
+            framework report screens' links and policy under Insights (reportLinks, with no editor for a user who does not
+            author; reportPolicy, what Insights' own services do, as data for the screens: the default range, who may set an
+            alert or share, the fixed parts of a dataset, a schedule and an alert, the organization's calendar). Refuses a
             user without Insights (INSIGHTS_UNAVAILABLE), a Projects client contact and a PASS public account among them, another
             app root (INSIGHTS_CONTEXT) and an organization that is not the user's, existing or not (ORGANIZATION_UNAVAILABLE).</description>
         <in-parameters>
@@ -42,6 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="appRoot"/>
             <parameter name="sharedLinks" type="Map"/>
             <parameter name="reportLinks" type="Map"/>
+            <parameter name="reportPolicy" type="Map"/>
             <parameter name="linkBase"/>
             <parameter name="webBase"/>
         </out-parameters>
@@ -57,8 +60,31 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="appRoot" from="found.appRoot"/>
             <set field="sharedLinks" from="found.sharedLinks"/>
             <set field="reportLinks" from="found.reportLinks"/>
+            <set field="reportPolicy" from="found.reportPolicy"/>
             <set field="linkBase" from="found.linkBase"/>
             <set field="webBase" from="found.webBase"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ShareGroups" allow-remote="false">
+        <description>The groups the current user may share a definition of Insights' own forms with (a saved report's copy,
+            an analysis, a flow map, a digest): their own groups by name, never the implicit ALL_USERS, nor the wall displays
+            (a dashboard and a playlist are shared on the framework's screens, by the root's reportPolicy). Refuses a user
+            without Insights (INSIGHTS_UNAVAILABLE). The report engine's save checks the group it is given itself.</description>
+        <out-parameters><parameter name="groups" type="List"/></out-parameters>
+        <actions>
+            <set field="groups" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').execute('shareGroups', context).groups"/>
+        </actions>
+    </service>
+    <service verb="get" noun="DeliveryPolicy" allow-remote="false">
+        <description>What an area of Insights that delivers adds to the root's reportPolicy for the framework's report screens it
+            shows (Scheduled reports, Business alerts; mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"):
+            recipientCap, the most recipients a group delivery or an alert's audience is saved and checked with, the cap of the organization the caller works in (else the
+            lowest of the organizations in their scope), never above the instance ceiling. It is read where it is used, not by
+            get#Context for every request. Refuses a user without Insights (INSIGHTS_UNAVAILABLE).</description>
+        <out-parameters><parameter name="recipientCap" type="Integer"/></out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').execute('deliveryPolicy', context)"/>
+            <set field="recipientCap" from="found.recipientCap"/>
         </actions>
     </service>
     <service verb="search" noun="Records" allow-remote="false">

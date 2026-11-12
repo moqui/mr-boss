@@ -12,179 +12,24 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights › Business alerts, the list (design-insights §8 Alerts; impl-insights P8): AlertFind (the view and the state) over
-    Mine (the rules the caller owns, each with its condition, audience and the most severe state of its series), Received (the
-    rules that told the caller, with the caller's own delivery, for every reader) and Templates (the shipped rules: Mantle's
-    daily sales floor, Customer Service's service level breaches, Commerce's three), each copied to the caller and inactive
-    until they activate it (ironstone.insights.AlertServices find#Alerts, copy#Alert, pause#Alerts, delete#Alert). A new rule
-    over a panel starts from that panel's menu on a dashboard (New alert rule). No data and Error say the health is not known,
-    never Normal. Pause, activate and delete confirm the rule and who it tells. -->
+<!-- Insights › Business alerts, the list (design-insights §8 Alerts; impl-insights P8; mr-moqui plans/Admin-Screens-Down.md,
+    Track I): the framework's Dashboards › Alerts at this location, with the three transitions Insights offers: copyAlert (a
+    shipped rule copied to the caller, with Insights' fixed parts, inactive until they activate it), pauseAlerts and
+    deleteAlert, each of the caller's own rule and each refused to one who may set no alert here (a reader, a dataset
+    steward). Under Insights' policy the views are Mine, Received (every reader's) and Templates, and only business rules
+    are listed: Tools' telemetry rules and its shared contact points, silences and mute timings are not shown, and their
+    transitions (evaluate, deleteShared) are not taken in, so they do not exist on this route. A new rule over a panel
+    starts from that panel's menu on a dashboard (New alert rule). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Business alerts" default-menu-include="false">
-
     <parameter name="view"/>
     <parameter name="state"/>
 
-    <transition name="copyAlert" method="post">
-        <actions>
-            <service-call name="ironstone.insights.AlertServices.copy#Alert" in-map="{definitionId:sourceDefinitionId, title:title}" out-map="copied"/>
-            <script>ec.message.addMessage(copied.applied ? 'Copied: set its threshold and audience, then activate it' : copied.reason,
-                copied.applied ? 'success' : 'danger')</script>
-            <set field="definitionId" from="copied.definitionId"/>
-        </actions>
-        <conditional-response url="../AlertDetail" condition="copied?.applied"><parameter name="definitionId"/></conditional-response>
-        <default-response url="."/>
-    </transition>
-    <transition name="pauseAlerts" method="post">
-        <actions>
-            <service-call name="ironstone.insights.AlertServices.pause#Alerts" in-map="{definitionIds:definitionIds, paused:paused}" out-map="pausedOut"/>
-            <script><![CDATA[
-                for (const result of pausedOut.results) if (!result.applied) ec.message.addMessage(result.reason, 'danger')
-                if (pausedOut.appliedCount) ec.message.addMessage(pausedOut.appliedCount + (pausedOut.appliedCount === 1 ? ' alert ' : ' alerts ')
-                    + (pausedOut.paused ? 'paused' : 'activated'), 'success')
-            ]]></script>
-        </actions>
-        <default-response url="."/>
-    </transition>
-    <transition name="deleteAlert" method="post">
-        <actions>
-            <service-call name="ironstone.insights.AlertServices.delete#Alert" in-map="{definitionId:definitionId}" out-map="deleted"/>
-            <script>ec.message.addMessage(deleted.applied ? 'Alert deleted' : deleted.reason, deleted.applied ? 'success' : 'danger')</script>
-        </actions>
-        <default-response url="."/>
-    </transition>
+    <transition-include name="copyAlert" location="component://tools/screen/Dashboards/Alerts.xml"/>
+    <transition-include name="pauseAlerts" location="component://tools/screen/Dashboards/Alerts.xml"/>
+    <transition-include name="deleteAlert" location="component://tools/screen/Dashboards/Alerts.xml"/>
 
-    <actions>
-        <!-- a member of the root group alone reads nothing in Insights: told so, as on Home -->
-        <if condition="insights.capabilities.view"><then>
-            <service-call name="ironstone.insights.AlertServices.find#Alerts" in-map="{view:view, state:state}" out-map="found"/>
-        </then><else>
-            <set field="found" from="{view:'received', alerts:[], received:[], templates:[], canAuthor:false, canDistribute:false}"/>
-        </else></if>
-        <set field="view" from="found.view"/>
-        <set field="alertList" from="found.alerts"/>
-        <set field="received" from="found.received"/>
-        <set field="templates" from="found.templates"/>
-        <set field="viewOptions" from="(found.canAuthor ? [{value:'mine', label:'Mine'}] : []).concat([{value:'received', label:'Received'}],
-                found.canAuthor ? [{value:'templates', label:'Templates'}] : [])"/>
-        <set field="stateOptions" from="[{value:'active', label:'Active'}, {value:'paused', label:'Paused'}]"/>
-        <set field="findValues" from="{view:view, state:state}"/>
-    </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col"><label text="Business alerts" type="h5"/></container>
-        </container>
-        <label type="p" style="m-muted" condition="found.canAuthor"
-                text="An alert is evaluated as its owner. Other people are told only when they may read exactly what the owner reads, each in a notification of their own. To watch a panel, open its menu on a dashboard and choose New alert rule; or copy a template."/>
-
-        <form-single name="AlertFind" transition="." map="findValues">
-            <field name="view"><default-field title="Show">
-                <drop-down><list-options list="viewOptions" key="${value}" text="${label}"/></drop-down>
-            </default-field></field>
-            <field name="state"><default-field title="State">
-                <drop-down allow-empty="true"><list-options list="stateOptions" key="${value}" text="${label}"/></drop-down>
-            </default-field></field>
-            <field name="apply"><default-field><submit text="Find"/></default-field></field>
-            <field-layout><field-row><field-ref name="view"/><field-ref name="state"/><field-ref name="apply"/></field-row></field-layout>
-        </form-single>
-
-        <section name="OwnAlerts" condition="view == 'mine'"><widgets>
-            <label type="p" style="m-muted" condition="!alertList.length" text="You have no alert yet. Copy a template, or start one from a panel's menu on a dashboard."/>
-            <form-list name="AlertRules" list="alertList" paginate="false" condition="alertList.length">
-                <row-selection id-field="definitionId" parameter="definitionIds" list-mode="true">
-                    <action>
-                        <dialog button-text="Pause" title="Pause the selected alerts"/>
-                        <form-single name="PauseSelected" transition="pauseAlerts">
-                            <field name="paused"><default-field><hidden default-value="true"/></default-field></field>
-                            <field name="note"><default-field title=""><label text="The selected alerts are not evaluated and tell nobody until activated again. Each one's result is shown."/></default-field></field>
-                            <field name="submitButton"><default-field title="Pause"><submit/></default-field></field>
-                        </form-single>
-                    </action>
-                </row-selection>
-                <field name="title"><default-field title="Alert">
-                    <link url="../AlertDetail" text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
-                </default-field></field>
-                <field name="conditionText"><default-field title="Fires when"><display/></default-field></field>
-                <field name="audienceText"><default-field title="Tells"><display/></default-field></field>
-                <field name="stateText"><default-field title="State">
-                    <render-mode>
-                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
-                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                        <text type="html">${stateText}</text>
-                    </render-mode>
-                </default-field></field>
-                <field name="lastText"><default-field title="Evaluated"><display/></default-field></field>
-                <field name="actions"><default-field title="">
-                    <link url="pauseAlerts" link-type="hidden-form" text="Pause" condition="!paused"
-                            confirmation="Pause ${title}? It is not evaluated and tells nobody until activated again."
-                            parameter-map="{definitionIds:definitionId, paused:'true'}"/>
-                    <link url="pauseAlerts" link-type="hidden-form" text="Activate" condition="paused"
-                            confirmation="Activate ${title}? Its reading is run as you, and ${audienceText} is checked first."
-                            parameter-map="{definitionIds:definitionId, paused:'false'}"/>
-                    <link url="deleteAlert" link-type="hidden-form" text="Delete"
-                            confirmation="Delete ${title} with its state and its delivery history? ${audienceText} is no longer told."
-                            parameter-map="{definitionId:definitionId}"/>
-                </default-field></field>
-                <columns type="mobile">
-                    <column><field-ref name="title"/><field-ref name="conditionText"/></column>
-                    <column><field-ref name="stateText"/><field-ref name="actions"/></column>
-                </columns>
-            </form-list>
-        </widgets></section>
-
-        <section name="ReceivedAlerts" condition="view == 'received'"><widgets>
-            <label type="p" style="m-muted" condition="!received.length"
-                    text="${insights.capabilities.view ? 'No alert has told you anything yet.' : 'Business alerts are shown to Insights readers.'}"/>
-            <form-list name="ReceivedList" list="received" skip-form="true" paginate="false" condition="received.length">
-                <field name="title"><default-field title="Alert">
-                    <link url="../AlertDetail" text="${title}" link-type="anchor" condition="readable" parameter-map="{definitionId:definitionId}"/>
-                    <label text="${title}" condition="!readable"/>
-                </default-field></field>
-                <field name="toldText"><default-field title="You were told"><display text="${toldText} · ${channelText}"/></default-field></field>
-                <field name="attemptText"><default-field title="When"><display/></default-field></field>
-                <field name="stateText"><default-field title="Your delivery">
-                    <render-mode>
-                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
-                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                        <text type="html">${stateText}</text>
-                    </render-mode>
-                </default-field></field>
-                <field name="ruleStateText"><default-field title="Now">
-                    <render-mode>
-                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${ruleStateColor}">${
-                            WebUtilities.encodeHtml(ruleStateText)}</q-chip>]]></text>
-                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: ruleStateText})}]]></text>
-                        <text type="html">${ruleStateText}</text>
-                    </render-mode>
-                </default-field></field>
-                <columns type="mobile">
-                    <column><field-ref name="title"/><field-ref name="toldText"/></column>
-                    <column><field-ref name="ruleStateText"/><field-ref name="attemptText"/></column>
-                </columns>
-            </form-list>
-        </widgets></section>
-
-        <section name="AlertTemplates" condition="view == 'templates'"><widgets>
-            <label type="p" style="m-muted" text="A shipped alert is a template. Your copy is yours alone and inactive until you set its threshold and audience and activate it."/>
-            <form-list name="TemplateList" list="templates" skip-form="true" paginate="false">
-                <field name="title"><default-field title="Template">
-                    <link url="../AlertDetail" text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
-                </default-field></field>
-                <field name="description"><default-field title="What it watches"><display/></default-field></field>
-                <field name="conditionText"><default-field title="Fires when"><display/></default-field></field>
-                <field name="copy"><default-field title="">
-                    <link url="copyAlert" link-type="hidden-form" text="Copy" condition="available"
-                            confirmation="Copy ${title}? Your copy tells you alone and stays inactive until you activate it."
-                            parameter-map="{sourceDefinitionId:definitionId}"/>
-                    <label text="${availableText}" style="m-muted" condition="!available"/>
-                </default-field></field>
-                <columns type="mobile">
-                    <column><field-ref name="title"/><field-ref name="conditionText"/></column>
-                    <column><field-ref name="copy"/></column>
-                </columns>
-            </form-list>
-        </widgets></section>
+        <include-screen location="component://tools/screen/Dashboards/Alerts.xml" share-scope="true"/>
     </widgets>
 </screen>

@@ -5,7 +5,10 @@
 // below a record screen is served under Insights but its read-only context: no transition and no owner tab; the root's Chatter
 // and RecordFiles panels answer only a user whose own grants open Commons (P12). An analysis summing
 // amounts across currencies is refused with its reason until it is grouped by currency, and is saved as a library panel only
-// by an author. A business event of the reader's organization is a marker on the panel. The engine's rules are the framework's ReportDrill and ReportAnnotations, the events'
+// by an author: Analysis' saveAnalysis on Insights' route is Insights' own (its author check and its grant), not the
+// framework screen's, so a distributor, who holds the engine's save, saves none there. The drill's page and the analysis'
+// query and rows are the framework's (tools/template/ReportDrill.js, ReportAnalysis.js), under Insights' scope, range, cost
+// filter and reason codes. A business event of the reader's organization is a marker on the panel. The engine's rules are the framework's ReportDrill and ReportAnnotations, the events'
 // records Mantle's BusinessEvents; the orders and the admitted sales dataset are InsightsDatasets'. The "usable when" scenario is
 // the acceptance InsightsDrillUsable. Run: ./moq test mr-boss --spec InsightsRecords
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -279,7 +282,20 @@ feature("an analysis summing amounts across currencies is refused until grouped 
             invoke(A + "store#Analysis", Object.assign({title: "Order value by currency", groupBy: "currencyUomId"}, choices))
         )
         const definition = asUser(users.author, () => invoke(R + "get#Definition", {definitionId: saved.definitionId}).definition)
+        // through Insights' route the save is Insights' own transition: the distributor, who holds the engine's save (the
+        // framework screen's saveAnalysis would take it), saves nothing there; the same post by the author saves
+        const routed = {title: "Routed analysis", groupBy: "currencyUomId"}
+        const analyses = userId =>
+            system(() =>
+                ec.entity.find("moqui.report.Definition").condition("ownerId", userId).condition("title", routed.title).count()
+            )
+        const byDistributor = post(users.distributor, "ReportBuilder/Analysis/saveAnalysis", Object.assign({}, routed, choices))
+        const byAuthor = post(users.author, "ReportBuilder/Analysis/saveAnalysis", Object.assign({}, routed, choices))
         return {
+            byDistributor,
+            byAuthor,
+            distributorSaved: analyses("BOSS_INS_DISTRIBUTOR"),
+            authorSaved: analyses("BOSS_INS_AUTHOR"),
             mixed,
             grouped,
             groupedText: Array.from(grouped.rows || [])
@@ -298,7 +314,7 @@ feature("an analysis summing amounts across currencies is refused until grouped 
             definition
         }
     },
-    then({mixed, grouped, groupedText, oneCurrency, page, reader, authorRuns, notAField, savedMixed, otherGroup, definition}) {
+    then({mixed, grouped, groupedText, oneCurrency, page, reader, authorRuns, notAField, savedMixed, otherGroup, definition, byDistributor, byAuthor, distributorSaved, authorSaved}) {
         !mixed.available
         mixed.refusedCode == "UNIT_MIXED"
         mixed.reason.includes("currencyUomId")
@@ -321,6 +337,8 @@ feature("an analysis summing amounts across currencies is refused until grouped 
         definition.type == "panel"
         definition.ownerId != null
         definition.body.queries[0].datasetId == "mantle-sales-orders"
+        byDistributor.errors != "" && distributorSaved == 0
+        byAuthor.errors == "" && authorSaved == 1
     }
 })
 

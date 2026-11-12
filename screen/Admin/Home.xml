@@ -13,29 +13,32 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Admin Home (design-admin §3 Home; style-guide §3.1 Landing): the Monitor / Manage / Configure shortcuts of the areas the user
-    opens (Health, the primary, Monitoring, Users (P4), Settings, Agents, System, Developer tools), then for an administrative reader
+    opens (Health, the primary, Monitoring, Users (P4), Settings, Agents, System, Tools), then for an administrative reader
     (ADMIN_OVERVIEW_VIEW) Needs attention (Attention: the failing and warning checks of every provider the reader may read, worst
     first, with the owner's fix link when the reader opens it), Setup checks (SetupChecks: Admin's own first-run checks by group)
-    and Health's cards (HealthCards: failed job runs, unresolved transports, backup coverage, sign-in failures), from
-    ironstone.admin.RegistryServices.get#Overview and get#Readiness. A provider that could not be checked is named; a summary that
-    cannot be read leaves the others. No Fix all. A user without the read sees the shortcuts and why the summaries are not
-    shown. -->
+    and Health's cards (HealthCards: failed job runs, unresolved transports, backup coverage, sign-in failures), from the
+    framework's org.moqui.admin.ReadinessServices.get#Overview and get#Readiness (template/AdminRegistry.js: a fix link and a
+    card's link by Admin's mount, each only where its place opens to the reader). A provider that could not be checked is
+    named; a summary that cannot be read leaves the others. No Fix all. A user without the read sees the shortcuts and why
+    the summaries are not shown. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <actions>
         <set field="can" from="admin.capabilities"/>
+        <!-- Tools by the user's own grant on its root (an Admin grant opens none of the framework's apps) -->
+        <set field="toolsOpen" from="ec.artifactExecution.isPermittedOwn('component://tools/screen/Tools.xml')"/>
         <!-- what the instance is called (P8: the instance.displayName preference, Settings › Instance), when it is named -->
         <service-call name="org.moqui.admin.ConfigurationServices.get#InstancePreference" out-map="instanceName" transaction="force-new"
                 ignore-error="true" in-map="{settingKey:'instance.displayName'}"/>
         <script>ec.message.clearErrors()</script>
         <if condition="can.overview">
             <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.get#Overview', {}, 'The overview is not available to you.')"/>
+            <set field="registry" from="ec.resource.script('component://mr-boss/template/AdminRegistry.js')"/>
+            <set field="called" from="registry.overview(null)"/>
             <set field="overview" from="called.out"/>
             <set field="overviewFailure" from="called.failure"/>
-            <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="setup" transaction="force-new" ignore-error="true"
-                    in-map="{ownerApp:'Admin'}"/>
-            <script>ec.message.clearErrors()</script>
+            <!-- the instance's own checks are the framework's, registered as System's -->
+            <set field="setup" from="registry.readiness({ownerApp:'System'}).out"/>
         </if>
         <set field="attention" from="overview?.attention || []"/>
         <set field="setupChecks" from="(setup?.checks || []).filter(row =&gt; row.providerKey.startsWith('admin.'))"/>
@@ -61,8 +64,10 @@ along with this software (see the LICENSE.md file). If not, see
                     condition="can.agents"/>
             <link url="${sharedLinks['System']}" text="System" link-type="anchor-button" icon="sym_o_devices"
                     condition="can.system"/>
-            <link url="${sharedLinks['Developer/Home']}" text="Developer tools" link-type="anchor-button" icon="sym_o_construction"
-                    condition="can.developer"/>
+            <!-- the framework's tools at their own app, shown by the user's own grant on its root (Tools Home lists each by
+                its permission) -->
+            <link url="/qapps/tools" url-type="plain" text="Tools" link-type="anchor-button" icon="sym_o_construction"
+                    condition="toolsOpen"/>
         </container>
         <section name="Summaries" condition="can.overview">
             <widgets>

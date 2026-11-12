@@ -16,7 +16,19 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Report builder" default-menu-index="5" menu-image="sym_o_edit" menu-image-type="icon">
     <!-- Explore (P2) for every Insights user; Datasets and the hidden DatasetView (P3) for authors and stewards, the hidden
         DatasetDetail and DatasetFields for stewards (BOSS_INS_DATASET_SCREENS, BOSS_INS_DATASET_STEWARDSHIP), replacing the copied
-        SimpleReport builder (impl-insights F20) -->
-    <subscreens default-item="Explore"/>
+        SimpleReport builder (impl-insights F20). The four dataset screens are the framework's Dashboards screens, each
+        included in the file of its name here with the transitions Insights offers, since the two groups' grants name these
+        locations and transitions (mr-moqui plans/Admin-Screens-Down.md, Track I) -->
+    <subscreens default-item="Explore">
+        <!-- the framework's Explore and its Compare (mr-moqui plans/Admin-Screens-Down.md, Track I), by location: no grant
+            names them, they have no transition of an instance administrator's and Insights adds nothing. The dataset choices
+            are the datasets the viewer may read (each dataset's own artifact), a viewer who reads none is told so (the
+            Insights administrator, who reads no business data: impl-insights F74), the range is Insights' (reportPolicy) and
+            the links go by reportLinks: adding a panel opens Insights › Dashboard and Compare opens Split, saving is offered
+            to authors only, and no log context is offered. Trace, user and visit links are of Tools' telemetry fields, which
+            no Insights group reads -->
+        <subscreens-item name="Explore" location="component://tools/screen/Dashboards/Explore.xml" menu-title="Explore" menu-index="1"/>
+        <subscreens-item name="Split" location="component://tools/screen/Dashboards/Split.xml" menu-title="Compare" menu-include="false"/>
+    </subscreens>
     <widgets><subscreens-panel id="SimpleReportPanel" type="tab"/></widgets>
 </screen>

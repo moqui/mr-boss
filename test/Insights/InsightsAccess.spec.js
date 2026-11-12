@@ -56,6 +56,25 @@ feature(
                 reader.defaults?.currencyMode !== "native"
             )
                 problems.push(`the reader's context: ${JSON.stringify(reader)}`)
+            // the framework report screens' policy under Insights (reportPolicy, beside reportLinks): Insights' range and fixed
+            // parts for everyone, and an alert or a share offered by the user's own permissions
+            const policy = reader.reportPolicy || {}
+            if (
+                policy.range?.from !== "now-30d" ||
+                policy.features?.alert !== false ||
+                policy.features?.share !== false ||
+                policy.recipientPermissionId !== "INSIGHTS_VIEW" ||
+                policy.datasetIdPrefix !== "insights-" ||
+                policy.datasetScopeLabel !== "Organization field" ||
+                policy.alertAudience?.topic !== "InsightsBusinessAlert" ||
+                reader.reportLinks?.alerts !== "//Insights/Alerts/Rules" ||
+                // a rule opens for every reader (the alerts they receive link it); setting one is the feature above
+                reader.reportLinks?.alertRule !== "//Insights/Alerts/AlertDetail"
+            )
+                problems.push(`the reader's report policy: ${JSON.stringify(policy)}`)
+            const authorFeatures = asUser(users.author, () => invoke(context, {})).reportPolicy?.features
+            if (authorFeatures?.alert !== true || authorFeatures?.share !== true)
+                problems.push(`the author's report features: ${JSON.stringify(authorFeatures)}`)
             // the Services reader: their own organization by request, Retail refused like a forged id
             const own = asUser(users.services, () => refusal(context, {organizationPartyId: ids.otherOrganizationId}))
             if (own !== "") problems.push(`the Services reader is refused Services: ${own}`)
@@ -333,9 +352,18 @@ feature("the dataset screens and the editors are refused to the ordinary groups;
             if (!unauthorized(message) || !message.includes("AT_XML_SCREEN"))
                 problems.push(`the reader opens ${path}: ${message || "opened"}`)
         }
-        // F74: the administrator reads no dataset, so Explore says so instead of Tools' log dataset and its refusal
+        // F74: the administrator reads no dataset, so Explore says so instead of Tools' log dataset and its refusal. Explore
+        // is the framework's screen, mounted by location (mr-moqui plans/Admin-Screens-Down.md, I0): the sentence is its own,
+        // and nothing of the search is shown or asked
         const explore = asUser(users.admin, () => lib.page("ReportBuilder/Explore", {}, "html"))
-        if (explore.status !== 200 || explore.errors.length || !explore.output.includes("No dataset is admitted for you to read"))
+        if (
+            explore.status !== 200 ||
+            explore.errors.length ||
+            !explore.output.includes("No dataset is available to you yet") ||
+            !explore.output.includes("once its steward admits it") ||
+            explore.output.includes("SearchOptions") ||
+            explore.output.includes("otel_logs")
+        )
             problems.push(`the administrator's Explore: ${explore.status} ${explore.errors.join(" | ")}`)
         // P3: the dataset list the author's, DatasetDetail the steward's, the administrator refused both (F20's raw entity
         // transitions are gone with the copied builder)

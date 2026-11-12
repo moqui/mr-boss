@@ -23,11 +23,14 @@ along with this software (see the LICENSE.md file). If not, see
     (Datasets, DatasetDetail, DatasetFields, DatasetView); P4 Reports (the report catalog) and Saved reports.
     P6 adds Report builder › Analysis (the author's), the hidden Drill (each panel's menu, reportLinks.drill) and the hidden
     Records mounts of the shared record screens, read only (design §10). P7 adds Delivery and alerts: Scheduled reports (the
-    list, with the hidden ScheduledReportDetail and ReportDelivery) and Management digest, every Insights user's to open, each
-    transition reaching a service that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself; they replace the last copied
-    screen (impl-insights F20). P8 adds Business alerts (the list, with the hidden AlertDetail), every Insights user's to open
-    for the alerts they receive, each transition reaching a service that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself;
-    a panel's New alert rule opens AlertDetail (reportLinks.alertRule), never Tools' AlertRule. P9 adds Business flows: Flow map
+    list, with the hidden ScheduledReportDetail and ReportDelivery: the framework's, by location, each transition reaching
+    the report engine's operations as the viewer, which are granted to who may schedule, deliver to others and read
+    deliveries) and Management digest (each transition reaching a service that checks the INSIGHTS_* permissions itself),
+    every Insights user's to open; they replace the last copied screen (impl-insights F20). P8 adds Business alerts (the list, with the hidden AlertDetail: the framework's alert screens, each included at Insights' own location with the
+    transitions Insights offers), every Insights user's to open for the alerts they receive, each change refused unless the
+    policy below lets the user set an alert (INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE: features.alert); a rule opens in
+    AlertDetail (reportLinks.alertRule), never Tools' AlertRule with its contact points, and a panel's New alert rule is
+    offered by the same feature. P9 adds Business flows: Flow map
     and Maps, with the hidden FlowMapEditor and ProcessStory, every Insights user's to open, each transition reaching
     ironstone.insights.FlowMapServices, which checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT, the map's organization and its owner
     itself; ProcessStory serves Commons Knowledge only to a user whose own grants open it. P10 adds Settings (Settings, the
@@ -36,7 +39,10 @@ along with this software (see the LICENSE.md file). If not, see
     Assist: the prompts and the response action below, the insights-analyst skill (skill/insights-analyst.md) and the read tools
     of ironstone.insights.AssistServices (data/BossSetupData.xml), each run as the signed-in user. P11 adds the hidden WallDisplay,
     the page a registered wall display plays its playlist on (the INSIGHTS_PLAYLISTS route group admits it alone), whose
-    request runs as the device's display account: get#Context is not called for it (below). -->
+    request runs as the device's display account: get#Context is not called for it (below). The framework's report screens that
+    need nothing of Insights' own are mounted by location (mr-moqui plans/Admin-Screens-Down.md, Track I): Library panels here,
+    Explore and Compare under Report builder, the three screens of Scheduled reports; they read the links and Insights' policy (reportPolicy: the default range, who may
+    set an alert or share, the fixed parts of a dataset, a schedule and an alert) that the always-actions below set. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 
@@ -47,7 +53,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P11: a shared device's request (a wall display; its route group admits WallDisplay alone) runs as a display account,
             which is no Insights user and holds no root grant: it gets the defaults only, and no links -->
         <if condition="UserSecurityChecks.currentDevice()"><then>
-            <set field="insights" from="{defaults: {from: 'now-30d', thru: 'now', currencyMode: 'native'}, sharedLinks: {}, reportLinks: {}}"/>
+            <set field="insights" from="{defaults: {from: 'now-30d', thru: 'now', currencyMode: 'native'}, sharedLinks: {}, reportLinks: {},
+                    reportPolicy: {range: {from: 'now-30d', thru: 'now'}}}"/>
         </then><else>
             <service-call name="ironstone.insights.ContextServices.get#Context" in-map="{appRoot:appRoot}" out-map="insights"/>
             <!-- P12 (the P6 mount lesson): the Chatter and RecordFiles mounts below are served only to a user whose own grants
@@ -66,6 +73,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- where the framework report screens' links go under Insights (mr-moqui docs/tools/Monitoring.md, "Mounting the report
             screens"); in always-actions, so the mounted screens' transitions read it too -->
         <set field="reportLinks" from="insights.reportLinks"/>
+        <!-- and Insights' policy for them, data only: a screen still asks its service, which decides -->
+        <set field="reportPolicy" from="insights.reportPolicy"/>
         <!-- Tools' telemetry dashboards, which no Insights group reads, are not listed (design §4 Dashboards) -->
         <set field="reportHiddenComponents" from="['tools']"/>
     </always-actions>
@@ -76,6 +85,10 @@ along with this software (see the LICENSE.md file). If not, see
             user whose own grants open Commons (always-actions above, P12) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- the framework's Library panels (a preview of a panel as the viewer, over the dashboard list with the type fixed to
+            panel), by location: no grant names it, it has no transition of an instance administrator's and Insights adds
+            nothing. Its links go by reportLinks: a panel opens in PanelDetail, offered to authors only -->
+        <subscreens-item name="Panels" location="component://tools/screen/Dashboards/Panels.xml" menu-title="Library panels" menu-index="3"/>
     </subscreens>
 
     <!-- the palette's dashboards, saved reports and flow maps (P4, P9, design §1.2), and Assist's prompts and response action

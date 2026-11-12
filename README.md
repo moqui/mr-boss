@@ -11,7 +11,11 @@ offboarding, groups, grants, capabilities and row rules, sign-in policy, identit
 organizations, the Constitution and instance settings, connections, mail relays, protocols and the mail queue, system
 messages and recovery, jobs and topics, imports, exports and backups, audit and access evidence, Health with its support
 summary, and the settings index ([design](plan/design-admin.md), [impl-admin](plan/impl-admin.md)). Its rules are tested in
-`test/Admin/`; its scenario walks, the access review walk and its screen sweeps are in `acceptance/Admin/`.
+`test/Admin/`; its scenario walks, the access review walk and its screen sweeps are in `acceptance/Admin/`. The screens
+with no business model in them (groups, sign-in policy, settings, connections, mail, jobs, health, data transfer, audit)
+are the framework's System screens, shown under Admin's root with what Admin adds for an organization
+([design-admin §1.4](plan/design-admin.md#14-screens-that-are-the-frameworks); mr-moqui
+[plans/Admin-Screens-Down.md](../../../plans/Admin-Screens-Down.md)).
 
 Insights (`screen/Insights/`) is built:
 dashboards and Explore over admitted datasets, the report catalog and metrics, Home's attention board, analysis and drill with
@@ -19,7 +23,10 @@ read-only record contexts, scheduled reports and digests delivered to recipients
 to them the same way, business flow maps an organization copies from the suite's templates, its settings, data readiness and
 Assist, and wall displays on registered shared devices; its specs are `test/Insights/` and `acceptance/Insights/` (the screen
 sweeps InsightsTui and InsightsServerStatic, the review walk InsightsReviewWalk)
-([design](plan/design-insights.md), [impl-insights](plan/impl-insights.md)). Both were built in one order ([impl-admin §1](plan/impl-admin.md#1-scope-and-order)).
+([design](plan/design-insights.md), [impl-insights](plan/impl-insights.md)). Its dataset, delivery, alert, playlist,
+wall display, drill and analysis screens are the framework's Dashboards screens, shown under Insights' root with its
+links and policy ([design-insights §4.2](plan/design-insights.md#42-framework-screens-shown-under-insights)). Both were
+built in one order ([impl-admin §1](plan/impl-admin.md#1-scope-and-order)).
 
 UI review and refinement plans use `plan/ui-review-*.md`, starting with
 [drawers, Commons and Comms](plan/ui-review-drawers-commons.md): screen coverage, complete user processes,

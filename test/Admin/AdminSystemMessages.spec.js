@@ -8,7 +8,9 @@
 // one ineligible names it and retries the others, once for its key; the unknown one is settled (its report kept beside it, its
 // status left as the transport left it) and never sent; a type is
 // given its registered handler by the integration administrator only. The area opens to the operator for the two message
-// screens only, and to the reader not at all. The framework's rules are the framework's AdminRecovery spec, Commerce's
+// screens only, and to the reader not at all. The four screens are the framework's System › Integrations screens at Admin's
+// locations (mr-moqui plans/Admin-Screens-Down.md): a transition of their instance administrator's part (updateMessage) is
+// not on Admin's route, for the operator and for ADMIN. The framework's rules are the framework's AdminRecovery spec, Commerce's
 // registered retry Mantle's StoreChannels. The HTTP fixtures answer every send: nothing leaves the machine.
 // Run: ./moq test mr-boss --spec AdminSystemMessages
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
@@ -237,6 +239,16 @@ feature(
                 expectedRevision: revision(ids.unknown)
             })
             out.sendsAtEnd = http.count()
+            // the System screen's own transitions for an instance administrator (a message's record changed directly) are not
+            // taken in here, so they do not exist on Admin's route: for the operator, whose area grant is an inheritable
+            // always-allow, and for ADMIN
+            for (const user of [users.operations, users.system])
+                post(user, "Integrations/SystemMessageDetail/updateMessage", {
+                    systemMessageId: ids.plain,
+                    remoteMessageId: "SPEC-DIRECT",
+                    statusId: "SmsgCancelled"
+                })
+            out.direct = message(ids.plain)
             // a type's handler: the integration administrator's, among the registered, never the operator's
             const save = user =>
                 post(user, "Integrations/MessageTypeDetail/saveType", {
@@ -267,6 +279,7 @@ feature(
             message(ids.unknown).outcomeSettlement == "done"
             message(ids.unknown).outcomeSettledReason == "Spec: the remote's log has it"
             out.sendsAtEnd == 2
+            out.direct.statusId == "SmsgError" && out.direct.remoteMessageId != "SPEC-DIRECT"
             out.operatorHandler == null
             type(types.incoming).consumeServiceName == NOOP
             !opened(out.operatorConnections) && !out.operatorConnections.output.includes("ConnectionList")

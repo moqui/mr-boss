@@ -7,28 +7,18 @@
 // it is grouped by its currency or filtered to one, a ratio averaged, a balance summed across its dates, a total of a bounded
 // page. A refusal is shown as its reason; nothing is computed around it. Every result is the viewer's own: the dataset's
 // admission and row filter decide the rows, and the organization in scope narrows a dataset that names it.
+// The choices' lists, a dataset's fields as choices, the engine's query of the choices and a result's rows are the
+// framework's (mr-moqui tools/template/ReportAnalysis.js, which Tools' own Analysis screen is built on). What is here is
+// Insights' own: who may build one (an author or a steward), which datasets are offered (the admitted business datasets),
+// the calendar of the organization in scope for a time grain's buckets, the narrowing to one organization (Assist), the
+// reason codes of its refusals and the save.
 const insights = ec.resource.script("component://mr-boss/service/ironstone/insights/Insights.js")
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {denied} = lib
 
 const ENGINE = "org.moqui.report.ReportServices."
-const aggregates = [
-    {value: "count", label: "Count of records"},
-    {value: "sum", label: "Sum"},
-    {value: "avg", label: "Average"},
-    {value: "min", label: "Least"},
-    {value: "max", label: "Greatest"},
-    {value: "cardinality", label: "Distinct values"}
-]
-const grains = [
-    {value: "day", label: "Day"},
-    {value: "week", label: "Week"},
-    {value: "month", label: "Month"},
-    {value: "quarter", label: "Quarter"},
-    {value: "year", label: "Year"}
-]
-const visualizations = ["table", "bar", "line", "stat"]
-const guardCode = /\b(UNIT_MIXED|RATIO_AGGREGATE|NONADDITIVE|BOUNDED_RESULT|ROWS_RESTRICTED)\b/
+const generic = ec.resource.script("component://tools/template/ReportAnalysis.js")
+const {visualizations} = generic
 
 function author() {
     const userScope = insights.required()
@@ -47,24 +37,7 @@ function sources(datasetId) {
     if (!chosen) return {datasets, dataset: null, fields: []}
     const found = insights.asViewer(ENGINE + "get#Dataset", {datasetId}).dataset || {}
     const body = insights.asViewer(ENGINE + "get#Definition", {definitionId: datasetId}).definition?.body || {}
-    const defaults = body.fieldDefaults || {}
-    const fields = Array.from(found.fields || [])
-        .filter(field => !String(field.name).startsWith("_"))
-        .map(field => {
-            const declared = defaults[field.name] || {}
-            const notes = []
-            if (declared.unitField) notes.push("in its " + declared.unitField)
-            if (declared.ratio) notes.push("a ratio")
-            if (declared.nonAdditive) notes.push("not added across " + Array.from(declared.nonAdditive).join(", "))
-            return {
-                value: field.name,
-                label: (declared.displayName || field.name) + (notes.length ? " (" + notes.join("; ") + ")" : ""),
-                type: field.type,
-                aggregatable: field.aggregatable !== false,
-                unitField: declared.unitField || null
-            }
-        })
-        .sort((a, b) => a.value.localeCompare(b.value))
+    const fields = generic.fieldsOf(found.fields, body.fieldDefaults)
     return {
         datasets,
         dataset: Object.assign(
@@ -80,75 +53,13 @@ function sources(datasetId) {
 }
 function options(p) {
     author()
-    const found = sources(p.datasetId || null)
-    return {
-        datasets: found.datasets,
-        measureFields: found.fields.filter(field => field.type === "number"),
-        groupFields: found.fields.filter(field => field.aggregatable && field.type !== "number"),
-        filterFields: found.fields.filter(field => field.aggregatable),
-        aggregates,
-        grains,
-        visualizations: visualizations.map(value => ({value, label: value.charAt(0).toUpperCase() + value.slice(1)}))
-    }
+    return generic.choicesOf(sources(p.datasetId || null))
 }
-// The engine's query of the typed choices: every field one of the dataset's own. A time grain's buckets follow the display
-// zone and week start of the organization in scope where it set them (Insights Settings, P10), else the viewer's.
+// The engine's query of the typed choices (the framework's queryOf, with Insights' reason codes): every field one of the
+// dataset's own. A time grain's buckets follow the display zone and week start of the organization in scope where it set
+// them (Insights Settings, P10), else the viewer's.
 function queryOf(p, found, organizationPartyId) {
-    const named = (value, list, what) => {
-        if (!value) return null
-        const field = list.find(row => row.value === value)
-        if (!field) denied("FIELD_UNAVAILABLE", what + " " + value + " is not a field of this dataset")
-        return field
-    }
-    const aggregate = p.aggregate || "count"
-    if (!aggregates.some(row => row.value === aggregate)) denied("VALUE_INVALID", "Choose how the measure is aggregated")
-    const measure = named(p.measureField, found.fields, "Measure")
-    if (aggregate !== "count" && !measure) denied("VALUE_INVALID", "Choose the field to " + aggregate)
-    if (measure && !["count", "cardinality"].includes(aggregate) && measure.type !== "number")
-        denied("VALUE_INVALID", measure.value + " is not a number")
-    const aggregations = []
-    if (p.timeGrain) {
-        if (!grains.some(row => row.value === p.timeGrain)) denied("VALUE_INVALID", "Choose a time grain")
-        aggregations.push({
-            id: "period",
-            type: "date_histogram",
-            role: "x-axis",
-            params: Object.assign(
-                {field: found.dataset.timeField, calendar_interval: p.timeGrain},
-                organizationPartyId ? insights.calendarParameters(organizationPartyId, p.timeGrain) : {}
-            )
-        })
-    }
-    for (const value of [p.groupBy, p.groupBy2].filter(Boolean)) {
-        const group = named(value, found.fields, "Group")
-        if (!group.aggregatable) denied("FIELD_UNAVAILABLE", value + " cannot be grouped by")
-        if (aggregations.some(aggregation => aggregation.id === value)) continue
-        aggregations.push({
-            id: value,
-            type: "terms",
-            role: aggregations.length ? "split-rows" : "x-axis",
-            params: {field: value, size: 20, other_bucket: true, other_bucket_key: "Other"}
-        })
-    }
-    if (aggregate !== "count") aggregations.push({id: "value", type: aggregate, role: "metric", params: {field: measure.value}})
-    const query = {datasetId: found.dataset.value, aggregations}
-    const filters = []
-    const filter = named(p.filterField, found.fields, "Filter")
-    if (filter && p.filterValue != null && String(p.filterValue) !== "")
-        filters.push({
-            query: {field: {name: filter.value, op: "eq", value: String(p.filterValue)}},
-            label: filter.value + ": " + p.filterValue
-        })
-    if (filters.length) query.filters = filters
-    return query
-}
-function shown(field, value) {
-    if (value == null) return ""
-    if (field.type === "time") {
-        const millis = /^-?\d+$/.test(String(value)) ? Number(value) : Date.parse(String(value))
-        if (!Number.isNaN(millis)) return ec.l10n.format(new Date(millis), "yyyy-MM-dd")
-    }
-    return String(value)
+    return generic.queryOf(p, found, organizationPartyId ? insights.calendarParameters(organizationPartyId, p.timeGrain) : {}, denied)
 }
 // get#AnalysisResult: the choices run as the viewer. A guard's refusal is the answer's reason, with its code.
 function result(p) {
@@ -178,58 +89,14 @@ function run(p) {
     try {
         answer = insights.asViewerApart(ENGINE + "run#Query", {query: Object.assign({}, query, range)})
     } catch (error) {
-        const message = String(error.message || error).replace(/^.*failed: /, "")
-        const code = message.match(guardCode)
-        return {
-            available: false,
-            refusedCode: code ? code[1] : "QUERY_FAILED",
-            reason: message.replace(/^[A-Z_]+: /, ""),
-            query,
-            rows: [],
-            columns: []
-        }
+        // a guard's refusal is the answer, with its code
+        return generic.refusedOf(String(error.message || error), query)
     } finally {
         ec.message.clearErrors()
         ec.message.popErrors()
     }
-    const frame = Array.from(answer.frames || [])[0] || {fields: []}
-    const fields = Array.from(frame.fields || [])
-    const length = Math.max(0, ...fields.map(field => Array.from(field.values || []).length))
-    // the engine's flags of a bucket (the rest, a missing value) are not measures
-    const flags = ["other", "missing"]
-    const flagged = (name, index) => fields.find(field => field.name === name)?.values?.[index] === true
-    const count = fields.find(field => field.name === "count")
-    const rows = []
-    for (let index = 0; index < length && rows.length < 500; index++) {
-        // an empty rest is not a row
-        if (flagged("other", index) && count && Number(count.values[index] || 0) === 0) continue
-        rows.push({
-            label: fields
-                .filter(field => field.config?.bucket)
-                .map(field => shown(field, field.config.bucket.labels?.[index] ?? field.values[index]))
-                .join(" · "),
-            valuesText: fields
-                .filter(field => !field.config?.bucket && !flags.includes(field.name))
-                .map(field => {
-                    // an amount's unit is its row's (grouped by its unit field) or the one unit of the result
-                    const unit = flagged("other", index) ? "" : field.config?.units?.[index] || field.unit || ""
-                    return field.name + " " + shown(field, field.values[index]) + (unit ? " " + unit : "")
-                })
-                .join(", ")
-        })
-    }
-    return {
-        available: true,
-        query,
-        range: answer.range || range,
-        columns: fields.map(field => field.name),
-        rows,
-        // the records the result is computed from, the engine's own count: never the number of rows shown
-        sourceCount: answer.sourceCount == null ? null : Number(answer.sourceCount),
-        notices: Array.from(answer.notices || [])
-            .map(notice => notice.message)
-            .filter(Boolean)
-    }
+    // the rows, the engine's own count of the records they are computed from and its notices
+    return generic.resultOf(answer, query, range)
 }
 // store#Analysis: the choices saved as a library panel the author owns, private or shared with one of their own groups (as
 // ShareDashboard), and optionally placed on one of their own dashboards by reference. The engine checks the dataset again.
@@ -252,18 +119,7 @@ function store(p) {
     // refused now, as it would be on every render (an amount across currencies, a ratio averaged)
     const checked = result(p)
     if (!checked.available) denied(checked.refusedCode, checked.reason)
-    const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 40)
-    const definitionId =
-        "analysis-" +
-        (slug || "panel") +
-        "-" +
-        ec.user.userId.toLowerCase().replace(/[^a-z0-9]+/g, "") +
-        "-" +
-        Date.now().toString(36)
+    const definitionId = generic.panelId(title)
     const saved = insights.asViewer(ENGINE + "save#Definition", {
         definition: {id: definitionId, type: "panel", title, userGroupId: group, body: {title, visualization, queries: [query]}},
         note: "Saved from Analysis"

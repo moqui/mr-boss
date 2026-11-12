@@ -7,15 +7,13 @@
 // Run: ./moq accept mr-boss --spec AdminFoundationWalk
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, refusal, shell} = lib
-const areas = ["Home", "Operations", "Agents", "System", "Developer"]
+const areas = ["Home", "Operations", "Agents", "System"]
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 // every ironstone.admin service a screen calls, with parameters it accepts from a user who has Admin
 const adminServices = [
     ["ironstone.admin.ContextServices.get#SharedContext", {}],
     ["ironstone.admin.ContextServices.check#Record", {recordType: "organization", recordId: ids.organizationId}],
-    ["ironstone.admin.ContextServices.get#Choices", {choice: "organizations"}],
-    ["ironstone.admin.ContextServices.get#AppAccess", {}],
-    ["ironstone.admin.RegistryServices.find#ToolLinks", {}]
+    ["ironstone.admin.ContextServices.get#Choices", {choice: "organizations"}]
 ]
 // A direct entity create's refusal as the current user: "" when it is stored, else its message.
 function entityRefusal(entityName, fields) {
@@ -76,16 +74,16 @@ feature("the delegated access administrator cannot add anyone to BOSS_ADMIN_ACCE
         const member = {userGroupId: ids.accessGroupId, userId: ids.sharedUserId, fromDate: ec.user.nowTimestamp}
         asUser(users.delegate, () => {
             // through Tools: Admin › System's group screens and the Tools System root are refused to them
-            for (const path of ["System/Security/UserGroup/UserGroupDetail", "System/Security/UserGroup/GroupUsers"]) {
+            for (const path of ["System/Access/GroupDetail"]) {
                 const rendered = lib.page(path, {userGroupId: ids.accessGroupId}, "html")
                 if (opened(rendered)) problems.push(`the delegate opens ${path}`)
             }
             const tools = ec.screen
                 .makeTest()
                 .rootScreen("component://tools/screen/System.xml")
-                .render("Security/UserGroup/GroupUsers", {userGroupId: ids.accessGroupId}, null)
+                .render("Access/GroupDetail", {userGroupId: ids.accessGroupId}, null)
             if (tools.status === 200 && !tools.errorMessages.length)
-                problems.push("the delegate opens Tools System's group users")
+                problems.push("the delegate opens Tools System's group screen")
             ec.message.clearErrors()
             // through the entity-auto service and a direct entity call
             const service = refusal("create#moqui.security.UserGroupMember", member)

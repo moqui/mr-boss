@@ -49,7 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="ownerOptions" from="[{key:'mine', text:'Mine'}, {key:'shared', text:'Shared with me'}]"/>
         <set field="canCopy" from="!!insights.capabilities.author"/>
         <if condition="canCopy">
-            <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share" transaction="force-new"
+            <service-call name="ironstone.insights.ContextServices.get#ShareGroups" out-map="share" transaction="force-new"
                     ignore-error="true"/>
             <script>ec.message.clearErrors()</script>
             <set field="shareGroups" from="share?.groups || []"/>

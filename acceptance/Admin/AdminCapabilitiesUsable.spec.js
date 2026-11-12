@@ -10,7 +10,7 @@
 // Run: ./moq accept mr-boss --spec AdminCapabilitiesUsable
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
-const capability = "ironstone.admin.CapabilityServices."
+const capability = "org.moqui.admin.AccessServices."
 const groupId = "ACCEPT_WH_READERS"
 const launcher = "BOSS_WAREHOUSE"
 const viewPermission = "PRODUCT_CATALOG_VIEW"

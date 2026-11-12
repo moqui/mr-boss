@@ -11,7 +11,6 @@
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 const {ids, users, asUser, system, invoke} = lib
 const R = "org.moqui.report.ReportServices."
-const A = "ironstone.insights.AlertServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const notes = ec.factory.getTool("NotificationCapture")
 const TOPIC = "InsightsBusinessAlert"
@@ -91,7 +90,7 @@ spec({
             }
         })
         if (ruleId && one("moqui.report.Definition", {definitionId: ruleId}))
-            asUser(users.distributor, () => invoke(A + "delete#Alert", {definitionId: ruleId}))
+            insights(users.distributor, "Alerts/AlertDetail/deleteAlert", {definitionId: ruleId}, "post")
         ec.message.clearErrors()
         ec.artifactExecution.enableAuthz()
     }
@@ -134,7 +133,7 @@ feature("the distributor copies the service level breach template, and the copy 
         detail.output.includes(title)
         detail.output.includes("Not active yet")
         detail.output.includes("Activate")
-        reader.errors.includes("INSIGHTS_ALERT_REQUIRED")
+        reader.errors.includes("Setting an alert is not offered to you here")
         one("moqui.report.Definition", {title: title + " reader"}) == null
     }
 })
@@ -160,7 +159,7 @@ feature("an equivalent colleague is added and the rule activated; the Services r
             "post"
         )
         const active = body()
-        // the same form with the Services reader: the screen's post changes nothing, and the service says why
+        // the same form with the Services reader: the screen's post changes nothing, and its error says why
         const posted = insights(
             users.distributor,
             "Alerts/AlertDetail/storeAudience",
@@ -172,29 +171,17 @@ feature("an equivalent colleague is added and the rule activated; the Services r
             },
             "post"
         )
-        const refused = asUser(users.distributor, () =>
-            invoke(A + "store#Alert", {
-                definitionId: ruleId,
-                audienceGiven: "Y",
-                audienceKind: "group",
-                recipientUserIds: [people.manager, people.colleague, people.services],
-                userGroupId: "BOSS_INSIGHTS"
-            })
-        )
         const detail = insights(users.distributor, "Alerts/AlertDetail", {definitionId: ruleId})
-        return {added, activated, active, posted, refused, after: body(), detail}
+        return {added, activated, active, posted, after: body(), detail}
     },
-    then({added, activated, active, posted, refused, after, detail}) {
+    then({added, activated, active, posted, after, detail}) {
         added.errors == ""
         activated.errors == ""
         active.paused == false
         active.audience.deliveryMode == "group"
         Array.from(active.audience.recipientUserIds).sort().join() == [people.colleague, people.manager].sort().join()
-        posted.errors == ""
-        refused.applied == false
-        refused.reasonCode == "RECIPIENT_REFUSED"
-        refused.reason.includes("Insights Services reader (scope-differs)")
-        !refused.reason.includes(ids.otherOrganizationId)
+        posted.errors.includes("Insights Services reader (scope-differs)")
+        !posted.errors.includes(ids.otherOrganizationId)
         // the refused save left the audience as it was
         Array.from(after.audience.recipientUserIds).sort().join() == [people.colleague, people.manager].sort().join()
         detail.errors == ""

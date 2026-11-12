@@ -188,7 +188,13 @@ const linkPaths = [
     "Time/TimesheetDetail",
     "Time/TimeEntries",
     "Payroll",
-    "Payroll/Rates"
+    "Payroll/Rates",
+    // P11: leave policies, their detail, allocations (HR's under Time, as the user's call of Nov 11 put HR's own editors out of
+    // Settings) and balances (design §7)
+    "Time/LeavePolicies",
+    "Time/LeavePolicyDetail",
+    "Time/LeaveAllocations",
+    "Time/LeaveBalances"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -286,7 +292,8 @@ function checkRecord(p) {
 // that are not inactive, the vacant ones first, by name; a department narrows them), workLocations (one employer's facilities)
 // and the termination reasons and types (People's lookups, ended values left out). P9: workingSchedules (one employer's schedules
 // not ended), holidayCalendars (one employer's and the shared ones), timeZones (the zone names) and employments (one employer's
-// current employments, each by its person: the employment a schedule is assigned to).
+// current employments, each by its person: the employment a schedule is assigned to). P11: leaveTypes (People's leave types, ended
+// values left out) and leavePolicies (the policies of the employers an HR reader reads, or of one, not closed; by name).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -699,6 +706,50 @@ const choiceSources = {
             selected,
             id => base().condition("partyRelationshipId", id).count() > 0,
             id => label(Array.from(base().condition("partyRelationshipId", id).list())[0] || {fromPartyId: id})
+        )
+    },
+    // P11: People's leave types (an HR vocabulary; ended values left out)
+    leaveTypes: (userScope, term, selected) => vocabularyOptions("PeopleLeaveType", term, selected),
+    // P11: the leave policies not closed of the employers an HR reader reads (or of organizationPartyId), by name
+    leavePolicies: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.hrView) return []
+        const owners = p?.organizationPartyId
+            ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+            : employerIds(userScope)
+        if (!owners.length) return []
+        const factory = ec.entity.conditionFactory
+        const open = () =>
+            find("mantle.humanres.leave.LeavePolicy")
+                .condition("organizationPartyId", "in", owners)
+                .condition(
+                    factory.makeCondition(
+                        factory.makeCondition("thruDate", "is-null", null),
+                        "or",
+                        factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                    )
+                )
+        let query = open()
+            .selectField(["leavePolicyId", "policyName", "organizationPartyId"])
+            .orderBy("^policyName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["leavePolicyId", "policyName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row =>
+            (row.policyName || row.leavePolicyId) +
+            (owners.length > 1 ? " (" + organizationName(row.organizationPartyId) + ")" : "")
+        const options = Array.from(query.list()).map(row => ({value: row.leavePolicyId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => open().condition("leavePolicyId", id).count() > 0,
+            id => label(one("mantle.humanres.leave.LeavePolicy", {leavePolicyId: id}) || {leavePolicyId: id})
         )
     }
 }

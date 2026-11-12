@@ -12,132 +12,23 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights › Report builder › Datasets (design-insights §5 Datasets; impl-insights P3, INS-03): the business datasets the author or
-    steward may read, and the steward's waiting for review, each with its state (admitted, needs review, unavailable, retired),
-    scope, index and feed and last build (ironstone.insights.DatasetServices.find#Datasets over the engine's find#BusinessDatasets).
-    A dataset reaches readers only once admitted: its document in a registered feed, its index built and a registered row filter
-    bound; until then it shows as needs review, never as an empty source. The steward creates a dataset over a registered feed's
-    document (CreateDataset) and opens it in DatasetDetail; an admitted dataset is previewed in DatasetView. The author's and the
-    steward's (BOSS_INS_DATASET_SCREENS); it replaces the copied SimpleReport builder's list (F20). -->
+<!-- Insights › Report builder › Datasets (design-insights §5 Datasets; impl-insights P3, INS-03; mr-moqui
+    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › Datasets at this location, which
+    BOSS_INS_DATASET_SCREENS opens to the author and the steward, with the one transition Insights offers: createDataset,
+    through the engine's create#BusinessDataset, which asks the dataset-save artifact and the update artifact of the
+    dataset named (the steward's insights-* grant). The list is the business datasets the viewer reads, and the steward's
+    waiting for review (find#BusinessDatasets); a dataset created here is named insights- and its short name, and the
+    scope field is the organization field (reportPolicy, set by the root: Insights.js). Tools' other datasets (the
+    telemetry and document indexes) are not shown under a mount and their transitions (explore, definition) are not taken
+    in, so they do not exist on this route. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Datasets" default-menu-index="3">
     <parameter name="status"/>
     <parameter name="text"/>
 
-    <transition name="createDataset">
-        <service-call name="ironstone.insights.DatasetServices.create#Dataset" in-map="context" out-map="created"/>
-        <default-response url="../DatasetDetail" parameter-map="{datasetId:created.datasetId}"/>
-        <error-response url="."/>
-    </transition>
+    <transition-include name="createDataset" location="component://tools/screen/Dashboards/Datasets.xml"/>
 
-    <actions>
-        <service-call name="ironstone.insights.DatasetServices.find#Datasets" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{status:(status || null), text:(text || null)}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
-        <set field="datasetList" from="found?.datasets || []"/>
-        <set field="canCreate" from="!!found?.canCreate"/>
-        <if condition="canCreate">
-            <service-call name="ironstone.insights.DatasetServices.get#DatasetChoices" out-map="choices"/>
-        </if>
-        <set field="documentChoices" from="choices?.documents || []"/>
-        <set field="policyChoices" from="choices?.policies || []"/>
-        <set field="filtered" from="!!(status || text)"/>
-        <set field="findValues" from="{status:status, text:text}"/>
-    </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col"><label text="Datasets" type="h5"/></container>
-            <container style="col-auto">
-                <container-dialog id="CreateDataset" button-text="New dataset" type="primary" icon="sym_o_add" width="640"
-                        title="New business dataset" condition="canCreate">
-                    <label type="p" text="A dataset reads one document of a registered data feed. It waits for review until its index is built and you admit it."/>
-                    <form-single name="CreateDatasetForm" transition="createDataset">
-                        <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
-                        <field name="name"><default-field title="Short name" tooltip="Letters and digits; the dataset is named insights- and this"><text-line size="30"/></default-field></field>
-                        <field name="dataDocumentId">
-                            <default-field title="Source">
-                                <drop-down><list-options list="documentChoices" key="${key}" text="${text}"/></drop-down>
-                            </default-field>
-                        </field>
-                        <field name="timeField"><default-field title="Time field" tooltip="The date the range filters on"><text-line size="30"/></default-field></field>
-                        <field name="scopePolicyId">
-                            <default-field title="Rows scoped by">
-                                <drop-down><list-options list="policyChoices" key="${key}" text="${text}"/></drop-down>
-                            </default-field>
-                        </field>
-                        <field name="organizationField"><default-field title="Organization field" tooltip="The field that carries each row's organization"><text-line size="30"/></default-field></field>
-                        <field name="submitButton"><default-field title="Create dataset"><submit/></default-field></field>
-                        <field-layout>
-                            <field-row><field-ref name="title"/><field-ref name="name"/></field-row>
-                            <field-row><field-ref name="dataDocumentId"/><field-ref name="timeField"/></field-row>
-                            <field-row><field-ref name="scopePolicyId"/><field-ref name="organizationField"/></field-row>
-                            <field-ref name="submitButton"/>
-                        </field-layout>
-                    </form-single>
-                </container-dialog>
-            </container>
-        </container>
-        <form-single name="DatasetFind" transition="." map="findValues">
-            <field name="text"><default-field title="Find"><text-line size="30"/></default-field></field>
-            <field name="status">
-                <default-field title="State">
-                    <drop-down allow-empty="true">
-                        <option key="admitted" text="Admitted"/><option key="review" text="Needs review"/>
-                        <option key="unavailable" text="Unavailable"/><option key="retired" text="Retired"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
-            <field-layout>
-                <field-row-big><field-ref name="text"/><field-ref name="status"/><field-ref name="submitButton"/></field-row-big>
-            </field-layout>
-        </form-single>
-        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
-        <container-box>
-            <box-body-nopad>
-                <form-list name="DatasetList" list="datasetList" skip-form="true" paginate="false">
-                    <field name="title">
-                        <conditional-field condition="stewarded" title="Dataset">
-                            <link url="../DatasetDetail" text="${title}" link-type="anchor" parameter-map="{datasetId:datasetId}"/>
-                        </conditional-field>
-                        <conditional-field condition="readable" title="Dataset">
-                            <link url="../DatasetView" text="${title}" link-type="anchor" parameter-map="{datasetId:datasetId}"/>
-                        </conditional-field>
-                        <default-field title="Dataset">
-                            <display text="${title}"/>
-                        </default-field>
-                    </field>
-                    <field name="statusName">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
-                                    WebUtilities.encodeHtml(statusName)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusName})}]]></text>
-                                <text type="html">${statusName}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="documentName"><default-field title="Source"><display text="${documentName || dataDocumentId}"/></default-field></field>
-                    <field name="scopeText"><default-field title="Scope"><display/></default-field></field>
-                    <field name="indexName"><default-field title="Index and feed"><display text="${indexName}${dataFeedId ? ' · ' + dataFeedId : ''}"/></default-field></field>
-                    <field name="lastIndexedText"><default-field title="Last build"><display text="${lastIndexedText ? lastIndexedText + ' (' + lagText + ' ago)' : 'Indexed as written'}"/></default-field></field>
-                    <field name="failedText"><default-field title="To review"><display/></default-field></field>
-                    <field name="actions">
-                        <default-field title="">
-                            <link url="../DatasetView" text="Preview" link-type="anchor-button" icon="sym_o_visibility"
-                                    parameter-map="{datasetId:datasetId}" condition="readable"/>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="title"/><field-ref name="scopeText"/></column>
-                        <column><field-ref name="statusName"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
-                <label type="p" style="q-pa-md m-muted" condition="!datasetList.length &amp;&amp; filtered" text="No dataset matches."/>
-                <label type="p" style="q-pa-md m-muted" condition="!datasetList.length &amp;&amp; !filtered &amp;&amp; !failure"
-                        text="No business dataset is open to you yet. A dataset steward admits each one once its index is built and its rows are scoped."/>
-            </box-body-nopad>
-        </container-box>
+        <include-screen location="component://tools/screen/Dashboards/Datasets.xml" share-scope="true"/>
     </widgets>
 </screen>

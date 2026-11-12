@@ -1,16 +1,19 @@
 // Exports and backups in Admin (impl-admin P16; design-admin §11 Exports, DataExport and Backups, §15.3 "Export and recipient
-// delivery" and "Backup scope"): a contact book's vCard through Admin's DataExport is its owner's export for who may view the
-// book, with the fields asked for, a field the caller may not read left out and named, the file to the caller's own response
-// and one record of it (never its content); the data operator, who may view no such book, exports and reads nothing of it,
-// and a user outside the Data area posts nothing to it; Exports lists an export and a scheduled report's delivery as status
-// (its id, state and counters), never its title, and the report itself stays its recipient's; Backups shows the coverage
-// with the fixed warning to the backup operator, who opens nothing else of the area, and the data operator is told it is
-// not available. One qvt render each of Exports, DataExport and Backups. The framework's rules are the framework's
-// AdminDataExport and AdminBackups specs, the contact book's own Mantle's ContactBooks.
+// delivery" and "Backup scope"; mr-moqui plans/Admin-Screens-Down.md A5: Exports and DataExport are the framework's System ›
+// Data screens mounted by location, Backups its screen in a wrapper): a contact book's vCard through Admin's DataExport is
+// its owner's export for who may view the book, with the fields asked for, the file to the caller's own response and one
+// record of it (never its content); the data operator, who may view no such book, exports and reads nothing of it, and a
+// user outside the Data area posts nothing to it; Exports lists an export and a scheduled report's delivery as status (its
+// id, state and counters), never its title, a target exported in its owner's place linked by Admin's mount routes, and the
+// report itself stays its recipient's; Backups shows the coverage with the fixed warning to the backup operator, who opens
+// nothing else of the area, and the data operator is told it is not available. One qvt render each of Exports, DataExport
+// and Backups. The framework's rules (the wizard's request, a field the caller may not read left out and named, a field no
+// registration names refused) are the framework's AdminDataExport and AdminBackups specs, the contact book's own Mantle's
+// ContactBooks.
 // Run: ./moq test mr-boss --spec AdminExports
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, page} = lib
-const D = "ironstone.admin.DataServices."
+const T = "org.moqui.admin.DataTransferServices."
 const BATCH = "moqui.server.TransferBatch"
 const TARGET = "contactBookVCard"
 const has = (value, pattern) => pattern.test(String(value ?? ""))
@@ -37,7 +40,6 @@ const occurrenceId = "SPEC_ADM_OCC1"
 const deliveryId = "SPEC_ADM_DLV1"
 const secretTitle = "spec-payroll-by-employee"
 let bookId = null
-let shippedColumns = null
 
 spec({
     stepwise: true,
@@ -99,7 +101,6 @@ spec({
                 statusId: "RptDlvSent",
                 attemptDate: now - 3590000
             })
-            shippedColumns = find("moqui.server.TransferTarget", {targetId: TARGET}).one().columnsJson
         })
         // the exporter's own personal book with one contact
         asUser(
@@ -119,153 +120,92 @@ spec({
     cleanupSpec() {
         ec.message.clearErrors()
         system(() => {
-            const target = find("moqui.server.TransferTarget", {targetId: TARGET}).one()
-            if (shippedColumns && target.columnsJson !== shippedColumns) {
-                target.set("columnsJson", shippedColumns)
-                target.update()
-            }
             find("moqui.report.ReportRecipientDelivery", {deliveryId}).deleteAll()
             find("moqui.report.ReportOccurrence", {occurrenceId}).deleteAll()
         })
     }
 })
 
-feature(
-    "a contact book's vCard through Admin: its viewer's export, a field they may not read left out, to them alone, recorded once",
-    {
-        when() {
-            const out = {bookId}
-            const request = {targetId: TARGET, scopeKey: bookId}
-            out.context = serviceAs(exporter.username, D + "get#ExportContext", Object.assign({review: true}, request))
-            // through the mount's own transition: the file is the response
-            out.defaults = post(
-                exporter.username,
-                "Data/DataExport/download",
-                Object.assign({operationKey: "SPEC_ADM_X1"}, request)
-            )
-            out.withNotes = serviceAs(
-                exporter.username,
-                D + "run#AdminExport",
-                Object.assign({fields: "name,emails,notes"}, request)
-            )
-            // the owner's registration now says who reads a contact's notes: this exporter does not
-            system(() => {
-                const target = find("moqui.server.TransferTarget", {targetId: TARGET}).one()
-                target.set(
-                    "columnsJson",
-                    JSON.stringify(
-                        JSON.parse(shippedColumns).map(column =>
-                            column.name === "notes" ? Object.assign({}, column, {permission: "ADMIN_AUDIT_VIEW"}) : column
-                        )
-                    )
-                )
-                target.update()
-            })
-            out.restricted = serviceAs(
-                exporter.username,
-                D + "run#AdminExport",
-                Object.assign({fields: "name,emails,notes"}, request)
-            )
-            out.restrictedContext = serviceAs(exporter.username, D + "get#ExportContext", request)
-            system(() => {
-                const target = find("moqui.server.TransferTarget", {targetId: TARGET}).one()
-                target.set("columnsJson", shippedColumns)
-                target.update()
-            })
-            // what a request may not name: another field, an entity, an address
-            out.unregistered = serviceAs(
-                exporter.username,
-                D + "run#AdminExport",
-                Object.assign({fields: "name,userId"}, request)
-            )
-            // the data operator holds the transfer permissions and may view no such book
-            out.operator = {
-                context: serviceAs(users.data, D + "get#ExportContext", request),
-                run: serviceAs(users.data, D + "run#AdminExport", request),
-                posted: post(users.data, "Data/DataExport/download", request)
-            }
-            // outside the Data area nothing is posted to the wizard
-            out.outside = post(users.identity, "Data/DataExport/download", request)
-            out.records = rows(BATCH, {targetId: TARGET})
-            return out
-        },
-        then(out) {
-            assert(out.bookId, "the exporter has no contact book")
-            // the wizard offers the book, the registered fields and the count; birthdays and notes only when asked for
-            const context = out.context
-            assert(context.hasTarget && context.scopeOptions.some(option => option.value === out.bookId), context.error)
-            assert(
-                context.fieldOptions.map(option => option.value).join() ===
-                    "name,organization,emails,phones,addresses,websites,groups,birthday,notes"
-            )
-            assert(
-                context.selectedFields.join() === "name,organization,emails,phones,addresses,websites,groups" &&
-                    context.deniedFieldText === ""
-            )
-            assert(context.preview.rowCount === 1 && context.operationKey, context.previewRefusal)
-            // the file is the response of the request that asked
-            assert(
-                out.defaults.status === 200 && out.defaults.output.startsWith("BEGIN:VCARD"),
-                out.defaults.errors.join("; ") + out.defaults.output.slice(0, 200)
-            )
-            assert(
-                out.defaults.output.includes("FN:Vera Cardholder") && out.defaults.output.includes("vera.cardholder@example.com")
-            )
-            assert(!out.defaults.output.includes("NOTE:"), "notes were exported without being asked for")
-            assert(
-                out.withNotes.exported === true &&
-                    out.withNotes.fileText.includes("NOTE:Spec export private note") &&
-                    out.withNotes.contentType === "text/vcard"
-            )
-            assert(has(out.withNotes.filename, /-\d{8}-\d{4}\.vcf$/), out.withNotes.filename)
-            // a field the caller may not read is left out whatever is asked, and named
-            assert(
-                out.restricted.exported === true && !out.restricted.fileText.includes("NOTE:"),
-                "a field the caller may not read was exported"
-            )
-            assert(
-                out.restricted.fileText.includes("FN:Vera Cardholder") &&
-                    out.restricted.omittedFieldList.map(field => field.name).join() === "notes"
-            )
-            assert(
-                out.restrictedContext.deniedFieldText === "Notes" &&
-                    !out.restrictedContext.fieldOptions.some(option => option.value === "notes")
-            )
-            assert(has(out.unregistered.error, /has no field/) && !out.unregistered.fileText, out.unregistered.error)
-            // another's book is not the data operator's to export or to see
-            assert(
-                !out.operator.context.scopeOptions.some(option => option.value === out.bookId),
-                "the book was offered to the data operator"
-            )
-            assert(has(out.operator.run.error, /not available/) && !out.operator.run.fileText, out.operator.run.error)
-            assert(!out.operator.posted.output.includes("BEGIN:VCARD") && !out.outside.output.includes("BEGIN:VCARD"))
-            assert(
-                out.outside.status !== 200 || out.outside.errors.length > 0,
-                "a user outside the Data area posted to the wizard"
-            )
-            // one record of each export made, the exporter's own, with no content
-            assert(
-                out.records.length === 3 &&
-                    out.records.every(record => record.userId === exporter.userId && record.state === "exported"),
-                out.records.length
-            )
-            assert(out.records.some(record => record.transferId === "SPEC_ADM_X1" && Number(record.rowCount) === 1))
-            assert(
-                !JSON.stringify(out.records).includes("Cardholder") && !JSON.stringify(out.records).includes("private note"),
-                "a record holds content"
-            )
+feature("a contact book's vCard through Admin: its viewer's export, to them alone, recorded once", {
+    when() {
+        const out = {bookId}
+        const request = {targetId: TARGET, scopeKey: bookId}
+        out.context = serviceAs(exporter.username, T + "get#ExportContext", Object.assign({review: true}, request))
+        // through the mount's own transition: the file is the response
+        out.defaults = post(exporter.username, "Data/DataExport/download", Object.assign({operationKey: "SPEC_ADM_X1"}, request))
+        out.withNotes = serviceAs(
+            exporter.username,
+            T + "run#ExportRequest",
+            Object.assign({fields: "name,emails,notes"}, request)
+        )
+        // the data operator holds the transfer permissions and may view no such book
+        out.operator = {
+            context: serviceAs(users.data, T + "get#ExportContext", request),
+            run: serviceAs(users.data, T + "run#ExportRequest", request),
+            posted: post(users.data, "Data/DataExport/download", request)
         }
+        // outside the Data area nothing is posted to the wizard
+        out.outside = post(users.identity, "Data/DataExport/download", request)
+        out.records = rows(BATCH, {targetId: TARGET})
+        return out
+    },
+    then(out) {
+        assert(out.bookId, "the exporter has no contact book")
+        // the wizard offers the book, the registered fields and the count; birthdays and notes only when asked for
+        const context = out.context
+        assert(context.hasTarget && context.scopeOptions.some(option => option.value === out.bookId), context.error)
+        assert(
+            context.fieldOptions.map(option => option.value).join() ===
+                "name,organization,emails,phones,addresses,websites,groups,birthday,notes"
+        )
+        assert(
+            context.selectedFields.join() === "name,organization,emails,phones,addresses,websites,groups" &&
+                context.deniedFieldText === ""
+        )
+        assert(context.preview.rowCount === 1 && context.operationKey, context.previewRefusal)
+        // the file is the response of the request that asked
+        assert(
+            out.defaults.status === 200 && out.defaults.output.startsWith("BEGIN:VCARD"),
+            out.defaults.errors.join("; ") + out.defaults.output.slice(0, 200)
+        )
+        assert(out.defaults.output.includes("FN:Vera Cardholder") && out.defaults.output.includes("vera.cardholder@example.com"))
+        assert(!out.defaults.output.includes("NOTE:"), "notes were exported without being asked for")
+        assert(
+            out.withNotes.exported === true &&
+                out.withNotes.fileText.includes("NOTE:Spec export private note") &&
+                out.withNotes.contentType === "text/vcard"
+        )
+        assert(has(out.withNotes.filename, /-\d{8}-\d{4}\.vcf$/), out.withNotes.filename)
+        // another's book is not the data operator's to export or to see
+        assert(
+            !out.operator.context.scopeOptions.some(option => option.value === out.bookId),
+            "the book was offered to the data operator"
+        )
+        assert(has(out.operator.run.error, /not available/) && !out.operator.run.fileText, out.operator.run.error)
+        assert(!out.operator.posted.output.includes("BEGIN:VCARD") && !out.outside.output.includes("BEGIN:VCARD"))
+        assert(out.outside.status !== 200 || out.outside.errors.length > 0, "a user outside the Data area posted to the wizard")
+        // one record of each export made, the exporter's own, with no content
+        assert(
+            out.records.length === 2 &&
+                out.records.every(record => record.userId === exporter.userId && record.state === "exported"),
+            out.records.length
+        )
+        assert(out.records.some(record => record.transferId === "SPEC_ADM_X1" && Number(record.rowCount) === 1))
+        assert(
+            !JSON.stringify(out.records).includes("Cardholder") && !JSON.stringify(out.records).includes("private note"),
+            "a record holds content"
+        )
     }
-)
+})
 
 feature(
     "Exports lists an export and a scheduled report's delivery as status; the report stays its recipient's; the screens render",
     {
         when() {
             const out = {}
-            out.list = serviceAs(exporter.username, D + "find#ExportRuns")
-            out.operatorList = serviceAs(users.data, D + "find#ExportRuns")
-            out.backupList = serviceAs(users.backup, D + "find#ExportRuns")
+            out.list = serviceAs(exporter.username, T + "find#ExportRuns")
+            out.operatorList = serviceAs(users.data, T + "find#ExportRuns")
+            out.backupList = serviceAs(users.backup, T + "find#ExportRuns")
             // the report behind a delivery: its recipient's alone
             out.report = serviceAs(users.data, "org.moqui.report.ReportServices.get#RecipientReport", {deliveryId})
             out.exports = asUser(exporter.username, () => page("Data/Exports"))
@@ -287,7 +227,7 @@ feature(
             assert(delivery.userName === "Admin Administrator" && delivery.download === false && delivery.detail === false)
             assert(!JSON.stringify(out.list).includes(secretTitle), "a report's definition was named")
             assert(
-                out.list.transferList.filter(row => row.kind === "export").length === 3,
+                out.list.transferList.filter(row => row.kind === "export").length === 2,
                 "the exporter's exports are not listed"
             )
             // the data operator reads the delivery's status and none of another's exports of a book they may not view
@@ -295,12 +235,13 @@ feature(
                 out.operatorList.transferList.some(row => row.runId === occurrenceId) &&
                     !out.operatorList.transferList.some(row => row.kind === "export")
             )
+            // a target exported in its owner's own place names its key; the page links it by Admin's mount routes
             assert(
                 out.operatorList.targetList.some(
-                    target =>
-                        target.targetId === "insightsDatasetRows" && target.ownerUrl === "/qapps/Insights/ReportBuilder/Datasets"
+                    target => target.targetId === "insightsDatasetRows" && target.ownerRoute === "insightsDatasets"
                 )
             )
+            assert(out.exports.output.includes("/qapps/Insights/ReportBuilder/Datasets"), "the owner's place is not linked")
             assert(has(out.backupList.error, /ADMIN_TRANSFER_VIEW is required/), out.backupList.error)
             assert(
                 !out.report.contentBase64 && out.report.available !== true,

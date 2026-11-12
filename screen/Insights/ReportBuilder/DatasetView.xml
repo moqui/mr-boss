@@ -12,12 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights › Report builder › DatasetView (design-insights §5 DatasetView; impl-insights P3, INS-03, INS-11): an admitted
-    dataset's rows as the viewer reads them: DatasetOptions (the dataset among those they read, the range from Insights' defaults
-    and a query), DataViewList (each row's title and fields, a page at a time) and ExportDocuments (the same rows as CSV or JSON, to
-    the server's cap, through the scoped export adapter export#Dataset and audit#Export). Every row passes the dataset's row filter
-    in the engine, so a reader of one organization sees and exports only its rows; there is no raw DataDocument view or export. The
-    author's and the steward's (BOSS_INS_DATASET_SCREENS); it replaces the copied builder's dynamic entity view (F20). -->
+<!-- Insights › Report builder › DatasetView (design-insights §5 DatasetView; impl-insights P3, INS-03, INS-11; mr-moqui
+    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetView at this location, which
+    BOSS_INS_DATASET_SCREENS opens to the author and the steward, with its one transition: exportDocuments, the rows the
+    viewer reads through the engine's query with the dataset's row filter, to the cap, recorded through audit#Export. Every
+    row passes the dataset's row filter in the engine, so a reader of one organization sees and exports only its rows. The
+    range, when the request names none, is Insights' (reportPolicy.range). The screen has no other transition. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Preview" default-menu-include="false">
     <parameter name="datasetId"/>
@@ -26,103 +26,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="queryString"/>
     <parameter name="pageIndex"/>
 
-    <transition name="exportDocuments" method="get" read-only="true">
-        <actions>
-            <service-call name="ironstone.insights.DatasetServices.export#Dataset" out-map="exported"
-                    in-map="{datasetId:datasetId, from:(from || null), thru:(thru || null), queryString:(queryString || null),
-                        format:(format || 'csv'), prettyPrint:(prettyPrint || null), requestedRowLimit:(requestedRowLimit || null)}"/>
-            <script>if (!ec.message.hasError()) ec.web.sendTextResponse(String(exported.content || ''), exported.contentType, exported.filename)</script>
-        </actions>
-        <default-response type="none"/>
-        <error-response url="." parameter-map="{datasetId:datasetId}"/>
-    </transition>
+    <transition-include name="exportDocuments" location="component://tools/screen/Dashboards/DatasetView.xml"/>
 
-    <actions>
-        <set field="from" from="from || insights.defaults.from"/>
-        <set field="thru" from="thru || insights.defaults.thru"/>
-        <service-call name="ironstone.insights.DatasetServices.find#Datasets" in-map="{status:'admitted'}" out-map="listed"
-                transaction="force-new" ignore-error="true"/>
-        <script>ec.message.clearErrors()</script>
-        <set field="datasetChoices" from="(listed?.datasets || []).filter(row => row.readable).map(row => ({key:row.datasetId, text:row.title}))"/>
-        <if condition="datasetId">
-            <service-call name="ironstone.insights.DatasetServices.get#DatasetView" out-map="viewed" transaction="force-new" ignore-error="true"
-                    in-map="{datasetId:datasetId, from:from, thru:thru, queryString:(queryString || null), pageIndex:(pageIndex || 0)}"/>
-            <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-            <script>ec.message.clearErrors()</script>
-        </if>
-        <set field="dataset" from="viewed?.dataset || null"/>
-        <set field="documentList" from="viewed?.documentList || []"/>
-        <set field="documentListCount" from="viewed?.documentListCount || 0"/>
-        <set field="documentListPageIndex" from="viewed?.documentListPageIndex || 0"/>
-        <set field="documentListPageSize" from="viewed?.documentListPageSize || 25"/>
-        <set field="documentListPageMaxIndex" from="viewed?.documentListPageMaxIndex || 0"/>
-        <set field="documentListPageRangeLow" from="viewed?.documentListPageRangeLow || 0"/>
-        <set field="documentListPageRangeHigh" from="viewed?.documentListPageRangeHigh || 0"/>
-        <set field="totalText" from="viewed?.totalText || '0'"/>
-        <set field="optionValues" from="{datasetId:datasetId, from:from, thru:thru, queryString:queryString}"/>
-        <set field="exportValues" from="{datasetId:datasetId, from:from, thru:thru, queryString:queryString, format:'csv', requestedRowLimit:1000}"/>
-    </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col">
-                <label text="${dataset ? dataset.title : 'Preview a dataset'}" type="h5"/>
-                <label type="p" style="text-caption m-muted q-mb-none" condition="dataset"
-                        text="Rows scoped by ${dataset?.scopeText}; ${totalText} in the range"/>
-            </container>
-            <container style="col-auto">
-                <container-dialog id="ExportDocuments" button-text="Export" type="primary" icon="sym_o_download" width="520"
-                        title="Export ${dataset?.title}" condition="dataset">
-                    <label type="p" text="The rows you see here, up to 10,000; the export is recorded."/>
-                    <form-single name="ExportDocumentsForm" transition="exportDocuments" map="exportValues">
-                        <field name="datasetId"><default-field><hidden/></default-field></field>
-                        <field name="from"><default-field><hidden/></default-field></field>
-                        <field name="thru"><default-field><hidden/></default-field></field>
-                        <field name="queryString"><default-field><hidden/></default-field></field>
-                        <field name="format">
-                            <default-field title="Format"><radio><option key="csv" text="CSV"/><option key="json" text="JSON"/></radio></default-field>
-                        </field>
-                        <field name="prettyPrint"><default-field title=" "><check><option key="true" text="Indented JSON"/></check></default-field></field>
-                        <field name="requestedRowLimit"><default-field title="Rows at most"><text-line size="8" input-type="number"/></default-field></field>
-                        <field name="submitButton"><default-field title="Download"><submit/></default-field></field>
-                    </form-single>
-                </container-dialog>
-            </container>
-        </container>
-        <form-single name="DatasetOptions" transition="." map="optionValues">
-            <field name="datasetId">
-                <default-field title="Dataset">
-                    <drop-down allow-empty="true"><list-options list="datasetChoices" key="${key}" text="${text}"/></drop-down>
-                </default-field>
-            </field>
-            <field name="from"><default-field title="From" tooltip="A date or a relative time such as now-30d"><text-line size="16"/></default-field></field>
-            <field name="thru"><default-field title="Through"><text-line size="16"/></default-field></field>
-            <field name="queryString"><default-field title="Query" tooltip="Field:value terms, as in Explore"><text-line size="30"/></default-field></field>
-            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
-            <field-layout>
-                <field-row-big><field-ref name="datasetId"/><field-ref name="from"/><field-ref name="thru"/>
-                    <field-ref name="queryString"/><field-ref name="submitButton"/></field-row-big>
-            </field-layout>
-        </form-single>
-        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
-        <section name="DatasetRows" condition="dataset">
-            <widgets>
-                <container-box>
-                    <box-body-nopad>
-                        <form-list name="DataViewList" list="documentList" skip-form="true">
-                            <field name="title"><default-field title="Row"><display/></default-field></field>
-                            <field name="summary"><default-field title="Fields"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/></column>
-                                <column><field-ref name="summary"/></column>
-                            </columns>
-                        </form-list>
-                        <label type="p" style="q-pa-md m-muted" condition="!documentList.length" text="No row of this dataset is in the range for you."/>
-                    </box-body-nopad>
-                </container-box>
-            </widgets>
-            <fail-widgets>
-                <label type="p" style="q-pa-md m-muted" condition="!failure" text="Choose an admitted dataset to see its rows."/>
-            </fail-widgets>
-        </section>
+        <include-screen location="component://tools/screen/Dashboards/DatasetView.xml" share-scope="true"/>
     </widgets>
 </screen>

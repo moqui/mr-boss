@@ -16,10 +16,14 @@ along with this software (see the LICENSE.md file). If not, see
     breakdown and the records behind it, opened from a panel's menu (Drill, the root's reportLinks) and hidden from the menu. The
     request names the dashboard or library panel, the panel, the range and the buckets chosen; ironstone.insights.DrillServices
     get#Drill asks the report engine, which reads the saved panel again as the viewer and computes every predicate, so the page
-    carries no query, and the organization in scope is fixed as on Insights › Dashboard. DrillMeaning: the measure's registered
-    meaning (the owner's). Breakdown: the panel's buckets to choose from, and one more of the dataset's dimensions; a breakdown
-    the engine's guards refuse says why. SourceRows: a page of the records with the query's own columns, each opening its
-    Insights record screen (read only, design §10), labelled as a sample when more match. A viewer who reads the total and not
+    carries no query, and the organization in scope is fixed as on Insights › Dashboard. It is Insights' own screen around
+    the framework's Drill (Tools Dashboards/Drill.xml, mr-moqui docs/tools/Monitoring.md "Drill"): the page is its
+    (template/ReportDrill.js, through Insights' service with Insights' scope, range and cost filter) and so are the
+    sections that show it (not available, the panel's buckets, the breakdown's rows, the source records), which have no
+    transition. What Insights adds: its header (the organization kept in the links back; Analysis for an author),
+    DrillMeaning, the measure's registered meaning (the owner's), the organization carried by the Breakdown form, and each
+    record's Insights record screen (read only, design §10; the row's recordUrl, which the service sets). A breakdown the
+    engine's guards refuse says why; the records are labelled as a sample when more match. A viewer who reads the total and not
     the records is told so; a value the viewer may not read is "not available". The same page is a linear task in the terminal
     and full width on a phone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -46,17 +50,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="drillError" from="drillOut?.refusal || null"/>
         <script>ec.message.clearErrors()</script>
         <set field="drill" from="(drillOut?.drill &amp;&amp; !drillOut.refusalCode ? drillOut.drill : null) || {available:false, reason:(drillError || 'This value is not available'),
-                selected:[], dimensions:[], breakdown:[], panelBuckets:[], rows:[], columns:[], carry:{definitionId:definitionId}}"/>
+                selected:[], selectedText:'', dimensions:[], breakdown:[], panelBuckets:[], rows:[], columns:[], carry:{definitionId:definitionId}}"/>
         <set field="meaning" from="drill.meaning"/>
-        <set field="selectedText" from="Array.from(drill.selected || []).map(item =&gt; (item.sourceField || item.field) + ': ' + item.label).join(' › ')"/>
-        <set field="breakdownValues" from="Object.assign({}, drill.carry, {breakdownDimension:(drill.breakdownDimension || '')})"/>
         <set field="dashboardParameters" from="{definitionId:definitionId, organizationPartyId:(organizationPartyId || ''), from:(from || ''), thru:(thru || '')}"/>
     </actions>
     <widgets>
         <container style="m-record-header">
             <container style="m-record-title">
                 <label text="${drill.title || 'Drill'}" type="h5" style="q-my-none"/>
-                <label text="${selectedText || 'The whole panel'}" type="p" style="text-caption m-muted q-mb-none"/>
+                <label text="${drill.selectedText || 'The whole panel'}" type="p" style="text-caption m-muted q-mb-none"/>
             </container>
             <container style="m-record-actions">
                 <link url="${sharedLinks['Dashboard']}" text="Back to the dashboard" link-type="anchor-button" btn-type="primary"
@@ -69,14 +71,7 @@ along with this software (see the LICENSE.md file). If not, see
                         condition="drill.available &amp;&amp; (insights.capabilities.author || insights.capabilities.datasetEdit)"/>
             </container>
         </container>
-        <section name="DrillUnavailable" condition="!drill.available">
-            <widgets>
-                <container-box type="warning">
-                    <box-header title="Not available"/>
-                    <box-body><label type="p" text="${drill.reason}"/></box-body>
-                </container-box>
-            </widgets>
-        </section>
+        <section-include name="DrillUnavailable" location="component://tools/screen/Dashboards/Drill.xml"/>
         <section name="DrillAvailable" condition="drill.available">
             <widgets>
                 <section name="DrillMeaning" condition="meaning">
@@ -97,79 +92,18 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Breakdown"/>
                     <box-body>
-                        <form-single name="Breakdown" transition="." map="breakdownValues">
-                            <field name="definitionId"><default-field><hidden/></default-field></field>
-                            <field name="panelId"><default-field><hidden/></default-field></field>
-                            <field name="queryReference"><default-field><hidden/></default-field></field>
+                        <!-- the framework's Breakdown form with the organization in scope carried too -->
+                        <form-single name="Breakdown" extends="component://tools/screen/Dashboards/Drill.xml#Breakdown" transition="." map="drill.breakdownValues">
                             <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                            <field name="from"><default-field><hidden/></default-field></field>
-                            <field name="thru"><default-field><hidden/></default-field></field>
-                            <field name="variablesJson"><default-field><hidden/></default-field></field>
-                            <field name="bucketsJson"><default-field><hidden/></default-field></field>
-                            <field name="breakdownDimension">
-                                <default-field title="Break down by" tooltip="One more dimension of the same records, in the same scope">
-                                    <drop-down allow-empty="true"><list-options list="drill.dimensions" key="${value}" text="${label}"/></drop-down>
-                                </default-field>
-                            </field>
-                            <field name="apply"><default-field><submit text="Break down"/></default-field></field>
-                            <field-layout><field-row><field-ref name="breakdownDimension"/><field-ref name="apply"/></field-row></field-layout>
                         </form-single>
-                        <label type="p" style="text-warning" text="${drill.breakdownRefused}" condition="drill.breakdownRefused"/>
+                        <section-include name="DrillBreakdownRefused" location="component://tools/screen/Dashboards/Drill.xml"/>
                     </box-body>
                     <box-body-nopad>
-                        <section name="PanelBuckets" condition="drill.panelBuckets.length">
-                            <widgets>
-                                <form-list name="PanelBucketList" list="drill.panelBuckets" skip-form="true" paginate="false">
-                                    <field name="label"><default-field title="Choose a value">
-                                        <link url="." text="${label}" link-type="anchor" parameter-map="chooseParameters"/>
-                                    </default-field></field>
-                                    <field name="valuesText"><default-field title="Value"><display/></default-field></field>
-                                </form-list>
-                            </widgets>
-                        </section>
-                        <section name="BreakdownRows" condition="drill.breakdown.length">
-                            <widgets>
-                                <form-list name="BreakdownList" list="drill.breakdown" skip-form="true" paginate="false">
-                                    <field name="label"><default-field title="${drill.breakdownDimension}"><display/></default-field></field>
-                                    <field name="valuesText"><default-field title="Value"><display/></default-field></field>
-                                </form-list>
-                            </widgets>
-                        </section>
+                        <section-include name="DrillPanelBuckets" location="component://tools/screen/Dashboards/Drill.xml"/>
+                        <section-include name="DrillBreakdownRows" location="component://tools/screen/Dashboards/Drill.xml"/>
                     </box-body-nopad>
                 </container-box>
-                <container-box>
-                    <box-header title="Source records"/>
-                    <box-toolbar>
-                        <link url="." text="Previous" link-type="anchor" parameter-map="drill.previousParameters"
-                                condition="drill.rowsAvailable &amp;&amp; drill.pageIndex &gt; 0"/>
-                        <link url="." text="Next" link-type="anchor" parameter-map="drill.nextParameters"
-                                condition="drill.rowsAvailable &amp;&amp; drill.pageIndex &lt; drill.pageMaxIndex"/>
-                    </box-toolbar>
-                    <box-body-nopad>
-                        <label type="p" style="q-pa-md m-muted" text="${drill.rowsReason}" condition="!drill.rowsAvailable"/>
-                        <section name="SourceRowsShown" condition="drill.rowsAvailable">
-                            <widgets>
-                                <form-list name="SourceRows" list="drill.rows" skip-form="true" paginate="false">
-                                    <field name="title">
-                                        <conditional-field condition="recordScreen" title="Record">
-                                            <link url="${sharedLinks['Records/' + recordScreen]}" text="${title}" link-type="anchor"
-                                                    parameter-map="recordParameters"/>
-                                        </conditional-field>
-                                        <default-field title="Record"><display/></default-field>
-                                    </field>
-                                    <field name="valuesText"><default-field title="In this value"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="title"/></column>
-                                        <column><field-ref name="valuesText"/></column>
-                                    </columns>
-                                </form-list>
-                                <label type="p" style="q-pa-md m-muted" condition="drill.bounded"
-                                        text="Showing ${drill.rows.length} of ${drill.total} records: a page, not all of them."/>
-                                <label type="p" style="q-pa-md m-muted" condition="!drill.rows.length" text="No record matches."/>
-                            </widgets>
-                        </section>
-                    </box-body-nopad>
-                </container-box>
+                <section-include name="DrillSourceRows" location="component://tools/screen/Dashboards/Drill.xml"/>
             </widgets>
         </section>
     </widgets>

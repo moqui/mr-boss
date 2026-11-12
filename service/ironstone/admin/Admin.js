@@ -1,6 +1,6 @@
 // The Admin app's context (impl-admin §2, P1; design-admin §1.1, §17.2): who may open Admin, the organizations they may
 // administer, their capabilities, the record checks every Admin screen and mount runs before a framework or Mantle service, the
-// drop-downs, the palette and the developer tool links. UserAccount, UserGroup and the security records carry no organization:
+// drop-downs, the palette and the mount of the framework's administration screens. UserAccount, UserGroup and the security records carry no organization:
 // an identity is in scope by Mantle's identity scope (Identity.js), the find on mantle.party.UserAccountOrganization (an
 // account with each internal organization its party works for) under the organization entity filters of the authorization
 // the call runs under (impl-admin §4, the P4 follow-up), with no organization math here; the framework org.moqui.admin and
@@ -13,7 +13,7 @@
 // Later phases extend the tables below rather than the functions: capabilityPermissions (a capability from a Moqui
 // permission), areas (the menu areas whose authorization is a capability), recordKinds (a kind of record: its read, the
 // capability that reads it and, once built, its screen), searchFinds (the palette), choiceSources (the drop-downs), linkPaths
-// (sharedLinks) and toolRoutes (DeveloperHome's framework tools).
+// (sharedLinks) and mountRoutes (where the framework's administration screens link under this root).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {find, one, rows, denied, call} = lib
 const access = lib.access
@@ -61,7 +61,7 @@ const capabilityPermissions = {
     agentAdmin: "AgentAdmin"
 }
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_ADM_<Area>): Operations for the reader,
-// the operations operator and the administrator; Agents and Developer tools for the administrator. Home is every Admin user's;
+// the operations operator and the administrator; Agents for the administrator. Home is every Admin user's;
 // System (the Tools System screens) is ADMIN's alone, by Tools' own grant (impl-admin F2), so it is the system capability
 // below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the
 // administrator; P4 Users (Users, UserDetail, Sessions) for the identity operator and the administrator; P7 Settings' Organizations,
@@ -91,8 +91,7 @@ const areas = {
     data: "Data",
     // P17: Audit (AuditChanges, AccessLog) for the audit reader and the administrator (BOSS_ADM_AUDIT)
     audit: "Audit",
-    agents: "Agents",
-    developer: "Developer"
+    agents: "Agents"
 }
 
 // ===== scope =====
@@ -346,9 +345,94 @@ const linkPaths = [
     // P19: the readiness and support summary
     "Operations/SupportSummary",
     "Agents/Home",
-    "System",
-    "Developer/Home"
+    "System"
 ]
+// The mount of the framework's administration screens under this root (adminMount; tools template/AdminMount.js, mr-moqui
+// plans/Admin-Screens-Down.md): where a link to a record goes here, by the key its registration or the framework's screen
+// names. Data only, never authority: a screen shown here still asks its service. A user's page is Admin's own, the staff
+// identity in the organizations administered, not System's account record. The paths are relative to a screen of an area
+// (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root. A
+// record whose page is the same relative path under both roots has the framework's route and none here (a group's
+// ../../Access/GroupDetail, and so a sign-in provider, the instance settings, localization, a message type, the
+// connections, the mail relays, a system message, a job, a topic, the exports, the imports and the backups). The keys are
+// the registrations' (an audit projection's linkKey, a recovery descriptor's or a transfer target's ownerRoute), so the
+// changes list (Audit › AuditChanges), GroupDetail's members, the Sessions list and the Data screens' owner links go by
+// this one table (mr-moqui plans/Admin-Screens-Down.md A3 to A5): a user's page is Users › UserDetail, and Admin's own
+// records have their places here.
+// The places of the settings index's entries (a SettingsEntry's destinationRoute) that are not the framework's own relative
+// path: Admin's own screens, and each app's settings as a plain URL. The index lists an entry only where its screen opens to
+// the viewer (the framework's find#Settings), so these are given as they are, to a BOSS user who opens the index alone too.
+const settingsRoutes = {
+    adminOrganizations: {url: "../../Settings/Organizations"},
+    adminConstitution: {url: "../../Settings/Constitution"},
+    adminReferenceData: {url: "../../Settings/ReferenceData"},
+    accountingSettings: {url: "/qapps/Accounting/Settings/Settings", plain: true},
+    accountingCurrencies: {url: "/qapps/Accounting/Settings/Currencies", plain: true},
+    accountingPaymentTerms: {url: "/qapps/Accounting/Settings/PaymentTerms", plain: true},
+    accountingTaxAuthorities: {url: "/qapps/Accounting/Tax/TaxAuthorities", plain: true},
+    productsSettings: {url: "/qapps/Products/Settings/Index", plain: true},
+    productsUnits: {url: "/qapps/Products/Units", plain: true},
+    productsIdentificationTypes: {url: "/qapps/Products/Settings/IdentificationTypes", plain: true},
+    commerceCheckoutSettings: {url: "/qapps/Commerce/Settings/CheckoutSettings", plain: true},
+    customerServiceSettings: {url: "/qapps/CustomerService/Settings/SettingsHome", plain: true},
+    customerServiceCaseTypes: {url: "/qapps/CustomerService/Settings/CaseTypes", plain: true},
+    customerServiceStatusCategories: {url: "/qapps/CustomerService/Settings/StatusCategories", plain: true},
+    purchasingSettings: {url: "/qapps/Purchasing/Settings/SettingsHome", plain: true},
+    warehouseSettings: {url: "/qapps/Warehouse/Settings/Index", plain: true},
+    manufacturingSettings: {url: "/qapps/Manufacturing/Settings/ProductionSettings", plain: true},
+    manufacturingReasonCodes: {url: "/qapps/Manufacturing/Settings/ReasonCodes", plain: true},
+    projectsSettings: {url: "/qapps/Projects/Settings/Index", plain: true},
+    projectsWorkItemTypes: {url: "/qapps/Projects/Settings/WorkItemTypes", plain: true},
+    projectsWorkflows: {url: "/qapps/Projects/Settings/Workflows", plain: true},
+    commsConsent: {url: "/qapps/Comms/Consent/List", plain: true},
+    insightsSettings: {url: "/qapps/Insights/Settings/AnalyticsSettings", plain: true},
+    peopleSettings: {url: "/qapps/People/Settings", plain: true},
+    voice: {url: "/qapps/system/Voice", plain: true},
+    toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
+}
+const mountRoutes = {
+    adminUser: {url: "../../Users/UserDetail", idParameter: "userId"},
+    adminInvitations: {url: "../../Users/Invitations"},
+    adminLifecycle: {url: "../../Users/LifecycleDetail", idParameter: "operationId"},
+    adminOrganization: {url: "../../Settings/OrganizationDetail", idParameter: "organizationPartyId"},
+    // the shared import wizard, mounted in the Data area: an import target started from Imports, an open import continued
+    // from ImportDetail
+    dataImport: {url: "../../Data/DataImport", idParameter: "targetId"},
+    // the owners' own places of the registered transfer targets (a TransferTarget's ownerRoute; an import run opens there
+    // with the parameters its owner gave): another app's page is a plain URL. Imports first, then exports
+    productsImport: {url: "/qapps/Products/ProductImport", plain: true},
+    commerceChannelImport: {url: "/qapps/Commerce/Integrations/ChannelImport", plain: true},
+    accountingStatementImport: {url: "/qapps/Accounting/Banking/StatementImport", plain: true},
+    accountingOpenItems: {url: "/qapps/Accounting/Settings/Setup/OpenItems", plain: true},
+    commonsContactImport: {url: "/qapps/Commons/Contacts/Import", plain: true},
+    projectsWorkItemImport: {url: "/qapps/Projects/WorkItems/Import", plain: true},
+    peopleEmployeeImport: {url: "/qapps/People/Employees/EmployeeImport", plain: true},
+    commonsContacts: {url: "/qapps/Commons/Contacts/List", plain: true},
+    insightsDatasets: {url: "/qapps/Insights/ReportBuilder/Datasets", plain: true},
+    insightsReports: {url: "/qapps/Insights/Reports", plain: true},
+    accountingTaxStatements: {url: "/qapps/Accounting/Tax/TaxStatements", plain: true},
+    accountingInvoiceBatch: {url: "/qapps/Accounting/Receivables/InvoiceBatch", plain: true},
+    projectsWorkItems: {url: "/qapps/Projects/WorkItems/List", plain: true},
+    // another app's page is a plain URL: Commerce's store integration (a system message's registered owner, by its remote)
+    // and Comms' mail accounts (a mail account's message in the mail queue, the mail reception's owner)
+    storeIntegration: {url: "/qapps/Commerce/Integrations/IntegrationDetail", idParameter: "systemMessageRemoteId", plain: true},
+    mailAccount: {url: "/qapps/Comms/Settings/MailAccounts", plain: true},
+    // the registries' places (mr-moqui plans/Admin-Screens-Down.md A6): the keys of the readiness providers' and checks'
+    // fix places (fixRoute) and of the health cards, where they are not the framework's own relative path. The framework's
+    // Monitor, Constitution, users and visits are System's screens beside its areas: here Monitor is Admin's landing, the
+    // telemetry sources are System's own page and the rest are under Admin › System, which opens to an instance
+    // administrator. A link Admin's own screens show is checked first (RegistryServices.get#OpenPaths)
+    monitor: {url: "../../Operations/Monitoring"},
+    monitorSources: {url: "/qapps/system/Monitor/Sources", plain: true},
+    constitution: {url: "../../System/Constitution"},
+    adminUsers: {url: "../../System/Security/UserAccount"},
+    adminVisits: {url: "../../System/Visit"},
+    accountingSetup: {url: "/qapps/Accounting/Settings/Setup", plain: true},
+    productsCatalogChecks: {url: "/qapps/Products/CatalogChecks", plain: true},
+    commerceStore: {url: "/qapps/Commerce/Stores/StoreDetail", idParameter: "productStoreId", plain: true},
+    insightsDataset: {url: "/qapps/Insights/ReportBuilder/DatasetDetail", idParameter: "datasetId", plain: true},
+    ...settingsRoutes
+}
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")
     const found = scope()
@@ -362,7 +446,8 @@ function sharedContext(p) {
             appRoot: "Admin",
             linkBase: "//Admin",
             webBase: "/qapps/Admin",
-            sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"}
+            sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"},
+            mount: {routes: Object.assign({adminUser: null}, settingsRoutes)}
         }
     const userScope = required(found)
     return {
@@ -373,7 +458,8 @@ function sharedContext(p) {
         appRoot: "Admin",
         linkBase: "//Admin",
         webBase: "/qapps/Admin",
-        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Admin/" + path]))
+        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Admin/" + path])),
+        mount: {routes: mountRoutes}
     }
 }
 
@@ -752,75 +838,6 @@ function choices(p) {
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 
-// ===== developer tools =====
-// The framework tools DeveloperHome links (design §13 DeveloperHome): each by its app (whose own grant opens it, never an Admin
-// one), its route under that app (System's under Admin › System, where an instance administrator opens it; the others at their
-// own app) and the permission its screen checks besides the app's grant, if any. Each keeps its own checks and environment
-// restrictions when opened; Admin adds no raw shell, service-run field or database restore.
-const toolRoutes = [
-    {tool: "Entity data", purpose: "Find, view and edit entity records", app: "tools", path: "Data/Grid"},
-    {tool: "Data views", purpose: "Saved views over entity data", app: "tools", path: "Data/Views"},
-    {tool: "Data export", purpose: "Export entity data as XML, JSON or CSV", app: "tools", path: "Data/Export"},
-    {tool: "Data load", purpose: "Load entity data files", app: "tools", path: "Data/Load"},
-    {tool: "Snapshots", purpose: "Database snapshots and their restore checks", app: "tools", path: "Data/Snapshots"},
-    {tool: "Data documents", purpose: "Data documents, feeds and search", app: "system", path: "DataDocument"},
-    {tool: "Status flows", purpose: "Status items and their transitions", app: "tools", path: "StatusFlows"},
-    {tool: "Entities", purpose: "Entity definitions, tables and indexes", app: "tools", path: "Schema"},
-    {tool: "Services", purpose: "Service reference and a service run", app: "tools", path: "Service"},
-    {
-        tool: "Load testing",
-        purpose: "Load scripts run against this server or another, and their runs",
-        app: "tools",
-        path: "Load/Scripts",
-        permission: "LOAD_RUNNER"
-    },
-    {tool: "SQL runner", purpose: "Run SQL statements", app: "tools", path: "Sql", permission: "SQL_RUNNER_WEB"},
-    {
-        tool: "Database",
-        purpose: "Database server, tables and statement statistics",
-        app: "tools",
-        path: "Database",
-        permission: "DATABASE_ADMIN"
-    },
-    {tool: "ETL", purpose: "Mappings, value maps and runs", app: "tools", path: "Etl"},
-    {tool: "Caches", purpose: "Cache statistics and clearing", app: "system", path: "Cache"},
-    {tool: "Resources", purpose: "Git repositories and resources", app: "system", path: "Resource"},
-    {tool: "Print", purpose: "Printers and print jobs", app: "system", path: "Print"},
-    {tool: "Instances", purpose: "Hosted instances", app: "system", path: "Instance"},
-    {tool: "Configuration", purpose: "The effective configuration", app: "system", path: "Conf"},
-    {tool: "Components", purpose: "Installed components", app: "system", path: "Components"}
-]
-const appNames = {system: "System", tools: "Tools"}
-const toolUrl = route => (route.app === "system" ? "/qapps/Admin/System/" : "/qapps/" + route.app + "/") + route.path
-// find#ToolLinks: the tools the user may open, each checked with its app's own grant and its permission; the others are left
-// out (design §13: omit unauthorized actions). Not an Admin capability: the user's own Tools grants decide.
-function toolLinks() {
-    const userScope = required()
-    const grants = userScope.grants
-    const links = []
-    for (const route of toolRoutes) {
-        try {
-            if (route.app === "system" ? !userScope.capabilities.system : !appGrant(grants, route.app)) continue
-            if (route.permission && !access.has(route.permission)) continue
-            links.push({
-                tool: route.tool,
-                purpose: route.purpose,
-                appName: appNames[route.app],
-                permission: route.permission || "",
-                url: toolUrl(route)
-            })
-        } catch (error) {
-            ec.logger.error("Admin tool link " + route.tool + " not checked: " + error.message)
-        }
-    }
-    return {links}
-}
-// The framework apps the user's own groups open, for the Monitoring and Agents landings' links (monitor, dashboards, system).
-function appAccess() {
-    const userScope = required()
-    return Object.fromEntries(Object.keys(appLocations).map(app => [app, appGrant(userScope.grants, app)]))
-}
-
 // get#MemberScope (P3): which of a group's members the user may change, the users of the organizations they administer (every
 // one for the administrator), and how many are outside; a member outside the scope is counted, never named.
 function memberScope(p) {
@@ -839,7 +856,7 @@ function memberScope(p) {
     return {inScopeUserIds: inScope, outsideCount: userIds.length - inScope.length}
 }
 
-const operations = {sharedContext, checkRecord, search, choices, toolLinks, appAccess, memberScope}
+const operations = {sharedContext, checkRecord, search, choices, memberScope}
 ;({
     // the scope for a phase's own module: the user's scope, the same refusing a user without Admin, and a record's check
     scope,

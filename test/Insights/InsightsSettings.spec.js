@@ -1,8 +1,10 @@
 // Insights' settings, data readiness and Assist (impl-insights P10; design-insights §11, §1.2): the organization's analytics
 // defaults are the Insights administrator's to change (a reader with the same input refused), for an organization of theirs
 // at the revision read, a recipient cap above Admin's instance ceiling refused and nothing stored; the saved cap is the one
-// delivery then uses for that organization and no other. Data readiness reads Admin's registry as the viewer: a source
-// rebuilt two hours ago is ready under the default policy and stale, with its lag, once the organization allows an hour;
+// delivery then uses for that organization and no other: what Scheduled reports adds to Insights' policy for the
+// framework's schedule screens, so a schedule saved through its route is stored with it. Data readiness reads Admin's
+// registry as the viewer: a source rebuilt two hours ago is ready under the default policy and stale, with its lag, once
+// the organization allows an hour;
 // a source the reader may not read is not listed; the refresh is refused to an author (the registration's permission) and
 // to a reader, and the steward's runs. Assist's query answers each reader their own organization's rows of an admitted
 // dataset, and refuses an unadmitted one, a cost dataset and a cost field (an MCP client whatever the caller holds) and a
@@ -12,11 +14,11 @@
 // InsightsDatasets'. The "usable when" scenario is the acceptance InsightsSettingsUsable.
 // Run: ./moq test mr-boss --spec InsightsSettings
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
-const {ids, users, asUser, system, refusal, invoke, page} = lib
+const {ids, users, asUser, system, refusal, invoke, page, transition} = lib
 const C = "ironstone.insights.ContextServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
-const REFRESH = "ironstone.admin.RegistryServices.request#Refresh"
+const REFRESH = "org.moqui.admin.ReadinessServices.request#Refresh"
 const salesId = "mantle-sales-orders"
 const sourceId = "boss-commerce-checkouts"
 const orders = {retail: "INS_DS_O1", services: "INS_DS_O2"}
@@ -97,14 +99,26 @@ feature(
     "the organization's cap and display zone are what its users' delivery and context then use, and no other organization's",
     {
         when() {
+            // the cap the delivery area adds to Insights' policy, and a schedule the distributor saves through Scheduled
+            // reports' route, which is stored with it
+            const saved = transition(
+                users.distributor,
+                "component://mr-boss/screen/Insights.xml",
+                "ScheduledReports/Schedules/createSchedule",
+                {newDefinitionId: "insights-suite", cronSelected: "0 0 6 ? * MON", renderMode: "csv", audienceKind: "personal"}
+            )
+            const scheduleId = (saved.location.match(/screenScheduledId=([^&]+)/) || [])[1] || "_NA_"
+            const stored = system(() => {
+                const row = ec.entity.find("moqui.screen.ScreenScheduled").condition("screenScheduledId", scheduleId).one()
+                const cap = row ? Number(row.recipientCap) : null
+                ec.entity.find("moqui.screen.ScreenScheduledLock").condition("screenScheduledId", scheduleId).deleteAll()
+                if (row) row.delete()
+                return cap
+            })
             return {
-                retail: asUser(users.distributor, () =>
-                    invoke("ironstone.insights.DeliveryServices.check#Audience", {
-                        definitionId: "insights-suite",
-                        recipientUserIds: [],
-                        recipientGroupIds: []
-                    })
-                ),
+                retail: asUser(users.distributor, () => invoke(C + "get#DeliveryPolicy", {})),
+                saved,
+                stored,
                 services: asUser(users.services, () => insightsLib().recipientCap()),
                 defaults: asUser(
                     users.reader,
@@ -115,8 +129,10 @@ feature(
                 reader: asUser(users.reader, () => invoke(C + "get#Settings", {organizationPartyId: ids.organizationId}))
             }
         },
-        then({retail, services, defaults, otherDefaults, reader}) {
+        then({retail, saved, stored, services, defaults, otherDefaults, reader}) {
             retail.recipientCap == 20
+            saved.errors == ""
+            stored == 20
             services == 50
             defaults.displayTimeZone == "America/Chicago" && defaults.weekStart == "InsWsSunday"
             otherDefaults.displayTimeZone == null
@@ -160,7 +176,8 @@ feature(
             hidden == null
             waiting.state == "warning"
             author.includes("REFRESH_DENIED")
-            reader.includes("not authorized")
+            // the registry is the framework's, any signed-in user's: a reader is refused by the registration's permission
+            reader.includes("REFRESH_DENIED")
             offered.refreshKey == refreshKey
             refreshed.state == "requested"
             // the index's size, every organization's documents together, is not a reader's

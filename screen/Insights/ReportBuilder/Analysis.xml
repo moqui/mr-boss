@@ -13,15 +13,19 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Report builder › Analysis (design-insights §5 Analysis; impl-insights P6, INS-03, INS-04): an author builds an
-    aggregate over an admitted dataset and saves it as a library panel. AnalysisSource: the dataset, the measure and how it is
-    aggregated, up to two groups, a time grain, one filter and the range (ironstone.insights.AnalysisServices
-    get#AnalysisOptions: only the author's admitted datasets and their own fields). AnalysisResult: the choices run through the
-    report engine as the author (get#AnalysisResult), with the engine's count of the records behind them and its notices; what
-    the engine's semantic guards refuse (an amount across currencies until it is grouped by its currency or filtered to one, a
-    ratio averaged, a balance summed across its dates) is shown as its reason, never as a number without a unit. SaveAnalysis:
-    a library panel the author owns, private or shared with one of their groups, optionally placed on a dashboard of their own
-    (store#Analysis); AnalysisSteps is then the framework definition editor (Insights › PanelDetail), where transformations,
-    pivot, totals and the time comparison are the engine's own. The author's and the dataset steward's
+    aggregate over an admitted dataset and saves it as a library panel. It is Insights' own screen around the framework's
+    Analysis (Tools Dashboards/Analysis.xml, mr-moqui docs/tools/Monitoring.md "Analysis"), whose sections show the page:
+    AnalysisSource, the dataset, the measure and how it is aggregated, up to two groups, a time grain, one filter and the
+    range; AnalysisResult, the choices run through the report engine as the author, with the engine's count of the records
+    behind them and its notices; AnalysisRefused, what the engine's semantic guards refuse (an amount across currencies
+    until it is grouped by its currency or filtered to one, a ratio averaged, a balance summed across its dates), shown as
+    its reason, never as a number without a unit; SaveAnalysis, a library panel the author owns, private or shared with
+    one of their groups, optionally placed on a dashboard of their own. What Insights keeps is the page and the save, from
+    its own services (ironstone.insights.AnalysisServices get#AnalysisOptions, get#AnalysisResult and store#Analysis: only
+    the author's admitted datasets and their own fields, the calendar of the organization in scope for a time grain, the
+    author check, Insights' reason codes) and its own saveAnalysis, which the grant below names; the framework's
+    saveAnalysis is not taken in. AnalysisSteps is then the framework definition editor (Insights › PanelDetail), where
+    transformations, pivot, totals and the time comparison are the engine's own. The author's and the dataset steward's
     (BOSS_INS_ANALYSIS); a reader opens a saved analysis as the panel it is. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Analysis" default-menu-index="2">
@@ -68,107 +72,17 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="analysis" from="(analysisOut?.result &amp;&amp; !analysisOut.refusalCode ? analysisOut.result : null) || {available:false, reason:(resultError || 'The analysis could not run'), rows:[], notices:[]}"/>
         </if>
-        <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share"/>
-        <set field="saveValues" from="Object.assign({}, choices, {visualization:'table'})"/>
+        <service-call name="ironstone.insights.ContextServices.get#ShareGroups" out-map="share"/>
+        <!-- the page as the framework's sections read it: the choices and the result are Insights' own services' -->
+        <set field="analysisView" from="{options:analysisOptions, optionsError:optionsError,
+                noDataset:(!analysisOptions.datasets.length &amp;&amp; !optionsError),
+                noDatasetText:'No dataset is admitted for you to read. A dataset steward admits them under Datasets.',
+                choices:choices, analysis:(analysis || null), canSave:true, shareGroups:share.groups,
+                dashboards:(analysisOptions.dashboards || []), saveValues:Object.assign({}, choices, {visualization:'table'})}"/>
     </actions>
     <widgets>
-        <container-box>
-            <box-header title="Source"/>
-            <box-body>
-                <label type="p" style="text-warning" text="${optionsError}" condition="optionsError"/>
-                <label type="p" style="m-muted" condition="!analysisOptions.datasets.length &amp;&amp; !optionsError"
-                        text="No dataset is admitted for you to read. A dataset steward admits them under Datasets."/>
-                <form-single name="AnalysisSource" transition="." map="choices">
-                    <field name="datasetId"><default-field title="Dataset" tooltip="An admitted dataset you may read">
-                        <drop-down allow-empty="true"><list-options list="analysisOptions.datasets" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="aggregate"><default-field title="Measure">
-                        <drop-down><list-options list="analysisOptions.aggregates" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="measureField"><default-field title="Of" tooltip="An amount keeps its currency: group by it or filter to one">
-                        <drop-down allow-empty="true"><list-options list="analysisOptions.measureFields" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="groupBy"><default-field title="Group by">
-                        <drop-down allow-empty="true"><list-options list="analysisOptions.groupFields" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="groupBy2"><default-field title="Then by">
-                        <drop-down allow-empty="true"><list-options list="analysisOptions.groupFields" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="timeGrain"><default-field title="Over time">
-                        <drop-down allow-empty="true"><list-options list="analysisOptions.grains" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="filterField"><default-field title="Only where">
-                        <drop-down allow-empty="true"><list-options list="analysisOptions.filterFields" key="${value}" text="${label}"/></drop-down>
-                    </default-field></field>
-                    <field name="filterValue"><default-field title="Is"><text-line size="16"/></default-field></field>
-                    <field name="from"><default-field title="From"><text-line size="12"/></default-field></field>
-                    <field name="thru"><default-field title="Through"><text-line size="12"/></default-field></field>
-                    <field name="run"><default-field><submit text="Run"/></default-field></field>
-                    <field-layout>
-                        <field-row><field-ref name="datasetId"/><field-ref name="aggregate"/></field-row>
-                        <field-row><field-ref name="measureField"/><field-ref name="timeGrain"/></field-row>
-                        <field-row><field-ref name="groupBy"/><field-ref name="groupBy2"/></field-row>
-                        <field-row><field-ref name="filterField"/><field-ref name="filterValue"/></field-row>
-                        <field-row><field-ref name="from"/><field-ref name="thru"/></field-row>
-                        <field-row-big><field-ref name="run"/></field-row-big>
-                    </field-layout>
-                </form-single>
-            </box-body>
-        </container-box>
-        <section name="AnalysisRefused" condition="analysis &amp;&amp; !analysis.available">
-            <widgets>
-                <container-box type="warning">
-                    <box-header title="Not a meaningful result"/>
-                    <box-body><label type="p" text="${analysis.reason}"/></box-body>
-                </container-box>
-            </widgets>
-        </section>
-        <section name="AnalysisResult" condition="analysis?.available">
-            <widgets>
-                <container-box>
-                    <box-header title="Result"/>
-                    <box-toolbar>
-                        <container-dialog id="SaveAnalysis" button-text="Save analysis" type="primary">
-                            <form-single name="SaveAnalysisForm" transition="saveAnalysis" map="saveValues">
-                                <field name="datasetId"><default-field><hidden/></default-field></field>
-                                <field name="aggregate"><default-field><hidden/></default-field></field>
-                                <field name="measureField"><default-field><hidden/></default-field></field>
-                                <field name="groupBy"><default-field><hidden/></default-field></field>
-                                <field name="groupBy2"><default-field><hidden/></default-field></field>
-                                <field name="timeGrain"><default-field><hidden/></default-field></field>
-                                <field name="filterField"><default-field><hidden/></default-field></field>
-                                <field name="filterValue"><default-field><hidden/></default-field></field>
-                                <field name="from"><default-field><hidden/></default-field></field>
-                                <field name="thru"><default-field><hidden/></default-field></field>
-                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                                <field name="title"><default-field title="Name"><text-line size="50"/></default-field></field>
-                                <field name="visualization"><default-field title="Show as">
-                                    <drop-down><list-options list="analysisOptions.visualizations" key="${value}" text="${label}"/></drop-down>
-                                </default-field></field>
-                                <field name="userGroupId"><default-field title="Share with" tooltip="Leave it empty to keep the analysis private. A group sees the panel; each person still sees only the data they may read.">
-                                    <drop-down allow-empty="true"><list-options list="share.groups" key="${value}" text="${label}"/></drop-down>
-                                </default-field></field>
-                                <field name="dashboardId"><default-field title="Add to dashboard" tooltip="One of your own dashboards">
-                                    <drop-down allow-empty="true"><list-options list="analysisOptions.dashboards" key="${value}" text="${label}"/></drop-down>
-                                </default-field></field>
-                                <field name="save"><default-field><submit text="Save analysis"/></default-field></field>
-                            </form-single>
-                        </container-dialog>
-                    </box-toolbar>
-                    <box-body>
-                        <label type="p" style="m-muted" condition="analysis.sourceCount != null"
-                                text="Computed from ${analysis.sourceCount} records you may read, ${ec.l10n.format(new Date(Date.parse(analysis.range.from)), 'yyyy-MM-dd')} to ${ec.l10n.format(new Date(Date.parse(analysis.range.thru)), 'yyyy-MM-dd')}."/>
-                        <label type="p" style="m-muted" text="${analysis.notices.join(' ')}" condition="analysis.notices.length"/>
-                    </box-body>
-                    <box-body-nopad>
-                        <form-list name="AnalysisRows" list="analysis.rows" skip-form="true" paginate="false">
-                            <field name="label"><default-field title="Group"><display text="${label || 'All'}"/></default-field></field>
-                            <field name="valuesText"><default-field title="Value"><display/></default-field></field>
-                        </form-list>
-                        <label type="p" style="q-pa-md m-muted" text="No record matches." condition="!analysis.rows.length"/>
-                    </box-body-nopad>
-                </container-box>
-            </widgets>
-        </section>
+        <section-include name="AnalysisSource" location="component://tools/screen/Dashboards/Analysis.xml"/>
+        <section-include name="AnalysisRefused" location="component://tools/screen/Dashboards/Analysis.xml"/>
+        <section-include name="AnalysisResult" location="component://tools/screen/Dashboards/Analysis.xml"/>
     </widgets>
 </screen>
