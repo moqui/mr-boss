@@ -63,6 +63,10 @@ the Claims list over find#Claims), EditExpenseInvoice's EditInvoice and EditExpe
 People/Expenses/ExpenseClaimDetail (ClaimHeader over store#Claim, ClaimItems over store#ClaimItem, with receipts and Read
 receipt). The two WorkerInvoice forms stay Projects' MyTime and blank. No baseline form maps to EmployeeAdvances, Accounting's
 Employee advances tab or People's InvoiceDetail.
+**People P18 (Nov 12, 2026):** no baseline form is mapped to SkillsMatrix, its terminal twin, Qualifications or Employee360's Skills
+and reviews: Marble's HumanRes has no skill, qualification or resume form, and qualifications, skill evaluations and resume lines are
+new records (`PartyQualification`, `PartySkillEvaluation`, `PartyResume`, refined from Mantle's commented sketches, design-people §10);
+their Implemented in is in usl-inventory's People rows.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

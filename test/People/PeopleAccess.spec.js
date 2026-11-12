@@ -52,6 +52,11 @@
 // Forms the People administrator's (the HR officer refused the screen). P16 review (the user's call of Nov 12, 2026): the
 // self-service employee on an interview's panel reads it through get#MyInterview and the reader is refused it with the same
 // parameters; the panel member reads no application record host (its notes and files are the recruiters').
+// P18: Skills & training's matrix development's, HR's and the managers' (the reader and the employee refused the screen), its
+// Qualifications the employee's by the area's own grant; a verified qualification revoked by the development administrator of its
+// employer (the reader refused with the same parameters, Services' qualification refused to Retail's development administrator), and
+// the Development group (the reader's without the matrix). P18 review (the user's call of Nov 12, 2026): the manager evaluates her
+// report's skill without PEOPLE_DEVELOP_EDIT, the reader is refused the same evaluation and the manager Services' employee.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -176,14 +181,15 @@ feature(
             const otherRoot = asUser(users.hr, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
-            // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances)
+            // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances; P18: their
+            // qualifications)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
                 Object.keys(employee.sharedLinks || {}).join() !==
                     "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
-                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances" ||
+                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -252,6 +258,15 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             const time = shell(user, true, "Time/Timesheets", "Time")
             if (JSON.stringify(time.names) !== JSON.stringify(menu))
                 problems.push(`${label} Time group: ${time.status} ${time.names}`)
+        }
+        // P18: Skills & training's matrix and qualifications; the reader's qualifications alone
+        for (const [user, menu, label] of [
+            [users.hr, ids.developmentMenu, "the HR officer's"],
+            [users.reader, ids.readerDevelopmentMenu, "the reader's"]
+        ]) {
+            const development = shell(user, true, "Development/Qualifications", "Development")
+            if (JSON.stringify(development.names) !== JSON.stringify(menu))
+                problems.push(`${label} Development group: ${development.status} ${development.names}`)
         }
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
@@ -1334,6 +1349,83 @@ feature(
                     panelInterview: "accepted",
                     readerInterview: "RECORD_UNAVAILABLE",
                     panelRecord: "false true"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "skills and qualifications: the matrix development's, HR's and the managers' screen; a verified qualification revoked by the development administrator of its employer, the reader refused with the same parameters, Services' refused to Retail's; the manager evaluates her report's skill, the reader refused; the employee's qualifications by the area's own grant",
+    {
+        when() {
+            const D = "mantle.humanres.DevelopmentServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            // a spec-local first aid certificate of Ines (Retail), verified, so the reader reads it (its validity) and may not revoke it
+            const partyQualificationId = system(
+                () =>
+                    call("create#mantle.humanres.ability.PartyQualification", {
+                        partyId: ids.reportPartyId,
+                        qualificationTypeEnumId: ids.firstAidTypeId,
+                        title: "People access spec first aid",
+                        thruDate: new Date(Date.now() + 400 * 86400000),
+                        verificationStatusId: "QlVerVerified"
+                    }).partyQualificationId
+            )
+            const revision = system(() =>
+                String(
+                    ec.user.timestampMillis(
+                        ec.entity
+                            .find("mantle.humanres.ability.PartyQualification")
+                            .condition("partyQualificationId", partyQualificationId)
+                            .one().lastUpdatedStamp
+                    )
+                )
+            )
+            const revoke = {partyQualificationId, decision: "revoke", reason: "Spec", expectedRevision: revision}
+            // the user's call of Nov 12, 2026: the manager evaluates her report Tomas's customer service (at the level he holds)
+            // without PEOPLE_DEVELOP_EDIT; the reader is refused the same evaluation, and the manager Services' Kenji
+            const evaluate = partyId => ({partyId, skillTypeEnumId: ids.serviceSkillId, skillLevel: "3", evidence: "Access spec"})
+            const codes = {
+                reader: code(asUser(users.reader, () => system(() => refusal(D + "verify#Qualification", revoke)))),
+                develop: code(asUser(users.develop, () => system(() => refusal(D + "verify#Qualification", revoke)))),
+                otherEmployer: code(
+                    asUser(users.develop, () =>
+                        system(() => refusal(D + "find#Qualifications", {partyQualificationId: ids.otherQualificationId}))
+                    )
+                ),
+                managerEvaluates: code(
+                    asUser(users.manager, () => system(() => refusal(D + "store#Skill", evaluate(ids.employeePartyId))))
+                ),
+                readerEvaluates: code(
+                    asUser(users.reader, () => system(() => refusal(D + "store#Skill", evaluate(ids.employeePartyId))))
+                ),
+                managerOther: code(
+                    asUser(users.manager, () => system(() => refusal(D + "store#Skill", evaluate(ids.otherEmployeePartyId))))
+                )
+            }
+            for (const user of [users.develop, users.hr, users.manager]) {
+                const opened = screenRefusal(user, "Development/SkillsMatrix")
+                if (opened) problems.push(`${user}'s SkillsMatrix: ${opened}`)
+            }
+            for (const user of [users.reader, users.employee]) {
+                const refused = screenRefusal(user, "Development/SkillsMatrix")
+                if (!unauthorized(refused)) problems.push(`${user} opens SkillsMatrix: ${refused || "opened"}`)
+            }
+            const own = screenRefusal(users.employee, "Development/Qualifications")
+            if (own) problems.push(`the employee's Qualifications: ${own}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    reader: "PERMISSION_DENIED",
+                    develop: "accepted",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    managerEvaluates: "accepted",
+                    readerEvaluates: "PERMISSION_DENIED",
+                    managerOther: "RECORD_UNAVAILABLE"
                 }
             problems.join("\n") == ""
         }
