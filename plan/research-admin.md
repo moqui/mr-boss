@@ -4,6 +4,12 @@ Oct 18, 2026
 
 Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-crosscut.md).
 
+**Paths (Nov 12, 2026).** The Tools `System/` screen paths cited below are the Oct 18
+baseline that was read, and they are left as they were. The administration screens among
+them are now System's areas (Access, Security, Settings, Operations, Data, Audit,
+Integrations, Protocols), and several of the files cited are gone: see mr-moqui
+[plans/Admin-Screens-Down.md](../../../../plans/Admin-Screens-Down.md).
+
 Deeper research pass on the **IronStone Admin** app (users, groups & permissions;
 organizations & settings; integrations & system messages; data import and export),
 cataloguing every relevant screen/page found in the reference apps. Companion to

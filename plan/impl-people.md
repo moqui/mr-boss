@@ -383,11 +383,11 @@ permissions, scope), PE-18 (the root).
   nothing for what is not) and `get#Readiness` (the checks of what is built: an employer with no department, an
   employee with no manager; later phases add theirs). `get#Readiness` answers the registry's contract with no adapter
   (F58): called with `providerKey` and an `organizationPartyId`, it returns `checks` of `checkKey`, `title`, `state`,
-  `reasonCode`, `message` and `fixPath`, and refuses an organization outside the caller's scope by reason code.
+  `reasonCode`, `message` and `fixRoute` (a route key the app showing it resolves), and refuses an organization outside the caller's scope by reason code.
 - **Admin's registries** (owner contracts, F27): People's capability bundles from crosscut §1.4's rows, as the
   built apps' are (BossSetupData.xml:2676-2687), `PEOPLE_IMPORT` in the HR bundle; the settings entry
   `people.settings` to `People/Settings` (the pattern of :2553-2556) and the readiness provider `people.setup` over
-  `get#Readiness`, scope `AdmScOrganization`, with `PEOPLE_CONFIGURE` and `fixPath` People/Settings (the row of
+  `get#Readiness`, scope `AdmScOrganization`, with `PEOPLE_CONFIGURE` and `fixRoute` `peopleSettings` (the row of
   :2550-2552; Accounting's and Products' services have adapters, People's answers the contract, F58).
 - **The People root** (design §1.2): the menu areas Home and Settings; each later phase adds its entries, and
   `later` entries stay absent. The eight placeholders are removed (each area's phase builds its real screens); the
@@ -418,7 +418,7 @@ permissions, scope), PE-18 (the root).
 - Checked first (the code over the plan): F1 (the root grant is live for `ADMIN` and `BOSS_PEOPLE_ADMIN`, ALWAYS, and the
   root's comment said otherwise), F2 (`PAYROLL_VIEW` and `PAYROLL_EDIT` in Mantle), F26 (the deny rows; there are thirteen,
   not twelve: Admin P6's `pause|reconcile|retry|transfer` row at the end of BossSetupData names the packages too), F27 and F58
-  (the readiness contract: Registry.js reads a provider with no adapter as the `checks` list and leaves out a refusal whose
+  (the readiness contract: Registry.js then, the framework's Readiness.js now, reads a provider's `checks` list and leaves out a refusal whose
   code is in its list, `ORGANIZATION_DENIED` among them), F39 and F49 (no PartyRelationship filter; `userOrgIds` reaches the
   direct `PrtOrgRollup` children only), F50 (manager to report), F59 (Party owner `_NA_`).
 - Access (`data/BossSetupData.xml`, appended but for the deny rows and the registry comment):
@@ -449,7 +449,7 @@ permissions, scope), PE-18 (the root).
     live manager, the first 20 by name, with `dueWorkCount`); no pay;
   - `get#Readiness`: the registry's contract with no adapter, `PEOPLE_CONFIGURE`, per employer in scope (or the one asked,
     `ORGANIZATION_DENIED` outside): for an employer with current employees, `people.departments` (warning
-    `NO_DEPARTMENT`) and `people.managers` (warning `EMPLOYEE_NO_MANAGER` with the count), `fixPath` People/Settings, each check
+    `NO_DEPARTMENT`) and `people.managers` (warning `EMPLOYEE_NO_MANAGER` with the count), `fixRoute` `peopleSettings`, each check
     that fails shown unavailable and the others going on; an employer with no employees answers no check.
 - BOSS `ironstone.people.ContextServices` over `service/ironstone/people/People.js` (tables `areas`, `recordKinds`,
   `searchFinds`, `choiceSources`, `linkPaths`): `get#SharedContext` (the root grant read from the user's own groups, as
@@ -544,7 +544,7 @@ repository ("People P1 review: …"; mr-mantle 07c5e38b).
     (`RECORD_UNAVAILABLE`); another and a forged organization are both `ORGANIZATION_DENIED`. Reads run with authorization off
     only after the check. `get#Home` refuses a caller who reads no employer, gives joins, exits and due work to an HR reader
     only and counts no pay. `get#Readiness` asks `PEOPLE_CONFIGURE`, answers the contract's fields, refuses an organization
-    by a code Registry.js leaves out (`refusalCodes`), and shows a failing check unavailable by name.
+    by a code the framework's Readiness.js leaves out (`refusalCodes`), and shows a failing check unavailable by name.
   - BOSS (`People.js`, ContextServices). The root grant is read from the user's own groups (ALWAYS over DENY over ALLOW);
     another `appRoot` is refused and the answer's `appRoot` is always People; `check#Record` admits a person through
     Mantle's `get#Scope` and refuses a missing and an unauthorized record alike; `get#Choices` is a table of named sources
@@ -3661,7 +3661,7 @@ under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-bos
 | F24 | P0: the per-field AI switch, the decimal evaluator and the device credential are unbuilt framework asks (mr-moqui plans/Remaining-Work.md:208-210); there is no `ExpressionServices` or `DeviceServices` | P12, P22; P30 waits on Admin P18 |
 | F25 | P0: the built framework pieces the design uses exist: `scan-input` (xml-form-3.xsd:1368), `view-tree` (:350), `view-board` (:247), `density` handheld (xml-screen-3.xsd:128), `record-lookup` (:600), `create-from` (:604), `quick-create` (:681), `today-source` (:694), `palette-source` (:714), `assist-prompt` (:762), `response-action` (:774), tx-commit SECAs (service-eca-3.xsd:83), `run#Extract` (AiTaskServices.xml:85), `create#CallLink` (CallServices.xml:304), mail rule actions as Mantle's `createRequest` (BasicEntities.xml:1162-1163; data/MantleSetupData.xml:464). There is no `view-timeline` element | As designed; P14 checks the timeline |
 | F26 | P0: the client deny pattern names each `ironstone` package; its longest row is 237 characters (BossSetupData.xml:445) and ProjectsAccess fails on a write verb it does not deny (test/Projects/ProjectsAccess.spec.js:637) | P1 adds `people`: the longest rows become 244 (:445) and 240 (:459), and none is split. `maintenance` then takes them to 256 and 252, so Maintenance's P1 splits both rows as it adds its name. Sales' P1 and Marketing's P1 add theirs and split a row only if it would pass 255; after Maintenance's split none should (the longest is 254 with `marketing`). A write verb new to the `ironstone` packages is added to a row by the phase that adds it |
-| F27 | P0: the registries' built contracts (since Nov 11, 2026 ReadinessProvider and SettingsEntry are the framework's `moqui.server` entities, impl-admin §9): ReadinessProvider (entity/AdminEntities.xml:21-50; Products' row BossSetupData.xml:2557-2560; an adapter or the contract's checks list, service/ironstone/admin/Registry.js:145, :684), SettingsEntry (:2553-2556), capability bundles (:2676-2687; People left out, plan/impl-admin.md:932), LifecycleParticipant (:4041-4044), ReportCatalogEntry (:3438-3446), MetricRegistration (:3741-3753), AttentionProvider (:3863-3868), FlowTarget (:4545-4548), DatasetClass with `InsDcPeople` already seeded (:4782-4785); the internal flow map's People step is information only (report/insights-flowmap-internal.json:208) | P1, P5, P29 |
+| F27 | P0: the registries' built contracts (since Nov 11, 2026 ReadinessProvider and SettingsEntry are the framework's `moqui.server` entities, impl-admin §9): ReadinessProvider (read at entity/AdminEntities.xml:21-50, now mr-moqui framework/entity/ServerEntities.xml:856; Products' row BossSetupData.xml:2557-2560; an adapter or the contract's checks list, service/ironstone/admin/Registry.js:145, :684), SettingsEntry (:2553-2556), capability bundles (:2676-2687; People left out, plan/impl-admin.md:932), LifecycleParticipant (:4041-4044), ReportCatalogEntry (:3438-3446), MetricRegistration (:3741-3753), AttentionProvider (:3863-3868), FlowTarget (:4545-4548), DatasetClass with `InsDcPeople` already seeded (:4782-4785); the internal flow map's People step is information only (report/insights-flowmap-internal.json:208) | P1, P5, P29 |
 | F28 | P0: a screen for users without its app's launcher is a non-inheritable grant on that screen and its context service (BossSetupData.xml:2528-2535) | P8's self-service grants |
 | F29 | P0: AC-23 is designed (plan/design-accounting.md:818-831, :2991) and is in no phase of impl-accounting | P27 builds it, as an owner contract (§4) |
 | F30 | P0: design §8 gates native finalization on AC-23 but names PayrollExchange's external processing as the live path until then, though its results create the same payroll invoices (§8.3 makes the projection a prerequisite of payroll exposure) | §4: P28's live external results are gated on AC-23 as finalization is; design-accounting's AC-23 row says so, and design-people §8, §8.3, §8.4 and §14.4 changed |
