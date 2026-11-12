@@ -5646,6 +5646,12 @@ backup follow-ups pulled in, on a release binary built from that mr-moqui.
 - `./moq test-framework` not run: Maintenance changed nothing under `crates/`, `runtime/base-component` or `dev-component`
   (mr-moqui's only Maintenance change is `plans/Remaining-Work.md`).
 
+- After the last pull (origin's People P17, P19, P20, P21, follow-up 1 and the Commons calendar follow-up, and the framework's
+  named-recipient notices; merged at mr-boss 16971602, mr-mantle 582fe60f, mr-moqui b6330c27, conflicts in RequestDetail.xml,
+  usl-inventory, CalendarDavServices.xml and Dav.spec.js kept both sides): `./moq test-apps` 3942 of 3943 regression features and
+  37 of 37 client, the one failure still People's (F353, now PeopleAccess.spec.js:507 after Recruiting); the acceptance suite 71
+  of 71 and 18 of 18. A read-only review of the incoming changes against Maintenance found nothing broken and the gaps F356–F360.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -6092,6 +6098,11 @@ paths under `mr-boss/`.
 | F353 | Final suites: People's Recruiting spec leaves an employer with no department, failing PeopleAccess's setup readiness after it | impl-people's lead |
 | F354 | Acceptance: in a spec's `then` block, `Array.from(...)` on a passed list and `JSON.parse(...)` answered `[]` and `{}` (a testkit rewrite, likely) | The walks compute them in `when`; a framework finding for later |
 | F355 | Acceptance: changing Planned start or Due in Assign and schedule drops the technicians already chosen (the list re-ranks for the window); a refused booking (bookSlot) answers HTTP 500 | Later |
+| F356 | Merge review: since the Commons calendar follow-up an event an application keeps (an interview, a training session, leave, a production run) answers `canEdit` false to everyone, so `book#Resource`, `cancel#ResourceBooking` and `check#ResourceBookings` (each asking edit) refuse its bookings; and People's Training.js and Recruiting.js take a free-text location and move and cancel their events with `update#WorkEffort`, so Maintenance's room calendar, conflict checks and blackouts never see an interview's or session's room, and a booking made before the merge is kept unchecked through a move and not withdrawn on cancel | Open: the organizer of a kept event books and cancels its resources (view and organizer, not edit), or People's services book and withdraw through the booking services; the user's call |
+| F357 | Merge review: `get#ResourceBookings`' `canCancel` (ScheduleServices.xml:152) offers Cancel on a kept event that `cancel#MyBooking` then refuses | Open, with F356 (`get#ManagedEvents` over the listed events) |
+| F358 | Merge review: `check#EventAccess` answers view and edit with no user and authorization off, so `ResourcePolicy.js eventVisibility` would name a clash by its title for a no-user caller; none exists | Later: answer Busy when there is no user |
+| F359 | Merge review: the approval topics ResourceBooking and WorkProcessApproval (and ResourceBookingNotice) could send `directOnly`, so a catch-all subscriber gets no card it cannot decide | Later |
+| F360 | Merge review: dispatch's free hours (`get#PartyCapacity`) do not subtract People P19 training sessions | Later |
 
 
 ## 7. Later
