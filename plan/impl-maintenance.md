@@ -364,7 +364,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | built and reviewed Nov 11, merged |
 | P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | built and reviewed Nov 11, merged |
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | built and reviewed Nov 12, merged |
-| P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
+| P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | built and reviewed Nov 12, merged |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | — |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
@@ -1457,7 +1457,7 @@ Design §3 Requests and the RequestDetail mount row, §1.2 (quick create, `creat
   EditRequest and FindRequest forms that name Maintenance/Requests.
 - Design edits: design-maintenance's header, §1.1, §1.2, §3 Requests and the RequestDetail mount row, §13.2's production handoff,
   §13.3's RequestTriageNotice and complete#RequestFromWork rows; design-drawers-commons' and design-manufacturing's header lines.
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F134 to F141 in order:
   - Report a problem is Commons' screen (`Commons/ReportProblem`), not under Maintenance: a quick create needs a root the requester
     opens, and a requester opens Commons only; Requests links to it.
   - The `create-from` provider of design §1.4 (a chat message, a voicemail or a mail prefilling Report a problem) is not built: the
@@ -1555,7 +1555,7 @@ Comms `create-from` hook (Chat's `createFrom`, `ChatServices.create#FromChat`). 
     each group's own menu (Requests for the planner, supervisor and Retail's planner; Home alone for the procedure author, approver
     and booking approver; Equipment and Facilities for the resource administrator). Not run.
   - Design: design-maintenance §3's as-built (R1, R2); design-drawers-commons' P4 line (R1).
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F142 to F149 in order:
   - The `create-from` seam stays unbuilt: design §1.4 says a chat message or voicemail *prefills* Report a problem, while the hook
     (`create#From`) makes a record and answers its link; a prefill needs a Comms `ext-action` with a screen target that reads the
     message under Chat's room check (and the voicemail slot), and making the request directly needs an organization and a target the
@@ -2359,6 +2359,10 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | Admin's settings registry is the framework's `moqui.server.SettingsEntry` (mr-moqui Admin-Screens-Down); Maintenance's row has the route `maintenanceSettings` in Admin.js, and P18's readiness provider goes where the framework's registry has it | Found at the P3 merge (F116) |
 | Nov 12, 2026 | People P8–P12 are merged (`RaprCost` and `get#CostingRate`, capacity from schedules, holidays, the projected collection kind), so P11, P12, P17's cost entry and P19 are built in their order; only P8 waits, for People P18 (`minimumSkillLevel`, `check#Qualifications`) | Updates the deferral row above (the pulls of Nov 12) |
 | Nov 12, 2026 | A resource is restored while linked work orders are still open: `end#ResourceUnavailability` lists them, leaves them open and needs a reason while any is (`openWorkReason`) | The user's call (P5); built as the review's R1, replacing the worker's `OPEN_WORK` refusal |
+| Nov 12, 2026 | `create-from` (a chat message, voicemail or mail) opens Report a problem prefilled, through a Comms screen-target action, built in P19 | The user's call (P4) |
+| Nov 12, 2026 | A reporter sees the assignee's name on their report; design §3 says so | The user's call (P4) |
+| Nov 12, 2026 | Every Maintenance group holds `MAINTENANCE_REQUEST` and `MAINTENANCE_REQUEST_VIEW_OWN` and Report a problem (`BOSS_MNT_REPORT_PROBLEM`), in their bundles too | The user's call (P4): every Maintenance user reports a problem and follows their own report |
+| Nov 12, 2026 | An approved procedure that is edited returns to Draft: new work waits for its next approval; existing work keeps what it was made from | The user's call (P6) |
 
 ## 5. Open questions
 
@@ -2500,7 +2504,7 @@ paths under `mr-boss/`.
 | F114 | P3 review: holders of `MAINTENANCE_PLAN`/`_SUPERVISE` could make the held moves on other work through a raw update where they have that path | No BOSS group has it (§2) |
 | F115 | P3 review: `assignedTo` counts declined and unassigned rows | Harmless while only schedule writes them |
 | F116 | P3 merge: master moved Admin's settings registry to the framework (`moqui.server.SettingsEntry`, `destinationRoute`, `screenLocation`) | P1's row moved at the merge; P18 follows the framework's readiness registry |
-| F117 | Pull of Nov 12: mr-moqui's Admin Screens Down (plans/Admin-Screens-Down.md A0–A6, I0–I4) moved Admin's generic screens to the framework's System and Tools apps and three registries to the framework: `moqui.server.SettingsEntry` (`destinationRoute` + `screenLocation`), `moqui.server.ReadinessProvider` (`fixRoute` + `fixId` + `scopeParameters`, was `fixPath`; services `org.moqui.admin.ReadinessServices`) and `moqui.server.RefreshOperation`. Owner routes are keys in mr-boss `service/ironstone/admin/Admin.js` `settingsRoutes` and `mountRoutes` (Data.js's and DataImport.js's tables are gone) or the framework's in tools `template/AdminMount.js`; `ownerRoute`, `fixRoute` and `linkKey` name one. Unchanged: `ironstone.admin.LifecycleParticipant`, the framework's CapabilityBundle, TopicRegistration, JobRegistration, RecoveryDescriptor, TransferTarget and AuditProjection, `Shared/DataImport` with `get#ImportMount`, and Insights' ironstone.insights registries (still `routePath`). Dataset readiness and refresh rows are `moqui.server.*` with `fixRoute="insightsDataset"`. System screens renamed with no aliases (SystemMessageDetail under Integrations, Jobs and JobDetail under Operations, Groups under Access, AuditChanges under Audit; Admin mounts the same names under its own areas) | P1's settings row moved (F116); P14 registers the job's `ownerRoute` and recovery as route keys; P17's dataset readiness and refresh are `moqui.server` rows; P18's readiness provider is a `moqui.server.ReadinessProvider` with `fixRoute`, and the equipment import's owner route a `mountRoutes` key; P19's export targets name route keys |
+| F117 | Pull of Nov 12: mr-moqui's Admin Screens Down (plans/archive/Admin-Screens-Down.md A0–A6, I0–I4) moved Admin's generic screens to the framework's System and Tools apps and three registries to the framework: `moqui.server.SettingsEntry` (`destinationRoute` + `screenLocation`), `moqui.server.ReadinessProvider` (`fixRoute` + `fixId` + `scopeParameters`, was `fixPath`; services `org.moqui.admin.ReadinessServices`) and `moqui.server.RefreshOperation`. Owner routes are keys in mr-boss `service/ironstone/admin/Admin.js` `settingsRoutes` and `mountRoutes` (Data.js's and DataImport.js's tables are gone) or the framework's in tools `template/AdminMount.js`; `ownerRoute`, `fixRoute` and `linkKey` name one. Unchanged: `ironstone.admin.LifecycleParticipant`, the framework's CapabilityBundle, TopicRegistration, JobRegistration, RecoveryDescriptor, TransferTarget and AuditProjection, `Shared/DataImport` with `get#ImportMount`, and Insights' ironstone.insights registries (still `routePath`). Dataset readiness and refresh rows are `moqui.server.*` with `fixRoute="insightsDataset"`. System screens renamed with no aliases (SystemMessageDetail under Integrations, Jobs and JobDetail under Operations, Groups under Access, AuditChanges under Audit; Admin mounts the same names under its own areas) | P1's settings row moved (F116); P14 registers the job's `ownerRoute` and recovery as route keys; P17's dataset readiness and refresh are `moqui.server` rows; P18's readiness provider is a `moqui.server.ReadinessProvider` with `fixRoute`, and the equipment import's owner route a `mountRoutes` key; P19's export targets name route keys |
 | F118 | Pull of Nov 12: Maintenance's appends at the end of BossSetupData.xml met People's at each pull | Moved to `data/BossSetupMaintenanceData.xml` (seed-initial, loading after BossSetupData); later phases append there; the client deny rows stay in BossSetupData |
 | F119 | P5: a correction is a new row; every reader of current availability takes the row in force (`supersededByUnavailabilityId` empty) | P15, P16, P17 must too |
 | F120 | P5: `record#ResourceUnavailability` checks its caller by data: Manufacturing's equipment-fault stop, or Maintenance's permission, scope and assignment | Built; review R2 narrowed Manufacturing's entry |
@@ -2517,6 +2521,22 @@ paths under `mr-boss/`.
 | F131 | P5 review: a correction may move an outage over another of the same resource | P17's union counts it once |
 | F132 | P5 review: `record#` locks the resource row before checking the caller | None |
 | F133 | P5 review: production context shows to every Downtime reader | None |
+| F134 | P4: Report a problem is Commons' screen (`Commons/ReportProblem`), since a requester opens no other root | Built |
+| F135 | P4: `create-from` not built | §4: P19 |
+| F136 | P4: the asset tag's QR opens EquipmentDetail, which a requester cannot open; they scan into ReportProblem | None |
+| F137 | P4: a maintenance request was visible in Commons to its organization by id | P4 review R1 (`requestHidden`) |
+| F138 | P4: requests have no observed-time field; written into the description | None |
+| F139 | P4: design §13.3's "completion notifies the requester" not built | Later (P19's Comms) |
+| F140 | P4: triage and report keys use PostingOperation | None |
+| F141 | P4: the Requests screen opened for any Maintenance user | P4 review R2 (`BOSS_MNT_REQUESTS`) |
+| F142 | P4 review: `create-from` is no small build | §4: P19 |
+| F143 | P4 review: a reporter can unlink their report from its work order or target through Commons' `unlink#RequestRecord` | P20's access walk; a Mantle guard later |
+| F144 | P4 review: capability bundles carry no area grants (Requests, Settings) | As Manufacturing's; later |
+| F145 | P4 review: `productionHandoff` relies on refusals before any write | Unchecked; later |
+| F146 | P4 review: the triage notice reaches ADMIN members of the organization and production requests adopted at once | None |
+| F147 | P4 review: the untriaged filter drops linked rows after paging | Harmless while triage links few |
+| F148 | P4 review: P4's artifact groups moved to BossSetupMaintenanceData.xml at the merge (F118) | Done |
+| F149 | P4 review: MaintenanceFoundationWalk's refusals hold by artifact groups | None |
 
 
 ## 7. Later
