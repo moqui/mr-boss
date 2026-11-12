@@ -47,7 +47,10 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- the Settings area (design §9), the Maintenance administrator's: denied to the root user group, as People's; BOSS_MAINTENANCE_ADMIN
         and ADMIN open it through their ALWAYS on the root. A later phase that puts another group's editor under Settings allows
-        that group here. -->
+        that group here. The user's call of Nov 12 on F346: the screens are gated by permission too (each tab's menu-include and an
+        always-action, MAINTENANCE_SETTINGS_EDIT, Teams also MAINTENANCE_PLAN or _SUPERVISE), since a custom group given Maintenance
+        in Admin is no member of BOSS_MAINTENANCE and this deny does not reach it; the deny rows here and on BOSS_MNT_REQUESTS and
+        BOSS_MNT_COSTS are kept beside the gates. -->
     <artifactGroups artifactGroupId="BOSS_MNT_SETTINGS" description="Maintenance settings">
         <artifacts artifactName="component://mr-boss/screen/Maintenance/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_MNT_SETTINGS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
@@ -329,7 +332,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the Requests area (design §3 Requests; impl-maintenance P4 review), the planners' and supervisors', who triage: denied to the
         root user group, as Manufacturing's areas are, and always for the planner and supervisor groups; BOSS_MAINTENANCE_ADMIN and
         ADMIN open it through their ALWAYS on the root. Mantle's find#MaintenanceRequests and triage#MaintenanceRequest check
-        MAINTENANCE_PLAN or MAINTENANCE_SUPERVISE again; a requester follows their own reports in Commons. -->
+        MAINTENANCE_PLAN or MAINTENANCE_SUPERVISE again; a requester follows their own reports in Commons. The screen is gated by
+        those permissions too (F346, the Settings area's note). -->
     <artifactGroups artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests">
         <artifacts artifactName="component://mr-boss/screen/Maintenance/Requests.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_MNT_REQUESTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
@@ -377,7 +381,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- impl-maintenance P11: the cost screens (WorkOrderDetail's Costs tab and MaintenanceCostReport), the cost reader's: denied to the
         root user group, as Requests are, and always for the cost reader group, so the tab and the report are in no other user's menu;
         BOSS_MAINTENANCE_ADMIN and ADMIN open them through their ALWAYS on the root. Mantle's get#MaintenanceCosts checks
-        MAINTENANCE_COST_VIEW again. The cost reader's bundle carries the grant, so a group given it in Admin opens them. -->
+        MAINTENANCE_COST_VIEW again. The cost reader's bundle carries the grant, so a group given it in Admin opens them. The screens
+        are gated by MAINTENANCE_COST_VIEW too (F346, the Settings area's note). -->
     <artifactGroups artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs">
         <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail/Costs.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <artifacts artifactName="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>

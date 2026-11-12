@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     model (Products), asset classes (Accounting), units (Products) and status flows (Tools). The Maintenance administrator's
     (MAINTENANCE_SETTINGS_EDIT, which Mantle checks on every change). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Lookups" default-menu-index="5">
+        default-menu-title="Lookups" default-menu-index="5"
+        default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')">
     <parameter name="enumTypeId"/>
     <parameter name="includeEnded"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
@@ -41,6 +42,12 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="enumTypeId"/></default-response>
         <error-response url="."><parameter name="enumTypeId"/></error-response>
     </transition>
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
+    <always-actions>
+        <script>if(!(maintenance.capabilities.settingsEdit))throw new Error('PERMISSION_DENIED: Maintenance settings are the Maintenance administrator\'s')</script>
+    </always-actions>
     <actions>
         <set field="can" from="maintenance.capabilities"/>
         <if condition="can.settingsEdit">

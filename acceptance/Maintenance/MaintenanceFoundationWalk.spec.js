@@ -1,10 +1,11 @@
 // Maintenance P1's "usable when" (impl-maintenance P1), as an acceptance walk with artifact authorization on, brought to the app
 // as built (P20, F169): the menu renders for each group with only its areas (each root entry's menu-include and the Requests, Costs
-// and Settings grants), each entry of it opening and the others refused (Requests and Settings, by their grants) or showing none of
+// and Settings permission gates, F346), each entry of it opening and the others refused (Requests and Settings, by their gates) or showing none of
 // their records (the areas a menu condition keeps out, whose Mantle reads refuse the user); maint.requester has no Maintenance launcher and is refused
 // the root and every ironstone.maintenance service, as a Projects client and a PASS public account are; Admin's Capabilities shows
 // the Maintenance bundles and an access administrator grants the planner bundle (its permissions, its artifact grants and the
-// launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities and menu (Settings for its Teams tab alone);
+// launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities and menu (Settings for its Teams tab
+// alone, by the permission gates of the user's call of Nov 12 on F346);
 // Admin's settings index lists Maintenance settings for maint.admin and not for maint.reader. The rules themselves are
 // MaintenanceAccess's and Mantle's MaintenanceScope; the review walk of every group is MaintenanceAccessWalk.
 // Run: ./moq accept mr-boss --spec MaintenanceFoundationWalk
@@ -14,10 +15,10 @@ const admin = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js
 const capability = "org.moqui.admin.AccessServices."
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 // each group's menu (design §1.2 as built, Maintenance.xml's menu-include): Work orders, Preventive and Reports for a work reader
-// (an assigned technician Work orders alone), Requests for a planner or supervisor (BOSS_MNT_REQUESTS), Procedures for a reader of
-// procedures or a planner or supervisor, Equipment and Facilities for a reader of them, Scheduling for a resource administrator,
-// a booking approver and a supervisor; Settings the administrator's (BOSS_MNT_SETTINGS), and for its Teams tab alone a planner's
-// and a supervisor's (BOSS_MNT_TEAMS, P8)
+// (an assigned technician Work orders alone), Requests for a planner or supervisor (MAINTENANCE_PLAN or _SUPERVISE), Procedures for
+// a reader of procedures or a planner or supervisor, Equipment and Facilities for a reader of them, Scheduling for a resource
+// administrator, a booking approver and a supervisor; Settings the administrator's (MAINTENANCE_SETTINGS_EDIT), and for its Teams
+// tab alone a planner's and a supervisor's (P8); each gated by permission (F346), the BOSS_MNT_* deny rows kept beside the gates
 const readerMenu = ["Home", "WorkOrders", "Procedures", "Preventive", "Equipment", "Facilities", "Reports"]
 const techMenu = ["Home", "WorkOrders", "Equipment", "Facilities"]
 const supervisorMenu = [
@@ -48,7 +49,7 @@ const menus = {
     [users.system]: ids.adminMenu
 }
 const refused = message => /MAINTENANCE_UNAVAILABLE|is not authorized/.test(message)
-// An entry outside a user's menu: Requests and Settings are refused by their artifact grants (BOSS_MNT_REQUESTS, BOSS_MNT_SETTINGS);
+// An entry outside a user's menu: Requests and Settings are refused by their permission gates (F346) and artifact grants;
 // the other areas are kept out of the menu by permission alone and open with nothing of theirs, Mantle's reads refusing the user
 // (Equipment and Facilities read nothing without a resource read, the lists and reports say none is open), so none of the demo
 // record each would list shows. Scheduling has none: its resources are any resource reader's (find#BookableResources).
@@ -229,8 +230,9 @@ feature("Capabilities shows the Maintenance bundles, and an access administrator
         teamCapabilities.view == true
         teamCapabilities.supervise == false
         menu.apps.includes("Maintenance")
-        // the planner's menu, Settings for its Teams tab (the bundle carries BOSS_MNT_TEAMS); its other tabs stay the
-        // administrator's though the team is no member of BOSS_MAINTENANCE, whose deny rows keep them from the planners
+        // the planner's menu, Settings for its Teams tab (MAINTENANCE_PLAN, and the bundle carries BOSS_MNT_TEAMS); its other tabs
+        // stay the administrator's though the team is no member of BOSS_MAINTENANCE, whose deny rows do not reach it: each tab's
+        // permission gate (MAINTENANCE_SETTINGS_EDIT, the user's call of Nov 12 on F346) keeps them from it
         menu.names == ids.staffMenu
         teamSettings == ["Teams"]
     }

@@ -68,6 +68,62 @@ const shellData = user => {
 const quickCreates = user => JSON.stringify(shellData(user))
 // a spec-local Maintenance user whose only capability group holds MAINTENANCE_PLAN, an agent of Services
 const editOnly = "MNT_SPEC_EDIT_ONLY"
+// spec-local custom groups an access administrator gives a Maintenance bundle and the launcher through Admin's capability matrix, each
+// with a user, an agent of Services (F346: no member of BOSS_MAINTENANCE, so its deny rows do not reach them)
+const customTeams = {
+    plan: {
+        groupId: "MNT_SPEC_PLAN_TEAM",
+        bundle: "BOSS_MAINTENANCE_PLAN",
+        userId: "MNT_SPEC_PLAN_TEAM_USER",
+        username: "maint.spec.planteam"
+    },
+    read: {
+        groupId: "MNT_SPEC_READ_TEAM",
+        bundle: "BOSS_MAINTENANCE_READ",
+        userId: "MNT_SPEC_READ_TEAM_USER",
+        username: "maint.spec.readteam"
+    }
+}
+function customTeam({groupId, bundle, userId, username}) {
+    if (system(() => ec.entity.find("moqui.security.UserGroup").condition({userGroupId: groupId}).count())) return username
+    const matrix = "org.moqui.admin.AccessServices."
+    const carried = entityName => system(() => Array.from(ec.entity.find(entityName).condition("userGroupId", bundle).list()))
+    const changes = carried("moqui.security.CapabilityBundlePermission")
+        .map(row => groupId + "~a~p:" + row.userPermissionId)
+        .concat(carried("moqui.security.CapabilityBundleArtifact").map(row => groupId + "~a~a:" + row.artifactGroupId))
+        .concat([groupId + "~a~a:BOSS_MAINTENANCE"])
+        .join(",")
+    asUser("admin.access", () => {
+        invoke(matrix + "create#Group", {
+            userGroupId: groupId,
+            description: "Maintenance spec team",
+            groupTypeEnumId: "UgtCustomTeam"
+        })
+        const proposal = invoke(matrix + "get#MatrixContext", {appName: "Maintenance", groups: groupId, changes}).proposal
+        invoke(matrix + "apply#MatrixChanges", {changes, revisions: proposal.revisions, reason: "Maintenance spec team"})
+    })
+    system(() => {
+        call("create#mantle.party.Party", {partyId: userId, partyTypeEnumId: "PtyPerson"})
+        call("create#mantle.party.Person", {partyId: userId, firstName: "Maintenance spec", lastName: "Team"})
+        call("create#mantle.party.PartyRelationship", {
+            relationshipTypeEnumId: "PrtAgent",
+            fromPartyId: userId,
+            toPartyId: ids.organizationId,
+            toRoleTypeId: "OrgInternal",
+            fromDate: 0
+        })
+        call("create#moqui.security.UserAccount", {
+            userId,
+            username,
+            partyId: userId,
+            currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+            passwordHashType: "SHA"
+        })
+        for (const userGroupId of ["BOSS_USERS", groupId])
+            call("create#moqui.security.UserGroupMember", {userId, userGroupId, fromDate: 0})
+    })
+    return username
+}
 
 spec({
     setupSpec() {
@@ -106,7 +162,7 @@ spec({
         system(() =>
             ec.entity
                 .find("moqui.security.UserGroupMember")
-                .condition("userId", editOnly)
+                .condition("userId", "in", [editOnly].concat(Object.values(customTeams).map(team => team.userId)))
                 .updateAll({thruDate: ec.user.nowTimestamp})
         )
         // the kiosk's device goes and its display account's memberships end
@@ -717,7 +773,8 @@ feature("Home shows the planner their organization and every counter (P14's too)
         settings.errors.length == 0
         settings.output.includes("Maintenance settings")
         settings.output.includes("Work policy")
-        unauthorized(readerSettings)
+        // the Settings frame's permission gate refuses the reader before the deny row on its tab is decided (F346)
+        readerSettings.includes("PERMISSION_DENIED")
     }
 })
 
@@ -1567,6 +1624,43 @@ feature(
             r.techTab != "" && r.readerTab != ""
             r.plannerPolicy != ""
             JSON.stringify(r.plannerTabs) == JSON.stringify(["Teams"])
+        }
+    }
+)
+
+// The user's call of Nov 12 on F346: Settings, Requests and the cost screens are gated by permission (each screen's menu-include
+// and an always-action), so a custom group given a bundle in Admin (no member of BOSS_MAINTENANCE, whose deny rows do not reach it)
+// gets what its permissions give: the planner bundle's opens Teams and Requests, its other Settings tabs refused (by the gate,
+// or before it by Teams' non-inheritable grant on the Settings frame) and the cost screens refused; the reader bundle's, which
+// the root's grant alone admits, is refused Settings and Requests by the gate
+feature(
+    "a custom group given the planner bundle opens Teams and Requests only of the gated screens; the reader bundle's neither",
+    {
+        when() {
+            const planTeam = customTeam(customTeams.plan)
+            const readTeam = customTeam(customTeams.read)
+            const settingsTabs = ["Settings/SettingsHome", "Settings/WorkPolicy", "Settings/Lookups", "Settings/Readiness"]
+            return {
+                plannerSettings: settingsTabs.filter(path => screenRefusal(planTeam, path) == ""),
+                plannerCosts: [
+                    screenRefusal(planTeam, "Reports/MaintenanceCostReport"),
+                    screenRefusal(planTeam, "WorkOrders/WorkOrderDetail/Costs", {workEffortId: ids.heldOrderId})
+                ],
+                teams: screenRefusal(planTeam, "Settings/Teams"),
+                requests: screenRefusal(planTeam, "Requests"),
+                settingsTabs: shell(planTeam, true, "Settings", "Settings").names,
+                readerSettings: screenRefusal(readTeam, "Settings/SettingsHome"),
+                readerRequests: screenRefusal(readTeam, "Requests")
+            }
+        },
+        then(r) {
+            r.plannerSettings.join() == ""
+            r.plannerCosts.every(message => message.includes("PERMISSION_DENIED"))
+            r.teams == ""
+            r.requests == ""
+            JSON.stringify(r.settingsTabs) == JSON.stringify(["Teams"])
+            r.readerSettings.includes("PERMISSION_DENIED")
+            r.readerRequests.includes("PERMISSION_DENIED")
         }
     }
 )

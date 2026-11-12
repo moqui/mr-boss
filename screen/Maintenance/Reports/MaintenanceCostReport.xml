@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- MaintenanceCostReport (design-maintenance §8 MaintenanceCostReport, §12 operational reports; review Y2; impl-maintenance P11): the
-    cost reader's only (the artifact group BOSS_MNT_COSTS; mantle.work.MaintenanceReportServices.get#MaintenanceCosts answers
+    cost reader's only (MAINTENANCE_COST_VIEW gates its menu entry and render, F346; the artifact group BOSS_MNT_COSTS; mantle.work.MaintenanceReportServices.get#MaintenanceCosts answers
     MAINTENANCE_COST_VIEW alone), in the Reports area beside PM compliance (design §1.2). CostOptions: the organization, facility, equipment, team, project, kind, component,
     currency and the period of the sources (from, before); CostTotals: parts, labor and outside service by currency, never added across
     currencies, the outside service ordered and not yet accepted pending, the hours not approved or with no costing rate apart, and the
@@ -62,7 +62,11 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
     <always-actions>
+        <script>if(!(maintenance.capabilities.costView))throw new Error('PERMISSION_DENIED: Maintenance costs are the cost reader\'s')</script>
         <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, assetId:assetId || null,
                 teamPartyId:teamPartyId || null, projectWorkEffortId:projectWorkEffortId || null, maintenanceKindEnumId:maintenanceKindEnumId || null,
                 component:component || null, currencyUomId:currencyUomId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
