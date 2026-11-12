@@ -1205,7 +1205,8 @@ along with this software (see the LICENSE.md file). If not, see
             const yn = (value) => value ? 'Y' : 'N'
             policy = {weekStart: String(stored.weekStart || 1), approvers: stored.approvers || 'project', lock: yn(stored.lock !== false), needItem: yn(!!stored.needItem),
                 needComment: yn(!!stored.needComment), minHours: String(stored.minHours ?? 0.25), future: yn(stored.future !== false), dayHours: String(stored.dayHours ?? 8),
-                workDays: Array.from(stored.workDays || [1, 2, 3, 4, 5]).map(String), remindDay: String(stored.remindDay || 1), remindHour: String(stored.remindHour ?? 10)}
+                workDays: Array.from(stored.workDays || [1, 2, 3, 4, 5]).map(String), remindDay: String(stored.remindDay || 1), remindHour: String(stored.remindHour ?? 10),
+                required: yn(stored.required === true)}
             const types = ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').parameters(organizationPartyId ? {organizationPartyId} : {}).call() || {}
             const offeredCount = Array.from(types.offeredList || []).length
             typeList = Array.from(types.typeList || []).map((row) => Object.assign({}, row, {isFirst: row.sequence === 1, isLast: row.sequence === offeredCount}))
@@ -1226,6 +1227,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="workDays" type="Object"/>
             <parameter name="remindDay" type="Integer"/>
             <parameter name="remindHour" type="Integer"/>
+            <parameter name="required"><description>Y: every employee keeps a weekly timesheet (People P10: a line manager's missing
+                lists count each report); not given keeps the stored value</description></parameter>
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
@@ -1238,7 +1241,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (!String(days).replace(/[^1-7]/g, '')) { ec.message.addError(L('Choose the working days')); return }
             ec.service.sync().name('mantle.work.TimesheetServices.store#TimesheetPolicy').parameters({organizationPartyId: org, weekStart: weekStart, approvers: approvers,
                 lock: lock === 'Y', needItem: needItem === 'Y', needComment: needComment === 'Y', minHours: minHours, future: future === 'Y', dayHours: dayHours,
-                workDays: days, remindDay: remindDay, remindHour: remindHour}).call()
+                workDays: days, remindDay: remindDay, remindHour: remindHour, required: required == null || required === '' ? null : required === 'Y'}).call()
             if (!ec.message.hasError()) message = L('Timesheet policy saved')
         ]]></script></actions>
     </service>

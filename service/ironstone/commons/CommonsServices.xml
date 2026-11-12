@@ -250,7 +250,7 @@ along with this software (see the LICENSE.md file). If not, see
             icon and label, the app's title (appTitles, from the shell data), when it came ("5 min ago", "Yesterday 3:12
             PM", "Oct 12"), whether it is unread, an approval's summary, and the link a row opens: the record's BOSS screen
             (ironstone.commons.PaletteServices.get#RecordLink) for a notification on a record or for a Mantle record-update topic,
-            else its own link. openIsScreen is true for a /qapps or /apps link, which opens in the canvas.</description>
+            else its own link (one through Commons' openRecord resolved here the same way). openIsScreen is true for a /qapps or /apps link, which opens in the canvas.</description>
         <in-parameters>
             <parameter name="notificationList" type="List"/>
             <parameter name="appTitles" type="Map"/>
@@ -308,7 +308,22 @@ along with this software (see the LICENSE.md file). If not, see
                         ec.logger.warn(`Notification ${row.notificationMessageId}: no link for ${recordEntityName} ${recordId}: ${err && err.message ? err.message : err}`)
                     }
                 }
-                if (!openUrl && row.linkText) openUrl = String(row.linkText)
+                // a link through the record-link resolver (Commons' openRecord: the timesheet topics, impl-people P10) opens where the
+                // resolver sends this user, as the email's link does
+                const resolver = !openUrl && row.linkText ? /^\/q?apps\/Commons\/openRecord\?(.*)$/.exec(String(row.linkText)) : null
+                if (resolver) {
+                    const asked = {}
+                    for (const pair of resolver[1].split('&')) {
+                        const at = pair.indexOf('=')
+                        if (at > 0) asked[decodeURIComponent(pair.substring(0, at))] = decodeURIComponent(pair.substring(at + 1).replace(/\+/g, ' '))
+                    }
+                    try {
+                        if (asked.id) openUrl = ec.service.sync().name('ironstone.commons.PaletteServices.get#RecordLink').parameters({docType: asked.docType || null,
+                                recordEntityName: asked.recordEntityName || null, id: asked.id}).call()?.url || null
+                    } catch (err) {
+                        ec.logger.warn(`Notification ${row.notificationMessageId}: no link for ${row.linkText}: ${err && err.message ? err.message : err}`)
+                    }
+                } else if (!openUrl && row.linkText) openUrl = String(row.linkText)
                 const sent = toMillis(row.userSentDate) ?? toMillis(row.sentDate)
                 const reason = reasons[row.reasonEnumId] || ['sym_o_notifications', null]
                 const isApproval = !!row.canApprove && !row.viewedDate

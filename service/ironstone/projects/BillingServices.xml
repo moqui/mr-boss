@@ -924,7 +924,8 @@ along with this software (see the LICENSE.md file). If not, see
             without money (People's Rates) the employees' pay rates alone (a RaprVendor rate of a person employed now by an employer
             of their People scope, get#PayrollEmployees, on any project) and the costing rates. The find: project, person, work type, position class, rate type, and effective on a day
             (else the current and coming rates; ended ones with showEnded). Each row: the rate type, project, person, position class,
-            work type, from, thru, amount and currency, whether it is current, coming or ended. The worker pay rate of a person who
+            work type, from, thru, amount and currency, whether it is current, coming or ended; a labor costing rate only of the
+            organizations the user reads, or shared (find#CostingRates). The worker pay rate of a person who
             is an employee is the employee's pay (mantle.humanres.EmploymentServices.get#PayRateAccess): its amount only with
             PAYROLL_VIEW (else amountText says payroll sets it), and changed (canChange) only with PAYROLL_EDIT; a costing rate is
             never changed here. counts: the rows of each list the user reads.</description>
@@ -977,6 +978,11 @@ along with this software (see the LICENSE.md file). If not, see
                         .orderBy('workTypeEnumId').orderBy('-fromDate').limit(5000).list()) rows.push(rate)
             } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
             const enumText = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description || id) : ''
+            // the labor costing rates the user reads: the shared ones and those of their organizations (mantle.humanres.RateServices
+            // find#CostingRates' scope; an organization's row of another organization is left out)
+            const costIds = purposes.includes('RaprCost') ? new Set(Array.from(ec.service.sync().name('mantle.humanres.RateServices.find#CostingRates')
+                    .parameters({showEnded: true}).call()?.rateList || []).map((row) => row.rateAmountId)) : new Set()
+            ec.message.clearErrors()
             // an employee's worker pay rate is pay: read with PAYROLL_VIEW, changed with PAYROLL_EDIT, asked once for the people
             const pay = ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({partyIdList: Array.from(new Set(rows
                     .filter((rate) => rate.ratePurposeEnumId === 'RaprVendor' && rate.partyId).map((rate) => rate.partyId)))}).disableAuthz().call() || {}
@@ -1015,7 +1021,7 @@ along with this software (see the LICENSE.md file). If not, see
                 else if (ended && !showEnded) continue
                 // payroll without money reads the employees' pay rates, not a contractor's; a costing rate is no person's
                 if (rateAccess.payOnly && rate.ratePurposeEnumId === 'RaprVendor' && !employees.has(rate.partyId)) continue
-                if (rate.ratePurposeEnumId === 'RaprCost' && (rate.partyId || rate.workEffortId)) continue
+                if (rate.ratePurposeEnumId === 'RaprCost' && (rate.partyId || rate.workEffortId || !costIds.has(rate.rateAmountId))) continue
                 counts[rate.ratePurposeEnumId] = (counts[rate.ratePurposeEnumId] || 0) + 1
                 if (rate.ratePurposeEnumId !== ratePurposeEnumId) continue
                 const uom = rate.rateCurrencyUomId || 'USD'

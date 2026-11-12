@@ -183,7 +183,8 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             [users.reader, ids.timeMenu, "the reader's"]
         ]) {
             const time = shell(user, true, "Time/Timesheets", "Time")
-            if (JSON.stringify(time.names) !== JSON.stringify(menu)) problems.push(`${label} Time group: ${time.status} ${time.names}`)
+            if (JSON.stringify(time.names) !== JSON.stringify(menu))
+                problems.push(`${label} Time group: ${time.status} ${time.names}`)
         }
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")

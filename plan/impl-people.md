@@ -2754,6 +2754,110 @@ missing time"; PE-18, PE-23.
     template is not available: one link template per topic), and whether My team's Last week should list only reports who keep
     time.
 
+**Review Nov 11 (P10).** A fresh review of `git diff master...ppl/p10` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §13 (MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates), §3 MyTeam, PE-23 and F17, F34, F57, F61, with the Projects
+owner contract, the group checks as permissions, the time approver's reach, Rates' pay and client rows, the costing lookup and
+its migration first; the user's three calls of Nov 11 built and recorded in §4; fixes committed apart per repository ("People P10
+review: …").
+- Rebased first: P9 (working schedules), built beside P10, merged to master in both repositories, and `ppl/p10` was rebased onto
+  it (mr-mantle cleanly; mr-boss with the conflicts resolved in the rebased P10 commit, so both phases' work stands):
+  - Time & leave is one area (`People/Time`, menu 7 and P9's icon) holding P10's time screens (Timesheets the default, My time,
+    Time entries, menu 1 to 3) and P9's Working schedules (menu 5, was 2) and Holidays (9). The group names collided (both phases
+    made `BOSS_PPL_TIME`): `BOSS_PPL_TIME` is now the area's (Time.xml inheritable, every People user's through the root and a
+    self-service employee's by its ALLOW, P10's), and P9's schedules group is `BOSS_PPL_SCHEDULES` (WorkingSchedules and
+    WorkingScheduleDetail: ALWAYS HR and the managers, denied to the root user group and, new, to `BOSS_PEOPLE_SELF`, whom the
+    area's inheritable ALLOW would otherwise let in); `BOSS_PPL_HOLIDAYS` denies `BOSS_PEOPLE_SELF` too. P9's Time.xml grant
+    (non-inheritable, the root group denied) is gone: every People user opens the area. People.js's `schedules` area reads
+    `Time/WorkingSchedules`, so the capability is still HR's and the managers'. PeopleSpecLib's menus (Time in every People
+    user's menu; `timeMenu`, `hrTimeMenu`, `managerTimeMenu` by group) and keys (`g w` then `g t`); PeopleAccess's menu feature
+    checks the HR officer's, the manager's and the reader's Time groups, and P10's feature also refuses the self-service employee
+    Working schedules and Holidays. People.xml's keymap and header, MyTeam (P9's schedule column and P10's last week), the demo
+    and setup data's appended blocks, design-people's header, §1.2 and §3, and usl-inventory's rows are merged.
+  - Run after the rebase, before the review: Mantle PeopleSchedules, LaborCostingRate, ProductionShopFloor 17 of 17; BOSS
+    PeopleSchedules, PeopleTime, PeopleAccess 24 of 24.
+- Checked and found sound:
+  - Projects' owner contract: the ten `BOSS_PROJECT_MANAGER` checks of `TimeServices` are `TIME_ENTRY_RATE` (money, which was
+    the group or ADMIN) and `TIMESHEET_APPROVE`; BossSetupData grants both only to `BOSS_PROJECT_MANAGER`, and Mantle to ADMIN, so
+    no Projects user gains or loses money or reach (ADMIN's Timesheets now opens on To approve, where it opened on Mine; its
+    projects were every project already). The links follow `appRoot` for links only; the screens' paths follow the mount.
+    ProjectsAccess, TimeEntries, Billing, ClientBilling, ProjectsSettings, ProjectsHome, Reports, Resources,
+    ManufacturingShopFloor, ManufacturingAccess, AccountingProductionCostClose pass, and Mantle's time, timesheet, billing,
+    production and project cost specs.
+  - A time approver under People reads only the weeks `get#TimesheetAccess` admits (the week's person, its approvers by the
+    organization's policy, ADMIN): `get#MyWeek` answers no week otherwise, Timesheets' lists are filtered by it, and a line
+    manager decides a report's week only under `line`. The pickers list the user's live reports, whose weeks are checked again.
+  - Rates: pay rows only for `PAYROLL_VIEW` holders, of the employees of their People employers (`get#PayrollEmployees`), set
+    with `PAYROLL_EDIT` on no project; client billing and Which rate only with money; the services check it again.
+  - `get#CostingRate` is production's lookup (the same rows, filter and order, the class from the same EmplPositionParty rule;
+    `laborFits` re-checks by rate id); `migrate#ProductionCostRates` moves each row in its own transaction and removes the old
+    value only when none is left; RaprCost writes need `ACCOUNTING_ADMIN` on every path (`store#`, `end#`, `create#`,
+    `update#RateAmount`).
+- Fixes:
+  - **R1 (low, owner contract).** TimeEntries.xml's Update rates button still read the group (`isMoneyManager`, BOSS_PROJECT_MANAGER
+    or ADMIN); it is `TIME_ENTRY_RATE`, as its service checks.
+  - **R2 (the user's call 1).** The four timesheet topics link through a record-link resolver: Commons' `openRecord` transition
+    (`/apps/Commons/openRecord?recordEntityName=…&id=…` or `?docType=MantleTimesheetWeek&id=<day>`; a browser's GET of the
+    `/apps` path runs it and redirects to the `/qapps` screen, a GET of a `/qapps` path loading the shell) over
+    `PaletteServices.get#RecordLink`, which gains `MantleTimesheetWeek` (the user's own week in My time: Projects' for a Projects
+    user, else People's for a People user or a self-service employee, else none). TimesheetApproval opens the timesheet, Returned,
+    Approved and Missing the person's week (a missing week with no timesheet too); `decorate#Notifications` resolves the same
+    link in the tray. Projects users' links still open Projects. Spec: PeopleTime's third feature (the reminder's link, the
+    employee's and john.doe's resolution, the transition's redirect).
+  - **R3 (the user's call 2).** `get#LineReports` answers `keeperIdList`: the live reports who logged time this week or in the
+    eight before, or whose organization's policy says every employee keeps a weekly timesheet (a new policy key `rq`, `required`,
+    default N; Projects' TimeSettings offers it as a check box, owner contract; Retail's demo sets it). `find#Timesheets`' missing
+    list adds only those (so Home's Weeks not submitted and Timesheets' Missing too), and My team shows Last week only for them,
+    nothing for the others. Spec: PeopleTime's third feature (Hannah's three reports with Retail's `rq`; without it only Tomas,
+    who kept time, and Ines and Rafael out of the missing list).
+  - **R4 (the user's call 3).** `RateAmount.organizationPartyId` (Mantle entity field). `get#CostingRate` takes `organizationPartyId`
+    (else the person's employers at the date, PrtEmployee) and prefers that organization's rows, by the same rules, then the
+    shared ones, so production (which now passes the person) is unchanged where no organization keeps rows; `laborFits` also
+    re-checks an organization's row against the employer. `find#CostingRates` lists the shared rows and those of the reader's
+    organizations (every one for `ACCOUNTING_ADMIN` or `PEOPLE_ALL_ORGANIZATIONS`), or of `organizationPartyId` (another refused,
+    `ORGANIZATION_DENIED`), with canChange by row; `store#`, `end#CostingRate` and `create#`/`update#RateAmount` of a RaprCost row
+    scope by organization as Accounting scopes finance administration (`AccountingPolicy.access` admin: every internal
+    organization, the active one when chosen): another organization's row is refused (`ORGANIZATION_DENIED`; End answers it as
+    missing), and a shared row is changed only working for every organization (no active organization) or by ADMIN, as a shared
+    pay grade needs `PEOPLE_ALL_ORGANIZATIONS`. A rate of another purpose carries no organization (`create#RateAmount` clears it),
+    so Projects' rows are unchanged. Accounting's box lists the chosen organization's rows and the shared ones with an
+    Organization column and New rate's For; Rates' Labor costing rows are those `find#CostingRates` gives the user. Spec:
+    LaborCostingRate's fourth feature (the employer's row, another organization's when asked, the shared row without either,
+    the shared fallback; working for A: A's row stored, B's and a shared one refused, B's End missing, A's list; a shared row with
+    none chosen; a reader of A seeing A's and the shared rows, refused B's).
+  - design-accounting §15, design-people (§3 MyTeam, §13, PE-23), design-projects §8 and usl-inventory say so.
+- Provisional findings (for the lead to number):
+  - Accounting has no organization-scoped finance administration (`ACCOUNTING_ADMIN` is every internal organization, narrowed only
+    by the active organization), so the "all-organizations grant" a shared costing row needs is read as finance administration
+    working for every organization (no active organization chosen), and an organization's row as one in that scope; Accounting's
+    CostingPolicies sets the active organization when one is chosen there, so a shared row is changed with none chosen (the box
+    says so). A dedicated `ACCOUNTING_ALL_ORGANIZATIONS` would be the user's call;
+  - `get#CostingRate` with a person employed by two organizations that both keep a matching row takes the most specific, then the
+    newest, of either;
+  - a database loaded with P9's data before this rebase keeps P9's `BOSS_PPL_TIME` rows (`BOSS_PPL_TIME_HR`, `_MANAGER`, `_DENY` and
+    the WorkingSchedules pattern member); a reload does not remove them, and the DENY then refuses Time & leave to the directory
+    reader. Nothing is released; a dev database is rebuilt from the data;
+  - My team's keepers and the missing list read each report's policy (`get#TimesheetPolicy` per report without recent time) on every
+    render, beside Home's missing list (the Built note's finding);
+  - the worker's findings stand otherwise: the timesheet topics' and Last week's are built (R2, R3); the costing rows' organization
+    is built (R4).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle LaborCostingRate (4 features: 0.01, 0.49, 0.17 and the new
+  0.84 s), ProductionShopFloor, WorkTimesheets 21 of 21; WorkTimeEntries, WorkManualTimeRates, WorkManualTimeBilling,
+  WorkProjectBilling, HumanResServices, PayrollServices, AccountingProjectCost, PeopleSchedules, ProductionCostClose 56 of 56;
+  BOSS PeopleTime (5 features; the new one 0.31 to 0.35 s), PeopleAccess, PeopleSelfService, CommonsSettings, Tasks, QuickCreate
+  75 of 75; AccountingProductionCostClose (CostingPolicies' render) 3 of 3; ProjectsAccess, TimeEntries, Billing, ClientBilling, ProjectsSettings, ProjectsHome,
+  Reports, Resources, ManufacturingShopFloor, ManufacturingAccess, TodayPanel, Notifications, PeopleSchedules 86 of 86. The new
+  features fail on the code as built (no organization field, no `keeperIdList`, no `MantleTimesheetWeek`, the old links).
+  `moqui lint --screens`: 135 flagged sites as before, none in the screens touched. Prettier clean on the changed JavaScript.
+  Not run: `./moq test-apps`, the acceptance suite (PeopleTimeUsable's costing rate is a shared row, set with no organization
+  chosen, as before).
+- For the lead:
+  - budget share: mr-mantle about +0.85 s (LaborCostingRate's fourth feature); mr-boss about +0.35 s (PeopleTime's third feature);
+  - merge hot spots: the rebase is done; mr-mantle `HumanResourcesEntities.xml` (RateAmount), `TimesheetServices.xml` (policy,
+    `get#LineReports`), `CostingRates.js`, `RateServices.xml`; mr-boss `BossSetupData.xml` (the Time groups, the topics),
+    `Commons.xml`, `CommonsServices.xml`, `PaletteServices.xml`, `CostingPolicies.xml`, `Projects/Settings/Time.xml`;
+  - the user's calls are in §4; the all-organizations reading for a shared costing row (the first finding) may want the user's
+    word.
+
 ### P11 — Leave policies, allocations and balances
 
 Design §7 (the model), LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances; PE-07.
@@ -3287,6 +3391,9 @@ the owner's design.
 | Nov 11, 2026 | A scheduled (later-dated) separation is withdrawable by HR like the other scheduled changes: no access end and no return tasks follow, and its checklist tasks are cancelled | The user's call on P7's question (built in P7's review, R10, with a spec; design-people §4, design-admin §4.1) |
 | Nov 11, 2026 | Emergency contacts are hidden through the disabled system account `_PEOPLE_PRIVATE_` as each contact party's `privateOwnerUserId` (no one signs in as it, it holds no group, so every reader that hides a personal contact shows the party to no one, and People's services show it to the person and HR of their employer), not a party-level private flag | The user's call on P8's question (built in P8; P8's review makes the account with the first contact rather than seeding it, R1) |
 | Nov 11, 2026 | HolidayCalendars stays under Time & leave as HR's own screen (`People/Time/HolidayCalendars`, `BOSS_PPL_HOLIDAYS`), not under People Settings as design §7 placed it | The lead's call, following the user's call of Nov 11 that moved HR's editors out of Settings (P7's review); as built in P9 (design-people §2, §7) |
+| Nov 11, 2026 | The four timesheet notification topics link through a neutral record-link resolver, so a notice opens People's or Projects' screen for whichever the user may open, as the tray does, a TimesheetMissing week with no timesheet included; Projects users' links keep opening Projects | The user's call on P10's question (built in P10's review, R2: Commons' `openRecord` over `get#RecordLink`, the docType `MantleTimesheetWeek`; design-projects §8, design-people §13) |
+| Nov 11, 2026 | My team's Last week lists only reports who keep time: those who kept time in recent weeks (the last eight) or whose employer's timesheet policy requires it; the others show nothing | The user's call on P10's question (built in P10's review, R3: `get#LineReports`' `keeperIdList`, the policy key `rq`; design-people §3, §13) |
+| Nov 11, 2026 | `RateAmount` gains an optional `organizationPartyId`, used for `RaprCost` rows: `get#CostingRate` prefers the employer's row, then a shared one; `store#`/`end#CostingRate` and Accounting's Labor costing box are scoped by organization (a shared row needs an all-organizations grant to change, as pay grades do); Projects' rate rows unchanged | The user's call on P10's finding (built in P10's review, R4, with LaborCostingRate's spec; design-accounting §15, design-people PE-23) |
 
 ## 5. Open questions
 

@@ -2792,6 +2792,15 @@ Mantle's `RateServices.find#CostingRates` (`ACCOUNTING_VIEW`, `ACCOUNTING_ADMIN`
 `store#CostingRate` and `end#CostingRate` (`ACCOUNTING_ADMIN`), and `create#`/`update#RateAmount` refuse a `RaprCost`
 row without `ACCOUNTING_ADMIN`; `get#CostingRate` resolves a class and work type (or a person's class) at a date with
 Manufacturing's rules, unpriced when no row applies. People's and Projects' Rates list the rows read only.
+As reviewed (impl-people P10's review, the user's call of Nov 11, 2026): a row carries an optional organization
+(`RateAmount.organizationPartyId`); `get#CostingRate` prefers the employer's rows (the organization given, else the person's
+employers at the date), then the shared ones; the box lists the chosen organization's rows and the shared ones, with an
+Organization column and New rate's For (the chosen organization, or every organization), and the services scope them as
+Accounting scopes finance administration (`AccountingPolicy.scope` admin: every internal organization, the active one when
+chosen): an organization's row is changed within that scope (`ORGANIZATION_DENIED` otherwise; another organization's row
+answers as missing to End), a shared row only working for every organization (no organization chosen), as a shared pay
+grade needs `PEOPLE_ALL_ORGANIZATIONS`; readers see the shared rows and their organizations' (every one for
+`ACCOUNTING_ADMIN`). Projects' rates carry no organization.
 
 **Source:** research §15; Manufacturing §14 Open (allocation basis, now settled here and in impl-manufacturing §4).
 

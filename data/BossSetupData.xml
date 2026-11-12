@@ -520,11 +520,16 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a support case's work done goes to its CaseDetail (the message's isCase, impl-customer-service P2) -->
     <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/${isCase ? 'CustomerService/Cases/CaseDetail' : 'Projects/Requests/RequestDetail'}?requestId=${requestId}"/>
     <!-- and of the timesheet topics (mantle.work.TimesheetServices, impl-projects.md P6a): the approval opens the week's TimesheetDetail, the
-        person's notices their week in My time -->
-    <moqui.security.user.NotificationTopic topic="TimesheetApproval" linkTemplate="/qapps/Projects/Time/TimesheetDetail?timesheetId=${timesheetId}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetReturned" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetApproved" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetMissing" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
+        person's notices their week in My time; each through Commons' record-link resolver (openRecord, impl-people P10, the user's
+        call of Nov 11, 2026), so it opens Projects' screen for a Projects user and People's for one who keeps time under People
+        (a TimesheetMissing week with no timesheet too). The link is the resolver's /apps path: a browser's GET of it runs the
+        transition and redirects to the screen under /qapps (a GET of a /qapps path loads the shell); the tray resolves it itself
+        (CommonsServices.decorate#Notifications). -->
+    <moqui.security.user.NotificationTopic topic="TimesheetApproval"
+            linkTemplate="/apps/Commons/openRecord?recordEntityName=mantle.work.time.Timesheet&amp;id=${timesheetId}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetReturned" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetApproved" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetMissing" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
     <!-- and of the allocation topics (mantle.work.ResourceServices, impl-projects.md P7): the request opens Allocations' Requested list,
         the decision the team planner on the allocation's project -->
     <moqui.security.user.NotificationTopic topic="AllocationRequest" linkTemplate="/qapps/Projects/Resources/Allocations?list=requested"/>

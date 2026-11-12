@@ -5,7 +5,9 @@
 // Timesheets with People's links and approves it on People's TimesheetDetail, which the HR officer may not; the employee's week
 // to submit is their Today item and self-service card under People; payroll reads and sets an employee's pay rate in People's
 // Rates and reads the labor costing rates (RaprCost) there, while client rates and another employer's employees are not
-// payroll's and the HR officer's rows are refused. Mantle's rules (the policy's approvers, the reminders' check, the
+// payroll's and the HR officer's rows are refused. My team's last week counts only the reports who keep time (kept time lately, or
+// their employer's policy says everyone does: Retail's demo), and a timesheet notice opens People's My time for the employee and
+// Projects' for a Projects user, through Commons' record-link resolver (the user's calls of Nov 11, 2026). Mantle's rules (the policy's approvers, the reminders' check, the
 // costing lookup) are Mantle's WorkTimesheets and LaborCostingRate; the access cases are PeopleAccess's (the menu, the Payroll
 // capability, the employee's context). The usable-when walk is the acceptance PeopleTimeUsable.
 // Run: ./moq test mr-boss --spec PeopleTime
@@ -87,6 +89,8 @@ feature("Remind missing time from My team reaches the manager's report and skips
     then({reminded, notices, otherNotices, policies}) {
         reminded.errors == ""
         notices.length == 1
+        // the notice links through Commons' record-link resolver, the person's week
+        notices[0].linkText == "/apps/Commons/openRecord?docType=MantleTimesheetWeek&id=" + state.lastWeekDay
         // Kenji is Services' employee, not Hannah's report: she does not approve his week, so he is skipped
         otherNotices.length == 0
         // People's demo sets line on Retail; Services, Projects' demo organization, keeps the project policy
@@ -129,6 +133,66 @@ feature("the employee's week to submit is their Today item and self-service card
         !hrToday.some(item => item.kind == "timesheet")
     }
 })
+
+feature(
+    "My team's last week counts the reports who keep time; a timesheet notice opens People's week for its person and Projects' for a Projects user",
+    {
+        when() {
+            const asManager = service =>
+                asUser(users.manager, () =>
+                    system(() => invoke(TS + service, service.startsWith("find") ? {list: "missing", withCounts: false} : {}))
+                )
+            const keepersOf = () => Array.from(asManager("get#LineReports").keeperIdList || [])
+            const missingOf = () => Array.from(asManager("find#Timesheets").rowList || []).map(row => row.partyId)
+            // Retail's policy says every employee keeps time: each of Hannah's reports; without it only Tomas, who kept time last week
+            const required = {keepers: keepersOf(), missing: missingOf()}
+            let lately
+            try {
+                system(() => invoke(TS + "store#TimesheetPolicy", {organizationPartyId: ids.organizationId, required: false}))
+                lately = {keepers: keepersOf(), missing: missingOf()}
+            } finally {
+                system(() => invoke(TS + "store#TimesheetPolicy", {organizationPartyId: ids.organizationId, required: true}))
+            }
+            // the reminder's link as the tray resolves it, and as the email's link opens it (a GET of the resolver)
+            const linkText = "/apps/Commons/openRecord?docType=MantleTimesheetWeek&id=" + state.lastWeekDay
+            const openOf = user =>
+                asUser(user, () =>
+                    system(
+                        () =>
+                            invoke("ironstone.commons.CommonsServices.decorate#Notifications", {
+                                notificationList: [
+                                    {notificationMessageId: "PEOPLE_TIME_SPEC", topic: "TimesheetMissing", linkText}
+                                ]
+                            }).rows[0].openUrl
+                    )
+                )
+            const opened = asUser(users.employee, () => {
+                const rendered = ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .renderMode("html")
+                    .render("apps/Commons/openRecord", {docType: "MantleTimesheetWeek", id: state.lastWeekDay}, "get")
+                const result = {status: rendered.status, location: String(rendered.header("Location") || "")}
+                ec.message.clearErrors()
+                return result
+            })
+            return {required, lately, employeeOpen: openOf(users.employee), projectsOpen: openOf(users.system), opened}
+        },
+        then({required, lately, employeeOpen, projectsOpen, opened}) {
+            required.keepers.includes(ids.employeePartyId)
+            required.keepers.includes("BOSS_PPL_INES")
+            required.keepers.includes("BOSS_PPL_RAFAEL")
+            required.missing.includes("BOSS_PPL_INES")
+            lately.keepers == [ids.employeePartyId]
+            !lately.missing.includes("BOSS_PPL_INES")
+            !lately.missing.includes("BOSS_PPL_RAFAEL")
+            employeeOpen == "/qapps/People/Time/MyTime?weekDate=" + state.lastWeekDay
+            projectsOpen == "/qapps/Projects/Time/MyTime?weekDate=" + state.lastWeekDay
+            opened.status == 302
+            opened.location == "/qapps/People/Time/MyTime?weekDate=" + state.lastWeekDay
+        }
+    }
+)
 
 feature("the manager approves the report's submitted week in People's Timesheets without Projects; the HR officer may not", {
     when() {

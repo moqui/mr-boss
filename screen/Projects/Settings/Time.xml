@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     its short keys under 255 characters, impl-projects.md F9): the week's first day, who approves (the projects' managers, the
     person's line manager, or any holder of TIMESHEET_APPROVE), the lock on submit, a work item required, a comment required (an
     approver's flag), the smallest entry (the rounding of the grid, quick time and the import), future days, the hours of a working
-    day and the working days (the working hours until Capacity), and the missing-time reminder's day and hour; and the work types
+    day and the working days (the working hours until Capacity), the missing-time reminder's day and hour, and whether every employee
+    keeps a weekly timesheet (People P10: a line manager's missing lists and My team count each report); and the work types
     offered (PartySetting ProjWorkTypes through get# and store#WorkTypes: offered in order, Offer or Stop offering, Up and Down,
     Rename of the organization's own) with NewWorkType (an Enumeration of WorkType, WktpOrg and a number). MyTime, QuickTime,
     TimeEntries and the import offer these. Service: ironstone.projects.TimeServices get# and store#TimeSettings, change#WorkTypes,
@@ -28,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="savePolicy">
         <service-call name="ironstone.projects.TimeServices.store#TimeSettings" out-map="saveOut" in-map="{weekStart:weekStart, approvers:approvers, lock:(lock || 'N'),
                 needItem:(needItem || 'N'), needComment:(needComment || 'N'), minHours:minHours, future:(future || 'N'), dayHours:dayHours, workDays:workDays,
-                remindDay:remindDay, remindHour:remindHour}"/>
+                remindDay:remindDay, remindHour:remindHour, required:(required || 'N')}"/>
         <actions><if condition="!ec.message.hasError()"><script>ec.message.addMessage(saveOut.message, 'success')</script></if></actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -87,6 +88,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="needItem"><default-field title=" "><check><option key="Y" text="Every entry is on a work item"/></check></default-field></field>
                         <field name="needComment"><default-field title=" "><check><option key="Y" text="Flag entries without a comment to the approver"/></check></default-field></field>
                         <field name="future"><default-field title=" "><check><option key="Y" text="Time may be logged on future days"/></check></default-field></field>
+                        <!-- People P10 (the user's call of Nov 11, 2026): a line manager's missing lists count every report -->
+                        <field name="required"><default-field title=" "><check><option key="Y" text="Every employee keeps a weekly timesheet (managers see each report's week)"/></check></default-field></field>
                         <field name="minHours"><default-field title="Smallest entry, hours are rounded to it"><drop-down>
                             <option key="0.1" text="6 minutes (0.1 h)"/><option key="0.25" text="15 minutes (0.25 h)"/><option key="0.5" text="30 minutes (0.5 h)"/>
                             <option key="1" text="An hour"/></drop-down></default-field></field>
@@ -102,7 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-layout>
                             <field-ref name="weekStart"/>
                             <field-ref name="approvers"/>
-                            <field-ref name="lock"/><field-ref name="needItem"/><field-ref name="needComment"/><field-ref name="future"/>
+                            <field-ref name="lock"/><field-ref name="needItem"/><field-ref name="needComment"/><field-ref name="future"/><field-ref name="required"/>
                             <field-row><field-ref name="minHours"/><field-ref name="dayHours"/></field-row>
                             <field-ref name="workDays"/>
                             <field-row><field-ref name="remindDay"/><field-ref name="remindHour"/></field-row>

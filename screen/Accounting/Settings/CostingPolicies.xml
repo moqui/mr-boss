@@ -21,10 +21,12 @@ along with this software (see the LICENSE.md file). If not, see
     the row it applied. Finance administration changes it; Manufacturing's ProductionSettings links here.
     Labor costing rates (design-accounting §15 LaborCostingRates; impl-people P10, owner contract, F34): the cost of an hour by
     position class and work type, the one labor costing purpose RaprCost that production's labor events, Maintenance and the cost
-    reports read (mantle.humanres.RateServices get#CostingRate), never a person's pay. Shared by every organization (the rows carry
-    none, as the lookup reads none); find#CostingRates for Accounting's readers, store#CostingRate (a change ends the rate in
-    effect and starts the next, from now or a later date) and end#CostingRate for finance administration (ACCOUNTING_ADMIN).
-    People's Rates shows them read only. -->
+    reports read (mantle.humanres.RateServices get#CostingRate), never a person's pay. A rate is the chosen organization's, which the
+    lookup prefers for its employees, or shared by every organization (the user's call of Nov 11, 2026): the box lists the chosen
+    organization's rows and the shared ones (every row the user reads with none chosen); find#CostingRates for Accounting's
+    readers, store#CostingRate (a change ends the rate in effect and starts the next, from now or a later date) and
+    end#CostingRate for finance administration (ACCOUNTING_ADMIN) of the row's organization, a shared row only working for every
+    organization (no organization chosen), as the services decide (canChange). People's Rates shows them read only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Costing policies"
         default-menu-index="8"
@@ -35,7 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the labor costing rates: start one (or change one, ending the rate in effect), and end one -->
     <transition name="saveCostingRate">
         <actions>
-            <service-call name="mantle.humanres.RateServices.store#CostingRate" in-map="{emplPositionClassId:(emplPositionClassId || null),
+            <service-call name="mantle.humanres.RateServices.store#CostingRate" in-map="{organizationPartyId:(rateOrganizationPartyId || null),
+                    emplPositionClassId:(emplPositionClassId || null),
                     workTypeEnumId:(workTypeEnumId || null), rateTypeEnumId:(rateTypeEnumId || null), rateAmount:(rateAmount ?? ''),
                     rateCurrencyUomId:(rateCurrencyUomId || null), fromDate:(fromDate || null), expectedRateAmountId:(expectedRateAmountId || null)}"/>
             <if condition="!ec.message.hasError()">
@@ -84,14 +87,23 @@ along with this software (see the LICENSE.md file). If not, see
                 + '; co-products by ' + current.coproductMethodText
                 + (current.allowOutputWeights ? '; explicit output weights allowed' : '')
                 + (current.scrapToVariance ? '; scrap to variance' : '; scrap to the scrap account') : ''"/>
-        <!-- the labor costing rates, every organization's (a reader without an Accounting or payroll grant gets none) -->
+        <!-- the labor costing rates, the chosen organization's and the shared ones (a reader without an Accounting or payroll grant
+            gets none) -->
         <service-call name="mantle.humanres.RateServices.find#CostingRates" out-map="laborFound" transaction="force-new"
-                ignore-error="true"/>
+                ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null)}"/>
         <script><![CDATA[
             ec.message.clearErrors()
             laborAvailable = laborFound?.rateList != null
-            laborRows = Array.from(laborFound?.rateList || [])
-            laborCanEdit = !!laborFound?.canEdit
+            // each row's organization as its own key (a shared row's empty, never the page's organization)
+            laborRows = Array.from(laborFound?.rateList || []).map(row => Object.assign({}, row, {rateOrgId: row.organizationPartyId || ''}))
+            // New rate: for the chosen organization, or shared by every organization, as the user may change them
+            const organizationText = organizationPartyId ? (ec.entity.find('mantle.party.Organization').condition('partyId', organizationPartyId)
+                    .disableAuthz().one()?.organizationName || organizationPartyId) : null
+            laborScopeOptions = []
+            if (organizationPartyId && laborFound?.canEditOrganization) laborScopeOptions.push({key: organizationPartyId, text: organizationText})
+            if (laborFound?.canEditShared) laborScopeOptions.push({key: '', text: ec.l10n.localize('Every organization (shared)')})
+            laborCanEdit = laborScopeOptions.length > 0
+            laborSharedNote = laborRows.some(row => !row.organizationPartyId) && !laborFound?.canEditShared && laborFound?.canEdit
             const already = ec.artifactExecution.disableAuthz()
             try {
                 positionClassOptions = Array.from(ec.entity.find('mantle.humanres.position.EmplPositionClass').orderBy('title').limit(200).list())
@@ -101,7 +113,8 @@ along with this software (see the LICENSE.md file). If not, see
                 rateTypeOptions = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'RateType').orderBy('sequenceNum')
                         .orderBy('description').list()).map(row => ({key: row.enumId, text: row.description || row.enumId}))
             } finally { if (!already) ec.artifactExecution.enableAuthz() }
-            newLaborRate = {rateTypeEnumId: 'RatpStandard', rateCurrencyUomId: ec.user.getPreference('CurrencyDefault') || ''}
+            newLaborRate = {rateTypeEnumId: 'RatpStandard', rateCurrencyUomId: ec.user.getPreference('CurrencyDefault') || '',
+                rateOrganizationPartyId: laborScopeOptions.length ? laborScopeOptions[0].key : ''}
         ]]></script>
     </actions>
     <widgets>
@@ -285,6 +298,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-dialog id="NewLaborCostingRate" button-text="New rate" icon="sym_o_add" title="New labor costing rate" width="600"
                                 condition="laborCanEdit">
                             <form-single name="NewLaborRate" transition="saveCostingRate" map="newLaborRate">
+                                <field name="rateOrganizationPartyId">
+                                    <default-field title="For"><radio><list-options list="laborScopeOptions" key="${key}" text="${text}"/></radio></default-field>
+                                </field>
                                 <field name="emplPositionClassId">
                                     <default-field title="Position class" tooltip="Any position when empty">
                                         <drop-down allow-empty="true"><list-options list="positionClassOptions" key="${key}" text="${text}"/></drop-down>
@@ -310,6 +326,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time type="timestamp"/></default-field></field>
                                 <field name="submit"><default-field title=""><submit text="Start rate"/></default-field></field>
                                 <field-layout>
+                                    <field-ref name="rateOrganizationPartyId"/>
                                     <field-row><field-ref name="emplPositionClassId"/><field-ref name="workTypeEnumId"/></field-row>
                                     <field-row><field-ref name="rateAmount"/><field-ref name="rateCurrencyUomId"/></field-row>
                                     <field-row><field-ref name="rateTypeEnumId"/><field-ref name="fromDate"/></field-row>
@@ -320,6 +337,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body-nopad>
                         <form-list name="LaborCostingRateRows" list="laborRows" skip-form="true" paginate="false" condition="laborRows.length">
+                            <field name="organizationText"><default-field title="Organization"><display/></default-field></field>
                             <field name="positionText"><default-field title="Position class"><display/></default-field></field>
                             <field name="workTypeText"><default-field title="Work type"><display/></default-field></field>
                             <field name="rateTypeText"><default-field title="Rate type"><display/></default-field></field>
@@ -342,13 +360,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         <container-dialog id="ChangeLaborRate_${rateAmountId}" button-text="Change" icon="sym_o_edit"
                                                 title="Change the labor costing rate" width="480" condition="canChange &amp;&amp; !coming">
                                             <form-single name="ChangeLaborRate" transition="saveCostingRate">
+                                                <field name="rateOrganizationPartyId" from="rateOrgId"><default-field><hidden/></default-field></field>
                                                 <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
                                                 <field name="workTypeEnumId"><default-field><hidden/></default-field></field>
                                                 <field name="rateTypeEnumId"><default-field><hidden/></default-field></field>
                                                 <field name="rateCurrencyUomId"><default-field><hidden/></default-field></field>
                                                 <field name="expectedRateAmountId" from="rateAmountId"><default-field><hidden/></default-field></field>
                                                 <field name="scopeText"><default-field title="Applies to">
-                                                    <label text="${positionText} · ${workTypeText}" type="span"/></default-field></field>
+                                                    <label text="${organizationText} · ${positionText} · ${workTypeText}" type="span"/></default-field></field>
                                                 <field name="rateAmount" from="null"><default-field title="New cost an hour"><text-line size="10"/></default-field></field>
                                                 <field name="fromDate" from="null"><default-field title="From" tooltip="Now when empty"><date-time type="timestamp"/></default-field></field>
                                                 <field name="submit"><default-field title=""><submit text="Start the new rate"
@@ -362,10 +381,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <columns type="mobile">
-                                <column><field-ref name="positionText"/><field-ref name="workTypeText"/></column>
+                                <column><field-ref name="positionText"/><field-ref name="workTypeText"/><field-ref name="organizationText"/></column>
                                 <column><field-ref name="amountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
                             </columns>
                         </form-list>
+                        <label text="The shared rates are every organization's: change them with no organization chosen." type="p"
+                                style="m-muted q-px-md q-pt-sm text-caption" condition="laborSharedNote"/>
                         <label text="No labor costing rates: labor hours are unpriced in production, maintenance and cost reports until a rate covers them."
                                 type="p" style="m-muted q-pa-md" condition="!laborRows.length"/>
                     </box-body-nopad>

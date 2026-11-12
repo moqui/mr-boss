@@ -1754,8 +1754,14 @@ keepers of the projects they manage; a line manager approves a report's week und
 of `PAYROLL_VIEW` without `TIME_ENTRY_RATE` (`ironstone.projects.BillingServices.check#RateAccess`): the employees' pay
 rates of their People employers alone, set with `PAYROLL_EDIT` on no project, no client billing; and a third list,
 Labor costing (`RaprCost`), read only to both, which Accounting's CostingPolicies maintains. A timesheet's record link
-opens People's TimesheetDetail for a user without Projects; the timesheet topics' links stay Projects' (a finding of
-impl-people P10). Projects' own behavior is unchanged.
+opens People's TimesheetDetail for a user without Projects. Projects' own behavior is unchanged. As reviewed (the user's
+calls of Nov 11, 2026): the four timesheet topics link through Commons' record-link resolver (`/apps/Commons/openRecord`,
+over `ironstone.commons.PaletteServices.get#RecordLink`: the timesheet, or the person's week, docType
+`MantleTimesheetWeek`), which opens Projects' screen for a Projects user, as before, and People's for one who keeps time
+under People; a line manager's missing list and My team take only the reports who keep time (`get#LineReports`'
+`keeperIdList`: time kept this week or in the eight before, or the policy's new key `rq`, every employee keeps a weekly
+timesheet, which TimeSettings offers as a check box); the labor costing rows of Rates are those of the user's
+organizations and the shared ones.
 
 ### MyTime
 

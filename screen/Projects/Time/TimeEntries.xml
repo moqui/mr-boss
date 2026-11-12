@@ -152,7 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
             offeredTypeOptions = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').call()?.offeredList || [])
                     .map((type) => ({key: type.enumId, text: type.label}))
             canDelete = entryRows.some((row) => row.canEdit)
-            isMoneyManager = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
+            isMoneyManager = ec.user.hasPermission('TIME_ENTRY_RATE')
             newEntryParams = projectFixed ? {workEffortId: fixedProjectId, itemId: fixedProjectId} : {}
             const empty = {thisWeek: 'No time this week', lastWeek: 'No time last week', thisMonth: 'No time this month', unbilled: 'No unbilled time',
                 noItem: 'No time off the work items', all: 'No time entries'}

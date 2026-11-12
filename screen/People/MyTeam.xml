@@ -19,8 +19,10 @@ along with this software (see the LICENSE.md file). If not, see
     decision, the People requests whose step waiting the manager may decide now, each opening where it is decided (PositionDetail,
     the person's Employee360), whose decision services recheck the approver and the source. The managers' area (BOSS_PPL_TEAM:
     denied to the root user group, ALWAYS for BOSS_PEOPLE_MANAGER, and the People administrator and ADMIN through the root's
-    ALWAYS). P10: each person's last week (submitted, or not: mantle.work.TimesheetServices.find#Timesheets' missing list, which holds
-    the manager's live reports), opening the week in People's My time, and Remind missing time on the selected people
+    ALWAYS). P10: each person's last week, for those who keep time (mantle.work.TimesheetServices.get#LineReports' keeperIdList: who
+    kept time lately, or whose employer's timesheet policy says every employee keeps one; the user's call of Nov 11, 2026; nothing
+    for the others), submitted or not (find#Timesheets' missing list, which holds the manager's live reports who keep time),
+    opening the week in People's My time, and Remind missing time on the selected people
     (send#MissingTimeReminders, which checks per person that the manager approves that week and counts the others as skipped).
     Who is out (P12) and reviews due (P20) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -45,12 +47,16 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P10: last week's missing weeks of the people the manager may remind (their live reports among them) -->
         <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingFound" transaction="force-new" ignore-error="true"
                 in-map="{list:'missing', withCounts:false}"/>
+        <!-- and which reports keep time (the others show no week) -->
+        <service-call name="mantle.work.TimesheetServices.get#LineReports" out-map="lineReports" transaction="force-new" ignore-error="true"/>
         <script><![CDATA[
             ec.message.clearErrors()
             const missing = new Set(Array.from(missingFound?.rowList || []).map(row => row.partyId))
             const weekOf = Object.fromEntries(Array.from(missingFound?.rowList || []).map(row => [row.partyId, row.weekStart]))
-            teamRows = Array.from(teamFound?.team || []).map(row => Object.assign({}, row, {weekMissing: missing.has(row.partyId),
-                weekText: missing.has(row.partyId) ? 'Not submitted' : 'Submitted', weekStart: weekOf[row.partyId] || null}))
+            const keepers = new Set(Array.from(lineReports?.keeperIdList || []))
+            teamRows = Array.from(teamFound?.team || []).map(row => Object.assign({}, row, {keepsTime: keepers.has(row.partyId),
+                weekMissing: keepers.has(row.partyId) && missing.has(row.partyId),
+                weekText: !keepers.has(row.partyId) ? '' : missing.has(row.partyId) ? 'Not submitted' : 'Submitted', weekStart: weekOf[row.partyId] || null}))
             availabilityColors = {working: 'positive', leave: 'warning'}
             // each decision opens where it is decided: a position's activation on PositionDetail, an employment change on the
             // person's record
@@ -110,7 +116,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="Last week">
                                     <link url="${sharedLinks['Time/MyTime']}" text="Not submitted" link-type="anchor" style="text-warning"
                                             parameter-map="{partyId:partyId, weekDate:weekStart}" condition="weekMissing"/>
-                                    <label text="Submitted" type="span" style="m-muted" condition="!weekMissing"/>
+                                    <label text="Submitted" type="span" style="m-muted" condition="keepsTime &amp;&amp; !weekMissing"/>
                                 </default-field>
                             </field>
                             <columns type="mobile">
