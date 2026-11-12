@@ -123,6 +123,11 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P6: a procedure waiting for the user's approval (Mantle's topic, approved or refused from Commons' approvals inbox through
             ProcessServices approve#WorkProcess and refuse#WorkProcess; its link opens ProcedureDetail) -->
         <notification-topic topic="WorkProcessApproval"/>
+        <!-- P16: a booking waiting for the user's approval (Mantle's topic, approved or denied from Commons' approvals inbox through
+            ResourceBookingServices approve#ResourceBooking and refuse#ResourceBooking; its link opens BookingRequests), and what became
+            of a booking, told its organizer -->
+        <notification-topic topic="ResourceBooking"/>
+        <notification-topic topic="ResourceBookingNotice"/>
         <today-source service="ironstone.maintenance.HomeServices.get#TodayItems" label="Maintenance"/>
         <keymap scope="maintenance">
             <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Scheduling › ResourceCalendar (design-maintenance §7 ResourceCalendar, Context passed; design-drawers-commons §7
+    Schedules; crosscut §3.13; impl-maintenance P16): Commons' Schedules component (Commons/Calendar/Schedules.qvue) over the bookable
+    rooms and equipment of the user's maintenance scope (mantle.work.ResourceBookingServices.find#BookableResources: a booking
+    approver's, those they approve), a day or a week, with each resource's bookings and, apart from them, its outages and planned
+    blocks (get#FullCalendarData's unavailableList through Commons' get#ResourceBookings with includeUnavailable): requested in
+    warning, booked in primary, blocked and out of service in negative. Booking and cancelling one's own are Commons' services
+    (book#ResourceSlot, cancel#MyBooking: create#Event, book#Resource, cancel#ResourceBooking), refused by the same policy and
+    blocks; an event opens in Commons; a resource's name opens its policy (ResourcePolicyDetail). No maintenance interval is edited
+    by dragging. The terminal shows ResourceCalendarTui, the resources and the day's intervals. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Resource calendar" default-menu-index="4" render-modes="vue,qvue,tui" server-static="vue,qvue">
+
+    <parameter name="view"/>
+    <parameter name="date"/>
+    <parameter name="type"/>
+
+    <!-- the scope's bookable resources (a room for a facility, equipment for an asset, in the component's shape), the user's time
+        zone and today -->
+    <transition name="resources" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const found = ec.resource.script('component://mr-boss/service/ironstone/maintenance/Maintenance.js').execute('calendarResources',
+                    {resourceType: type || 'all', text: text || null})
+            const defaults = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarDefaults').call()?.defaults || {}
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {resourceList: found.resourceList, timeZone: ec.user.timeZone,
+                todayText: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'), workStart: defaults.workStart, workEnd: defaults.workEnd,
+                weekStart: defaults.weekStart, adminUrl: null})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the bookings and blocks of the resources asked (keys) that the scope holds, from start to end (days) -->
+    <transition name="bookings" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const allowed = new Set(Array.from(ec.resource.script('component://mr-boss/service/ironstone/maintenance/Maintenance.js')
+                    .execute('calendarResources', {resourceType: 'all'}).resourceList).map((resource) => resource.key))
+            const asked = String(keys || '').split(',').map((key) => key.trim()).filter((key) => allowed.has(key))
+            const out = asked.length ? ec.service.sync().name('ironstone.commons.ScheduleServices.get#ResourceBookings').parameters({start: start, end: end,
+                keys: asked.join(','), includeUnavailable: true}).call() : {bookingList: [], failedSources: []}
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {bookingList: out.bookingList, failedSources: out.failedSources})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- booking and cancelling one's own: Commons' services, the resource's policy and blocks applying -->
+    <transition name="bookSlot">
+        <actions><script><![CDATA[
+            const key = String(resource || '')
+            const at = key.indexOf('|')
+            const day = date ? String(date).substring(0, 10) : ''
+            const out = ec.service.sync().name('ironstone.commons.ScheduleServices.book#ResourceSlot').parameters({resourceType: resourceType || (at > 0 ? key.substring(0, at) : ''),
+                resourceId: resourceId || (at > 0 ? key.substring(at + 1) : ''), start: start || (day ? day + ' ' + (from || '09:00') : ''),
+                end: end || (day ? day + ' ' + (to || '10:00') : ''), purpose: purpose || null, notes: notes || null}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {workEffortId: out.workEffortId, statusId: out.statusId, requiresApproval: out.requiresApproval,
+                messageInfos: [{type: out.requiresApproval ? 'warning' : 'success', message: out.message,
+                    link: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + out.workEffortId, linkText: ec.l10n.localize('Open')}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="cancelBooking">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.ScheduleServices.cancel#MyBooking').parameters({workEffortId: workEffortId || '',
+                resourceType: resourceType || '', resourceId: resourceId || ''}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {eventCancelled: out.eventCancelled, messageInfos: [{type: 'success', message: out.message}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commons/Calendar/Schedules.qvue" template="false"/>
+            <!-- the terminal: ResourceCalendarTui, the plain screen beside this one, on the same day -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "ResourceCalendarTui",
+                url: sri.buildUrl("../ResourceCalendarTui").addParameters({date: date || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">The resource calendar is a .qvue screen: open it under /qapps.</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

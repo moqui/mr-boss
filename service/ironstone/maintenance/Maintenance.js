@@ -148,6 +148,9 @@ const linkPaths = [
     "Scheduling/Resources",
     "Scheduling/ResourcePolicyDetail",
     "Scheduling/Blackouts",
+    // P16: Scheduling's BookingRequests and ResourceCalendar (design §7)
+    "Scheduling/BookingRequests",
+    "Scheduling/ResourceCalendar",
     // P6: Procedures and the procedure record (design §4)
     "Procedures/Find",
     "Procedures/ProcedureDetail"
@@ -1043,7 +1046,59 @@ function recordLink(p) {
     }
 }
 
-const operations = {sharedContext, capabilities: capabilitiesOf, checkRecord, choices, search, resolveScan, recordLink}
+// calendarResources (P16): the bookable rooms and equipment of the user's scope (Mantle's find#BookableResources, which checks the
+// permission and scope: a booking approver gets those they approve) in the shape Commons' Schedules component reads, for
+// ResourceCalendar: a facility as a room, an asset as equipment, its name opening its policy; resourceType all, room or equipment,
+// and text narrow it. Nothing for a user without Maintenance or the read.
+function calendarResources(p) {
+    if (!scope().read) return {resourceList: []}
+    ec.message.pushErrors()
+    let found = []
+    try {
+        found = Array.from(
+            ec.service
+                .sync()
+                .name("mantle.work.ResourceBookingServices.find#BookableResources")
+                .parameters({
+                    resourceType: p.resourceType === "room" ? "facility" : p.resourceType === "equipment" ? "asset" : null,
+                    text: p.text || null,
+                    pageSize: 100
+                })
+                .disableAuthz()
+                .call()?.resourceList || []
+        )
+    } catch (error) {
+        found = []
+    } finally {
+        ec.message.clearErrors()
+        ec.message.popErrors()
+    }
+    return {
+        resourceList: found.map(row => {
+            const room = row.resourceType === "facility"
+            const resourceId = room ? row.facilityId : row.assetId
+            return {
+                resourceType: room ? "room" : "equipment",
+                resourceId,
+                key: (room ? "room|" : "equipment|") + resourceId,
+                name: row.resourceName,
+                typeLabel: row.typeText || "",
+                icon: room ? "sym_o_meeting_room" : "sym_o_devices",
+                site: row.locationName || "",
+                capacity: row.capacityText ? Number(String(row.capacityText).replace(/[^0-9.]/g, "")) || null : null,
+                approverNames: row.approverNames ? String(row.approverNames).split(", ") : [],
+                requiresApproval: /approved by|approval required/.test(row.policyText || ""),
+                policyText: row.policyText || "",
+                url:
+                    "/qapps/Maintenance/Scheduling/ResourcePolicyDetail?" +
+                    (room ? "facilityId=" : "assetId=") +
+                    encodeURIComponent(resourceId)
+            }
+        })
+    }
+}
+
+const operations = {sharedContext, capabilities: capabilitiesOf, checkRecord, choices, search, resolveScan, recordLink, calendarResources}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Maintenance operation " + op)
     return operations[op](p || {})
