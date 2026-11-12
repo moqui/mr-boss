@@ -304,8 +304,12 @@ function reportLinks(capabilities) {
 // - features: who may set an alert (an author or a distributor, Alerts.js) and who may share a dashboard of their own (an
 //   author, share#Dashboard);
 // - range: the default reporting range (get#Context's defaults);
-// - datasetIdPrefix and datasetScopeParameter: what a dataset created in Insights is named and the scope policy's parameter
-//   its form asks for (Datasets.js createdPrefix; rowFilterParameters.organizationField);
+// - datasetIdPrefix: what a dataset created in Insights is named with; written here only: the steward group's grant is on
+//   org.moqui.report.dataset.insights-* (BossSetupData), and the engine creates a dataset only under an id its creator's
+//   own grant names;
+// - datasetScopeParameter, datasetScopeLabel and datasetScopeHelp: the dataset forms' scope field under Insights, the
+//   field that carries a row's organization: its words, and the rowFilterParameters entry it is sent in under a scope
+//   policy whose registration names none (Mantle's organization policy takes organizationField);
 // - recipientPermissionId: whom a distributor may propose (Delivery.js readerIds: Insights' readers);
 // - reportEmailTemplateId and alertAudience: the fixed parts of a schedule and of an alert rule (Delivery.js TEMPLATE;
 //   Alerts.js TOPIC, TEMPLATE and DETAIL_LINK);
@@ -322,6 +326,8 @@ function reportPolicy(capabilities, settings) {
         range: {from: defaultRange.from, thru: defaultRange.thru},
         datasetIdPrefix: "insights-",
         datasetScopeParameter: "organizationField",
+        datasetScopeLabel: "Organization field",
+        datasetScopeHelp: "The field that carries each row's organization",
         recipientPermissionId: capabilityPermissions.view,
         reportEmailTemplateId: "BOSS_INSIGHTS_REPORT",
         alertAudience: {

@@ -3,7 +3,7 @@
 // sales and inventory datasets waiting for review, is refused Admit for inventory while its index is not built, rebuilds it (its
 // last build and lag then show on the dataset) and admits it, and admits the sales datasets, whose organization filter is bound;
 // the Sales dashboard then reads for insights.reader only ORG_ZIZI_RETAIL's orders and for the ORG_ZIZI_SERVICES reader only theirs;
-// the author's CSV export holds the same rows they read. The rules are the framework's BusinessDatasets, Mantle's
+// the author's export (DatasetView's transition) holds the same rows they read. The rules are the framework's BusinessDatasets, Mantle's
 // OrganizationRowFilter and the regression InsightsDatasets. Written with P3, not run as part of it.
 // Run: ./moq accept mr-boss --spec InsightsDatasetsUsable
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -136,18 +136,25 @@ feature("the Sales dashboard reads ORG_ZIZI_RETAIL's orders for insights.reader 
     }
 })
 
-feature("the author's CSV export of the sales orders holds the rows they read", {
+feature("the author's export of the sales orders holds the rows they read", {
     when() {
         const read = asUser(users.author, () =>
             invoke(R + "query#Documents", Object.assign({datasetId: "mantle-sales-orders", pageSize: 1}, range))
         )
+        // DatasetView's export transition (the framework's screen at Insights' location), as JSON so that its rows are counted
         const exported = asUser(users.author, () =>
-            invoke(
-                "ironstone.insights.DatasetServices.export#Dataset",
-                Object.assign({datasetId: "mantle-sales-orders", format: "csv", requestedRowLimit: 10000}, range)
+            String(
+                ec.screen
+                    .makeTest()
+                    .rootScreen(webroot)
+                    .render(
+                        "apps/Insights/ReportBuilder/DatasetView/exportDocuments",
+                        Object.assign({datasetId: "mantle-sales-orders", format: "json", requestedRowLimit: 10000}, range),
+                        null
+                    ).output || ""
             )
         )
-        return {total: Number(read.total || 0), rows: exported.rowCount, content: exported.content}
+        return {total: Number(read.total || 0), rows: JSON.parse(exported).length, content: exported}
     },
     then({total, rows, content}) {
         total > 0

@@ -118,16 +118,27 @@ feature("rows: Explore, its suggestions, the direct query, aggregates and export
             const explore = page(user, "ReportBuilder/Explore", Object.assign({datasetId: salesId}, range))
             if (explore.status != 200 || explore.errors) problems.push(`${user}'s Explore: ${explore.status} ${explore.errors}`)
             else if (explore.output.includes(notTheirs)) problems.push(`${user}'s Explore shows ${notTheirs}`)
-            // the export: the author's and the steward's, the same rows; the others refused
-            const exported = attempt(
-                user,
-                "ironstone.insights.DatasetServices.export#Dataset",
-                Object.assign({datasetId: salesId, format: "csv", requestedRowLimit: 10000}, range)
-            )
+            // the export, DatasetView's transition (the framework's screen at Insights' location): the author's and the
+            // steward's, the same rows; the others refused the screen
+            const exported = asUser(user, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen(webroot)
+                    .render(
+                        "apps/Insights/ReportBuilder/DatasetView/exportDocuments",
+                        Object.assign({datasetId: salesId, format: "csv", requestedRowLimit: 10000}, range),
+                        null
+                    )
+                const errors = Array.from(result.errorMessages || []).join(" | ")
+                return {
+                    refused: errors || (result.status == 200 ? "" : String(result.status)),
+                    content: String(result.output || "")
+                }
+            })
             const exports = user === users.author || user === users.steward
             if (exports && exported.refused) problems.push(`${user} is refused the export: ${exported.refused}`)
             if (!exports && !exported.refused) problems.push(`${user} exports the dataset`)
-            if (!exported.refused && String(exported.content || "").includes(notTheirs)) problems.push(`${user}'s export holds ${notTheirs}`)
+            if (exported.content.includes(notTheirs)) problems.push(`${user}'s export holds ${notTheirs}`)
         }
         return {problems}
     },

@@ -65,6 +65,8 @@ feature(
                 policy.features?.share !== false ||
                 policy.recipientPermissionId !== "INSIGHTS_VIEW" ||
                 policy.datasetIdPrefix !== "insights-" ||
+                policy.datasetScopeParameter !== "organizationField" ||
+                policy.datasetScopeLabel !== "Organization field" ||
                 policy.alertAudience?.topic !== "InsightsBusinessAlert" ||
                 reader.reportLinks?.alerts !== "//Insights/Alerts/Rules"
             )

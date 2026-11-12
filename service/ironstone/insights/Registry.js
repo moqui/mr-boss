@@ -669,9 +669,17 @@ function findList(formLocation) {
     if (!match) return null
     // a dynamic form's find is kept under its name and a "#" extension (the framework's saved_find_location): the form is the name
     const formName = match[2].replace(/#.*$/, "")
-    const text = ec.resource.getLocationReference("component://mr-boss/screen/" + match[1] + ".xml").getText()
-    const exists = text != null && (!formName || String(text).includes('form-list name="' + formName + '"'))
-    return {path: match[1], formName, exists, text: exists ? String(text) : ""}
+    const own = ec.resource.getLocationReference("component://mr-boss/screen/" + match[1] + ".xml").getText()
+    // a screen that shows a framework screen at its own location (the report builder's dataset screens, mr-moqui
+    // plans/Admin-Screens-Down.md): the list is the included screen's
+    const included = Array.from(
+        String(own ?? "").matchAll(/<include-screen location="(component:\/\/tools\/screen\/[^"]+\.xml)"/g)
+    )
+        .map(found => ec.resource.getLocationReference(found[1]).getText())
+        .filter(source => source != null)
+    const text = own == null ? null : [String(own)].concat(included.map(String)).join("\n")
+    const exists = text != null && (!formName || text.includes('form-list name="' + formName + '"'))
+    return {path: match[1], formName, exists, text: exists ? text : ""}
 }
 // A saved find's screen: an mr-boss form list's screen path when it opens to the viewer, else why not.
 function findRoute(row, grants) {

@@ -3280,6 +3280,11 @@ along with this software (see the LICENSE.md file). If not, see
         ALWAYS so they pass BOSS_INS_REPORT_ENGINE's deny, and each also checks the dataset's own artifact in the engine. -->
     <artifactGroups artifactGroupId="BOSS_INS_DATASET_READ" description="Insights: listing business datasets">
         <artifacts artifactName="org.moqui.report.ReportServices.find#BusinessDatasets" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- what the framework's dataset screens read beside it, shown under Insights' mount (mr-moqui
+            plans/Admin-Screens-Down.md, Track I): one dataset the viewer reads or stewards, its document's fields and
+            conditions for its steward only, and what a dataset form offers, the sources for one who may create only -->
+        <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDatasetOptions" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_DATASET_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_DATASET_READ_DATA" userGroupId="BOSS_INSIGHTS_DATA"
