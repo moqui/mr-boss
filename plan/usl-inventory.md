@@ -1059,7 +1059,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | create#ProductAssetAdHoc |  |  |
 | AssetServices | update#PhysicalInventoryDate | Warehouse/Counts/CountDetail | — Not used: post#Count sets the count's date before its lines post (P10) |
 | EquipmentServices | create#Equipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/Find (New equipment, through MaintenanceResourceServices.store#MaintenanceEquipment) |
-| EquipmentServices | get#AssetMaintenanceNeeded |  |  |
+| EquipmentServices | get#AssetMaintenanceNeeded |  | — Not used: the baseline's helper (highest meter value, latest maintenance whatever its status) is left as it is; Maintenance's due projection is MaintenancePlanServices.get#MaintenanceDue (impl-maintenance P13, F11) |
 | EquipmentServices | create#AssetMaintenance | Manufacturing/WorkCenters/Downtime | Manufacturing/WorkCenters/Downtime and EquipmentDetail (Request maintenance: through mantle.work.ProductionServices.request#ProductionMaintenance, AsMntCreated and MntTpCorrective, Manufacturing P11) |
 | EquipmentServices | create#AssetMaintenanceContent | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
 | EquipmentServices | update#AssetMaintenanceContent | Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
@@ -1315,7 +1315,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | --- | --- | --- | --- |
 | EventServices | get#FullCalendarData | Commons/Home; Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Home; Comms/Calls; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Home; Comms/Home; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | create#Event | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Inbox; Comms/Chat; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar; Marketing/Events; Marketing/Events/EventDetail; Marketing/QuickCreate | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/QuickCreate; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | get#NextBusinessDay | People/Time/LeaveRequests |  |
+| EventServices | get#NextBusinessDay | People/Time/LeaveRequests | Maintenance/Preventive/Plans/PlanDetail and Plans (a plan's planned day after a weekend or holiday, over the organization's WepHoliday events and the plan's People holiday calendar, through MaintenancePlanServices.get#MaintenanceDue; impl-maintenance P13) |
 | EventServices | get#FutureBusinessDay | Projects/WorkItems/Timeline; People/Time/LeaveRequests |  |
 | GitServices | add#ProjectRepository | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Code; Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings | Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings; Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Code |
 | GitServices | remove#ProjectRepository | Projects/Projects/ProjectDetail/Code; Projects/Code/RepositoryDetail/Settings | Projects/Code/RepositoryDetail/Settings; Projects/Projects/ProjectDetail/Code |
@@ -2270,3 +2270,14 @@ policy), called by built screens through the Maintenance screens after `ironston
 | work/ProcessServices | find#ProcessExecutions | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Usage (ProcessUsage) |
 | work/ProcessServices | check#ProcessApplicability | Shared/Product360 | Products' CatalogRecordServices.store#CatalogRow (a maintenance default's work template; Product360's Equipment tab) |
 
+Added in `work/MaintenancePlanServices.xml` (impl-maintenance P13; `MaintenancePlans.js`, design-maintenance §5.1), called by built
+screens through the Maintenance screens after `ironstone.maintenance.AccessServices.check#Record` (recordType plan) where a plan is
+named:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenancePlanServices | find#MaintenanceSchedules | Maintenance/Preventive/Plans | Maintenance/Preventive/Plans/Find (PlanRows); Maintenance/Equipment/EquipmentDetail/Maintenance (Preventive plans) |
+| work/MaintenancePlanServices | get#MaintenanceSchedule | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail (header, findings) and its Schedule tab (ScheduleTerms, the terms' history) |
+| work/MaintenancePlanServices | store#MaintenanceSchedule | Maintenance/Preventive/Plans; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/Find (NewPlan); PlanDetail (Activate, More › End plan: PlanAction) and its Schedule tab (Edit terms) |
+| work/MaintenancePlanServices | get#MaintenanceDue | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/Schedule (DueExplanation, through get#MaintenanceSchedule); the next due of every PlanRows row |
+| work/MaintenancePlanServices | find#MaintenanceDue | Maintenance/Preventive/DueMaintenance | none yet: DueMaintenance is P14's |

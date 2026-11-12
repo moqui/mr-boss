@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Preventive › Plans › PlanDetail (design-maintenance §5 PlanDetail; style-guide §3.3 Detail; impl-maintenance P13): one
+    preventive plan the user may read (check#Record plan: a maintenance reader of its organization; else "not available"). The
+    record header: its id and name, target, organization, model default, the target's time zone and its state (Draft, Active,
+    Ended); the primary action by state and authority (Activate for a planner or supervisor on a draft that nothing keeps from
+    activation, PlanAction), and More (End, with a reason). What keeps a draft from activation (no time zone, a named
+    procedure that does not qualify, an incomplete trigger; a procedure is optional, the user's call of Nov 12) is named above the tabs. The tabs, by menu index: Schedule (1: DueExplanation and
+    ScheduleTerms with Edit, and the terms' history). Due history and Generated work join with P14. Each write is
+    mantle.work.MaintenancePlanServices.store#MaintenanceSchedule's after the record check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Plan" default-menu-include="false">
+    <parameter name="maintenanceScheduleId" required="true"/>
+    <always-actions>
+        <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="planCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!planCheck?.recordId"/>
+    </always-actions>
+    <transition-include name="planAction" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
+    <subscreens default-item="Schedule">
+        <subscreens-item name="Schedule" location="component://mr-boss/screen/Maintenance/Preventive/Plans/PlanDetail/Schedule.xml" menu-index="1"/>
+    </subscreens>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenancePlanServices.get#MaintenanceSchedule" out-map="planDetail"
+                    transaction="force-new" ignore-error="true" in-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="recordFound &amp;&amp; !!planDetail?.schedule"/>
+        <set field="plan" from="planDetail?.schedule || {}"/>
+        <set field="findings" from="planDetail?.findings || []"/>
+        <set field="captionText" from="[plan.targetKind + ' ' + plan.targetName, plan.organizationName, plan.defaultText ? 'Follows ' + plan.defaultText : '',
+                plan.timeZoneText ? 'Time zone ' + plan.timeZoneText : 'No time zone', plan.fromText ? 'Active from ' + plan.fromText : '',
+                plan.thruText ? 'Ended ' + plan.thruText : ''].filter(Boolean).join(' · ')"/>
+        <set field="targetLink" from="plan.assetId ? sharedLinks['Equipment/EquipmentDetail'] : sharedLinks['Facilities/FacilityDetail']"/>
+    </actions>
+    <widgets>
+        <section name="PlanNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Plan ${maintenanceScheduleId} is not available: it does not exist or it is not one of your organizations'."
+                                type="p"/>
+                        <link url="${sharedLinks['Preventive/Plans/Find']}" text="Back to the plans" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="PlanFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.work.maintenance.MaintenanceSchedule" record-id="${maintenanceScheduleId}"
+                        title="Plan ${maintenanceScheduleId} · ${plan.scheduleName || ''}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${maintenanceScheduleId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${plan.scheduleName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="Ended: ${plan.endReason}" type="div" style="text-caption m-muted" condition="plan.endReason"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${plan.statusColor}">${
+                                    WebUtilities.encodeHtml(plan.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: plan.statusText})}]]></text>
+                                <text type="html">${plan.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <link url="planAction" text="Activate" icon="sym_o_play_arrow" link-type="hidden-form-link" btn-type="primary"
+                                    parameter-map="{maintenanceScheduleId:maintenanceScheduleId, expectedRevision:plan.revision, planAction:'activate'}"
+                                    condition="planDetail.canActivate"
+                                    confirmation="Activate ${plan.scheduleName}? Its due dates count from now on."/>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="EndPlanDialog" button-text="End plan" icon="sym_o_stop_circle" title="End ${plan.scheduleName}"
+                                        width="520" condition="planDetail.canEnd">
+                                    <label text="No due date is projected after the end; the plan and its history stay." type="p" style="text-caption m-muted"/>
+                                    <form-single name="EndPlan" transition="planAction">
+                                        <field name="maintenanceScheduleId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision" from="plan.revision"><default-field><hidden/></default-field></field>
+                                        <field name="planAction" from="'end'"><default-field><hidden/></default-field></field>
+                                        <field name="changeReason"><default-field title="Why the plan ends"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="End plan"><submit type="danger" confirmation="End this plan?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${targetLink}" text="Open ${plan.targetName}" icon="sym_o_open_in_new"
+                                        parameter-map="{assetId:plan.assetId, facilityId:plan.facilityId}"/>
+                                <link url="${sharedLinks['Preventive/Plans/Find']}" text="All plans" icon="sym_o_list"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <section name="PlanFindings" condition="findings.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Before it can be activated"/>
+                            <box-body>
+                                <section-iterate name="PlanFinding" list="findings" entry="finding">
+                                    <widgets><label text="${finding.text}" type="div"/></widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <subscreens-panel id="PlanTabs" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

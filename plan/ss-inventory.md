@@ -43,6 +43,8 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**Maintenance P13 (Nov 12, 2026):** the baseline's ProductMaintenanceList is Plans and EquipmentDetail's plans pane: a plan of a piece of equipment follows its model's maintenance default (ProductMaintenance), whose values it takes where it names none, without enrolling every piece of equipment of the model; AddPlannedMaintenance stays P14's DueMaintenance (generation).
+
 **Maintenance P6 (Nov 12, 2026):** no baseline form is mapped to the procedures (Procedures and ProcedureDetail are new, design-maintenance §4); their Implemented in is in usl-inventory's ProcessServices rows. Product360's maintenance default (CreateProductMaintenance) takes only a procedure the applicability check admits.
 
 **People P13 (Nov 11, 2026):** no baseline form is mapped to Attendance, TimeImport or SelfService's Clock: attendance punches
@@ -332,7 +334,7 @@ is unchanged.
 | EditAssetMaintenance | UpdateContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Files (the work order's record files, P3) |
 | FindAssetMaintenance | AddPlannedMaintenance | Maintenance/Preventive/DueMaintenance; Maintenance/WorkOrders/WorkOrderDetail |  |
 | FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/NewWorkOrder (NewWork: create#MaintenanceWorkOrder, P3) |
-| FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail |  |
+| FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail | Maintenance/Preventive/Plans/Find (PlanRows, with each plan's model default) and PlanDetail; Maintenance/Equipment/EquipmentDetail/Maintenance (Preventive plans) (P13) |
 | FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/EquipmentDetail/Maintenance (work orders and maintenance records, with Adopt, P3) |
 | AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail; Maintenance/Preventive/DueMaintenance | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading) |
 | AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Meters, Recent readings) |

@@ -205,6 +205,9 @@ feature(
             equipment.output.includes("Compressor 500-hour oil service")
             equipment.output.includes("Compressor drive belt squeal")
             equipment.output.includes("Create work")
+            // P13: its preventive plans
+            equipment.output.includes("Preventive plans")
+            equipment.output.includes("Compressor C-1 oil service every 250 hours")
             facility.errors.length == 0
             facility.output.includes("Room 102 light flickers")
             facility.output.includes("Air handler coil leak") == false
