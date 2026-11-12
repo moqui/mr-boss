@@ -41,10 +41,11 @@ along with this software (see the LICENSE.md file). If not, see
                 {label: 'Interval', value: due.intervalText || '', origin: originText[term.intervalOrigin] || ''},
                 term.triggerEnumId === 'MstMeter' ? {label: 'Meter', value: term.meterName || '', origin: originText[term.meterOrigin] || ''}
                     : {label: 'Dates', value: (term.cadenceText || '') + (term.firstDueLocal ? ', first due ' + term.firstDueLocal : ''), origin: ''},
-                term.triggerEnumId === 'MstMeter' ? {label: 'Baseline', value: term.baselineValue != null ? String(term.baselineValue) + ' at ' + term.baselineDateText : '', origin: ''}
+                term.triggerEnumId === 'MstMeter' ? {label: 'Baseline', value: term.baselineValue != null ? String(term.baselineValue) + (term.meterUnitText ? ' ' + term.meterUnitText : '') + ' at ' + term.baselineDateText : '', origin: ''}
                     : {label: 'Business days', value: term.businessDaysOnly === 'Y' ? 'Moved to the next business day' + (term.holidayCalendarName ? ', holidays of ' + term.holidayCalendarName : '') : 'Kept on the due day', origin: ''},
                 term.triggerEnumId === 'MstMeter' ? {label: 'Reading kept for', value: term.maxReadingAgeDays + ' days', origin: ''} : null,
-                {label: 'Procedure', value: plan.procedureName || '', origin: originText[term.procedureOrigin] || ''},
+                {label: 'Procedure', value: plan.procedureName || 'None: ad hoc work from the plan', origin: originText[term.procedureOrigin] || ''},
+                {label: 'Estimate', value: term.estimatedWorkTime != null ? term.estimatedWorkTime + ' hr' : '', origin: ''},
                 {label: 'Maintenance type', value: term.maintenanceTypeText || '', origin: originText[term.typeOrigin] || ''},
                 {label: 'Made ahead', value: term.leadDays ? term.leadDays + ' days' : 'On the day', origin: ''},
                 {label: 'Team', value: plan.teamName || '', origin: ''},
@@ -159,6 +160,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     <default-field title="Reading kept for (days)" tooltip="An older reading leaves the due unknown; 30 when empty"><text-line size="5"/></default-field>
                                 </field>
                                 <field name="leadDays"><default-field title="Made ahead (days)"><text-line size="5"/></default-field></field>
+                                <field name="estimatedWorkTime">
+                                    <default-field title="Estimate (hours)" tooltip="The work's estimate when the plan names no procedure"><text-line size="6"/></default-field>
+                                </field>
                                 <field name="teamPartyId">
                                     <default-field title="Team">
                                         <drop-down allow-empty="true">
@@ -183,7 +187,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-row><field-ref name="intervalQuantity"/><field-ref name="intervalUomId"/><field-ref name="cadenceEnumId"/></field-row>
                                     <field-row><field-ref name="firstDueLocal"/><field-ref name="businessDaysOnly"/><field-ref name="holidayCategoryId"/></field-row>
                                     <field-row><field-ref name="productMeterId"/><field-ref name="baselineValue"/><field-ref name="baselineDate"/></field-row>
-                                    <field-row><field-ref name="maxReadingAgeDays"/><field-ref name="leadDays"/></field-row>
+                                    <field-row><field-ref name="maxReadingAgeDays"/><field-ref name="leadDays"/><field-ref name="estimatedWorkTime"/></field-row>
                                     <field-row><field-ref name="effectiveDate"/><field-ref name="changeReason"/></field-row>
                                     <field-ref name="submitButton"/>
                                 </field-layout>

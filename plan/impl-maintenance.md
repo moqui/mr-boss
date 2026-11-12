@@ -2311,8 +2311,10 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
 - **Mantle records.** `MaintenanceSchedule` and `MaintenanceScheduleTerm` (design §5.1 and PlanDetail's field
   list), one trigger a schedule, dated terms.
 - **Mantle `mantle.work.MaintenancePlanServices`:** `find#MaintenanceSchedules`, `get#MaintenanceSchedule`,
-  `store#MaintenanceSchedule` (activation refused with no time zone, P2's field, or no qualifying procedure, each
-  a named finding), `get#MaintenanceDue` and `find#MaintenanceDue`: calendar cadence in the resource's zone with
+  `store#MaintenanceSchedule` (activation refused with no time zone, P2's field, or a named procedure that does not
+  qualify, each a named finding; a procedure is optional, the user's call of Nov 12, replacing the built
+  `PROCEDURE_REQUIRED` refusal: with none, P14 generates an ad hoc work order with the plan's name and estimate; a
+  draft's terms are edited in place until activation, dated rows from it, the user's call of Nov 12 as built), `get#MaintenanceDue` and `find#MaintenanceDue`: calendar cadence in the resource's zone with
   month-end clamping and the business-day move by `EventServices.get#NextBusinessDay`, which keeps the obligation
   date; meter thresholds from accepted completion readings only; missing or stale readings answered as unknown.
   `get#AssetMaintenanceNeeded` is left as it is for the baseline (F11) and is not called.
@@ -2453,7 +2455,9 @@ PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
 
 - **Mantle records.** `MaintenanceOccurrence`, unique by schedule and obligation; the `MaintenanceDue` topic.
 - **Mantle `MaintenancePlanServices`:** `find#MaintenanceOccurrences`, `generate#MaintenanceWorkOrders` (one
-  unresolved execution a schedule; a procedure through `instantiate#WorkProcess`, else an ad hoc root; each
+  unresolved execution a schedule; a procedure through `instantiate#WorkProcess`, else an ad hoc root with the plan's
+  name and estimate (`MaintenanceScheduleTerm.estimatedWorkTime`, P13 review); `maintenanceScheduleId` set on the
+  `MaintenanceWorkOrder` through an option of create#MaintenanceWorkOrder's own path (no caller supplies it); each
   schedule on its own with a named outcome; marked `operation` with its `operation-ref`),
   `reconcile#MaintenanceSchedule` (coalesce, skip, correct a counted completion; reasoned and non-destructive), and
   the ServiceJob that calls the same generation in bounded batches, seeded paused. Completion of generated work

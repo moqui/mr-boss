@@ -4,8 +4,9 @@
 // its next threshold, and the contactor check's start counter answers "reading older than 30 days" (unknown, not "not due") until the
 // resource administrator records a reading, after which its threshold is known; Room 201's monthly inspection is due on November 30
 // at 09:00 in the campus' time zone; a change of the room plan's interval needs a reason, starts the next term and keeps the earlier one
-// in the history; a new plan for the van is refused activation until it names a procedure, and a reader may open a plan but not activate
-// it. The rules are Mantle's MaintenanceDue and BOSS's MaintenancePlans and MaintenanceAccess.
+// in the history; a new plan for the van naming the room procedure is refused activation (the procedure does not apply) and, with no
+// procedure, is activated (the user's call, Nov 12: P14 makes its work ad hoc from its name and estimate); a reader may open a plan but
+// not activate it. The rules are Mantle's MaintenanceDue and BOSS's MaintenancePlans and MaintenanceAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePlansWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib
@@ -66,7 +67,13 @@ feature("the planner finds the three draft plans and activates each from PlanDet
         )
         const readerActivates = activate(users.reader, ids.roomPlanId)
         const activated = [ids.roomPlanId, ids.compressorPlanId, ids.stalePlanId].map(id => activate(users.planner, id))
-        return {find, detail, readerActivates, activated, states: [ids.roomPlanId, ids.compressorPlanId, ids.stalePlanId].map(id => plan(id).statusId)}
+        return {
+            find,
+            detail,
+            readerActivates,
+            activated,
+            states: [ids.roomPlanId, ids.compressorPlanId, ids.stalePlanId].map(id => plan(id).statusId)
+        }
     },
     then({find, detail, readerActivates, activated, states}) {
         opened(find)
@@ -85,7 +92,9 @@ feature("the planner finds the three draft plans and activates each from PlanDet
 feature("DueExplanation names the compressor's last reading, increment and next threshold, and the stale counter's age", {
     when() {
         const tab = maintenanceScheduleId =>
-            asUser(users.planner, () => page("Preventive/Plans/PlanDetail/Schedule", {maintenanceScheduleId, lastStandalone: "true"}))
+            asUser(users.planner, () =>
+                page("Preventive/Plans/PlanDetail/Schedule", {maintenanceScheduleId, lastStandalone: "true"})
+            )
         const compressor = tab(ids.compressorPlanId)
         const stale = tab(ids.stalePlanId)
         const room = read(users.planner, P + "get#MaintenanceDue", {maintenanceScheduleId: ids.roomPlanId}).due
@@ -147,34 +156,55 @@ feature("a change of the room plan's interval needs a reason, starts the next te
     }
 })
 
-feature("a new plan for the van is a draft that names what keeps it from activation until it has a procedure", {
-    when() {
-        const created = post(users.planner, "Preventive/Plans/Find/storePlan", {
-            operationKey: "walk-plan-van",
-            targetKind: "equipment",
-            assetId: ids.vanId,
-            scheduleName: "Van 3 six-monthly service",
-            triggerEnumId: "MstCalendar",
-            intervalQuantity: 6,
-            intervalUomId: "TF_mon",
-            firstDueLocal: "2027-01-15 08:00"
-        })
-        const van = rows("mantle.work.maintenance.MaintenanceSchedule", {assetId: ids.vanId}).find(
-            row => row.scheduleName === "Van 3 six-monthly service"
-        )
-        state.van = van?.maintenanceScheduleId
-        const detail = asUser(users.planner, () =>
-            page("Preventive/Plans/PlanDetail", {maintenanceScheduleId: state.van, lastStandalone: "-3"})
-        )
-        const refused = activate(users.planner, state.van)
-        return {created, van, detail, refused}
-    },
-    then({created, van, detail, refused}) {
-        created.errors.length == 0
-        van.statusId == "MschDraft"
-        opened(detail)
-        detail.output.includes("Before it can be activated")
-        detail.output.includes("Choose the procedure the work follows")
-        refused.errors.join(" ").includes("PROCEDURE_REQUIRED")
+feature(
+    "a new plan for the van names a procedure that does not apply and is refused activation; with no procedure it is activated",
+    {
+        when() {
+            const created = post(users.planner, "Preventive/Plans/Find/storePlan", {
+                operationKey: "walk-plan-van",
+                targetKind: "equipment",
+                assetId: ids.vanId,
+                scheduleName: "Van 3 six-monthly service",
+                triggerEnumId: "MstCalendar",
+                intervalQuantity: 6,
+                intervalUomId: "TF_mon",
+                firstDueLocal: "2027-01-15 08:00",
+                templateWorkEffortId: ids.roomProcedureId,
+                estimatedWorkTime: 3
+            })
+            const van = rows("mantle.work.maintenance.MaintenanceSchedule", {assetId: ids.vanId}).find(
+                row => row.scheduleName === "Van 3 six-monthly service"
+            )
+            state.van = van?.maintenanceScheduleId
+            const detail = asUser(users.planner, () =>
+                page("Preventive/Plans/PlanDetail", {maintenanceScheduleId: state.van, lastStandalone: "-3"})
+            )
+            const refused = activate(users.planner, state.van)
+            // the procedure taken out: the work is ad hoc, from the plan's name and estimate
+            const stored = read(users.planner, P + "get#MaintenanceSchedule", {maintenanceScheduleId: state.van}).storedTerm
+            const cleared = post(
+                users.planner,
+                "Preventive/Plans/PlanDetail/Schedule/storePlan",
+                Object.assign({}, stored, {
+                    maintenanceScheduleId: state.van,
+                    expectedRevision: Number(plan(state.van).revision),
+                    scheduleName: "Van 3 six-monthly service",
+                    templateWorkEffortId: null
+                })
+            )
+            const activated = activate(users.planner, state.van)
+            return {created, van, detail, refused, cleared, activated, after: plan(state.van)}
+        },
+        then({created, van, detail, refused, cleared, activated, after}) {
+            created.errors.length == 0
+            van.statusId == "MschDraft"
+            opened(detail)
+            detail.output.includes("Before it can be activated")
+            detail.output.includes("The procedure does not apply")
+            refused.errors.join(" ").includes("PROCEDURE_NOT_QUALIFIED")
+            cleared.errors.length == 0
+            activated.errors.length == 0
+            after.statusId == "MschActive"
+        }
     }
-})
+)

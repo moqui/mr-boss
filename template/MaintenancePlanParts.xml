@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
                         firstDueLocal:firstDueLocal, productMeterId:productMeterId, baselineValue:baselineValue, baselineDate:baselineDate,
                         maxReadingAgeDays:maxReadingAgeDays, businessDaysOnly:businessDaysOnly, holidayCategoryId:holidayCategoryId,
                         leadDays:leadDays, templateWorkEffortId:templateWorkEffortId, maintenanceTypeEnumId:maintenanceTypeEnumId,
-                        teamPartyId:teamPartyId, effectiveDate:effectiveDate, changeReason:changeReason}"/>
+                        teamPartyId:teamPartyId, estimatedWorkTime:estimatedWorkTime, effectiveDate:effectiveDate, changeReason:changeReason}"/>
             <if condition="!ec.message.hasError()">
                 <set field="isNew" from="!maintenanceScheduleId"/>
                 <set field="maintenanceScheduleId" from="saved.maintenanceScheduleId"/>

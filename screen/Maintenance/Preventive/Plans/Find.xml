@@ -18,8 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
     (open by default), each with its target, procedure, interval, next due (a date in the target's zone, or a meter threshold), the
     age of its last reading and its due state; a model default shows as the plan's source, and choosing one does not enroll every
     piece of equipment of the model. New plan for a planner or supervisor: a draft for one piece of equipment (optionally following
-    a maintenance default of its model, whose values it takes where it names none) or one facility; activation is on PlanDetail,
-    where a missing time zone or procedure is named. -->
+    a maintenance default of its model, whose values it takes where it names none) or one facility, with a procedure or with none
+    (then P14's work order is ad hoc, with the plan's name and estimate: the user's call, Nov 12); activation is on PlanDetail,
+    where a missing time zone or a procedure that does not qualify is named. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Plans" default-menu-index="1">
     <parameter name="text"/>
@@ -62,7 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col-auto row items-center q-gutter-xs">
                 <container-dialog id="NewPlanDialog" button-text="New plan" type="primary" icon="sym_o_add" title="New preventive plan"
                         width="720" condition="canPlan">
-                    <label text="A plan starts as a draft; activate it on the plan once its time zone and procedure are in place." type="p"
+                    <label text="A plan starts as a draft; activate it on the plan once its time zone is set. With no procedure, its work is made from its name and estimate." type="p"
                             style="text-caption m-muted"/>
                     <form-single name="NewPlan" transition="storePlan" map="newPlan">
                         <field name="operationKey"><default-field><hidden/></default-field></field>
@@ -107,6 +108,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </drop-down>
                             </default-field>
                         </field>
+                        <field name="estimatedWorkTime">
+                            <default-field title="Estimate (hours)" tooltip="The work's estimate when the plan names no procedure"><text-line size="6"/></default-field>
+                        </field>
                         <field name="triggerEnumId">
                             <default-field title="Due by">
                                 <radio><option key="MstCalendar" text="The calendar"/><option key="MstMeter" text="A meter"/></radio>
@@ -148,6 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="triggerEnumId"/>
                             <field-row><field-ref name="intervalQuantity"/><field-ref name="intervalUomId"/><field-ref name="firstDueLocal"/></field-row>
                             <field-row><field-ref name="productMeterId"/><field-ref name="baselineValue"/><field-ref name="baselineDate"/></field-row>
+                            <field-ref name="estimatedWorkTime"/>
                             <field-ref name="submitButton"/>
                         </field-layout>
                     </form-single>

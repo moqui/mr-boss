@@ -16,8 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     preventive plan the user may read (check#Record plan: a maintenance reader of its organization; else "not available"). The
     record header: its id and name, target, organization, model default, the target's time zone and its state (Draft, Active,
     Ended); the primary action by state and authority (Activate for a planner or supervisor on a draft that nothing keeps from
-    activation, PlanAction), and More (End, with a reason). What keeps a draft from activation (no time zone, no qualifying
-    procedure, an incomplete trigger) is named above the tabs. The tabs, by menu index: Schedule (1: DueExplanation and
+    activation, PlanAction), and More (End, with a reason). What keeps a draft from activation (no time zone, a named
+    procedure that does not qualify, an incomplete trigger; a procedure is optional, the user's call of Nov 12) is named above the tabs. The tabs, by menu index: Schedule (1: DueExplanation and
     ScheduleTerms with Edit, and the terms' history). Due history and Generated work join with P14. Each write is
     mantle.work.MaintenancePlanServices.store#MaintenanceSchedule's after the record check. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
