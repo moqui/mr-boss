@@ -319,7 +319,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | built and reviewed Nov 11, merged |
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | built and reviewed Nov 11, merged |
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | built and reviewed Nov 11, merged |
-| P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | — |
+| P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | built and reviewed Nov 11, merged |
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | — |
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | — |
 | P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | — |
@@ -3474,7 +3474,7 @@ Design §6 (attendance), Attendance, TimeImport, SelfService's Clock; PE-05 (wit
 - Design edits: design-people (header; §1.2 Time & leave; §1.4 Quick create; §3 SelfService; §6 Attendance and TimeImport as
   built); design-admin §11.1 (the time-and-attendance target as built); design-drawers-commons §1.5 (People's Clock in on Commons'
   root).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F221 to F230 in order:
   - the quick create Clock in is offered to every user the time area opens to, clocking on or not: the shell offers a quick create by
     its screen's grant alone (`shell.rs link_entry`), so "only where the employment has clocking on" holds for SelfService's clock and
     not for the + menu, whose Clock screen says clocking is not on; a condition on a quick create (a provider service or a condition
@@ -3575,7 +3575,7 @@ mr-moqui worktree on `ppl/p13`); fixes committed apart per repository ("People P
   - **R4 (low, registration).** The `timeAndAttendance` target named `PEOPLE_IMPORT` alone though its services require
     `PEOPLE_HR_VIEW` and `PEOPLE_HR_EDIT` too; a target's permissions are all required, so it names all three (design-admin §11.1).
     Nothing in the framework dispatches a `wizard` target's import, so no behavior changed; no spec.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F231 to F235 in order:
   - `import#Records` keeps every ready row's outcome and the batch's counts in its own transaction around the rows' (up to 5000):
     each punch commits on its own, but if that outer transaction fails or times out on a large file the rows stay ready and the
     batch previewed, and a rerun records nothing new and reports those rows as already recorded;
@@ -4102,7 +4102,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
