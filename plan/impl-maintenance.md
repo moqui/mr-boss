@@ -376,7 +376,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
-| P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built Nov 12 |
+| P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built and reviewed Nov 12, merged |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
@@ -3331,7 +3331,7 @@ PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
   for P14's services; ss-inventory's AddPlannedMaintenance and a P14 line.
 - Design edits: design-maintenance's header, §1.2, §3 Home, §5.1, PlanDetail, DueMaintenance, §8 PreventiveComplianceReport, §9 Settings
   and §13.2 as built.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F262 to F272 in order:
   - F186 fixed in the projection itself, not only in the occurrences: every fixed-cadence obligation is walked under the term it falls in
     (a term's own first due date, from its start to the next term), so the overdue count, the due list and compliance agree; P13's
     specs pass unchanged.
@@ -3429,7 +3429,7 @@ OperationRecovery.js) and the job runner (crates/moqui-core/src/service/jobs.rs)
     person it assigns to a plan's work (a day before its due date, the root's planned finish; notification), unless they have one, and
     removes the reminders of a person it takes off (a replacement included); Mantle writes the assignee's row, as People's leave does.
     Spec: MaintenanceGeneration "a plan's work reminds its assignee of its due date; taken off it, they have none".
-- Findings (unnumbered):
+- Findings, numbered by the lead F273 to F276 in order:
   - "The job and a planner at once" is tested in turn (the job, then the planner's WORK_OPEN), not in two threads; the plan lock and the
     unique key carry the concurrent case.
   - A plan's work moved by a path other than the lifecycle (a baseline status change) is credited only when a generation or a decision
@@ -4643,6 +4643,22 @@ paths under `mr-boss/`.
 | F259 | P18 review: `adminGroups` is `../../Access/Groups` under both Admin and System, so by AdminMount.js' rule it belongs in the framework's `frameworkRoutes` (System's Health then links it too) | P18's Review note |
 | F260 | P18 review: Two files applied at the same time for one new key in one organization can register two assets (`keyFields` covers one file) | P18's Review note |
 | F261 | P18 review: Re-planning a withdrawn plan at its very start revives that row with the new values | P18's Review note |
+| F262 | P14: F186 fixed in the projection itself, not only in the occurrences | P14's Built note |
+| F263 | P14: The job runs with no user (the scheduler's authorization-off path, no run-as identity), so Maintenance's scope is resolved for it (`systemScope` | P14's Built note |
+| F264 | P14: Due reminders for assigned PM work (design §5.1) are not set | P14's Built note |
+| F265 | P14: There is no reopen action on a work order (§3's lifecycle) | P14's Built note |
+| F266 | P14: Meter obligations are keyed by their threshold ("meter 350") | P14's Built note |
+| F267 | P14: The completion cadence (MscCompletion) has no fixed obligations | P14's Built note |
+| F268 | P14: PreventiveComplianceReport is the first screen of a Reports area (menu index 9, MAINTENANCE_VIEW) that P17 completes (the landing, work status) | P14's Built note |
+| F269 | P14: Generation of a plan whose target became stock fails with RECORD_UNAVAILABLE (P13's `targetOf`), named per plan | P14's Built note |
+| F270 | P14: Equipment's next-PM column (F185) is not built | P14's Built note |
+| F271 | P14: F192 | P14's Built note |
+| F272 | P14: An existing database needs `MaintenancePlanSetupData.xml` (the job) and `MaintenancePlanData.xml` loaded on upgrade (as F170). | P14's Built note |
+| F273 | P14 review: "The job and a planner at once" is tested in turn (the job, then the planner's WORK_OPEN), not in two threads | P14's Review note |
+| F274 | P14 review: A plan's work moved by a path other than the lifecycle (a baseline status change) is credited only when a generation or a decision of the plan syncs its occurrences | P14's Review note |
+| F275 | P14 review: The reminder's offset is fixed at a day (1440 minutes) | P14's Review note |
+| F276 | P14 review: Tools' raw JobDetail Run now runs a job as the clicking user (framework behaviour) | P14's Review note |
+| F277 | P14 merge: MaintenanceAccess (one spec of every phase's access case) took 8.5 s alone and 20.7 s at load average 20 | The full suites' measure decides; split it or move cases to acceptance if it nears 15 s |
 
 
 ## 7. Later
