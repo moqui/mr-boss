@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Pay groups (design-people §8 PayGroups; style-guide §3.9 Settings; impl-people P22): the employers' pay groups,
+    from mantle.humanres.PayrollSetupServices.find#Groups (a payroll reader's): Groups (each its employer, currency, frequency,
+    periods a year, pay date, proration, time basis, localization and readiness, preview only in this build with why); a group opened
+    (payrollGroupId) shows GroupTerms and Periods (its prepared pay periods with their pay dates, and the next ones previewed before
+    they are prepared). A configuration holder (PAYROLL_EDIT and PAYROLL_CONFIGURE, which Mantle checks) adds a group (New pay group,
+    the one primary: nothing is assumed, neither currency nor divisor nor pay date nor proration), changes its policy with a reason
+    (audited; its currency, frequency and first period stay once periods exist), ends it, and prepares its next periods (once:
+    preparing again continues after the last). No group can be live: the readiness says so. Under Payroll beside Rates, payroll's
+    area (the P22 review's call of Nov 12, 2026). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay groups" default-menu-index="8">
+    <parameter name="payrollGroupId"/>
+    <parameter name="previewCount"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new group, a group's policy changed with a reason, or its end: Mantle checks the configuration holder and every policy -->
+    <transition name="storeGroup">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#Group" out-map="stored"
+                    in-map="{payrollGroupId:(payrollGroupId || null), expectedRevision:(expectedRevision || null),
+                        organizationPartyId:(organizationPartyId || null), groupName:(groupName ?? null), currencyUomId:(currencyUomId ?? null),
+                        timePeriodTypeId:(timePeriodTypeId ?? null), firstPeriodFromDate:(firstPeriodFromDate ?? null),
+                        periodsPerYear:(periodsPerYear ?? null), payDateOffsetDays:(payDateOffsetDays ?? null), prorationEnumId:(prorationEnumId ?? null),
+                        timeBasisEnumId:(timeBasisEnumId ?? null), workweekTimeZone:(workweekTimeZone ?? null),
+                        payrollLocalizationId:(payrollLocalizationId ?? null), description:(description ?? null), end:(end == 'true'),
+                        thruDate:(thruDate || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${end == 'true' ? 'Pay group ended' : (payrollGroupId ? 'Pay group saved' : 'Pay group created')}</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollGroupId" from="stored?.payrollGroupId || payrollGroupId"/></default-response>
+        <error-response url="."><parameter name="payrollGroupId"/></error-response>
+    </transition>
+    <!-- the group's next periods prepared once -->
+    <transition name="preparePeriods">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.prepare#Periods" out-map="prepared"
+                    in-map="{payrollGroupId:payrollGroupId, periodCount:(periodCount || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${prepared.createdCount} period${prepared.createdCount == 1 ? '' : 's'} prepared</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollGroupId"/></default-response>
+        <error-response url="."><parameter name="payrollGroupId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollSetupServices.find#Groups" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{pageIndex:(pageIndex || 0), pageSize:(pageSize || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="payrollGroupId &amp;&amp; found?.groups">
+            <service-call name="mantle.humanres.PayrollSetupServices.find#Groups" out-map="opened" transaction="force-new" ignore-error="true"
+                    in-map="{payrollGroupId:payrollGroupId}"/>
+            <script>ec.message.clearErrors()</script>
+            <if condition="opened?.group &amp;&amp; previewCount">
+                <service-call name="mantle.humanres.PayrollSetupServices.prepare#Periods" out-map="previewed" transaction="force-new" ignore-error="true"
+                        in-map="{payrollGroupId:payrollGroupId, periodCount:previewCount, preview:true}"/>
+                <script>previewError = ec.message.errorsString; ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <script><![CDATA[
+            groupsFound = !!found?.groups
+            canEdit = !!found?.canEdit
+            groupRows = Array.from(found?.groups || []).map(row => Object.assign({}, row, {readinessState: row.readiness?.state,
+                readinessText: row.readiness?.message}))
+            groupsCount = found?.groupsCount || 0
+            groupsPageIndex = found?.groupsPageIndex || 0
+            groupsPageSize = found?.groupsPageSize || 20
+            groupsPageMaxIndex = found?.groupsPageMaxIndex || 0
+            groupsPageRangeLow = found?.groupsPageRangeLow || 0
+            groupsPageRangeHigh = found?.groupsPageRangeHigh || 0
+            group = opened?.group || null
+            periods = Array.from(opened?.periods || [])
+            nextPeriods = Array.from(previewed?.periods || [])
+            readinessColors = {ready: 'positive', warning: 'orange-9', failed: 'negative', unavailable: 'grey-8'}
+            groupValues = group ? {payrollGroupId: group.payrollGroupId, expectedRevision: group.revision, groupName: group.groupName,
+                currencyUomId: group.currencyUomId, timePeriodTypeId: group.timePeriodTypeId, firstPeriodFromDate: group.firstPeriodFromDateText,
+                periodsPerYear: group.periodsPerYear, payDateOffsetDays: group.payDateOffsetDays, prorationEnumId: group.prorationEnumId,
+                timeBasisEnumId: group.timeBasisEnumId, workweekTimeZone: group.workweekTimeZone,
+                payrollLocalizationId: group.payrollLocalizationId, description: group.description} : {}
+            groupFacts = group ? [
+                {term: 'Employer', value: group.organizationName},
+                {term: 'Currency', value: group.currencyUomId},
+                {term: 'Frequency', value: group.frequencyText + ', from ' + group.firstPeriodFromDateText},
+                {term: 'Periods a year', value: String(group.periodsPerYear ?? '')},
+                {term: 'Pay date', value: group.payDateText},
+                {term: 'Proration', value: group.prorationText},
+                {term: 'Hours from', value: group.timeBasisText},
+                {term: 'Workweek time zone', value: group.workweekTimeZone || 'Not set'},
+                {term: 'Localization', value: group.localizationName || 'None'},
+                {term: 'Readiness', value: group.readiness.message}
+            ] : []
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Pay groups" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewGroupDialog" button-text="New pay group" icon="sym_o_add" type="primary" width="760"
+                        title="New pay group" condition="canEdit">
+                    <label type="p" text="A pay group is paid together: one employer, one currency, one calendar. Nothing is assumed, so each policy is chosen here."/>
+                    <form-single name="NewGroup" transition="storeGroup">
+                        <field name="groupName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="currencyUomId">
+                            <default-field title="Currency">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timePeriodTypeId">
+                            <default-field title="Pay frequency">
+                                <drop-down allow-empty="true">
+                                    <option key="PayrollMonth" text="Monthly"/>
+                                    <option key="PayrollSemiMonth" text="Twice a month"/>
+                                    <option key="PayrollBiWeek" text="Every two weeks"/>
+                                    <option key="PayrollWeek" text="Weekly"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="firstPeriodFromDate"><default-field title="First period starts"><date-time type="date"/></default-field></field>
+                        <field name="periodsPerYear">
+                            <default-field title="Periods a year" tooltip="The divisor of a yearly amount: 12 monthly, 24 twice a month, 26 two-weekly, 52 weekly">
+                                <text-line size="6" input-type="number"/></default-field>
+                        </field>
+                        <field name="payDateOffsetDays">
+                            <default-field title="Paid days after the period ends" tooltip="0: on its last day; a negative number: before it">
+                                <text-line size="4" input-type="number"/></default-field>
+                        </field>
+                        <field name="prorationEnumId">
+                            <default-field title="Part periods prorated by">
+                                <drop-down allow-empty="true">
+                                    <option key="PprCalendarDays" text="Calendar days"/>
+                                    <option key="PprWorkingDays" text="Working days"/>
+                                    <option key="PprHours" text="Hours"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timeBasisEnumId">
+                            <default-field title="Hours from">
+                                <drop-down allow-empty="true">
+                                    <option key="PtbTimesheets" text="Approved timesheets"/>
+                                    <option key="PtbAttendance" text="Attendance"/>
+                                    <option key="PtbSchedule" text="Working schedule"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="workweekTimeZone"><default-field title="Workweek time zone" tooltip="Optional, such as America/Chicago"><text-line size="24"/></default-field></field>
+                        <field name="payrollLocalizationId">
+                            <default-field title="Localization">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payrollLocalizations'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create pay group"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="groupName"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-row><field-ref name="currencyUomId"/><field-ref name="timePeriodTypeId"/></field-row>
+                            <field-row><field-ref name="firstPeriodFromDate"/><field-ref name="periodsPerYear"/></field-row>
+                            <field-row><field-ref name="payDateOffsetDays"/><field-ref name="prorationEnumId"/></field-row>
+                            <field-row><field-ref name="timeBasisEnumId"/><field-ref name="workweekTimeZone"/></field-row>
+                            <field-ref name="payrollLocalizationId"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!groupsFound">
+            <widgets>
+                <label text="Pay groups are open to payroll. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="GroupRows" condition="groupsFound">
+            <widgets>
+                <label text="Each group's calendar and pay policy. Payroll is preview only here: no group can be live until a localization covers it."
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Groups" list="groupRows" skip-form="true" paginate="true" condition="groupRows.length">
+                            <field name="groupName">
+                                <default-field title="Pay group">
+                                    <link url="." text="${groupName}" link-type="anchor" parameter-map="{payrollGroupId:payrollGroupId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="frequencyText"><default-field title="Frequency"><display/></default-field></field>
+                            <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                            <field name="localizationName"><default-field title="Localization"><display/></default-field></field>
+                            <field name="readinessText">
+                                <default-field title="Readiness">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColors[readinessState] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readinessText})}]]></text>
+                                        <text type="html">${readinessText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupName"/><field-ref name="frequencyText"/></column>
+                                <column><field-ref name="currencyUomId"/><field-ref name="readinessText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!groupRows.length"
+                                text="No pay group is set up yet.${canEdit ? ' Start one with New pay group.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="OpenedGroup" condition="group">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${group.groupName}"/>
+                            <box-toolbar>
+                                <container-dialog id="EditGroupDialog" button-text="Edit policy" icon="sym_o_edit" width="760"
+                                        title="Edit ${group.groupName}" condition="group.canEdit">
+                                    <label type="p" text="Each change is recorded with its reason. Once periods are prepared the currency, frequency and first period stay."/>
+                                    <form-single name="EditGroup" transition="storeGroup" map="groupValues">
+                                        <field name="payrollGroupId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="groupName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                        <field name="periodsPerYear"><default-field title="Periods a year"><text-line size="6" input-type="number"/></default-field></field>
+                                        <field name="payDateOffsetDays">
+                                            <default-field title="Paid days after the period ends"><text-line size="4" input-type="number"/></default-field></field>
+                                        <field name="prorationEnumId">
+                                            <default-field title="Part periods prorated by">
+                                                <drop-down>
+                                                    <option key="PprCalendarDays" text="Calendar days"/>
+                                                    <option key="PprWorkingDays" text="Working days"/>
+                                                    <option key="PprHours" text="Hours"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="timeBasisEnumId">
+                                            <default-field title="Hours from">
+                                                <drop-down>
+                                                    <option key="PtbTimesheets" text="Approved timesheets"/>
+                                                    <option key="PtbAttendance" text="Attendance"/>
+                                                    <option key="PtbSchedule" text="Working schedule"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="workweekTimeZone"><default-field title="Workweek time zone"><text-line size="24"/></default-field></field>
+                                        <field name="payrollLocalizationId">
+                                            <default-field title="Localization">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payrollLocalizations'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save policy"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="groupName"/><field-ref name="periodsPerYear"/></field-row>
+                                            <field-row><field-ref name="payDateOffsetDays"/><field-ref name="prorationEnumId"/></field-row>
+                                            <field-row><field-ref name="timeBasisEnumId"/><field-ref name="workweekTimeZone"/></field-row>
+                                            <field-row><field-ref name="payrollLocalizationId"/><field-ref name="reason"/></field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EndGroupDialog" button-text="End group" icon="sym_o_block" width="520"
+                                        title="End ${group.groupName}" condition="group.canEdit">
+                                    <form-single name="EndGroup" transition="storeGroup"
+                                            map="{payrollGroupId:group.payrollGroupId, expectedRevision:group.revision, end:'true'}">
+                                        <field name="payrollGroupId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="end"><default-field><hidden/></default-field></field>
+                                        <field name="thruDate"><default-field title="From" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="End group"><submit type="danger" confirmation="End the pay group ${group.groupName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="." text="Close" icon="sym_o_close" link-type="anchor-button" btn-type="default" parameter-map="{payrollGroupId:''}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="GroupTerms" list="groupFacts" skip-form="true" paginate="false">
+                                    <field name="term"><default-field title="Policy"><display/></default-field></field>
+                                    <field name="value"><default-field title="Value"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="term"/></column>
+                                        <column><field-ref name="value"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Periods"/>
+                            <box-toolbar>
+                                <link url="." text="Preview the next periods" icon="sym_o_preview" link-type="anchor-button" btn-type="default"
+                                        parameter-map="{payrollGroupId:group.payrollGroupId, previewCount:6}"/>
+                                <container-dialog id="PreparePeriodsDialog" button-text="Prepare periods" icon="sym_o_event_available" width="480"
+                                        title="Prepare periods of ${group.groupName}" condition="group.canEdit">
+                                    <label type="p" text="The next periods after the last one prepared, each with its pay date. A period is prepared once."/>
+                                    <form-single name="PreparePeriods" transition="preparePeriods" map="{payrollGroupId:group.payrollGroupId, periodCount:3}">
+                                        <field name="payrollGroupId"><default-field><hidden/></default-field></field>
+                                        <field name="periodCount"><default-field title="How many" tooltip="1 to 24"><text-line size="4" input-type="number"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Prepare"><submit confirmation="Prepare the next periods of ${group.groupName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="Periods" list="periods" skip-form="true" paginate="false" condition="periods.length">
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="Processing"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromDateText"/><field-ref name="thruDateText"/></column>
+                                        <column><field-ref name="payDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!periods.length"
+                                        text="No period is prepared yet.${group.canEdit ? ' Prepare them with Prepare periods.' : ''}"/>
+                                <section name="NextPeriods" condition="nextPeriods.length">
+                                    <widgets>
+                                        <label type="p" style="q-pa-sm text-weight-medium" text="The next periods, not yet prepared"/>
+                                        <form-list name="NextPeriodList" list="nextPeriods" skip-form="true" paginate="false">
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fromDateText"/><field-ref name="thruDateText"/></column>
+                                                <column><field-ref name="payDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <label type="p" style="q-pa-sm text-negative" condition="previewError" text="${previewError}"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

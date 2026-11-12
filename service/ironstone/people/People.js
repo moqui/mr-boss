@@ -264,7 +264,14 @@ const linkPaths = [
     "Performance/Goals",
     "Performance/ReviewCycles",
     "Performance/ReviewForms/List",
-    "Performance/ReviewForms/FormDetail"
+    "Performance/ReviewForms/FormDetail",
+    // P22: payroll configuration (design §8): pay components, structures and groups, payroll's under Payroll beside Rates (the P22
+    // review's call of Nov 12, 2026)
+    "Payroll/PayComponents",
+    "Payroll/PayComponentDetail",
+    "Payroll/PayStructures",
+    "Payroll/PayStructureDetail",
+    "Payroll/PayGroups"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1149,6 +1156,105 @@ choiceSources.reviewColleagues = (userScope, term, selected, p) => {
     return Array.from(byParty.values())
 }
 
+// P22: payroll configuration's drop-downs, a payroll reader's (PAYROLL_VIEW) of one employer in scope (organizationPartyId): its pay
+// components in use (code and name) for a structure, its pay groups for a preview, its accounts (code and name) for a component's
+// mapping; and the registered localizations. No amount is in any of them.
+const payrollEmployer = (userScope, p) =>
+    userScope.capabilities.payrollView && p?.organizationPartyId && employerIds(userScope).includes(p.organizationPartyId)
+        ? p.organizationPartyId
+        : null
+const inUse = query => {
+    const factory = ec.entity.conditionFactory
+    return query.condition(
+        factory.makeCondition(
+            factory.makeCondition("thruDate", "is-null", null),
+            "or",
+            factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+        )
+    )
+}
+function searched(query, term, fields) {
+    if (!term) return query
+    const factory = ec.entity.conditionFactory
+    return query.condition(
+        factory.makeCondition(
+            fields.map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+            "or"
+        )
+    )
+}
+choiceSources.payComponents = (userScope, term, selected, p) => {
+    const organizationPartyId = payrollEmployer(userScope, p)
+    if (!organizationPartyId) return []
+    const C = "mantle.humanres.payroll.PayrollComponent"
+    const label = row => row.componentCode + " · " + (row.componentName || row.componentCode)
+    const rows = Array.from(
+        searched(inUse(find(C).condition("organizationPartyId", organizationPartyId)), term, ["componentCode", "componentName"])
+            .orderBy("componentCode")
+            .limit(choiceLimit)
+            .list()
+    )
+    return withSelected(
+        rows.map(row => ({value: row.payrollComponentId, label: label(row)})),
+        selected,
+        id => !!one(C, {payrollComponentId: id, organizationPartyId}),
+        id => label(one(C, {payrollComponentId: id}))
+    )
+}
+choiceSources.payGroups = (userScope, term, selected, p) => {
+    const organizationPartyId = payrollEmployer(userScope, p)
+    if (!organizationPartyId) return []
+    const G = "mantle.humanres.payroll.PayrollGroup"
+    const rows = Array.from(
+        searched(inUse(find(G).condition("organizationPartyId", organizationPartyId)), term, ["groupName"])
+            .orderBy("^groupName")
+            .limit(choiceLimit)
+            .list()
+    )
+    return withSelected(
+        rows.map(row => ({value: row.payrollGroupId, label: row.groupName || row.payrollGroupId})),
+        selected,
+        id => !!one(G, {payrollGroupId: id, organizationPartyId}),
+        id => one(G, {payrollGroupId: id})?.groupName || id
+    )
+}
+choiceSources.glAccounts = (userScope, term, selected, p) => {
+    const organizationPartyId = payrollEmployer(userScope, p)
+    if (!organizationPartyId) return []
+    const ownIds = Array.from(
+        find("mantle.ledger.account.GlAccountOrganization")
+            .condition("organizationPartyId", organizationPartyId)
+            .selectField("glAccountId")
+            .list()
+    ).map(row => row.glAccountId)
+    if (!ownIds.length) return []
+    const A = "mantle.ledger.account.GlAccount"
+    const label = row => [row.accountCode, row.accountName].filter(Boolean).join(" ")
+    const rows = Array.from(
+        searched(find(A).condition("glAccountId", "in", ownIds), term, ["accountCode", "accountName"])
+            .orderBy("accountCode")
+            .limit(choiceLimit)
+            .list()
+    )
+    return withSelected(
+        rows.map(row => ({value: row.glAccountId, label: label(row)})),
+        selected,
+        id => ownIds.includes(id),
+        id => label(one(A, {glAccountId: id}) || {accountCode: id})
+    )
+}
+choiceSources.payrollLocalizations = (userScope, term, selected) => {
+    if (!userScope.capabilities.payrollView) return []
+    const L = "mantle.humanres.payroll.PayrollLocalization"
+    const rows = Array.from(searched(find(L), term, ["localizationName"]).orderBy("localizationName").limit(choiceLimit).list())
+    return withSelected(
+        rows.map(row => ({value: row.payrollLocalizationId, label: row.localizationName || row.payrollLocalizationId})),
+        selected,
+        id => !!one(L, {payrollLocalizationId: id}),
+        id => one(L, {payrollLocalizationId: id})?.localizationName || id
+    )
+}
+
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown People choice " + p.choice)
@@ -1629,6 +1735,11 @@ function decisionUrl(row) {
     // P20: a review's finalizing, on the review's detail
     if (row.approvalKindEnumId === "PakReview")
         return reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(row.sourceId)
+    // P22 review: publishing a pay component's term or a pay structure, on the component's or the structure's detail
+    if (row.approvalKindEnumId === "PakPayrollConfig")
+        return row.sourceEntityName === "mantle.humanres.payroll.PayrollStructure"
+            ? "/qapps/People/Payroll/PayStructureDetail?payrollStructureId=" + encodeURIComponent(row.sourceId)
+            : "/qapps/People/Payroll/PayComponentDetail?payrollComponentId=" + encodeURIComponent(row.payrollComponentId || "")
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1660,8 +1771,12 @@ function today(p) {
             },
             values
         )
-    // the decisions are a decider's (PEOPLE_REQUEST_APPROVE), with a party to decide as
-    if (ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") && ec.user.userAccount?.partyId) {
+    // the decisions are a decider's (PEOPLE_REQUEST_APPROVE, or PAYROLL_APPROVE for payroll configuration: P22 review), with a
+    // party to decide as
+    if (
+        (ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") || ec.user.hasPermission("PAYROLL_APPROVE")) &&
+        ec.user.userAccount?.partyId
+    ) {
         const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
         for (const row of Array.from(found.dueWork || []))
             items.push(item({kind: "approval", title: row.title, url: decisionUrl(row)}))

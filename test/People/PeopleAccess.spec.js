@@ -32,7 +32,8 @@
 // (the directory reader refused with the same parameters, Services' schedule refused to Retail's HR), WorkingSchedules' one html
 // render (the HR officer's), the capability schedules. P10: Time & leave opened to the self-service employee by its own grant
 // (Payroll and Employees still refused them), Payroll the payroll groups' (the HR officer refused Rates; the Payroll capability;
-// the payroll operator's menu and the Time group), and the employee's context linking their own My time.
+// the payroll operator's menu and the Time group), and the employee's context linking their own My time. P22 review: the payroll
+// operator's Payroll group (Rates and payroll configuration) and the capability payrollConfigure (PAYROLL_CONFIGURE).
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -213,6 +214,10 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             if (JSON.stringify(performance.names) !== JSON.stringify(menu))
                 problems.push(`${label} Performance group: ${performance.status} ${performance.names}`)
         }
+        // P22 review: Payroll's Rates and payroll configuration, the payroll operator's
+        const payrollGroup = shell(users.payroll, true, "Payroll/Rates", "Payroll")
+        if (JSON.stringify(payrollGroup.names) !== JSON.stringify(ids.payrollGroupMenu))
+            problems.push(`the payroll operator's Payroll group: ${payrollGroup.status} ${payrollGroup.names}`)
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
@@ -247,6 +252,8 @@ const capabilityNames = [
     "payrollView",
     "payrollEdit",
     "payrollApprove",
+    // P22 review: payroll configuration (PAYROLL_CONFIGURE), the payroll operator's and the People administrator's
+    "payrollConfigure",
     // a read's employers every internal organization (PEOPLE_ALL_ORGANIZATIONS)
     "allOrganizations",
     // a reader of an employer, from the view capabilities
@@ -281,7 +288,7 @@ const capabilityUsers = [
         ]
     },
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
-    {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff", "payroll"]},
+    {user: users.payroll, granted: ["payrollView", "payrollEdit", "payrollConfigure", "staff", "payroll"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff", "payroll"]},
     {user: users.develop, granted: ["developView", "developEdit", "staff"]},
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},
@@ -291,6 +298,7 @@ const capabilityUsers = [
             "configure",
             "payrollView",
             "payrollEdit",
+            "payrollConfigure",
             "allOrganizations",
             "staff",
             "settings",

@@ -19,8 +19,11 @@ along with this software (see the LICENSE.md file). If not, see
     CostingPolicies; client rates and contractors' rates only to those who manage project money (TIME_ENTRY_RATE). The area is
     the payroll groups' (BOSS_PPL_PAYROLL: denied to the root user group, ALWAYS for BOSS_PEOPLE_PAYROLL and
     BOSS_PEOPLE_PAYROLL_APPROVE, and the People administrator and ADMIN through the root's ALWAYS). P15 adds InvoiceDetail out of the
-    menu: the shared InvoiceDetail in People's context, an expense claim's invoice read and reconciled by a reader of the claim, a holder of PEOPLE_EXPENSE_MANAGE (F19). Pay
-    runs, payslips, pay assignments, pay adjustments and the payroll exchange join with P22 to P28. -->
+    menu: the shared InvoiceDetail in People's context, an expense claim's invoice read and reconciled by a reader of the claim, a holder of PEOPLE_EXPENSE_MANAGE (F19). P22
+    (moved here from Settings by its review, the user's call of Nov 12, 2026): payroll configuration, Pay components, Pay structures
+    and Pay groups (menu 6 to 8; PayComponentDetail and PayStructureDetail out of the menu), screens of this directory, read with
+    PAYROLL_VIEW and changed with PAYROLL_EDIT and PAYROLL_CONFIGURE (Mantle's PayrollSetupServices check them), published on a
+    payroll approver's approval. Pay runs, payslips, pay assignments, pay adjustments and the payroll exchange join with P23 to P28. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="Rates">
