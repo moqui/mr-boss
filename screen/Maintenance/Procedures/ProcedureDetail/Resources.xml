@@ -13,9 +13,9 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- ProcedureDetail's Resources tab (design-maintenance §4 ProcessResources; impl-maintenance P6): the planned requirements by step: parts
-    (WorkEffortProduct, consumed), equipment needed (WorkEffortAssetNeeded) and skills (WorkEffortSkillStandard; the minimum skill level
-    joins with People's P18, impl-maintenance F75), each copied to the work made of the procedure. For an author: Add requirement and
-    Remove (store#ProcessRequirements). No cost. -->
+    (WorkEffortProduct, consumed), equipment needed (WorkEffortAssetNeeded) and skills (WorkEffortSkillStandard with People's least
+    level and, P8, the qualification type that proves it, which assignment checks), each copied to the work made of the procedure. For
+    an author: Add requirement and Remove (store#ProcessRequirements). No cost. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Resources" default-menu-index="3">
     <parameter name="workEffortId"/>
@@ -37,7 +37,9 @@ along with this software (see the LICENSE.md file). If not, see
                 stepName: stepNames[row.workEffortId] || 'The whole procedure',
                 kindText: {product: 'Part', asset: 'Equipment', skill: 'Skill'}[row.kind] || row.kind,
                 quantityText: row.quantity != null ? String(row.quantity) : '',
-                durationText: row.duration != null ? row.duration + ' h' : ''}))"/>
+                durationText: row.duration != null ? row.duration + ' h' : '',
+                termsText: row.kind == 'skill' ? [row.minimumSkillLevel != null ? 'Level ' + row.minimumSkillLevel : '',
+                    row.qualificationTypeEnumId ? 'proved by ' + (ec.entity.find('moqui.basic.Enumeration').condition('enumId', row.qualificationTypeEnumId).one()?.description || row.qualificationTypeEnumId) : ''].filter(Boolean).join(', ') : ''}))"/>
         <set field="newRequirement" from="{rootWorkEffortId: workEffortId, kind: 'product', estimatedQuantity: 1}"/>
     </actions>
     <widgets>
@@ -77,6 +79,26 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
+                                <!-- P8: a skill's least level and the qualification that proves it -->
+                                <field name="minimumSkillLevel">
+                                    <default-field title="At least" tooltip="Skills: the least level a technician is evaluated at">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumCode}" text="${enumCode} ${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="SkillLevel"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="qualificationTypeEnumId">
+                                    <default-field title="Proved by" tooltip="Skills: a qualification the technician must hold, verified and valid">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'qualificationTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
                                 <field name="estimatedQuantity">
                                     <default-field title="Quantity or people"><text-line size="6" input-type="number"/></default-field>
                                 </field>
@@ -92,6 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="stepName"><header-field title="Step"/><default-field><display/></default-field></field>
                             <field name="kindText"><header-field title="Kind"/><default-field><display/></default-field></field>
                             <field name="name"><header-field title="Requirement"/><default-field><display/></default-field></field>
+                            <field name="termsText"><header-field title="At least"/><default-field><display/></default-field></field>
                             <field name="quantityText" align="right"><header-field title="Quantity"/><default-field><display/></default-field></field>
                             <field name="durationText" align="right"><header-field title="Hours"/><default-field><display/></default-field></field>
                             <field name="remove">

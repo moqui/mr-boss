@@ -15,8 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Settings area of IronStone Maintenance (design-maintenance §9 Settings, §1.2; impl-maintenance P1), the Maintenance
     administrator's (BOSS_MNT_SETTINGS denies the root user group; BOSS_MAINTENANCE_ADMIN and ADMIN open it through the root), linked
     from Admin's settings index (maintenance.settings): SettingsHome, the landing; the work policy (MaintenanceSettings, P3, dated
-    from P18), Lookups and the setup Readiness (P18, the provider maintenance.readiness that Admin's Health shows too). Teams (P8)
-    joins with its phase. -->
+    from P18), Teams (P8: People's teams read only, their dispatch defaults), Lookups and the setup Readiness (P18, the provider
+    maintenance.readiness that Admin's Health shows too). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="20" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true"/>

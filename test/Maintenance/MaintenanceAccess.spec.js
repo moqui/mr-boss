@@ -22,7 +22,8 @@
 // message read under Comms' room check with the user's own filters, a record room of Retail's forklift refused: review R1), P18's equipment
 // import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
-// plan refused; the compliance a reader's, not a technician's or Retail's),
+// plan refused; the compliance a reader's, not a technician's or Retail's), P8's team defaults (the administrator's; the planner
+// refused, Retail's planner reads no Services team; Teams the administrator's tab),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1413,6 +1414,34 @@ feature(
             !r.plannerAreas.includes("MaintenanceCostReport")
             r.plannerTab != ""
             r.plannerReport != ""
+        }
+    }
+)
+
+// P8: a team's dispatch defaults are the settings editor's (Mantle's store#MaintenanceTeamDefaults), Retail's planner reads no Services
+// team, and Teams is the administrator's tab
+feature(
+    "a team's defaults are the administrator's: the planner is refused, Retail reads no Services team, Teams is not the planner's",
+    {
+        when() {
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal("mantle.work.MaintenanceSettingsServices." + service, parameters)
+                })
+            const team = {teamPartyId: ids.fieldTeamId}
+            return {
+                holder: as(users.admin, "store#MaintenanceTeamDefaults", Object.assign({intakeTag: "compressors"}, team)),
+                planner: as(users.planner, "store#MaintenanceTeamDefaults", Object.assign({intakeTag: "compressors"}, team)),
+                retail: as(users.retailPlanner, "find#MaintenanceTeams", team),
+                plannerTab: screenRefusal(users.planner, "Settings/Teams")
+            }
+        },
+        then(r) {
+            r.holder == ""
+            r.planner.includes("PERMISSION_DENIED")
+            r.retail.includes("RECORD_UNAVAILABLE")
+            r.plannerTab != ""
         }
     }
 )

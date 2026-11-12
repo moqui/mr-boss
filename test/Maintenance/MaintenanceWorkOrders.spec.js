@@ -5,7 +5,10 @@
 // offboarding listing a technician's open work orders under Maintenance's participant and not Projects'; and the owner contract
 // of "in maintenance" (F13, F49): Manufacturing's equipment read counts an AssetMaintenance in process, not a
 // planned work order. The lifecycle's rules are Mantle's MaintenanceWorkOrders and MaintenanceManagedWork; the golden walk is the
-// client's MaintenanceWorkOrdersWalk, the "usable when" the acceptance MaintenanceCorrectiveWalk.
+// client's MaintenanceWorkOrdersWalk, the "usable when" the acceptance MaintenanceCorrectiveWalk. P8: AssignSchedule's technicians
+// choice ranks the compressor oil service's people for its window (Owen, on leave that week, below Kenji; a technician is offered
+// the organization's people, unranked), with the bulk Assign and Schedule on WorkOrders' render and the qualification check on the
+// Work policy's; the dispatch rules are Mantle's MaintenanceDispatch.
 // Run: ./moq test mr-boss --spec MaintenanceWorkOrders
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib
@@ -76,6 +79,9 @@ feature(
             rendered.output.includes("Room 201 projector bracket loose")
             rendered.output.includes("New work order")
             rendered.output.includes("Unassigned")
+            // P8 (BulkWork): the selection assigns or schedules each work order on its own
+            rendered.output.includes("Assign the selected work orders")
+            rendered.output.includes("Schedule the selected work orders")
             // closed work is not listed by default
             !rendered.output.includes("Room 102 light flickers")
             unassigned.includes(ids.waitingOrderId) && unassigned.includes(ids.roomOrderId)
@@ -228,6 +234,35 @@ feature(
             policy.output.includes("Starts")
             // P11: the threshold's cost half, a policy field
             policy.output.includes("Approve planned work estimated up to")
+            // P8: the qualification check, a warning by default
+            policy.output.includes("A technician missing a required qualification")
         }
     }
 )
+
+feature("Assign and schedule ranks the team's technicians for the work's window: one on leave that week below the free ones", {
+    when() {
+        const choices = (user, parameters) =>
+            asUser(user, () =>
+                Array.from(
+                    invoke(
+                        "ironstone.maintenance.ContextServices.get#Choices",
+                        Object.assign({appRoot: "Maintenance", choice: "technicians"}, parameters)
+                    ).options || []
+                )
+            )
+        return {
+            // the field team chosen in the dialog: its members first, each ranked for the window
+            planner: choices(users.planner, {workEffortId: ids.plannedOrderId, teamPartyId: ids.fieldTeamId}),
+            technician: choices(users.tech, {workEffortId: ids.plannedOrderId})
+        }
+    },
+    then({planner, technician}) {
+        const at = partyId => planner.findIndex(option => option.value == partyId)
+        at(ids.qualifiedTechId) == 0 && at(ids.awayTechId) == 2
+        planner[at(ids.awayTechId)].label.includes("0 h free")
+        planner[at(ids.qualifiedTechId)].label.includes("h free")
+        technician.some(option => option.value == ids.qualifiedTechId)
+        !technician.some(option => String(option.label).includes("h free"))
+    }
+})

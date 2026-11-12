@@ -6,7 +6,8 @@
 // Health showing the provider to the administrator and not to a reader) with Readiness' one qvt render, and the equipment import
 // listed in Admin's Imports for a data operator who also holds MAINTENANCE_RESOURCE_VIEW and not for one without it. The import's
 // row rules are Mantle's MaintenanceImport; the access cases are MaintenanceAccess'; the "usable when" is the acceptance
-// MaintenanceSetupWalk.
+// MaintenanceSetupWalk. P8: Teams' one qvt render (People's compressor team read only, its lead and members with their dates, the
+// link to People's organization structure, its dispatch defaults).
 // Standalone over the demo: a spec-local organization for the policy and the readiness (the demo's organization keeps its
 // defaults for the other specs), and spec-local data operators.
 // Run: ./moq test mr-boss --spec MaintenanceSettings
@@ -323,3 +324,26 @@ feature(
         }
     }
 )
+
+feature("Teams shows People's team read only, with its lead, its dated members and its dispatch defaults, and says membership is People's", {
+    when() {
+        return asUser(users.admin, () =>
+            page("Settings/Teams", {
+                organizationPartyId: ids.organizationId,
+                teamPartyId: ids.fieldTeamId,
+                lastStandalone: "true"
+            })
+        )
+    },
+    then(rendered) {
+        rendered.errors.length == 0
+        rendered.output.includes("Compressor and field service")
+        rendered.output.includes("Facilities maintenance")
+        rendered.output.includes("Kenji Arakawa")
+        rendered.output.includes("Lead")
+        rendered.output.includes("Owen Castillo")
+        rendered.output.includes("Dispatch defaults")
+        rendered.output.includes("compressors")
+        rendered.output.includes("Being a member grants nothing in Maintenance")
+    }
+})

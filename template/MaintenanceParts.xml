@@ -32,7 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
                         organizationPartyId:(choiceOrganizationPartyId || null), assetId:(choiceAssetId || null),
                         facilityId:(choiceFacilityId || null), rootWorkEffortId:(choiceRootWorkEffortId || null),
-                        workEffortId:(choiceWorkEffortId || null), measurementTypeId:(choiceMeasurementTypeId || null)}"/>
+                        workEffortId:(choiceWorkEffortId || null), measurementTypeId:(choiceMeasurementTypeId || null),
+                        teamPartyId:(choiceTeamPartyId ?? null), windowFrom:(choiceWindowFrom || null), windowThru:(choiceWindowThru || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>

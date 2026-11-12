@@ -501,6 +501,7 @@ const resourceChoices = [
 // P6: the choices of procedures, answered to a reader of procedures or a planner or supervisor choosing one for work
 const procedureChoices = [
     "procedures",
+    "qualificationTypes",
     "procedureTypes",
     "procedureModels",
     "procedureClasses",
@@ -527,6 +528,7 @@ const workChoices = [
     "closurePolicies",
     "teams",
     "workPeople",
+    "technicians",
     "workFacilities",
     "openWorkOrders",
     "rejectReasons",
@@ -608,6 +610,27 @@ function workPeopleOptions(userScope, term, selected, p) {
             .conditionDate("fromDate", "thruDate", null)
             .count() > 0
     return withSelected(Array.from(byParty.values()).slice(0, choiceLimit), selected, member, partyLabel)
+}
+function technicianOptions(userScope, term, selected, p) {
+    const caps = userScope.capabilities
+    if (!p?.workEffortId || !(caps.plan || caps.supervise)) return workPeopleOptions(userScope, term, selected, p)
+    let found
+    try {
+        found = lib.probe("mantle.work.MaintenanceServices.find#MaintenanceCandidates", {
+            workEffortId: p.workEffortId,
+            teamPartyId: p.teamPartyId ?? null,
+            // a date-time field's empty mask ("____-__-__ __:__") or a partial entry is no window
+            windowFrom: /^\d{4}-\d{2}-\d{2}/.test(String(p.windowFrom || "")) ? p.windowFrom : null,
+            windowThru: /^\d{4}-\d{2}-\d{2}/.test(String(p.windowThru || "")) ? p.windowThru : null
+        })
+    } catch (error) {
+        return []
+    }
+    const lower = String(term || "").toLowerCase()
+    const options = Array.from(found.candidateList || [])
+        .filter(row => !lower || String(row.name).toLowerCase().includes(lower))
+        .map(row => ({value: row.partyId, label: row.label}))
+    return withSelected(options, selected, () => false, partyLabel)
 }
 const choiceSources = {
     // the organizations of the user's maintenance scope
@@ -782,6 +805,11 @@ const choiceSources = {
     // the teams and people work may be given to
     teams: (userScope, term, selected, p) => teamOptions(userScope, term, selected, p),
     workPeople: (userScope, term, selected, p) => workPeopleOptions(userScope, term, selected, p),
+    // P8: a work order's technicians ranked for its window and team (Mantle's find#MaintenanceCandidates: free hours, skill,
+    // People's qualification state, the team), each labelled so; a planner's or supervisor's, the organization's people otherwise
+    technicians: (userScope, term, selected, p) => technicianOptions(userScope, term, selected, p),
+    // P8: the qualification that proves a procedure step's skill (People's QualificationType values)
+    qualificationTypes: (userScope, term, selected) => enumOptions("QualificationType", term, selected),
     // a facility work is for: every facility of the scope (a room inside a building), through Mantle's scoped find
     workFacilities: (userScope, term, selected) => {
         if (!userScope.capabilities.resourceRead) return []

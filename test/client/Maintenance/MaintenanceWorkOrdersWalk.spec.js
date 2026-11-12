@@ -70,7 +70,8 @@ feature(
             waitForStatus(planner, "Approved")
             planner.getByRole("button", {name: "Assign and schedule", exact: true}).click()
             const dialog = planner.getByRole("dialog")
-            choose(planner, dialog, "Technicians", "Techn", /^Maintenance Technician$/)
+            // P8: each technician is offered with their free hours and team ("Maintenance Technician · 8 h free · team")
+            choose(planner, dialog, "Technicians", "Techn", /^Maintenance Technician( ·|$)/)
             dialog.getByRole("button", {name: "Save", exact: true}).click()
             waitForText(planner, "Maintenance Technician")
 

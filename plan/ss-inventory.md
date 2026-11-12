@@ -50,6 +50,7 @@ usl-inventory's People rows.
 
 **Maintenance P13 (Nov 12, 2026):** the baseline's ProductMaintenanceList is Plans and EquipmentDetail's plans pane: a plan of a piece of equipment follows its model's maintenance default (ProductMaintenance), whose values it takes where it names none, without enrolling every piece of equipment of the model; AddPlannedMaintenance stays P14's DueMaintenance (generation).
 
+**Maintenance P8 (Nov 12, 2026):** no baseline form maps to the dispatch (Teams, AssignSchedule's ranked technicians and BulkWork's Assign and Schedule are new, design-maintenance §3, §9 Teams); the run's AddPartyAssignForm and UpdateAssignForm rows below keep their Maintenance target, Overview's Assign and schedule, now with the ranked picker. Their Implemented in is in usl-inventory's MaintenanceServices and MaintenanceSettingsServices rows.
 **Maintenance P6 (Nov 12, 2026):** no baseline form is mapped to the procedures (Procedures and ProcedureDetail are new, design-maintenance §4); their Implemented in is in usl-inventory's ProcessServices rows. Product360's maintenance default (CreateProductMaintenance) takes only a procedure the applicability check admits.
 
 **People P13 (Nov 11, 2026):** no baseline form is mapped to Attendance, TimeImport or SelfService's Clock: attendance punches

@@ -81,7 +81,9 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{rootWorkEffortId:rootWorkEffortId, workEffortId:(stepWorkEffortId || null), kind:kind,
                         productId:(kind == 'asset' ? null : productId), assetProductId:(kind == 'asset' ? productId : null),
                         skillTypeEnumId:skillTypeEnumId, estimatedQuantity:estimatedQuantity, estimatedNumPeople:estimatedQuantity,
-                        estimatedDuration:estimatedDuration, remove:(remove == 'Y')}"/>
+                        estimatedDuration:estimatedDuration, remove:(remove == 'Y'),
+                        minimumSkillLevel:(kind == 'skill' ? minimumSkillLevel || null : null),
+                        qualificationTypeEnumId:(kind == 'skill' ? qualificationTypeEnumId || null : null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${remove == 'Y' ? 'Requirement removed' : 'Requirement saved'}</message></if>
         </actions>
         <default-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></default-response>
