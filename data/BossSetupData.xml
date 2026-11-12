@@ -5241,4 +5241,33 @@ along with this software (see the LICENSE.md file). If not, see
         assignees alone; a People user reaches its People box from there -->
     <moqui.security.user.NotificationTopic topic="PeopleTaskAssigned"
             linkTemplate="/qapps/Commons/Tasks/TaskDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-people P9 (design-people §6 WorkingSchedules and WorkingScheduleDetail, §7 HolidayCalendars, §1.2: a section with no
+        capability is omitted): Time & leave is HR's and the managers' for now (working schedules: HR's, and a manager's read of the
+        schedules their reports follow): denied to the root user group, opened to BOSS_PEOPLE_HR and BOSS_PEOPLE_MANAGER (ALWAYS, as
+        My team) and to the People administrator and ADMIN through their ALWAYS on the root. Holidays under it is HR's own editor (the
+        user's call of Nov 11 put HR's editors out of Settings): denied to the root user group, opened to the HR officers (Time's own
+        grant is not inheritable, so the managers' does not reach it). Mantle's
+        ScheduleServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and the employer again. The time screens of later
+        phases (timesheets, attendance, leave) widen the area with their own grants. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TIME" description="People time and leave">
+        <!-- the menu group's own render, not inherited (an inherited ALWAYS would open Holidays to the managers), and the working
+            schedules below it -->
+        <artifacts artifactName="component://mr-boss/screen/People/Time.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_HOLIDAYS" description="People holiday calendars">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/HolidayCalendars.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

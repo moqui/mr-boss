@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Working schedules (design-people §6 WorkingSchedules; style-guide §3.2 List; impl-people P9): the working weeks an HR
+    officer's employers keep, or a manager's reports follow, from mantle.humanres.ScheduleServices.find#Schedules: each with its
+    employer, time zone, weekly hours, holiday calendar, dates and state, and for HR how many employments follow it; each opens
+    WorkingScheduleDetail. An HR editor (PEOPLE_HR_EDIT) starts a dated schedule (New schedule, the one primary: name, employer, time
+    zone, holiday calendar and start; no five-day week or holiday calendar is assumed) and copies one (Copy, a new schedule with its
+    lines from the new start, never the same identity). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Working schedules" default-menu-index="2" menu-image="sym_o_calendar_view_week" menu-image-type="icon">
+    <parameter name="term"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="includeEnded"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new schedule, or a copy: Mantle checks the HR editor, the employer, the zone and the calendar -->
+    <transition name="storeSchedule">
+        <actions>
+            <service-call name="mantle.humanres.ScheduleServices.store#Schedule" out-map="stored"
+                    in-map="{organizationPartyId:(organizationPartyId || null), scheduleName:(scheduleName || null), timeZone:(timeZone || null),
+                        holidayCategoryId:(holidayCategoryId || null), description:(description || null), fromDate:(fromDate || null),
+                        copyFromScheduleId:(copyFromScheduleId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${copyFromScheduleId ? 'Schedule copied' : 'Schedule created'}</message></if>
+        </actions>
+        <default-response url="../WorkingScheduleDetail"><parameter name="workingScheduleId" from="stored?.workingScheduleId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.hrView &amp;&amp; can.hrEdit)"/>
+        <service-call name="mantle.humanres.ScheduleServices.find#Schedules" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), organizationPartyId:(organizationPartyId || null), includeEnded:(includeEnded == 'Y'),
+                    pageIndex:(pageIndex || 0), pageSize:(pageSize || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="schedulesFound" from="!!found?.schedules"/>
+        <set field="schedules" from="found?.schedules || []"/>
+        <set field="schedulesCount" from="found?.schedulesCount || 0"/>
+        <set field="schedulesPageIndex" from="found?.schedulesPageIndex || 0"/>
+        <set field="schedulesPageSize" from="found?.schedulesPageSize || 20"/>
+        <set field="schedulesPageMaxIndex" from="found?.schedulesPageMaxIndex || 0"/>
+        <set field="schedulesPageRangeLow" from="found?.schedulesPageRangeLow || 0"/>
+        <set field="schedulesPageRangeHigh" from="found?.schedulesPageRangeHigh || 0"/>
+        <set field="showAssigned" from="!!can.hrView"/>
+        <set field="filtered" from="!!(term || organizationPartyId || includeEnded == 'Y')"/>
+        <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null, includeEnded: includeEnded || null}"/>
+        <set field="newSchedule" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+                timeZone: ec.user.timeZone || null}"/>
+        <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Working schedules" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewScheduleDialog" button-text="New schedule" icon="sym_o_add" type="primary" width="720"
+                        title="Start a working schedule" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                    <label type="p" text="A schedule is an employer's working week in a time zone. Add its working hours on the schedule, then assign it to employees from a date."/>
+                    <form-single name="NewSchedule" transition="storeSchedule" map="newSchedule">
+                        <field name="scheduleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'employers', selected:newSchedule.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timeZone">
+                            <default-field title="Time zone" tooltip="The working hours are local times in this zone, and its days count in it">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'timeZones', selected:newSchedule.timeZone}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="holidayCategoryId">
+                            <default-field title="Holiday calendar" tooltip="Optional: the employer's or a shared calendar, whose holidays take the day">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                            parameter-map="{choice:'holidayCalendars'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                        <field name="description"><default-field title="Description"><text-line size="50"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create schedule"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="scheduleName"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-row><field-ref name="timeZone"/><field-ref name="holidayCategoryId"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="description"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!schedulesFound">
+            <widgets>
+                <label text="Working schedules are open to HR and to managers for their teams. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ScheduleRows" condition="schedulesFound">
+            <widgets>
+                <form-single name="FindSchedules" transition="." map="findValues">
+                    <field name="term"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeEnded"><default-field title="Ended too"><check><option key="Y" text=" "/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="term"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="includeEnded"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ScheduleList" list="schedules" skip-form="true" paginate="true" select-columns="true" condition="schedules.length">
+                            <field name="scheduleName">
+                                <default-field title="Schedule">
+                                    <link url="${sharedLinks['Time/WorkingScheduleDetail']}" text="${scheduleName}" link-type="anchor"
+                                            parameter-map="{workingScheduleId:workingScheduleId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="timeZone"><default-field title="Time zone"><display/></default-field></field>
+                            <field name="weeklyHours" align="right"><default-field title="Hours a week"><display format="#,##0.##"/></default-field></field>
+                            <field name="holidayCalendarName"><default-field title="Holiday calendar"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="assignedCount" align="right" hide="!showAssigned">
+                                <default-field title="Employees"><display format="#,##0"/></default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="canEdit" title="">
+                                    <container-dialog id="CopySchedule_${workingScheduleId}" button-text="Copy" icon="sym_o_content_copy" type="default"
+                                            width="560" title="Copy ${scheduleName}">
+                                        <label type="p" text="The copy is a new schedule of the same employer, with the working hours ${scheduleName} has on its start. Nobody who follows ${scheduleName} moves to it."/>
+                                        <form-single name="CopySchedule" transition="storeSchedule"
+                                                map="{copyFromScheduleId:workingScheduleId, scheduleName:scheduleName + ' (copy)', timeZone:timeZone}">
+                                            <field name="copyFromScheduleId"><default-field><hidden/></default-field></field>
+                                            <field name="scheduleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="timeZone">
+                                                <default-field title="Time zone">
+                                                    <drop-down>
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'timeZones', selected:timeZone}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Copy schedule"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="scheduleName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="weeklyHours"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!schedules.length &amp;&amp; filtered" text="No schedule matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!schedules.length &amp;&amp; !filtered"
+                                text="No working schedule is defined yet.${canEdit ? ' Start one with New schedule.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

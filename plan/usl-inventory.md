@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
-**Added** (People P1 to P7, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P9, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -567,6 +567,14 @@ the screens that call it.
 | ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7) |
 | ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7) |
 | IdentityServices | request#Provisioning, request#AccessEnd | People/Employees/HireEmployee; People/Employees/Employee360 | People's tx-commit rules (mr-boss service/PeopleLifecycle.secas.xml) and Employee360's Request access again, through ironstone.admin.LifecycleServices; Admin/Users/LifecycleDetail retries their waiting steps (People P7) |
+| ScheduleServices | find#Schedules | People/Time/WorkingSchedules | People/Time/WorkingSchedules (Schedules) (People P9) |
+| ScheduleServices | get#Schedule | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (the header, Week, Assignments) (People P9) |
+| ScheduleServices | store#Schedule | People/Time/WorkingSchedules; People/Time/WorkingScheduleDetail | People/Time/WorkingSchedules (NewSchedule, Copy); People/Time/WorkingScheduleDetail (Edit schedule, End schedule) (People P9) |
+| ScheduleServices | store#ScheduleLine | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Week: Add working hours, Change, End) (People P9) |
+| ScheduleServices | assign#Schedule | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Assign, End for employee; Employment.js, an EmploymentChange of kind EckSchedule) (People P9) |
+| ScheduleServices | get#Holidays | People/Time/HolidayCalendars (designed under People/Settings) | People/Time/HolidayCalendars (Calendars, Holidays) (People P9) |
+| ScheduleServices | store#HolidayCalendar, store#Holiday | People/Time/HolidayCalendars (designed under People/Settings) | People/Time/HolidayCalendars (New calendar, Rename; Add holiday, Change, Remove) (People P9) |
+| ScheduleServices | get#CapacityPreview | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Capacity preview) (People P9) |
 
 ## Ledger (81 services)
 
@@ -1531,7 +1539,7 @@ Existing capacity service mapped by the People design (Oct 31, 2026); source ver
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders |  |
+| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders | People/Time/WorkingScheduleDetail (Capacity preview, through ScheduleServices.get#CapacityPreview); Projects/Resources/PersonDetail and TeamPlanner and the timesheets' expected hours (get#TeamPlan, TimesheetServices.get#WeekDays), a People working schedule read first (People P9, F23) |
 
 ## General (2 services)
 
