@@ -2158,6 +2158,210 @@ stage 1.
   SelfService from Commons Home, sees their employment and requests, and opens their own Employee360;
   `people.manager` sees their reports and waiting decisions in MyTeam and no one else's.
 
+**Built Nov 11 (P8).** mr-mantle 733251b6, mr-boss (branch `ppl/p8`).
+- Checked first (the code over the plan): F28 (BossSetupData's settings-index grant, non-inheritable on the screen, its root's
+  context and its services), F46 (Commons/People out of the menu, Employee360 its only screen), F64 (Commons Home has no card
+  registry; `get#UserTodayItems` calls each `today-source` the shell gathers from the roots a user may open, and Home and the Today
+  panel take each service once by name), P6's per-employment lines (`linesOf`, `reportLines`), P7's `hiddenTaskIds`, protected
+  steps and the checklist roots with no owner, and P2's private-contact category. Also: every party reader that hides a personal
+  contact does so by `Party.privateOwnerUserId` (the entity filters, `find#Party`, contact books, Commons' contacts and contact page,
+  the palette, `search#Universal`, `get#RecordLinkInfo`, mail matching), a field with a foreign key to UserAccount; a checklist step's
+  assignment (`create#WorkEffortParty`) is told on the generic `WorkItemAssigned`, whose title names the task and its root
+  ("Offboarding: <person>", "Return … from <person>"), and `instantiate#WorkProcess` wrote the execution's policy after the
+  assignments; the shell filters a key by whether its screen opens; a service-call's authorization under a non-inheritable screen
+  grant is the service's own.
+- Mantle:
+  - `PeopleServices` over `Employees.js`, `Approvals.js`, `Checklists.js` and `People.js`: `get#SelfService` (`PEOPLE_SELF_SERVICE`,
+    no party parameter: the caller's current and coming employments with employer, title, department, manager and work location,
+    their emergency contacts, and the counts of their open requests and People tasks; `checkOnly` answers available false);
+    `find#MyRequests` (the caller's own PeopleApproval requests: kind, what, dates, state, who decides the step waiting or that no
+    one may yet, a refusal's reason; paged); `get#Team` (`PEOPLE_TEAM_VIEW`: the caller's live lines, one row per employment at an
+    employer the line is at, the public work identity with department, work location and Working or On leave, no employment id;
+    no manager or party parameter); `find#DueWork` (kinds `decision`: the requests whose step waiting the caller may decide now,
+    read from the notices sent to them and checked against the route; `noManager` and `checklistTask`: an HR reader's employees with
+    no manager and the open lifecycle tasks of the employers in scope; `myTask`: the caller's own open People tasks under P7's
+    `hiddenTaskIds`; a protected task about the caller never shown, as HR either; paged; `KIND_INVALID`, `PERMISSION_DENIED`,
+    `ORGANIZATION_DENIED`); `get#Home` adds `vacancies` (a position reader's, through `find#Positions`) and `decisions`, a count that
+    fails logged and left out;
+  - emergency contacts (the user's call on F80): `store#EmergencyContact` (the person or an HR editor of their employer, as
+    `store#PersonalInfo`; add, change at the contact's revision, end, never delete; `NAME_REQUIRED`, `PHONE_REQUIRED`,
+    `REVISION_CHANGED`, `CONTACT_LIMIT` at five), each contact a Person party with its `PhonePrimary` phone, linked by a dated
+    `PrtEmergencyContact` relationship (the relation in `relationshipName`), the party held by a new account `_PEOPLE_PRIVATE_`
+    (`privateOwnerUserId`; disabled, no password, no group) and owned by the employee, so no reader shows it to anyone; read with
+    `get#Employee360`'s personal information (the person and HR), each with its own revision;
+  - `PeopleTaskAssigned` (seeded in `PeopleLifecycleSetupData.xml` with `notify#PeopleTaskAssigned`; title "<who> assigned you a
+    People task, due <day>"): `TaskServices.notify#TaskAssigned` hands a task whose root's process policy is People's to it, so
+    `WorkItemAssigned` is never sent for People's work; `WorkProcesses.js instantiate` writes the execution's policy before pass two.
+- BOSS:
+  - `Shared/PeopleSelfService.xml`, mounted at `People/SelfService` and `Commons/People/SelfService` (owner contract, F46), out of
+    both menus: MySummary (the counts, My employment), My People tasks (each a Commons task), My requests, Emergency contacts, and
+    Open my employee record (primary; `get#SelfServiceContext`: People's Employee360 for a People user who reads them, else
+    Commons'); `template/PeopleEmergencyContacts.xml` (its transition and section, also in Employee360's Personal information,
+    changed wherever the personal information is: People's mount and Commons' own record);
+  - `People/MyTeam` (menu 2, `g m`; Team over `get#Team`, Decisions over `find#DueWork` with All approvals), the managers' by
+    `BOSS_PPL_TEAM` (DENY the root group, ALWAYS `BOSS_PEOPLE_MANAGER`); People.js's area `myTeam`;
+  - Home: Hire employee primary for HR and My self-service for a self-service user, Vacant positions and Decisions waiting cards,
+    DueWork over `find#DueWork` (paged, persons and tasks linked), and for a People user who reads no employer their decisions
+    waiting and My team;
+  - `BOSS_PPL_SELF` (F28): non-inheritable ALLOW for `BOSS_PEOPLE_SELF` on the shared screen (one location for both mounts), its
+    contact transition, `get#SharedContext` and `get#SelfServiceContext`, and `get#SelfService`, `find#MyRequests`, `find#DueWork`
+    and `store#EmergencyContact`; `get#SharedContext` answers such a user `{read: false, self: true}`, their employments and the
+    SelfService link alone; the launcher and every other People screen stay refused;
+  - Today (F64): `ironstone.people.ContextServices.get#TodayItems` (the decisions waiting, `PEOPLE_REQUEST_APPROVE`, each opening
+    PositionDetail or the person's Employee360) on the People root and on Commons' root (owner contract); the root's
+    `PeopleTaskAssigned` topic, its link (BossSetupData) Commons' TaskDetail;
+  - Commons Home (owner contract, design-drawers-commons §5): one card, My employment, over `get#SelfService` with `checkOnly`,
+    linking `Commons/People/SelfService`.
+- Specs: Mantle `PeopleScope` gains the manager's team case (0.28 s: the lines' employments at their employers, a report employed by
+  two at the line's alone, a supplied party and manager dropped, the reader refused; self-service the caller's own; no requests);
+  `PeopleDirectory` gains the emergency contacts (0.45 s: the person adds, HR of A changes at its revision, a stale revision, a
+  phone missing and the reader refused, the reader reads none, no party search or record link finds the party, ended and kept);
+  `PeopleApprovals`' activation feature checks the decision waiting on the head alone and the requester's own request waiting for
+  them (+0.1 s); `PeopleChecklists`' offboarding feature checks the assignee told on `PeopleTaskAssigned` and not `WorkItemAssigned`
+  with a title naming no one, the leaver's due work and self-service count leaving out the protected task and HR's reading it
+  (+0.1 s). BOSS `test/People/PeopleSelfService` (5 features, 0.43 s: a supplied partyId changing nothing, another person's contacts
+  refused; SelfService's one qvt render under Commons as the employee; Commons Home's People card in html; My team's one qvt render
+  as the manager, Leon and Kenji absent; Today's source for the manager and nothing for the employee); `PeopleAccess` gains one
+  feature (0.42 s: the employee opens SelfService under People, the one html render, and is refused Employees, My team and
+  Approvals; My team the manager's, the html render, the reader refused), its context feature the employee's own context and its
+  menu feature the manager's menu (`managerMenu`; `adminMenu` gains My team). Acceptance, written and not run:
+  `acceptance/People/PeopleSelfServiceUsable` (2 features); `PeopleFoundationWalk`'s manager Home check follows Home's new text.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleApprovals,
+  PeopleChecklists, PeopleEmployment, PeopleScheduledChanges, PeopleOrganization, PeoplePositions, WorkProcess, UserProvisioning,
+  HumanResServices, WorkMyTasks, WorkProjectItems, WorkProjectServices, CommonsToday, CalendarServices, Dav, RecordLinks,
+  RecordVisibility, UniversalSearch, ContactBooks, PartyServices, WorkProjectHub and SupportCases 206 of 206 (mr-mantle 39.0 s),
+  PeopleChecklists 3 of 3 again after its last check; BOSS PeopleSelfService, PeopleAccess, PeopleEmployees, PeopleHire,
+  PeopleLifecycle, PeopleApprovals, PeopleOrganization, PeoplePositions, CommonsSettings, TodayPanel, Tasks, QuickCreate,
+  Notifications, Contacts, AdminCapabilities, AdminRegistries, AdminLifecycle, AdminUsers, AdminAccess, AdminGroups, ProjectsAccess,
+  AppOrganizationFilters, InsightsRecords, InsightsAccess, Resources, Chatter, RecordFiles, WorkItemDetail and CommerceAccess 277 of
+  277 (mr-boss 40.8 s), then PeopleSelfService, PeopleAccess, WorkItems and Projects 34 of 34; the client walk PeopleHireWalk 1 of 1
+  (7.1 s). `moqui lint --screens`: 135 flagged sites as before, none in the screens P8 touched, no new TUI worklist entry. Prettier
+  clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People rows (`get#SelfService`, `find#MyRequests`, `get#Team`, `find#DueWork`,
+  `store#EmergencyContact`, `notify#PeopleTaskAssigned`; `get#Home`'s counts); ss-inventory's P8 note (no baseline form maps to
+  SelfService, MyTeam or Home's due work; the emergency contacts are People's own record).
+- Design edits: design-people (header; §1.2 the menu; §1.4 Today and the topic; §3 Home, MyTeam and SelfService as built; §4
+  Employee360's emergency contacts); design-drawers-commons (header; §5 Home's People card and SelfService, owner contract).
+- Findings (provisional, numbered by the lead):
+  - the emergency contact's party is hidden by a new system account, `_PEOPLE_PRIVATE_`, as its `privateOwnerUserId` (the field
+    has a foreign key to UserAccount, and the employee may have no account); an ADMIN user sees the account in Admin's users, as
+    `_EDGE_` and `_AGENT_ASSIST_`. A party-level private flag would need a Mantle entity change and every reader's condition;
+  - before P8 a checklist step's or return task's assignee was told on `WorkItemAssigned` with "Offboarding: <person>" or "Return …
+    from <person>" in the title, a lock-screen leak of a separation (P7 left it); P8's topic replaces it for People's work;
+  - the decisions waiting are read from the notices sent to the user (up to 200, newest first), each checked against its route now: a
+    request rerouted to the user without a notice is not listed until one is sent (P5's notify sends one on every reroute);
+  - My team lists direct reports only (the expansion of the hierarchy within team scope, design §3, is later); Remind missing time
+    waits on P10's timesheets;
+  - My requests holds only the People approval requests the user asked for: a plain employee has none until leave (P12) and claims
+    (P15); a change about them that HR asked is not theirs to see;
+  - Today's People source answers decisions only, to `PEOPLE_REQUEST_APPROVE`; its self items (leave starting, a qualification
+    expiring) come with P12 and P18, so "nothing without `PEOPLE_SELF_SERVICE`" holds trivially now; a decision's link opens People's
+    screens, which a decider without the People root (a ParPerson approver who is only a self-service employee) cannot open, though
+    the tray and Commons' Notifications decide it;
+  - the self-service employee who opens `People/SelfService` gets People's frame with an empty menu (the launcher hides People);
+    Commons' mount is the one linked;
+  - the demo manager (`people.manager`, Hannah) has no self-service: the groups are not nested, so an employee who manages needs
+    `BOSS_PEOPLE_SELF` too (a hire's default proposal gives it);
+  - Home's Vacant positions reads `find#Positions` for a count, which builds every position row in reach up to its cap.
+- For the lead:
+  - budget share: mr-mantle about 0.95 s (PeopleScope's team feature 0.28, PeopleDirectory's contacts 0.45, PeopleApprovals' and
+    PeopleChecklists' checks about 0.2); mr-boss about 0.85 s (PeopleSelfService 0.43, PeopleAccess's feature 0.42); the client walk
+    unchanged (7.1 s);
+  - merge hot spots: mr-mantle `Employees.js` (personalOf, the operations table, the appended functions), `People.js` (homeCounts,
+    home's loop, dueWork, the exports), `Approvals.js` (the appended section, operations, exports), `Checklists.js`
+    (lifecycleTasks, exports), `WorkProcesses.js` (instantiate's policy write), `TaskServices.xml` (`notify#TaskAssigned`),
+    `PeopleServices.xml` (header, get#Home, get#Employee360, appended services), `PeopleLifecycleSetupData.xml` (appended); mr-boss
+    `BossSetupData.xml` (appended), `People.js` (areas, linkPaths, sharedContext, the appended functions and operations),
+    `ContextServices.xml` (appended), `screen/People.xml` (subscreens, keymap, providers), `People/Home.xml`, `Shared/Employee360.xml`,
+    `Commons.xml`, `Commons/Home.xml`, `Commons/People.xml`, `PeopleSpecLib.js` (menus), `PeopleAccess.spec.js`, the inventories,
+    design-people's header, §1.2, §1.4, §3, §4 and design-drawers-commons §5;
+  - gate 1: the acceptance tests to run with the full suites are PeopleSelfServiceUsable (new) and PeopleFoundationWalk (its
+    manager Home check changed; AGENTS.md asks a changed acceptance test to be run, the brief not to);
+  - the user's call: whether an emergency contact's party may be held by the `_PEOPLE_PRIVATE_` account (built) or wants a
+    party-level private flag.
+
+**Review Nov 11 (P8).** A fresh review of `git diff master...ppl/p8` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §3 (Home, MyTeam, SelfService), §1.2, §1.4, design-drawers-commons §5 and F28, F46, F64, F80, with self scope, the self grant,
+the team and decisions, protected tasks and the emergency contacts' privacy first; the user's call of Nov 11 (§4) recorded; fixes
+committed apart per repository ("People P8 review: …"; mr-mantle 0dc6354c).
+- Checked and found sound:
+  - Self scope: `get#SelfService`, `find#MyRequests` and `find#DueWork` take no party or user (a supplied `partyId` is dropped:
+    PeopleSelfService's first feature); `store#EmergencyContact` admits the person (`PEOPLE_SELF_SERVICE`, own party) or an HR editor
+    of an employer of theirs through `personAccess`, a contact of another person refused as missing; `get#SelfServiceContext` and
+    the self branch of `get#SharedContext` answer the user's own party and employments and links alone.
+  - The self grant (`BOSS_PPL_SELF`, non-inheritable), probed as `people.employee` with authorization on: SelfService opens under
+    People and Commons; People's Home and root, Employees, Employee360 (their own too), Settings, Staffing, Approvals, MyTeam and
+    HireEmployee are refused by screen, through the web root and by transition (Employee360's `storeEmergencyContact` and
+    `storePersonalInfo` under People refused before they run); the self-service transition with Ines's `partyId` is refused by the
+    service and writes nothing; `get#Team`, `find#Employees`, `get#Employee360`, `get#Home`, `get#Scope`, `find#Positions`, People's
+    `search#Records` and `get#TodayItems` called directly are refused by authorization; `find#DueWork` answers `myTask` only.
+  - `get#Team` reads the caller's live lines (`scopeOf().reportLines`, `linesOf` now) and only the employments at the line's
+    employers, no employment id, private contact or pay; `waitingFor` (the decisions) lists only requests pending now whose current
+    step the caller is an approver of, by user and party, on a route that already leaves out the requester, the subject and the
+    deciders of other steps (`resolve`), so every row is one `recordDecision` would accept.
+  - Protected tasks: `myTasks` applies `hiddenTaskIds`; HR's `checklistTask` leaves out the reader's own protected work; the
+    self-service count is `myTaskCount`. The PeopleTaskAssigned title names who assigned and the due day only (the email template's
+    subject is the title, its body the message's three fields).
+  - `notify#TaskAssigned` hands a task to People only when its root's process policy is `WppPeopleChecklist`; other work keeps
+    `WorkItemAssigned` unchanged. `instantiate#WorkProcess` writing the policy before pass two changes nothing for a guarding policy:
+    pass two writes by entity-auto services, which `check#ManagedWork` does not guard. WorkProjectItems, WorkProcess, WorkMyTasks
+    (Mantle) and WorkItems, Projects, Tasks, CustomerServiceCases and CustomerServiceAssignment (BOSS) pass.
+  - Emergency contacts' party, probed as HR, the manager, the reader, the People administrator, an ADMIN user and an Insights
+    administrator: Commons' ContactDetail of the party and of the employee (relationships go through `visibleParty`), the Contacts
+    list searched by the contact's name, Commons' Employee360, Chatter's `get#RecordInfo` and `get#RecordLinkInfo` show nothing of
+    it; People's Employee360 shows it to HR of the employer and ADMIN only. `search#Universal` and `find#Party` filter
+    `privateOwnerUserId` in the query.
+  - The Commons root's Today source answers nothing without `PEOPLE_REQUEST_APPROVE` or for another user's Today; Commons Home's
+    card asks `get#SelfService` with `checkOnly` and links `Commons/People/SelfService`, out of the menu.
+- Fixes:
+  - **R1 (high, install).** Mantle seeded the `_PEOPLE_PRIVATE_` account in `PeopleLifecycleSetupData.xml` (type seed). The Login
+    screen and `UserServices.create#InitialAdminAccount` offer a fresh install its first administrator only while no account exists
+    but `_NA_`, `_EDGE_` and the agents' chat users, so a production install with Mantle's seed could no longer create its first
+    administrator. The account (the user's call: kept) is now made with the first emergency contact, in its own transaction
+    (`Employees.js privateHolderId`; disabled, no password, no group), and is no longer seeded. Spec: PeopleDirectory's contacts
+    feature checks the account disabled with no password and no group (the seeded test database cannot show the first-run case).
+  - **R2 (medium, integrity and access).** `emergencyLinks` took any current `PrtEmergencyContact` relationship from the person,
+    and Commons' `add#ContactRelationship` writes any relationship type (with `reverse`, from any party the user sees to their own
+    personal contact; a contact administrator from an employee to any directory person). Such a row put a directory party or
+    someone's personal contact in the person's emergency contacts, and `store#EmergencyContact` then let the person or HR rename that
+    party and replace its primary phone with authorization off. Only a party held by `_PEOPLE_PRIVATE_` and owned by the person is
+    now an emergency contact. Spec: PeopleDirectory's contacts feature (a row to a directory person is not listed and changing it
+    is RECORD_UNAVAILABLE, the party unchanged); it fails on the code as built.
+  - **R3 (the worker's finding, the lead's instruction).** The demo manager (`people.manager`, Hannah) is in `BOSS_PEOPLE_SELF`
+    too (BossUsersDemoData; groups are not nested). PeopleAccess's capabilities table gives the manager `self`.
+  - PeopleAccess's self-service feature now also checks the employee refused People's Home and their own Employee360 under People,
+    Employee360's emergency-contact transition under People, and `get#Team`, `get#Employee360` and `get#Home` called directly.
+- Provisional findings (for the lead to number):
+  - Commons' Add a relationship still offers the Emergency Contact type (it offers every `PartyRelationshipType`); a row made there is
+    inert since R2 but visible as a relationship to whoever sees both parties. Leaving the type out of Commons' choice is an owner
+    contract on ContactServices;
+  - an offboarding step of the Employee role assigned to the leaver (P7's finding) also sends them a PeopleTaskAssigned notice
+    (neutral title) for a task they cannot open: at the assignment, inside `instantiate#WorkProcess`, the step's protection and the
+    execution's `EmploymentChecklist` are not yet written, so `hiddenTaskIds` cannot tell;
+  - an ADMIN user reads emergency contacts in People's Employee360 (ADMIN holds every People permission) and in Mantle's ledger
+    party lookups (`EntityLib` shows personal contacts to a system administrator), as every personal contact;
+  - two first emergency contacts at once on a fresh install: the second's account create fails in its own transaction and is read
+    again, so neither fails unless the account cannot be made at all.
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleApprovals,
+  PeopleChecklists, PeopleEmployment, PeopleScheduledChanges, WorkProcess, WorkProjectItems, WorkMyTasks, RecordLinks,
+  RecordVisibility, ContactBooks, PartyServices, UniversalSearch, HumanResServices, UserProvisioning, UserLifecycle and CommonsToday
+  147 of 147 (48.5 s; mr-mantle 24.8 s of features; PeopleDirectory's contacts feature 0.50 s); BOSS PeopleAccess, PeopleSelfService,
+  PeopleEmployees, PeopleLifecycle, PeopleHire, PeopleApprovals, PeopleOrganization, PeoplePositions, WorkItems, Projects,
+  CustomerServiceAssignment, CustomerServiceCases, Contacts, AdminUsers, AdminGroups, AdminCapabilities, AdminLifecycle, TodayPanel,
+  Tasks, CommonsSettings, Notifications, InsightsRecords and Chatter with their dependencies 204 of 204 (50.5 s; mr-boss 27.7 s of
+  features; PeopleAccess's P8 feature 0.54 s). The R2 check fails on the code as built. Prettier clean on the changed JavaScript. No
+  screen changed: `moqui lint --screens` not run. Not run: `./moq test-apps`, the acceptance suite (the user's call).
+- For the lead:
+  - budget share: mr-mantle about +0.05 s over the Built note (PeopleDirectory's contacts feature); mr-boss about +0.15 s
+    (PeopleAccess's P8 feature 0.54 s);
+  - merge hot spots beside the Built note's: mr-mantle `Employees.js` (emergencyLinks, privateHolderId), `PeopleLifecycleSetupData.xml`
+    (the account no longer seeded), `PeopleDirectory.spec.js`; mr-boss `BossUsersDemoData.xml` (the manager's membership),
+    `PeopleAccess.spec.js`, design-people §4;
+  - the user's call is in §4: the emergency contacts stay hidden through the disabled system account `_PEOPLE_PRIVATE_` as
+    `privateOwnerUserId`, not a party-level flag (made with the first contact since R1);
+  - gate 1's acceptance tests are the Built note's (PeopleSelfServiceUsable, PeopleFoundationWalk); the demo manager's new
+    self-service membership leaves their checks as written.
+
 ### P9 — Working schedules, holidays and capacity
 
 Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCalendars; PE-06.
@@ -2749,6 +2953,7 @@ the owner's design.
 | Nov 11, 2026 | A hire's provisioning still waits for an identity operator (Admin's rule stands), and the request notifies the employer's identity operators through a notification topic, `IdentityOperatorRequest`, seeded in Mantle with the service that owns it (`IdentityServices.request#Provisioning`; `request#AccessEnd` the same), its title naming only the person and employer an operator sees on the operation, so they act from the tray or LifecycleOperations | The user's call on P7's question (built in P7's review, R8; design-admin §4.1). BossSetupData links it to LifecycleDetail |
 | Nov 11, 2026 | An equipment return task is assigned to the leaver's manager at that employment (from the assignment the separation ends), falling back to the HR officer who asked for the separation | The user's call on P7's question (built in P7's review, R9; design-people §4). An offboarding step of the Manager role is assigned the same way |
 | Nov 11, 2026 | A scheduled (later-dated) separation is withdrawable by HR like the other scheduled changes: no access end and no return tasks follow, and its checklist tasks are cancelled | The user's call on P7's question (built in P7's review, R10, with a spec; design-people §4, design-admin §4.1) |
+| Nov 11, 2026 | Emergency contacts are hidden through the disabled system account `_PEOPLE_PRIVATE_` as each contact party's `privateOwnerUserId` (no one signs in as it, it holds no group, so every reader that hides a personal contact shows the party to no one, and People's services show it to the person and HR of their employer), not a party-level private flag | The user's call on P8's question (built in P8; P8's review makes the account with the first contact rather than seeding it, R1) |
 
 ## 5. Open questions
 

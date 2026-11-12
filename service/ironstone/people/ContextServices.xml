@@ -28,9 +28,11 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="SharedContext" allow-remote="false">
         <description>Check that the user may open People and resolve their scope and the app's routes: capabilities (the People
             and payroll permissions, and the areas), the employers a staff reader sees as options and whether they are every
-            one, the units under them, the user's own party and current employments, and the links. Refuses a user without
-            People (PEOPLE_UNAVAILABLE), a Projects client contact, a PASS public account and a self-service employee among
-            them, and another app root (PEOPLE_CONTEXT). Pay values are never part of it.</description>
+            one, the units under them, the user's own party and current employments, and the links. A self-service employee
+            without People (P8: their own grant on the self-service screen) gets a context of their own: the capability self,
+            their own party and employments, and the self-service link. Refuses a user without People (PEOPLE_UNAVAILABLE), a
+            Projects client contact and a PASS public account among them, and another app root (PEOPLE_CONTEXT). Pay values are
+            never part of it.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <out-parameters>
             <parameter name="capabilities" type="Map"/>
@@ -221,6 +223,50 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="recordList" from="found.recordList"/>
             <set field="card" from="found.card"/>
             <set field="optionList" from="found.optionList"/>
+        </actions>
+    </service>
+
+    <!-- ===== P8: People's Today source and the self-service context ===== -->
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>People's Today source (design §1.4 Today; People.xml and Commons.xml shell-providers, F64; get#UserTodayItems
+            calls it): the People decisions waiting on the user (mantle.humanres.PeopleServices.find#DueWork's decision: a request
+            whose step waiting they may decide now, PEOPLE_REQUEST_APPROVE), each opening where it is decided (PositionDetail, the
+            person's Employee360). A user without PEOPLE_REQUEST_APPROVE, and another user's Today, get none. Declared on both
+            roots, it is taken once.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('today', context)"/>
+            <set field="items" from="found.items"/>
+            <set field="label" from="found.label"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SelfServiceContext" allow-remote="false">
+        <description>The links of Shared/PeopleSelfService under the app that mounts it (People or Commons; design §3 SelfService):
+            the user's own employee record (People's Employee360 for a People user who reads it, else Commons'), and for a People
+            user People's Approvals and Home. Refuses another app root (PEOPLE_CONTEXT). Grants nothing: get#SelfService checks the
+            user.</description>
+        <implements service="ironstone.people.ContextServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="employee360Url"/>
+            <parameter name="approvalsUrl"/>
+            <parameter name="peopleHomeUrl"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
+            <set field="appRoot" from="found.appRoot"/>
+            <set field="employee360Url" from="found.employee360Url"/>
+            <set field="approvalsUrl" from="found.approvalsUrl"/>
+            <set field="peopleHomeUrl" from="found.peopleHomeUrl"/>
         </actions>
     </service>
 </services>

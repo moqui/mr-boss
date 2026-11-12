@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › My team (design-people §3 MyTeam, §1.2; style-guide §3.1 Landing; impl-people P8): a manager's current reports and the
+    decisions waiting on them. Team: mantle.humanres.PeopleServices.get#Team, the people of the manager's live reporting lines, one
+    row per employment at an employer the line is at (never a report's employment elsewhere), their public work identity with the
+    department, work location and whether they work or are on leave; each opens their Employee360. Decisions: find#DueWork's
+    decision, the People requests whose step waiting the manager may decide now, each opening where it is decided (PositionDetail,
+    the person's Employee360), whose decision services recheck the approver and the source. The managers' area (BOSS_PPL_TEAM:
+    denied to the root user group, ALWAYS for BOSS_PEOPLE_MANAGER, and the People administrator and ADMIN through the root's
+    ALWAYS). The schedule and who is out (P9, P12), missing time and "Remind missing time" (P10) and reviews due (P20) join with
+    their phases. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="My team" default-menu-index="2" menu-image="sym_o_diversity_3" menu-image-type="icon">
+    <actions>
+        <service-call name="mantle.humanres.PeopleServices.get#Team" out-map="teamFound" transaction="force-new" ignore-error="true"/>
+        <set field="teamAvailable" from="teamFound?.team != null"/>
+        <if condition="people.capabilities.requestApprove">
+            <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="decisionsFound" transaction="force-new"
+                    ignore-error="true" in-map="{kinds:'decision', pageSize:50}"/>
+        </if>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            teamRows = Array.from(teamFound?.team || [])
+            availabilityColors = {working: 'positive', leave: 'warning'}
+            // each decision opens where it is decided: a position's activation on PositionDetail, an employment change on the
+            // person's record
+            decisionRows = Array.from(decisionsFound?.dueWork || []).map(row => Object.assign({}, row,
+                row.approvalKindEnumId == 'PakPosition'
+                    ? {openPath: sharedLinks['Staffing/PositionDetail'], openParameters: {emplPositionId: row.sourceId}}
+                    : row.partyId ? {openPath: sharedLinks['Employees/Employee360'], openParameters: {partyId: row.partyId}}
+                    : {openPath: sharedLinks['Approvals'], openParameters: {}}))
+            decisionsMoreText = decisionsFound && decisionsFound.dueWorkCount > decisionRows.length
+                ? 'The first ' + decisionRows.length + ' of ' + decisionsFound.dueWorkCount + '.' : ''
+        ]]></script>
+    </actions>
+    <widgets>
+        <label text="My team" type="h5"/>
+        <section name="TeamMissing" condition="!teamAvailable">
+            <widgets>
+                <label text="My team shows the people who report to you. It is not available to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Team" condition="teamAvailable">
+            <widgets>
+                <container-box>
+                    <box-header title="Team"/>
+                    <box-body-nopad>
+                        <form-list name="TeamRows" list="teamRows" skip-form="true" paginate="false" condition="teamRows.length">
+                            <field name="personName">
+                                <default-field title="Person">
+                                    <link url="${sharedLinks['Employees/Employee360']}" text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
+                                            link-type="anchor" parameter-map="{partyId:partyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
+                            <field name="availabilityText">
+                                <default-field title="Now">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${availabilityColors[availability] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(availabilityText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: availabilityText})}]]></text>
+                                        <text type="html">${availabilityText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="jobTitle"/></column>
+                                <column><field-ref name="availabilityText"/><field-ref name="workPhone"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No one reports to you now." type="p" style="m-muted q-pa-md" condition="!teamRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Decisions" condition="people.capabilities.requestApprove">
+            <widgets>
+                <container-box>
+                    <box-header title="Decisions waiting on you"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Approvals']}" link-type="anchor" text="All approvals"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="DecisionRows" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
+                            <field name="title">
+                                <default-field title="Decision">
+                                    <link url="${openPath}" text="${title}" link-type="anchor" parameter-map="openParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="dueText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="assigneeText"><default-field title="Step"><display/></default-field></field>
+                            <field name="whenText"><default-field title="Asked"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="whenText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="${decisionsMoreText}" type="p" style="text-caption m-muted q-px-md" condition="decisionsMoreText"/>
+                        <label text="No decision waits on you." type="p" style="m-muted q-pa-md" condition="!decisionRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

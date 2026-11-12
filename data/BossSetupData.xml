@@ -5206,4 +5206,39 @@ along with this software (see the LICENSE.md file). If not, see
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/></authz>
     </artifactGroups>
+    <!-- impl-people P8 (design-people §1.1, §3 SelfService; F28): a self-service employee opens their own self-service without the
+        People launcher, as every BOSS user opens Admin's settings index: a non-inheritable ALLOW on the shared self-service screen
+        (one location for both mounts, People/SelfService and Commons/People/SelfService), its emergency contact transition, the
+        People root's context (which answers such a user their own employments and the self-service link, and nothing else) and the
+        Mantle services the screen calls, each checking PEOPLE_SELF_SERVICE and the caller's own party itself. The People root and
+        every other People screen and service still refuse them (an inheritable grant here would open what is below it). -->
+    <artifactGroups artifactGroupId="BOSS_PPL_SELF" description="People self-service for employees without the launcher">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/storeEmergencyContact"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="ironstone\.people\.ContextServices\.get#(SharedContext|SelfServiceContext)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- impl-people P8 (design-people §3 MyTeam, §1.2: a section with no capability is omitted): My team is the managers': denied
+        to the root user group, opened to BOSS_PEOPLE_MANAGER (ALWAYS, as the HR officers' wizards) and to the People administrator
+        and ADMIN through their ALWAYS on the root. Mantle's get#Team checks PEOPLE_TEAM_VIEW and the caller's own lines again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TEAM" description="People my team">
+        <artifacts artifactName="component://mr-boss/screen/People/MyTeam.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TEAM_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TEAM_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-people P8: a People task assigned (Mantle's PeopleTaskAssigned topic, a checklist step or an equipment return, its title
+        naming nothing private) opens the task in Commons, which every BOSS user opens and which shows a protected task to its
+        assignees alone; a People user reaches its People box from there -->
+    <moqui.security.user.NotificationTopic topic="PeopleTaskAssigned"
+            linkTemplate="/qapps/Commons/Tasks/TaskDetail?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

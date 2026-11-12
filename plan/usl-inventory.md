@@ -503,7 +503,7 @@ the screens that call it.
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | PeopleServices | get#Scope | People | People (the root, through ironstone.people.ContextServices); Projects/Resources/PersonDetail and Admin/Users/UserDetail (the Employee360 link, get#Employee360Link) (People P1, P2) |
-| PeopleServices | get#Home | People/Home | People/Home (People P1) |
+| PeopleServices | get#Home | People/Home | People/Home (People P1; P8: the vacancies and decisions waiting counts) |
 | PeopleServices | get#Readiness | People/Settings | People/Settings/SettingsHome; Admin/Operations/Health (the readiness registry, people.setup) (People P1) |
 | PeopleServices | find#Employees | People/Employees | People/Employees/List (and its CSV export); the People palette's directory and the Person record-lookup (ironstone.people.ContextServices search#Records, lookup#Records) (People P2) |
 | PeopleServices | get#Employee360 | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360; Insights/Records/Employee360 (through get#Employee360Context) (People P2) |
@@ -558,6 +558,12 @@ the screens that call it.
 | PeopleServices | complete#ReturnTasks | (Mantle's rule on an AssetPartyAssignment's end) | none: an EECA, whoever ends the holding (People P7) |
 | PeopleServices | note#AccessRequestFailure | People/Employees/Employee360 | none directly: ironstone.admin.LifecycleServices request#Provisioning and request#AccessEnd note a failure on the change, Employee360 shows it with Request access again (People P7) |
 | PeopleServices | validate#EmployeeImportRow, apply#EmployeeImportRow, find#EmployeeImportScopes | People/Employees/EmployeeImport | People/Employees/EmployeeImport (Shared/DataImport for the employees target); Admin/Data/Imports (People P7) |
+| PeopleServices | get#SelfService | People/SelfService; Commons/People/SelfService | Shared/PeopleSelfService at People/SelfService and Commons/People/SelfService (MySummary, the counts); Commons/Home (People's card, checkOnly) (People P8) |
+| PeopleServices | find#MyRequests | People/SelfService | Shared/PeopleSelfService (My requests) (People P8) |
+| PeopleServices | get#Team | People/MyTeam | People/MyTeam (Team) (People P8) |
+| PeopleServices | find#DueWork | People/Home; People/MyTeam | People/Home (DueWork: no manager and lifecycle tasks; a manager's decisions count); People/MyTeam (Decisions); Shared/PeopleSelfService (My People tasks); ironstone.people.ContextServices.get#TodayItems (Today's decisions waiting, on the People and Commons roots) (People P8) |
+| PeopleServices | store#EmergencyContact | People/Employees/Employee360; People/SelfService | People/Employees/Employee360 and Commons/People/Employee360 (Personal information's emergency contacts); Shared/PeopleSelfService (Emergency contacts) (template/PeopleEmergencyContacts.xml) (People P8) |
+| PeopleServices | notify#PeopleTaskAssigned | (TaskServices.notify#TaskAssigned for People's lifecycle work) | none: the PeopleTaskAssigned notice, opening the task in Commons (People P8) |
 | ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7) |
 | ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7) |
 | IdentityServices | request#Provisioning, request#AccessEnd | People/Employees/HireEmployee; People/Employees/Employee360 | People's tx-commit rules (mr-boss service/PeopleLifecycle.secas.xml) and Employee360's Request access again, through ironstone.admin.LifecycleServices; Admin/Users/LifecycleDetail retries their waiting steps (People P7) |
