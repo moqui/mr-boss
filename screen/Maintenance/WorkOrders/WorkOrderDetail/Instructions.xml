@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The work order and technician instructions (design-maintenance §12; impl-maintenance P19): a print (html-print, opened from
+    WorkOrderDetail's More menu) of the work order as instantiated: its organization, id, target, kind, priority, team and
+    technicians, the planned window and when it was printed, a QR of the work order's link (ec.resource.barcodeSvg), its
+    description, and the steps of its execution tree in order with their instructions, what each records (check off, pass or fail,
+    a reading with its unit and limits, evidence, a comment) and a box to sign. Read through Mantle's get#MaintenanceWorkOrder and
+    get#ProcessExecution after the work order's check (the parent's always-actions: recordFound), so a technician prints only their
+    assigned work. No cost, no rate and no reporter. Not a tab: default-menu-include false. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Instructions" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="printWork" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.get#ProcessExecution" out-map="printExecution" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="printOrder" from="printWork?.workOrder || null"/>
+        <set field="printSteps" from="(printExecution?.stepList || []).filter(row =&gt; !row.removed).map(row =&gt; Object.assign({}, row,
+                {stepName: ' '.repeat(Math.max(0, (row.depth || 1) - 1) * 4) + row.name, takesText: row.isGroup ? '' : [row.responseText,
+                row.measurementUomText ? 'in ' + row.measurementUomText : null, row.minimumValue != null || row.maximumValue != null ?
+                'limits ' + [row.minimumValue ?? '', row.maximumValue ?? ''].join(' to ') : null, row.evidenceRequired ? 'evidence' : null,
+                row.commentRequired ? 'a comment' : null, row.requiredText].filter(Boolean).join(', '),
+                instructions: row.instructionText || row.description || ''}))"/>
+        <set field="printLink" from="(ec.web?.getWebappRootUrl(true, null) || '') + '/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=' +
+                encodeURIComponent(workEffortId || '')"/>
+        <set field="qrSvg" from="printOrder ? ec.resource.barcodeSvg('QR', printLink, {moduleWidth: 0.5, quietZone: 4, humanReadable: false}) : ''"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+        <set field="printCaption" from="printOrder ? [printOrder.targetName, printOrder.kindText, printOrder.typeText,
+                printOrder.priority != null ? 'priority ' + printOrder.priority : null].filter(Boolean).join(' · ') : ''"/>
+        <set field="printWindow" from="printOrder ? [printOrder.estimatedStartText ? 'Planned from ' + printOrder.estimatedStartText : null,
+                printOrder.estimatedCompletionText ? 'due ' + printOrder.estimatedCompletionText : null].filter(Boolean).join(', ') : ''"/>
+    </actions>
+    <widgets>
+        <section name="InstructionsFound" condition="printOrder">
+            <widgets>
+                <container style="row items-start q-col-gutter-md">
+                    <container style="col">
+                        <label text="${printOrder.organizationName || ''}" type="div" style="text-caption"/>
+                        <label text="Work order ${workEffortId}: ${printOrder.workEffortName || ''}" type="h5"/>
+                        <label text="${printCaption}" type="p"/>
+                        <label text="${printWindow}" type="p" condition="printWindow"/>
+                        <label text="Team ${printOrder.teamName || 'none'} · technicians ${printOrder.assigneeNames || 'not assigned'}" type="p"/>
+                        <label text="Status ${printOrder.statusText || ''} · printed ${printedText}" type="p" style="text-caption"/>
+                    </container>
+                    <container style="col-auto">
+                        <render-mode>
+                            <text type="qvt">&lt;div class="bg-white q-pa-xs"&gt;${qrSvg}&lt;/div&gt;</text>
+                            <text type="html">${qrSvg}</text>
+                            <text type="html-print">${qrSvg}</text>
+                            <text type="tui">${JSON.stringify({t: 'text', text: printLink})}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <label text="${printOrder.description}" type="p" condition="printOrder.description"/>
+                <label text="Steps" type="h6"/>
+                <form-list name="InstructionSteps" list="printSteps" skip-form="true" paginate="false">
+                    <field name="stepName"><default-field title="Step"><display/></default-field></field>
+                    <field name="instructions"><default-field title="Instructions"><display/></default-field></field>
+                    <field name="takesText"><default-field title="Record"><display/></default-field></field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="signOff"><default-field title="Done by"><display text=" "/></default-field></field>
+                </form-list>
+                <label text="No procedure: the work is as described above." type="p" condition="!printSteps.length"/>
+                <label text="Completed by ____________________ Date ____________ Equipment state after the work ____________________" type="p"/>
+            </widgets>
+        </section>
+        <label text="Work order ${workEffortId} is not available." type="p" condition="!printOrder"/>
+    </widgets>
+</screen>

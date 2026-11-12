@@ -19,7 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     activation, PlanAction), and More (End, with a reason). What keeps a draft from activation (no time zone, a named
     procedure that does not qualify, an incomplete trigger; a procedure is optional, the user's call of Nov 12) is named above the tabs. The tabs, by menu index: Schedule (1: DueExplanation and
     ScheduleTerms with Edit, and the terms' history). Due history and Generated work join with P14. Each write is
-    mantle.work.MaintenancePlanServices.store#MaintenanceSchedule's after the record check. -->
+    mantle.work.MaintenancePlanServices.store#MaintenanceSchedule's after the record check. P19: More's Add next due to calendar
+    (.ics of an active calendar plan's next due, Mantle's get#MaintenanceCalendarFile; DueMaintenance's rows, P14, take the same
+    transition). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Plan" default-menu-include="false">
     <parameter name="maintenanceScheduleId" required="true"/>
@@ -30,6 +32,19 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!planCheck?.recordId"/>
     </always-actions>
     <transition-include name="planAction" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
+    <!-- P19: the plan's next calendar due as a calendar file -->
+    <transition name="dueCalendarFile" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceCalendarFile" out-map="calendar"
+                    in-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <script>ec.web.sendTextResponse(calendar.text, 'text/calendar', calendar.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="maintenanceScheduleId"/></error-response>
+    </transition>
     <subscreens default-item="Schedule">
         <subscreens-item name="Schedule" location="component://mr-boss/screen/Maintenance/Preventive/Plans/PlanDetail/Schedule.xml" menu-index="1"/>
     </subscreens>
@@ -105,6 +120,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                                 <link url="${targetLink}" text="Open ${plan.targetName}" icon="sym_o_open_in_new"
                                         parameter-map="{assetId:plan.assetId, facilityId:plan.facilityId}"/>
+                                <link url="dueCalendarFile" text="Add next due to calendar (.ics)" icon="sym_o_event" link-type="anchor"
+                                        parameter-map="{maintenanceScheduleId:maintenanceScheduleId}"
+                                        condition="plan.statusId == 'MschActive' &amp;&amp; plan.triggerEnumId != 'MstMeter'"/>
                                 <link url="${sharedLinks['Preventive/Plans/Find']}" text="All plans" icon="sym_o_list"/>
                             </button-menu>
                         </container>

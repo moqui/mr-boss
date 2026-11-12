@@ -27,7 +27,16 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
+    <!-- Maintenance P19: Commons' Report a problem mounted here, so its action below is a dialog of this screen -->
+    <subscreens>
+        <subscreens-item name="ReportProblem" location="component://mr-boss/screen/Commons/ReportProblem.xml" menu-include="false"/>
+    </subscreens>
     <ext-action name="boss.createCase" slot="voicemail-actions" sequence="20" label="Create a case" icon="sym_o_support_agent" transition="createCase">
+        <parameter name="voicemailId"/>
+    </ext-action>
+    <!-- Maintenance P19 (the user's call of Nov 12): Report a problem prefilled with the voicemail's transcript (Commons' ReportProblem
+        mounted here, for a user who may report; the audio stays in Comms) -->
+    <ext-action name="maintenance.reportProblem" slot="voicemail-actions" sequence="30" label="Report a problem" icon="sym_o_report_problem" screen="ReportProblem">
         <parameter name="voicemailId"/>
     </ext-action>
 </screen-extend>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SendMessage (design-maintenance §1.4 Assist "Send as message"; impl-maintenance P19): the root's response-action opens it in the
+    shell's quick-create frame from an Assist answer on any Maintenance page, the answer's text in messageText. The user picks the
+    people (or a mailbox) to send it to, reads and edits the text, and sends it as an internal message (Comms'
+    ironstone.comms.ComposeServices.send#Compose, from the user, to recipients its search offers them), filed on the page's record
+    when Maintenance admits the user to it (a work order, equipment or a facility, check#Record; Compose checks it again). Nothing is
+    sent until the user submits. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Send as message" default-menu-include="false">
+    <parameter name="entityName"/>
+    <parameter name="recordId"/>
+    <!-- the people and mailboxes the user may message (Comms' internal recipients) -->
+    <transition name="recipients" read-only="true">
+        <actions>
+            <service-call name="ironstone.comms.ComposeServices.search#Recipients" in-map="{term:term, mode:'internal'}" out-map="found"/>
+            <script>ec.web.sendJsonResponse(Array.from(found?.optionList || []).map(option =&gt; ({value: option.value, label: option.label})))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="sendMessage">
+        <actions>
+            <script><![CDATA[
+                const words = String(messageText || '').trim()
+                if (!toValue) ec.message.addError(ec.l10n.localize('Choose who to send it to'))
+                else if (!words) ec.message.addError(ec.l10n.localize('Write the message'))
+                if (!ec.message.hasError()) {
+                    const escape = (line) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    const body = words.split(/\r?\n\s*\r?\n/).map((part) => '<p>' + part.split(/\r?\n/).map(escape).join('<br>') + '</p>').join('')
+                    const sent = ec.service.sync().name('ironstone.comms.ComposeServices.send#Compose').parameters({fromValue: 'internal',
+                        toJson: JSON.stringify([{value: toValue, label: ''}]), subject: String(subject || '').trim() || ec.l10n.localize('From Assist'),
+                        body: body, bodyText: words, recordEntity: messageRecordEntity || null, recordId: messageRecordId || null}).call()
+                    if (!ec.message.hasError()) ec.message.addMessage(sent?.message || ec.l10n.localize('Message sent'), 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="entityName"/><parameter name="recordId"/></default-response>
+        <error-response url="."><parameter name="entityName"/><parameter name="recordId"/></error-response>
+    </transition>
+    <actions>
+        <!-- the page's record, filed on only when Maintenance admits the user to it -->
+        <set field="recordType" from="({'mantle.work.effort.WorkEffort': 'workOrder', 'mantle.product.asset.Asset': 'asset',
+                'mantle.facility.Facility': 'facility'})[entityName] || null"/>
+        <set field="messageRecord" from="null"/>
+        <if condition="recordType &amp;&amp; recordId">
+            <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="messageRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:recordType, recordId:recordId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="messageValues" from="{entityName:entityName, recordId:recordId, messageRecordEntity:(messageRecord?.recordId ? entityName : null),
+                messageRecordId:(messageRecord?.recordId ? recordId : null), subject:(messageRecord?.recordId ? (messageRecord.kindName || '') + ' ' +
+                recordId + ': ' + (messageRecord.label || '') : ''), messageText:''}"/>
+    </actions>
+    <widgets>
+        <label text="Send as message" type="h6"/>
+        <form-single name="SendMessageForm" transition="sendMessage" map="messageValues">
+            <field name="entityName"><default-field><hidden/></default-field></field>
+            <field name="recordId"><default-field><hidden/></default-field></field>
+            <field name="messageRecordEntity"><default-field><hidden/></default-field></field>
+            <field name="messageRecordId"><default-field><hidden/></default-field></field>
+            <field name="toValue">
+                <default-field title="To" tooltip="A person or a mailbox you may message">
+                    <drop-down allow-empty="true"><dynamic-options transition="recipients" server-search="true" min-length="1"/></drop-down>
+                </default-field>
+            </field>
+            <field name="subject"><default-field title="Subject"><text-line size="50"/></default-field></field>
+            <field name="messageText">
+                <default-field title="Message" tooltip="Sent as you, as an internal message">
+                    <text-area rows="8" cols="60"/>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Send"><submit/></default-field></field>
+        </form-single>
+    </widgets>
+</screen>

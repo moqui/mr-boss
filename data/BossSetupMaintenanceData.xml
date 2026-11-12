@@ -339,4 +339,14 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Maintenance/Scheduling/BookingRequests?${facilityId ? 'facilityId=' + facilityId : 'assetId=' + assetId}"/>
     <moqui.security.user.NotificationTopic topic="ResourceBookingNotice"
             linkTemplate="/qapps/Commons/Calendar/EventDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P19 (F53, F117): the list exports Maintenance makes in its own lists (CSV with the current filters and the
+        columns shown, no hidden column), listed in Admin's Exports as wizard export targets with their owner route (a mountRoutes key
+        in service/ironstone/admin/Admin.js), nothing dispatched, as Projects' work item list is. The PM export joins with
+        DueMaintenance (P14): maintenanceDueList, route maintenanceDue. -->
+    <moqui.server.TransferTarget targetId="maintenanceWorkOrderList" direction="export" targetMode="wizard" title="Maintenance work orders"
+            description="The work orders of a list as CSV, from Work orders in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceWorkOrders" sequenceNum="65"/>
+    <moqui.server.TransferTarget targetId="maintenanceBookingList" direction="export" targetMode="wizard" title="Booking requests"
+            description="The booking requests of a list as CSV, from Booking requests in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceBookingRequests" sequenceNum="66"/>
 </entity-facade-xml>

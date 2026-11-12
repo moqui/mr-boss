@@ -133,6 +133,20 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="ResourceBooking"/>
         <notification-topic topic="ResourceBookingNotice"/>
         <today-source service="ironstone.maintenance.HomeServices.get#TodayItems" label="Maintenance"/>
+        <!-- P19 (design §1.4): Comms' record cards of work orders, equipment and facilities, ahead of the suite's generic lookup
+            (sequence below Comms' 0) so a work order opens in Maintenance; a caller's open work and equipment under repair; Assist's
+            chips (each also needs its screen's grant) and its answer actions, filed through Maintenance's own record check -->
+        <record-lookup name="maintenance.records" service="ironstone.maintenance.StackServices.lookup#Records" sequence="-10"/>
+        <call-context name="maintenance.work" service="ironstone.maintenance.StackServices.get#CallContext"/>
+        <assist-prompt label="Summarize history" text="Summarize this equipment's maintenance history"
+                screen="Maintenance/Equipment/EquipmentDetail" entity="mantle.product.asset.Asset" sequence="50"/>
+        <assist-prompt label="What blocks completion?" text="What blocks completion of this work order?"
+                screen="Maintenance/WorkOrders/WorkOrderDetail" entity="mantle.work.effort.WorkEffort" sequence="51"/>
+        <assist-prompt label="Report a problem" text="Report a problem: " screen="Maintenance/Home" sequence="52"/>
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Maintenance/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="60"/>
+        <response-action label="Send as message" icon="sym_o_send" screen="Maintenance/SendMessage" text-parameter="messageText"
+                sequence="61"/>
         <keymap scope="maintenance">
             <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>
             <key keys="g w" label="Work orders" screen="Maintenance/WorkOrders"/>

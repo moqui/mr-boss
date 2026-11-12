@@ -16,7 +16,9 @@
 // technician reads it, not another or Retail; a waiver is a supervisor's), P10's purchases of a work order (its planner reads
 // them, a resource administrator and Retail's planner do not; a technician asks for nothing, a planner links no order line the
 // work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
-// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1),
+// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P19's stack providers
+// (a work order's record card and a caller's work for its organization's planner, not a resource administrator, Retail's planner or
+// a requester without the root; Comms' Report a problem on a chat message for a user who may report, not another app's user),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1078,6 +1080,74 @@ feature(
             supervisorApps.includes("Maintenance")
             !supervisorApps.includes("Warehouse")
             !supervisorQuickCreates.includes("warehouseNewReceipt")
+        }
+    }
+)
+
+feature(
+    "the stack providers answer a work order's card and a caller's work to its planner, not a resource administrator, Retail or a requester; Comms offers Report a problem to a reporter only",
+    {
+        when() {
+            const S = "ironstone.maintenance.StackServices."
+            const card = user =>
+                asUser(user, () => {
+                    try {
+                        const out = invoke(S + "lookup#Records", {
+                            operation: "card",
+                            recordEntityName: "mantle.work.effort.WorkEffort",
+                            recordId: ids.inProgressOrderId
+                        })
+                        if (ec.message.hasError()) return "refused " + ec.message.getErrorsString()
+                        return out.card ? "card" : "none"
+                    } catch (error) {
+                        return "refused " + error.message
+                    }
+                })
+            const callWork = user =>
+                asUser(user, () => {
+                    try {
+                        const out = invoke(S + "get#CallContext", {number: "+18015550152"})
+                        if (ec.message.hasError()) return "refused " + ec.message.getErrorsString()
+                        return Array.from(out.recordList || []).some(row => row.url.includes(ids.inProgressOrderId))
+                            ? "work"
+                            : "none"
+                    } catch (error) {
+                        return "refused " + error.message
+                    }
+                })
+            // Comms' Chat message actions (the screen-extend's ext-action, shown by Report a problem's grant)
+            const chatActions = user =>
+                asUser(user, () => {
+                    const result = ec.screen
+                        .makeTest()
+                        .rootScreen("component://webroot/screen/webroot.xml")
+                        .render("extItems/apps/Comms/Chat", {}, null)
+                    ec.message.clearErrors()
+                    if (result.status != 200) return []
+                    return Array.from(JSON.parse(String(result.output)).actions || []).map(action => action.name)
+                })
+            return {
+                holderCard: card(users.planner),
+                resourcesCard: card(users.resources),
+                otherCard: card(users.retailPlanner),
+                requesterCard: card(users.requester),
+                holderCall: callWork(users.planner),
+                otherCall: callWork(users.retailPlanner),
+                requesterCall: callWork(users.requester),
+                requesterActions: chatActions(users.requester),
+                otherAppActions: chatActions(users.otherApp)
+            }
+        },
+        then(out) {
+            out.holderCard == "card"
+            out.resourcesCard == "none"
+            out.otherCard == "none"
+            refused(out.requesterCard)
+            out.holderCall == "work"
+            out.otherCall == "none"
+            refused(out.requesterCall)
+            out.requesterActions.includes("maintenance.reportProblem")
+            !out.otherAppActions.includes("maintenance.reportProblem")
         }
     }
 )
