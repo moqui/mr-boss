@@ -5753,7 +5753,7 @@ the follow-up note, §2, AGENTS.md and Practices-App-Dev, with the lead's calls 
     non-editor ("... books no rooms or equipment here; it is changed on ..."). ResourceBookingDecisions' R3 feature adds Ann
     refused booking on her own leave (fails without the fix); rerun: ResourceBookingDecisions 9, Recruiting 10, Training 4,
     LeaveRequests 5 (28 of 28), EventDetail 15 and Schedules 6 (21 of 21).
-- Findings:
+- Findings, numbered by the lead F361 to F363 in order:
   - Manufacturing's production runs are kept events whose moves and cancels do not call `keptEventMoved` or
     `keptEventCancelled`; their work centers are booked by Manufacturing's own rules, not `book#Resource`, but a room or equipment
     booked on a run through the services would not be rechecked or withdrawn. For later, with Manufacturing.
@@ -5839,6 +5839,7 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P17: a third dataset `boss-maintenance-outages` (a resource down past four hours); the generation-failure alert reads the server log (`otel_logs`), owned by a holder of the log dataset; Maintenance supervisors and administrators read the datasets through Insights | The lead's acceptance of the worker's recommendations |
 | Nov 12, 2026 | P8: Teams is read by planners and supervisors (as the design says) and changed by the administrator; the dispatch answer shows a qualification's state, expiry and level, never its documents, and leaves out People's restricted kinds; the intake tag stays undated; free hours counting other maintenance work and routing by a team's resource scope are later | The lead's acceptance of the reviewer's recommendations |
 | Nov 12, 2026 | P12: the stored and sent intervention report never carries amounts (work, parts and quantities, hours, outcome, acknowledgment); costs stay in the Costs tab and the cost report. Replaces the earlier row's "the storer's cost access decides" | The user's call (P12 review) |
+| Nov 12, 2026 | Follow-ups: the organizer of a kept meeting (People's interviews and training sessions) books, cancels and rechecks its rooms and equipment (`check#EventAccess` `canBook`); People's moves recheck and cancels withdraw an event's bookings (`keptEventMoved`, `keptEventCancelled`); leave and production runs stay with their own apps | The user's go-ahead on F356; limited to meetings by the lead, as the review recommended |
 | Nov 12, 2026 | P12: the storer's cost access decides whether the stored intervention report shows amounts, and the agent sends it as stored; no demo customer repair (a spec fixture) | The lead's acceptance of the worker's recommendations |
 
 ## 5. Open questions
@@ -6225,6 +6226,9 @@ paths under `mr-boss/`.
 | F358 | Merge review: `check#EventAccess` answers view and edit with no user and authorization off, so `ResourcePolicy.js eventVisibility` would name a clash by its title for a no-user caller; none exists | Fixed (Follow-ups Nov 12): no user sees no event, so Busy |
 | F359 | Merge review: the approval topics ResourceBooking and WorkProcessApproval (and ResourceBookingNotice) could send `directOnly`, so a catch-all subscriber gets no card it cannot decide | Fixed (Follow-ups Nov 12): the three go `directOnly()` |
 | F360 | Merge review: dispatch's free hours (`get#PartyCapacity`) do not subtract People P19 training sessions | Fixed (Follow-ups Nov 12): `find#MaintenanceCandidates` takes off People's `sessionHours` |
+| F361 | Follow-up review: Manufacturing's production runs are kept events whose moves and cancels do not call `keptEventMoved` or `keptEventCancelled` | Later, with Manufacturing |
+| F362 | Follow-up review: dispatch subtracts session hours from the window's total, not day by day | Later (needs `get#PartyCapacity`'s dayList) |
+| F363 | Follow-up review: People's interview and training screens have no link to their event's booking box | Later, People's |
 
 
 ## 7. Later
