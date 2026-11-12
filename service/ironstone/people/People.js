@@ -48,6 +48,14 @@ const expensesLocation = "component://mr-boss/screen/People/Expenses.xml"
 // P18: Skills & training, whose Qualifications a self-service employee opens by the area's own grant (BOSS_PPL_DEVELOPMENT)
 const developmentLocation = "component://mr-boss/screen/People/Development.xml"
 const projectsLocation = "component://mr-boss/screen/Projects.xml"
+// P21: Grievances (the user's confidential cases), every People user's under Employees and a self-service employee's by its own grant
+// (BOSS_PPL_CASES_SELF), and a case's RequestDetail under People
+const grievancesLocation = "component://mr-boss/screen/People/Employees/Grievances.xml"
+// P20: Reviews & goals, which a self-service employee opens by its own grant (BOSS_PPL_PERFORMANCE)
+const performanceLocation = "component://mr-boss/screen/People/Performance.xml"
+const reviewDetailPath = "/qapps/People/Performance/ReviewDetail"
+const REVIEW = "mantle.humanres.ability.PerformanceReview"
+const caseDetailPath = "/qapps/People/Employees/RequestDetail"
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Insights.js and Commerce.js): screenAuthz reads the groups' rows once, and
@@ -234,7 +242,29 @@ const linkPaths = [
     "Development",
     "Development/SkillsMatrix",
     "Development/SkillsMatrixTui",
-    "Development/Qualifications"
+    "Development/Qualifications",
+    // P17: an offer, its letter's print and an employment change's lifecycle letter (HR's)
+    "Staffing/OfferDetail",
+    "Staffing/OfferLetter",
+    "Employees/EmploymentLetter",
+    // P19: training (design §10): the sessions, a session's detail and a completed place's certificate (every People user's and a
+    // self-service employee's by the area's own grant)
+    "Development/Training",
+    "Development/TrainingDetail",
+    "Development/TrainingCertificate",
+    // P19 review: the training assessment forms (the learning administrator's and the People administrator's)
+    "Development/AssessmentForms/List",
+    "Development/AssessmentForms/FormDetail",
+    // P20: reviews and goals (design §11): the reviews, a review's detail and its release print, the goals (every People user's and
+    // a self-service employee's by the area's own grant), the review cycles and the review forms (the review administrator's)
+    "Performance",
+    "Performance/Reviews",
+    "Performance/ReviewDetail",
+    "Performance/ReviewRelease",
+    "Performance/Goals",
+    "Performance/ReviewCycles",
+    "Performance/ReviewForms/List",
+    "Performance/ReviewForms/FormDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -269,7 +299,11 @@ function sharedContext(p) {
                 "Expenses/ExpenseClaimDetail": "//People/Expenses/ExpenseClaimDetail",
                 "Expenses/EmployeeAdvances": "//People/Expenses/EmployeeAdvances",
                 // P18: their own qualifications (the Skills & training area's own grant)
-                "Development/Qualifications": "//People/Development/Qualifications"
+                "Development/Qualifications": "//People/Development/Qualifications",
+                // P19: the training sessions of their employers, their own places and certificates (the same area's grant)
+                "Development/Training": "//People/Development/Training",
+                "Development/TrainingDetail": "//People/Development/TrainingDetail",
+                "Development/TrainingCertificate": "//People/Development/TrainingCertificate"
             }
         }
     }
@@ -1005,6 +1039,116 @@ choiceSources.applicants = (userScope, term, selected, p) => {
 choiceSources.applicationSources = (userScope, term, selected) =>
     vocabularyOptions("EmploymentApplicationReferredBy", term, selected)
 
+// ===== P19: training's choices (design §10 Training) =====
+// who may train a session: the current employees and agents of the employers a development reader administers (store#Training checks
+// the course's employer)
+choiceSources.trainers = (userScope, term, selected, p) =>
+    userScope.capabilities.developView ? employeeOptions(userScope, term, selected, p, ["PrtEmployee", "PrtAgent"]) : []
+// the published training assessment forms of one employer (organizationPartyId), else of every employer the user reads
+// (mantle.party.FormDefinitionServices.find#Forms checks the reader per employer), labelled with the employer when several
+choiceSources.trainingForms = (userScope, term, selected, p) => {
+    const employers = p?.organizationPartyId
+        ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+        : employerIds(userScope)
+    const wanted = String(term || "").toLowerCase()
+    const options = []
+    for (const organizationPartyId of employers.slice(0, 20)) {
+        let found
+        try {
+            found = lib.probe("mantle.party.FormDefinitionServices.find#Forms", {
+                purposeEnumIds: ["DbfpTrainingAssessment"],
+                organizationPartyId
+            })
+        } catch (error) {
+            continue
+        }
+        for (const form of Array.from(found.forms || []))
+            if (form.published && (!wanted || form.description.toLowerCase().includes(wanted) || form.formId === selected))
+                options.push({
+                    value: form.formId,
+                    label: form.description + (employers.length > 1 ? " · " + organizationName(organizationPartyId) : "")
+                })
+    }
+    return options.slice(0, choiceLimit)
+}
+
+// P20: the published review forms of one employer (organizationPartyId), else of every employer the user reads, as trainingForms
+choiceSources.reviewForms = (userScope, term, selected, p) => {
+    const employers = p?.organizationPartyId
+        ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+        : employerIds(userScope)
+    const wanted = String(term || "").toLowerCase()
+    const options = []
+    for (const organizationPartyId of employers.slice(0, 20)) {
+        let found
+        try {
+            found = lib.probe("mantle.party.FormDefinitionServices.find#Forms", {
+                purposeEnumIds: ["DbfpReview"],
+                organizationPartyId
+            })
+        } catch (error) {
+            continue
+        }
+        for (const form of Array.from(found.forms || []))
+            if (form.published && (!wanted || form.description.toLowerCase().includes(wanted) || form.formId === selected))
+                options.push({
+                    value: form.formId,
+                    label: form.description + (employers.length > 1 ? " · " + organizationName(organizationPartyId) : "")
+                })
+    }
+    return options.slice(0, choiceLimit)
+}
+// P20: the colleagues a reviewer asks for feedback and development names a reviewer: the current employees and agents of the review's
+// employer (organizationPartyId), for one who works for it now or reads it as staff; Mantle's change#ReviewState checks again
+choiceSources.reviewColleagues = (userScope, term, selected, p) => {
+    const organizationPartyId = p?.organizationPartyId
+    if (!organizationPartyId) return []
+    const partyId = ec.user.userAccount?.partyId
+    const worksThere =
+        !!partyId &&
+        find("mantle.party.PartyRelationship")
+            .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+            .condition({fromPartyId: partyId, toPartyId: organizationPartyId})
+            .conditionDate("fromDate", "thruDate", null)
+            .count() > 0
+    if (!worksThere && !employerIds(userScope).includes(organizationPartyId)) return []
+    const factory = ec.entity.conditionFactory
+    let query = find("mantle.party.PartyFromAndRelationship")
+        .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+        .condition("toPartyId", organizationPartyId)
+        .conditionDate("fromDate", "thruDate", null)
+        .selectField(["fromPartyId", "firstName", "lastName"])
+        .orderBy(["^firstName", "^lastName"])
+        .limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["fromPartyId", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
+                "or"
+            )
+        )
+    const byParty = new Map()
+    for (const row of Array.from(query.list()))
+        if (!byParty.has(row.fromPartyId))
+            byParty.set(row.fromPartyId, {
+                value: row.fromPartyId,
+                label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+            })
+    if (selected && !byParty.has(selected) && byParty.size < choiceLimit) {
+        const row = find("mantle.party.PartyFromAndRelationship")
+            .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+            .condition({toPartyId: organizationPartyId, fromPartyId: selected})
+            .conditionDate("fromDate", "thruDate", null)
+            .selectField(["fromPartyId", "firstName", "lastName"])
+            .one()
+        if (row)
+            byParty.set(selected, {value: selected, label: [row.firstName, row.lastName].filter(Boolean).join(" ") || selected})
+    }
+    return Array.from(byParty.values())
+}
+
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown People choice " + p.choice)
@@ -1479,6 +1623,12 @@ function decisionUrl(row) {
     if (row.approvalKindEnumId === "PakExpenseClaim")
         return "/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=" + encodeURIComponent(row.sourceId)
     if (row.approvalKindEnumId === "PakAdvance") return "/qapps/People/Expenses/EmployeeAdvances?show=decide"
+    // P19: a place asked for in a training session, on the session's detail
+    if (row.approvalKindEnumId === "PakTraining")
+        return trainingDetailPath + "?personTrainingId=" + encodeURIComponent(row.sourceId)
+    // P20: a review's finalizing, on the review's detail
+    if (row.approvalKindEnumId === "PakReview")
+        return reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(row.sourceId)
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1487,7 +1637,7 @@ function decisionUrl(row) {
 // and (P10) the user's own weeks to submit (my week not submitted: TimesheetServices.find#WeeksToSubmit, the rule of Projects'
 // Today), for one who keeps time under People (a People user, or a self-service employee by the time area's own grant) and does
 // not open Projects, whose own source answers them there, each opening the week in People's My time. Another user's Today gets
-// none. The self-service items of later phases (leave starting, a qualification expiring) join here.
+// none. The self-service items of later phases join here (P12 leave starting, P18 a qualification expiring, P19 training due).
 function today(p) {
     const label = "People"
     if (!ec.user.userId || (p.userId && p.userId !== ec.user.userId)) return {items: [], label}
@@ -1572,6 +1722,58 @@ function today(p) {
             ec.logger.error("People Today of " + ec.user.userId + ": the qualifications expiring were left out: " + error.message)
         }
     }
+    // P19: training due: the user's own enrolled sessions and those they train, starting within seven days (find#Training's due),
+    // each opening the session
+    if (ec.user.userAccount?.partyId && developmentAreaOpens()) {
+        try {
+            const found = lib.probe("mantle.humanres.DevelopmentServices.find#Training", {show: "due", pageSize: 10})
+            for (const row of Array.from(found.sessions || [])) {
+                const day = String(row.startText || "").slice(0, 10)
+                items.push(
+                    item({
+                        kind: "training",
+                        title: (row.isTrainer ? "You train " : "Training: ") + row.title + " " + row.startText,
+                        startDate: day || null,
+                        url: trainingDetailPath + "?workEffortId=" + encodeURIComponent(row.workEffortId),
+                        record: {
+                            recordEntityName: "mantle.work.effort.WorkEffort",
+                            recordId: row.workEffortId,
+                            recordName: row.title
+                        }
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the training due was left out: " + error.message)
+        }
+    }
+    // P20 review: a review step due: the user's own self assessment, the assessment of a person they review and feedback asked of
+    // them, waiting (find#Reviews' to do; the decisions are above, a release and an acknowledgment are on Reviews), each opening the
+    // review; the step and the cycle, the person reviewed to the reviewer and a giver, never a rating or an answer
+    if (ec.user.userAccount?.partyId && performanceAreaOpens()) {
+        try {
+            const found = lib.probe("mantle.humanres.ReviewServices.find#Reviews", {show: "todo", pageSize: 20})
+            const stepTodo = ["Your self assessment", "Assess", "Give feedback"]
+            for (const row of Array.from(found.reviews || [])) {
+                if (!stepTodo.includes(row.todoText)) continue
+                const what =
+                    row.todoText === "Your self assessment"
+                        ? "Your self assessment for " + row.cycleName
+                        : (row.todoText === "Assess" ? "Assess " : "Feedback on ") + row.personName + " · " + row.cycleName
+                items.push(
+                    item({
+                        kind: "review",
+                        title: what + (row.dueText ? ", due " + row.dueText : ""),
+                        dueDate: row.dueText || null,
+                        url: reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(row.performanceReviewId),
+                        record: {recordEntityName: REVIEW, recordId: row.performanceReviewId, recordName: row.cycleName}
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the review steps due were left out: " + error.message)
+        }
+    }
     if (keepsTimeHere()) {
         try {
             for (const week of Array.from(lib.probe("mantle.work.TimesheetServices.find#WeeksToSubmit", {}).weekList || [])) {
@@ -1629,6 +1831,9 @@ function developmentAreaOpens(grants = rootGrants()) {
 // with its files, for whoever reads them (the person and HR of an employer of theirs), else none.
 const QUALIFICATION = "mantle.humanres.ability.PartyQualification"
 const qualificationsPath = "/qapps/People/Development/Qualifications"
+// P19: a training session's detail (Today's training due, a place to approve)
+const trainingDetailPath = "/qapps/People/Development/TrainingDetail"
+const trainingPath = "/qapps/People/Development/Training"
 function qualificationLink(partyQualificationId) {
     if (!ec.user.userId || !partyQualificationId || !developmentAreaOpens()) return null
     const found = call("mantle.humanres.DevelopmentServices.check#QualificationAccess", {partyQualificationId})
@@ -1641,6 +1846,38 @@ function qualificationLink(partyQualificationId) {
         "&partyQualificationId=" +
         encodeURIComponent(partyQualificationId)
     )
+}
+// P20: whether People's Reviews & goals area opens to the user: through the root, or by the area's own grant for a self-service
+// employee.
+function performanceAreaOpens(grants = rootGrants()) {
+    if (grants.systemAdmin) return true
+    if (grants.read) return areaGrant(grants, "Performance")
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(performanceLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P20: a review's People link (a notice, the files panel's record, the record link): its ReviewDetail under People for one who reads
+// it (Mantle's get#Review: its person, reviewer, a feedback giver, an approver, development), else none.
+function reviewLink(performanceReviewId) {
+    if (!ec.user.userId || !performanceReviewId || !performanceAreaOpens()) return null
+    try {
+        lib.probe("mantle.humanres.ReviewServices.get#Review", {performanceReviewId})
+    } catch (error) {
+        return null
+    }
+    return reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(performanceReviewId)
+}
+// P21: whether Grievances opens to the user: through the root, or by its own grant for a self-service employee.
+function grievancesOpen(grants = rootGrants()) {
+    if (grants.systemAdmin || grants.read) return true
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(grievancesLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P21: a confidential case's People link (a notice, Chatter's and RecordFiles' record, the record link): its RequestDetail under
+// People for its people (Mantle's check#PeopleCaseAccess), else none.
+function caseLink(requestId) {
+    if (!ec.user.userId || !requestId || !grievancesOpen()) return null
+    const found = call("mantle.request.RequestServices.check#PeopleCaseAccess", {requestId})
+    return found.recordVisible ? caseDetailPath + "?requestId=" + encodeURIComponent(requestId) : null
 }
 // P10: whether the user keeps their time under People and not in Projects: People's time area opens to them and Projects' root
 // does not (its own Today source answers a Projects user's weeks to submit).
@@ -1676,7 +1913,14 @@ function selfServiceContext(p) {
         expenseClaimsUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/ExpenseClaims?show=mine" : null,
         advancesUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/EmployeeAdvances?show=mine" : null,
         // P18: their own qualifications, under Skills & training when it opens to them
-        qualificationsUrl: developmentAreaOpens(grants) ? qualificationsPath + "?show=mine" : null
+        qualificationsUrl: developmentAreaOpens(grants) ? qualificationsPath + "?show=mine" : null,
+        // P19 review: their own training places, under the same area
+        trainingUrl: developmentAreaOpens(grants) ? trainingPath + "?show=mine" : null,
+        // P21: their confidential cases (Grievances), and filing one
+        grievancesUrl: grievancesOpen(grants) ? "/qapps/People/Employees/Grievances" : null,
+        // P20: their own reviews and goals, under Reviews & goals when it opens to them
+        reviewsUrl: performanceAreaOpens(grants) ? "/qapps/People/Performance/Reviews?show=mine" : null,
+        goalsUrl: performanceAreaOpens(grants) ? "/qapps/People/Performance/Goals" : null
     }
 }
 
@@ -1733,4 +1977,4 @@ function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown People operation " + op)
     return operations[op](p || {})
 }
-;({execute: run, employmentLink, changeParameters, decisionUrl, qualificationLink})
+;({execute: run, employmentLink, changeParameters, decisionUrl, qualificationLink, caseLink, reviewLink})

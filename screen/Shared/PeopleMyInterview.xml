@@ -40,7 +40,11 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.RecruitingServices.get#ApplicationFile" out-map="sharedOut"
                     in-map="{applicationContentId:applicationContentId}"/>
-            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(sharedOut.location, !!sharedOut.inline, sharedOut.fileName)</script>
+            <!-- the file is read as Mantle admitted it: the self-service grant does not reach the content store (P17 review) -->
+            <script>if (!ec.message.hasError()) {
+                const was = ec.artifactExecution.disableAuthz()
+                try { ec.web.sendResourceResponse(sharedOut.location, !!sharedOut.inline, sharedOut.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
+            }</script>
         </actions>
         <default-response type="none"/>
         <error-response url="."><parameter name="workEffortId"/></error-response>

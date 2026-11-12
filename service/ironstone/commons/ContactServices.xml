@@ -638,7 +638,8 @@ along with this software (see the LICENSE.md file). If not, see
                     seen.add(row.requestId)
                     // the request under the user's filters
                     const request = ec.entity.find('mantle.request.Request').condition('requestId', row.requestId).one()
-                    if (request == null) continue
+                    // a confidential case is People's alone, on no contact's tab (impl-people P21)
+                    if (request == null || request.requestTypeEnumId === 'RqtHrCase') continue
                     requestList.push({requestId: request.requestId, requestName: request.requestName || request.requestId, statusText: status(request.statusId),
                         roleText: role(row.roleTypeId), dateText: request.requestDate ? ec.l10n.format(request.requestDate, 'yyyy-MM-dd') : '',
                         url: '/qapps/Commons/Requests/RequestDetail?requestId=' + encodeURIComponent(request.requestId)})

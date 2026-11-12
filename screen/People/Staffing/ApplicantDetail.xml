@@ -24,7 +24,15 @@ along with this software (see the LICENSE.md file). If not, see
     (the source, referral, contact permission and notes, a recruiter's), Files (the application's private files: its content host,
     the resume an application by mail brought, a recruiter adds more), Interviews (each opening its event under Interviews) and
     the scorecards, opted out of AI (ai-opt-out, PE-21): a panel member's own to answer once (Submit scorecard,
-    submit#Scorecard) and answered, a recruiter's every one. An application outside the reader's reach shows "Not available". -->
+    submit#Scorecard) and answered, a recruiter's every one. An application outside the reader's reach shows "Not available".
+    P17 (design §5 ApplicantDetail and OfferDetail): Create offer for a recruiter of an application at Interview or Offer with no open
+    offer (store#Offer: a seat of the opening, the start, when it is open until and a note; it moves the application to Offer and
+    opens OfferDetail), the primary once a scorecard is in (Schedule interview the primary before), and the Offers box (each offer of
+    the application with its state, opening OfferDetail; find#Offers). An applicant's resume is shared with the panel when attached
+    (the user's call of Nov 12, 2026), and the recruiter can stop sharing it. An interview's event is People's (Commons calendar
+    editors, Nov 12, 2026): a recruiter changes its time, length, place or note (change#Interview) and cancels it (cancel#Interview)
+    on its row here, and Commons' EventDetail shows it read-only. Its invitations go once the change commits (People follow-up 1,
+    F358); a failed send shows on its row to its recruiters, with Send again (send#InterviewInvitations; follow-up 1 review). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Applicant" default-menu-include="false">
     <parameter name="employmentApplicationId"/>
@@ -55,17 +63,67 @@ along with this software (see the LICENSE.md file). If not, see
         panel, the scorecard and the stage) -->
     <transition name="scheduleInterview">
         <actions>
-            <service-call name="mantle.humanres.RecruitingServices.schedule#Interview" out-map="scheduled"
+            <service-call name="mantle.humanres.RecruitingServices.schedule#Interview"
                     in-map="{employmentApplicationId:employmentApplicationId, startDate:(startDate || null),
                         durationMinutes:(durationMinutes || null),
                         panelPartyIds:(Array.isArray(panelPartyIds) ? panelPartyIds.join(',') : (panelPartyIds || null)),
                         formId:(formId || null), videoCall:(videoCall == 'Y'), location:(location || null),
                         inviteCandidate:(inviteCandidate == 'Y'), note:(note || null)}"/>
             <if condition="!ec.message.hasError()">
-                <message type="success">${scheduled.invitationsSent ? 'Interview scheduled; the panel and the candidate are invited' : 'Interview scheduled; the invitations were not sent: send them from the interview'}</message>
+                <message type="success">Interview scheduled; the invitations are on their way</message>
             </if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- an interview changed or cancelled here, the only place its event changes (Mantle checks the recruiter and the times; the
+        attendees are told once it commits) -->
+    <transition name="changeInterview">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.change#Interview"
+                    in-map="{workEffortId:workEffortId, startDate:(startDate || null), durationMinutes:(durationMinutes || null),
+                        location:(hasCall == 'Y' ? null : (location ?? '')), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Interview changed; the attendees are being told</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <transition name="cancelInterview">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.cancel#Interview"
+                    in-map="{workEffortId:workEffortId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Interview cancelled; the attendees are being told</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- People follow-up 1 review: an interview's invitations sent again after a failed send (Mantle checks the recruiter; who was
+        told already is not told again) -->
+    <transition name="sendInterviewInvitations">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.send#InterviewInvitations" out-map="sent"
+                    in-map="{workEffortId:workEffortId}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !sent.invitationsSent">
+                <then><message type="warning">The invitations were not sent: ${sent.invitationProblem}</message></then>
+                <else-if condition="!ec.message.hasError()"><message type="success">The invitations are sent</message></else-if></if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- P17: an offer of the application, drafted (Mantle checks the recruiter, the stage, the seat and the dates), then opened -->
+    <transition name="createOffer">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.store#Offer" out-map="drafted"
+                    in-map="{employmentApplicationId:employmentApplicationId, emplPositionId:(emplPositionId || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), expireDate:(expireDate || null), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Offer drafted: set its terms and submit it for approval</message></if>
+            <set field="employmentOfferId" from="drafted?.employmentOfferId"/>
+        </actions>
+        <default-response url="../OfferDetail"><parameter name="employmentOfferId"/></default-response>
         <error-response url="."><parameter name="employmentApplicationId"/></error-response>
     </transition>
     <!-- the panel member's own scorecard, once: the form's answers are the request's values, checked again in Mantle -->
@@ -125,8 +183,12 @@ along with this software (see the LICENSE.md file). If not, see
             factRows = app && recruiter ? [['Email', app.emailAddress], ['Source', app.sourceText], ['Referred by', app.referredByName],
                 ['May be contacted', app.contactAllowed ? 'Yes, about other openings' : 'Only about this opening'], ['Notes', app.comments],
                 ['Owner', app.ownerName]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
-            interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, whenText: interview.whenText,
+            interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, employmentApplicationId: app.employmentApplicationId, whenText: interview.whenText,
                 panelText: interview.panelText, location: interview.location, stateText: interview.cancelled ? 'Cancelled' : '',
+                canChange: canEdit && !interview.cancelled, hasCall: interview.hasCall ? 'Y' : 'N',
+                canResend: canEdit && !!interview.invitationsFailed, problemText: interview.invitationProblemText || '',
+                startText: interview.startMs != null ? ec.l10n.format(new Date(interview.startMs), 'yyyy-MM-dd HH:mm') : '',
+                durationMinutes: interview.startMs != null && interview.endMs != null ? String(Math.round((interview.endMs - interview.startMs) / 60000)) : '',
                 scorecardText: interview.scorecards.length ? interview.scorecards.filter(card => card.answered).length + ' of ' + interview.scorecards.length + ' submitted' : ''})) : []
             scorecardRows = app ? app.interviews.flatMap(interview => interview.scorecards.map(card => Object.assign({}, card,
                 {interviewText: interview.whenText}))).filter(card => card.answered) : []
@@ -146,7 +208,19 @@ along with this software (see the LICENSE.md file). If not, see
                 .map(file => ({value: file.applicationContentId, label: file.description})) : []
             shareValue = app ? {employmentApplicationId: app.employmentApplicationId,
                 sharedContentIds: sharedRows.map(file => file.applicationContentId)} : {}
+            // P17: an offer of it: made by a recruiter once assessed (the primary once a scorecard is in), and its offers
+            canOffer = !!app?.canOffer
+            offerPrimary = canOffer && scorecardRows.length > 0
+            offerSeatOptions = app ? Array.from(app.openingSeats || []).map(row => ({key: row.emplPositionId, text: row.positionName})) : []
+            offerValue = app ? {employmentApplicationId: app.employmentApplicationId, emplPositionId: offerSeatOptions[0]?.key || null} : {}
+            offerLink = sharedLinks['Staffing/OfferDetail']
         ]]></script>
+        <if condition="recruiter">
+            <service-call name="mantle.humanres.RecruitingServices.find#Offers" out-map="offersFound" transaction="force-new" ignore-error="true"
+                    in-map="{employmentApplicationId:app.employmentApplicationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="offerRows" from="Array.from(offersFound?.offers || [])"/>
     </actions>
     <widgets>
         <section name="ApplicationMissing" condition="!recordFound">
@@ -181,7 +255,39 @@ along with this software (see the LICENSE.md file). If not, see
                             </render-mode>
                         </container>
                         <container style="col-12 col-md-auto m-record-actions">
-                            <container-dialog id="ScheduleInterviewDialog" button-text="Schedule interview" icon="sym_o_event" type="primary"
+                            <!-- P17: an offer of the application, the primary once assessed -->
+                            <container-dialog id="CreateOfferDialog" button-text="Create offer" icon="sym_o_contract"
+                                    type="${offerPrimary ? 'primary' : 'default'}" width="640" title="Offer ${app.applicantName} the position"
+                                    condition="canOffer">
+                                <label type="p" style="text-caption m-muted"
+                                        text="A draft: its terms are checked as a hire checks them; payroll sets the pay, and it is submitted for approval before it is issued."/>
+                                <form-single name="CreateOffer" transition="createOffer" map="offerValue">
+                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                    <field name="emplPositionId">
+                                        <default-field title="Position" tooltip="A seat of the opening">
+                                            <drop-down><list-options list="offerSeatOptions" key="${key}" text="${text}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="Starts"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+                                    <field name="thruDate">
+                                        <default-field title="Ends" tooltip="Empty for an open-ended employment"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                                    </field>
+                                    <field name="expireDate">
+                                        <default-field title="Open until" tooltip="The candidate answers by then"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                                    </field>
+                                    <field name="note"><default-field title="Note for the letter"><text-area rows="2" cols="60"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Draft the offer"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-ref name="emplPositionId"/>
+                                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                        <field-ref name="expireDate"/>
+                                        <field-ref name="note"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ScheduleInterviewDialog" button-text="Schedule interview" icon="sym_o_event"
+                                    type="${offerPrimary ? 'default' : 'primary'}"
                                     width="720" title="Schedule an interview with ${app.applicantName}" condition="canSchedule">
                                 <form-single name="ScheduleInterview" transition="scheduleInterview" map="interviewValue">
                                     <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
@@ -320,7 +426,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <form-single name="SharePanelFiles" transition="sharePanelFiles" map="shareValue">
                                         <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
                                         <field name="sharedContentIds">
-                                            <default-field title="The panel reads" tooltip="None is shared until you choose it, the resume either">
+                                            <default-field title="The panel reads" tooltip="A resume is shared when attached; another file once you choose it">
                                                 <check><list-options list="shareOptions" key="${value}" text="${label}"/></check>
                                             </default-field>
                                         </field>
@@ -349,6 +455,39 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-box>
                     </row-col>
                     <row-col lg="6">
+                        <!-- P17: the offers of the application, each opening OfferDetail (a recruiter's) -->
+                        <section name="ApplicationOffers" condition="offerRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Offers"/>
+                                    <box-body-nopad>
+                                        <form-list name="Offers" list="offerRows" skip-form="true" paginate="false">
+                                            <field name="positionName">
+                                                <default-field title="Offer">
+                                                    <link url="${offerLink}" text="${positionName || employmentOfferId}" link-type="anchor"
+                                                            parameter-map="{employmentOfferId:employmentOfferId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDateText"><default-field title="Starts"><display/></default-field></field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="positionName"/><field-ref name="fromDateText"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                         <container-box>
                             <box-header title="Interviews"/>
                             <box-body-nopad>
@@ -358,14 +497,56 @@ along with this software (see the LICENSE.md file). If not, see
                                             <link url="${eventLink}" text="${whenText}" link-type="anchor"
                                                     parameter-map="{workEffortId:workEffortId}"/>
                                             <label text="${stateText}" type="div" style="text-caption text-negative" condition="stateText"/>
+                                            <label text="${problemText}" type="div" style="text-caption text-negative" condition="problemText"/>
                                         </default-field>
                                     </field>
                                     <field name="panelText"><default-field title="Panel"><display/></default-field></field>
                                     <field name="location"><default-field title="Where"><display/></default-field></field>
                                     <field name="scorecardText"><default-field title="Scorecards"><display/></default-field></field>
+                                    <field name="actions" align="right">
+                                        <conditional-field condition="canChange || canResend" title="">
+                                            <link url="sendInterviewInvitations" text="Send again" icon="sym_o_forward_to_inbox" link-type="hidden-form"
+                                                    parameter-map="{workEffortId:workEffortId, employmentApplicationId:employmentApplicationId}" condition="canResend"
+                                                    confirmation="Send the invitations of the interview of ${whenText} again? Who was told already is not told again."/>
+                                            <container-dialog id="ChangeInterview_${workEffortId}" button-text="Change" icon="sym_o_edit_calendar" type="default"
+                                                    width="560" title="Change the interview of ${whenText}" condition="canChange">
+                                                <form-single name="ChangeInterview" transition="changeInterview"
+                                                        map="{workEffortId:workEffortId, startDate:startText, durationMinutes:durationMinutes, hasCall:hasCall,
+                                                            location:(hasCall == 'Y' ? '' : location)}">
+                                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="hasCall"><default-field><hidden/></default-field></field>
+                                                    <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
+                                                    <field name="durationMinutes">
+                                                        <default-field title="Minutes"><text-line size="5" input-type="number"/></default-field>
+                                                    </field>
+                                                    <field name="location">
+                                                        <conditional-field condition="hasCall != 'Y'" title="Where"><text-line size="40"/></conditional-field>
+                                                        <default-field><hidden/></default-field>
+                                                    </field>
+                                                    <field name="note"><default-field title="Note to the attendees"><text-area rows="2" cols="50"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Change and tell the attendees"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="CancelInterview_${workEffortId}" button-text="Cancel" icon="sym_o_event_busy" type="danger"
+                                                    width="480" title="Cancel the interview of ${whenText}" condition="canChange">
+                                                <form-single name="CancelInterview" transition="cancelInterview" map="{workEffortId:workEffortId}">
+                                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Cancel the interview">
+                                                            <submit type="danger" confirmation="Cancel the interview of ${whenText} and tell the attendees?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </conditional-field>
+                                        <default-field title=""><display text=" "/></default-field>
+                                    </field>
                                     <columns type="mobile">
                                         <column><field-ref name="whenText"/><field-ref name="panelText"/></column>
-                                        <column><field-ref name="scorecardText"/></column>
+                                        <column><field-ref name="scorecardText"/><field-ref name="actions"/></column>
                                     </columns>
                                 </form-list>
                                 <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!interviewRows.length"

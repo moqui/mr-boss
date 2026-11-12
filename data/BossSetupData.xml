@@ -5162,7 +5162,7 @@ along with this software (see the LICENSE.md file). If not, see
         offboard, hold it. Openings and review steps join the same lookup with their phases: P16's review adds the draft and open
         openings the user is the recruiting owner of, handed to a new owner who works for the employer. -->
     <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
-            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, and the requests waiting for their decision."
+            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, the requests waiting for their decision, the open confidential cases they handle (by name alone; each goes back to the employer's case intake handlers when they leave), and the open reviews they review and the feedback asked of them (by the person's name; a review goes to the person's manager and the feedback is withdrawn when they leave)."
             resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
             transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
@@ -5226,9 +5226,13 @@ along with this software (see the LICENSE.md file). If not, see
                 inheritAuthz="N"/>
         <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/storeEmergencyContact"
                 artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <!-- P17 review (the user's call of Nov 12, 2026): My letters, the user's own issued lifecycle letters (find#MyLetters and
+            get#MyLetter take the caller's own party alone) -->
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/myLetter"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
         <artifacts artifactName="ironstone\.people\.ContextServices\.get#(SharedContext|SelfServiceContext)" artifactTypeEnumId="AT_SERVICE"
                 nameIsPattern="Y" inheritAuthz="N"/>
-        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact)"
+        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact|find#MyLetters|get#MyLetter)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
@@ -5506,4 +5510,86 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="QualificationExpiring"
             linkTemplate="/qapps/People/Development/Qualifications?show=mine&amp;partyQualificationId=${partyQualificationId}"/>
+    <!-- impl-people P17 (design-people §5 OfferDetail, §15 the letters): an offer of employment to approve (Mantle's PeopleOfferApproval
+        topic) opens OfferDetail, which the Staffing area opens to every People user (Mantle's RecruitingServices check who reads an
+        offer: its recruiters, HR and payroll readers of the employer, and the approver of the step waiting). An employment change's
+        lifecycle letter print (Employees/EmploymentLetter) is HR's, with the hire and change wizards (BOSS_PPL_EMPLOYMENT); Mantle's
+        PeopleServices check PEOPLE_HR_VIEW and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleOfferApproval"
+            linkTemplate="/qapps/People/Staffing/OfferDetail?employmentOfferId=${employmentOfferId}"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
+            artifactName="component://mr-boss/screen/People/Employees/EmploymentLetter.xml" artifactTypeEnumId="AT_XML_SCREEN"
+            inheritAuthz="Y"/>
+    <!-- impl-people P19 (design-people §10 Training and TrainingDetail): Training, a session's detail and a completed place's
+        certificate are under Skills & training (People/Development), so they open as the area does: every People user through the
+        root, a self-service employee by BOSS_PPL_DEVELOPMENT (the sessions of their employers, their own places, results and
+        certificates, and the sessions they train); what each reads and does is Mantle's DevelopmentServices' check. A place to
+        approve (Mantle's PeopleTrainingApproval topic) opens the session, where it is decided, as from People's Approvals or the
+        notification tray. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingApproval"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <!-- impl-people P19 review: the person's decision notice (Mantle's PeopleTrainingDecision) opens their place on the session.
+        Assessment forms (People/Development/AssessmentForms, the survey builder with People's Development mount) are the learning
+        administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS, as the skills matrix), denied to the root user group and to
+        self-service, the People administrator and ADMIN through the root's ALWAYS; Mantle's FormDefinitionServices check the
+        training assessment purpose's edit permission (PEOPLE_DEVELOP_EDIT or PEOPLE_CONFIGURE) and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingDecision"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_ASSESSMENT_FORMS" description="People training assessment forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/AssessmentForms.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-people P21 (design-people §4 Grievances, §13 RequestDetail): Grievances (People/Employees/Grievances) is every People user's
+        through the root, and a self-service employee's without the launcher by this inheritable ALLOW (as their Time & leave), to raise
+        a concern and follow their own cases; a case's RequestDetail (People/Employees/RequestDetail, the shared request detail's
+        People branch) and its Chatter panel are theirs by the same group, as their record files are (BOSS_PPL_FILES_SELF): both
+        locations are those Commons mounts, which every BOSS user opens there already, and what they show is decided per record
+        (Mantle's get#PeopleCase and get#RecordLinkInfo admit a case's people alone), so the grant reaches no record Commons' does not.
+        A case handler holds PEOPLE_CASE_HANDLE (BOSS_PEOPLE_CASE) and reads only the cases they are assigned. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_CASES_SELF" description="People grievances for self-service employees">
+        <artifacts artifactName="component://mr-boss/screen/People/Employees/Grievances.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/RequestDetail.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/Chatter.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_CASES_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleCaseUpdate" linkTemplate="/qapps/People/Employees/RequestDetail?requestId=${requestId}"/>
+    <!-- impl-people P20 (design-people §11, §1.2): Reviews & goals (People/Performance: Reviews, Goals, a review's detail and its
+        release print) is every People user's through the root, and a self-service employee's without the launcher by this inheritable
+        ALLOW on the area (as Skills & training, BOSS_PPL_DEVELOPMENT), for their own reviews and goals and the feedback asked of them:
+        Mantle's ReviewServices answer each user what they may read. Review cycles and Review forms (the survey builder with People's
+        Performance mount) are the review administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS), denied to the root user group and
+        to self-service, the People administrator and ADMIN through the root's ALWAYS (BOSS_PPL_REVIEW_ADMIN). A review's files are on
+        its own content host (PerformanceReview: the reviewer's, development's and, once released, the person's), whose panel is
+        People's RecordFiles; a self-service employee reaches it by BOSS_PPL_FILES_SELF. A review's finalizing to approve (Mantle's
+        PeopleReviewStep) and a review step given or a review released (PeopleReviewUpdate) open the review. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_PERFORMANCE" description="People reviews and goals, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Performance.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_PERFORMANCE_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_REVIEW_ADMIN" description="People review cycles and review forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Performance/Review(Cycles|Forms)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleReviewStep"
+            linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleReviewUpdate"
+            linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
 </entity-facade-xml>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Released review (design-people §15 Review release; impl-people P20): a released review as it was released, from
+    mantle.humanres.ReviewServices.get#ReviewRelease (stored when released, never rendered again, without a private note), for the
+    person, the reviewer and development readers of the employer. Printed from ReviewDetail as html-print
+    (/apps/People/Performance/ReviewRelease?performanceReviewId=...&renderMode=html-print); its PDF, also stored when released, is
+    ReviewDetail's releasePdf. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Released review" default-menu-include="false">
+    <parameter name="performanceReviewId" required="true"/>
+    <actions>
+        <service-call name="mantle.humanres.ReviewServices.get#ReviewRelease" out-map="release" transaction="force-new"
+                ignore-error="true" in-map="{performanceReviewId:performanceReviewId}"/>
+        <set field="releaseError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="printBody" from="release?.printHtml ? String(release.printHtml).replace(/^[\s\S]*&lt;body[^&gt;]*&gt;/i, '')
+                .replace(/&lt;\/body&gt;[\s\S]*$/i, '') : ''"/>
+    </actions>
+    <widgets>
+        <section name="ReleaseMissing" condition="!printBody">
+            <widgets>
+                <label text="${releaseError.includes('not released') ? 'This review is not released yet.' : 'This review is not available.'}" type="p"/>
+            </widgets>
+        </section>
+        <!-- the released text is the person's, not shared with AI -->
+        <section name="Release" condition="printBody" ai-opt-out="true">
+            <widgets>
+                <render-mode>
+                    <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Released review " + performanceReviewId + ": print it from the browser"})}]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

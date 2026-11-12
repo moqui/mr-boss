@@ -285,12 +285,15 @@ function openAssignments(partyId) {
             .list()
     ).map(row => row.requestId)
     if (requestIds.length)
+        // a confidential case is People's: its handlers are changed on the case (assign#PeopleCaseHandler), never counted or
+        // moved here (impl-people P21)
         for (const request of Array.from(
             find("mantle.request.Request")
                 .condition("requestId", "in", Array.from(new Set(requestIds)))
                 .list()
         ))
-            if (!["ReqCompleted", "ReqCancelled"].includes(request.statusId)) found.requests.push(request.requestId)
+            if (!["ReqCompleted", "ReqCancelled"].includes(request.statusId) && request.requestTypeEnumId !== "RqtHrCase")
+                found.requests.push(request.requestId)
     return found
 }
 function findAssignments(p) {

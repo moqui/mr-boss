@@ -920,7 +920,8 @@ along with this software (see the LICENSE.md file). If not, see
                 requestList = []
                 for (const link of ec.entity.find('mantle.request.RequestWorkEffort').condition('workEffortId', workEffortId).list()) {
                     const request = ec.entity.find('mantle.request.Request').condition('requestId', link.requestId).one()
-                    if (request) requestList.push({requestId: request.requestId, requestName: request.requestName || request.requestId, statusText: statusLabel(request.statusId),
+                    // a confidential case is not shown on its task (impl-people P21)
+                    if (request && request.requestTypeEnumId !== 'RqtHrCase') requestList.push({requestId: request.requestId, requestName: request.requestName || request.requestId, statusText: statusLabel(request.statusId),
                         url: '/qapps/Projects/Requests/RequestDetail?requestId=' + encodeURIComponent(request.requestId)})
                 }
                 // the repeat rule: the item's, or its series'

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The offer letter (design-people §15 "Employment/offer and lifecycle letters"; style-guide §8 Print documents; impl-people P17),
+    OfferDetail's Preview the letter: with renderMode=html-print (and its PDF at /fop/apps/People/Staffing/...) the letter of an offer
+    not yet issued, marked as a draft, on People's letter template (mantle.humanres.RecruitingServices.get#OfferLetter, Mantle's
+    Letters.js, every value escaped; the pay terms for a payroll reader alone). An issued offer's letter is the one stored when it was
+    issued, opened from OfferDetail and never rendered again: here it is not shown. A sibling of OfferDetail, out of the menu; in
+    another render mode it links to the printed page. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Offer letter" default-menu-include="false">
+    <parameter name="employmentOfferId" required="true"/>
+    <actions><script><![CDATA[
+        ec.message.pushErrors()
+        let found = null
+        try {
+            found = ec.service.sync().name('mantle.humanres.RecruitingServices.get#OfferLetter')
+                .parameters({employmentOfferId: employmentOfferId || ''}).requireNewTransaction(true).call() || null
+            if (ec.message.hasError()) found = null
+        } finally {
+            ec.message.clearErrors()
+            ec.message.popErrors()
+        }
+        const enc = text => String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        const L = text => enc(ec.l10n.localize(text))
+        printHtml = !found ? '<p>' + L('This offer is not available') + '</p>'
+            : found.issued ? '<p>' + L('This offer is issued: open its letter as it was stored, from the offer') + '</p>'
+            : found.letterHtml
+        printUrl = '/apps/People/Staffing/OfferLetter?renderMode=html-print&employmentOfferId=' + encodeURIComponent(employmentOfferId || '')
+    ]]></script></actions>
+    <widgets>
+        <render-mode>
+            <text type="html-print"><![CDATA[${printHtml}]]></text>
+            <text type="html"><![CDATA[${printHtml}]]></text>
+            <text type="qvt"><![CDATA[<p><a href="${WebUtilities.encodeHtml(printUrl)}" target="_blank">${ec.l10n.localize('Open the printable letter')}</a></p>]]></text>
+            <text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "OfferLetter", text: ec.l10n.localize("Open the printable letter"), url: printUrl})}]]></text>
+        </render-mode>
+    </widgets>
+</screen>

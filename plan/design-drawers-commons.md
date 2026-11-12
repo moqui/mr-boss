@@ -643,11 +643,11 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
 | `PeopleExpenseApproval` | People | expense claim | proposed `mantle.humanres.ExpenseServices.decide#Claim` |
 | `PeopleAdvanceApproval` | People | expense advance | proposed `mantle.humanres.ExpenseServices.decide#Advance` |
 | `PeoplePositionApproval` | People | planned position (`EmplPosition`) | `mantle.humanres.PositionServices.approve#PositionApproval` and `refuse#PositionApproval`, each calling the decision service `decide#PositionApproval` with the action (as built, impl-people P5: the framework passes no action to a topic's service, so each topic names an approve and a refuse handler, as the purchase topics do) |
-| `PeopleOfferApproval` | People | employment offer | proposed `mantle.humanres.RecruitingServices.change#OfferState` |
+| `PeopleOfferApproval` | People | employment offer (`EmploymentOffer`) | `mantle.humanres.RecruitingServices.approve#Offer` and `refuse#Offer`, each calling `change#OfferState` with the action; the last approval approves the offer for issue, a refusal makes it a draft again (as built, impl-people P17) |
 | `PeopleEmploymentChangeApproval` | People | transfer or separation (`EmploymentChange`; a pay change joins with P23) | `mantle.humanres.PeopleServices.approve#EmploymentChange` and `refuse#EmploymentChange`, each calling `decide#EmploymentChange` with the action; the last approval applies the change (as built, impl-people P6) |
 | `PeoplePayAdjustmentApproval` | People | payroll input adjustment | proposed `mantle.humanres.PayrollInputServices.decide#Adjustment` |
-| `PeopleTrainingApproval` | People | training enrollment | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
-| `PeopleReviewStep` | People | performance review step | proposed `mantle.humanres.ReviewServices.change#ReviewState` |
+| `PeopleTrainingApproval` | People | training enrollment (`PersonTraining`) | `mantle.humanres.DevelopmentServices.approve#Enrollment` and `refuse#Enrollment`, each calling `decide#Enrollment` with the action; the last approval enrolls the person, an attendee of the session's event (as built, impl-people P19) |
+| `PeopleReviewStep` | People | performance review step | `mantle.humanres.ReviewServices.change#ReviewState`, through the topic's `approve#ReviewStep` and `refuse#ReviewStep` (as built, impl-people P20: a review's finalizing; its title names no person) |
 | `PayrollRunApproval` | People | payroll run | proposed `mantle.humanres.PayrollRunServices.approve#Run`; refuse returns the run to Review through proposed `return#Run` |
 | `SalesQuoteApproval` | Sales | quote (`OrderHeader`) at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote`; the topic is Mantle's, seeded beside `OrderChangeApproval` as the purchase topics are (impl-sales P9, F26) |
 | `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval`; seeded with Marketing's setup data, as the built apps seed theirs, each with a topic registration naming `MARKETING_APPROVE` (impl-marketing P2, F42) |
@@ -935,6 +935,13 @@ the existing type `WetAvailable`.
   and shifts (People), my work orders and due PM (Maintenance), the campaign calendar (Marketing)
   or my interviews (People). A projected collection is never writable, and the grid shows it like a
   subscription (Need "Projected calendar collections", §19).
+
+**Who changes an event (Nov 12, 2026; impl-people P19 follow-up, Commons calendar editors).** Its organizer and the editors of a
+calendar that holds it for its editors (a delegate of the organizer's calendar, a team calendar it was made in). Putting an event
+in a calendar gives view only to whoever could not change it (`CalendarWorkEffort.viewOnly`: an attendee's own calendar, its
+delegates, CalDAV), and an event an app keeps (`EventManager`: People's training sessions, interviews and approved leave,
+Manufacturing's production runs) changes only in that app; EventDetail shows it read-only, saying where, and CalDAV refuses its
+writes (403).
 
 ### Calendar
 

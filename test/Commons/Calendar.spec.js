@@ -6,7 +6,8 @@
 // the quick event; a move and a resize, notifying the attendees; a move onto another booking of its room refused, then kept
 // anyway; a recurring event changed as this event, this and following and all events (mantle.work.EventServices
 // update#EventOccurrence), and cancelled the same ways (one instance as an EXDATE of its series); the answer to an
-// invitation; the popover; the search and Find a time. Joe
+// invitation; the popover; the search and Find a time; Joe's planning put in john.doe's own calendar stays Joe's to change
+// (Commons calendar editors). Joe
 // Developer may not see john.doe's family event nor change john.doe's events (IronStone R5, R28). Authorization stays on.
 // Run: ./moq test mr-boss --spec Calendar
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -141,6 +142,28 @@ feature("the week has the team sync, the invitation to answer, the closure, the 
         !titles(week).includes("Vendor demo: shared printers")
         titles(declined).includes("Vendor demo: shared printers")
         byId(declined, "BOSS_DEMO_EV_VENDOR")[0].partyStatusId == "WeptDeclined"
+    },
+})
+
+// Commons calendar editors (Nov 12, 2026): an invitation john.doe puts in his own calendar is there to be seen; the grid, the
+// popover and EventDetail's access still give him no change of Joe's planning, and a move of it is refused
+feature("Joe's planning put in john.doe's own calendar shows there and stays Joe's to change: no drag, no edit, a move refused", {
+    when() {
+        const added = sys(() => call("mantle.work.CalendarServices.add#CalendarEvent", { calendarId: "BOSS_DEMO_CAL_JD", workEffortId: "BOSS_DEMO_EV_PLANNING" }))
+        const week = events(weekStart, weekEnd)
+        const popover = get("eventSummary", { workEffortId: "BOSS_DEMO_EV_PLANNING" })
+        const moved = post("moveEvent", { workEffortId: "BOSS_DEMO_EV_PLANNING", start: day(2) + " 15:00", end: day(2) + " 16:00" })
+        const planning = one("mantle.work.effort.WorkEffort", { workEffortId: "BOSS_DEMO_EV_PLANNING" })
+        sys(() => call("mantle.work.CalendarServices.remove#CalendarEvent", { calendarId: "BOSS_DEMO_CAL_JD", workEffortId: "BOSS_DEMO_EV_PLANNING" }))
+        return { added, shown: byId(week, "BOSS_DEMO_EV_PLANNING")[0] || {}, popover, moved, planning }
+    },
+    then({ added, shown, popover, moved, planning }) {
+        added.added == true
+        shown.workEffortId == "BOSS_DEMO_EV_PLANNING"
+        !shown.canEdit
+        popover.json.event && !popover.json.event.canEdit
+        moved.errors.includes("Only the organizer")
+        userText(planning.estimatedStartDate) == day(2) + " 13:00"
     },
 })
 

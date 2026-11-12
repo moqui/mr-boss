@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Reviews & goals (design-people §11, §1.2; impl-people P20): Reviews (the default: the user's review work, their own
+    reviews, those they review and, for development, all of their employers'), Goals, Review cycles and Review forms (the review
+    administrator's), with ReviewDetail and ReviewRelease out of the menu. Every People user opens the area through the root, and what
+    each sees is what Mantle's ReviewServices admit: a person their own review and goals, a reviewer the reviews they are given, a
+    feedback giver their own feedback, an approver the review they decide, development every review of its employers; a reviewer's
+    private notes their author's alone. A self-service employee without the launcher opens the area by its own grant
+    (BOSS_PPL_PERFORMANCE), for their own reviews, goals and feedback. Review cycles and Review forms are the review administrator's
+    (BOSS_PPL_REVIEW_ADMIN: BOSS_PEOPLE_DEVELOP, the People administrator and ADMIN; denied to the root user group and self-service). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reviews &amp; goals" default-menu-index="13" menu-image="sym_o_rate_review" menu-image-type="icon">
+    <subscreens default-item="Reviews">
+        <!-- Reviews (menu index 1), Goals (2), ReviewCycles (3) and ReviewForms (4) are files under Performance/, with ReviewDetail
+            and ReviewRelease out of the menu -->
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

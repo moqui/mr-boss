@@ -37,13 +37,32 @@ along with this software (see the LICENSE.md file). If not, see
     find#MyInterviews, which takes no party), shown when they have any, each opening MyInterview beside this screen, where they read
     the applicant's name, the opening and what the recruiter shared with the panel and answer their scorecard; the scorecards to
     submit counted in the summary. P18: My qualifications links People's Qualifications (their own, when the Skills and training
-    area opens to them), where they submit a certificate or document for verification. Payslips (P26) join with their phase. -->
+    area opens to them), where they submit a certificate or document for verification; P19 review: My training links People's
+    Training (their own places, the same area). P17 review (the user's call of Nov 12, 2026):
+    My letters, the issued lifecycle letters addressed to the user (a hire's confirmation, a transfer, a separation and the like:
+    mantle.humanres.PeopleServices find#MyLetters, which takes no party), shown when they have any, each opened as it was stored,
+    whole, pay included (get#MyLetter refuses another person's letter as a missing one). Payslips (P26) join with their phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
     <transition-include name="storeEmergencyContact" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
     <!-- P13: the clock (record#Punch, the user's own) -->
     <transition-include name="clock" location="component://mr-boss/template/PeopleClock.xml"/>
+    <!-- P17 review: one of the user's own issued letters, as it was stored (Mantle admits the caller's own alone) -->
+    <transition name="myLetter" read-only="true">
+        <parameter name="employmentLetterId"/>
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.get#MyLetter" out-map="letterFound"
+                    in-map="{employmentLetterId:employmentLetterId}"/>
+            <!-- the file is read as Mantle admitted it: the self-service grant does not reach the content store -->
+            <script>if (!ec.message.hasError()) {
+                const was = ec.artifactExecution.disableAuthz()
+                try { ec.web.sendResourceResponse(letterFound.letter.location, true, letterFound.letter.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
+            }</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
 
     <actions>
         <service-call name="ironstone.people.ContextServices.get#SelfServiceContext" out-map="links" transaction="force-new"
@@ -116,6 +135,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="interviewRows" from="Array.from(myInterviews?.interviews || [])"/>
+        <!-- P17 review: the user's own issued lifecycle letters (find#MyLetters takes no party) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.PeopleServices.find#MyLetters" out-map="myLetters" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="letterRows" from="Array.from(myLetters?.letters || [])"/>
+        <set field="letterEmployers" from="new Set(letterRows.map(row => row.organizationPartyId)).size"/>
         <set field="scorecardsText" from="String(myInterviews?.toAnswerCount || 0)"/>
     </actions>
 
@@ -163,6 +189,17 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P18 -->
                             <link url="${links.qualificationsUrl}" url-type="plain" text="My qualifications" link-type="anchor-button"
                                     icon="sym_o_workspace_premium" condition="links?.qualificationsUrl"/>
+                            <!-- P19 review: their own training places (Training's Mine) -->
+                            <link url="${links.trainingUrl}" url-type="plain" text="My training" link-type="anchor-button"
+                                    icon="sym_o_school" condition="links?.trainingUrl"/>
+                            <!-- P21: their confidential cases, and filing one -->
+                            <link url="${links.grievancesUrl}" url-type="plain" text="Raise a concern" link-type="anchor-button"
+                                    icon="sym_o_shield_person" condition="links?.grievancesUrl"/>
+                            <!-- P20: their own reviews and goals -->
+                            <link url="${links.reviewsUrl}" url-type="plain" text="My reviews" link-type="anchor-button"
+                                    icon="sym_o_rate_review" condition="links?.reviewsUrl"/>
+                            <link url="${links.goalsUrl}" url-type="plain" text="My goals" link-type="anchor-button"
+                                    icon="sym_o_flag" condition="links?.goalsUrl"/>
                         </container>
                     </container>
                 </container>
@@ -375,6 +412,31 @@ along with this software (see the LICENSE.md file). If not, see
                                     <columns type="mobile">
                                         <column><field-ref name="whenText"/><field-ref name="facilityName"/></column>
                                         <column><field-ref name="hoursText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P17 review: My letters, the user's own issued lifecycle letters, shown when they have any -->
+                <section name="MyLettersSection" condition="letterRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My letters"/>
+                            <box-body-nopad>
+                                <form-list name="MyLetters" list="letterRows" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Letter">
+                                            <link url="myLetter" text="${title}" link-type="anchor" target-window="_blank"
+                                                    parameter-map="{employmentLetterId:employmentLetterId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationName" hide="letterEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="issuedDateText"><default-field title="Issued"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/></column>
+                                        <column><field-ref name="issuedDateText"/></column>
                                     </columns>
                                 </form-list>
                             </box-body-nopad>

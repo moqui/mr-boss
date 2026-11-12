@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Reviews (design-people §11 Reviews; style-guide §3.2 List; impl-people P20): the reviews the user reads, from
+    mantle.humanres.ReviewServices.find#Reviews: To do (the default: their own step waiting, a decision of a review's approval, a
+    release, an acknowledgment), Mine (their own reviews), I review, and All (a development reader's employers', never their own);
+    a cycle (reviewCycleId, from Review cycles) and a name narrow it. Each row opens ReviewDetail and shows the person, the cycle and
+    period, the reviewer, the self and reviewer assessments' states, the feedback given of asked (never to the person reviewed), the
+    earliest due date, what the user has to do and the state as a chip; never a rating. Every People user's and a self-service
+    employee's (the area's own grant, BOSS_PPL_PERFORMANCE); what each reads is Mantle's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reviews" default-menu-index="1" menu-image="sym_o_rate_review" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="reviewCycleId"/>
+    <parameter name="term"/>
+    <parameter name="pageIndex"/>
+    <actions>
+        <set field="showing" from="['todo', 'mine', 'team', 'all'].includes(show) ? show : (reviewCycleId ? 'all' : 'todo')"/>
+        <service-call name="mantle.humanres.ReviewServices.find#Reviews" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{show:showing, reviewCycleId:(reviewCycleId || null), term:(term || null), pageIndex:(pageIndex || 0)}"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            reviews = Array.from(found?.reviews || [])
+            reviewsCount = found?.reviewsCount || 0
+            reviewsPageIndex = found?.reviewsPageIndex || 0
+            reviewsPageSize = found?.reviewsPageSize || 20
+            reviewsPageMaxIndex = found?.reviewsPageMaxIndex || 0
+            reviewsPageRangeLow = found?.reviewsPageRangeLow || 0
+            reviewsPageRangeHigh = found?.reviewsPageRangeHigh || 0
+            canSeeAll = !!found?.canSeeAll
+            showOptions = [{key: 'todo', text: 'To do'}, {key: 'mine', text: 'Mine'}, {key: 'team', text: 'I review'}]
+                .concat(canSeeAll ? [{key: 'all', text: 'All'}] : [])
+            stateColors = {PrvInProgress: 'primary', PrvApproval: 'warning', PrvFinalized: 'primary', PrvReleased: 'positive',
+                PrvAcknowledged: 'positive', PrvExcluded: 'grey-8'}
+            findValues = {show: showing, term: term || null, reviewCycleId: reviewCycleId || null}
+            emptyText = showing == 'todo' ? 'Nothing waits for you: no assessment, feedback, decision or release.'
+                : showing == 'mine' ? 'You have no review yet. One starts when your employer starts a review cycle.'
+                : showing == 'team' ? 'You review no one yet.'
+                : 'No review matches.'
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Reviews" type="h5"/>
+                <label text="Self assessments, your assessments of the people you review, feedback asked of you and reviews to release or acknowledge." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+
+        <form-single name="FindReviews" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio><list-options list="showOptions" key="${key}" text="${text}"/></radio>
+                </default-field>
+            </field>
+            <field name="reviewCycleId"><default-field><hidden/></default-field></field>
+            <field name="term"><default-field title="Person"><text-find size="20" hide-options="true"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="term"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ReviewList" list="reviews" skip-form="true" paginate="true" condition="reviews.length">
+                    <field name="personName">
+                        <default-field title="Person">
+                            <link url="../ReviewDetail" text="${personName}" link-type="anchor" parameter-map="{performanceReviewId:performanceReviewId}"/>
+                        </default-field>
+                    </field>
+                    <field name="cycleName"><default-field title="Cycle"><display text="${cycleName} · ${periodText}"/></default-field></field>
+                    <field name="reviewerName"><default-field title="Reviewer"><display/></default-field></field>
+                    <field name="selfStateText"><default-field title="Self"><display/></default-field></field>
+                    <field name="managerStateText"><default-field title="Reviewer's"><display/></default-field></field>
+                    <field name="feedbackText"><default-field title="Feedback"><display/></default-field></field>
+                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                    <field name="todoText"><default-field title="To do"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusEnumId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="personName"/><field-ref name="cycleName"/><field-ref name="todoText"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!reviews.length" text="${emptyText}"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

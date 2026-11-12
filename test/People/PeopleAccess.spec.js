@@ -57,6 +57,24 @@
 // employer (the reader refused with the same parameters, Services' qualification refused to Retail's development administrator), and
 // the Development group (the reader's without the matrix). P18 review (the user's call of Nov 12, 2026): the manager evaluates her
 // report's skill without PEOPLE_DEVELOP_EDIT, the reader is refused the same evaluation and the manager Services' employee.
+// P17: an offer read by a recruiter of its employer (the directory reader refused it with the same parameters, Services' offer refused
+// to Retail's recruiter), its pay set by payroll and refused to the HR officer with the same parameters, and an employment change's
+// letter print HR's (the directory reader refused the screen). P17 review (the user's call of Nov 12, 2026): the employee reads
+// their own issued letter through SelfService's My letters (the services and the transition by its own grant) and is refused Ines's;
+// the reader (no self-service) is refused the employee's letter with the same parameters.
+// P19: a training session scheduled by the development administrator of its employer (the HR officer refused with the same
+// parameters), an assessment its trainer's (the reader refused the same assessment), Services' session refused to Retail's
+// development administrator, the employee's Training by the area's own grant, and Training in the Development group. P19 review:
+// the assessment forms the development administrator's (the HR officer and the employee refused the screen), the employee's
+// self-service link to their training.
+// P21: a confidential case read by its handler and its employee, and refused to the manager, the HR officer, the People
+// administrator and the instance administrator with the same parameters; no Commons list, access check or id lookup holds it;
+// RequestDetail's one qvt render as the handler (the case inside its AI opt-out) and the employee's html render by their own
+// grant; Grievances opened to the self-service employee by its own grant and refused another app's user, and the Employees group
+// with Grievances.
+// P20: a review cycle set up by a development editor of the employer (the HR officer refused with the same parameters, Services
+// refused to Retail's review administrator); Review cycles the review administrator's (the HR officer and the employee refused the
+// screen), Reviews the employee's by the area's own grant and their self-service link to it; the Performance group per user.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -182,14 +200,15 @@ feature(
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
             // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances; P18: their
-            // qualifications)
+            // qualifications; P19: training, a session and a certificate)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
                 Object.keys(employee.sharedLinks || {}).join() !==
                     "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
-                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications" ||
+                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications," +
+                        "Development/Training,Development/TrainingDetail,Development/TrainingCertificate" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -267,6 +286,15 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             const development = shell(user, true, "Development/Qualifications", "Development")
             if (JSON.stringify(development.names) !== JSON.stringify(menu))
                 problems.push(`${label} Development group: ${development.status} ${development.names}`)
+        }
+        // P20: Reviews & goals' reviews and goals every People user's; its review cycles and forms the review administrator's
+        for (const [user, menu, label] of [
+            [users.develop, ids.developPerformanceMenu, "the review administrator's"],
+            [users.reader, ids.performanceMenu, "the reader's"]
+        ]) {
+            const performance = shell(user, true, "Performance/Reviews", "Performance")
+            if (JSON.stringify(performance.names) !== JSON.stringify(menu))
+                problems.push(`${label} Performance group: ${performance.status} ${performance.names}`)
         }
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
@@ -1427,6 +1455,380 @@ feature(
                     readerEvaluates: "PERMISSION_DENIED",
                     managerOther: "RECORD_UNAVAILABLE"
                 }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P17: an offer is read by its employer's recruiters, its pay set by payroll alone; an employment letter's print is HR's",
+    {
+        when() {
+            const R = "mantle.humanres.RecruitingServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const day = days => ec.l10n.format(new Date(Date.now() + days * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+            // an interviewed application's draft offer of an employer: Retail's by its recruiter, Services' by the system administrator
+            const draftOffer = (organizationPartyId, seatId, lastName) =>
+                system(() => {
+                    const opening = invoke(R + "store#Opening", {
+                        organizationPartyId,
+                        title: "Access spec offer opening",
+                        emplPositionIds: seatId,
+                        action: "open"
+                    })
+                    const made = invoke(R + "create#Application", {
+                        jobOpeningId: opening.jobOpeningId,
+                        firstName: "Access",
+                        lastName
+                    })
+                    for (const statusId of ["EaScreening", "EaInterview"])
+                        invoke("update#mantle.humanres.employment.EmploymentApplication", {
+                            employmentApplicationId: made.employmentApplicationId,
+                            statusId
+                        })
+                    return invoke(R + "store#Offer", {
+                        employmentApplicationId: made.employmentApplicationId,
+                        emplPositionId: seatId,
+                        fromDate: day(45)
+                    }).employmentOfferId
+                })
+            const retail = asUser(users.recruiter, () => draftOffer(ids.organizationId, ids.openingSeatId, "Offeree"))
+            const services = draftOffer(ids.otherOrganizationId, ids.otherOpeningSeatId, "Elsewhere")
+            const as = (user, service, parameters) => asUser(user, () => system(() => code(refusal(service, parameters))))
+            const pay = {employmentOfferId: retail, payAmount: "38000", currencyUomId: "USD", timePeriodTypeId: "PayrollYear"}
+            const codes = {
+                recruiter: as(users.recruiter, R + "get#Offer", {employmentOfferId: retail}),
+                reader: as(users.reader, R + "get#Offer", {employmentOfferId: retail}),
+                otherEmployer: as(users.recruiter, R + "get#Offer", {employmentOfferId: services}),
+                hrPay: as(users.hr, R + "store#Offer", pay),
+                payrollPay: as(users.payroll, R + "store#Offer", pay)
+            }
+            const problems = []
+            const hrLetter = screenRefusal(users.hr, "Employees/EmploymentLetter", {employmentChangeId: "_NA_"})
+            if (hrLetter) problems.push(`the HR officer's employment letter: ${hrLetter}`)
+            const readerLetter = screenRefusal(users.reader, "Employees/EmploymentLetter", {employmentChangeId: "_NA_"})
+            if (!unauthorized(readerLetter)) problems.push(`the reader opens an employment letter: ${readerLetter || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    recruiter: "accepted",
+                    reader: "RECORD_UNAVAILABLE",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    hrPay: "PERMISSION_DENIED",
+                    payrollPay: "accepted"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature("P17 review: an employee reads their own issued letters in self-service, no one else's", {
+    when() {
+        const P = "mantle.humanres.PeopleServices."
+        const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+        // spec-local issued lifecycle letters of Tomas (the employee) and Ines, as Mantle stores them
+        const letterOf = (partyId, key) =>
+            system(() => {
+                const location = "dbresource://mantle/content/peopleLetter/access-spec-" + key + ".html"
+                ec.resource.getLocationReference(location).putText("<html><body>Access spec letter " + key + "</body></html>")
+                return call("create#mantle.humanres.employment.EmploymentLetter", {
+                    employmentChangeId: "PPL_ACCESS_SPEC_" + key,
+                    changeKindEnumId: "EckTransfer",
+                    partyId,
+                    organizationPartyId: ids.organizationId,
+                    title: "Transfer",
+                    contentLocation: location,
+                    contentType: "text/html",
+                    fileName: "Transfer-" + key + ".html",
+                    includesPay: "N",
+                    issuedDate: ec.user.nowTimestamp
+                }).employmentLetterId
+            })
+        const own = letterOf(ids.employeePartyId, "OWN")
+        const other = letterOf(ids.reportPartyId, "OTHER")
+        // as the user with artifact authorization on: the services by SelfService's own grant, then Mantle's checks
+        const as = (user, service, parameters) =>
+            asUser(user, () => {
+                const message = refusal(service, parameters)
+                return /is not authorized/.test(message) ? "UNAUTHORIZED" : code(message)
+            })
+        const listed = asUser(users.employee, () => invoke(P + "find#MyLetters").letters || [])
+        const opened = asUser(users.employee, () => hit("apps/Commons/People/SelfService/myLetter", {employmentLetterId: own}))
+        return {
+            codes: {
+                employee: as(users.employee, P + "get#MyLetter", {employmentLetterId: own}),
+                reader: as(users.reader, P + "get#MyLetter", {employmentLetterId: own}),
+                another: as(users.employee, P + "get#MyLetter", {employmentLetterId: other})
+            },
+            listed: listed.map(row => row.employmentLetterId).filter(id => id === own || id === other),
+            opened: !opened.refused && opened.output.includes("Access spec letter OWN")
+        }
+    },
+    then({codes, listed, opened}) {
+        codes ==
+            {
+                employee: "accepted",
+                reader: "UNAUTHORIZED",
+                another: "RECORD_UNAVAILABLE"
+            }
+        listed.length == 1
+        opened == true
+    }
+})
+
+feature(
+    "training: a session scheduled by the development administrator of its employer, the HR officer refused with the same parameters; an assessment the session's trainer's, the reader refused the same assessment; Services' session refused to Retail's development administrator; the employee's Training by the area's own grant and self-service link; the assessment forms the development administrator's",
+    {
+        when() {
+            const D = "mantle.humanres.DevelopmentServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const hour = 60 * 60 * 1000
+            const problems = []
+            // a spec-local course of Retail with no assessment form, and one session of Services' (its own course, Kenji training)
+            const trainingClassId = asUser(users.develop, () =>
+                system(() =>
+                    invoke(D + "store#TrainingClass", {
+                        organizationPartyId: ids.organizationId,
+                        title: "People access spec course"
+                    })
+                )
+            ).trainingClassId
+            const otherSessionId = system(() => {
+                const otherClassId = call("create#mantle.humanres.ability.TrainingClass", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    title: "People access spec Services course"
+                }).trainingClassId
+                const workEffortId = call("create#mantle.work.effort.WorkEffort", {
+                    workEffortTypeEnumId: "WetEvent",
+                    purposeEnumId: "WepTraining",
+                    workEffortName: "Training: People access spec Services course",
+                    statusId: "WeInPlanning",
+                    estimatedStartDate: new Date(Date.now() + 48 * hour),
+                    estimatedCompletionDate: new Date(Date.now() + 50 * hour)
+                }).workEffortId
+                call("create#mantle.humanres.ability.TrainingSession", {
+                    workEffortId,
+                    trainingClassId: otherClassId,
+                    organizationPartyId: ids.otherOrganizationId,
+                    trainerPartyId: ids.otherEmployeePartyId,
+                    capacity: 4
+                })
+                return workEffortId
+            })
+            const schedule = {
+                trainingClassId,
+                startDate: new Date(Date.now() + 24 * hour),
+                endDate: new Date(Date.now() + 26 * hour),
+                trainerPartyId: ids.managerPartyId,
+                capacity: "4"
+            }
+            const codes = {hrSchedules: code(asUser(users.hr, () => system(() => refusal(D + "store#Training", schedule))))}
+            const workEffortId = asUser(users.develop, () => system(() => invoke(D + "store#Training", schedule))).workEffortId
+            const personTrainingId = asUser(users.develop, () =>
+                system(() => invoke(D + "enroll#Training", {workEffortId, partyId: ids.employeePartyId}))
+            ).personTrainingId
+            // the session has taken place, and Hannah, its trainer, marked Tomas attended
+            system(() =>
+                call("update#mantle.work.effort.WorkEffort", {
+                    workEffortId,
+                    estimatedStartDate: new Date(Date.now() - 3 * hour),
+                    estimatedCompletionDate: new Date(Date.now() - hour)
+                })
+            )
+            asUser(users.manager, () => system(() => invoke(D + "mark#TrainingAttendance", {personTrainingId, attended: "Y"})))
+            const assess = {personTrainingId, outcome: "fail", evidence: "Access spec"}
+            Object.assign(codes, {
+                readerAssesses: code(asUser(users.reader, () => system(() => refusal(D + "complete#Training", assess)))),
+                trainerAssesses: code(asUser(users.manager, () => system(() => refusal(D + "complete#Training", assess)))),
+                otherEmployer: code(
+                    asUser(users.develop, () => system(() => refusal(D + "get#Training", {workEffortId: otherSessionId})))
+                )
+            })
+            const own = screenRefusal(users.employee, "Development/Training")
+            if (own) problems.push(`the employee's Training: ${own}`)
+            // P19 review: the training assessment forms are the learning administrator's, not the HR officer's or the employee's
+            const developForms = screenRefusal(users.develop, "Development/AssessmentForms")
+            if (developForms) problems.push(`the learning administrator's assessment forms: ${developForms}`)
+            for (const [user, who] of [
+                [users.hr, "the HR officer"],
+                [users.employee, "the employee"]
+            ]) {
+                const refused = screenRefusal(user, "Development/AssessmentForms")
+                if (!unauthorized(refused)) problems.push(`${who} opens the assessment forms: ${refused || "opened"}`)
+            }
+            // P19 review: the employee's self-service links their own training places
+            const links = asUser(users.employee, () =>
+                invoke("ironstone.people.ContextServices.get#SelfServiceContext", {appRoot: "Commons"})
+            )
+            if (links.trainingUrl !== "/qapps/People/Development/Training?show=mine")
+                problems.push(`the employee's training link: ${links.trainingUrl}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    hrSchedules: "PERMISSION_DENIED",
+                    readerAssesses: "RECORD_UNAVAILABLE",
+                    trainerAssesses: "accepted",
+                    otherEmployer: "RECORD_UNAVAILABLE"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "confidential cases: the employee files a case with Retail's case handler, who reads it; the manager, the HR officer and the administrators are refused it with the same parameters; no other app's request list, detail or lookup holds it; RequestDetail shows it behind the AI opt-out to its handler and to the employee by their own grant; the employee opens Grievances by its own grant",
+    {
+        when() {
+            const R = "mantle.request.RequestServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const subject = "People access spec: a confidential concern"
+            const problems = []
+            const requestId = asUser(users.employee, () =>
+                system(
+                    () =>
+                        invoke(R + "create#PeopleCase", {subject, details: "Spec details", incidentDate: "2026-11-02"}).requestId
+                )
+            )
+            const get = {requestId}
+            const codes = {
+                handler: code(asUser(users.caseHandler, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                filer: code(asUser(users.employee, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                manager: code(asUser(users.manager, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                hr: code(asUser(users.hr, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                admin: code(asUser(users.admin, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                system: code(asUser(users.system, () => system(() => refusal(R + "get#PeopleCase", get))))
+            }
+            // the handler's own requests in Commons, its access check there and the id lookup hold no case
+            asUser(users.caseHandler, () =>
+                system(() => {
+                    const rows = Array.from(
+                        invoke("ironstone.commons.RequestServices.find#RequestRows", {list: "all"}).rowList || []
+                    )
+                    if (rows.some(row => row.requestId === requestId))
+                        problems.push("the case is in the handler's Commons requests")
+                    const access = invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId, need: "check"})
+                    if (access.visible) problems.push("Commons' request access admits the case")
+                    if (invoke("mantle.GeneralServices.lookup#ById", {lookupId: requestId}).requestId)
+                        problems.push("the id lookup finds the case")
+                })
+            )
+            // P21 review: Commons answers the case as a missing request (found false), to the manager as to anyone
+            const commonsAccess = asUser(users.manager, () =>
+                system(() => invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId, need: "check"}))
+            )
+            if (commonsAccess.found || commonsAccess.visible) problems.push("Commons tells the manager the case exists")
+            // P21 review: the handler's note on the case is on no other record, for the instance administrator either (a reply on
+            // the handler's party record, Chatter's party branch)
+            const noteText = "People access spec: the handler's note"
+            const noteId = asUser(users.caseHandler, () =>
+                system(() => invoke("mantle.request.RequestServices.add#RequestComment", {requestId, body: noteText}))
+            ).communicationEventId
+            const reply = asUser(users.system, () =>
+                system(() =>
+                    refusal("ironstone.shared.ChatterServices.reply#Entry", {
+                        recordEntityName: "mantle.party.Party",
+                        recordId: ids.caseHandlerPartyId,
+                        parentCommEventId: noteId,
+                        body: "People access spec: a reply from outside"
+                    })
+                )
+            )
+            if (!/is not on this record/.test(reply))
+                problems.push(`the administrator replies to the case note: ${reply || "replied"}`)
+            // P21 review: an agent's render of the case's Chatter panel as its handler (Assist's screen session) shows nothing of it
+            const agentChatter = asUser(users.caseHandler, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/People.xml")
+                    .renderMode("tui")
+                    .agent()
+                    .render(
+                        "Chatter/ChatterTui",
+                        {recordEntity: "mantle.request.Request", recordId: requestId, appRoot: "People"},
+                        null
+                    )
+                ec.message.clearErrors()
+                return String(result.output || "")
+            })
+            if (agentChatter.includes(noteText) || !agentChatter.includes("This record is not available"))
+                problems.push("an agent's render of the case's Chatter shows it")
+            // RequestDetail under People: the handler's one qvt render (the case behind the opt-out), HR's html render (not available)
+            const handlerPage = asUser(users.caseHandler, () => page("Employees/RequestDetail", {requestId}))
+            if (handlerPage.errors.length) problems.push(`the handler's RequestDetail: ${handlerPage.errors.join(" | ")}`)
+            if (!handlerPage.output.includes(subject)) problems.push("the handler's RequestDetail lacks the case")
+            if (!handlerPage.output.includes('data-ai-opt-out="section"')) problems.push("the case is not opted out of AI")
+            // the employee's html render: their own case, opened under People by its own grant (BOSS_PPL_CASES_SELF)
+            const filerPage = asUser(users.employee, () => page("Employees/RequestDetail", {requestId}, "html"))
+            if (filerPage.status != 200 || filerPage.errors.length || !filerPage.output.includes(subject))
+                problems.push(`the employee's RequestDetail: ${filerPage.status} ${filerPage.errors.join(" | ")}`)
+            const own = screenRefusal(users.employee, "Employees/Grievances")
+            if (own) problems.push(`the employee's Grievances: ${own}`)
+            if (!unauthorized(screenRefusal(users.otherApp, "Employees/Grievances")))
+                problems.push("another app's user opens Grievances")
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    handler: "accepted",
+                    filer: "accepted",
+                    manager: "RECORD_UNAVAILABLE",
+                    hr: "RECORD_UNAVAILABLE",
+                    admin: "RECORD_UNAVAILABLE",
+                    system: "RECORD_UNAVAILABLE"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "reviews: a review cycle set up by a development editor of the employer (the HR officer refused with the same parameters, Services refused to Retail's review administrator); Review cycles the review administrator's (the HR officer and the employee refused); Reviews the employee's by the area's own grant, and their self-service links their reviews",
+    {
+        when() {
+            const R = "mantle.humanres.ReviewServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const cycle = organizationPartyId => ({
+                organizationPartyId,
+                cycleName: "People access spec cycle",
+                reviewTemplateId: ids.reviewTemplateId,
+                periodFromDate: "2026-01-01",
+                periodThruDate: "2026-12-31"
+            })
+            const codes = {
+                developStores: code(
+                    asUser(users.develop, () => system(() => refusal(R + "store#Cycle", cycle(ids.organizationId))))
+                ),
+                hrStores: code(asUser(users.hr, () => system(() => refusal(R + "store#Cycle", cycle(ids.organizationId))))),
+                otherEmployer: code(
+                    asUser(users.develop, () => system(() => refusal(R + "store#Cycle", cycle(ids.otherOrganizationId))))
+                )
+            }
+            const problems = []
+            const cycles = screenRefusal(users.develop, "Performance/ReviewCycles")
+            if (cycles) problems.push(`the review administrator's review cycles: ${cycles}`)
+            for (const [user, who] of [
+                [users.hr, "the HR officer"],
+                [users.employee, "the employee"]
+            ]) {
+                const refused = screenRefusal(user, "Performance/ReviewCycles")
+                if (!unauthorized(refused)) problems.push(`${who} opens the review cycles: ${refused || "opened"}`)
+            }
+            const own = screenRefusal(users.employee, "Performance/Reviews")
+            if (own) problems.push(`the employee's Reviews: ${own}`)
+            const links = asUser(users.employee, () =>
+                invoke("ironstone.people.ContextServices.get#SelfServiceContext", {appRoot: "Commons"})
+            )
+            if (links.reviewsUrl !== "/qapps/People/Performance/Reviews?show=mine")
+                problems.push(`the employee's reviews link: ${links.reviewsUrl}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes == {developStores: "accepted", hrStores: "PERMISSION_DENIED", otherEmployer: "ORGANIZATION_DENIED"}
             problems.join("\n") == ""
         }
     }

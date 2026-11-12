@@ -129,6 +129,13 @@ along with this software (see the LICENSE.md file). If not, see
                     .disableAuthz().one() : null
                 title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), kind?.description].filter(Boolean).join(' · ')
                 typeLabel = L('Qualification')
+            } else if (entityName === 'mantle.humanres.ability.PerformanceReview') {
+                // People's review host (impl-people P20): the person and the cycle, read after get#RecordLinkInfo admitted the user as
+                // its reviewer, a development reader of its employer or, once released, the person; never a rating or a note
+                const person = ec.entity.find('mantle.party.Person').condition('partyId', record.partyId).disableAuthz().one()
+                const cycle = ec.entity.find('mantle.humanres.ability.ReviewCycle').condition('reviewCycleId', record.reviewCycleId).disableAuthz().one()
+                title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), cycle?.cycleName].filter(Boolean).join(' · ')
+                typeLabel = L('Review')
             } else if (entityName === 'moqui.resource.GitMergeRequest') {
                 // a merge request by its number and title (get#RecordLinkInfo checked its repository's view right)
                 title = '!' + record.mergeRequestNum + ' ' + (record.title || '')
@@ -803,6 +810,10 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.shared.ChatterServices.get#RecordInfo" out-map="recordOut"
                     in-map="{recordEntityName:recordEntityName, recordId:recordId, requireVisible:true}"/>
             <if condition="ec.message.hasError()"><return/></if>
+            <!-- a confidential case (impl-people P21): its conversation is its people's notes; no message from it goes to anyone else -->
+            <if condition="recordOut.info.recordEntityName == 'mantle.request.Request' &amp;&amp;
+                    ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(recordId)">
+                <return error="true" message="A confidential case's conversation is its notes: write a note for its people"/></if>
             <service-call name="ironstone.shared.ChatterServices.get#UserIdsParties" in-map="{userIds:toUserIds}" out-map="toOut"/>
             <if condition="!toOut.partyIdList?.length"><return error="true" message="Choose who to send the message to"/></if>
             <if condition="!String(body).replace(/&lt;[^&gt;]*&gt;/g, '').replace(/&amp;nbsp;/g, ' ').trim()">
@@ -841,6 +852,10 @@ along with this software (see the LICENSE.md file). If not, see
             const notOnRecord = () => ec.message.addError(ec.resource.expand('Message ${id} is not on this record', '', {id: communicationEventId}))
             const value = ec.entity.find('mantle.party.communication.CommunicationEvent').condition('communicationEventId', communicationEventId).one()
             if (value == null) { notOnRecord(); return }
+            // a note or message filed on a confidential case is its people's alone (impl-people P21 review): on no other record for
+            // anyone else, its author's or a recipient's party included (an attachment, a reply, taking it off)
+            if (ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').hiddenEventIds([communicationEventId]).length) {
+                notOnRecord(); return }
             const found = (entityName, keys) => ec.entity.find(entityName).condition(keys).count() > 0
             let on = false
             if (info.isParty) {

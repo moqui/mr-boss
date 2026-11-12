@@ -62,6 +62,10 @@ along with this software (see the LICENSE.md file). If not, see
     order among the tasks opens WorkOrderDetail. In Commons, the reporter of a maintenance request sees its safe summary (state,
     target, the work order's name and status; Mantle's find#MaintenanceRequests), and a work order is listed among the tasks only
     for one Maintenance admits to it (MaintenanceAccess workHidden, F69): a requester holds no Maintenance root (F78).
+    People (impl-people P21, crosscut §3.11's People row, design-people §13 RequestDetail; mantle.request.RequestServices
+    get#PeopleCase, template/PeopleCaseDetail.xml): a confidential case at People/Employees/RequestDetail, for its people alone (the
+    employee who filed it and its handlers), opted out of AI; any other request is not available there, and a case is not
+    available in any other context (Commons' get#RequestAccess and every app's own read leave it out).
 
     Commerce (impl-commerce P8, crosscut §3.11, design-commerce §10 RequestDetail; mantle.order.StoreOperationsServices
     get#StoreRequest, template/CommerceRequestDetail.xml): a case of the user's stores at Commerce/Customers/RequestDetail,
@@ -120,6 +124,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="triageRequest" location="component://mr-boss/template/MaintenanceRequestParts.xml"/>
     <!-- Commerce (impl-commerce P8): an internal note on a store case (template/CommerceRequestDetail.xml) -->
     <transition-include name="commerceRequestNote" location="component://mr-boss/template/CommerceRequestDetail.xml"/>
+    <!-- People (impl-people P21): a confidential case's moves, handlers and the work asked on it (template/PeopleCaseDetail.xml) -->
+    <transition-include name="changeCase" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
+    <transition-include name="assignCaseHandler" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
+    <transition-include name="addCaseTask" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->
@@ -364,6 +372,21 @@ along with this software (see the LICENSE.md file). If not, see
                 recordFound = false
                 return
             }
+            // People (impl-people P21, F19): a confidential case for its people alone, in its own section opted out of AI
+            // (template/PeopleCaseDetail.xml); anyone else, and any other request, is told it is not available
+            if (appRoot === 'People') {
+                ec.message.pushErrors()
+                try {
+                    caseOut = ec.service.sync().name('mantle.request.RequestServices.get#PeopleCase').parameters({requestId: requestId})
+                            .requireNewTransaction(true).call() || {}
+                    peopleCaseFound = !ec.message.hasError() && !!caseOut.peopleCase
+                } catch (error) {
+                    caseOut = {}
+                    peopleCaseFound = false
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = false
+                return
+            }
             // Customer Service (impl-customer-service P2, F49): a case in its own section (template/CustomerServiceCaseDetail.xml)
             if (appRoot === 'CustomerService') {
                 detailPath = '/qapps/CustomerService/Cases/CaseDetail'
@@ -558,7 +581,12 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="PurchasingRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
         <section-include name="CustomerServiceCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
         <section-include name="CommerceRequest" location="component://mr-boss/template/CommerceRequestDetail.xml"/>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; !mfgRequest &amp;&amp; !mntRequest"><widgets>
+        <!-- People (impl-people P21): the confidential case, opted out of AI as a whole (PE-21; the opt-out is on this section, since a
+            section-include does not carry the included section's) -->
+        <section name="PeopleCaseConfidential" condition="appRoot == 'People'" ai-opt-out="true"><widgets>
+            <section-include name="PeopleCase" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
+        </widgets></section>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'People' &amp;&amp; !mfgRequest &amp;&amp; !mntRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>

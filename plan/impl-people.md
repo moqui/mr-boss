@@ -1,5 +1,8 @@
 # IronStone BOSS — People implementation
 
+Nov 12, 2026 — gate 3 built: P15–P19 and P21 (stage 3), expenses, recruiting, development and cases, each phase reviewed by
+a fresh agent and merged on its focused specs, with the Commons calendar follow-up (view-only attendee links, app-managed
+events). Next: P20 beside P22, then P23, and stage 4.
 Nov 12, 2026 — gate 2 built: P9–P14 (stage 2), time and leave, each phase reviewed by a fresh agent and merged on its
 focused specs, P12 and P13 with their framework parts (the per-field AI opt-out, a quick create's condition service). Next:
 stage 3 (P15 beside P16, then P17 beside P18, P19 beside P21, P20 beside P22, P23).
@@ -326,11 +329,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | built and reviewed Nov 11, merged |
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | built and reviewed Nov 11, merged |
 | P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | built and reviewed Nov 11, merged |
-| P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | — |
+| P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | built and reviewed Nov 11, merged |
 | P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | built and reviewed Nov 11, merged |
-| P19 Training | Mantle, BOSS | Training, TrainingDetail | — |
-| P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | — |
-| P21 Grievances | Mantle, BOSS | Grievances, RequestDetail | — |
+| P19 Training | Mantle, BOSS | Training, TrainingDetail | built and reviewed Nov 11, merged |
+| P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | built and reviewed Nov 12, merged |
+| P21 Grievances | Mantle, BOSS | Grievances, RequestDetail | built and reviewed Nov 11, merged |
 | P22 Pay components, structures and groups | mr-moqui, Mantle, BOSS | PayComponents, PayComponentDetail, PayStructures, PayStructureDetail, PayGroups | — |
 | P23 Pay assignments and compensation | Mantle, BOSS | PayAssignments; Employee360's Compensation | — |
 | P24 Pay inputs and hours for pay | Mantle, BOSS | HoursForPay, PayAdjustments | — |
@@ -4458,6 +4461,237 @@ Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
 - **Usable when** (`acceptance/People/PeopleOffersUsable`): a recruiter drafts an offer, HR approves, the candidate's
   acceptance is recorded, and HR hires from it; a second hire from the same offer is refused.
 
+**Built Nov 12 (P17).** mr-mantle b2b73796, mr-boss (branch `ppl/p17`).
+- Checked first (the code over the plan): P5's approval pattern (one approve and one refuse handler per topic over the domain's
+  decision, F110; `record#Decision`'s revision and self checks; routing by `chooseRules`), P6's hire (`planHire`, `hire#Employee`'s
+  operation key, `personAdmitted`, the draft record's whitelist), P9's `assign#Schedule` (a schedule from the hire's first day
+  changes that assignment in place), P15's printed claim (`ec.resource.xslFoTransform`, with the html page where there is no PDF
+  engine) and P16's applications and sharing. Found: with no rule a request about a person routes to their manager, so an offer
+  (about an applicant, who has none) would wait unresolved; P16's applications name their employer and not a position, so P6's
+  person search and admission (an applicant "to one of their positions", by `EmploymentApplication.emplPositionId`) found none of
+  P16's applicants by name and refused them by id; the test runtime has a PDF engine (a stored letter is a PDF, its text read with
+  `ec.resource.extractText`).
+- Mantle:
+  - `entity/PeopleRecruitingEntities.xml`: `mantle.humanres.recruitment.EmploymentOffer` (the dated terms of one application: a seat
+    of its opening, the department, manager, work location, working schedule, start, optional end, expiry and a note; the pay
+    amount, currency and payroll frequency; the state Draft, Waiting for approval, Approved, Issued, Accepted, Declined, Hired,
+    Withdrawn with its flow, an issued one past its expiry read as Expired; the answer, the signed acceptance, the hire it made; key
+    fields audit-logged) and `mantle.humanres.employment.EmploymentLetter` (a letter issued: of an offer or an employment change, its
+    stored file, type, whether it holds pay, who issued it and when); the kind `PakOffer`; `data/PeopleRecruitingSetupData.xml` the
+    topic `PeopleOfferApproval` (`approve#Offer`, `refuse#Offer`; its title names the position, never the person or pay);
+  - `RecruitingServices` over a new module `Offers.js`: `find#Offers`, `get#Offer` (the approval summary, the opening's seats for an
+    editor, an accepted offer's hireTerms for an HR editor), `store#Offer` (a recruiter with PEOPLE_RECRUIT_EDIT or an HR editor
+    drafts and changes the terms, checked as the hire checks them (Employment.js `checkTerms`, exported) and the seat one of the
+    opening's; the pay only a payroll editor's; changed terms make a waiting or approved offer a draft again and supersede its
+    approval; `APPLICATION_STAGE`, `OFFER_OPEN`, `OFFER_LOCKED`, `POSITION_NOT_OF_OPENING`, `PAY_INCOMPLETE` and the pay checks),
+    `change#OfferState` (submit, approve, refuse, withdraw, issue, accept, decline under the offer's lock; an action done answers as
+    it is), `approve#Offer` and `refuse#Offer`, `get#OfferLetter` (the stored letter, the one with pay for a payroll reader alone; the
+    preview before) and `get#OfferEvidence`. Readers: a recruiter, an HR reader and a payroll reader of the employer, and the
+    approver of the step waiting (without pay). Pay is absent without PAYROLL_VIEW on every path (the offer, the list, the
+    preview, the stored letter, the notice, the summary, the hire's terms);
+  - a new module `Letters.js`: the one letter template (the employer, date, reference, addressee, title, paragraphs, terms,
+    closing and signer, every value escaped; a preview marked as a draft), its storage (rendered once when issued, stored as the PDF
+    or the html-print page, read from storage after) and the lifecycle letters of an applied change (a hire's confirmation, a
+    transfer, a manager change, a leave of absence, a return, a separation; never the change's reason): `PeopleServices`
+    `get#EmploymentLetter` (an HR reader's: the stored letter or the preview) and `issue#EmploymentLetter` (an HR editor's, once per
+    change, the change locked; `CHANGE_NOT_APPLIED`, `LETTER_NOT_OFFERED`); `find#EmploymentChanges`' rows say whether a change's
+    letter is offered and issued;
+  - Approvals.js: the kind `PakOffer` and a kind's own default route (`defaultRole`): with no rule an offer goes to the employer's HR
+    officers (`ParHr`, "No rule: HR decides"), never the recruiter who submitted it or the applicant;
+  - Employment.js: `hire#Employee` and `preview#Hire` take `employmentOfferId` (the HireTerms interface and the draft whitelist):
+    the offer locked for the hire, its employer and applicant (admitted by the offer), its terms where none is given, its working
+    schedule from the first day (`assign#Schedule`), and consumed exactly once (`OFFER_USED`, `OFFER_NOT_ACCEPTED`, `OFFER_PERSON`,
+    `OFFER_EMPLOYER`, `OFFER_APPLICATION_CLOSED`; the offer and its application Hired; no pay and no account but HR's own Request an
+    account); the hire's person search and admission read P16's applications by employer as well as by position;
+  - Recruiting.js: Offer as a stage needs an open offer (drafting one moves the application there); `get#Application` answers a
+    recruiter the open offer, whether a new one is made and the opening's seats; the user's call of Nov 12 (§4): a resume is shared
+    with the interview panel when attached (`create#ApplicationContent` shares an `EactResume` file unless told not to; mail and
+    chat intake share the resume they keep), another file only when a recruiter shares it, and the recruiter can stop sharing it.
+- BOSS:
+  - `People/Staffing/OfferDetail` (out of the menu): the record header with one primary by state (Submit, Approve, Issue, Record
+    acceptance, Hire), under More Refuse, Declined by the candidate, Edit terms, Set pay (payroll's), Preview the letter, the issued
+    letter and Withdraw; Terms (the pay a payroll reader's, else "Set by payroll"), the candidate's answer with the signed letter,
+    Letter and Approval; `People/Staffing/OfferLetter` (the offer letter's html-print preview); `People/Employees/EmploymentLetter`
+    (a change's lifecycle letter's html-print preview, HR's: a member of `BOSS_PPL_EMPLOYMENT`);
+  - ApplicantDetail: Create offer (the primary once a scorecard is in, Schedule interview the primary before) and Offers; Shared with
+    the panel's wording for the resume default;
+  - HireEmployee: Identity's Accepted offers to hire from and Start from the offer (the draft from the offer's hireTerms), the steps
+    passing `employmentOfferId` to `preview#Hire` and `hire#Employee`; OfferDetail's Hire opens Identity with the offer;
+  - Employee360's Employment changes: Issue letter (with its preview) and Letter (the stored one), HR's under People
+    (`issueLetter`, `employmentLetter`);
+  - People.js link paths; People.xml's notification topic; Approvals lists `PeopleOfferApproval`; BossSetupData the topic's link to
+    OfferDetail and the EmploymentLetter screen in `BOSS_PPL_EMPLOYMENT`.
+- Specs: Mantle `test/humanres/Offers` (4 features, stepwise, 3.7 s: 0.74, 0.48, 1.90, 0.58: a recruiter's draft without pay, the
+  reader and another employer refused, a seat not of the opening refused, the pay payroll's alone and absent from the recruiter's
+  and HR's offer, the list and the letter's preview; the approval to HR, the recruiter's own decision `SELF_APPROVAL`, changed terms
+  a draft again and the old notice no longer decided, a refusal with its reason, the approval; the issued letter stored once, the
+  recruiter refused the letter holding pay, the payroll reader's letter unchanged in bytes after the opening and the person changed,
+  `OFFER_LOCKED` after issue, the acceptance, the recruiter refused the hire, `OFFER_PERSON`, the preview from the offer, the hire,
+  its retry, `OFFER_USED`, one employment, no account, no salary row, no account asked, the offer's schedule on the assignment; the
+  hire's lifecycle letter previewed, issued once and read from storage, refused to the recruiter); Recruiting gains one feature (0.10
+  s: a resume shared when attached, a cover letter not, the recruiter stopping it) and its mail feature the resume shared. BOSS
+  `test/People/PeopleOffers` (2 features, 1.75 s: OfferDetail's one qvt render as the recruiter (Submit, "Set by payroll", the
+  amount absent); ConfirmHire's one qvt render as the HR officer from the accepted offer's draft (the applicant, From the accepted
+  offer, no pay), the draft discarded and no hire made, so Retail's vacant seat stays vacant). `PeopleAccess` gains one feature (0.34
+  s: an offer read by Retail's recruiter and refused to the reader with the same parameters and to Retail's recruiter for Services'
+  offer; the pay refused to the HR officer with the parameters payroll is answered; the employment letter print HR's, the reader
+  refused). Acceptance, written and not run: `acceptance/People/PeopleOffersUsable` (3 features: the recruiter's offer from
+  ApplicantDetail, payroll's pay on OfferDetail, submit and the recruiter's own approval refused; HR's approval, the issue with the
+  letter payroll's, the acceptance; the hire through Identity's Start from the offer and ConfirmHire's Hire, the second hire
+  `OFFER_USED`, no account or salary, the application Hired; on a spec-local seat of Store Operations).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Offers, Recruiting, PeopleApprovals,
+  PeopleEmployment, PeopleScope, PeopleDirectory, PeopleScheduledChanges, PeopleSchedules, HumanResServices, PeopleChecklists and
+  FormDefinitions 60 of 60 (28.1 s of features), then Offers, Recruiting, PeopleApprovals, PeopleEmployment 26 of 26 and
+  ExpenseClaims, LeaveRequests, Attendance, PeopleScope, PeopleChecklists 26 of 26 after the last changes; BOSS PeopleOffers,
+  PeopleAccess, PeopleRecruiting, PeopleHire, PeopleEmployees, PeopleApprovals, PeopleSelfService, PeopleLifecycle, RecordFiles and
+  AdminLifecycle 60 of 60, then PeopleOffers, PeopleAccess, PeopleRecruiting, PeopleHire, PeopleEmployees, PeopleApprovals,
+  PeopleExpenses, PeopleSelfService, RecordFiles and Chat 76 of 76. One-off renders, not kept: ApplicantDetail before and after the
+  offer (qvt), OfferDetail as the recruiter (tui, html) and HR (qvt, waiting and accepted), OfferLetter (html-print, qvt, tui),
+  Identity with the accepted offer (qvt), EmploymentLetter for a manager change (html-print, tui) and Employee360 with Issue letter
+  (qvt, tui): no error. `moqui lint --screens` (release binary): 136 flagged sites, none in the People screens. Prettier clean on the
+  new and changed JavaScript (People.js was not clean on master and is left so). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People rows (RecruitingServices' offer services, `get#`/`issue#EmploymentLetter`, `preview#Hire`,
+  `hire#Employee` and `find#EmploymentChanges` from an offer and with letters); ss-inventory's P17 note (no baseline form).
+- Design edits: design-people (header; §3 SelfService's sharing; §4 HireEmployee and EmploymentChange as built; §5 ApplicantDetail
+  and OfferDetail as built; §12 the topic's handlers; §15 the letters row); design-drawers-commons §4 (the `PeopleOfferApproval`
+  row: its approve and refuse handlers); §4's resume row notes it is built.
+- Findings, numbered by the lead F305 to F315 in order:
+  - with no rule an offer is decided by the employer's HR officers (a kind's own default route, `PakOffer`'s `ParHr`): the default of
+    a request about a person, their manager, leaves an applicant's offer unresolved; an employer's rules for the kind still route it;
+  - a payroll reader of the employer (PAYROLL_VIEW) reads its offers, the applicant's name and terms with the pay, since a payroll
+    editor sets the pay on OfferDetail; design §5 said "compensation terms by grant";
+  - an issued letter holding pay is read with PAYROLL_VIEW alone, so a recruiter without it issues the letter but cannot open it:
+    payroll (or HR holding PAYROLL_VIEW) hands it to the candidate; no delivery of a letter by mail or to the employee's
+    self-service is built (design §15 "restricted delivery");
+  - expiry is read, not stored: an issued offer past its date reads Expired and takes no answer; nothing moves it and no one is told;
+  - the candidate's refusal is Declined (`OfrDeclined`), apart from an approver's refusal, which makes the offer a draft again;
+    design §5's "refused";
+  - P6 and P16 left a gap this phase closes: P6's person search and admission read applications by position, and P16's name their
+    employer; the hire's search now reads both;
+  - a hire from an offer takes the offer's terms only where the wizard gives none, and HR may change them in the steps: the hire
+    records what HR confirmed, the offer what was offered; the offer's working schedule makes an `EckSchedule` change beside the hire;
+  - a withdrawn or declined offer leaves its application at Offer, for the recruiter to refuse or withdraw it; an offer of an
+    application closed since is not hired from (`OFFER_APPLICATION_CLOSED`) but stays accepted until withdrawn;
+  - one letter per offer or change: a letter is not issued again (a corrected offer is a new offer after a withdrawal); a change
+    withdrawn after its letter was issued keeps the letter; a change dated later has its letter issued before its date;
+  - HR finds the accepted offers to hire on the hire wizard's Identity; no notice tells HR an offer was accepted, and there is no
+    list of offers apart from an application's;
+  - an offer's issue renders its PDF in the request (about a second in the spec).
+- For the lead:
+  - budget share: mr-mantle about 3.8 s (Offers 3.7 s, Recruiting's new feature 0.1 s); mr-boss about 2.1 s (PeopleOffers 1.75 s,
+    PeopleAccess's P17 feature 0.34 s); no client spec;
+  - merge hot spots (P18 runs beside): mr-mantle `entity/PeopleRecruitingEntities.xml` (appended), `data/PeopleRecruitingSetupData.xml`
+    (appended), `Approvals.js` (the kinds table's end, `chooseRules`, `basisTexts`, the loaders), `Employment.js` (the loaders,
+    `draftFields.hire`, `relatedByName`, `personAdmitted`, `planHire`, `hireEmployee`, `findEmploymentChanges`, `changeRow`, the
+    exports), `Recruiting.js` (`stageProblem`, `getApplication`'s recruiter branch, `keepFiles`, the header), `PeopleServices.xml`
+    (HireTerms, hire#Employee's description, two services appended), `RecruitingServices.xml` (appended, `create#ApplicationContent`);
+    mr-boss `data/BossSetupData.xml` (appended at its end), `screen/People.xml` (the providers' end), `People/Approvals.xml`,
+    `People/Staffing.xml`, `Staffing/ApplicantDetail.xml`, `Employees/HireEmployee.xml` and its three steps, `Shared/Employee360.xml`
+    (two transitions, the change rows, the row actions), `service/ironstone/people/People.js` (linkPaths' end),
+    `test/People/PeopleAccess.spec.js` (the header, the appended feature), the inventories, design-people (header, §3, §4, §5, §12,
+    §15), design-drawers-commons §4, this file (§4's resume row);
+  - acceptance to run with the full suites: PeopleOffersUsable (new), PeopleRecruitingUsable (a mail application's resume is now
+    shared with the panel; read, it asserts nothing of the sharing) and PeopleHireUsable (the hire's code changed);
+  - for the user's call: who decides an offer when no rule names anyone (built: the employer's HR); whether payroll readers read
+    offers (built) or pay goes in by another path; who delivers an issued letter holding pay (built: payroll, no mail delivery);
+    whether employees read their own lifecycle letters in self-service (not built).
+
+**Review Nov 12 (P17).** A fresh review of `git diff master...ppl/p17` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §5 OfferDetail and ApplicantDetail, §4 HireEmployee, §12's `PeopleOfferApproval` and §15 the letters; the user's four calls of
+Nov 12 built and recorded in §4; fixes committed apart per repository ("People P17 review: …"; mr-mantle beef6ee5). Both branches were
+first rebased onto master after P18 and P15's follow-up merged: mr-mantle cleanly (HumanResourcesEntities' EmplPositionClassSkill key,
+Approvals.js, Employment.js, Recruiting.js and PeopleServices.xml merged without a conflict); mr-boss with BossSetupData (P18's
+Development grants and P17's topic and EmploymentLetter member), People.xml's notification topics, People.js linkPaths, Employee360's
+header, PeopleAccess's header and a P17 feature apart from P18's, design-people's header and §4's resume row (P17's built version
+beside P18's three rows), each keeping both sides; Offers, Recruiting, PeopleEmployment (18 of 18) and PeopleOffers, PeopleAccess,
+PeopleHire, PeopleSkills (31 of 31) passed after it.
+- Checked and found sound:
+  - pay terms: `offerRow` (get#Offer and find#Offers), the letter's preview, the stored letter (PERMISSION_DENIED without
+    PAYROLL_VIEW), the approval's notice, title and summary (position, opening, names; never pay), `hireTerms` and the hire (no
+    salary row) carry pay only for a payroll reader of the employer; offers are in no palette, export, Chatter or record panel
+    (`EmploymentOffer` is no People record host), and the raw entity stays refused (PeopleAccess's mantle.humanres paths);
+  - an accepted offer hires once: `offerForHire` locks the offer, `hireProblem` refuses OFFER_USED, OFFER_NOT_ACCEPTED, OFFER_PERSON,
+    OFFER_EMPLOYER and OFFER_APPLICATION_CLOSED, `consumeOffer` marks it Hired with the hire's employment; hire#Employee is still
+    `editorScope("Hiring")`'s (a recruiter is refused); P6's rules and specs hold (PeopleEmployment, PeopleHire pass; the hire's
+    working schedule an `EckSchedule` beside it);
+  - changed terms (pay included) make a waiting or approved offer a draft and `sourceChanged` supersedes the approval, and
+    `record#Decision` refuses a decision on a superseded or earlier revision; the decision is taken under the offer's lock;
+  - a recruiter's offer grants no account or payroll right: no account is asked but by HR's own Request an account, no
+    `EmploymentSalary`; a recruiter sets no pay (PERMISSION_DENIED) and reads none;
+  - the issued letter is rendered once under the offer's (or the change's) lock and read from storage after (the spec's digest
+    unchanged after the opening and person change);
+  - the hire's person search (P6's call of Nov 11: names only for people related to the employer, exact email otherwise): the change
+    adds the applicants of the employer's own applications (`EmploymentApplication.organizationPartyId`, P16), who are applicants to
+    it as P6's position applicants were; nobody outside the employer is found by name, and a person chosen by id is admitted by
+    the same rule or as the offer's applicant;
+  - with no rule a `PakOffer` request goes to the employer's HR officers (`defaultRole`, basis "No rule: HR decides"); other
+    kinds' defaults are unchanged.
+- Fixes:
+  - **R1 (the user's call of Nov 12; medium).** No delivery of an issued letter was built: a recruiter without PAYROLL_VIEW issued a
+    letter holding pay and could not hand it over. Issuing now emails the stored letter to the applicant's address as an attachment
+    once the issue commits: `RecruitingServices.send#OfferLetter`, run by the tx-commit rule `PeopleOfferLetterEmail`
+    (`service/PeopleRecruiting.secas.xml`) as the issuer, who need not read it; template `PEOPLE_OFFER_LETTER` from the employer's
+    address (EmailPrimary, else EmailWork), the message naming the position and expiry, never pay; once (a letter sent or waiting
+    in the mail queue answers repeated; the offer locked while sending). The outcome is on the offer (`letterSendStatus` sent,
+    queued or failed, `letterSendDate`, `letterSentTo`, `letterEmailMessageId`, `letterSendError`) and on OfferDetail's Letter box
+    without the content (the address for recruiters and HR); a failure (no applicant address, no sender, a failed send) is
+    recorded and logged, never undoing the issue, and Send the letter again (an offer editor's) retries it. Spec: Offers (the
+    send failing without the employer's address with the offer still issued, the reader refused, the recruiter's send queued and
+    a second answered repeated, the message's address and subject and no pay in its body).
+  - **R2 (the user's call of Nov 12; medium).** Employees did not see their own letters. SelfService's My letters (both mounts):
+    `PeopleServices.find#MyLetters` (no party: the caller's own issued lifecycle letters) and `get#MyLetter` (the stored file,
+    whole, pay included; another person's or an offer's letter RECORD_UNAVAILABLE), the transition `myLetter` and both services in
+    `BOSS_PPL_SELF` (F28's non-inheritable pattern). Specs: Offers (the hired person's one letter listed and read, the offer's
+    letter and another employee's view refused), PeopleAccess (Tomas's letter by the services and the Commons transition with
+    artifact authorization on, Ines's refused to him, the reader refused his).
+  - **R3 (high, confidentiality).** `get#OfferEvidence` gave the candidate's signed letter (a copy of the letter holding pay) to
+    every reader of the offer: the recruiter, HR and the approver read the pay that `get#OfferLetter` refused them. It is now
+    PAYROLL_VIEW's when the offer holds pay (`evidenceRestricted`; OfferDetail says payroll reads it), and the file downloads as an
+    attachment rather than inline (an uploaded HTML file was served inline in the app's origin); a name loses leading dots. Spec:
+    Offers (the recruiter refused, payroll read).
+  - **R4 (medium, no self-approval).** Only who submitted an offer and the applicant were kept from deciding it: an HR officer who
+    drafted an offer that a recruiter submitted approved their own. Approvals.js takes a kind's `selfPartyIds` (PakOffer: the
+    offer's creator) into the route's exclusions and `record#Decision`'s SELF_APPROVAL. Spec: Offers (HR's draft submitted by the
+    recruiter, HR's approval SELF_APPROVAL).
+  - **R5 (medium, P16's, found here).** A self-service panel member could not download a file shared with the panel:
+    MyInterview's `sharedFile` sent the file with authorization on, and the non-inheritable `BOSS_PPL_INTERVIEW_SELF` does not reach
+    `moqui.resource.DbResource` (a 500). It and My letters send the file Mantle admitted with authorization off. Spec:
+    PeopleRecruiting (the shared file downloaded as the employee under Commons; a 500 on the phase's code).
+  - **R6 (low).** A Hire sent twice at once from an accepted offer: the second waited on the offer and answered OFFER_USED, not the
+    first hire, since its operation key was checked before the lock. hire#Employee locks the offer first.
+  - **R7 (low).** `get#EmploymentLetter` read a lifecycle letter holding pay without PAYROLL_VIEW (none holds pay today); it now
+    refuses one as `get#OfferLetter` does.
+- Findings, numbered by the lead F316 to F319 in order:
+  - the email goes from the employer's EmailPrimary (else EmailWork) address; an employer with neither, as the demo employers may
+    be, records "no email address to send from" and the recruiter sends it again once one is added; a reply goes to that address;
+  - Send the letter again follows a failure only: a letter sent or queued is not sent again (a candidate who lost it is sent a copy
+    by payroll, or a new offer);
+  - My letters lists the lifecycle letters alone; a hired person's offer letter (addressed to them as an applicant) is not in it;
+  - an HR officer reads an employment's lifecycle letters under Employee360 and the employee in self-service; the letter is
+    never on the person's Party record or files;
+  - R5's pattern: a screen under a non-inheritable self-service grant that sends a stored file needs the file sent with
+    authorization off after its service's check; the P15 and P18 self-service files go through inheritable grants and are not
+    affected.
+- Tests (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase Offers, Recruiting,
+  PeopleEmployment 18 of 18 and PeopleOffers, PeopleAccess, PeopleHire, PeopleSkills 31 of 31; after the fixes Offers, Recruiting,
+  PeopleEmployment, PeopleApprovals, ExpenseClaims 32 of 32 (Offers 4.3 s: 0.73, 0.66, 2.07, 0.81) and PeopleOffers, PeopleAccess,
+  PeopleHire, PeopleSkills, PeopleRecruiting, PeopleSelfService, PeopleApprovals 43 of 43 (PeopleAccess's new feature 0.26 s).
+  `moqui lint --screens` (release binary): none flagged in the People screens. Prettier clean on the changed JavaScript. Not run:
+  `./moq test-apps`, the acceptance suite (PeopleOffersUsable unchanged; its issue now sends the letter, which it does not assert)
+  and the client walk PeopleHireWalk (Identity's Accepted offers box shows only with an accepted offer).
+- For the lead:
+  - budget share beside the Built note's: mr-mantle about +0.6 s (Offers' new checks and the issue's worker wait); mr-boss about
+    +0.3 s (PeopleAccess's my-letters feature 0.26 s, PeopleRecruiting's download);
+  - merge hot spots beside the Built note's (P19 runs beside): mr-mantle `Approvals.js` (`requestOf`, `selfOfSource`, `resolve`'s
+    self, `recordDecision`), `Offers.js`, `Letters.js`, `Recruiting.js`'s exports, `PeopleServices.xml` (two services appended),
+    `RecruitingServices.xml` (send#OfferLetter appended), `PeopleRecruitingEntities.xml`, `PeopleRecruitingSetupData.xml`, the new
+    `service/PeopleRecruiting.secas.xml`; mr-boss `BossSetupData.xml` (`BOSS_PPL_SELF`'s artifacts), `Shared/PeopleSelfService.xml`
+    (header, a transition, the actions' end, a section before the emergency contacts), `Shared/PeopleMyInterview.xml`,
+    `Staffing/OfferDetail.xml`, PeopleAccess (header, an appended feature), PeopleRecruiting, design-people §3, §5, §15,
+    usl-inventory and §4 here;
+  - the user's calls of Nov 12 (§4): with no rule HR decides an offer and payroll readers read offers (as built); the letter
+    emailed to the applicant (R1); employees' own letters in self-service (R2).
+
 ### P18 — Skills and qualifications
 
 Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels), Employee360's SkillsAndReviews
@@ -4756,6 +4990,361 @@ P18.
 - **Usable when** (`acceptance/People/PeopleTrainingUsable`): a session is scheduled, employees enroll, the trainer
   records results, and those who passed hold the qualification with its expiry.
 
+**Built Nov 12 (P19).** mr-mantle ce41a51d, mr-boss (branch `ppl/p19`).
+- Checked first (the code over the plan): F6 (the PersonTraining and TrainingClass sketches inside the review sketch's XML comment:
+  a training keyed by person, class and date with a Y/N approved flag, a class with a type and a description); P5's approvals
+  (`Approvals.js` kinds, `request`, `sourceChanged`, `sourceSummary`, `record#Decision` refusing without PEOPLE_REQUEST_APPROVE before
+  anything else, the topic's separate approve and refuse handlers, F110) and P15's advance as the nearest pattern; P16's survey builder
+  (the `DbfpTrainingAssessment` purpose and its registration, edited with PEOPLE_CONFIGURE and read with PEOPLE_DEVELOP_VIEW;
+  `FormDefinitions.publishedFormFor` and `recordAnswer`; the exit interview's FormInvitation with no link; FormPublication.eecas
+  locking an invited response) and P18's `Development.js` (`isRestricted`, the levels of projection, `check#Qualifications` reading
+  any verified qualification), the Development area and its grants (`BOSS_PPL_DEVELOPMENT` an inheritable ALLOW for self-service)
+  and Today's source on both roots (P8). Also: `WorkEffort`'s purpose field is `purposeEnumId` (`WepTraining` seeded);
+  `EventServices.create#Event` makes the event and `store#WorkEffortReminders` sets only the caller's own reminders; the
+  `PeopleApprovalKind` enumeration type is seeded after HumanResourcesEntities.xml, so a kind seeded in that file's seed-data fails
+  the whole file (the kind is in PeopleDevelopmentSetupData.xml).
+- Mantle:
+  - `entity/HumanResourcesEntities.xml`: the training sketches out of the comment (the review sketches stay in it for P20) and
+    refined: `TrainingClass` (a course of an employer: title, kind `TrainingClassType`, description, the qualification type passing
+    grants and its `validityMonths`, `assessmentRequired`, a default `assessmentFormId`, ended by `thruDate`), `TrainingSession` (the
+    facts of a WepTraining event keyed by its workEffortId: course, employer, trainer, capacity, assessment form), `PersonTraining`
+    (a place with its own id: person, employment, employer, department, session, course, `statusEnumId` audit-logged:
+    `PersonTrainingStatus` PtsRequested, PtsEnrolled, PtsCompleted, PtsRefused, PtsWithdrawn, PtsCancelled; reason, decision,
+    `attendedFlag` audit-logged and hours, completion, the qualification granted, the certificate's stored page and PDF and when it
+    was issued, an operation key) and `PersonTrainingResult` (each assessment, kept: `TrainingResult` TrrPassed or TrrFailed, score,
+    assessor, evidence opted out of AI, the form, its response and invitation, an operation key);
+  - `mantle.humanres.DevelopmentServices` over a new module `Training.js`: `find#Training`, `get#Training`, `store#TrainingClass`,
+    `store#Training`, `enroll#Training`, `decide#Enrollment`, `approve#Enrollment`, `refuse#Enrollment`, `mark#TrainingAttendance`,
+    `complete#Training` and `get#TrainingCertificate`, each with its reason codes (the service descriptions list them). Who: a
+    development reader (PEOPLE_DEVELOP_VIEW) of the employer reads every session, place and assessment, a development editor
+    (PEOPLE_DEVELOP_EDIT) changes courses and sessions, enrolls people, marks attendance and assesses; the session's trainer (a
+    person working for the employer, assigned by development) reads their session's places and assessments and no other's, marks
+    attendance and assesses; a self-service employee of the employer reads its sessions, asks for and withdraws their own place and
+    reads their own outcome (never the assessor's answers or evidence) and certificate; an approver of a waiting place reads that
+    place. No one marks or assesses their own place (`SELF_APPROVAL`); missing and unauthorized alike `RECORD_UNAVAILABLE`;
+  - the session is a private event made through Commons' `EventServices.create#Event` (`WetEvent`, `WepTraining`, `WevRestricted`,
+    owned by the scheduler), its trainer and each person enrolled a current `WorkEffortParty`, and each person enrolled a
+    `WorkEffortReminder` of their own a day before (written by the service: `store#WorkEffortReminders` sets only the caller's); a
+    change moves the event and the trainer's attendance, a cancellation cancels the event and every place (a waiting approval
+    superseded through `sourceChanged`);
+  - a place the person asks for waits for a People approval of kind `PakTraining` (Approvals.js's new kind; the notice names the
+    person, the course and the day, never the reason), routed as every People approval (no rule: the manager); the last approval
+    enrolls (refused `SESSION_FULL` with no seat), a refusal keeps its reason; a development editor's enrollment of a current
+    employee is made at once; seats count the places waiting and enrolled; the trainer holds no place in their own session;
+  - `complete#Training` locks the place: attendance first (`ATTENDANCE_REQUIRED`); with the session's form, the answers are checked
+    and kept as a FormResponse its FormInvitation locks (naming the person, the assessor, the session and the place; no link); a
+    failure is kept and the place stays enrolled; the pass completes it once, grants the course's qualification once (a verified
+    `PartyQualification` valid the course's months, the reference the place's id, renewing the person's latest verified one of the
+    type, so `check#Qualifications`, the skills matrix and the expiry reminder count it) and issues the completion certificate
+    (Mantle's `template/humanres/TrainingCertificate.print.html.fancy`, stored as its page and PDF under the place, never rendered
+    again; a PDF that fails is logged and the page kept); a completion retried, or a retry of its operation key, answers the first;
+  - `data/PeopleDevelopmentSetupData.xml`: the `PakTraining` kind and the `PeopleTrainingApproval` topic (approve and refuse
+    handlers, refusal reason required, a title naming the person, course and day).
+- BOSS:
+  - Screens: `People/Development/Training` (menu 3 of Skills & training: FindTraining (Upcoming, Mine, I train, Past, All, by course),
+    SessionList with the state and the user's own place as chips and a row's Ask for a place; Schedule session the one primary and
+    the Courses box (New course, Change, End) for a development editor), `Development/TrainingDetail` (out of the menu: the record
+    header with Ask for a place or Enroll a person as the primary and More's Change session and Cancel session; Enrollment with
+    Approve, Refuse, Withdraw, Attendance, Assess, Certificate and PDF per place; Record a result over the session's assessment form
+    as a dynamic form of its DbForm; Results, the answers and evidence opted out of AI; a not-available state) and
+    `Development/TrainingCertificate` (out of the menu: the stored page in html-print);
+  - `ironstone.people` People.js: the links, the self-service links (the three screens), the choices `trainers` (the employees and
+    agents of a development reader's employers) and `trainingForms` (an employer's published training assessments, or every
+    employer's), `decisionUrl` for PakTraining (TrainingDetail by the place) and Today's training due (`find#Training`'s due: the
+    user's own enrolled sessions and those they train, within seven days, opening the session); ContextServices' descriptions;
+    People.xml: the `PeopleTrainingApproval` topic; People/Approvals: the topic among `notificationTopics`; BossSetupData (appended):
+    the topic's link to TrainingDetail; BossPeopleDemoData (appended): Retail's fire warden course (`BOSS_PPL_TC_FIREWARDEN`, assessed,
+    granting `BOSS_PPL_QT_FIREWARDEN` for 24 months), no session. No new grant: the screens are under the Development area's.
+- Specs: Mantle `test/humanres/Training` (4 features, stepwise, 2.9 s: 0.57, 0.62, 1.33, 0.35: a restricted type and a validity
+  refused, a self-service employee and another employer refused a course, a past start, a missing form and a trainer of another
+  employer refused, the event's purpose and visibility, the trainer an attendee, the self-service employee's list and its Ask for
+  a place, another employer's development seeing none; a place asked waits, a retry by its key answers it, a second place, another
+  person's place, the trainer's place and the person's own and HR's decisions refused, the manager reading the place and its reason
+  and approving it, development enrolling Bo at once, the session full, the attendee and its reminder, Today's due; attendance before
+  the start, by HR and over the session's length refused, an absent person's assessment refused, no answers and invalid answers
+  refused, a failure kept with the place enrolled, the pass completing it and granting the qualification, the retry answering the
+  first, a failure after completion refused, one qualification valid 24 months, the staffing check qualified, the certificate read by
+  the person and refused to another, two locked responses; the trainer reading their session's assessments with the answers and
+  none of another session, the person their own outcomes without answers or evidence, another employer's development refused,
+  development reading the evidence, the trainer refused a cancellation, the cancellation cancelling a waiting place and superseding
+  its approval). BOSS `test/People/PeopleTraining` (3 features, 1.2 s: 0.23, 0.97, 0.04: Training's one qvt render as the learning
+  administrator with the session, Schedule session, New course, seats and what passing grants, the choices `trainers` and
+  `trainingForms` with a selected value off the page, Tomas's Today item; TrainingDetail's one qvt render as the trainer with Tomas's
+  place to assess over the form's field, the result posted through completeTraining with authorization on completing the place;
+  TrainingCertificate's one html-print render as Tomas). `PeopleAccess` gains one feature (0.48 s: a session scheduled by the
+  development administrator and refused to the HR officer with the same parameters, an assessment accepted for the trainer and
+  refused to the reader with the same parameters, Services' session refused to Retail's development administrator, the employee's
+  Training by the area's own grant), its menu feature's Development group (PeopleSpecLib `developmentMenu`, `readerDevelopmentMenu`,
+  the P19 ids) and the employee's context links. Acceptance, written and not run: `acceptance/People/PeopleTrainingUsable` (4
+  features: the learning administrator schedules a fire warden session from Training trained by Hannah; Tomas asks for a place from
+  Training, Hannah approves it on TrainingDetail, the learning administrator enrolls Rafael; after the session Hannah marks both
+  attended, Tomas passes, Rafael fails and passes a second attempt; both hold the fire warden certificate, verified, about two years,
+  the staffing check qualified, Tomas reads his own outcome without the answers and prints his certificate).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Training, PeopleApprovals,
+  Qualifications, HumanResServices, ExpenseClaims and Recruiting 36 of 36 (mr-mantle 16.1 s of features); BOSS PeopleTraining,
+  PeopleAccess, PeopleApprovals, PeopleSkills, PeopleSelfService, TodayPanel and PeopleRecruiting 49 of 49 (mr-boss 17.4 s). One-off
+  renders (a spec not kept): Training in tui and html as the self-service employee (Ask for a place), TrainingDetail in tui as him
+  after asking, in html as his manager (the place to decide, Approve and Refuse) and as the learning administrator (Enroll a person,
+  Change session), People's Approvals as the manager with the training place, and her Today's decision opening TrainingDetail; all
+  without error. `moqui lint --screens` (release binary): 136 flagged sites as before, none in the screens P19 added or touched, no
+  TUI worklist entry for them. Prettier clean on the new and changed JavaScript (People.js's earlier `openingOptions` lines left as
+  merged). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table (the eleven DevelopmentServices of P19), `create#Event`'s and
+  `store#WorkEffortReminders`' Implemented in; ss-inventory's P19 note (no baseline form is mapped).
+- Design edits: design-people (header; §1.2 Training; §1.4 Today and the topic; §10 Training and TrainingDetail as built; §12 the
+  topic's handlers; §15 the completion certificate); design-drawers-commons §4 (the `PeopleTrainingApproval` row).
+- Findings, numbered by the lead F320 to F329 in order:
+  - the training assessment purpose stays edited with PEOPLE_CONFIGURE (P16's registration; Forms is under the People
+    administrator's Settings), so the learning administrator builds no assessment form; P16's finding offered PEOPLE_DEVELOP_EDIT;
+  - a trainer is any person working for the employer whom development assigns (an employee or agent, a self-service employee too);
+    their passing assessment grants a verified qualification although they are no qualification verifier (HR or development):
+    the authority is the assignment; a development editor assesses too;
+  - the person reads their own outcome, score, date and assessor, never the assessor's answers or evidence; HR readers read a
+    certificate (`get#TrainingCertificate`) but no session or place; a manager reads a report's place only as its approver;
+  - a development editor's enrollment of another person is made at once, with no approval (an assignment, not a request); the
+    person's own request always waits, whatever the person's permissions;
+  - the person is not told when their place is approved or refused (no decision topic, as leave's `PeopleLeaveDecision`); Today,
+    Training and the calendar's attendance show it;
+  - Sessions do not list due recertification (design §10's Sessions): nothing links a qualification expiring to a session that
+    renews it; Today's my qualification expiring (P18) and training due are separate items;
+  - a session's time changed on Commons' EventDetail by the event's owner (the scheduler) bypasses `store#Training`'s checks and
+    revision; a session is one occurrence (no series or multi-day schedule);
+  - attendance and assessment wait for the session's start; a place may be approved after the session started (only a request
+    is refused once it starts);
+  - `TrainingClassType` is not among Lookups' HR families, and courses are per employer (no shared course);
+  - a revoked granted qualification leaves the issued certificate as it was; no certificate is ever issued again;
+  - no key for Training, and SelfService has no training link (Today and the area cover it).
+- For the lead:
+  - budget share: mr-mantle about 2.9 s (Training); mr-boss about 1.7 s (PeopleTraining 1.2 s, PeopleAccess's feature 0.5 s); the
+    certificate's PDF is most of each completing feature; no client spec;
+  - merge hot spots (P17 runs beside): mr-mantle `Approvals.js` (the `PakTraining` kind after `PakAdvance`, where P17's offer kind
+    goes too), `entity/HumanResourcesEntities.xml` (the training entities after the review sketch's comment; P20 refines the review
+    sketch there), `data/PeopleDevelopmentSetupData.xml`, `DevelopmentServices.xml` (appended; P20 adds its services here);
+    mr-boss `service/ironstone/people/People.js` (`linkPaths`' end, the self-service links, the P19 choices block after P16's,
+    `decisionUrl`, Today's training due before the weeks to submit, `trainingDetailPath`), `ContextServices.xml` (two
+    descriptions), `screen/People.xml` (header, the topic after QualificationExpiring), `screen/People/Approvals.xml`
+    (`notificationTopics` and its comment; P17 adds its offer topic there), `screen/People/Development.xml`,
+    `data/BossSetupData.xml` and `data/BossPeopleDemoData.xml` (appended at their ends), `test/People/PeopleSpecLib.js` (the
+    Development menus, the P19 ids), `PeopleAccess.spec.js` (header, the employee's context links, the appended feature), the
+    inventories, design-people (header, §1.2, §1.4, §10, §12, §15), design-drawers-commons §4, this file;
+  - acceptance to run with the full suites: PeopleTrainingUsable (new), PeopleApprovalsUsable (a new approval kind and topic on
+    Approvals), PeopleSkillsUsable (the qualification a training grants is a verified PartyQualification as the matrix reads it);
+  - for the user's call: whether a trainer's passing assessment may grant a verified qualification (the second finding), and
+    whether the person reads the assessor's answers (the third). Nothing else waits on the user.
+
+**Review Nov 12 (P19).** A fresh review of `git diff master...ppl/p19` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §10 Training and TrainingDetail, §15 and PE-14, confidentiality first; the user's two calls of Nov 12 recorded in §4 (both as
+built); fixes committed apart per repository ("People P19 review: …"). Both branches were rebased onto master after P17's merge:
+mr-mantle with one conflict, `Approvals.js` (P17's `EMPLOYMENT_OFFER` and `PakOffer` with its `selfPartyIds`, then P19's
+`PERSON_TRAINING` and `PakTraining`, both kept); mr-boss with BossSetupData (P17's offer topic and EmploymentLetter grant, then the
+training topic), People.xml (both topics), People/Approvals (both topics in `notificationTopics` and the header), People.js
+(`linkPaths`: P17's offer screens, then training's) and PeopleAccess (header, P17's offer feature, its review's letters feature, then
+P19's training feature), each keeping both sides. The phase commits are now mr-mantle caaaf46c and mr-boss f316b1e4. Training,
+Qualifications, PeopleApprovals and Offers (20 of 20) and PeopleTraining, PeopleAccess, PeopleSkills, PeopleOffers and
+PeopleApprovals (36 of 36) passed after it.
+- Checked and found sound:
+  - Completion: `complete#Training` locks the place before its operation key's retry check and the completed check, so a completion
+    sent twice at once grants one qualification and answers the first (`repeated`, the same result and qualification); a failure is
+    its own result row, kept, with the place enrolled; a failure after completion is refused; the qualification is created only on
+    the pass, verified, the trainer its verifier (`verifiedByUserId`), the place its reference and the session in its comment, and
+    development (a qualification verifier of the employer) revokes it through `verify#Qualification`.
+  - The trainer reads the assessments (answers and evidence) of their own session alone: `sessionAccess` is computed per session
+    from `TrainingSession.trainerPartyId`; the trainer of another session reads it as any employee (their own place only, no
+    result). The person reads their own results with outcome, score, date and assessor, `evidence` null and no answers, on every
+    path (`get#Training` by session or by place); the certificate holds neither.
+  - The assessment's response: Training.js reads `FormResponse` and its answers only in `get#Training`, for development and the
+    trainer. No other path reaches it in the apps: People's survey registration has no responses screens (`responses: null`), its
+    purposes admit no publication access kind, so `ExternalAccess` makes no link for their invitations, the invitation key is an
+    idempotency key and no token, no self-service list reads `FormInvitation` by party, and `FormResponseAnswer.valueText` is opted
+    out of AI. What remains is the framework's `get#FormResponse` (no reader check, F62; artifact authorization guards its remote
+    use) and Marble's SimpleScreens Survey screens, which list every response to ADMIN alone (`SimpleScreensSurvey` has no other
+    grant).
+  - The certificate is rendered once, by the passing completion, stored as its page and PDF under the place, and read back as
+    stored (`get#TrainingCertificate`: the person, development and HR readers of the employer); its PDF downloads for the person
+    with artifact authorization on (now checked in PeopleTraining).
+  - No self-approval: the person's own request goes to People's approvals with the person as subject and requester, which
+    `record#Decision` refuses (`SELF_APPROVAL`) and the spec checks; no one marks or assesses their own place; a development
+    editor's enrollment of another is made at once, their own place waits.
+  - Scope by employer: development's reach is `PEOPLE_DEVELOP_VIEW` over the user's People organizations; a self-service employee
+    reads the sessions of their current employers; courses, sessions, enrollments and assessments are refused across employers
+    (Training and PeopleAccess); `trainers` and `trainingForms` choices are bounded the same way; Today's training due reads
+    `find#Training` as the user.
+- Fixed:
+  - R1 (medium): a session's time, status and attendees could be changed outside `store#Training`: its organizer (the scheduler)
+    through Commons' EventDetail (`update#EventOccurrence`, `cancel#EventOccurrence`, attendees), and any attendee (the trainer or a
+    person enrolled) by putting the event in a calendar of their own (`add#CalendarEvent` needed only view of the event), which made
+    them its editor (`check#EventAccess`'s calendar edit) and let CalDAV write it, bypassing the dates, the closed-session check, the
+    revision and the places. Commons' `check#EventAccess` now answers `managedBy` for a WepTraining event with a `TrainingSession`,
+    whose edit it refuses ("is changed on its People training session") while its view stands, and `add#CalendarEvent` refuses
+    such an event. Spec Training (the organizer's `check#EventAccess` and `update#EventOccurrence`, the trainer's
+    `add#CalendarEvent`; fails on the code as it was).
+  - R2 (low; worker's finding): a place could be approved after the session started; `decide#Enrollment` refuses an approval then
+    (`SESSION_CLOSED`); a refusal may still follow. Spec Training (Cy's late approval refused, his refusal recorded).
+  - R3 (low; worker's finding): the person was not told when their place was approved or refused; the new `PeopleTrainingDecision`
+    topic (Mantle's PeopleDevelopmentSetupData: private, "Your place in {course} on {day}: approved|refused", the message the
+    place, session, course, day and outcome, never the reason), sent by `decide#Enrollment` on the last approval or a refusal to
+    the person and who asked, failure-tolerant; BOSS links it to TrainingDetail and declares it on People's root. Spec Training (Ana
+    told of her approval, Cy of his refusal, neither reason in the message or title).
+  - R4 (low; worker's finding): the learning administrator could not build an assessment form. Mantle's training assessment
+    `FormPurpose` admits `PEOPLE_DEVELOP_EDIT` beside `PEOPLE_CONFIGURE` (FormDefinitions reads an edit or view permission as a
+    comma list, any one admitting); BOSS mounts the builder again as Skills & training › Assessment forms
+    (`People/Development/AssessmentForms`, menu 4, its List and FormDetail the shared SurveyForms and SurveyFormDetail) through a
+    `mounts.Development` entry of People's survey registration (the training purpose alone, edit by `developEdit` or `configure`,
+    its routes and words; the screen's always-actions set `surveyMount`), granted by `BOSS_PPL_ASSESSMENT_FORMS` (ALWAYS for
+    BOSS_PEOPLE_DEVELOP, denied to BOSS_PEOPLE and BOSS_PEOPLE_SELF; the People administrator and ADMIN through the root), so
+    Settings stays the People administrator's. Specs Training (a development editor's training assessment made, a review form
+    refused) and PeopleAccess (the learning administrator opens Assessment forms, the HR officer and the employee are refused). A
+    one-off probe, not kept: as the learning administrator the list offers New form for the training assessment alone, creating
+    one opens its FormDetail under Development with Add question.
+  - R5 (low): a trainer kept reading their session's places and assessments after leaving the employer; the trainer's access now
+    needs a current employee or agent relationship with the session's employer (`trainsIt`; find#Training's I train the same).
+    Spec Training (Tia, ended, refused the session and listing none).
+  - R6 (low): why a place was refused (`decisionReason`) was shown to every reader of the place, the trainer included; now as the
+    reason asked: development's, the person's and the approver's. Spec Training.
+  - R7 (worker's finding): SelfService links My training (`get#SelfServiceContext`'s `trainingUrl`, Training's Mine, on both
+    mounts when the area opens to the user) and the key `g i` opens Training. Spec PeopleAccess (the employee's link, the HR
+    officer's keys).
+- Findings, numbered by the lead F330 to F335 in order:
+  - Commons-wide: `check#EventAccess` makes an editor of anyone with edit on a calendar the event is in, and `add#CalendarEvent`
+    asks only that the user may see the event, so an attendee of any private event (a meeting, P16's interview) who puts it in a
+    calendar of their own may move, change or cancel it, and CalDAV may write it; R1 closes it for training sessions only. An
+    interview's event (owned by the recruiter) is also changed on EventDetail outside the interview's services;
+  - Commons' calendar data (`ironstone.commons.CalendarServices` get#CalendarData) computes `canEdit` itself from ownership and
+    calendars, so the calendar still offers dragging a training session to its organizer; the move is refused by
+    `update#EventOccurrence`;
+  - a place still waiting when its session starts stays waiting until refused (the approver sees Approve, which is refused);
+  - a session cancelled tells no one but through the event's state and Today (no decision topic for a cancellation);
+  - the worker's findings that stand: courses per employer and `TrainingClassType` outside Lookups; Sessions do not list due
+    recertification; a session is one occurrence; a development editor's enrollment needs no approval; a revoked qualification
+    leaves its certificate; HR readers read a certificate but no session; a manager reads a report's place only as its approver;
+  - mr-boss People.js on master is still not Prettier-clean (P16's `openingOptions`); left as merged.
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase, 20 of 20 and 36 of 36
+  (above); after the fixes, Mantle Training, Qualifications, PeopleApprovals, Offers, FormDefinitions and LeaveRequests 27 of 27
+  (mr-mantle 17.6 s of features) and BOSS PeopleTraining, PeopleAccess, PeopleSkills, PeopleOffers, PeopleApprovals,
+  PeopleSelfService, PeopleRecruiting and PeopleTime 49 of 49 (mr-boss 16.1 s); Training last 3.3 s (0.81, 0.60, 1.45, 0.43),
+  PeopleTraining 0.65 s (0.25, 0.32, 0.08), PeopleAccess 11.0 s of features (its training feature 0.57 s). The new Training checks
+  were run on the unfixed code (the event's check failed first). `moqui lint --screens` (release binary): 136 flagged sites as
+  before, none in the screens P19 or this review touched. Prettier clean on the changed JavaScript but People.js (above). Not run:
+  test-apps, the acceptance suite.
+- For the lead:
+  - budget share beside the Built note's: mr-mantle about +0.4 s (Training's new checks); mr-boss about +0.1 s (PeopleAccess's
+    assessment forms and link checks, the PDF download);
+  - merge hot spots beside the Built note's (P21 rebases onto these): mr-mantle `work/EventServices.xml` (`check#EventAccess`),
+    `work/CalendarServices.xml` (`add#CalendarEvent`), `party/FormDefinitions.js` (`canEdit`, `canView`), `data/PeopleRecruitingSetupData.xml`
+    (the training purpose), `data/PeopleDevelopmentSetupData.xml` (the decision topic), `Training.js`; mr-boss
+    `service/ironstone/shared/SurveyApps.js` (People's `mounts`, `context`), `screen/People/Development/AssessmentForms.xml` (new),
+    `screen/People.xml` (the key and topic), `screen/Shared/PeopleSelfService.xml` and ContextServices (`trainingUrl`),
+    BossSetupData (the decision topic and `BOSS_PPL_ASSESSMENT_FORMS` after the training topic), PeopleSpecLib (`keys`),
+    PeopleAccess's training feature, design-people (header, §1.2, §10, §12, §13 Forms), usl-inventory, §4 here;
+  - acceptance: PeopleTrainingUsable, as written, approves Tomas's place before the session and is unaffected by R2; to run with the
+    full suites as the Built note says;
+  - the user's calls: both recorded in §4 as built; the Commons-wide calendar finding above may want one.
+
+**Follow-up Nov 12 (Commons calendar editors).** The user's call (§4): F330, the Commons-wide hole, is fixed in Commons now,
+generally. mr-mantle b936d768 and mr-boss (this commit), branch `ppl/cal`.
+- Putting an event in a calendar gives its editors no more than the one who put it there: `CalendarWorkEffort.viewOnly` (new) is Y
+  when `add#CalendarEvent` puts an event the user may not change (an attendee's invitation) in a calendar, and `check#EventAccess`
+  makes no editor through such a link (the attendee, nor a delegate who edits their calendar); feeds, `import#Calendar` and CalDAV
+  writes (`store#CalendarFeedEvents`) neither change nor cancel it, and a split series copies the flag. The organizer, editors of a
+  calendar that holds the event for its editors (a delegate of the organizer's calendar, a team calendar it was made in) and their
+  own events are as before.
+- An event an application keeps: R1's hard-coded training check is now the `EventManager` entity (an entity whose row names the
+  event, optionally a purpose, and where it changes), seeded beside its entity: `PeopleTrainingSession` (TrainingSession,
+  WepTraining) and `PeopleInterview` (ApplicationInterview); any app's event declares one the same way. `check#EventAccess` answers
+  `managedBy` and `eventManagerId` (`get#ManagedEvents`, a batch) and refuses the edit to every user ("X is changed on its
+  application's interviews in People"); the owner's services write the event themselves or call the event services as the system
+  (`runAsSystem`, admitted with no user and authorization off).
+- Interviews change only through RecruitingServices: `change#Interview` (start from now on, length, place unless a video call, whose
+  link is kept open past the new end, note) and `cancel#Interview` (the scorecards stay), a recruiter of the employer's; the
+  invitations of schedule, change and cancel go as the system. ApplicantDetail's Interviews rows have Change and Cancel (danger,
+  confirmed); Commons' EventDetail shows a kept event read-only with "This event is changed on …", and `get#EventAccessInfo`'s
+  edit refusal names where.
+- CalDAV: `put#DavObject` refuses (403) a write to an event of the calendar the user may not change, under its name or another
+  with its UID, and `delete#DavObject` its delete; the organizer's delete cancels the event though an attendee's calendar shows it
+  (a viewOnly link is not "elsewhere"). The tasks branch is untouched.
+- Commons' calendar data (`get#CalendarEvents`) computes `canEdit` with the same rule (viewOnly links, kept events), so the grid
+  offers no drag of an invitation the user put in their calendar, nor of a session or interview to its organizer (F331).
+- Specs (each new check fails on the code as it was): Mantle CalendarServices (Ben's invitation in his calendar, viewOnly, he and
+  Cy, his calendar's editor, refused a move, a cancel and a booking; Dee, an editor of Ada's calendar, still changes it), Dav (the
+  attendee's phone reads it and is refused a change, under its name and another with its UID, and a delete; the organizer's delete
+  cancels it), Recruiting (the organizer refused update and cancel on Commons with where it changes, the panel member refused a
+  calendar, a reader and another employer's recruiter refused, the change, the cancel, then INTERVIEW_CANCELLED); BOSS Calendar
+  (Joe's planning in john.doe's own calendar: no canEdit on the grid or the popover, the move refused) and PeopleRecruiting (the
+  recruiter's changeInterview on ApplicantDetail; EventDetail's save refused naming People). Training unchanged and passing.
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): Mantle Training, Recruiting, Dav, CalendarServices,
+  CalendarChanges, CommonsToday, LeaveRequests, ShiftRoster, PeopleChecklists, Qualifications, Offers, BusinessTime 89 of 89; BOSS
+  Calendar, EventDetail, Schedules, CalendarSettings, PublishedCalendar, SyncSettings, TodayPanel, QuickCreate, PeopleRecruiting,
+  PeopleTraining, PeopleLeave, PeopleRoster, PeopleTime, ManufacturingAccess 115 of 115, PeopleAccess and PeopleSelfService 30 of
+  30. Budget share: mr-mantle about +0.9 s (CalendarServices 0.42, Dav 0.12, Recruiting 0.37), mr-boss about +0.2 s. `moqui lint
+  --screens`: 136 flagged sites as before, none in ApplicantDetail or EventDetail. Prettier clean on Recruiting.js, Recruiting.spec
+  and PeopleRecruiting.spec (CalendarServices, Dav and Calendar specs were not Prettier-formatted before; left in their style). Not
+  run: test-apps, the acceptance suite.
+- Findings, numbered by the lead F354 to F357 in order:
+  - an attendee's link made before this fix has no viewOnly and still makes its calendar's editors the event's; no data upgrade
+    marks them (a personal calendar of an attendee who is not the organizer is the likely set);
+  - a phone's change of an event made in the app (no `universalId`; served as `mantle-{id}`) is stored as a new event beside it,
+    since `store#CalendarFeedEvents` matches by `universalId` only: a duplicate, before and after this fix;
+  - an interview's panel is fixed once scheduled (EventDetail's attendees are refused on a kept event): cancel and schedule again;
+    a cancelled interview's call link stays open until it expires (`revoke#CallLink` is its owner's);
+  - by the rule, an attendee who may already change an event (an editor of its team calendar) makes their own calendar's editors
+    its editors too when they put it there.
+
+**Review Nov 12 (calendar follow-up).** Every write path was walked against the rule: Mantle EventServices (update, cancel and
+restore#EventOccurrence, store#EventRecurrence, send#EventInvitations, remove#EventAttendee, book#Resource, cancel and
+check#ResourceBookings all check `check#EventAccess` edit), CalendarServices (`add#CalendarEvent` marks, `store#CalendarFeedEvents`
+skips viewOnly and kept events for feeds, `import#Calendar` and CalDAV), CalendarDavServices (PUT by name and by UID, DELETE), the
+BOSS Commons event and calendar services and screens (every change behind `get#EventAccessInfo` edit; `duplicate#Event` and
+`save#EventOverview` add through `add#CalendarEvent`), Projects' calendar (a WetEvent through the same check, other items through
+`move#TimelineItem`'s task and project access), Manufacturing (runs are not events to `get#EventAccessInfo`, F39), ShiftRoster
+(ShiftAssignment rows, no events) and holidays (no organizer, no calendar). Sound: an attendee, their delegates, a shared calendar's
+editors and a phone change or cancel no invitation they did not organize; kept events change only in People; the organizer's own,
+the delegate of the organizer's calendar and the team calendar it was made in are as before (CalendarServices' Dee, Calendar spec).
+The system scope (no user, authorization off) is reached only by `runAsSystem`, scheduler jobs, data loads and the mail sync;
+the anonymous services and screens (PublishedCalendar, `fetch#CalendarSubscriptions`, `send#DueReminders`, the call link token
+routes, `create#ApplicationFromEmail`) pass no request-chosen event to an event write service, so it is safe as built.
+- R1 (High; the follow-up's first finding): attendee links made before the fix still gave edit. `migrate#CalendarViewOnlyLinks`
+  (CalendarServices, run from the new seed file `data/CalendarSeedData.xml`, as P10's `migrate#ProductionCostRates`) marks each
+  link with no viewOnly: Y when the event has an organizer who neither owns nor edits the calendar and the calendar's owner could
+  not change the event through another calendar link, else N (the organizer's own, a delegate's or team member's, an event with
+  no organizer, a feed's). Each link in its own transaction, a failure logged and counted. `add#CalendarEvent` now writes N for
+  an editor's link, so a later load judges no new link again. Spec: CalendarServices (Ben's old link Y, he and Cy refused;
+  Ada's own, Dee's delegated call, the all-hands Ben edits through the team calendar and an event with no organizer N; a second
+  run does nothing).
+- R2 (Medium; the follow-up's third finding, in part): `cancel#Interview` closes the interview's video call link: the recruiter
+  who scheduled it through the framework's `revoke#CallLink` (guests removed at once), another recruiter of the employer as the
+  system (the link revoked, so its token and guests are refused, and the guests' credentials ended for `expire#Calls`), with
+  `revoke#CallLink`'s preconditions checked first so no error rolls the cancel back. Spec: Recruiting (both paths: the link
+  revoked, the token refused, the guest out).
+- R3 (Low): a phone's delete of an invitation the attendee's calendar only shows was refused (403), so it came back on the phone
+  with no way to drop it there (before the follow-up the delete took it out of that calendar); it now takes it out of that
+  calendar and leaves the event as it was. A kept event's delete is still 403. Spec: Dav (204, the calendar empty, the event
+  unchanged; the organizer's delete still cancels it).
+- Findings, numbered by the lead F358 to F362 in order:
+  - `tellAttendees` (schedule, change and cancel#Interview) catches a failing `send#EventInvitations`, but the failure has
+    already marked the transaction rollback-only (docs/logic/Services.md), so the interview change rolls back while the screen
+    says it was made and the attendees were not told; the invitations want to go after commit (pre-existing in schedule since P16);
+  - Leave's WetTimeOff projections are owned by the employee, so Mantle's event services (update, cancel and restore#EventOccurrence,
+    `add#CalendarEvent` and then CalDAV) let the employee move or cancel their approved leave's "Out of office" on a direct call;
+    the BOSS screens refuse it (`get#EventAccessInfo` is WetEvent only) and no remote endpoint reaches it today. An EventManager
+    row on LeaveRequestSegment.workEffortId (with an index) would close it; production runs (WepProductionRun, guarded in BOSS
+    only, F39) likewise by an EventManager on WorkEffort with that purpose;
+  - as the system, `send#EventInvitations` no longer leaves out the acting user, so a recruiter on the panel who changes or
+    cancels an interview is notified of their own change;
+  - a cancelled interview's scorecards stay open to submit (`submit#Scorecard` does not look at the event);
+  - the migration errs toward view only on a shared calendar: a link an editor of the event (not its organizer) put in a shared
+    calendar is marked Y unless the calendar's owner edits the event through another calendar; the organizer and that other
+    calendar's editors still change it.
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): Mantle Training, Recruiting, Dav,
+  CalendarServices, CalendarChanges, CommonsToday, LeaveRequests, ShiftRoster, PeopleChecklists, Qualifications, Offers,
+  BusinessTime 91 of 91 (52.5 s, features 28.1 s); BOSS Calendar, EventDetail, Schedules, CalendarSettings, PublishedCalendar,
+  SyncSettings, TodayPanel, QuickCreate, PeopleRecruiting, PeopleTraining, PeopleLeave, PeopleRoster, PeopleTime,
+  ManufacturingAccess, PeopleAccess, PeopleSelfService 145 of 145 (48.5 s, features 24.9 s). New checks: the migration feature
+  0.42 s, the call link feature 0.22 s, the changed Dav feature 0.12 s; each fails on the code before the fixes. Prettier clean on
+  Recruiting.js and Recruiting.spec. The seed file was not loaded into a database here (the service is spec'd directly).
+- For the lead: budget share mr-mantle about +0.65 s, mr-boss none. Merge hot spots: CalendarServices.xml, CalendarDavServices.xml,
+  Recruiting.js, Recruiting.spec, impl-people.md; nothing in P21's files. R3 departs from the follow-up's "DELETE refused to
+  non-editors" for a link the calendar only shows (it changes the user's calendar, never the event): the user may want to confirm.
+
 ### P20 — Reviews and goals
 
 Design §11 ReviewCycles, Reviews, ReviewDetail, Goals; PE-16. After P16 (an assessment is a response of a review
@@ -4772,6 +5361,278 @@ form) and P18.
 - **Usable when** (`acceptance/People/PeopleReviewsUsable`; design §14.3 "Qualifications and reviews", its second
   half): a cycle starts for a team, an employee and their manager assess, the review is released and acknowledged,
   and the manager's private notes appear in no export or Chatter.
+
+**Built Nov 12 (P20).** mr-mantle b465da64, mr-boss (branch `ppl/p20`).
+- Checked first (the code over the plan): F6 (the PerformanceReview, PerformanceReviewItem and PerformanceNote sketches in one XML comment
+  of HumanResourcesEntities.xml: a review keyed to employee, manager and a payment, items by a fixed type list with a five-step rating,
+  a note keyed by employee and date; no cycle, template, step or goal record); P5's approvals (`Approvals.js` kinds, `request`,
+  `sourceSummary`, `keepWaiting`, `sourceChanged`, `reroute` called with no kind by P6's separation, a manager change and the daily job,
+  `find#OwnedApprovals` and `transfer#ApprovalOwner` with P16's openings and P21's cases), P12's opt-out (an entity field, a section, a
+  form field; `isAgentRender`), P16's survey builder (`DbfpReview` registered, edited with PEOPLE_CONFIGURE, read with
+  PEOPLE_DEVELOP_VIEW; `publishedFormFor`, `recordAnswer`, `answersOf`; a FormInvitation naming the respondent and the record, no link),
+  P19's comma-list permission and Development mount of the registration (SurveyApps.js `mounts`), P18's and P21's content hosts
+  (`get#RecordLinkInfo`'s content map and visibility branches, RecordFiles' `get#ContentType`, Chatter's record title, the People
+  root's panel check) and P19's stored certificate (a page and PDF written once). Also: every task list (`get#MyTasks`,
+  `get#TaskObjectTags`, `get#FullCalendarData`, Today through People's own lifecycle tasks), the project rollup EECAs and the search
+  documents (MantleTask, MantleEvent, MantleProject) read only WetTask, WetEvent and WetProject work efforts, so a work effort of a type
+  of its own is in none of them; `get#RecordLinkInfo` admits a work effort outside a project to its owner, a party of it, a calendar
+  of it or a staff reader of WorkEffort, so a goal needs a rule of its own; design §1.4 keeps review topics' titles free of names.
+- Mantle:
+  - `entity/PeopleReviewEntities.xml` (package `mantle.humanres.ability`; the sketches' comment taken out of HumanResourcesEntities.xml):
+    `ReviewTemplate` (dated, an employer's: self assessment, feedback allowed and shared, approval before release, the review form of
+    each step), `ReviewCycle` (an employer or a unit and those under it, the template, the period and due dates; `ReviewCycleStatus`
+    draft, in progress, closed, audit-logged), `PerformanceReview` refined (a person's review of one employment in a cycle; the reviewer
+    `managerPartyId` and the state `PerformanceReviewStatus` (assessing, waiting for approval, finalized, released, acknowledged,
+    excluded) audit-logged; the overall rating on the sketch's scale; the release's stored page and PDF; the acknowledgment comment,
+    opted out of AI), `PerformanceReviewStep` (the self assessment, the reviewer's assessment, each feedback asked: assignee, due day,
+    form response and invitation, summary opted out of AI, rating, returns, who asked), `PerformanceNote` refined (the reviewer's private
+    note, its author's, opted out of AI), `PerformanceReviewContent` (the review's content host) and `PersonGoal` (a goal's measure,
+    target, actual value, unit, progress note, outcome `GoalOutcome`, owner and the review it was agreed in, keyed by its WorkEffort);
+    the sketch's PerformanceReviewItem is not built: an assessment's criteria are the questions of its review form;
+  - `data/PeopleReviewSetupData.xml`: the WorkEffort type `WetGoal` and purpose `WepGoal`; the kind `PakReview` and the topic
+    `PeopleReviewStep` (approve and refuse handlers, refusal reason required, its title the cycle, employer and step, never the
+    person); `PeopleReviewUpdate` (a step given or returned, a review released: a sentence naming the cycle and a date, never the
+    person, a rating, an answer or a note); `DbfpReview`'s registration (PeopleRecruitingSetupData) edited by PEOPLE_CONFIGURE or
+    PEOPLE_DEVELOP_EDIT;
+  - `mantle.humanres.ReviewServices` (`ReviewServices.xml`) over a new module `Reviews.js`: `find#Cycles`, `store#ReviewTemplate`,
+    `store#Cycle` (with close), `start#Cycle` (with preview), `find#Reviews`, `get#Review`, `store#Assessment`, `submit#Feedback`,
+    `change#ReviewState` (requestFeedback, cancelFeedback, return, finalize, approve, refuse, release, acknowledge, reassign, exclude),
+    `approve#ReviewStep`, `refuse#ReviewStep`, `store#ReviewNote`, `get#ReviewRelease`, `check#ReviewAccess`, `create#ReviewContent`,
+    `save#ReviewContentFile`, `find#Goals` and `store#Goal`, their reason codes in the descriptions. Who: a development reader
+    (PEOPLE_DEVELOP_VIEW) of the employer reads every review and step and a development editor sets up templates and cycles, starts,
+    closes, returns the reviewer's assessment, releases, changes the reviewer and excludes; the reviewer (while they work for the
+    employer) reads every step but feedback an earlier reviewer asked for, assesses, asks for and withdraws feedback, returns the self
+    assessment, finalizes and releases; the person reads their state and own self assessment and, once released, the reviewer's
+    assessment, the rating and the feedback the template shares, and acknowledges; a feedback giver their own feedback; an approver of
+    the PakReview step the steps (never a note); a private note its author alone; missing and unauthorized alike `RECORD_UNAVAILABLE`;
+  - start: one review per current employee of the employer in scope who has none in the cycle, each in its own transaction; the
+    reviewer the manager of the employment's live line; a person with none named `NO_REVIEWER` and left out; the person and the reviewer
+    told; a later start adds who was left out. A step is answered once on its form (a FormResponse its FormInvitation locks, naming the
+    person, the respondent and the step) or as a summary, and locked; a return (with its reason) reopens it. Finalizing needs the
+    reviewer's assessment submitted and nothing waiting; with the template's approval it waits for a People approval of kind PakReview
+    (no rule: the employer's HR officers, `defaultRole` ParHr; never the reviewer who asks or the person), whose refusal returns the
+    reviewer's assessment. Releasing renders the review once (Mantle's `template/humanres/ReviewRelease.print.html.fancy`: the person,
+    cycle, reviewer, overall rating, the self and reviewer's assessments with their answers, the shared feedback; never a note), stores
+    its page and PDF on the review and tells the person; a PDF that fails is logged and the page kept;
+  - goals: a WorkEffort of the `WetGoal` type and `WepGoal` purpose (title, period, percent complete, parent goal, restricted, owned by
+    the person, no WorkEffortParty) with its PersonGoal; set by the person, the manager of a live line at the employer or a development
+    editor of the employer; closed with an outcome or cancelled with a reason; read by those and by the reviewer of the review it was
+    agreed in;
+  - the lifecycle participant (`Approvals.js`): `find#OwnedApprovals` lists the open reviews the user reviews (`review:<id>`) and the
+    feedback asked of them (`reviewStep:<id>`) by the person's name, not transferable; `reroute` with no kind (P6's separation, a
+    manager change, the daily job) calls `Reviews.js rerouteSteps` in the caller's transaction: a review whose person left is excluded,
+    a reviewer who left (or whose line no longer manages the person while their assessment waits) is replaced by the manager of the
+    employment's live line, else the review waits with no reviewer, and feedback asked of a leaver is withdrawn; each review on its own;
+  - `get#RecordLinkInfo` (CommunicationServices.xml): the review host's content map entry and visibility branch (its reviewer and
+    development readers of its employer, its person once released, `check#ReviewAccess`, for every caller) and a goal's rule (a WepGoal
+    work effort: its person, their manager, its review's reviewer, development readers of its employer, `Reviews.js goalVisible`).
+- BOSS:
+  - Screens: `People/Performance` (menu 13, "Reviews & goals", `sym_o_rate_review`): `Reviews` (the default: To do, Mine, I review,
+    All; the state chip; phone columns), `Goals` (Mine, My team, All, a person's or a review's; Add goal the one primary; a row's
+    Update progress and More's Change, Close and Cancel goal), `ReviewCycles` (Open, Closed, All; New cycle the one primary; Preview
+    with who it reviews and who is left out, Start reviews; Change, Close; the Templates box), `ReviewForms` (the survey builder's
+    shared screens with People's new Performance mount, the review forms), `ReviewDetail` (out of the menu: the record header with
+    one primary by state and More; Approval; Your self assessment, Your assessment of, Your feedback on over the step's form as a
+    dynamic form of its DbForm with the summary and the rating; Steps; Your private notes; the acknowledgment; the goals of the
+    review; Files on the review's host; every text section and field `ai-opt-out`) and `ReviewRelease` (out of the menu: the stored
+    page in html-print, `ai-opt-out`);
+  - `ironstone.people` People.js: the link paths, the self-service links `reviewsUrl` and `goalsUrl` (SelfService's My reviews and My
+    goals, both mounts), `decisionUrl` for PakReview (ReviewDetail), the choices `reviewForms` and `reviewColleagues`, `reviewLink`
+    (Commons' `get#RecordLink` for a review), `performanceAreaOpens`; ContextServices' two links; People.xml: the panels admit the review
+    host, the key `g f`, the two topics; People/Approvals: `PeopleReviewStep` among `notificationTopics`; RecordFilesServices: the
+    review host (`create#ReviewContent`, the reviewer and development editors change); ChatterServices: a review's record title (the
+    person and the cycle); SurveyApps.js: the Performance mount (the review purpose, edited by `developEdit` or `configure`);
+    BossSetupData (appended): `BOSS_PPL_PERFORMANCE` (the area, an inheritable ALLOW for self-service), `BOSS_PPL_REVIEW_ADMIN` (Review
+    cycles and Review forms: ALWAYS for BOSS_PEOPLE_DEVELOP, denied to BOSS_PEOPLE and BOSS_PEOPLE_SELF), the two topics' links, and
+    the lifecycle participant's description; BossPeopleDemoData (appended): Retail's Annual review template (`BOSS_PPL_RT_ANNUAL`: self
+    assessment, feedback kept by the reviewer, no approval, no form), no cycle.
+- Specs: Mantle `test/humanres/Reviews` (4 features, stepwise, 3.3 s: 0.72, 0.79, 0.95, 0.88: a template's and a cycle's refusals
+  (another employer, a non-editor, a form not the employer's, dates), the preview changing nothing, the start making three reviews and
+  naming the two people with no manager, a second start adding none, a started cycle and a used template refused a change, the to-do
+  lists; the self assessment once, a colleague refused, the note the reviewer's, feedback asked and given once, the form's missing and
+  invalid answers and an unknown rating refused, what the person, the giver, the reviewer, development, another employer and a
+  colleague read (the note the author's alone); finalizing waiting for HR, the reviewer's and the person's decisions refused, the
+  notice's title naming the cycle and not the person, a refusal returning the assessment with its reason, the approval, the release
+  refused before and repeated after, the stored release with the assessment and rating and without the note or the feedback, the
+  person reading the assessment and rating after release and never the note or the feedback, a note refused after release, the files
+  and the record link the person's after release, the acknowledgment, no notice holding a note, a summary or a rating; a reviewer
+  changed by development (not by the reviewer), the new one reading none of the earlier note and the earlier one nothing, the lifecycle
+  lookup, the reviewer leaving (the review back to the line's manager, the leaver's own review waiting with no reviewer), the note read
+  again by its author, goals set by the person and their manager and refused to a colleague, the measure's progress, the review's
+  goals, the goal's record link, the WetGoal type outside every task list (My tasks, the phone's Tasks collection, People's own due
+  work), a closed goal refused a change); Training's check of a development editor's form now names an exit interview (the review
+  purpose admits them). BOSS `test/People/PeopleReviews` (3 features, 1.0 s: 0.26, 0.36, 0.34: ReviewCycles' one qvt render as the
+  review administrator with the preview, Templates and the choices `reviewForms` and `reviewColleagues` with a selected value off the
+  page; Reviews' one qvt render as Tomas; ReviewDetail's one qvt render as Hannah with his self assessment, the form's field, the rating,
+  her note and the opt-out markers, and its one agent (tui) render without the note or the self assessment; her assessment posted
+  through `assess` with authorization on; Goals' one qvt render as Tomas; ReviewRelease's one html-print render as Tomas without the
+  note). `PeopleAccess` gains one feature (0.42 s: a cycle stored by the review administrator, the HR officer refused with the same
+  parameters, Services refused to Retail's administrator; Review cycles opened by the administrator and refused to the HR officer and
+  the employee; Reviews opened to the employee by the area's grant; the employee's self-service link) and its menu feature the
+  Performance group (PeopleSpecLib: every menu gains Performance, `performanceMenu`, `developPerformanceMenu`, the key `g f`,
+  `reviewTemplateId`). Acceptance, written and not run: `acceptance/People/PeopleReviewsUsable` (4 features: the review administrator
+  adds a template asking for approval and starts Store Operations' cycle from Review cycles; Tomas submits his self assessment, Hannah
+  keeps a private note, assesses him and finalizes; the HR officer approves on ReviewDetail, Hannah releases, Tomas reads and prints
+  it, acknowledges it and agrees a goal from it; the note in none of Reviews' CSV, the review's Chatter panel, Tomas's timeline, the
+  notices, search or an agent's render).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Reviews, Training, FormDefinitions,
+  PeopleApprovals, PeopleEmployment, PeopleScheduledChanges, PeopleCases, RecordLinks, RecordVisibility, Qualifications, Recruiting,
+  WorkMyTasks, Dav, PeopleChecklists, Offers, LeaveRequests and CaseFeedback 108 of 108 (mr-mantle 38.8 s of features); BOSS
+  PeopleReviews, PeopleAccess, PeopleSelfService, PeopleTraining, PeopleApprovals, PeopleSkills, PeopleRecruiting, RecordFiles,
+  Chatter, CustomerServiceFeedback, CustomerServiceTemplates, CustomerServiceAccess, TodayPanel, AdminLifecycle, PeopleLifecycle,
+  PeopleEmployees, PeopleLeave, Notifications and PeopleOffers 146 of 146 (mr-boss 39.1 s). A check of each new spec failed when
+  changed (a mutation, put back). One-off renders (a spec not kept): ReviewCycles, Reviews, Goals and ReviewDetail in tui, ReviewDetail
+  in html as the reviewer and as a person who does not read it (not available), Review forms, All reviews and My team's goals in qvt;
+  all without error. `moqui lint --screens` (release binary): 136 flagged sites as before, none in the screens P20 added or touched, no
+  TUI worklist entry for them. Prettier clean on the new and changed JavaScript (People.js's earlier `openingOptions` lines left as
+  merged). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table (the ReviewServices rows; "P1 to P21"); ss-inventory's P20 note (no baseline form is
+  mapped).
+- Design edits: design-people (header; §1.2 Reviews & goals; §1.4 the two topics; §11 as built; §12 the topic's handlers; §15 the
+  review release); design-drawers-commons §4 (the `PeopleReviewStep` row); design-admin §14 (People's participant: reviews).
+- Findings, numbered by the lead F370 to F383 in order:
+  - the sketch's PerformanceReviewItem is not built: an assessment's criteria are the questions of the step's review form (P16's
+    `DbfpReview`), and a step with no form is a written summary and, for the reviewer, the overall rating on the sketch's scale;
+  - review topics' titles name no person (design §1.4's rule), so a notice reads "A review for Annual 2026 waits for your assessment,
+    by …"; the approval's message, Approvals and ReviewDetail name the person;
+  - with no approval rule the employer's HR officers decide a review's finalizing (`defaultRole` ParHr, as offers): the person's manager
+    is usually the reviewer who asks, and there is no "manager's manager" role; an employer's PakReview rule routes it otherwise;
+  - the reviewer is the manager of the employment's live line when the cycle starts; the design's "reviewer rule" is not built (no
+    other rule), and a person with no manager is left out with `NO_REVIEWER` until a line exists and the cycle is started again, or
+    development changes the reviewer once a review exists;
+  - a private note is read by its author alone, development and HR included; a replaced reviewer no longer reads the review, so not
+    their own notes either; nothing hands a note on;
+  - a new reviewer reads none of the feedback the earlier one asked for (design §11's "do not silently disclose earlier feedback");
+    development and an approver read it;
+  - a step is submitted once, with no draft saved for later; a return reopens it;
+  - feedback is asked by the reviewer alone, never anonymous; the person reads it only when the template shares it, and is not shown
+    who was asked before release; development withdraws it but asks none;
+  - a goal's owner is on PersonGoal, not a WorkEffortParty row, so no assignment list (Projects', Commons') sees it; linking the tasks
+    that implement it (design §11 Goals) and team or department goals are not built; a parent goal is one of the same employer; a goal
+    has no record link outside Goals (it is in no search);
+  - not built: Today's review step due, MyTeam's reviews due (design §1.2) and Employee360's reviews (SkillsAndReviews); the notices
+    carry the due dates;
+  - a template a started cycle uses is not changed (end it and add another); there is no copy;
+  - the reviewer follows the line only when `reroute` runs (a separation, an applied manager change, the daily job), as approvals do
+    (P5's finding); P3's `change#Manager` alone leaves the reviewer until then;
+  - a review's files and Chatter (People's panels) are the reviewer's and development's and become the person's once released, so a
+    reviewer's Chatter note is not private: ReviewDetail shows no Chatter panel, and the private notes are their own record;
+  - the review purpose's forms are built under Review forms by the review administrator and still listed in the People
+    administrator's Forms.
+- For the lead:
+  - budget share: mr-mantle about 3.3 s (Reviews); mr-boss about 1.4 s (PeopleReviews 1.0 s, PeopleAccess's feature 0.4 s); no client
+    spec;
+  - merge hot spots (P22 runs beside; ppl/fix1 merges first): mr-mantle `Approvals.js` (`PERFORMANCE_REVIEW`, `reviews()`, the
+    `PakReview` kind after `PakTraining`, `reroute`'s review call, `findOwnedApprovals`' review rows, `transferApprovalOwner`'s refusal),
+    `party/CommunicationServices.xml` (`get#RecordLinkInfo`'s description, content map and the review and goal branches after the
+    qualification's), `entity/HumanResourcesEntities.xml` (the sketches' comment removed), `data/PeopleRecruitingSetupData.xml` (the
+    review purpose's edit permission), `DevelopmentServices.xml` (header), `test/humanres/Training.spec.js` (the development editor's form
+    check); mr-boss `service/ironstone/people/People.js` (`linkPaths`' end, `performanceLocation`, `decisionUrl`, the P20 choices before
+    `choices`, `selfServiceContext`, `performanceAreaOpens` and `reviewLink` before the grievances helpers, the exports),
+    `ContextServices.xml` (two links), `screen/People.xml` (header, panel check, key, topics), `screen/People/Approvals.xml`,
+    `screen/Shared/PeopleSelfService.xml`, `service/ironstone/shared/SurveyApps.js` (the Performance mount), `RecordFilesServices.xml`,
+    `ChatterServices.xml`, `commons/PaletteServices.xml`, `data/BossSetupData.xml` (appended; the participant's description),
+    `data/BossPeopleDemoData.xml` (appended), `test/People/PeopleSpecLib.js` (every menu, keys, ids), `PeopleAccess.spec.js` (header, menu
+    feature, appended feature), the inventories, design-people (header, §1.2, §1.4, §11, §12, §15), design-drawers-commons §4,
+    design-admin §14, this file. Notifications use master's `ec.makeNotificationMessage()...userIds(...)` (`Reviews.js tell`), as P19's
+    decision notice does: ppl/fix1's named-recipients send replaces it there;
+  - acceptance to run with the full suites: PeopleReviewsUsable (new), PeopleApprovalsUsable (a new kind and topic on Approvals),
+    PeopleFoundationWalk (the new menu entry), PeopleTrainingUsable (the review purpose's permission beside the training one);
+  - for the user's call: who decides a review's finalizing by default (built: the employer's HR officers); whether development (the
+    review administrator) reads the reviewer's private notes (built: their author alone); whether a new reviewer reads the feedback the
+    earlier one asked for (built: no).
+
+**Review Nov 12 (P20).** A fresh review of `git diff master...ppl/p20` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §11, §15, PE-01, PE-16 and PE-21, confidentiality first (as the person before and after release, the reviewer, a new
+reviewer, a feedback giver, an approver, HR, development, ADMIN and other apps' staff, each with a valid id, through the review
+services, ReviewDetail, the record rule, Chatter, RecordFiles, notices, the id lookup, search, Today and the task lists); the
+user's three calls of Nov 12 recorded in §4; fixes committed apart per repository ("People P20 review: …"). Both branches were
+rebased onto master after People follow-up 1 (directOnly notices, after-commit interview invitations, the EventManager rows,
+`ConfidentialRecordType`) with no conflict: Approvals.js, CommunicationServices.xml, HumanResourcesEntities.xml, Training.spec.js,
+People.js, People.xml, Approvals.xml, BossSetupData.xml, PeopleSpecLib.js, PeopleAccess.spec.js and this file merged cleanly, each
+keeping both sides; the phase commits are now mr-mantle 4f559f8c and mr-boss ca90d063. Reviews, PeopleApprovals, Training and
+RecordNotes (24 of 24) and PeopleReviews and PeopleAccess (30 of 30) passed after it.
+- Checked and found sound:
+  - A private note is read by its author alone on every path: `get#Review` reads the caller's own (`authorPartyId`), so the person,
+    a later reviewer, development, HR, an approver and ADMIN (who holds `PEOPLE_DEVELOP_VIEW` and reads every step) read none;
+    `store#ReviewNote` changes only the author's; the release renders steps, never a note; no list, export, notice, Chatter host,
+    DataDocument, palette source or Assist tool reads `PerformanceNote`, and its text, the steps' summaries and the
+    acknowledgment are `ai-opt-out` (ReviewDetail's sections too; its agent render shows neither the note nor the assessments).
+  - The person reads their state and own self assessment before release and the reviewer's assessment and rating after; feedback
+    only when the template shares it; never who was asked before release; a giver their own feedback alone; missing and
+    unauthorized reviews are `RECORD_UNAVAILABLE` alike.
+  - Goals are in no task list: every Today, My tasks, CalDAV Tasks, Commons task, Projects work item, project rollup, search
+    document (MantleTask, MantleEvent, MantleProject), calendar and shell count reads typed work efforts (WetTask, WetEvent,
+    WetProject) or WorkEffortParty rows, which a goal never has; the Work EECAs and SECAs act only on tasks or named purposes; no
+    WorkEffort roll-up to a parent exists. Projects' and Commons' screens over WorkEffort go through those services.
+  - No self-approval: `record#Decision` refuses the requester (the reviewer who finalized) and the person; the person's actions are
+    their own steps and the acknowledgment; development's own review is not in their reach (`develop` excludes self).
+  - `start#Cycle` starts each person in its own transaction with its errors pushed, names `NO_REVIEWER` and each failure and goes
+    on; a second start adds only those left out. The release is rendered once (`issueRelease` returns when the page is stored),
+    under the review's lock, from a finalized review only; a PDF that fails keeps the page.
+  - Scope: templates, cycles and starts are a development editor's of the employer; the reviewer reads and acts only while they
+    work for it; goals by the person, a live line's manager at the employer or development; `reroute` with no kind re-routes each
+    review on its own (a leaver's review excluded, a leaver's feedback withdrawn, a reviewer replaced by the live line's manager).
+- Fixed:
+  - R1 (the user's call of Nov 12, 2026): a new reviewer read none of the feedback an earlier reviewer had asked for, nor could
+    withdraw what still waited, so finalizing was blocked (`FEEDBACK_WAITING`) until development withdrew it. The feedback is the
+    review's: `readsStep` gives every full reader every step, and `cancelFeedback` lets the review's reviewer withdraw any waiting
+    feedback; an earlier reviewer's notes still do not pass. Spec Reviews (Nia, made reviewer of Bo's review, reads Cy's feedback
+    that Max asked for and withdraws Ana's; none of Max's note).
+  - R2 (high): the review's notes became the person's at release, so a note or message filed on the review before (the record
+    panel People.xml admits for the review host, Chatter's links, a mail filed on it) would reach them then. Mantle's
+    `link#CommunicationEventRecord` files nothing on a review before it is released (`REVIEW_NOT_RELEASED`); the reviewer keeps
+    private notes of their own. Spec Reviews (Max's note on Ana's review refused before release, filed after).
+  - R3 (medium): the person read the approval's decisions with their reasons (HR's refusal "Say more about the stocktakes") and,
+    after release, the reviewer's assessment's return reason: the approval is the full readers' alone, a step's return reason its
+    assignee's and the full readers'. Spec Reviews.
+  - R4 (People follow-up 1): `Reviews.js tell` sends direct-only, and the review host is registered in `ConfidentialRecordType`
+    (PeopleReviewEntities.xml), so its mention and follower notices go to their named recipients alone. Spec Reviews (a subscriber to
+    every PeopleReviewUpdate message is told nothing of a reassignment that told Nia; the type confidential).
+  - R5 (medium, no self-approval): a reviewer changed while the approval waited (`keepWaiting`) who is one of its approvers (an HR
+    officer made the reviewer) could approve the review they now give: `decide` refuses the review's reviewer (`SELF_APPROVAL`) and
+    `canDecide` is false for them. Spec Reviews (HR made Ana's reviewer refused; fails on the code as it was).
+  - R6 (medium): the id lookup (`GeneralServices.lookup#ById`, the source of Comms' `search#LinkRecords` for Chatter, EventDetail,
+    RequestDetail, Notes, Knowledge and Chat) answered a goal's title to anyone who typed its id; it answers no goal now, as it
+    answers no confidential case. `get#RecordLinkInfo`'s goal rule keys on the `WetGoal` type, not the `WepGoal` purpose a work item
+    may be given (which hid that task from everyone). Spec Reviews (the lookup of Ana's goal, as Ana, is empty).
+  - R7 (built, the worker's unbuilt pieces): People's Today source answers the user's review steps due (their self assessment, an
+    assessment of a person they review, feedback asked of them; the step, the cycle and the due day), each opening the review; MyTeam's
+    Reviews due box (the open reviews the manager gives; a review's approval waiting opens ReviewDetail, not the person's record);
+    Employee360's Reviews under People (`find#Reviews` by `partyId`: the reviews the user reads as the person, the reviewer or
+    development, with the state and, once released, the overall rating). Specs PeopleReviews (Tomas's and Hannah's Today; Tomas's
+    reviews as himself and Hannah with the released result, none to HR) and PeopleSelfService (MyTeam's render shows Reviews due).
+    One-off renders, not kept: MyTeam in qvt and tui as Hannah, Employee360 in qvt and tui (development) with the region; no error.
+- Findings, numbered by the lead F384 to F389 in order:
+  - Mantle's generic REST resource `/workEfforts` (mantle.rest.xml) lists, reads, updates and clones work efforts with no type
+    condition, a goal included, for a caller its artifact authorization admits (ADMIN's designed tools); a goal's own services are
+    the only reviewed path.
+  - A review's files added before release (by the reviewer or development) become the person's at release, as designed (the Files
+    box says so); unlike notes they are not refused before release.
+  - Chatter's `get#RecordInfo` and Comms' link search label a goal "Task" (its readers alone see it).
+  - A note on a goal's work effort (no screen offers one) would tell a subscriber to every ChatterMention message: a goal's type is
+    not a `ConfidentialRecordType` (the registry is by entity, and WorkEffort is every app's).
+  - `create#Task` does not check that its parent is a task, so a task could be put under a goal through Mantle's REST.
+  - `reroute`'s review pass runs in the caller's transaction (the separation's), as the approvals' pass does: one review's database
+    failure would mark the separation's transaction for rollback.
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Reviews, PeopleApprovals, Training,
+  RecordNotes, RecordLinks, RecordVisibility, PeopleCases, InboxThreads and UniversalSearch 81 of 81 (Reviews 4.2 s: 0.67, 0.73,
+  1.76, 1.05 under load from the parallel phase); BOSS PeopleReviews, PeopleAccess, PeopleSelfService, PeopleEmployees,
+  PeopleApprovals, PeopleTraining, PeopleSkills, Chatter, RecordFiles and TodayPanel 95 of 95 (PeopleReviews 1.8 s: 0.24, 0.46,
+  1.06). R5's check failed on the code as it was (the spec run with the phase's Reviews.js and CommunicationServices.xml, put back).
+  `moqui lint --screens`: no flagged site in the screens touched (137 overall; the extra one is the framework's GitRepositoryDetail).
+  Prettier clean on the changed JavaScript (People.js's earlier `openingOptions` lines as merged). Not run: `./moq test-apps`, the
+  acceptance suite.
+- For the lead:
+  - budget share: about +0.9 s in mr-mantle (Reviews' two features); about +0.1 s in mr-boss. PeopleAccess (27 features) measured
+    21.3 s under the parallel phase's load in one run (over the 15 s limit) and 11.1 s in the next; it is near the limit and is the
+    spec to split.
+  - merge hot spots for P22: mr-mantle `CommunicationServices.xml` (`link#CommunicationEventRecord`, `get#RecordLinkInfo`'s goal
+    rule), `GeneralServices.xml` (`lookup#ById`); mr-boss `People.js` (`today`, the `REVIEW` constant), `screen/People/MyTeam.xml`,
+    `screen/Shared/Employee360.xml`, `ContextServices.xml` (get#TodayItems' description), this file's §4 (three rows appended) and
+    design-people §11.
+  - the user's calls of Nov 12 are in §4: HR officers finalize by default (as built); private notes their author's alone (as
+    built); a new reviewer reads the review's feedback (built, R1).
 
 ### P21 — Grievances
 
@@ -4790,6 +5651,410 @@ Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends sta
 - **Usable when** (`acceptance/People/PeopleCasesUsable`; design §14.3 "Confidentiality across every path", its case
   half): an employee files a case; only the intake handler sees it, in the list, the palette, search, files and
   Assist; assigning a task to IT opens nothing of the case to its assignee.
+
+**Built Nov 12 (P21).** mr-mantle a82a3456, mr-boss (branch `ppl/p21`).
+- Checked first (the code over the plan): F19 (Shared/RequestDetail branches by `appRoot`, each app's section in a template, the
+  Commerce and Purchasing pattern), F20 (RequestTriageNotice, SupportCaseRule, SupportCaseCustomerRule and SupportCaseSlaRule on
+  every request; `complete#RequestFromWork` knowing no HR type), P2's F66 (`get#RecordLinkInfo`'s visibility branches, RecordFiles'
+  `get#ContentType`, the Records drive's folder map), P7's `hiddenTaskIds` and its seven call sites (each prefiltering on
+  `ChecklistStep.isProtected`), P12's opt-out and its uncovered paths (a service tool's result, the search index, a `section-include`
+  of an opted-out section, a `go` query), P16's `get#CaseResponse` fix (one app's service reading another's records). A survey of
+  every reader of requests found a case would have surfaced, with its name or comments, through: Commons' request list, Home's
+  assigned requests, request detail and access check; a contact's Requests tab; a call's screen pop; a task's linked records
+  (Commons' TaskDetail, Projects' WorkItemDetail, Today's record caption); Admin's open assignments; `lookup#ById` (the palette's
+  Go to id, Comms' link search, Assist mentions); `search#Universal` and the MantleRequest and MantleCommunicationEvent documents
+  (which index comment bodies); a party's Chatter timeline (`find#PartyCommunicationEvents`, every note's text); the record
+  notices (`notify#RecordMention`, `notify#RecordFollowers`: the record's name and the start of the text, to anyone made a
+  follower); `get#RecordLinkInfo`'s staff, no-organization-filter and authorization-off paths, and its communication event bypasses.
+  Customer Service, Commerce, Warehouse, Purchasing, Manufacturing and Insights read requests by a case profile, store, facility,
+  type or dataset a case never has. The data tool reads `moqui.basic` alone; no agent tool reads requests.
+- Mantle:
+  - `entity/PeopleCaseEntities.xml`: the type `RqtHrCase`, an Enumeration of its own type `RequestConfidentialType` (not a
+    `RequestType`: no request type list offers it and every type check that asks for a RequestType refuses it), and `PeopleCase`
+    (the employer, the employment, subject, details, the day, how to contact the employee, the outcome note, opted out of AI; an
+    operation key). The case's Request row says nothing: "Confidential case", no description, project, store, facility, category,
+    customer or organization party; its people are its RequestParty rows, the employee (Reporter) and the handlers (Assignee);
+  - `data/PeopleCaseSetupData.xml`: the topic `PeopleCaseUpdate` (no push, `titleTemplate` a fixed sentence: "A confidential case
+    was filed with you", "… assigned to you", "… you are on was updated") and the PartySetting type `PeopleCaseIntake` (the
+    employer's designated intake handlers, party ids);
+  - `RequestServices` (`PeopleCaseServices.xml`, included by `service-include`; `PeopleCases.js`): `create#PeopleCase`,
+    `find#PeopleCases`, `get#PeopleCase`, `change#PeopleCase`, `assign#PeopleCaseHandler`, `add#PeopleCaseTask`,
+    `check#PeopleCaseAccess`, `notify#PeopleCaseUpdate`, `get#CaseDocumentData` (their codes in the descriptions). A handler is an
+    Assignee of the case holding PEOPLE_CASE_HANDLE; filing needs a current employment of the employee's and no permission (as a
+    claim); the intake handlers must hold PEOPLE_CASE_HANDLE through an enabled account and work for the employer, never the
+    employee; the case's people follow it from filing, so a note tells them;
+  - the rule other readers apply, in `PeopleCases.js` (`caseIds`, `hiddenRequestIds`, `caseEvents`, `caseTaskIds`,
+    `protectedTaskIds`): `get#RecordLinkInfo` admits a case, its files (`RequestContent`) and a communication event filed on one
+    (the event or its thread's root, by RequestCommEvent or a CommunicationEventRecord) to its people alone, for every caller,
+    authorization disabled or not, ADMIN and the staff rule included, before the client and finance rules; a task linked to a case
+    to its current assignee alone, the same way. `Checklists.js protectedTaskIds` takes case tasks too, so the seven P7 call sites
+    (CalDAV's Tasks, `get#MyTasks`, `get#FullCalendarData`, Today, search, Commons' task list, the record rule) leave them out;
+  - the Request rules (F20): RequestTriageNotice, SupportCaseRule and SupportCaseSlaRule are conditioned on the type;
+    `notify#RequestTriage`, `ensure#CaseProfile` (`CONFIDENTIAL_CASE`, so SupportCaseCustomerRule and the message and work clock
+    rules find no profile) and `complete#RequestFromWork` leave a case alone; `create#Request` and `update#Request` refuse the type
+    (`CASE_TYPE_RESERVED`) and `update#Request` a case ("not found");
+  - the other readers: `notify#RecordMention` and `notify#RecordFollowers` send a case's notice on PeopleCaseUpdate to its people
+    alone; `follow#Record` refuses a follower who is not one of them; `find#PartyCommunicationEvents` leaves out a note filed on a
+    case; `search#Universal` drops a case and a note on one; `lookup#ById` finds no case; Today's record caption names no case;
+    MantleRequest and MantleCommunicationEvent have `get#CaseDocumentData` as their manual data service and a post-query
+    condition, so a case and its notes are never indexed; `save#RequestContentFile` keeps a case's files under `peoplecase/`, a
+    folder the Records drive does not map (as an employment's).
+- BOSS:
+  - Screens: `People/Employees/Grievances` (menu 4 of Employees, every People user's and a self-service employee's by
+    `BOSS_PPL_CASES_SELF`; the screen `ai-opt-out`): the user's cases (Show open, closed, all; phone columns; the state chip with its
+    tui text) and Raise a concern (SubmitCase, the primary); `People/Employees/RequestDetail`: Shared/RequestDetail with People's
+    branch (`template/PeopleCaseDetail.xml`, inside a section `ai-opt-out`, since a section-include does not carry an included
+    section's): the record header with one primary by state (Start, Resolve, Reopen; the employee's Withdraw), a handler's More
+    (Close without action, Add a handler, Remove a handler, Ask for work), the case, its people, the work asked of others, the
+    conversation (Chatter of the request) and its files; no shell record context. SelfService links Grievances ("Raise a concern");
+  - the People root's panels serve a case (and no other request) beside the HR hosts; the topic is declared there, its link
+    (BossSetupData) opens RequestDetail; RecordFiles' change right on a case is `check#PeopleCaseAccess`'s; `get#RecordLink` opens a
+    case under People for its people (`People.js caseLink`), else nowhere; Chatter's `send#Message` refuses a case;
+  - every other app leaves a case out for everyone: Commons' `get#RequestAccess` ("not available", as an RFQ, so Commons' and
+    Projects' request detail and services and Manufacturing's), `find#RequestRows`, Home's assigned requests, a contact's Requests
+    tab, a call's screen pop, Commons' TaskDetail and Projects' WorkItemDetail linked records, Admin's open assignments
+    (`Lifecycle.js`, an owner contract: design-admin's Offboarding preview says so);
+  - grants: `BOSS_PPL_CASES_SELF` (Grievances, Shared/RequestDetail and Shared/Chatter by location for `BOSS_PEOPLE_SELF`, on
+    `BOSS_PPL_FILES_SELF`'s ground); demo: Retail's intake handler is people.case (`BossPeopleDemoData.xml`); Services has none.
+- Specs: Mantle `test/request/PeopleCases` (5 features, 2.5 s feature time: filing with the intake handler, its people reading it
+  and the manager, HR without it, another employer's handler, ADMIN and the task's assignee refused its valid id, a retry, no
+  employment and no handler refused, the notice's fixed title and no push; no triage notice, case profile or completion from work,
+  the generic create and update refused; the record rule for the case, a note and a file with authorization disabled and a call
+  with no user, the note telling its people alone and absent from the timeline, no outside follower, the search documents left out
+  as the feed assembles them; the protected task out of CalDAV and other lists, its assignee refused the case; the moves at their
+  revision, the last handler kept, the withdrawal). BOSS `PeopleAccess` gains the case rule (0.5 s: the handler and employee read it,
+  the manager, HR, the People administrator and ADMIN refused with the same parameters; no Commons list, access check or lookup
+  holds it; RequestDetail's one qvt render as the handler inside the opt-out, and its html render as the employee, opened by their own
+  grant; Grievances by its own grant, refused another app's user; the Employees group with Grievances). Acceptance, written and not run:
+  `acceptance/People/PeopleCasesUsable` (3 features: Tomas raises a concern from Grievances; only people.case sees it, through the
+  list, the detail, its notes and files, and the manager, HR, the People administrator and ADMIN see nothing of it in Grievances,
+  RequestDetail, the record rule, Commons' list and detail, the lookup and search, nor an agent's render of the handler's page; the
+  handler asks IT for work, and IT reads the task and nothing of the case, the task out of their CalDAV and everyone else's reach).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle PeopleCases 5 of 5 (2.5 s); the
+  readers and Request rules it changed: CalendarChanges, CalendarServices, CommonsToday, ContactBooks, CrmMiscServices,
+  InboxThreads, InternalMessages, Mailboxes, MantleSearch, PeopleChecklists, PeopleDirectory, RecordLinks, RecordVisibility,
+  ReportLookups, StaffIdentity, SupportCases, SupportSla, UniversalSearch, WorkGitReview, WorkMyTasks, WorkProjectClients,
+  WorkProjectPlan, WorkProjectRequests, WorkProjectServices, WorkTimesheets, CaseFeedback, SupportAssignment, SupportChannels,
+  Recruiting, LeaveRequests (306 of 306), PurchaseRequests, RecordNotes, ReplenishmentRoutes, SupportRelations, WarehouseTransfers,
+  WorkPlanToCashBasicFlow, WorkTimeEntries, SupportKnowledge, SupportPortal, SupportReplies, SupportTemplates, SupportWarranty (136
+  of 136). BOSS PeopleAccess 23 of 23 (the new feature 0.5 s); the Commons, Comms, Projects, Purchasing, Customer Service,
+  Commerce, Warehouse, Manufacturing, Admin, Insights and People specs over the changed readers (AccountingAccess, AdminAccess,
+  AdminLifecycle, Calendar, Chat, Chatter, ClientBilling, CommerceAccess, CommonsSettings, CommsHome, Compose, Contacts,
+  CustomerServiceAccess, CustomerServiceCases, CustomerServiceChannels, CustomerServiceWarranty, EventDetail, Files,
+  InsightsRecords, ManufacturingAccess, ManufacturingDowntime, Notifications, PeopleAttendance, PeopleLeave, PeopleLifecycle,
+  PeopleSelfService, PeopleTime, PeopleEmployees, PeopleSkills, PeopleExpenses, PeopleRecruiting, ProjectDetail, ProjectRequests,
+  ProjectsAccess, PurchasingAccess, PurchasingRequests, PurchasingSourcing, QuickCreate, RecordFiles, Requests, Tasks, TodayPanel,
+  WarehouseAccess, WarehouseTransfers, WorkItemDetail, WorkItems: 482 of 482). `moqui lint --screens`: 136 flagged sites, none in
+  the changed screens; no TUI-text finding in them. Prettier clean on the new and changed JavaScript but People.js, which was not
+  clean on master (its additions are). Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- Inventories: usl-inventory's People rows gain the case services with their screens; ss-inventory notes no baseline form maps to
+  Grievances or People's RequestDetail.
+- Design edits: design-people (header, §4 Grievances and §13 RequestDetail as built), design-crosscut §3.11's People row,
+  design-admin's Offboarding preview (a case is no open assignment).
+- Findings, numbered by the lead F336 to F346 in order:
+  - The intake handlers are designated by the employer's PartySetting `PeopleCaseIntake` (seeded for Retail in the demo); there is
+    no screen to set it until P29's Settings, and an employer with none refuses a filing (`NO_CASE_HANDLER`) rather than sending it
+    to every holder of PEOPLE_CASE_HANDLE there (ADMIN holds it, so "every holder" would make the instance administrator a handler).
+  - The phase's "usable when" says only the intake handler sees the case "in the list, the palette, search, files and Assist". As
+    built, the list, files and notes are its people's, and the palette, universal search, the id lookup, record-lookup and Assist
+    answer a case to nobody, its people included (design §2's Grievances and RequestDetail rows: no `Request requestId` exposed to
+    Assist, and Assist's search reuses the palette's rows). The acceptance test checks nobody else finds it there.
+  - The confidential type is an Enumeration of its own type, not a `RequestType`, so no type list or type check of another app
+    takes it; `Request.requestTypeEnumId`'s relationship names the Enumeration by id alone, so nothing else changes.
+  - A task linked to a case is reached only by its current assignee for every caller, authorization disabled too: stricter than
+    P7's protected tasks (whose rule holds with authorization on). Its assignee is told on PeopleTaskAssigned, whose link opens the
+    task in Commons, where its linked records leave the case out.
+  - A party's timeline drops a case's notes after its query's page, so that page can show fewer rows than its size.
+  - A message a case's people link to the case (Comms' Link to record) then follows the case: its own sender and recipients no
+    longer see it outside People. The participants decide that; linking is not refused.
+  - A Chatter or RecordFiles panel of a case requested under another root (Commons') still answers its people, by the record rule;
+    only People's screens link a case. The panel check of each other root is not changed.
+  - A handler who leaves keeps their Assignee row (reading needs PEOPLE_CASE_HANDLE as well, which an access end removes), Admin's
+    lifecycle does not move cases, and nothing re-routes a case whose only handler left: its employee still reads it and nobody
+    handles it. A re-route like P6's for approvals waits on the user's call.
+  - `get#RecordLinkInfo` on a communication event now reads its case links (up to three queries) for every caller.
+  - SupportCaseCustomerReply, SupportCaseSlaMessage and SupportCaseSlaWork still run on a case's messages and work; each finds no
+    case profile and does nothing.
+  - `BOSS_PPL_CASES_SELF` grants Shared/RequestDetail and Shared/Chatter by location (as `BOSS_PPL_FILES_SELF` grants RecordFiles),
+    so a self-service employee may open them under any root whose path admits it; what they show is decided per record.
+- For the lead:
+  - budget share: mr-mantle about 2.5 s (PeopleCases); mr-boss about 0.5 s (PeopleAccess's feature); no client spec;
+  - merge hot spots (P17 and P19 touch Approvals.js, People.js, People.xml, PeopleSpecLib.js, PeopleAccess.spec.js,
+    BossSetupData.xml, Approvals.xml and Employee360.xml): mr-mantle `service/mantle/party/CommunicationServices.xml`
+    (`get#RecordLinkInfo`'s case rule before the client rule, `protectedHidden`, the description; `find#PartyCommunicationEvents`,
+    `notify#RecordMention`, `notify#RecordFollowers`, `follow#Record`), `service/mantle/request/RequestServices.xml` (the guards in
+    create, update, triage, save of a file and complete from work; the includes at its end), `Checklists.js` (`protectedTaskIds`),
+    `service/mantle/work/TaskServices.xml`, `WorkEffortServices.xml`, `CalendarDavServices.xml`, `search/UniversalSearchServices.xml`,
+    `GeneralServices.xml`, `SupportCaseServices.xml`, `entity/Request.eecas.xml`, `data/MantleDocumentData.xml`,
+    `MantleDocumentWorkData.xml`; mr-boss `service/ironstone/people/People.js` (the grievances location, `grievancesOpen`,
+    `caseLink`, `selfServiceContext`, the exports), `ContextServices.xml` (self-service links), `screen/People.xml` (header, panel
+    check, topic), `screen/People/Employees.xml`, `screen/Shared/RequestDetail.xml` (the transition-includes, the People branch of
+    its actions, the wrapped section-include and RequestNotFound's condition), `screen/Shared/PeopleSelfService.xml`,
+    `data/BossSetupData.xml` and `data/BossPeopleDemoData.xml` (appended at their ends), `test/People/PeopleSpecLib.js` (the
+    Employees menus, the ids' end), `PeopleAccess.spec.js` (header, appended feature), `service/ironstone/commons/RequestServices.xml`,
+    `TaskServices.xml`, `ContactServices.xml`, `PaletteServices.xml`, `screen/Commons/Home.xml`, `comms/ComposeServices.xml`,
+    `projects/WorkItemServices.xml`, `shared/ChatterServices.xml`, `shared/RecordFilesServices.xml`, `admin/Lifecycle.js`, the
+    inventories, design-people (header, §4, §13), design-crosscut §3.11, design-admin;
+  - for the user's call: how an employer's intake handlers are designated (a setting, as built, or every case handler working
+    there) and what happens to a case whose last handler leaves; and whether a case's people should find it in the palette and
+    search (built: nobody does).
+
+**Review Nov 12 (P21).** A fresh review of `git diff master...ppl/p21` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 Grievances, §13 RequestDetail, crosscut §3.11, PE-01 and PE-21, confidentiality first and adversarially (as the manager,
+an HR officer without the case, the People administrator, ADMIN, a linked task's assignee, a colleague and other apps' staff, each
+with a valid id, through every app's request screens and services, the record rule, Chatter, RecordFiles, notices, search, the
+palette, Assist and the lifecycle); the user's three calls of Nov 12 recorded in §4; fixes committed apart per repository ("People
+P21 review: …"). Both branches were rebased onto master after P17's and P19's merges: mr-mantle with no conflict (P19's
+EventServices and CalendarServices changes untouched); mr-boss with BossPeopleDemoData (P19's fire warden course, then Retail's
+intake handler), BossSetupData (P17's offer topic and letter grant, P19's training topics and Assessment forms, then
+`BOSS_PPL_CASES_SELF` and the case topic), People.xml (header and topics), PeopleSelfService (My training, then Raise a concern),
+ContextServices and People.js (`trainingUrl`, then `grievancesUrl`), PeopleSpecLib (the course ids, then the handler), PeopleAccess
+(header, P17's and P19's features, then the case feature, appended), design-people's header and usl-inventory, each keeping both
+sides; the phase commits are now mr-mantle 5b92eeeb and mr-boss b58793c0. PeopleCases, Training, Offers, SupportCases and WorkProjectRequests (37 of 37) and PeopleAccess, Requests, ProjectRequests,
+CustomerServiceCases and PurchasingRequests (61 of 61) passed after it.
+- Checked and found sound:
+  - The case services take the caller's own party and never a supplied one: filing under a current employment of the caller's
+    (another's is RECORD_UNAVAILABLE), the intake handlers from the employer's setting, each eligible (an enabled account holding
+    PEOPLE_CASE_HANDLE, working for the employer, never the employee); a handler is an Assignee row and the permission, the
+    employee their Reporter row; anyone else, a missing case alike, is RECORD_UNAVAILABLE on get, change, assign, task and the
+    list's id; the moves name the revision, the last handler stays, the employee only withdraws.
+  - The record rule: `get#RecordLinkInfo` admits a case, its RequestContent and a note or message filed on it (the event or its
+    thread's root, by RequestCommEvent or CommunicationEventRecord) to its people alone before every other branch (staff, client,
+    ADMIN, authorization disabled, no user), and a task linked to a case to its current assignee alone; RecordFiles, Chatter's
+    reads, Comms' links, Commons' event and knowledge links and the Records drive below the manage level all go through it.
+  - Other apps (F20): RequestTriageNotice, SupportCaseRule and SupportCaseSlaRule are conditioned on the type alone (every other
+    request takes the same branch as before); `ensure#CaseProfile` answers CONFIDENTIAL_CASE, so the customer, message and work
+    clock rules find no profile; `notify#RequestTriage` and `complete#RequestFromWork` skip it; `create#Request` and
+    `update#Request` refuse the type, `update#Request` a case. Customer Service, Commerce, Purchasing, Warehouse, Manufacturing,
+    Insights (its RequestDetail source is the service clocks) and Projects (a project or a triaged RequestType) read requests by
+    something a case never has; Commons' and Projects' detail go through `get#RequestAccess`. Their specs pass unchanged.
+  - The AI opt-out: PeopleCase's subject, details, contact preference and outcome are `ai-opt-out`; Grievances is opted out as a
+    screen and RequestDetail's People branch as a section (an agent render runs nothing of it); the data tool reads no request
+    entity; MantleRequest and MantleCommunicationEvent mark a case and its notes out of the index (their manual data service and a
+    post-query condition), and `search#Universal` drops an older hit; the notice's title is a fixed sentence and holds no text.
+  - The palette, search, the id lookup, record-lookup and Assist answer no case for anyone (the user's call, as built); Today's
+    record caption, a party's timeline, Home, a contact's Requests tab, a call's screen pop, TaskDetail, WorkItemDetail and Admin's
+    open assignments leave it out; CalDAV's Tasks and every task list but its assignee's leave out a task linked to a case, and
+    TaskDetail and WorkItemDetail show its assignee no case.
+- Fixed:
+  - R1 (high): a note on a case was reachable through its author's party record, where the record rule is not asked of the event:
+    Chatter's `check#CommEventOnRecord` (an attachment of the note downloaded, a reply posted into the case's thread copying its
+    subject, its unlink's answer telling it is there) and Mantle's `check#RecordNoteAccess` (ADMIN deleted a case note by the
+    handler's party; its errors told whether a note was there); `reply#CommunicationEvent` checked a Message parent's visibility
+    but not a Comment's; `link#CommunicationEventRecord` linked any event to a record the caller sees (its subject and text then
+    on that record's timeline and in its followers' notices); the request comment services (`add#RequestComment`,
+    `check#RequestComment` for update and ADMIN's delete), `get#RequestContentLocation` and `replace#RequestParty` (which could make
+    anyone a handler) did not know a case. `PeopleCases.js hiddenEventIds` (the events filed on a case the caller is no part of)
+    now answers such a note as missing in each, the request services refuse a case to anyone but its people, and
+    `replace#RequestParty` refuses a case for everyone (its people change through `assign#PeopleCaseHandler`). Specs PeopleCases
+    (the administrator's delete by party, the manager's reply and link, ADMIN's comment delete, HR's comment, ADMIN's party change
+    refused; the handler's edit kept) and PeopleAccess (the administrator's Chatter reply on the handler's party record refused);
+    each fails on the code as it was.
+  - R2 (high, PE-21): an agent's render of the case's Chatter or Files panel as its handler (Assist's screen session going to
+    `People/Chatter` or `RecordFiles` with the case, whose tui twins render the timeline's text and the file names) sent the
+    case's notes to a model: RequestDetail's opted-out section does not cover the panels, which load as their own requests.
+    ChatterTui and RecordFilesTui now answer a case as not available to an agent's render (`sri.isAgentRender()`). Spec
+    PeopleAccess (the handler's agent render of the case's Chatter shows no note; fails on the code as it was).
+  - R3 (low): Commons' `get#RequestAccess` answered a case `found` (then refused), which Projects' `get#ProjectRequestAccess` and
+    `get#RequestDetail` pass on: a case is now answered as a missing request. Spec PeopleAccess (the manager's check).
+  - R4 (the user's call of Nov 12, 2026; the worker's finding of a case whose only handler left): a handler who leaves the
+    employer is taken off its open cases, and a case left with no handler goes back to the employer's intake handlers, who are
+    told on PeopleCaseUpdate ("A confidential case was assigned to you"). `PeopleCases.js rerouteCases` (each open case of the
+    employer: a handler who no longer handles cases there, or a named leaver, has their Assignee row ended and stops following
+    it; with none left, the eligible intake handlers but the employee are added, follow it and are told; with no intake handler
+    the case waits, logged, and the next call routes it; each case failure-tolerant) runs from Employment.js when a separation
+    is applied in effect (the leaver named, in the apply's transaction) and from the daily job's `rerouteDueChanges` for the
+    employers of the changes come since (their separations' people named). People's lifecycle participant
+    (`find#OwnedApprovals`) lists the user's open cases as `case:<id>`, "Confidential case", not transferable, with no subject,
+    employee or employer (`ownedCases`); `transfer#ApprovalOwner` refuses one (NOT_TRANSFERABLE); BossSetupData's participant
+    description and design-admin's Offboarding preview say so. Spec PeopleCases (Hope, the case's only handler, lists it by name
+    alone, is refused its transfer, leaves; the daily job takes her off, the case goes back to Hal, who is told once and reads it,
+    and she reads it no more).
+- Findings, numbered by the lead F347 to F353 in order:
+  - The instance administrator's own tools read a case whole: Tools' Data (browse, grid, export, documents) and SQL, System's
+    Resource (the `peoplecase/` files) and Audit (the request's status rows), Mantle's REST (`/rest/s1/mantle`, ADMIN's: its
+    communication event and work effort reads); `/rest/e1` is refused for want of an entity grant on `mantle.*`. Attack-Surface
+    keeps the designed admin tools privileged on purpose; adding `mantle.request.PeopleCase` (and the case's note bodies) to the
+    framework's restricted entities, and `peoplecase/` to the Records drive's managed exclusion, is a framework change for the
+    user to decide.
+  - A NotificationTopicUser row with `allNotifications` on PeopleCaseUpdate (an instance administrator's, set in Tools) would
+    receive every case notice (the case's id, a fixed title). The framework's notification has `direct_only`, which the JS API
+    does not expose; once it does, `PeopleCases.js tell` sends direct-only.
+  - Chatter's and RecordFiles' JSON transitions (the browser's panel) do not ask `isAgentRender()`; an agent's screen session
+    renders tui, where R2 holds. The same panels of an employment's or a qualification's notes (P2, P18) are not opted out for an
+    agent render either.
+  - A message a case's people link to the case stays readable to its own sender and recipients in Comms through their party
+    (the record rule now answers it as the case's): the worker's finding, unchanged.
+  - `merge#Parties` reports a count of moved request parties that includes cases, and `delete#Contact` names a RequestParty or
+    `Request.filedByPartyId` reference; both are a contact administrator's and say no more than that a case row exists.
+  - A Records drive manager (`RdpManage` of `BOSS_RECORDS`, none seeded) sees the `peoplecase/` folder.
+  - The search index's case mark on a message is computed when it is indexed; a message filed onto a case later stays indexed
+    until reindexed (`search#Universal` drops it when read; a dataset over the `mantle` index would not).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase, as above; after the
+  fixes, Mantle PeopleCases 7 of 7 (3.3 s feature time; the two new features 0.6 s), and the specs over what the fixes changed,
+  RecordNotes, RecordLinks, InboxThreads, InternalMessages, PeopleEmployment, PeopleScheduledChanges, PeopleApprovals,
+  PeopleChecklists, SupportCases, WorkProjectRequests, CaseFeedback, Training and Offers (115 of 115); BOSS PeopleAccess 26 of 26
+  (the case feature 0.7 s), Chatter, RecordFiles, Requests, ProjectRequests, AdminLifecycle, PeopleLifecycle, PeopleApprovals,
+  Inbox, CustomerServiceCases and PurchasingRequests (97 of 97). `moqui lint --screens`: 136 flagged sites as before, none new.
+  Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about 3.3 s (PeopleCases, up 0.8 s from the Built note); mr-boss about 0.7 s (PeopleAccess's case
+    feature, up 0.2 s); no client spec;
+  - merge hot spots beyond the Built note's: mr-mantle `humanres/Employment.js` (the apply's reroute and `rerouteDueChanges`),
+    `humanres/Approvals.js` (`findOwnedApprovals`, `transferApprovalOwner`), `PeopleApprovalServices.xml`,
+    `party/CommunicationServices.xml` (`reply#CommunicationEvent`, `link#CommunicationEventRecord`, `check#RecordNoteAccess`),
+    `request/RequestServices.xml` (`replace#RequestParty`, the comment services, `get#RequestContentLocation`); mr-boss
+    `shared/ChatterServices.xml` (`check#CommEventOnRecord`), `Shared/ChatterTui.xml`, `Shared/RecordFilesTui.xml`,
+    `commons/RequestServices.xml` (`get#RequestAccess`), `data/BossSetupData.xml` (People's lifecycle participant), design-admin,
+    design-people §4 Grievances, P29's section (the intake setting's screen);
+  - the user's calls (§4, Nov 12): intake by the `PeopleCaseIntake` setting with P29's screen (as built); a leaver's cases back
+    to the intake handlers and listed in Admin's lifecycle (built here, R4); no palette, search, record-lookup or Assist for
+    anyone (as built). For the user: the instance administrator's tools and the `allNotifications` subscription (the first two
+    findings) need a framework decision. Gate 3 is the lead's to mark.
+
+**Follow-up Nov 12 (follow-up 1).** After gate 3: the user's calls of Nov 12 (§4) on P21's review findings F347 and F348 and the
+calendar follow-up's R3, and the calendar review's F358 and F359. mr-moqui 03f1b5d0, mr-mantle d13c2e1b and mr-boss (this commit),
+branch `ppl/fix1`.
+- Checked first (the code over the plan): the framework's `NotificationMessage::direct_only` (crates/moqui-core/src/notify/message.rs:
+  `resolve_users` adds the `allNotifications` subscribers unless it is set; only moqui-report's business alerts set it) and the JS
+  builder (script/host/notification.rs), which had no member for it; every `makeNotificationMessage` of People (eight senders) and the
+  topics they use; Recruiting.js `tellAttendees` (a failing `send#EventInvitations` marks the interview's transaction rollback-only
+  however the errors are taken back, docs/logic/Services.md) and the tx-commit pattern of P17's offer letter (PeopleRecruiting.secas.xml);
+  Leave.js `project` (WetTimeOff written by entity-auto CRUD, owned by the employee, with no EventManager) and the production run's
+  guard (BOSS `get#EventAccessInfo` only: a run is a WetEvent of purpose WepProductionRun owned by its organization, in no calendar, written
+  by Manufacturing's own services, which call no event service).
+- mr-moqui: `ec.makeNotificationMessage().directOnly(flag)` (no argument is true), documented in JS-Core-API and typed in
+  `moqui-host.d.ts` and its golden (which also gain the documented `reason`, `record`, `actorUserId` and `appName` members they had left
+  out); Attack-Surface's topic note names it, and its Tools note records the user's call on F347 (the instance administrator's own data
+  tools read a confidential record whole: privileged by design). Spec EcApi (a direct-only notice to its named user alone; without it
+  and with `directOnly(false)` the subscriber is told).
+- Direct-only, decided per topic by whether its notice concerns a confidential record: PeopleCaseUpdate (`PeopleCases.js tell`, so the
+  record notices of a case's notes too); every approval topic (`Approvals.js notify`: PeoplePositionApproval,
+  PeopleEmploymentChangeApproval, PeopleLeaveApproval, PeopleAttendanceApproval, PeopleExpenseApproval, PeopleAdvanceApproval,
+  PeopleOfferApproval, PeopleTrainingApproval, each to the step's deciders); PeopleLeaveDecision and PeopleTrainingDecision (the
+  person's own decision); QualificationExpiring (the person's own document or permit); PeopleTaskAssigned (a protected checklist step,
+  a separation's before it is announced, or a case's task). Left open: PeopleShiftChange (a roster the team sees), the shared
+  EventInvitation, EventInvitationResponse and WorkEffortReminder topics (an interview's title names the opening, never the applicant; a
+  leave reminder says "Out of office"), and the generic record notices of other People records (below).
+- F358: schedule, change and cancel#Interview send nothing in their own transaction. Three tx-commit rules (PeopleRecruiting.secas.xml)
+  run `RecruitingServices.send#InterviewInvitations` (new, not remote) once they commit, as the recruiter on a service worker: it sends
+  `send#EventInvitations` as the system in a transaction of its own, so a failure is logged and answered (`invitationsSent` false,
+  `invitationProblem`) and adds no error; another event is not sent. The three services lose `invitationsSent` and
+  `invitationProblem`; ApplicantDetail says "the invitations are on their way" and "the attendees are being told".
+- F359: the EventManager `PeopleLeave` (LeaveRequestSegment, its `workEffortId` now indexed `LEAVE_SEG_EVENT`; "its leave request in
+  People") keeps approved leave's "Out of office" from update, cancel and restore#EventOccurrence, `add#CalendarEvent` and CalDAV for
+  its employee and everyone; Leave.js writes and cancels it directly, as before. Production runs have the same gap closed by the
+  EventManager `ProductionRun` (`mantle.work.effort.WorkEffort` of purpose WepProductionRun, seeded beside ProductionRunLine; "its
+  production run in Manufacturing"): no user had a path to edit one (its organizer is the organization and runs are in no calendar),
+  so it is defensive, for every caller of Mantle's event services rather than BOSS's alone.
+- §4 records the user's three calls: CalDAV's delete of a view-only invitation (204, the event unchanged; as the calendar review built
+  it), the admin tools reading a case whole (accepted), and case and other confidential notices direct-only (this follow-up).
+  design-people §5's interview note and design-drawers-commons's editor rule say what was built.
+- Specs (each new check fails on the code before): mr-moqui EcApi (the direct-only feature 0.00 s); Mantle Recruiting (F358: the
+  change read inside its own transaction has sent nothing, the attendee is told after the commit, a send of no interview answers so
+  with no error; 0.36 s), LeaveRequests (Ana refused the move and cancel of her approved afternoon, managed by PeopleLeave, HR's cancel
+  still cancels it; in the cancellation feature, 0.98 s), CalendarServices (a run's organizer refused its move and cancel; 0.15 s),
+  PeopleCases (ADMIN subscribed to every PeopleCaseUpdate message is not told of a filing; in the filing feature, 0.83 s).
+- Tests run (the Debug build of mr-moqui `ppl/fix1`, `--debug --nobuild`, this runtime; the shared release binary has no
+  `directOnly`): framework EcApi 7 of 7; `cargo test -p moqui-devkit typegen` 8 of 8; Mantle Recruiting and PeopleCases 17 of 17,
+  LeaveRequests, LeaveLedger, CalendarServices, CalendarChanges, Dav, Training, Offers, PeopleApprovals, ExpenseClaims,
+  Qualifications, PeopleChecklists, ShiftRoster, CommonsToday, Attendance, PeopleEmployment, ManufacturingServices,
+  ProductionShopFloor, WarehouseProduction, ProductionDowntime 143 of 143; BOSS PeopleRecruiting, PeopleLeave, Calendar, EventDetail,
+  PeopleAccess, PeopleApprovals, PeopleExpenses, PeopleTraining, PeopleSkills, PeopleLifecycle, PeopleSelfService,
+  ManufacturingAccess, ManufacturingPlanning, TodayPanel, Notifications, PeopleTime, PeopleRoster 130 of 130 (PeopleAccess named over
+  15 s in Debug, 15.12 s; unchanged here). `moqui lint --screens`: 136 flagged sites as before, none in ApplicantDetail. Prettier
+  clean on the changed JavaScript but CalendarServices.spec, which was not Prettier-formatted before (left in its style). Not run:
+  test-apps, test-framework, the acceptance suite.
+- Findings, numbered by the lead F363 to F367 in order:
+  - The generic record notices still reach a subscriber to every message of their topic: `notify#RecordMention` (ChatterMention) and
+    `notify#RecordFollowers` (RecordFollow) carry the record's name and the start of the note's text for an employment's,
+    qualification's or applicant's notes (P2, P18, P16); only a case's notes go direct-only (PeopleCaseUpdate). Making them direct-only
+    for People's records (or for every record) is a Mantle change for the user to decide.
+  - Tools' TopicDetail calls a private topic (`isPrivate` Y) "only those a notification is sent to receive it", but the resolution
+    adds `allNotifications` subscribers to a private topic's messages too (as Attack-Surface says, and as Java does); every People topic
+    above is private, so the screen's word was wrong for them until now and still is for a private topic sent without `directOnly`.
+  - A failed after-commit interview invitation is logged only: the recruiter is not told and there is no "send again" (the old message
+    pointed at one that was never built); `send#EventInvitations` sends again whoever was not told at the next change. F358's spec
+    reaches the failure path only through an event that is not an interview (a real send failure cannot be made from a spec).
+  - get#ManagedEvents now reads LeaveRequestSegment (an indexed `in` query) and, for events of purpose WepProductionRun, WorkEffort on
+    every page of calendar data and every event write.
+  - PeopleAccess's spec time is at the 15 s cap in a Debug run (15.12 s; not measured on a release binary here, which has no
+    `directOnly` until the framework merges).
+- For the lead:
+  - budget share: mr-mantle about +0.6 s (Recruiting's new feature 0.36 s, CalendarServices' 0.15 s, the checks added to LeaveRequests'
+    and PeopleCases' features); mr-moqui server about +0.0 s; mr-boss none;
+  - merge hot spots (P20, reviews and goals, is built beside this): mr-mantle `humanres/Approvals.js` (`notify`: one line and its
+    comment; a review or goal approval kind added there is direct-only with the rest), `PeopleServices.xml` (`notify#PeopleTaskAssigned`),
+    `Leave.js`, `Training.js`, `Development.js` (one line each), `Recruiting.js`, `RecruitingServices.xml`, `PeopleRecruiting.secas.xml`,
+    `entity/PeopleLeaveEntities.xml`, `entity/ProductionEntities.xml`, `request/PeopleCases.js`, the specs Recruiting, LeaveRequests,
+    CalendarServices and PeopleCases; mr-boss `screen/People/Staffing/ApplicantDetail.xml`, design-people §5, design-drawers-commons,
+    usl-inventory (the RecruitingServices rows), impl-people (§4's last rows, this note); mr-moqui `script/host/notification.rs`, `moqui-host.d.ts` and its golden, JS-Core-API,
+    Attack-Surface, EcApi.spec. P20's own notices (a review's, a goal's) concern confidential records and want `directOnly()` too;
+  - the follow-up needs a framework merge with the apps: Mantle's People code calls `directOnly()`, which the release binary before
+    mr-moqui 03f1b5d0 does not have (every People notice would fail, logged, and the change stay);
+  - for the user's call: the generic record notices of People records (the first finding).
+
+**Review Nov 12 (follow-up 1).** The fresh review of `ppl/fix1` (master had not moved in the three repositories; no rebase):
+mr-moqui d623c7ab, mr-mantle 0e9267ea and mr-boss (this commit).
+- Checked and found sound: `directOnly()` (script/host/notification.rs; no argument and any non-boolean are true, as
+  `persistOnSend`) reaches `NotificationMessage::direct_only`, and every delivery path takes the one list `resolve_users` makes,
+  which leaves out the `allNotifications` subscribers of a direct-only message: the persisted `NotificationMessageUser` rows (the
+  tray, the inbox and `send#NotificationDigests`, which reads those rows only), the cluster topic's `userIds` that `/notws` and the
+  TUI route by, the immediate email (`send_emails` over the resolved users) and Web Push; no other reader adds a topic's
+  subscribers. The eight People senders call it after `userIds`, inside their try, so a failure is still logged and the change
+  stays. F358: the tx-commit rules fire only on commit, so a failed or rolled-back schedule, change or cancel sends nothing; the
+  send runs `send#EventInvitations` as the system with `requireNewTransaction`, its messages absorbed (`as_system`) and popped, so a
+  failure marks nothing of the rule's own transaction; schedule, change and cancel#Interview are called only from ApplicantDetail.
+  F359: no Leave, Manufacturing or BOSS code calls Mantle's event services on a leave event or a run (Leave.js and the
+  production services write the WorkEffort directly), so the EventManager rows refuse only the calendar, Commons and CalDAV paths;
+  `get#ManagedEvents`' added reads are by the page's own ids (`LeaveRequestSegment.workEffortId in`, indexed `LEAVE_SEG_EVENT`; the
+  purpose map was already read for PeopleTrainingSession), bounded by its caller's list (a calendar page's events, a CalDAV write's).
+- Fixed:
+  - R1 (medium, mr-moqui): Tools' TopicDetail said a private topic reaches "only those a notification is sent to"; the resolution
+    adds the `allNotifications` subscribers to a private topic's messages unless direct-only (the follow-up's second finding).
+    The Kind row now says so.
+  - R2 (the user's call, below; mr-mantle): `notify#RecordMention` and `notify#RecordFollowers` send direct-only for a record whose
+    type is registered in the new `mantle.party.communication.ConfidentialRecordType` (`check#ConfidentialRecordType`: the full
+    entity name, or the full name of a short one; `disabled` Y leaves it out), seeded beside People's hosts in
+    HumanResourcesEntities: Employment, EmploymentApplication, PartyQualification. A case's notes already go to PeopleCaseUpdate
+    (`isCase`, before the registration is read); P20's review host joins with a row. Other apps' notes are unchanged (the
+    follow-up's first finding).
+  - R3 (medium, mr-mantle and mr-boss): a failed after-commit invitation send was logged only (the follow-up's third finding).
+    `send#InterviewInvitations` records its outcome on `ApplicationInterview` (`invitationSendStatus` failed, `invitationSendDate`,
+    `invitationSendError`: an error, or an attendee `send#EventInvitations` skipped, by name and reason; a later send that tells
+    everyone marks it sent, and nothing is written while none has failed); `get#Application` gives the application's recruiters
+    alone `invitationsFailed` and `invitationProblemText`; ApplicantDetail shows the line under the interview's time with Send again
+    (the `sendInterviewInvitations` transition; a cancelled interview's failed cancel too, where Change and Cancel are not shown).
+    The service now checks its caller, a recruiter (PEOPLE_RECRUIT_EDIT) of the employer, since Send again reaches it from a screen
+    (the rules run as the one who made the change, who passed the same check); another caller and an event that is not an
+    interview are both RECORD_UNAVAILABLE (it had answered "Not an interview" without an error, which named what an id is).
+    An attendee told already is not told again (the digest), so Send again tells only who was missed.
+  - R4 (low, mr-mantle): `get#ManagedEvents` no longer reads WorkEffort a second time for a manager of a purpose whose entity is
+    WorkEffort itself (ProductionRun): the purpose read is the row.
+- The user's call (§4, Nov 12): People's confidential record notes notified direct-only (R2).
+- Findings, numbered by the lead F368 to F369 in order:
+  - F358's real failure path was reached in a spec only now, through a skipped attendee (the recruiter has no address to email the
+    candidate from); a whole-send error (an exception in `send#EventInvitations`) is still reached by no spec.
+  - `EventInvitation` (an interview's invitation to the panel: its title names the opening and links the event), the reminder
+    topics and PeopleShiftChange still reach an `allNotifications` subscriber, as the follow-up left them; a decision for the user
+    if an instance administrator's subscription to those topics should not see interviews.
+- Tests (the Debug build of mr-moqui `ppl/fix1`, `--debug --nobuild`, this runtime): framework AdminJobs and EcApi 11 of 11; Mantle
+  Recruiting, CalendarServices, LeaveRequests, PeopleCases, RecordNotes, RecordLinks, Dav, CalendarChanges, CommonsToday,
+  Qualifications, PeopleEmployment, ManufacturingServices 124 of 124 (RecordNotes' new feature 0.02 s, failing with the check
+  answering false; Recruiting's F358 feature 0.71 s, was 0.36 s); BOSS PeopleRecruiting, Chatter, Calendar, EventDetail,
+  ProjectsAccess, PeopleEmployees, PeopleSkills, PeopleLeave, ManufacturingPlanning 92 of 92 (PeopleRecruiting's change feature
+  0.18 s, now posting Send again). `moqui lint --screens`: the same flagged sites before and after. Prettier clean on Recruiting.js
+  and Recruiting.spec (RecordNotes.spec was not Prettier-formatted before; left in its style). Not run: test-apps, test-framework,
+  the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +0.4 s over the follow-up's (Recruiting +0.35 s, RecordNotes +0.02 s); mr-boss and mr-moqui about 0;
+  - merge order: mr-moqui (d623c7ab and the follow-up's 03f1b5d0) before or with mr-mantle, whose People code calls `directOnly()`;
+  - merge hot spots beside P20: mr-mantle `entity/PartyEntities.xml` (ConfidentialRecordType after RecordFollower),
+    `HumanResourcesEntities.xml` (three seed rows), `PeopleRecruitingEntities.xml` (ApplicationInterview's fields),
+    `CommunicationServices.xml` (the two notify services and the new check), `Recruiting.js` (`sendInterviewInvitations`,
+    `interviewRows`), `EventServices.xml` (`get#ManagedEvents`), the specs Recruiting and RecordNotes; mr-boss ApplicantDetail
+    (the transition and the Interviews row), PeopleRecruiting.spec, design-people §5, usl-inventory, impl-people (§4's last row, this
+    note); mr-moqui TopicDetail. P20's review (and goal, if confidential) host wants a ConfidentialRecordType row beside its entity.
 
 ### P22 — Pay components, structures and groups
 
@@ -4948,7 +6213,12 @@ Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, As
   `PeopleAttendanceEntities.xml`), audit-logged as a change of the employer's preferences, by a People administrator or an HR editor
   of the employer; P13's `Attendance.js isClockingOn` stays the one reader (an employment's own Y or N first), so the self-service
   clock, the + menu's Clock in and Who clocks follow it with no change. Should PeoplePreferences be one JSON setting as Projects'
-  settings are, `isClockingOn` reads its key instead and the `PeopleClocking` rows move into it.
+  settings are, `isClockingOn` reads its key instead and the `PeopleClocking` rows move into it. The employer's confidential case
+  intake handlers (P21; the user's call of Nov 12, 2026): `store#Settings` writes the `PartySetting` `PeopleCaseIntake` (party
+  ids) by the People administrator of the employer, each checked as `create#PeopleCase` reads it (an enabled account holding
+  PEOPLE_CASE_HANDLE, working for the employer), audit-logged; PeoplePreferences shows it with the handlers' names (never a case),
+  and SetupReadiness warns for an employer with employees and no eligible intake handler (a filing there is refused,
+  `NO_CASE_HANDLER`).
 - **Insights' registrations** (owner contracts, F27): `report/boss-people-*.json` (a headcount and turnover dataset, a
   leave-balance dataset, a dashboard and the alert templates), each dataset's class row (`InsDcPeople`), catalog
   entries, metrics and attention providers on the built patterns, and the People step of the internal flow map
@@ -5052,6 +6322,7 @@ the owner's design.
 | Nov 11, 2026 | At most two phase workers run at once, and only as a pair §1 lets run side by side: P9 with P10; in stage 3 two of the tracks P15, P16–P17, P18 and P21 (P19 and P20 after both P16 and P18); P22–P23 beside a stage 3 track. Every other phase runs alone, in §1's order | The user's call. A pair that appends to the same file rebases before merging (§1) |
 | Nov 11, 2026 | Mantle seeds an `EmailWork` contact purpose; the directory and every People projection of a work email (the list, the export, Employee360's Overview, the palette and the record-lookup card) show only `EmailWork`, never `EmailPrimary`; People's demo stores its employees' work emails under `EmailWork` | The user's call on P2's question (built in P2's review, R1). `EmailPrimary` may be a person's own address. No other app's spec or screen reads the demo employees' emails; a purpose drop-down offers "Email - Work" |
 | Nov 11, 2026 | An employment's files and activity stay HR's (an HR reader of its employer, as built in P2): the person does not read the files on their own employment | The user's call on P2's question: left as built (design §4 Employee360) |
+| Nov 12, 2026 | The Commons-wide calendar editor hole of P19's review (F330) is fixed in Commons now, generally: putting an event in a calendar gives view only to whoever could not change it, and an event an app keeps (People's training sessions and interviews, any app's through `EventManager`) changes only through that app; interviews get `change#Interview` and `cancel#Interview` | The user's call; built in P19's follow-up (Commons calendar editors) |
 | Nov 11, 2026 | A user's organizations (`PartyServices.get#PartyInternalOrgIds`, so `userOrgIds` and `filterOrgIds`) admit an internal organization's rollup children only when they are internal (`OrgInternal`) themselves: a department or team is never an organization in any app's scope, and People walks its units itself (F49). Admin's Organizations counts and lists only internal child organizations, and Accounting's and Purchasing's cost centres are the internal ones (the ledger's dimension rule) | The user's call on P3's question: kept as built in P3; P3's review carried it to the readers of rollup children that assumed every child internal |
 | Nov 11, 2026 | Department memberships stay open in P3 (`store#Membership` writes a department's members as a team's). P6 makes the employment assignment write the department membership and makes OrgStructure read only for a department's members, a team's staying editable | The user's call on P3's question; P6's text gains it |
 | Nov 11, 2026 | An emergency contact is a Person party per contact, linked from the employee by a dated `PartyRelationship` of a new type; built in P8 (PersonalInfo and SelfService) | The user's call on P2's F80; P8's text gains it |
@@ -5086,10 +6357,26 @@ the owner's design.
 | Nov 12, 2026 | An expense approval notice names no amount in its title; its detail shows the approver the claim's total (the notice's `amount` and `currencyUomId`, which the notification lists show as the approval's summary) | The user's call on P15's question (built in P15's review, R3: Approvals.js `PakExpenseClaim`; PeopleExpenses) |
 | Nov 12, 2026 | An interviewer with self-service only answers their scorecard from SelfService: My interviews on SelfService (People/SelfService and Commons/People/SelfService) lists the interviews the user is on the panel of, each opening MyInterview beside it (People/MyInterview, Commons/People/MyInterview), where the panel member reads their own interview, the candidate's name, the opening and the materials HR shares with the panel, and submits their scorecard once. "Shared with the panel" is a file of the application a recruiter marks shared on ApplicantDetail (none by default, the resume either); a panel member reads nothing else of the application (its stage, source, contact, notes, other files or record host) there or in People. Grants on F28's non-inheritable pattern (`BOSS_PPL_INTERVIEW_SELF`) | The user's call (P16's review). Built in P16's review: `RecruitingServices.find#MyInterviews`, `get#MyInterview`, `share#ApplicationContent`, `get#ApplicationFile`, `EmploymentApplicationContent.panelShared`; design §3 SelfService, §5 ApplicantDetail |
 | Nov 12, 2026 | Free-text form answers (`FormResponseAnswer.valueText`) are opted out of AI for every app's forms, as P16's review built it, not only People's purposes | The user's call: respondents' words reach no model in any app (case feedback comments and tax statement answers included) |
-| Nov 12, 2026 | An applicant's resume is shared with the interview panel by default when attached; other files only when the recruiter marks them; the recruiter can unshare it | The user's call, after P16's review shared nothing by default; P17 builds it |
+| Nov 12, 2026 | An applicant's resume is shared with the interview panel by default when attached; other files only when the recruiter marks them; the recruiter can unshare it | The user's call, after P16's review shared nothing by default; P17 builds it (built in P17: `create#ApplicationContent` shares an `EactResume` file unless told not to, mail and chat intake share the resume they keep; Mantle Recruiting's spec; design-people §3, §5 ApplicantDetail) |
 | Nov 12, 2026 | A manager with a live reporting line evaluates that report's skills without `PEOPLE_DEVELOP_EDIT`: `store#Skill` records it as the manager's evaluation (`SkillSource` `SksManagerEvaluated`, the manager its assessor), which sets the accepted level and meets a requirement as an evaluation does; the matrix, its terminal twin and Employee360 offer it on the manager's reports. Certificate verification stays the development and HR verifiers' (`verify#Qualification` unchanged) | The user's call on P18's question (built in P18's review, R2; design-people §10 SkillsMatrix; Qualifications and PeopleAccess check a manager evaluating their report and refused another's) |
 | Nov 12, 2026 | A job requirement keeps its dated history: `EmplPositionClassSkill`'s primary key gains `fromDate` (a Mantle entity change), so each period is its own row and readers take the row in effect at their date; removing ends the row, a change ends the period in effect and starts a new one (a period not started yet is changed in place), and requiring the skill again starts a new row, never before the last one ended | The user's call on P18's question (built in P18's review, R3: Positions.js `store#JobRequirement`, `get#JobClass`, `classRows`; Development.js `classRequirements`; BossPeopleDemoData's requirement rows; design-people §5 JobClassDetail). No other reader or writer exists: Marble's HumanRes screens and the data files hold none beyond BOSS's demo |
 | Nov 12, 2026 | A staff reader of the employer sees whether a person's identity document or work permit is valid, expiring or expired, with its dates; only its number and file are the person's and HR's (as P18 built it) | The user's call, on P18's review finding |
+| Nov 12, 2026 | With no approval rule, the employer's HR officers decide an offer (a kind's own default route, `PakOffer`'s `ParHr`); an employer's rules for the kind still route it; never the recruiter who submitted or drafted it, nor the applicant | The user's call on P17's question (as built; the drafter excluded in P17's review, R4) |
+| Nov 12, 2026 | Payroll readers (PAYROLL_VIEW) of the employer read its offers, the applicant's name and terms with the pay, to set the pay on OfferDetail | The user's call on P17's question (as built) |
+| Nov 12, 2026 | Issuing an offer emails its stored letter to the applicant's address as an attachment; the issuer need not be able to open it; the send is recorded on the offer, its outcome visible to recruiters without the letter's content; sent by Mantle's mail (an EmailTemplate), failure tolerant: a failed send is recorded and can be sent again, never undoing the issue | The user's call on P17's question (built in P17's review, R1: `send#OfferLetter`, template `PEOPLE_OFFER_LETTER`, the issue's tx-commit rule; design-people §5 OfferDetail, §15) |
+| Nov 12, 2026 | Employees see their own issued lifecycle letters (hire, transfer, manager change, leave, return, separation) in SelfService's My letters under both self-service mounts (People and Commons), whole, pay included since the letter is theirs; another person's letter is refused; grants on F28's non-inheritable pattern | The user's call on P17's question (built in P17's review, R2: `find#MyLetters`, `get#MyLetter`, `BOSS_PPL_SELF`; design-people §3 SelfService, §15) |
+| Nov 12, 2026 | A trainer's passing assessment grants the course's qualification as verified: the course is the authority (not the trainer's own verification rights); the grant is recorded with the trainer (its verifier) and the session (the place its reference); development can revoke it | The user's call on P19's question (as built: `complete#Training`'s grant; revoked by `verify#Qualification`, which leaves the issued certificate as it was) |
+| Nov 12, 2026 | A trainee sees only the outcome and score of their own assessment (with its date and assessor); the assessor's answers and evidence stay with development and the session's trainer | The user's call on P19's question (as built: `get#Training`'s results; the assessment's response read only through it) |
+| Nov 12, 2026 | An employer's confidential case intake handlers are named by its `PartySetting` `PeopleCaseIntake` (as built in P21); an employer with none refuses a filing with a clear message (`NO_CASE_HANDLER`: "Your employer has nobody to take confidential cases yet; ask HR who handles them"); P29's Settings gives the setting a screen | The user's call on P21's question (as built; P29's section names the screen) |
+| Nov 12, 2026 | When a case's last handler leaves the employer (a separation), the case goes back to the employer's intake handlers, who are told on `PeopleCaseUpdate` with a title naming nothing; Admin's lifecycle lists the leaver's open cases as an owned resource of People's lifecycle participant, without their content | The user's call on P21's question (built in P21's review: `PeopleCases.js rerouteCases` from the separation's apply and the daily job, the leaver taken off every open case of the employer; `ownedCases` in `find#OwnedApprovals`, "Confidential case", not transferable; spec PeopleCases) |
+| Nov 12, 2026 | Confidential cases reach no palette, search, record-lookup or Assist for anyone, their people included; people open them from Grievances | The user's call on P21's question (as built) |
+| Nov 12, 2026 | A phone's CalDAV delete of an invitation the attendee's calendar only shows (`viewOnly`) takes it out of that calendar (204) and never changes the event; a kept event's delete is still 403, and the organizer's delete cancels the event | The user's call on the calendar follow-up's review question (as built: its R3, `delete#DavObject`; Dav spec) |
+| Nov 12, 2026 | The instance administrator's own data tools reading a confidential case whole (Tools' Data and SQL, System's Resource and Audit, Mantle's REST) is accepted: the admin tools are privileged by design; no framework restriction of `PeopleCase` or of `peoplecase/` is added | The user's call on P21's review finding F347 (mr-moqui docs/security/Attack-Surface.md, Tools and System, says so) |
+| Nov 12, 2026 | People's confidential notices go to their named recipients only: a subscription to every message of a topic (`NotificationTopicUser.allNotifications`, set in Tools) receives none. The framework exposes it to scripts as `directOnly()` on `ec.makeNotificationMessage()`; People sends direct-only on PeopleCaseUpdate, every approval topic (Approvals.js `notify`: positions, employment changes, leave, attendance, expenses, advances, offers, training), PeopleLeaveDecision, PeopleTrainingDecision, QualificationExpiring and PeopleTaskAssigned | The user's call on P21's review finding F348 (built in People follow-up 1); PeopleShiftChange and the shared EventInvitation and reminder topics stay open (follow-up 1's note) |
+| Nov 12, 2026 | The notes and messages on People's confidential records are told to their named users alone: `notify#RecordMention` (ChatterMention) and `notify#RecordFollowers` (RecordFollow) send direct-only for a record type registered in `mantle.party.communication.ConfidentialRecordType`, which People's hosts join with a seed row (employment, application, qualification; a case through PeopleCaseUpdate; a review, P20's review); other apps' notes are unchanged | The user's call on People follow-up 1's first finding (built in its review, R2; spec RecordNotes) |
+| Nov 12, 2026 | With no approval rule, the employer's HR officers decide a review's finalizing when its template asks for approval (`PakReview`'s own default route, `ParHr`); an employer's rules for the kind still route it; never the reviewer (the one who asked, or one who became the reviewer since) nor the person reviewed | The user's call on P20's question (as built; the current reviewer refused in P20's review, R5) |
+| Nov 12, 2026 | A reviewer's private notes (`PerformanceNote`) are their author's alone: not the person's, a later reviewer's, development's, HR's, an approver's or ADMIN's on any app path; never in the release, an export, Chatter, a notice, search or a model's input | The user's call on P20's question (as built: `get#Review` reads the caller's own notes alone; Mantle Reviews) |
+| Nov 12, 2026 | When a review's reviewer changes (development's reassign, or the line's re-route when a reviewer leaves), the new reviewer reads the feedback already given on the review and withdraws the feedback still waiting, whoever asked for it: the feedback belongs to the review. The earlier reviewer's private notes do not pass | The user's call on P20's question (built in P20's review, R1: Reviews.js `readsStep`, `cancelFeedback`; Mantle Reviews checks Nia reading Cy's feedback that Max asked for and withdrawing Ana's, and none of Max's note) |
 
 ## 5. Open questions
 
@@ -5108,7 +6395,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |

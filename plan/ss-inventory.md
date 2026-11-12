@@ -60,6 +60,9 @@ are new records (`AttendancePunch`, design-people §14.2 "Attendance punch captu
 Projects' work-time clock (a time entry on a work item), which stays blank as before (impl-projects §7); their Implemented in is in
 usl-inventory's People rows.
 
+**People P17 (Nov 12, 2026):** no baseline form is mapped to OfferDetail, its letter or an employment change's lifecycle letter: the
+baseline HumanRes screens have no offer (design-people §5, §14.2); their Implemented in is in usl-inventory's People rows.
+
 **People P16 (Nov 12, 2026):** no baseline form is mapped to Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar or
 People's Forms: the baseline HumanRes screens have no recruiting forms (EmploymentApplication had only its fields, F9), and a job
 opening, its interviews and scorecards are People's own records (design-people §5, §14.2); their Implemented in is in
@@ -75,10 +78,24 @@ the Claims list over find#Claims), EditExpenseInvoice's EditInvoice and EditExpe
 People/Expenses/ExpenseClaimDetail (ClaimHeader over store#Claim, ClaimItems over store#ClaimItem, with receipts and Read
 receipt). The two WorkerInvoice forms stay Projects' MyTime and blank. No baseline form maps to EmployeeAdvances, Accounting's
 Employee advances tab or People's InvoiceDetail.
+**People P21 (Nov 12, 2026):** no baseline form is mapped to Grievances or People's RequestDetail branch: Marble has no grievance
+screen, and a confidential case's forms (SubmitCase, the handler's moves, Add a handler, Ask for work) are People's own over the case
+services; its notes and files are the shared Chatter and RecordFiles of the request (EditRequest's NewNoteForm and NewContentForm),
+under People for the case's people alone. Their Implemented in is in usl-inventory's People rows.
+
 **People P18 (Nov 12, 2026):** no baseline form is mapped to SkillsMatrix, its terminal twin, Qualifications or Employee360's Skills
 and reviews: Marble's HumanRes has no skill, qualification or resume form, and qualifications, skill evaluations and resume lines are
 new records (`PartyQualification`, `PartySkillEvaluation`, `PartyResume`, refined from Mantle's commented sketches, design-people §10);
 their Implemented in is in usl-inventory's People rows.
+**People P19 (Nov 12, 2026):** no baseline form is mapped to Training, TrainingDetail or the training certificate: Marble's
+HumanRes has no training form, and courses, sessions, places and assessments are new records (`TrainingClass` and `PersonTraining`
+refined from Mantle's commented sketches, `TrainingSession` and `PersonTrainingResult`, design-people §10); their Implemented in is in
+usl-inventory's People rows.
+**People P20 (Nov 12, 2026):** no baseline form is mapped to ReviewCycles, Reviews, ReviewDetail, Goals or the review release:
+Marble's HumanRes has no review or goal form, and templates, cycles, reviews, their steps and notes and goals are new records
+(`PerformanceReview` and `PerformanceNote` refined from Mantle's commented sketches, `ReviewTemplate`, `ReviewCycle`,
+`PerformanceReviewStep`, `PerformanceReviewContent`, `PersonGoal` over a WetGoal WorkEffort, design-people §11); their Implemented in
+is in usl-inventory's People rows.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

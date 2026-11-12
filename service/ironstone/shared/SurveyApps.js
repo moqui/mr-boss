@@ -8,7 +8,10 @@
 // People service of the record it belongs to). Marketing adds its own (impl-marketing P12).
 //
 // A registration is data, never authority: the services it names check the user's permissions and organization themselves,
-// and the capability only shows or hides an action. An app with no registration sees "not available".
+// and the capability only shows or hides an action. An app with no registration sees "not available". A registration may
+// name mounts: the builder mounted again under one of the app's areas (the mounting screen's always-actions set surveyMount
+// to the mount's name), with its own purposes, edit capabilities (any one of which shows the edit actions), routes and words over the
+// app's (People's Development: the learning administrator's training assessments, impl-people P19 review).
 const D = "mantle.party.FormDefinitionServices."
 const apps = {
     CustomerService: {
@@ -110,8 +113,8 @@ const apps = {
         accessRows: [
             {
                 who: "The People administrator of its employer",
-                what: "Change and publish the form",
-                how: "People configure (PEOPLE_CONFIGURE)"
+                what: "Change and publish the form; a training assessment also the learning administrator",
+                how: "People configure (PEOPLE_CONFIGURE); a training assessment and a review form also People develop edit (PEOPLE_DEVELOP_EDIT)"
             },
             {
                 who: "Recruiters, development and HR readers of the employer",
@@ -123,7 +126,88 @@ const apps = {
                 what: "Answer once and read their own answer, never another's",
                 how: "Their assignment on the record (an interview's panel)"
             }
-        ]
+        ],
+        mounts: {
+            // impl-people P19 review: the training assessments under Skills & training (Development/AssessmentForms), built by the
+            // learning administrator (PEOPLE_DEVELOP_EDIT) or the People administrator, whom Mantle's training assessment purpose
+            // admits (its FormPurpose editPermission)
+            Development: {
+                purposes: ["DbfpTrainingAssessment"],
+                capabilities: {context: "people", edit: ["developEdit", "configure"]},
+                links: {
+                    forms: "Development/AssessmentForms/List",
+                    formDetail: "Development/AssessmentForms/FormDetail",
+                    responses: null,
+                    response: null
+                },
+                words: {
+                    listTitle: "Assessment forms",
+                    listCaption:
+                        "The training assessments a trainer answers for each person they assess. A course or session names its form; the answers are read by development and the session's trainer, never by the person assessed, and a form changes by dated questions, so earlier answers keep the questions they answered.",
+                    empty: "No assessment form yet. Make one with New form, add its questions and publish it; a course or session then names it.",
+                    formsLink: "All assessment forms",
+                    backLink: "Back to assessment forms",
+                    previewCaption:
+                        "The trainer answers the published questions with these rules in People (assessing a person enrolled), and the server checks the answer again."
+                },
+                accessRows: [
+                    {
+                        who: "The learning administrator or the People administrator of its employer",
+                        what: "Change and publish the form",
+                        how: "People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)"
+                    },
+                    {
+                        who: "Development readers of the employer",
+                        what: "Read the form and every assessment's answers on the session",
+                        how: "People develop view (PEOPLE_DEVELOP_VIEW)"
+                    },
+                    {
+                        who: "The session's trainer",
+                        what: "Answer it for each person they assess, and read their session's answers",
+                        how: "The session's trainer, while they work for its employer"
+                    }
+                ]
+            },
+            // impl-people P20: the review forms under Reviews & goals (Performance/ReviewForms), built by the review administrator
+            // (PEOPLE_DEVELOP_EDIT) or the People administrator, whom Mantle's review purpose admits (its FormPurpose editPermission)
+            Performance: {
+                purposes: ["DbfpReview"],
+                capabilities: {context: "people", edit: ["developEdit", "configure"]},
+                links: {
+                    forms: "Performance/ReviewForms/List",
+                    formDetail: "Performance/ReviewForms/FormDetail",
+                    responses: null,
+                    response: null
+                },
+                words: {
+                    listTitle: "Review forms",
+                    listCaption:
+                        "The questions of a review's self assessment, reviewer's assessment and feedback. A review template names its forms; the answers are read through the review (the person their own self assessment and, once released, the reviewer's), and a form changes by dated questions, so earlier answers keep the questions they answered.",
+                    empty: "No review form yet. Make one with New form, add its questions and publish it; a review template then names it.",
+                    formsLink: "All review forms",
+                    backLink: "Back to review forms",
+                    previewCaption:
+                        "The person, the reviewer or a colleague asked for feedback answers the published questions with these rules in People (on the review), and the server checks the answer again."
+                },
+                accessRows: [
+                    {
+                        who: "The review administrator or the People administrator of its employer",
+                        what: "Change and publish the form",
+                        how: "People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)"
+                    },
+                    {
+                        who: "Development readers of the employer",
+                        what: "Read the form and every review's answers",
+                        how: "People develop view (PEOPLE_DEVELOP_VIEW)"
+                    },
+                    {
+                        who: "The review's person, reviewer and the colleagues asked for feedback",
+                        what: "Answer their own step once; the person reads the reviewer's answers once released",
+                        how: "Their step on the review"
+                    }
+                ]
+            }
+        }
     }
 }
 // The registration of an app root, or null.
@@ -131,10 +215,14 @@ const app = appRoot => (appRoot && Object.hasOwn(apps, appRoot) ? apps[appRoot] 
 // The app's survey context for a screen: its registration and whether the user may change forms (the edit capability of the
 // app's shared context, which the app's root put in the screen's context under the registration's name).
 function context(appRoot) {
-    const registration = app(appRoot)
-    if (!registration) return null
+    const base = app(appRoot)
+    if (!base) return null
+    const mountName = ec.context.get("surveyMount")
+    const mount = mountName && base.mounts && Object.hasOwn(base.mounts, mountName) ? base.mounts[mountName] : null
+    const registration = mount ? Object.assign({}, base, mount, {words: Object.assign({}, base.words, mount.words || {})}) : base
     const appContext = ec.context.get(registration.capabilities.context)
     const capabilities = appContext?.capabilities || {}
-    return Object.assign({}, registration, {canEdit: !!capabilities[registration.capabilities.edit]})
+    const edits = [].concat(registration.capabilities.edit)
+    return Object.assign({}, registration, {canEdit: edits.some(name => !!capabilities[name])})
 }
 ;({app, context})
