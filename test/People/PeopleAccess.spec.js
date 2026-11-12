@@ -19,7 +19,10 @@
 // position refused to Retail's HR), a decision asked of an approver (the directory reader refused), and Settings' tabs. P6: the
 // hire and employment change wizards and their quick create the HR officer's (the directory reader refused the screen and not
 // offered it), a hire and an employment change an HR editor's of the employer (the directory reader refused with the same
-// parameters, Services' employer and employment refused to Retail's HR).
+// parameters, Services' employer and employment refused to Retail's HR). P7: Settings opened to the HR officer (its checklists and
+// employee import; the setup checks stay the administrator's), a checklist template and a person's equipment HR's of the employer (the
+// directory reader refused with the same parameters, Services' template and holder refused to Retail's HR), the employee import's
+// mount HR's.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -122,7 +125,7 @@ feature("the People menu and keys follow the groups; the launcher shows People t
     when() {
         const problems = []
         const hr = shell(users.hr)
-        if (hr.status != 200 || JSON.stringify(hr.names) !== JSON.stringify(ids.staffMenu))
+        if (hr.status != 200 || JSON.stringify(hr.names) !== JSON.stringify(ids.hrMenu))
             problems.push(`the HR officer's menu: ${hr.status} ${hr.names}`)
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
@@ -189,7 +192,7 @@ const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     {user: users.manager, granted: ["team", "requestApprove"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
-    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment"]},
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "settings", "employment"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
@@ -302,9 +305,15 @@ feature(
         when() {
             const hrHome = asUser(users.hr, () => page("Home"))
             const settings = asUser(users.admin, () => page("Settings", {}, "html"))
-            return {hrHome, settings, hrSettings: screenRefusal(users.hr, "Settings")}
+            // P7: the HR officer opens Settings for the checklists and the employee import; the setup checks stay the administrator's
+            return {
+                hrHome,
+                settings,
+                hrSettings: asUser(users.hr, () => page("Settings", {}, "html")),
+                readerSettings: screenRefusal(users.reader, "Settings")
+            }
         },
-        then({hrHome, settings, hrSettings}) {
+        then({hrHome, settings, hrSettings, readerSettings}) {
             hrHome.errors.length == 0
             hrHome.output.includes("Headcount")
             hrHome.output.includes("Joined, last 30 days")
@@ -317,7 +326,10 @@ feature(
             // P3's demo departments: each employer's department check is ready
             !settings.output.includes("No department is set up")
             settings.output.includes("Ziziwork Services")
-            unauthorized(hrSettings)
+            hrSettings.errors.length == 0
+            hrSettings.output.includes("People settings")
+            !hrSettings.output.includes("Setup readiness")
+            unauthorized(readerSettings)
         }
     }
 )
@@ -607,6 +619,56 @@ feature(
                     hrChange: "accepted",
                     readerChange: "PERMISSION_DENIED",
                     hrOtherChange: "RECORD_UNAVAILABLE"
+                }
+        }
+    }
+)
+
+feature(
+    "checklists and equipment are HR's of the employer: Retail's checklist and Ines's laptop read and changed by Retail's HR officer, the directory reader refused with the same parameters, Services' refused to Retail's HR; the employee import is HR's",
+    {
+        when() {
+            const as = (user, service, parameters) =>
+                asUser(user, () => system(() => refusal("mantle.humanres.PeopleServices." + service, parameters)))
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            // a Services checklist, for Retail's HR to be refused
+            const other = system(() =>
+                invoke("mantle.humanres.PeopleServices.store#Checklist", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    lifecycleKindEnumId: "ClkOnboarding",
+                    workEffortName: "Services access spec"
+                })
+            )
+            const step = {templateWorkEffortId: ids.onboardingId, workEffortId: ids.onboardingId + "_3", dueOffsetDays: 3}
+            return {
+                screens: {
+                    hr: screenRefusal(users.hr, "Settings/ChecklistTemplates"),
+                    reader: screenRefusal(users.reader, "Settings/ChecklistTemplates") ? "refused" : "opened",
+                    hrImport: screenRefusal(users.hr, "Settings/EmployeeImport"),
+                    readerImport: screenRefusal(users.reader, "Settings/EmployeeImport") ? "refused" : "opened"
+                },
+                codes: {
+                    hrStep: code(as(users.hr, "store#ChecklistStep", step)),
+                    readerStep: code(as(users.reader, "store#ChecklistStep", step)),
+                    hrOtherStep: code(
+                        as(users.hr, "store#ChecklistStep", Object.assign({}, step, {templateWorkEffortId: other.workEffortId}))
+                    ),
+                    hrEquipment: code(as(users.hr, "get#AssignedEquipment", {partyId: ids.reportPartyId})),
+                    readerEquipment: code(as(users.reader, "get#AssignedEquipment", {partyId: ids.reportPartyId})),
+                    hrOtherEquipment: code(as(users.hr, "get#AssignedEquipment", {partyId: ids.otherEmployeePartyId}))
+                }
+            }
+        },
+        then({screens, codes}) {
+            screens == {hr: "", reader: "refused", hrImport: "", readerImport: "refused"}
+            codes ==
+                {
+                    hrStep: "accepted",
+                    readerStep: "PERMISSION_DENIED",
+                    hrOtherStep: "RECORD_UNAVAILABLE",
+                    hrEquipment: "accepted",
+                    readerEquipment: "RECORD_UNAVAILABLE",
+                    hrOtherEquipment: "RECORD_UNAVAILABLE"
                 }
         }
     }

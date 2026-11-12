@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Tasks (impl-people P7; design-people §13 WorkItemDetail): not in the menu; WorkItemDetail is the shared work item detail
+    (screen/Shared/WorkItemDetail.xml) in People's context, for a lifecycle checklist or equipment return task (its People branch:
+    the Commons task rule for its people, the checklist box, read only for an HR reader). A task's links (Employee360's equipment,
+    a notification, the checklist's other tasks) open it here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Tasks" default-menu-include="false">
+    <subscreens default-item="WorkItemDetail">
+        <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

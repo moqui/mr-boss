@@ -76,4 +76,54 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters><parameter name="assignmentKind" required="true"/></in-parameters>
         <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').execute('transferAssignments', context))</script></actions>
     </service>
+    <!-- People's entry (Provisioning.js; impl-people P7, design-admin §4.1 Provisioning from People, owner contract): called by the
+        mr-boss tx-commit rules on People's hire and applied employment change (service/PeopleLifecycle.secas.xml) and by HR's
+        Request access again on Employee360; Mantle's IdentityServices keep the operation and run or hold its steps. -->
+    <service verb="request" noun="Provisioning" allow-remote="false">
+        <description>A People hire's provisioning (employmentChangeId: an applied hire whose HR officer asked an account for): the
+            grant proposal BOSS_USERS and BOSS_PEOPLE_SELF, with any other bundle of bundleGroupIdList the caller may give
+            (registered, its delegable permission held, never a privileged group; GRANT_INVALID, GRANT_NOT_YOURS otherwise), sent
+            to mantle.party.IdentityServices.request#Provisioning, keyed by the change (operationKey, else Mantle's key of it): a
+            retry answers the first operation. Its steps run now for an identity operator and wait for one otherwise (Admin's
+            delegation rules decide when the invitation is sent); the employment is the organization membership. A failure never
+            undoes the hire: it is noted on the change (note#AccessRequestFailure) and answered as a refusal (applied false,
+            reasonCode, reason), so the tx-commit rule never fails.</description>
+        <in-parameters>
+            <parameter name="employmentChangeId" required="true"/>
+            <parameter name="bundleGroupIdList" type="List"/>
+            <parameter name="operationKey"/>
+            <parameter name="reason"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="operationId"/>
+            <parameter name="statusId"/>
+            <parameter name="retried" type="Boolean"/>
+        </out-parameters>
+        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Provisioning.js').execute('requestProvisioning', context))</script></actions>
+    </service>
+    <service verb="request" noun="AccessEnd" allow-remote="false">
+        <description>A People separation's access end (employmentChangeId: an applied separation; any other change answers
+            NOT_A_SEPARATION and does nothing), sent to mantle.party.IdentityServices.request#AccessEnd, keyed by the change: the
+            employer's other relationships of the person end and, when they work for no internal organization then, the account's
+            memberships end at the separation's date; another employer's access stays. Its steps run now for an identity operator
+            and wait for one otherwise. A person with no account answers NO_ACCOUNT. A failure is noted on the change and answered
+            as a refusal; it never undoes the separation.</description>
+        <in-parameters>
+            <parameter name="employmentChangeId" required="true"/>
+            <parameter name="operationKey"/>
+            <parameter name="reason"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="operationId"/>
+            <parameter name="statusId"/>
+            <parameter name="retried" type="Boolean"/>
+        </out-parameters>
+        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Provisioning.js').execute('requestAccessEnd', context))</script></actions>
+    </service>
 </services>

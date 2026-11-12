@@ -5,8 +5,9 @@
 // have.
 //
 // A mount is the app the wizard is opened under (the root sets appRoot, never the request). Under a catalog app (Products)
-// the target is the catalog and nothing else, with the app's own catalog context; under Admin it is the target the request
-// names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW reads an import there). Any other root is refused.
+// the target is the catalog and nothing else, with the app's own catalog context; under People it is the employees target
+// (impl-people P7); under Admin it is the target the request names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW
+// reads an import there). Any other root is refused.
 const T = "org.moqui.admin.DataTransferServices."
 const text = value => String(value ?? "").trim()
 function call(name, parameters = {}) {
@@ -23,7 +24,8 @@ const ownerRoutes = {
     accountingStatementImport: "Accounting/Banking/StatementImport",
     accountingOpenItems: "Accounting/Settings/Setup/OpenItems",
     commonsContactImport: "Commons/Contacts/Import",
-    projectsWorkItemImport: "Projects/WorkItems/Import"
+    projectsWorkItemImport: "Projects/WorkItems/Import",
+    peopleEmployeeImport: "People/Settings/EmployeeImport"
 }
 function ownerUrl(ownerRoute, parameters = {}) {
     if (!Object.hasOwn(ownerRoutes, text(ownerRoute))) return ""
@@ -50,6 +52,24 @@ function mount(p) {
             listLink: admin.sharedLinks["Data/Imports"],
             detailLink: admin.sharedLinks["Data/ImportDetail"],
             activeOrganizationPartyId: admin.activeOrganizationPartyId || null
+        }
+    }
+    // People's mount (impl-people P7, design-people §12 EmployeeImport): the employees target only, whatever the request names, for
+    // an HR reader; an import is run by an HR editor who holds PEOPLE_IMPORT (the target asks PEOPLE_IMPORT and PEOPLE_HR_EDIT, its
+    // row services the hire's own permissions and scope)
+    if (appRoot === "People") {
+        const people = call("ironstone.people.ContextServices.get#SharedContext", {appRoot})
+        const caps = people.capabilities || {}
+        if (!caps.hrView) throw new Error("PEOPLE_HR_VIEW is required")
+        return {
+            appRoot,
+            targetId: "employees",
+            canRun: !!caps.import && !!caps.hrEdit,
+            downloadBase: "/apps/People/Settings/EmployeeImport",
+            selfLink: people.sharedLinks["Settings/EmployeeImport"],
+            listLink: null,
+            detailLink: null,
+            activeOrganizationPartyId: people.activeOrganizationPartyId || people.organizationPartyIds?.[0] || null
         }
     }
     // a catalog app's mount: the catalog target only, whatever the request names

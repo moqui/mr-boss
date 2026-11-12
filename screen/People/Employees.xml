@@ -19,11 +19,13 @@ along with this software (see the LICENSE.md file). If not, see
     opens them: what each sees is what Mantle's services admit (a staff reader the employers they read, a manager their reports
     in the directory, HR the HR columns and regions and the changes to units, memberships and reporting lines). P6: HireEmployee and
     EmploymentChange (wizards under Employees/, HR's by their grant BOSS_PPL_EMPLOYMENT), out of the menu, opened from the directory,
-    the quick create and Employee360. -->
+    the quick create and Employee360. P7: EquipmentDetail (the shared equipment detail, Shared/EquipmentDetail.xml, with People's
+    context: custody and the return at a separation), out of the menu, opened from Employee360's equipment and a return task. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employees" default-menu-index="4" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
+        <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml" menu-include="false"/>
         <!-- P3: OrgStructure (menu index 2) and OrgChart (3) are files under Employees/ -->
     </subscreens>
     <widgets>

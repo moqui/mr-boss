@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The People box of the shared WorkItemDetail under People (impl-people P7; design-people §13 WorkItemDetail): a lifecycle checklist
+    or equipment return task's context, pplContext from mantle.humanres.PeopleServices.get#ChecklistTask: the person, employer and
+    checklist, what the task links to (the equipment's EquipmentDetail; the Admin lifecycle outcome of the IT access request, as its
+    state and its steps' states, never a secret) and the checklist's other tasks. On the Overview tab for its people; alone, read only,
+    for an HR reader who is none of them. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PeopleWorkItemContext" condition="pplTask &amp;&amp; pplContext &amp;&amp; (pplReadOnly || tab == 'overview')">
+            <widgets>
+                <section name="PeopleTaskHeader" condition="pplReadOnly">
+                    <widgets>
+                        <container style="q-mb-xs">
+                            <link url="${pplContext.canReadEmployee ? sharedLinks['Employees/Employee360'] : sharedLinks['Home']}" link-type="anchor"
+                                    text="${pplContext.canReadEmployee ? pplContext.personName : 'People'}" icon="arrow_back"
+                                    parameter-map="pplContext.canReadEmployee ? {partyId:pplContext.partyId} : {}"/>
+                        </container>
+                        <container style="m-record-header">
+                            <container style="m-record-title">
+                                <label text="${pplContext.workEffortName}" type="h5"/>
+                                <label text="${[pplContext.statusText, pplContext.dueText ? 'Due ' + pplContext.dueText : ''].filter(Boolean).join(' · ')}"
+                                        type="p" style="text-caption m-muted q-mb-none"/>
+                                <label text="Read only: you are not one of this task's people." type="p" style="text-caption m-muted q-mb-none"/>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="${pplContext.kindText} · ${pplContext.personName}"/>
+                    <box-body>
+                        <label type="p" text="${pplContext.checklistName} (${pplContext.organizationName})"/>
+                        <label type="p" style="text-caption m-muted" condition="pplContext.isProtected"
+                                text="Protected: kept off phones."/>
+                        <section name="PeopleTaskEquipment" condition="pplContext.equipment">
+                            <widgets>
+                                <container style="row items-center q-gutter-sm">
+                                    <label text="Equipment:" type="span" style="text-weight-medium"/>
+                                    <link url="${sharedLinks['Employees/EquipmentDetail']}" text="${pplContext.equipment.assetName}" link-type="anchor"
+                                            parameter-map="{assetId:pplContext.equipment.assetId}"/>
+                                    <label text="${pplContext.equipment.serialNumber ? 'Serial ' + pplContext.equipment.serialNumber : ''}" type="span"
+                                            style="m-muted"/>
+                                </container>
+                                <label type="p" style="text-caption m-muted"
+                                        text="Ending the holding on the equipment's page, or a custody change elsewhere, completes this task."/>
+                            </widgets>
+                        </section>
+                        <section name="PeopleTaskAccess" condition="pplContext.access">
+                            <widgets>
+                                <label type="p" text="Account request: ${pplContext.access.statusText}"/>
+                                <label type="p" style="text-caption m-muted" text="${pplContext.access.stepsText}" condition="pplContext.access.stepsText"/>
+                            </widgets>
+                        </section>
+                        <form-list name="ChecklistSiblings" list="pplContext.siblings" skip-form="true" paginate="false"
+                                condition="pplContext.siblings?.length">
+                            <field name="workEffortName">
+                                <default-field title="The checklist's other tasks">
+                                    <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="${workEffortName}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="done"><default-field title="Done"><display text="${done ? 'Done' : 'Open'}"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="workEffortName"/></column>
+                                <column><field-ref name="done"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

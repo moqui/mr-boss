@@ -17,10 +17,16 @@ along with this software (see the LICENSE.md file). If not, see
     default: SetupReadiness over mantle.humanres.PeopleServices.get#Readiness). PeoplePreferences is P29's; the domain editors
     of design §1.2's Settings group (pay components, structures and groups, leave policies and allocations, holidays, approval
     rules, checklists, forms, lookups, EmployeeImport) join with their phases, each opening it to its own groups. P5: Approval
-    rules (ApprovalPolicies) and Lookups, the People administrator's. -->
+    rules (ApprovalPolicies) and Lookups, the People administrator's. P7: Checklists (ChecklistTemplates) and Employee import
+    (EmployeeImport, the shared import wizard Shared/DataImport.xml mounted for the `employees` target, design-people §12
+    EmployeeImport), HR's: BOSS_PPL_SETTINGS opens the area to the HR officers, whose services check their own permissions
+    (SettingsHome's readiness and the People administrator's editors stay PEOPLE_CONFIGURE's in Mantle). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="20" menu-image="sym_o_settings" menu-image-type="icon">
-    <subscreens default-item="SettingsHome" always-use-full-path="true"/>
+    <subscreens default-item="SettingsHome" always-use-full-path="true">
+        <subscreens-item name="EmployeeImport" location="component://mr-boss/screen/Shared/DataImport.xml" menu-title="Employee import"
+                menu-index="5"/>
+    </subscreens>
     <widgets>
         <subscreens-menu id="PeopleSettingsTabs" type="tab"/>
         <subscreens-active/>

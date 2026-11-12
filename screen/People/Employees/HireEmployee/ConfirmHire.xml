@@ -16,7 +16,10 @@ along with this software (see the LICENSE.md file). If not, see
     it: the person and employer, the plan (a new employment, the employee relationship of the employer completed, or a rehire beside
     the earlier employment, which stays as it was), the first assignment's terms by name, the person's other relationships with the
     employer (a contractor's stays) and the warnings and notes. Hire, the one primary, makes it in one transaction (hire#Employee,
-    with the draft's operation key, so a second press answers the first) and opens the person's Employee360; the draft record is discarded. -->
+    with the draft's operation key, so a second press answers the first) and opens the person's Employee360; the draft record is discarded.
+    P7: the onboarding checklists that start (a note of the preview) and the optional account request ("Request an account": Admin's
+    lifecycle is asked, after the hire commits, for an invitation with BOSS_USERS and BOSS_PEOPLE_SELF; nobody gets a login merely to
+    be paid, the user's call). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Confirm" default-menu-index="3" menu-image="sym_o_task_alt" menu-image-type="icon">
 
@@ -34,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
                     confirmNewPerson: draft.confirmNewPerson === 'Y', fromDate: draft.fromDate, thruDate: draft.thruDate,
                     departmentPartyId: draft.departmentPartyId, emplPositionId: draft.emplPositionId,
                     managerPartyId: draft.managerPartyId, facilityId: draft.facilityId, reason: String(reason ?? '').trim() || null,
-                    operationKey: hireOperationKey}).call()
+                    requestAccount: requestAccount === 'Y' || requestAccount === true, operationKey: hireOperationKey}).call()
                 if (ec.message.hasError()) return
                 // the draft is done with
                 if (hireDraftId) ec.service.sync().name('mantle.humanres.PeopleServices.delete#EmploymentDraft').parameters({
@@ -137,6 +140,11 @@ along with this software (see the LICENSE.md file). If not, see
                         <form-single name="ConfirmHireForm" transition="hireEmployee">
                             <field name="reason">
                                 <default-field title="Note" tooltip="Kept on the hire's record"><text-line size="50"/></default-field>
+                            </field>
+                            <field name="requestAccount">
+                                <default-field title="Account" tooltip="Admin invites the person to their work email with access to BOSS and their self-service; leave it off for someone who only needs to be paid">
+                                    <check><option key="Y" text="Request an account"/></check>
+                                </default-field>
                             </field>
                         </form-single>
                         <label type="p" style="text-negative" condition="!canHire"

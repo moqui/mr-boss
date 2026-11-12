@@ -5178,4 +5178,20 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_EMPLOYMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- impl-people P7 (design-people §12 ChecklistTemplates and EmployeeImport, §4 provisioning; design-admin §4.1): the Settings area
+        opened to the HR officers for their Checklists and Employee import (ALWAYS beside the root user group's DENY, as the wizards'
+        grant above; the People administrator's editors there stay PEOPLE_CONFIGURE's in Mantle, which an HR officer reads but does
+        not change), and People's access requests to Admin's lifecycle, which the tx-commit rules of service/PeopleLifecycle.secas.xml
+        call as the hire's HR officer or the approver whose decision applied a separation: any user may call them (as Mantle's
+        identity services), Mantle admitting only the change's requester, an HR editor of its employer, the one whose decision
+        applied it or an identity operator, with the caller's organizations as the identity scope. -->
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_PPL_SETTINGS_HR" userGroupId="BOSS_PEOPLE_HR" artifactGroupId="BOSS_PPL_SETTINGS"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_ACCESS_REQUEST" description="People access requests to Admin's lifecycle">
+        <artifacts artifactName="ironstone\.admin\.LifecycleServices\.request#(Provisioning|AccessEnd)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_ACCESS_REQUEST_ALL" userGroupId="ALL_USERS" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/></authz>
+    </artifactGroups>
 </entity-facade-xml>

@@ -1860,6 +1860,148 @@ EquipmentDetail, Employee360's AssignedEquipment; PE-02, PE-19 (the `employees` 
   hires four and names the one, and Admin's Imports lists the run for a data operator who also holds
   `PEOPLE_HR_VIEW`.
 
+**Built Nov 11 (P7).** mr-mantle 603f448a, mr-boss (branch `ppl/p7`).
+- Checked first (the code over the plan): F14, F15, F16, F22, F45, F49, F52, F54, F60 as P0 found them, and P6's F121 to F136. Also:
+  Admin's invitation needs a real inviter holding `ADMIN_IDENTITY_MANAGE` (acceptance rechecks the inviter from the records), and
+  an HR officer holds none, so People cannot invite as itself nor as the system; `start#Lifecycle`'s organization removal refuses an
+  account whose employment relationship the separation has already ended (`NOT_A_MEMBER`); a `tx-commit` rule runs on a service
+  worker as the caller, after the commit; a `WetProject` root lists in Projects for an all-projects reader; a separation and a
+  transfer are applied by `decide#` or `approve#EmploymentChange`, not by `apply#EmploymentChange`; Shared/DataImport's mount knew
+  Admin and the catalog only; a then-block line that starts with a regular expression continues the line before it.
+- Mantle:
+  - MT-03's first part, under its names (§4, F14, F54): `entity/WorkProcessEntities.xml` `WorkEffortProcessPolicy` (dated; the using
+    policy, a new WorkProcessPolicy type with `WppPeopleChecklist`; `guardsExecution`, N for People; an execution's operation key)
+    and `WorkEffortStepPolicy` (dated; required, the role, `dueOffsetDays`); `mantle.work.ProcessServices` over `WorkProcesses.js`:
+    `store#ProcessStep`, `instantiate#WorkProcess` (the two-pass copy: definition fields, template flag, status and actuals reset,
+    due dates from the offsets, `WeatDependsOn` remapped, one `WeatBasedOn` per node, the policies copied, each step assigned to the
+    party named for its role; one transaction; the key answers the first root) and `check#ManagedWork` (`MANAGED_WORK` for work whose
+    own, root's or parent's policy guards execution, and a root with a MaintenanceWorkOrder row once the entity exists), called by
+    `TaskServices` `update#Task`, `set#TaskDates`, `set#TaskStatus`, `move#Task`, `set#TaskRecurrence` and `WorkEffortServices`
+    `delete#WorkEffort`, `add#`, `remove#` and `replace#WorkEffortParty`; the services ask the policy's permission (`policies` table),
+    and People calls the module after its own checks; `clone#WorkEffort` and `clone#Project` unchanged;
+  - checklists (`entity/PeopleChecklistEntities.xml` `ChecklistTemplate`, `ChecklistStep`, `EmploymentChecklist`; `Checklists.js`):
+    PeopleServices `find#Checklists`, `store#Checklist`, `store#ChecklistStep` (an HR editor of the employer; roles Employee,
+    Manager, HumanResourcesManager, else a named person employed by the employer), `start#Checklists` (Mantle's tx-commit rules,
+    `service/PeopleChecklists.secas.xml`, on `hire#Employee` and an applied `apply#`, `decide#` and `approve#EmploymentChange`; each
+    template of the employer and kind in its own transaction through `start#Checklist`, a failure logged by employment and template;
+    the change's record decides, so an approving manager starts a transfer's checklist), the root a `WetTask` of purpose
+    `WepPrOrgMgmt` named for the person, offboarding tasks protected and left out of `CalendarDavServices.get#TaskObjectTags` (F22),
+    and `get#ChecklistTask` (the People box: its people, an HR reader of the employment's employer, the employee when theirs to see);
+    `preview#Hire` notes the onboarding checklists that will start;
+  - equipment: `start#EquipmentReturn` (a separation's return task per holding on its date, under a root of its own, protected,
+    assigned to the HR officer who asked, naming the holding by `WorkEffortAssetAssign` and a `WorkEffortParty` of the holder in its
+    role, F60), `entity/PeopleChecklist.eecas.xml` on an `AssetPartyAssignment` update that sets `thruDate` calling
+    `complete#ReturnTasks` (never refusing; Warehouse's `replace#AssetPartyAssignment` unchanged and completing them too, F45, F52),
+    `get#AssignedEquipment` (the person and HR of their employer), `get#EquipmentCustody` and `return#Equipment` (an HR editor; the
+    receiving custodian employed now by one of the caller's employers, `CUSTODIAN_INVALID`);
+  - provisioning (owner contract, F15): `IdentityServices.request#Provisioning` and `request#AccessEnd` in `Lifecycle.js` over an
+    applied hire (with `accessRequested`) or separation, admitted for the change's requester, an HR editor of the employer, the one
+    whose decision applied it or an identity operator; one operation keyed by the change (Provisioning, kind `UlkProvision`: membership,
+    invite, grants, notify; access end: the employer's other relationships and, with no internal organization left, sessions and
+    memberships, else the memberships step skipped naming the other employer), run at once for an identity operator of the
+    organization and otherwise waiting (`OPERATOR_REQUIRED`) for one, who runs each from LifecycleDetail (`retry#LifecycleStep`
+    knows the new steps); the change records the operation and its IT tasks are linked (`ChecklistStep.operationId`); the
+    operation's records written with authorization off after the check. `hire#Employee` takes `requestAccount`;
+    `note#AccessRequestFailure` keeps a failure on the change; LifecycleOperations' texts name a step waiting for an operator;
+  - the `employees` import (F16): `data/PeopleLifecycleSetupData.xml` seeds the `rows` target (fields of the hire, keyed by person and
+    work email; password, group, permission, user id, salary, wage, pay, tax, bank and IBAN columns refused; `PEOPLE_IMPORT` and
+    `PEOPLE_HR_EDIT` to import, `PEOPLE_HR_VIEW` to view, no `ADMIN_*`), its row services in `PeopleImport.js`
+    (`validate#` over `preview#Hire`, `apply#` over `hire#Employee` under the row's key, `find#EmployeeImportScopes`), callable by any
+    user as Mantle's identity row services are, each checking `PEOPLE_IMPORT` and the hire's own rules;
+  - F131 and F134: `withdraw#EmploymentChange` (an HR editor; an applied transfer, manager change, leave, return or reorganization set
+    for a later date: its assignments end on their own start, the assignment before continues, the membership, seat and line it would
+    have moved stay as they were; `EchWithdrawn` with when, who and why; a begun leave loses only its return; `CHANGE_IN_EFFECT`,
+    `LATER_CHANGE_SCHEDULED`, `NOT_WITHDRAWABLE`, `REASON_REQUIRED`, `POSITION_OCCUPIED`); a separation dated before scheduled changes
+    withdraws them on its application and records itself on them (`supersededByChangeId`; its preview lists them), and a return
+    withdraws the leave's scheduled return, so it can come early; `apply#DueAssignments` routes an employer's waiting decisions on the
+    date a later separation, manager change, transfer or reorganization comes (`EmploymentChange.reroutedDate`), each employer in its
+    own transaction.
+- BOSS:
+  - `ironstone.admin.LifecycleServices.request#Provisioning` and `request#AccessEnd` (`Provisioning.js`; BOSS's proposal `BOSS_USERS`
+    and `BOSS_PEOPLE_SELF`, any other bundle only one the caller may give; a failure noted on the change and answered, never thrown);
+    `service/PeopleLifecycle.secas.xml` (tx-commit on `hire#Employee` with an account asked and on an applied separation through
+    `apply#`, `decide#` and `approve#EmploymentChange`); the `BOSS_PPL_ACCESS_REQUEST` grant (any user; Mantle admits only the change's
+    own people);
+  - screens: `People/Settings/ChecklistTemplates` (Templates, Steps; New checklist, Rename, End, Add step, Edit, End);
+    `People/Settings/EmployeeImport` (Shared/DataImport, the `employees` target; `get#ImportMount`'s People mount and the owner route
+    `peopleEmployeeImport`); `People/Tasks/WorkItemDetail` (WorkItemDetail's People branch: the Commons rule, Overview, Files and
+    Chatter only, no clone, request or delete, the People box `template/PeopleWorkItem.xml`, read only for an HR reader);
+    `People/Employees/EquipmentDetail` (EquipmentDetail's People context `template/PeopleEquipment.xml`: Custody and End assignment;
+    no files or notes); Employee360's Assigned equipment, Withdraw (or Withdraw the return) and Request access again in Employment
+    changes; ConfirmHire's Request an account; Settings opened to the HR officers (`BOSS_PPL_SETTINGS_HR`, ALWAYS);
+  - demo: Retail's New starter and Leaver checklists and Ines Varga's laptop (`BossPeopleDemoData.xml`, appended).
+- Specs: Mantle `test/work/WorkProcess` (5 features, 1.1 s: a template instantiated once per key with offsets, assignees, a remapped
+  dependency, `WeatBasedOn` links and an ended step left out, the reader refused; a tree failing part way leaving nothing; a checklist
+  task completed by `set#TaskStatus` and a guarded process's task refused `MANAGED_WORK` by `update#Task`, `set#TaskStatus` and
+  `add#WorkEffortParty`; a hire starting its checklist after commit while a failing template leaves the hire; a separation's return
+  task completed by `replace#AssetPartyAssignment`; written with People's policy and the generic services only, so it passes
+  unchanged after Maintenance's P6), `test/party/UserProvisioning` (2 features, 0.3 s: one operation per key waiting for an operator,
+  a reader, no account asked and an unregistered bundle refused, the operator's retry inviting the work address once; an access end
+  for one employer keeping the other's access, the last employer's waiting for and then ending the memberships, no account
+  `NO_ACCOUNT`), `test/humanres/PeopleChecklists` (3 features, 1.5 s: templates HR's, the reader and Services' HR refused; the onboarding
+  task on the employee's phone and opened under People, the offboarding task off it; equipment read and returned, a custodian
+  outside refused, the return task completed) and `test/humanres/PeopleScheduledChanges` (4 features, 1.2 s: a scheduled transfer
+  withdrawn with its terms kept, the reader, Services' HR, a change in effect refused; a separation withdrawing a later transfer; an
+  early return; the job routing on the date). BOSS `test/People/PeopleLifecycle` (3 features, 1.35 s: the SECA's provisioning with
+  its proposal and IT task, a failure noted and asked again from Employee360; the import refusing a password column, an HR editor
+  without `PEOPLE_IMPORT` and the reader, hiring two rows and naming the repeat; ChecklistTemplates', EquipmentDetail's and
+  WorkItemDetail's People renders, one qvt each); `PeopleAccess` gains one feature (0.46 s: the checklist and equipment rules and the
+  two Settings screens) and its menu, capability and Settings cases follow HR's opened Settings; PeopleEmployees' Employee360 render
+  checks Assigned equipment. Acceptance, written and not run: `acceptance/People/PeopleLifecycleUsable` (4 features).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle WorkProcess, UserProvisioning, PeopleChecklists,
+  PeopleScheduledChanges, PeopleEmployment, PeopleOrganization, PeopleApprovals, PeoplePositions, PeopleScope, PeopleDirectory,
+  HumanResServices, PayrollServices, PayrollAdjustments, UserLifecycle, StaffIdentity, StaffInvitation, StaffInvitationImport, Dav,
+  CalendarServices, WorkMyTasks, WorkProjectItems, WorkProjectServices, WorkProjectPlan, WorkResources, ProductionShopFloor,
+  WorkTimeEntries, InternalOrganizations and ContactBooks 206 of 206 (mr-mantle 35.5 s), and after Prettier the eight touched 43 of 43;
+  BOSS PeopleHire, PeopleAccess, PeopleEmployees, PeopleOrganization, PeoplePositions, PeopleApprovals, PeopleLifecycle,
+  AdminLifecycle, AdminImports, AdminRegistries, AdminUsers, WarehouseFacilities, WarehouseInventory, Tasks, WorkItemDetail, WorkItems,
+  ProjectsAccess, ManufacturingWorkCenters, ManufacturingDowntime, AccountingFixedAssets, ProductsImport, InsightsRecords, Resources,
+  Contacts, AppOrganizationFilters and TimeEntries 221 of 221 (mr-boss 38.6 s), PeopleLifecycle 3 of 3 again after its last fix; the
+  client walk PeopleHireWalk 1 of 1 (7.1 s). `moqui lint --screens`: 135 flagged sites as before, none in the screens P7 touched, and
+  no new TUI worklist entry. Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table (P1 to P7: the new PeopleServices, ProcessServices and IdentityServices rows) and
+  the `replace#AssetPartyAssignment` and `set#TaskStatus` rows; ss-inventory's note (no baseline form maps to P7's screens).
+- Design edits: design-people (header; §4 as built; HireEmployee, EmploymentChange, EmployeeImport, ChecklistTemplates,
+  WorkItemDetail and EquipmentDetail as built); design-admin §4.1 Provisioning from People as built (owner design); design-maintenance
+  §4.1 MT-03's first part as built; design-crosscut §3.10's People row.
+- Findings (provisional, numbered by the lead):
+  - People's provisioning and access end wait for an identity operator unless the HR officer is one: Admin's invitation needs an
+    inviter with `ADMIN_IDENTITY_MANAGE` at sending and acceptance, so neither HR nor the system can send it. Nothing notifies the
+    operators: they find the operation in LifecycleOperations' Needs attention, and the IT task shows it waiting;
+  - the rules on `decide#` and `approve#EmploymentChange` join those on `hire#Employee` and `apply#EmploymentChange` (design: the
+    latter two) because a transfer and a separation are applied by their last approval;
+  - `create#StaffAccount` is not used: a hire is invited to the work email (a person with none fails the invite step until one is
+    added and the step retried); the provisioning is the default proposal only from ConfirmHire (the service takes more bundles the
+    caller may give; no screen offers them);
+  - an access end records no participant steps (owned drives, calendars, Projects assignments): those are offered by Admin's own
+    disable; the memberships end at the separation's date and the person keeps a membership while employed elsewhere;
+  - a return task is assigned to the HR officer who asked for the separation (design: "the asset's custodian role", which names no
+    one); the receiving custodian is chosen at the return, an employee of the employer;
+  - Settings is opened to the HR officers (ALWAYS) for Checklists and Employee import, so HR also opens Approval rules and Lookups,
+    whose changes Mantle refuses without `PEOPLE_CONFIGURE` (P1's note foresaw an editor's group allowed there);
+  - a scheduled separation cannot be withdrawn (`NOT_WITHDRAWABLE`), and a report's assignment set for after a leaver's separation
+    keeps naming them;
+  - the import takes the department, position, manager and work location by id, a date as yyyy-MM-dd, and requests no account;
+  - the exit interview is a link kind only until P16's forms;
+  - the managed-work check adds one or two reads to each generic task write;
+  - the job's first run marks every earlier separation and manager change (their `reroutedDate` empty), routing each employer once.
+- For the lead:
+  - budget share: mr-mantle about 4.1 s (WorkProcess 1.1, UserProvisioning 0.3, PeopleChecklists 1.5, PeopleScheduledChanges 1.2);
+    mr-boss about 1.8 s (PeopleLifecycle 1.35, PeopleAccess's feature 0.46); the client walk unchanged (7.1 s);
+  - merge hot spots: mr-mantle `Employment.js` (statusTexts, assignmentsOf, checkDate and the superseding, withdrawScheduled,
+    applyChange, applyDueAssignments, planHire's note, impactOf, changeRow, the exports), `PeopleServices.xml` (hire#Employee,
+    approve#EmploymentChange and apply#DueAssignments parameters; services appended), `HumanResourcesEntities.xml` (EmploymentChange's
+    fields and status), `Lifecycle.js` and `IdentityServices.xml` (appended), `IdentityEntities.xml`, `PartyLifecycleData.xml`,
+    `PeopleApprovalSetupData.xml` (the job), `TaskServices.xml` and `WorkEffortServices.xml` (the guard lines), `CalendarDavServices.xml`;
+    mr-boss `BossSetupData.xml` and `BossPeopleDemoData.xml` (appended), `People.js` (linkPaths, employee360), `ContextServices.xml`,
+    `Shared/Employee360.xml`, `Shared/WorkItemDetail.xml`, `Shared/EquipmentDetail.xml`, `Shared/DataImport.xml`, `DataImport.js`,
+    `LifecycleServices.xml` (appended), `People/Settings.xml`, `People/Employees.xml`, `ConfirmHire.xml`, `PeopleSpecLib.js`,
+    `PeopleAccess.spec.js`, `PeopleEmployees.spec.js`, the inventories, design-people's header and §4, design-admin §4.1,
+    design-maintenance §4.1, design-crosscut §3.10;
+  - the user's calls: whether HR may open Settings (built) or its editors move out of it; whether a hire's default proposal may be
+    sent without an identity operator (built: it waits for one); who a return task is assigned to (built: the HR officer who asked);
+    whether a scheduled separation is withdrawable (built: no).
+
 ### P8 — Self-service, MyTeam and Home
 
 Design §3 Home, MyTeam, SelfService, §1.2 (the Commons mount), §1.4 (Today, quick create, palette); PE-18. Ends
