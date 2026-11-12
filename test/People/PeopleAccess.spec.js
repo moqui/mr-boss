@@ -64,7 +64,9 @@
 // the reader (no self-service) is refused the employee's letter with the same parameters.
 // P19: a training session scheduled by the development administrator of its employer (the HR officer refused with the same
 // parameters), an assessment its trainer's (the reader refused the same assessment), Services' session refused to Retail's
-// development administrator, the employee's Training by the area's own grant, and Training in the Development group.
+// development administrator, the employee's Training by the area's own grant, and Training in the Development group. P19 review:
+// the assessment forms the development administrator's (the HR officer and the employee refused the screen), the employee's
+// self-service link to their training.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1560,7 +1562,7 @@ feature("P17 review: an employee reads their own issued letters in self-service,
 })
 
 feature(
-    "training: a session scheduled by the development administrator of its employer, the HR officer refused with the same parameters; an assessment the session's trainer's, the reader refused the same assessment; Services' session refused to Retail's development administrator; the employee's Training by the area's own grant",
+    "training: a session scheduled by the development administrator of its employer, the HR officer refused with the same parameters; an assessment the session's trainer's, the reader refused the same assessment; Services' session refused to Retail's development administrator; the employee's Training by the area's own grant and self-service link; the assessment forms the development administrator's",
     {
         when() {
             const D = "mantle.humanres.DevelopmentServices."
@@ -1629,6 +1631,22 @@ feature(
             })
             const own = screenRefusal(users.employee, "Development/Training")
             if (own) problems.push(`the employee's Training: ${own}`)
+            // P19 review: the training assessment forms are the learning administrator's, not the HR officer's or the employee's
+            const developForms = screenRefusal(users.develop, "Development/AssessmentForms")
+            if (developForms) problems.push(`the learning administrator's assessment forms: ${developForms}`)
+            for (const [user, who] of [
+                [users.hr, "the HR officer"],
+                [users.employee, "the employee"]
+            ]) {
+                const refused = screenRefusal(user, "Development/AssessmentForms")
+                if (!unauthorized(refused)) problems.push(`${who} opens the assessment forms: ${refused || "opened"}`)
+            }
+            // P19 review: the employee's self-service links their own training places
+            const links = asUser(users.employee, () =>
+                invoke("ironstone.people.ContextServices.get#SelfServiceContext", {appRoot: "Commons"})
+            )
+            if (links.trainingUrl !== "/qapps/People/Development/Training?show=mine")
+                problems.push(`the employee's training link: ${links.trainingUrl}`)
             return {codes, problems}
         },
         then({codes, problems}) {

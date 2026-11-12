@@ -91,8 +91,28 @@ const ids = {
     // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll; P11's g b, Leave balances, to HR and managers; P12's
     // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user; P14's g h, Shift roster, to HR and
     // managers; P15's g x, Expense claims, and P16's g n, Openings, and g v, Interviews, to every People user; P18's g k, Skills
-    // matrix, to development, HR and managers, and g q, Qualifications, to every People user)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h", "g x", "g n", "g v", "g k", "g q"],
+    // matrix, to development, HR and managers, and g q, Qualifications, to every People user; P19's g i, Training, to every People
+    // user)
+    keys: [
+        "g p",
+        "g e",
+        "g o",
+        "g c",
+        "g s",
+        "g a",
+        "g w",
+        "g t",
+        "g b",
+        "g l",
+        "g d",
+        "g h",
+        "g x",
+        "g n",
+        "g v",
+        "g k",
+        "g q",
+        "g i"
+    ],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
     // P16: an approved active seat of Retail (vacant) and one of Services, the seats the recruiting specs open openings on

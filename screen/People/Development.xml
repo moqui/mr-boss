@@ -20,12 +20,17 @@ along with this software (see the LICENSE.md file). If not, see
     and the other staff readers, each at their level (an identity document's or work permit's number the person's and HR's alone;
     a manager and other staff readers verified ones' validity only). A self-service employee without the launcher opens the area
     by its own grant (BOSS_PPL_DEVELOPMENT), for their own qualifications and training (the sessions of their employers, their own
-    places, results and certificates, and the sessions they train); the matrix is denied to them (BOSS_PPL_SKILLS). -->
+    places, results and certificates, and the sessions they train); the matrix is denied to them (BOSS_PPL_SKILLS). P19 review:
+    Assessment forms (Development/AssessmentForms over the survey builder's shared screens with People's Development mount of its
+    registration, service/ironstone/shared/SurveyApps.js): the training assessments, built by the learning administrator
+    (PEOPLE_DEVELOP_EDIT, which Mantle's training assessment purpose admits beside PEOPLE_CONFIGURE), opened to BOSS_PEOPLE_DEVELOP
+    and the People administrator and denied to the root user group and self-service (BOSS_PPL_ASSESSMENT_FORMS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Skills &amp; training" default-menu-index="12" menu-image="sym_o_school" menu-image-type="icon">
     <subscreens default-item="SkillsMatrix">
         <!-- SkillsMatrix (menu index 1), Qualifications (2) and Training (3) are files under Development/, with SkillsMatrixTui,
             TrainingDetail and TrainingCertificate out of the menu -->
+        <!-- P19 review: AssessmentForms (4), the training assessment forms, is a file under Development/ -->
     </subscreens>
     <widgets>
         <subscreens-active/>

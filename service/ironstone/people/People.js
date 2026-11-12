@@ -243,7 +243,10 @@ const linkPaths = [
     // self-service employee's by the area's own grant)
     "Development/Training",
     "Development/TrainingDetail",
-    "Development/TrainingCertificate"
+    "Development/TrainingCertificate",
+    // P19 review: the training assessment forms (the learning administrator's and the People administrator's)
+    "Development/AssessmentForms/List",
+    "Development/AssessmentForms/FormDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1701,6 +1704,7 @@ const QUALIFICATION = "mantle.humanres.ability.PartyQualification"
 const qualificationsPath = "/qapps/People/Development/Qualifications"
 // P19: a training session's detail (Today's training due, a place to approve)
 const trainingDetailPath = "/qapps/People/Development/TrainingDetail"
+const trainingPath = "/qapps/People/Development/Training"
 function qualificationLink(partyQualificationId) {
     if (!ec.user.userId || !partyQualificationId || !developmentAreaOpens()) return null
     const found = call("mantle.humanres.DevelopmentServices.check#QualificationAccess", {partyQualificationId})
@@ -1748,7 +1752,9 @@ function selfServiceContext(p) {
         expenseClaimsUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/ExpenseClaims?show=mine" : null,
         advancesUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/EmployeeAdvances?show=mine" : null,
         // P18: their own qualifications, under Skills & training when it opens to them
-        qualificationsUrl: developmentAreaOpens(grants) ? qualificationsPath + "?show=mine" : null
+        qualificationsUrl: developmentAreaOpens(grants) ? qualificationsPath + "?show=mine" : null,
+        // P19 review: their own training places, under the same area
+        trainingUrl: developmentAreaOpens(grants) ? trainingPath + "?show=mine" : null
     }
 }
 

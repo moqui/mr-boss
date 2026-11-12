@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Skills & training › Assessment forms (design-people §10 Training, §13 Forms; impl-people P19 review): the training
+    assessments a session's trainer answers, built by the learning administrator. The survey builder's shared screens (List:
+    Shared/SurveyForms, FormDetail: Shared/SurveyFormDetail) with People's Development mount of its registration
+    (service/ironstone/shared/SurveyApps.js: the training assessment purpose alone, edited with PEOPLE_DEVELOP_EDIT or
+    PEOPLE_CONFIGURE, which Mantle's purpose registration admits and mantle.party.FormDefinitionServices checks again). The
+    learning administrator's and the People administrator's (BOSS_PPL_ASSESSMENT_FORMS: ALWAYS for BOSS_PEOPLE_DEVELOP, denied to the
+    root user group and self-service; the People administrator and ADMIN through the root's ALWAYS). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Assessment forms" default-menu-index="4" menu-image="sym_o_quiz" menu-image-type="icon">
+    <always-actions>
+        <!-- the survey builder's screens below take People's Development mount of its registration -->
+        <set field="surveyMount" value="Development"/>
+    </always-actions>
+    <subscreens default-item="List" always-use-full-path="true">
+        <subscreens-item name="List" location="component://mr-boss/screen/Shared/SurveyForms.xml" menu-include="false"/>
+        <subscreens-item name="FormDetail" location="component://mr-boss/screen/Shared/SurveyFormDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

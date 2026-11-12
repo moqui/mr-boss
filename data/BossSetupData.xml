@@ -5522,4 +5522,21 @@ along with this software (see the LICENSE.md file). If not, see
         notification tray. -->
     <moqui.security.user.NotificationTopic topic="PeopleTrainingApproval"
             linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <!-- impl-people P19 review: the person's decision notice (Mantle's PeopleTrainingDecision) opens their place on the session.
+        Assessment forms (People/Development/AssessmentForms, the survey builder with People's Development mount) are the learning
+        administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS, as the skills matrix), denied to the root user group and to
+        self-service, the People administrator and ADMIN through the root's ALWAYS; Mantle's FormDefinitionServices check the
+        training assessment purpose's edit permission (PEOPLE_DEVELOP_EDIT or PEOPLE_CONFIGURE) and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingDecision"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_ASSESSMENT_FORMS" description="People training assessment forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/AssessmentForms.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

@@ -291,6 +291,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="advancesUrl"><description>P15: the user's own advances (the same area)</description></parameter>
             <parameter name="qualificationsUrl"><description>P18: the user's own qualifications (People's Skills &amp; training
                 area, when it opens to them)</description></parameter>
+            <parameter name="trainingUrl"><description>P19 review: the user's own training places (the same area)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -305,6 +306,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="expenseClaimsUrl" from="found.expenseClaimsUrl"/>
             <set field="advancesUrl" from="found.advancesUrl"/>
             <set field="qualificationsUrl" from="found.qualificationsUrl"/>
+            <set field="trainingUrl" from="found.trainingUrl"/>
         </actions>
     </service>
 

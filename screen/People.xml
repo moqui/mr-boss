@@ -53,7 +53,8 @@ along with this software (see the LICENSE.md file). If not, see
     grant, BOSS_PPL_DEVELOPMENT; the matrix denied to self-service, BOSS_PPL_SKILLS), the qualification content host (a
     qualification's files, its RecordFiles and Chatter host), the QualificationExpiring topic and the keys g k and g q. P19 Training
     under Skills and training (sessions, a session's detail and a completed place's certificate, every People user's and a
-    self-service employee's by the area's grant), the PeopleTrainingApproval topic and Today's training due. -->
+    self-service employee's by the area's grant), the PeopleTrainingApproval topic and Today's training due; its review: the
+    PeopleTrainingDecision topic, the key g i and the Assessment forms under Skills and training (BOSS_PPL_ASSESSMENT_FORMS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -126,6 +127,8 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- P18: the skills matrix and the qualifications -->
             <key keys="g k" label="Skills matrix" screen="People/Development/SkillsMatrix"/>
             <key keys="g q" label="Qualifications" screen="People/Development/Qualifications"/>
+            <!-- P19 review: the training sessions -->
+            <key keys="g i" label="Training" screen="People/Development/Training"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
@@ -177,6 +180,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P19: a place in a training session to approve (PeopleTrainingApproval; DevelopmentServices approve#Enrollment and
             refuse#Enrollment), opening the session; Today's training due is the source above -->
         <notification-topic topic="PeopleTrainingApproval"/>
+        <!-- P19 review: the person's decision notice (PeopleTrainingDecision), opening their place -->
+        <notification-topic topic="PeopleTrainingDecision"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

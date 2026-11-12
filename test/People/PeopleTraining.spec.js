@@ -145,15 +145,25 @@ feature("TrainingDetail as the trainer: Tomas's place to assess over the form's 
     }
 })
 
-feature("TrainingCertificate as Tomas: the certificate as issued", {
+feature("TrainingCertificate as Tomas: the certificate as issued, and its stored PDF", {
     when() {
+        // P19 review: the stored PDF as the self-service employee, with artifact authorization on
+        const pdf = asUser(users.employee, () => {
+            const result = ec.screen
+                .makeTest()
+                .rootScreen(webroot)
+                .render("apps/People/Development/TrainingDetail/certificatePdf", {personTrainingId: state.placeId}, null)
+            return {status: result.status, errors: Array.from(result.errorMessages || []).join(" | ")}
+        })
         return {
             rendered: asUser(users.employee, () =>
                 page("Development/TrainingCertificate", {personTrainingId: state.placeId}, "html-print")
-            )
+            ),
+            pdf
         }
     },
-    then({rendered}) {
+    then({rendered, pdf}) {
+        pdf.status == 200 && pdf.errors == ""
         rendered.status == 200 && rendered.errors.length == 0
         rendered.output.includes("Certificate of completion") && rendered.output.includes("Tomas Lindqvist")
         rendered.output.includes("Fire warden training") && rendered.output.includes("Fire warden certificate")
