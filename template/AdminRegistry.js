@@ -1,5 +1,5 @@
 // What Admin's own screens read of the framework's registries (org.moqui.admin.ReadinessServices: readiness, the overview
-// and the settings index; mr-moqui plans/Admin-Screens-Down.md A6), with what is Admin's: the organization as the scope a
+// and the settings index; mr-moqui plans/archive/Admin-Screens-Down.md A6), with what is Admin's: the organization as the scope a
 // request is narrowed by, and a registration's place as a link. The framework answers a place as a key (a check's fixRoute, a
 // card's route, a settings entry's destinationRoute); Admin's mount resolves it (the framework's AdminMount.js over the routes
 // Admin.js gives), and a fix link, a card's link and Health's link are shown only where the place opens to the viewer's own

@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights › Business alerts, the list (design-insights §8 Alerts; impl-insights P8; mr-moqui plans/Admin-Screens-Down.md,
+<!-- Insights › Business alerts, the list (design-insights §8 Alerts; impl-insights P8; mr-moqui plans/archive/Admin-Screens-Down.md,
     Track I): the framework's Dashboards › Alerts at this location, with the three transitions Insights offers: copyAlert (a
     shipped rule copied to the caller, with Insights' fixed parts, inactive until they activate it), pauseAlerts and
     deleteAlert, each of the caller's own rule and each refused to one who may set no alert here (a reader, a dataset

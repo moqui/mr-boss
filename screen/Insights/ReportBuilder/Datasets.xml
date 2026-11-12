@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Report builder › Datasets (design-insights §5 Datasets; impl-insights P3, INS-03; mr-moqui
-    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › Datasets at this location, which
+    plans/archive/Admin-Screens-Down.md, Track I): the framework's Dashboards › Datasets at this location, which
     BOSS_INS_DATASET_SCREENS opens to the author and the steward, with the one transition Insights offers: createDataset,
     through the engine's create#BusinessDataset, which asks the dataset-save artifact and the update artifact of the
     dataset named (the steward's insights-* grant). The list is the business datasets the viewer reads, and the steward's

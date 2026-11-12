@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Insights › Business alerts (design-insights §8 Alerts, AlertDetail; impl-insights P8, INS-07): the list (Rules, the default:
     Mine, Received and Templates) with the hidden AlertDetail. The two screens are the framework's Dashboards alert screens
     (Alerts and AlertRule), each included at its own location with the transitions Insights offers (mr-moqui
-    plans/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"). Every Insights user opens
+    plans/archive/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"). Every Insights user opens
     the area (Received and one's own state are every reader's); what each is offered follows Insights' policy and their own
     grant of the report engine's operations (data/BossSetupData.xml), which BOSS_INS_REPORT_ENGINE refuses to anyone else,
     and the engine checks its own grants, the rule's sources and each recipient. The screens read Insights' policy, which

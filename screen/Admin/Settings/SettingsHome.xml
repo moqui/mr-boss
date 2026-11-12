@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- SettingsHome (design-admin §7 SettingsHome, §14.2; mr-moqui plans/Admin-Screens-Down.md A6): the framework's System ›
+<!-- SettingsHome (design-admin §7 SettingsHome, §14.2; mr-moqui plans/archive/Admin-Screens-Down.md A6): the framework's System ›
     Settings settings index at this location, which BOSS_ADM_SETTINGS_INDEX opens to every BOSS user (a non-inheritable ALLOW;
     impl-admin F46), as a warehouse manager reaching Warehouse's settings, and the Settings area to every Admin user. The
     index is org.moqui.admin.ReadinessServices.find#Settings: each app's settings landing, shown only when the user's own

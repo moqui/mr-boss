@@ -1,5 +1,5 @@
 // The access review in Admin, ironstone.admin.CapabilityServices (impl-admin P9; design-admin §16 the access and grant review;
-// mr-moqui plans/Admin-Screens-Down.md). The framework's org.moqui.admin.AccessServices holds the registry, the projections and
+// mr-moqui plans/archive/Admin-Screens-Down.md). The framework's org.moqui.admin.AccessServices holds the registry, the projections and
 // every rule (get#GrantReview: ADMIN_ACCESS_VIEW, sealed permissions left out and counted), and the review's rows are made by
 // the framework's System screen's module (tools template/AccessReview.js). This module adds Admin's part:
 // - accessReview: the review's one list for print and CSV, with a group's members shown only when they work for an organization

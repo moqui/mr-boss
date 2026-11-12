@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Report builder › DatasetFields (design-insights §5 DatasetFields; impl-insights P3, INS-03; mr-moqui
-    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetFields at this location, which
+    plans/archive/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetFields at this location, which
     BOSS_INS_DATASET_STEWARDSHIP opens to the dataset steward, with its two transitions: storeFields and storeConditions,
     through the engine's store#BusinessDatasetFields and store#BusinessDatasetConditions, which check the dataset's update
     artifact, refuse removing or renaming a field a definition over the dataset uses and a stale version, and leave the

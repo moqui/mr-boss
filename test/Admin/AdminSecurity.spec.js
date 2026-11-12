@@ -5,7 +5,7 @@
 // the screens' transitions by the integration administrator and the access administrator, each refused the other's part
 // with its reason (a role mapping to a privileged group never written, the secret never shown); the administrative reader
 // opens none of it. The three screens are the framework's System › Security screens, shown here by location (mr-moqui
-// plans/Admin-Screens-Down.md). The framework's rules (role mappings, the endpoint-change rule, the test, the policy's values,
+// plans/archive/Admin-Screens-Down.md). The framework's rules (role mappings, the endpoint-change rule, the test, the policy's values,
 // the lockout preview) are the framework's AdminIdentityProviders spec.
 // Run: ./moq test mr-boss --spec AdminSecurity
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")

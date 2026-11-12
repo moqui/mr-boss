@@ -3,7 +3,7 @@
 //
 // The delivery itself is the framework's (mr-moqui crates/moqui-report/src/delivery.rs, docs/tools/Monitoring.md "Report
 // delivery"), and so are the screens of Scheduled reports and of Business alerts (the framework's Dashboards screens, shown
-// under Insights with its reportPolicy: mr-moqui plans/Admin-Screens-Down.md, Track I), which read and write through
+// under Insights with its reportPolicy: mr-moqui plans/archive/Admin-Screens-Down.md, Track I), which read and write through
 // org.moqui.report.ReportServices as the viewer. What stays here is Insights' own:
 // - a management digest: a report definition (kind digest) over dashboards the composer reads, with a period and a short
 //   commentary, saved through the engine as its owner; its schedule is an ordinary schedule of it, made in Scheduled reports;

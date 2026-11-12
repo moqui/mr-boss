@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     INS-06, INS-11): the list (Schedules, the default: Mine, Shared administration and Received) with the hidden
     ScheduledReportDetail and ReportDelivery, replacing the copied personal scheduled finds (impl-insights F20; design §13.2),
     whose rows are kept and listed under Mine. The three screens are the framework's Dashboards screens, mounted by location
-    (mr-moqui plans/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"): no grant names
+    (mr-moqui plans/archive/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"): no grant names
     them or a transition of theirs, and Insights adds nothing but its policy. Every Insights user opens the area (Received is
     every reader's); what each is offered follows their own grant of the report engine's operations (data/BossSetupData.xml:
     reading deliveries, scheduling for oneself, delivering to others), which BOSS_INS_REPORT_ENGINE refuses to anyone else,

@@ -40,7 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
     of ironstone.insights.AssistServices (data/BossSetupData.xml), each run as the signed-in user. P11 adds the hidden WallDisplay,
     the page a registered wall display plays its playlist on (the INSIGHTS_PLAYLISTS route group admits it alone), whose
     request runs as the device's display account: get#Context is not called for it (below). The framework's report screens that
-    need nothing of Insights' own are mounted by location (mr-moqui plans/Admin-Screens-Down.md, Track I): Library panels here,
+    need nothing of Insights' own are mounted by location (mr-moqui plans/archive/Admin-Screens-Down.md, Track I): Library panels here,
     Explore and Compare under Report builder, the three screens of Scheduled reports; they read the links and Insights' policy (reportPolicy: the default range, who may
     set an alert or share, the fixed parts of a dataset, a schedule and an alert) that the always-actions below set. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
