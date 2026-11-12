@@ -164,6 +164,9 @@ const linkPaths = [
     // P13: preventive plans and the plan record (design §5)
     "Preventive/Plans/Find",
     "Preventive/Plans/PlanDetail",
+    // P14: the due list and the compliance report (design §5 DueMaintenance, §8)
+    "Preventive/DueMaintenance",
+    "Reports/PreventiveComplianceReport",
     // P10: a purchase order of the work (the shared OrderDetail, read only)
     "WorkOrders/OrderDetail",
     // P18: the lookups, the setup readiness and the equipment import (design §9, §6)

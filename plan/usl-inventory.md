@@ -2193,7 +2193,7 @@ Added in `product/MaintenanceResourceServices.xml` and `facility/FacilityService
 | product/MaintenanceResourceServices | find#MaintenanceEquipment | Maintenance/Equipment | Maintenance/Equipment/Find (EquipmentRows); Maintenance/Facilities/FacilityDetail/Equipment; the palette and the equipment choice (ironstone.maintenance) |
 | product/MaintenanceResourceServices | find#MaintenanceFacilities | Maintenance/Facilities | Maintenance/Facilities/Find (FacilityTree, list and tree); Maintenance/Facilities/FacilityDetail (header, Children, Rooms); the palette |
 | product/MaintenanceResourceServices | store#MaintenanceEquipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/Find (CreateEquipment); Maintenance/Equipment/EquipmentDetail/Identity (Edit equipment) |
-| product/MaintenanceResourceServices | record#MaintenanceMeter | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading); a checklist's counter reading (record#ProcessStep, its Measurement linked; in work, only the work's own equipment, Maintenance P7, F94) |
+| product/MaintenanceResourceServices | record#MaintenanceMeter | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading); a checklist's counter reading (record#ProcessStep, its Measurement linked; in work, only the work's own equipment, Maintenance P7, F94); a meter plan's Complete (transition#MaintenanceWorkOrder's meterValue, the assigned technician's or a supervisor's, Maintenance P14 and its review) |
 | product/MaintenanceResourceServices | store#MaintenanceRegistration | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Registrations (Add registration) |
 | product/MaintenanceResourceServices | change#MaintenanceCustody | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Assignments (Change custodian) |
 | product/MaintenanceResourceServices | move#MaintenanceEquipment | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Identity (Move, with its preview) |
@@ -2210,16 +2210,16 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | work/MaintenanceServices | get#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (header, Lifecycle; Overview, Time, History) |
 | work/MaintenanceServices | create#MaintenanceWorkOrder | Maintenance/WorkOrders | Maintenance/WorkOrders/NewWorkOrder (NewWork; the quick create's; P6: from a procedure, Use procedure) |
 | work/MaintenanceServices | store#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (WorkHeaderEdit) |
-| work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer; P6: replacePartyId on the root and its steps, F113) |
-| work/MaintenanceServices | transition#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (primary action, Lifecycle, CompleteWork); Maintenance/WorkOrders/Find (board moves) |
+| work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer; P6: replacePartyId on the root and its steps, F113); P14 review: a plan's work reminds each person assigned to it a day before its due date (WorkEffortReminder), and one taken off it keeps none |
+| work/MaintenanceServices | transition#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (primary action, Lifecycle, CompleteWork; a meter plan's reading, P14); Maintenance/WorkOrders/Find (board moves) |
 | work/MaintenanceServices | act#MaintenanceWorkOrders | Maintenance/WorkOrders | Maintenance/WorkOrders/Find (Approve, Cancel on the selection) |
 | work/MaintenanceServices | adopt#MaintenanceRecord | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Maintenance (Adopt) |
 | work/MaintenanceServices | start#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Start timer; then TimesheetServices.start#Timer) |
 | work/MaintenanceServices | stop#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Stop timer; then TimesheetServices.stop#Timer) |
 | work/MaintenanceServices | record#MaintenanceTime | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Record time; then TimeServices.store#TimeEntry) |
 | work/MaintenanceSettingsServices | get#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings) |
-| work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from the date chosen; P18: each field not given kept, PolicyDates) |
-| work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work) |
+| work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from the date chosen; P18: each field not given kept, PolicyDates; the preventive lead days, P14) |
+| work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work; the overdue PM and unknown meter counters, P14) |
 
 Added in `work/MaintenanceServices.xml` (impl-maintenance P4; `MaintenanceIntake.js`): the requests and intake, called by Maintenance's
 Requests and RequestDetail after `check#Record` and by Commons' Report a problem and RequestDetail (a requester holds no Maintenance
@@ -2316,7 +2316,7 @@ named:
 | work/MaintenancePlanServices | get#MaintenanceSchedule | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail (header, findings) and its Schedule tab (ScheduleTerms, the terms' history) |
 | work/MaintenancePlanServices | store#MaintenanceSchedule | Maintenance/Preventive/Plans; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/Find (NewPlan); PlanDetail (Activate, More › End plan: PlanAction) and its Schedule tab (Edit terms) |
 | work/MaintenancePlanServices | get#MaintenanceDue | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/Schedule (DueExplanation, through get#MaintenanceSchedule); the next due of every PlanRows row |
-| work/MaintenancePlanServices | find#MaintenanceDue | Maintenance/Preventive/DueMaintenance | none yet: DueMaintenance is P14's |
+| work/MaintenancePlanServices | find#MaintenanceDue | Maintenance/Preventive/DueMaintenance | Maintenance/Preventive/DueMaintenance (DueRows with the calendar view, GenerateWork's preview: each row's generation outcome; capped at 500 plans, P14) |
 
 Added in `work/MaintenanceServices.xml` (impl-maintenance P10; `MaintenancePurchases.js`), called by built screens through the
 Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`, and by Purchasing's RequestDetail:
@@ -2329,6 +2329,19 @@ Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`, a
 | work/MaintenanceServices | accept#MaintenanceService | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (Accept outside service); transition#MaintenanceWorkOrder's complete (CompleteWork's outside-service line) |
 | work/MaintenanceServices | get#MaintenanceOrder | Maintenance/WorkOrders/OrderDetail | Maintenance/WorkOrders/OrderDetail (Shared/OrderDetail's Maintenance branch, read only) |
 | work/MaintenanceServices | get#PurchaseRequestWork | Purchasing/Requests/RequestDetail | Purchasing/Requests/RequestDetail (the originating work order under the header; its name only for a user Maintenance admits) |
+
+Added in `work/MaintenancePlanServices.xml` and `work/MaintenanceReportServices.xml` (impl-maintenance P14; `MaintenancePlans.js`,
+design-maintenance §5.1 occurrences, DueMaintenance, §8), with the MaintenanceOccurrence record and the generate_MaintenanceWorkOrders
+job (`data/MaintenancePlanSetupData.xml`, paused; its registration, recovery and the MaintenanceDue topic in `data/MaintenancePlanData.xml`):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenancePlanServices | generate#MaintenanceWorkOrders | Maintenance/Preventive/DueMaintenance; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/DueMaintenance (GenerateWork, Generate on a row, the selection); PlanDetail (Generate work, its preview in the confirmation); template/MaintenancePlanParts.xml generateDue |
+| work/MaintenancePlanServices | run#MaintenanceGeneration | — (the job) | the generate_MaintenanceWorkOrders ServiceJob, Admin's Jobs (its JobRegistration, batchSize) and its recovery (RecoveryDescriptor maintenanceGenerationJob, ownerRoute maintenanceDue; run by the scheduler as the job, with no user); a person who runs it generates in their own scope (P14 review R1) |
+| work/MaintenancePlanServices | reconcile#MaintenanceSchedule | Maintenance/Preventive/DueMaintenance; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/DueMaintenance (ResolveDue: coalesce, skip); PlanDetail/DueHistory (missed due dates: coalesce, skip; Correct a completion); template/MaintenancePlanParts.xml resolveDue |
+| work/MaintenancePlanServices | find#MaintenanceOccurrences | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/DueHistory (OccurrenceHistory) and GeneratedWork |
+| work/MaintenancePlanServices | get#MaintenanceDueJob | Maintenance/Settings | Maintenance/Settings/WorkPolicy (the preventive generation job's state) |
+| work/MaintenanceReportServices | get#MaintenanceCompliance | Maintenance/Reports/PreventiveComplianceReport | Maintenance/Reports/PreventiveComplianceReport (ComplianceOptions, ComplianceSummary, ComplianceRows) |
 
 Added in `work/MaintenanceSettingsServices.xml` and `product/MaintenanceImportServices.xml` (impl-maintenance P18; `MaintenanceSettings.js`,
 `MaintenanceImport.js`, design-maintenance §9 and §6 EquipmentImport), called by built screens, by Admin's Health (the readiness

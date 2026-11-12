@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
       work order opens;
     - adoptRecord: an open maintenance record of equipment made a work order (adopt#MaintenanceRecord), which opens;
     - lifecycleAction: an action of the lifecycle (transition#MaintenanceWorkOrder) at the revision read, with its reason or the
-      completion's outcome, disposition and finish, and (P10) the outside-service line Complete accepts with its evidence;
+      completion's outcome, disposition and finish (and a meter plan's reading, P14), and (P10) the outside-service line Complete
+      accepts with its evidence;
     - storeWorkOrder: WorkHeader's edit (store#MaintenanceWorkOrder);
     - scheduleWorkOrder: AssignSchedule (schedule#MaintenanceWorkOrder), the team, the technicians and the planned window;
     - startTimer, stopTimer, recordTime: the technician's own time (start#, stop#MaintenanceTimer, record#MaintenanceTime);
@@ -69,6 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
                         holdReasonEnumId:holdReasonEnumId, cancelReasonEnumId:cancelReasonEnumId, outcomeEnumId:outcomeEnumId,
                         dispositionEnumId:dispositionEnumId, failureModeEnumId:failureModeEnumId,
                         actualCompletionDate:actualCompletionDate, offlineIntent:offlineIntent, followUpName:followUpName,
+                        meterValue:meterValue,
                         serviceOrderId:(serviceLine ? String(serviceLine).split(':')[0] : null),
                         serviceOrderItemSeqId:(serviceLine ? String(serviceLine).split(':')[1] : null),
                         serviceAcceptedQuantity:(serviceLine ? serviceAcceptedQuantity : null),
@@ -262,6 +264,12 @@ along with this software (see the LICENSE.md file). If not, see
                                         <drop-down allow-empty="true">
                                             <list-options list="actionRow.evidenceFiles || []" key="${workEffortContentId}" text="${text}"/>
                                         </drop-down>
+                                    </default-field>
+                                </field>
+                                <!-- P14 (F187): a meter plan's work records the reading it took -->
+                                <field name="meterValue" hide="!actionRow.readingMeterName">
+                                    <default-field title="${actionRow.readingMeterName || 'Meter'} reading" tooltip="Taken in this work; the plan's next threshold counts from it">
+                                        <text-line size="10" input-type="number"/>
                                     </default-field>
                                 </field>
                                 <field name="actualCompletionDate" hide="!actionRow.needsCompletion">
