@@ -14,8 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- People › Applicant (design-people §5 ApplicantDetail; style-guide §3.4 360; impl-people P16): one application, from
     mantle.humanres.RecruitingServices.get#Application, as a recruiter of its employer reads it (everything) or as a member of
-    one of its interview panels (the applicant's name, the opening, the stage, the files and their own interviews and
-    scorecards; never another reviewer's scorecard nor another opening's candidates). The record header (the applicant, the
+    one of its interview panels (P16 review, the user's call of Nov 12, 2026: the applicant's name, the opening, the files a
+    recruiter shared with the panel and their own interviews and scorecards; never the stage, the application's notes and other
+    files, another reviewer's scorecard nor another opening's candidates; the same as their self-service MyInterview). The record header (the applicant, the
     opening and employer, the stage and a possible duplicate) with its one primary by stage: Schedule interview (a recruiter's,
     before an offer: schedule#Interview, a private event with the panel, a video call link when asked and the iMIP invitation to
     the candidate; the panel each assigned the scorecard) and under More Move to stage (change#ApplicationStage with a reason:
@@ -77,6 +78,37 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
         <error-response url="."><parameter name="employmentApplicationId"/></error-response>
     </transition>
+    <!-- P16 review: a file of the application (a recruiter's any, a panel member's one shared with the panel; get#ApplicationFile checks) -->
+    <transition name="applicationFile" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.get#ApplicationFile" out-map="fileOut"
+                    in-map="{applicationContentId:applicationContentId}"/>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(fileOut.location, !!fileOut.inline, fileOut.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- P16 review: the files shared with the interview panels, the ones checked (share#ApplicationContent per file, Mantle checks the
+        recruiter) -->
+    <transition name="sharePanelFiles">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.get#Application" out-map="current"
+                    in-map="{employmentApplicationId:employmentApplicationId}"/>
+            <script><![CDATA[
+                const checked = new Set((Array.isArray(sharedContentIds) ? sharedContentIds : String(sharedContentIds || '').split(','))
+                    .map(id => String(id).trim()).filter(Boolean))
+                for (const file of Array.from(current?.application?.files || [])) {
+                    if (ec.message.hasError()) break
+                    if (!file.hasFile || !!file.panelShared === checked.has(file.applicationContentId)) continue
+                    ec.service.sync().name('mantle.humanres.RecruitingServices.share#ApplicationContent')
+                        .parameters({applicationContentId: file.applicationContentId, shared: checked.has(file.applicationContentId)}).call()
+                }
+            ]]></script>
+            <if condition="!ec.message.hasError()"><message type="success">The panel's materials are saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
     <actions>
         <service-call name="mantle.humanres.RecruitingServices.get#Application" out-map="found" transaction="force-new" ignore-error="true"
                 in-map="{employmentApplicationId:(employmentApplicationId || '')}"/>
@@ -108,6 +140,12 @@ along with this software (see the LICENSE.md file). If not, see
             interviewValue = app ? {employmentApplicationId: app.employmentApplicationId, durationMinutes: '60', videoCall: 'Y',
                 inviteCandidate: app.emailAddress ? 'Y' : 'N', formId: app.scorecardFormId || null, organizationPartyId: app.organizationPartyId} : {}
             eventLink = sharedLinks['Staffing/InterviewsCalendar'] + '/EventDetail'
+            // P16 review: the files shared with the panel, and for a recruiter the choice of them
+            sharedRows = app ? Array.from(app.sharedFiles || []) : []
+            shareOptions = app && recruiter ? Array.from(app.files || []).filter(file => file.hasFile)
+                .map(file => ({value: file.applicationContentId, label: file.description})) : []
+            shareValue = app ? {employmentApplicationId: app.employmentApplicationId,
+                sharedContentIds: sharedRows.map(file => file.applicationContentId)} : {}
         ]]></script>
     </actions>
     <widgets>
@@ -133,7 +171,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="${app.applicantName}" type="h5"/>
                             <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none" condition="captionText"/>
                         </container>
-                        <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-status">
+                        <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-status" condition="recruiter">
                             <render-mode>
                                 <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${app.stageColor}">${
                                     WebUtilities.encodeHtml(app.stageText)}</q-chip>${app.possibleDuplicate ? ' <q-chip dense square class="q-ma-none m-tonal text-warning">' +
@@ -260,14 +298,54 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-box>
                             </widgets>
                         </section>
+                        <section name="ApplicationFilesSection" condition="recruiter">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <label text="The application's private files: its resume and what the applicant sent, read by its recruiters; the interview panel reads only the ones shared with it."
+                                                type="p" style="text-caption m-muted"/>
+                                        <record-files id="ApplicationFiles" record-entity="mantle.humanres.employment.EmploymentApplication"
+                                                record-id="${app.employmentApplicationId}"/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <!-- P16 review: what the panel reads of the application's files; a recruiter who changes it chooses them -->
                         <container-box>
-                            <box-header title="Files"/>
-                            <box-body>
-                                <label text="The application's private files: its resume and what the applicant sent, read by its recruiters and its interviewers."
-                                        type="p" style="text-caption m-muted"/>
-                                <record-files id="ApplicationFiles" record-entity="mantle.humanres.employment.EmploymentApplication"
-                                        record-id="${app.employmentApplicationId}"/>
-                            </box-body>
+                            <box-header title="Shared with the panel"/>
+                            <box-toolbar>
+                                <container-dialog id="SharePanelFilesDialog" button-text="Choose what the panel reads" icon="sym_o_share" width="560"
+                                        title="Files shared with the interview panel" condition="canEdit &amp;&amp; shareOptions.length">
+                                    <form-single name="SharePanelFiles" transition="sharePanelFiles" map="shareValue">
+                                        <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                        <field name="sharedContentIds">
+                                            <default-field title="The panel reads" tooltip="None is shared until you choose it, the resume either">
+                                                <check><list-options list="shareOptions" key="${value}" text="${label}"/></check>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PanelFiles" list="sharedRows" skip-form="true" paginate="false" condition="sharedRows.length">
+                                    <field name="description">
+                                        <default-field title="File">
+                                            <link url="applicationFile" text="${description}" link-type="anchor" target-window="_blank"
+                                                    parameter-map="{applicationContentId:applicationContentId, employmentApplicationId:app.employmentApplicationId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="contentDateText"><default-field title="Added"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="typeText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-md" condition="!sharedRows.length"
+                                        text="${recruiter ? 'No file is shared with the panel: it reads the name of the applicant and the opening only.' : 'The recruiter shared no material with the panel.'}"/>
+                            </box-body-nopad>
                         </container-box>
                     </row-col>
                     <row-col lg="6">

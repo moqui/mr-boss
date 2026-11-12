@@ -49,7 +49,9 @@
 // refused the same claim with the same parameters.
 // P16: an opening's applications a recruiter's of its employer (the HR officer refused with the same parameters, Services' opening
 // refused to Retail's recruiter), an application read by an interviewer of its panel alone (the HR officer refused it), and People's
-// Forms the People administrator's (the HR officer refused the screen).
+// Forms the People administrator's (the HR officer refused the screen). P16 review (the user's call of Nov 12, 2026): the
+// self-service employee on an interview's panel reads it through get#MyInterview and the reader is refused it with the same
+// parameters; the panel member reads no application record host (its notes and files are the recruiters').
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1264,13 +1266,57 @@ feature(
                 return {jobOpeningId: opening.jobOpeningId}
             })
             const find = {jobOpeningId: retail.jobOpeningId}
+            // P16 review: an interview of Retail's application with the self-service employee on its panel
+            const day = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+            const publishedScorecards = system(() =>
+                ec.entity
+                    .find("moqui.screen.form.DbForm")
+                    .condition({purposeEnumId: "DbfpInterviewScorecard", ownerPartyId: ids.organizationId})
+                    .list()
+            ).map(row => row.formId)
+            const scorecardId = asUser(users.admin, () =>
+                system(() => {
+                    // the employer's scorecard: a spec form published for it when it has none
+                    let formId = publishedScorecards[0]
+                    if (!formId) {
+                        const D = "mantle.party.FormDefinitionServices."
+                        formId = invoke(D + "create#Form", {
+                            purposeEnumId: "DbfpInterviewScorecard",
+                            organizationPartyId: ids.organizationId,
+                            description: "Access spec scorecard"
+                        }).formId
+                        invoke(D + "save#FormField", {formId, title: "Overall", fieldTypeEnumId: "DBFFT_text-line"})
+                        invoke(D + "publish#Form", {formId})
+                    }
+                    return formId
+                })
+            )
+            const scheduled = asUser(users.recruiter, () =>
+                system(() =>
+                    invoke(R + "schedule#Interview", {
+                        employmentApplicationId: retail.employmentApplicationId,
+                        startDate: ec.l10n.parseTimestamp(day + " 11:00:00.000", "yyyy-MM-dd HH:mm:ss.SSS"),
+                        panelPartyIds: ids.employeePartyId,
+                        formId: scorecardId,
+                        location: "Access room"
+                    })
+                )
+            )
             // Mantle's own checks, as the user (the services are reached through People's screens)
             const as = (user, service, parameters) => asUser(user, () => system(() => code(refusal(service, parameters))))
+            const myInterview = {workEffortId: scheduled.workEffortId}
+            const record = user =>
+                asUser(user, () =>
+                    system(() => invoke(R + "check#ApplicationAccess", {employmentApplicationId: retail.employmentApplicationId}))
+                ).recordVisible
             const codes = {
                 recruiter: as(users.recruiter, R + "find#Applications", find),
                 hr: as(users.hr, R + "find#Applications", find),
                 otherEmployer: as(users.recruiter, R + "find#Applications", {jobOpeningId: services.jobOpeningId}),
-                hrApplication: as(users.hr, R + "get#Application", {employmentApplicationId: retail.employmentApplicationId})
+                hrApplication: as(users.hr, R + "get#Application", {employmentApplicationId: retail.employmentApplicationId}),
+                panelInterview: as(users.employee, R + "get#MyInterview", myInterview),
+                readerInterview: as(users.reader, R + "get#MyInterview", myInterview),
+                panelRecord: String(record(users.employee)) + " " + String(record(users.recruiter))
             }
             const forms = screenRefusal(users.admin, "Settings/Forms")
             if (forms) problems.push(`the administrator's Forms: ${forms}`)
@@ -1284,7 +1330,10 @@ feature(
                     recruiter: "accepted",
                     hr: "PERMISSION_DENIED",
                     otherEmployer: "RECORD_UNAVAILABLE",
-                    hrApplication: "RECORD_UNAVAILABLE"
+                    hrApplication: "RECORD_UNAVAILABLE",
+                    panelInterview: "accepted",
+                    readerInterview: "RECORD_UNAVAILABLE",
+                    panelRecord: "false true"
                 }
             problems.join("\n") == ""
         }

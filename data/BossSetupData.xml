@@ -5153,9 +5153,10 @@ along with this software (see the LICENSE.md file). If not, see
         decisions and the approval rules that name the user, through Mantle's own services (the owned-resource contract). A
         rule is handed to a new approver who works for its employer; a waiting request follows its route and is not transferred.
         The services check PEOPLE_APPROVAL_OWNER_CHANGE for another user's; the identity operator and the administrator, who
-        offboard, hold it. Openings and review steps join the same lookup with their phases. -->
+        offboard, hold it. Openings and review steps join the same lookup with their phases: P16's review adds the draft and open
+        openings the user is the recruiting owner of, handed to a new owner who works for the employer. -->
     <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
-            description="The People approval rules that name the user to decide, handed to a new approver, and the requests waiting for their decision."
+            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, and the requests waiting for their decision."
             resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
             transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
@@ -5224,6 +5225,26 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- impl-people P16 review (the user's call of Nov 12, 2026; F28): an interview panel member with self-service only answers their
+        scorecard from SelfService: a non-inheritable ALLOW on the shared MyInterview screen (one location for both mounts,
+        People/MyInterview and Commons/People/MyInterview), its two transitions, and the Mantle services it and SelfService's My
+        interviews call, each of which admits the caller's own panel alone (find#MyInterviews and get#MyInterview take no party;
+        submit#Scorecard the caller's own assignment; get#ApplicationFile a file a recruiter shared with the panel). Nothing else of
+        recruiting opens to them. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_INTERVIEW_SELF" description="People own interviews for panel members without the launcher">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyInterview.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyInterview.xml/submitScorecard"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyInterview.xml/sharedFile"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.RecruitingServices\.(find#MyInterviews|get#MyInterview|submit#Scorecard|get#ApplicationFile)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_INTERVIEW_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>

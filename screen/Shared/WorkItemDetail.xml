@@ -80,6 +80,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="tasks"><default-response url="../List" parameter-map="taskListReturn.findMap"/></transition>
 
     <!-- ========== changes, each showing the item again on its tab ========== -->
+    <!-- People (impl-people P16 review): the exit interview a checklist step links, recorded on its task -->
+    <transition-include name="submitExitInterview" location="component://mr-boss/template/PeopleWorkItem.xml"/>
     <transition name="changeStatus">
         <actions>
             <service-call name="ironstone.commons.TaskServices.set#TaskStatus" out-map="statusOut" in-map="{workEffortId:workEffortId, toStatusId:toStatusId,

@@ -81,6 +81,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P8: the user's own self-service (design §3 SelfService), the same definition as Commons/People/SelfService, out of the
             menu and linked from Home; a self-service employee without People opens it by its own grant (BOSS_PPL_SELF) -->
         <subscreens-item name="SelfService" location="component://mr-boss/screen/Shared/PeopleSelfService.xml" menu-include="false"/>
+        <!-- P16 review (the user's call of Nov 12, 2026): an interview panel member's own interview and scorecard, beside SelfService
+            and opened from its My interviews, the same definition as Commons/People/MyInterview -->
+        <subscreens-item name="MyInterview" location="component://mr-boss/screen/Shared/PeopleMyInterview.xml" menu-include="false"/>
     </subscreens>
 
     <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b; P14: g h; P16: g n and g v). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person

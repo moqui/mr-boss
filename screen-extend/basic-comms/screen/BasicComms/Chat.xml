@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone's message actions in the BasicComms Chat (plans/Comms-Framework.md §3.3): a task, a request, an event, (Customer
-    Service) a case or (People P15) a line of the user's own expense claim made from a message, through Chat's createFrom transition and the create-from provider boss.records (Comms.xml), which files the
+    Service) a case, (People P15) a line of the user's own expense claim or (People P16) a job application made from a message, through Chat's createFrom transition and the create-from provider boss.records (Comms.xml), which files the
     message on the new record. -->
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <ext-action name="boss.createTask" slot="chat-message-actions" sequence="10" label="Create a task" icon="sym_o_task_alt" transition="createFrom" hook="create-from">
@@ -34,5 +34,11 @@ along with this software (see the LICENSE.md file). If not, see
         (ChatServices.create#FromChat's kind claimLine); refused for another's message and for a user with no employment -->
     <ext-action name="boss.addToClaim" slot="chat-message-actions" sequence="50" label="Add to my claim" icon="sym_o_receipt_long" transition="createFrom" hook="create-from">
         <parameter name="chatRoomId"/><parameter name="eventSeq"/><parameter name="kind" value="claimLine"/>
+    </ext-action>
+    <!-- People P16: "Create application", the sender's application to the room's opening or the opening whose plus tag the message
+        names (ChatServices.create#FromChat's kind application, mantle.humanres.RecruitingServices.create#ApplicationFromChat);
+        refused for a user who does not change recruiting and for the user's own message -->
+    <ext-action name="boss.createApplication" slot="chat-message-actions" sequence="60" label="Create application" icon="sym_o_person_search" transition="createFrom" hook="create-from">
+        <parameter name="chatRoomId"/><parameter name="eventSeq"/><parameter name="kind" value="application"/>
     </ext-action>
 </screen-extend>

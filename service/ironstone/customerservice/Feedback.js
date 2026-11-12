@@ -341,6 +341,9 @@ function getCaseResponse(p) {
     const invitation = blank(p.formResponseId) ? null : one(INVITATION, {formResponseId: p.formResponseId})
     const unavailable = () => denied("RECORD_UNAVAILABLE", "Response " + (p.formResponseId || "") + " is not available")
     if (!invitation || !cs.owns(userScope, invitation.organizationPartyId)) unavailable()
+    // a case feedback response alone: another app's assigned answer (People's scorecard, exit interview) of an organization the
+    // user serves is read only through its own app's service (impl-people P16 review)
+    if (one(FORM, {formId: invitation.formId})?.purposeEnumId !== PURPOSE) unavailable()
     const followUp = Array.from(find(FOLLOW_UP, {invitationId: invitation.invitationId}).list())[0] || null
     const manager = !!userScope.capabilities.caseManage
     const teamMember = !!followUp?.teamPartyId && !!userScope.partyId && (userScope.teamIds || []).includes(followUp.teamPartyId)
