@@ -886,7 +886,8 @@ const choiceSources = {
     // P9: the charge and the parts of a work order (organizationPartyId: the work's organization)
     costCenters: (userScope, term, selected, p) => chargeOptions(userScope, term, selected, p, "costCenter"),
     projects: (userScope, term, selected, p) => chargeOptions(userScope, term, selected, p, "project"),
-    stockParts: (userScope, term, selected) => productOptions(term, selected, "AstTpInventory"),
+    // inventory and supplies (both issued to maintenance work and routed to its expense, the user's call of Nov 12)
+    stockParts: (userScope, term, selected) => productOptions(term, selected, ["AstTpInventory", "AstTpSupplies"]),
     partFacilities: (userScope, term, selected, p) => {
         const organizationPartyId = p?.organizationPartyId
         if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
@@ -938,11 +939,12 @@ function chargeOptions(userScope, term, selected, p, kind) {
         id => (kind === "costCenter" ? partyLabel(id) : one("mantle.work.effort.WorkEffort", {workEffortId: id})?.workEffortName || id)
     )
 }
-// Products by id or name, of an asset type when one is named (equipment models), with the selected one.
+// Products by id or name, of an asset type (or types) when one is named (equipment models, parts), with the selected one.
 function productOptions(term, selected, assetTypeEnumId) {
     const factory = ec.entity.conditionFactory
     let query = find("mantle.product.Product").orderBy("productName").limit(choiceLimit)
-    if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
+    if (Array.isArray(assetTypeEnumId)) query = query.condition("assetTypeEnumId", "in", assetTypeEnumId)
+    else if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
     if (term)
         query = query.condition(
             factory.makeCondition(

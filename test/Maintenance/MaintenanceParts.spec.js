@@ -38,25 +38,50 @@ feature("the Parts tab shows the planner the planned gasket with what was issued
     }
 })
 
-feature("MaterialIssueReceipt in Maintenance gives the assigned technician Issue, Return unused and History", {
-    when() {
-        return asUser(users.tech, () =>
-            page("WorkOrders/MaterialIssueReceipt", {workEffortId: ids.inProgressOrderId, lastStandalone: "true"})
-        )
-    },
-    then(rendered) {
-        rendered.errors.length == 0
-        rendered.output.includes("Parts of work order " + ids.inProgressOrderId)
-        rendered.output.includes("Issue part")
-        rendered.output.includes("Services stock warehouse")
-        rendered.output.includes("Unused returns ·")
-        rendered.output.includes("Return unused")
-        rendered.output.includes("Issues and returns")
-        rendered.output.includes("One gasket left over")
-        // no production output or tracking in Maintenance
-        !rendered.output.includes("Tracking ·")
+feature(
+    "MaterialIssueReceipt in Maintenance gives the assigned technician Issue, Return unused and History; a refusal is shown",
+    {
+        when() {
+            return asUser(users.tech, () => {
+                const rendered = page("WorkOrders/MaterialIssueReceipt", {
+                    workEffortId: ids.inProgressOrderId,
+                    lastStandalone: "true"
+                })
+                // the Maintenance branch of materialAction: an issue above what is on hand is refused by Mantle's guard, named
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Maintenance.xml")
+                    .render(
+                        "WorkOrders/MaterialIssueReceipt/materialAction",
+                        {
+                            workEffortId: ids.inProgressOrderId,
+                            lineKey: ids.inProgressOrderId + "__" + ids.gasketId,
+                            assetId: ids.gasketStockId,
+                            quantity: 999,
+                            operationKey: "parts-spec-refused"
+                        },
+                        "post"
+                    )
+                const refusal = Array.from(result.errorMessages || []).join(" | ") + " " + String(result.output || "")
+                ec.message.clearErrors()
+                return Object.assign(rendered, {refusal})
+            })
+        },
+        then(rendered) {
+            rendered.refusal.includes("QUANTITY_EXCEEDS")
+            rendered.errors.length == 0
+            rendered.output.includes("Parts of work order " + ids.inProgressOrderId)
+            rendered.output.includes("Issue part")
+            rendered.output.includes("Services stock warehouse")
+            rendered.output.includes("Unused returns ·")
+            rendered.output.includes("Return unused")
+            rendered.output.includes("Issues and returns")
+            rendered.output.includes("One gasket left over")
+            // no production output or tracking in Maintenance
+            !rendered.output.includes("Tracking ·")
+        }
     }
-})
+)
 
 feature("a part's stock under Maintenance lists the facilities of the user's organizations that hold stock", {
     when() {

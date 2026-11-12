@@ -609,9 +609,9 @@ the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AssetAutoPostServices | post#AssetReceipt |  | Maintenance/WorkOrders/MaterialIssueReceipt (Return unused: a return of an issuance to a maintenance work order is credited to its expense and dimensions, not WIP, AC-24, Maintenance P9) |
+| AssetAutoPostServices | post#AssetReceipt |  | Maintenance/WorkOrders/MaterialIssueReceipt (Return unused: a return of an issuance to a maintenance work order is credited to its expense and dimensions, not WIP, and a receipt to the work that names no issuance yet to the policy's expense, inventory and supplies alike, AC-24, Maintenance P9 and its review) |
 | AssetAutoPostServices | repost#AssetReceipt |  | Manufacturing/WorkOrders/Disassembly (a dated delta with forwardReceiptRepostEnabled, ReceiptAdjustments.js, Manufacturing P9) |
-| AssetAutoPostServices | post#AssetIssuance |  | Maintenance/WorkOrders/MaterialIssueReceipt (Issue: to a maintenance work order or step, the MaintenanceCostPolicy expense with the facility, cost centre and project, not WIP; none mapped: the error journal, MAINTENANCE_COST_UNMAPPED; AC-24, Maintenance P9) |
+| AssetAutoPostServices | post#AssetIssuance |  | Maintenance/WorkOrders/MaterialIssueReceipt (Issue: to a maintenance work order or step, the MaintenanceCostPolicy expense with the facility, cost centre and project, not WIP; none mapped: the error journal, MAINTENANCE_COST_UNMAPPED; supplies the same, in place of the fixed-asset debit, the user's call of Nov 12; AC-24, Maintenance P9 and its review) |
 | AssetAutoPostServices | revert#AssetIssuanceOnCancel |  |  |
 | AssetAutoPostServices | repost#AssetIssuance |  |  |
 | AssetAutoPostServices | calculate#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.calculate#DepreciationRun) |

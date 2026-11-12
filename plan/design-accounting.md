@@ -2567,8 +2567,12 @@ most specific row in effect for an issuance to a managed maintenance root or ste
 facility (the nearest of the work's facility and its ancestors the organization owns) and the cost centre on the entry and the
 project as the transaction's `workEffortId`; `post#AssetReceipt` credits a return of such an issuance the same account and
 dimensions, read from the issuance's posting. No row: the transaction goes to the error journal named
-`MAINTENANCE_COST_UNMAPPED`, and Maintenance's issue refuses before it (`COST_POLICY_MISSING`). Supplies are not routed
-(Maintenance refuses them). Every other issuance and receipt posts as before.
+`MAINTENANCE_COST_UNMAPPED`, and Maintenance's issue refuses before it (`COST_POLICY_MISSING`). A supplies part issued to such
+work is routed the same way: the row's expense replaces Mantle's fixed-asset debit (`GatUnissuedFixedAsset`) and the credit stays
+the asset account the supplies were received into (the user's call, Nov 12, 2026; impl-maintenance P9 review); supplies issued
+anywhere else post as before. A receipt to managed maintenance work that names no issuance yet (`receive#Asset` posts before the
+return names it) is credited to the row's expense, never WIP, and the return reposts it the issuance's way only when the two
+differ. Every other issuance and receipt posts as before.
 
 **Navigation:** The settings entry and Home queues link here; source identifiers open their Accounting detail mount or an authorized shared record. Back preserves find filters.
 
