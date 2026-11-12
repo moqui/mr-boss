@@ -362,7 +362,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F75); items waiting on People P9/P10/P12/P18 left open |
 | P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | built and reviewed Nov 11, merged |
-| P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | built Nov 11 (review pending) |
+| P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | — |
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | — |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | — |
@@ -880,6 +880,110 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
     `plan/design-maintenance.md` §1.1, §1.2, §6, the inventories; mr-mantle `AssetServices.xml` (replace), `FacilityServices.xml`,
     FacilitySetup.js, CatalogRecords.js and the entity files;
   - the user's calls: none needed; the facility writers' ownerless rooms (the second finding) may want one later.
+
+**Review Nov 11 (P2).** mr-mantle 9f37ac4f, mr-boss 7d039285 and this note's commit (branch `mnt/p2`), over the worker's
+90b107c2, 4afa75a6, 6801f484 and 97aaa2de. Reviewed `git diff master...mnt/p2` in both repos against P2's text, §2, §4, F16–F23,
+F61, F62, F67, F70, F77, F82 and F83, design §6 and §13.2, AGENTS.md and Practices-App-Dev; read the owners' code each change
+reaches (move#Asset, Warehouse's StockPosting and InventoryCounts, AssetBooks, the return-task EECA, FacilitySetup.js,
+FacilityScope.js, People.js `employers()`, Products' Catalog.js options); lint re-run with the Debug binary.
+- Checked and found sound:
+  - `move#MaintenanceEquipment` moves equipment only: `equipmentOf` refuses stock (`AstTpInventory`, `AstTpSupplies`) and an asset
+    with no type, as Warehouse's own guards count an untyped asset as stock; it needs `MAINTENANCE_RESOURCE_EDIT`, `STOCK_MOVE` and
+    both facilities in FacilityScope, and refuses an organization change. `Asset.facilityId` and `locationSeqId` are audit-logged
+    (`enable-audit-log="true"`), so the direct write is audited. No ledger posting is bypassed: move#Asset itself posts nothing (an
+    AssetDetail quantity pair only, for stock), AssetBooks reads a facility only for inventory standard costs, and a fixed asset's
+    book is by owner organization, which the move never changes; the status SECAs on update#Asset do not fire (no status change);
+  - the hidden-ancestor tree: `hidden-n` is an index into the scope's sorted out-of-scope parents, the node's name is "" and its label
+    fixed, `parentName` is "" and `parentFacilityId` the key for a row under it; a real out-of-scope id given as `parentFacilityId`
+    answers only the scope's children; FacilityDetail's header, Children and Rooms, EquipmentDetail and the equipment rows name no
+    facility outside the scope (the rows' `facilityShown`); the palette and the choices now drop the node (R2);
+  - the scoped finds filter in the query before `count()` and paging (scope, text, registrations, facility subtree, custodian,
+    warranty, features, organization); F83's narrowing (an every-organization holder with an active internal organization) is
+    People's `employers()` rule for lists, with the record check left at every organization, as the worker recorded;
+  - EquipmentDetail and FacilityDetail outside Maintenance: every new part is conditioned on `appRoot == 'Maintenance'` (the tabs
+    render nothing elsewhere; Edit facility's time zone, capacity and bookable are `ignored` elsewhere, so Warehouse's store#Facility
+    call gets none of them and changes none); F22's update check keeps Warehouse's `check#Record` in the `else` branch unchanged, for
+    Warehouse and Manufacturing alike. Warehouse's, Manufacturing's and Accounting's EquipmentDetail rendered in qvt (an ad-hoc
+    render, not kept): 200, no errors, no Maintenance tab or supplier warranty;
+  - Products: `maintenanceContext()` is reached only for `appRoot == 'Maintenance'`; catalogEdit and catalogAdmin are the user's own
+    catalog capabilities (and store#CatalogRow checks CatalogPolicy again), every price, cost, method and stock capability false;
+    Product360 passes Maintenance's root to `get#CatalogOptions` under Maintenance only, the other mounts `null` as before;
+  - People.js's Maintenance row: regions `overview` only, no own-only regions, edits false; AssignedEquipment under Maintenance is
+    `get#AssignedEquipment` (Resources.js), each holding checked with `requireAsset` in Maintenance's scope; People's
+    `showsEquipment` stays People's;
+  - the Book: `bookOf` calls Accounting's `get#AssetBook` as the user (its own Accounting read in the owner organization), the tab
+    bar drops Book without it, and Book.xml shows a book only from that answer; MaintenanceEquipment checks the resource
+    administrator gets no book and a finance reader gets the net book value;
+  - replace#AssetPartyAssignment's `effectiveDate` defaults to now, so People's `return#Equipment` (no date) is unchanged; the
+    return-task EECA fires on the update that sets an empty `thruDate`, whatever its date, so a dated Maintenance change completes the
+    task as People's does (PeopleChecklists and PeopleScheduledChanges pass);
+  - "Mantle maintenance services are reached only under the root's grant": right per §2 and as every other app does it. No BOSS
+    group has artifact authorization for an app's Mantle services (BossSetupData lists only four report or price services); People's
+    `mantle.humanres.PeopleServices` are reached the same way under People's root. Each of the eight services checks its own
+    permission and scope (`scopeWith`, `recordMeter`'s own check), so the inherited grant decides nothing;
+  - the owner-less-room finding is right: FacilitySetup.js's `facilityOf` owns a facility by its own `ownerPartyId`, and store#Facility
+    requires an owner (`OWNER_REQUIRED`), so only loaded data has ownerless facilities; Maintenance reads them by the nearest owning
+    ancestor and its Edit facility is then refused (`FACILITY_UNAVAILABLE`). `move#MaintenanceEquipment` checks FacilityScope by
+    the nearest owning ancestor too (`facilityOrganization`), where Warehouse's own stock guards use the facility's owner; for owned
+    facilities they agree.
+- Fixes:
+  - R1 (access, medium). The `parties` and `people` choices offered every person and organization in the system (any enabled,
+    non-private party) to any resource reader, a technician with the assigned view among them: other organizations' employees,
+    customers' contacts. Other apps scope theirs (Warehouse's by role, People's by employer). Now `custodians` (Change custodian, the
+    list's custodian filter) offers the scope's organizations and their current employees (PrtEmployee), and `parties` (warrantor,
+    agency, the warranty filter) organizations only, of the internal ones only the scope's; `people` is gone (unused).
+    MaintenanceAccess: the planner's custodians hold Kenji, Retail's planner's do not, and the planner's parties offer no person
+    and not Retail; it fails with the old choices.
+  - R2 (correctness, low; leak checked). find#MaintenanceFacilities adds the unnamed node to any page that is not a level, so the
+    palette showed a blank row opening `FacilityDetail?facilityId=hidden-1` and the parent choice offered `hidden-1` with no label
+    (no name or id leaked). Both drop the node now; MaintenanceEquipment checks the palette and the parent choice for the leased bay
+    under Retail's warehouse; it fails without the filter.
+  - R3 (correctness, medium; F83). An every-organization holder with an active organization opening a facility of another
+    organization (the record check admits it) got an empty header, no children and no equipment: FacilityDetail's reads went through
+    the narrowed lists. A list anchored on a record (find#MaintenanceFacilities' new `facilityId` and a real `parentFacilityId`,
+    find#MaintenanceEquipment's `facilityId`) is now read in the record check's scope; the roots and unanchored lists stay narrowed,
+    and `hidden-n` levels keep the list's scope so their numbering holds. FacilityDetail's header reads by `facilityId` (it searched
+    the id as text, 100 to a page). MaintenanceResources checks the other organization's site and its pump for the narrowed holder
+    while its roots stay the active organization's; it fails without the change.
+  - R4 (hardening, low; F61). `replace#AssetPartyAssignment` itself refuses an effective date later than now (`DATE_FUTURE`, a
+    minute's skew allowed): it is on the `/mantle` REST asset path (mantle.rest.xml), so the new parameter could end a holding in the
+    future, and the return-task rule completes the task when the end is written. MaintenanceResources checks it; fails without.
+  - R5 (correctness, low). `change#MaintenanceCustody` checked a back-dated change only against the current holders, so a date inside
+    another holder's ended holding made two holders at once. It now refuses that too (`DATE_BEFORE_HOLDING`); MaintenanceResources
+    checks an Operator held January to March refused from February and accepted from March 2; fails without.
+  - R6 (correctness, low; missing test). The equipment move left the asset's `containerId`, so a later move of the container
+    (ContainerAssetLocation) would carry the equipment back; it now clears it, as move#Asset's whole move does. The move had no
+    regression case at all (only the acceptance walk): MaintenanceResources now checks the preview, `STOCK_MOVE` refused, stock
+    refused, another organization's site refused, and the move with its audit row and no container; the container check fails
+    without the change.
+  - Design §6 (the move cell said `move#Asset`; the move's equipment-only rule, container and ledger; the anchored lists; the custody
+    overlap and drop-downs; replace's refusal of a later date) and the Mantle service descriptions.
+- Findings (for the lead to number):
+  - `change#MaintenanceCustody` accepts any enabled person or organization as the new holder; R1 narrows only the drop-down. People's
+    `return#Equipment` requires a custodian employed by the employer. Whether Mantle should hold Maintenance's holder to the scope's
+    organizations and their employees (a customer's equipment held by the customer would then need its own rule) is the user's call;
+    recommended: yes, with the asset's owner organization admitted for customer equipment.
+  - The owner-less facility (the worker's finding, confirmed above): recommended that FacilityScope and FacilitySetup's `facilityOf`
+    read a facility's organization by its nearest owning ancestor, as Maintenance does, which changes Warehouse's behaviour for
+    ownerless rows only (an owner contract, the user's call); meanwhile the demo's rooms name their owner.
+  - `record#MaintenanceMeter` in work checks the work is assigned to the caller but not that the equipment is the work's target; P7
+    (the technician's reading in a step) should tie them.
+  - EquipmentDetail's new `subscreens` (default Identity) apply under every mount, so its URL gains `/Identity` in the other apps; it
+    renders nothing there (checked above), but a bookmark or test that compares the path would see it.
+  - The equipment and facility lists' rows each read the organization, time zone, child and equipment counts with their own queries
+    (a few per row, pages of 20 to 100); acceptable now, a candidate for batching with P3's work-order counts.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceResources 5 of 5 (1.6 s feature time; the new move
+  feature 0.20 s), then with MaintenanceScope, PeopleChecklists, PeopleScheduledChanges, AssetReservationMisc, WorkProcess and
+  WarehouseFacilities 89 of 89 features (12.5 s); mr-boss MaintenanceEquipment 4 of 4 and MaintenanceAccess 9 of 9 (4.4 s alone), then
+  with ProjectsAccess and WarehouseFacilities 48 of 48 features. Each new case was run against the code without its fix and failed
+  (R1–R6 as above). `moqui lint --screens` with `target/debug/moqui`: 136 flagged sites, as before P2, none in the changed screens.
+  Prettier clean on the changed JavaScript. Not run: ./moq test-apps, the acceptance suite (MaintenanceEquipmentWalk passes no
+  party choice and is unchanged by the fixes).
+- For the lead: budget share mr-mantle MaintenanceResources 1.6 s (+0.4 s over the Built note), mr-boss unchanged in effect (+0.1 s);
+  merge hot spots as the Built note's, plus mr-mantle `MaintenanceResources.js`, `MaintenanceResourceServices.xml` and
+  `AssetServices.xml` (replace), mr-boss `Maintenance.js` (choiceSources, resourceChoices), Resources.js, `Assignments.xml` and
+  Equipment/Find.xml (the custodians choice), design §6; the user's calls open: the holder Mantle admits in a custody change (first
+  finding) and the ownerless facility's organization in FacilityScope (second), each with the recommendation above.
 
 ### P3 — Work orders
 
