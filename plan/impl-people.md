@@ -5789,6 +5789,108 @@ Built and Review notes of P7, P9, P10, P12, P14, P18, P19 and follow-ups 1 and 2
   F360 wait on the user's call with People's lead.
 - Budget share: mr-mantle +0.1 s (PeopleChecklists), mr-boss about +0.05 s (the registry and Teams checks).
 
+**Follow-up Nov 12 (follow-up 3).** Links between People and the merged Maintenance app, on the user's calls of Nov 12 (§4) on the
+Maintenance merge review's F390 and F393 (impl-maintenance F356, F357, F360). Branch `ppl/fix3`: mr-mantle 6055d1d7 and mr-boss (this commit).
+Not merged.
+- Checked first (the code over the plan): `store#Membership` (employees only, through `people.employmentFind`) and `store#Unit`;
+  `Organization.js employerOf` (rollups only) against Maintenance's team readers, all by `Party.ownerPartyId`:
+  `MaintenanceDispatch.js` `requireTeam` and `teamsOf` (Teams, `find#MaintenanceTeams`, the defaults), `MaintenanceWork.js`
+  `requireTeam` (a work order's team, the policy's default team), `MaintenancePlans.js` (a plan term's team), `MaintenanceIntake.js`
+  `intakeTeam` (the rule owner's organization) and BOSS `Maintenance.js teamOptions`; the demo's Facilities maintenance (an owner, no
+  rollup, two agents as members). EventServices' `book#Resource`, `check#ResourceBookings` and `cancel#ResourceBooking` (each
+  `check#EventAccess` edit: a kept event refused to every user, admitted to the system scope), `ResourcePolicy.js guard` and
+  `eventVisibility` (as the system every event was visible, so a clash would name its title: F358), `create#Event` and
+  `cancel#EventOccurrence` (bookings kept, notices withdrawn); Training.js and Recruiting.js (a free-text `location`; moves and cancels
+  by `update#WorkEffort`, so no booking checked); Commons' `get#ResourceBookings` (`canCancel` the user's own and not recurring),
+  `cancel#MyBooking`, ResourceDetail and EventDetail (Cancel behind `canEdit`, false on a kept event); `get#PartyCapacity` (leave
+  spread additively, holidays and shifts) and its callers (Maintenance's dispatch window, Projects' staffing and reports, timesheets'
+  expected hours, People's capacity preview).
+- Teams (the user's call 1):
+  - `store#Membership` admits a current agent of the team's employer (`PrtAgent`) as a team's member or lead; a department's lead
+    stays an employee (`NOT_EMPLOYED`), its members its assignments'. OrgStructure's Add member and a team's Edit lead choose among
+    employees and agents (`staff`), the dialog says so.
+  - One rule for a team's organization, Mantle `humanres/UnitEmployers.js`: the organization its rollups reach first, its internal
+    owner for a team with no rollup at all (a department none). `Organization.js` reads its `kindsOf` and `employerOf` from it (so
+    such a team opens on `get#Unit` and keeps its members, though the tree does not list it); Maintenance's readers above read
+    `teamOrganizations` and `teamsOf` (owner contracts: `find#MaintenanceTeams` names that organization).
+  - Demo: Facilities maintenance (`BOSS_MNT_TEAM`) has its `PrtOrgRollup` under Services from Jan 1, 2026
+    (`BossZMaintenanceDemoData.xml`).
+- Rooms (the user's call 2, F356, F357):
+  - Mantle `humanres/EventRooms.js`: a bookable room (`FcTpRoom`, bookable, not closed; else `ROOM_UNAVAILABLE`) is booked,
+    checked again after a move, changed and cancelled through `book#Resource`, `check#ResourceBookings` and `cancel#ResourceBooking`
+    called as the system (`runAsSystem`) by People's services after their own check; a refusal (a clash, a block, the policy) is
+    `ROOM_UNAVAILABLE` with the booking service's words and rolls the change back; `roomsOf` reads each event's room and its state
+    (booked, waiting for its approver, refused).
+  - `store#Training` (`facilityId`), `schedule#Interview` and `change#Interview` (`facilityId`, empty for none) book the room, which
+    is the event's place (an interview on a video call keeps its link as the place); free text stays for a place off site; a move
+    checks the room kept, a new room is booked and the old cancelled; `cancelSession` and `cancel#Interview` cancel the booking.
+    Sessions' and interviews' rows carry `facilityId`, `roomName`, `roomStatus` and `roomStatusText` (an interview's for its recruiters
+    and panel only).
+  - EventServices (descriptions) and `ResourcePolicy.js eventVisibility`: no user sees no event, so a clash found as the system is
+    Busy (F358, which this made reachable).
+  - Commons' `get#ResourceBookings` reads `get#ManagedEvents` and offers no Cancel on a kept event (F357; Maintenance's room calendar
+    and Commons' ResourceDetail use it).
+  - Screens: Training's Schedule session and TrainingDetail's Change session have Room (the new `rooms` choice: bookable rooms by name
+    or site, for a development reader or a recruiter) beside Place; the header names a room waiting or refused; ApplicantDetail's
+    Schedule interview and Change have Room, the Interviews row's state names a room waiting or refused.
+- Capacity (F360): `get#PartyCapacity` reads `Training.js sessionTimesOf` (the sessions not cancelled over the range, of each person as
+  trainer or holding a place enrolled or completed and not marked absent) and takes them off with the person's time off, the
+  intervals merged so each moment counts once (timed leave is now merged too, where it was added), at most the day's base; a holiday
+  takes the day and neither counts. Each day and week gains `training` and `trainingHours`; `leave` stays leave's.
+- Owner contracts written: design-maintenance's header, §7.1 (an application's event), §9 Teams, §13.2 (the window's free hours);
+  impl-maintenance F356, F357, F358 and F360 rows "Built by People follow-up 3"; design-people's header, §4 OrgStructure, §5
+  ApplicantDetail, §10 TrainingDetail. No inventory row changes (no service or form added; `facilityId` parameters only).
+- Specs (each new check fails on the code before: no room is booked and an agent is `NOT_EMPLOYED`; F357's check run on the old
+  ScheduleServices failed): Mantle PeopleOrganization gains "a team takes an agent..." (0.62 s: an agent member and lead, an agent of
+  another employer and a department's agent lead refused, a team made outside People opened and kept by A's HR and refused to B's, a
+  department outside refused, `teamOrganizations` and `teamsOf` rollup first); Training gains "a session's room..." (0.96 s: a clash
+  refused naming Busy and not the meeting, a store room refused, the room booked and named the place, a direct cancel refused, Zoe's
+  capacity with two hours of leave and one of training, the coach's two, a move into the meeting or the blackout refused with the
+  session unmoved, a move kept, off site with the booking gone, back and cancelled with it, the coach's hours back); Recruiting gains
+  "an interview's room..." (0.46 s: a clash refused with no interview made, the room booked, a direct booking refused, a move into the
+  meeting and into the annex's blackout refused, the move to the annex done, the cancel taking it). BOSS PeopleTraining gains "the
+  session in Room 103" (0.29 s: booked, the rooms choice with a selected value off the page, Commons' calendar `mine` with no Cancel,
+  `cancel#MyBooking` refused); MaintenanceSettings' Teams feature asks People for maint.tech2 in Facilities maintenance
+  (`ALREADY_MEMBER`), its unit's employer Services and `find#MaintenanceTeams` naming Services.
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): Mantle PeopleOrganization, Training, Recruiting,
+  CalendarChanges, CalendarServices, Dav, LeaveRequests, LeaveLedger, BusinessTime, CommonsToday, the Maintenance specs that read teams,
+  bookings or capacity (Dispatch, Intake, Reports, Stack, WorkOrders, Generation, Due, Scope, ManagedWork, Costs, Processes, Outages),
+  ResourceBookingDecisions, ResourceBookingPolicy, PeopleSchedules, ShiftRoster, WorkProjectReports, WorkResources, PeopleEmployment,
+  PeopleScope, PeopleDirectory, Qualifications, Offers, PeopleApprovals, TimeImports and WorkManualTimeBilling 236 of 236 (36 specs,
+  96.9 s of features); BOSS every People spec but PeopleHire, PeopleExpenses, PeopleOffers, PeoplePositions and PeopleReviews (15),
+  MaintenanceSettings, MaintenanceScheduling, MaintenanceWorkOrders, MaintenanceAccess, MaintenancePlans, MaintenanceRequests,
+  MaintenanceStack, MaintenanceEquipment, Schedules, EventDetail and Calendar 175 of 175 (26 specs, 54.2 s). `moqui lint --screens`:
+  137 flagged sites, none in the changed screens. Prettier clean on the new and changed JavaScript that was clean before
+  (MaintenanceWork.js, People.js and Maintenance.js were not, and are left in their style). Not run: `./moq test-apps`, the
+  acceptance suite (none written: the follow-up has no "usable when" of its own).
+- Findings (provisional, numbered by the lead):
+  - An agent's team memberships do not end when the agency ends: a separation ends an employee's memberships (Employment.js), nothing
+    ends an agent's, so a contractor whose `PrtAgent` row ended stays a member (and Maintenance ranks them first among the team, though
+    `requireMember` then refuses the assignment).
+  - The owner fallback makes every `OrgTeam` with no rollup owned by an internal organization a People unit by `get#Unit` and
+    `store#Membership`, Customer Service's service teams among them (owned by their organization, `PrtServiceTeam` members): People's
+    HR can now add `PrtMember` rows to one. They were already Maintenance's teams by owner (P3's open owner question).
+  - Timesheets' expected hours (`TimesheetServices`, `capacity`) now drop by a person's training hours, as Projects' utilization and
+    dispatch do; training is worked time, so whether a timesheet should still expect it is the user's call.
+  - A training session at another employer takes the person's hours off at every employer (F392's shape, as leave).
+  - As the system, a booking that needs approval is requested even when the scheduler is one of the room's approvers (no user to
+    match), and the approver's notice has no acting user; the requester shown is the event's owner.
+  - A kept event's booking made before this (none in the demo) is not re-read: a session or interview moved now checks it, one
+    cancelled now cancels it.
+  - No demo session or interview has a room.
+- For the lead:
+  - budget share: mr-mantle about +2.0 s (PeopleOrganization 0.62, Training 0.96, Recruiting 0.46); mr-boss about +0.4 s
+    (PeopleTraining 0.29, MaintenanceSettings' Teams about +0.1); no spec near 15 s;
+  - merge hot spots: mr-mantle `Organization.js` (the unit reads moved to `UnitEmployers.js`, `addMembership`), `Training.js`
+    (`sessionLines`, `storeTraining`, `cancelSession`, the export), `Recruiting.js` (`interviewRows`, schedule, change and cancel),
+    `ResourceServices.xml` (`get#PartyCapacity`), `ResourcePolicy.js`, `EventServices.xml` (three descriptions), the four Maintenance
+    modules' team checks, `DevelopmentServices.xml`, `RecruitingServices.xml`, the three specs (features appended); mr-boss `People.js`
+    (a choice source after `trainingForms`), `Maintenance.js` (`teamOptions`), Commons' `ScheduleServices.xml`, Training,
+    TrainingDetail, ApplicantDetail, OrgStructure, `BossZMaintenanceDemoData.xml`, PeopleTraining (a feature inserted second),
+    MaintenanceSettings' Teams feature, design-people, design-maintenance, impl-maintenance's F356–F360 rows, this file (§4's two rows,
+    this note). P22 (`ppl/p22`) touches none of these but this file and possibly `People.js`;
+  - the user's call wanted: the timesheet expected hours above, and whether a team's contractor membership should end with the agency.
+
 ### P21 — Grievances
 
 Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends stage 3.
@@ -6761,6 +6863,8 @@ the owner's design.
 | Nov 12, 2026 | When a review's reviewer changes (development's reassign, or the line's re-route when a reviewer leaves), the new reviewer reads the feedback already given on the review and withdraws the feedback still waiting, whoever asked for it: the feedback belongs to the review. The earlier reviewer's private notes do not pass | The user's call on P20's question (built in P20's review, R1: Reviews.js `readsStep`, `cancelFeedback`; Mantle Reviews checks Nia reading Cy's feedback that Max asked for and withdrawing Ana's, and none of Max's note) |
 | Nov 12, 2026 | Payroll configuration (pay components, structures, groups and localizations) has its own permission, `PAYROLL_CONFIGURE`, in place of `PEOPLE_CONFIGURE`: Mantle seeds it granted to `ADMIN`; BossSetupData grants it to `BOSS_PEOPLE_PAYROLL` and `BOSS_PEOPLE_ADMIN` and adds it to their capability bundles; the five pay configuration screens are under People/Payroll beside Rates, so Settings stays the People administrator's | The user's call on P22's finding (built in P22's review, R5: design-people §1.1, §1.2, §8; P22's text; the acceptance PeoplePayConfigurationUsable walks as `people.payroll` again) |
 | Nov 12, 2026 | Publishing a pay component or a pay structure needs an approver: publish asks a People approval of kind `PakPayrollConfig` on P5's pattern (an Approvals.js kind, the `PeoplePayrollConfigApproval` topic with approve and refuse services, a direct-only notice); with no rule the employer's payroll approvers (and HR editors who read payroll) decide, never one who drafted or asked (the kind's excluded deciders, as P17's); the published version takes effect on approval; a changed draft supersedes the waiting request | The user's call on P22's finding (built in P22's review, R6: Mantle PayConfiguration's approval feature; design-people §8, §12) |
+| Nov 12, 2026 | A team may include contractors: `store#Membership` admits a current agent of the employer (`PrtAgent`) as a team's member or lead; a department stays employees only (its members are assignments', its lead an employee). Teams sit under their unit by a `PrtOrgRollup`; Maintenance's demo team Facilities maintenance (`BOSS_MNT_TEAM`) gets its rollup under Services. People and Maintenance read a team's organization by one rule: the organization its rollups reach first, its internal owner (`Party.ownerPartyId`) for a team with no rollup at all | The user's call on the Maintenance merge review's F390 (built in follow-up 3: Mantle `UnitEmployers.js`, read by `Organization.js` and Maintenance's team readers as an owner contract; PeopleOrganization, MaintenanceSettings) |
+| Nov 12, 2026 | People builds its side of impl-maintenance F356, F357 and F360 now: a training session and an interview take a meeting room through Maintenance's resource booking (a bookable room, booked as the system by People's services after their own check; free text stays for a place off site), refused on a clash or a blackout, moved and cancelled with their event; the booking services refuse every user on an application's event (its own services book, move and cancel for it), Commons' room calendar offers no Cancel there, and a clash found as the system is named Busy. `get#PartyCapacity` takes a person's training sessions off (as the trainer, or holding a place enrolled or completed), counted once with leave, shifts and holidays | The user's call on F393 (built in follow-up 3: Mantle `EventRooms.js`, Training.js, Recruiting.js, ResourceServices, ResourcePolicy.js; BOSS Training, TrainingDetail, ApplicantDetail, Commons' ScheduleServices; Training, Recruiting, PeopleTraining) |
 
 ## 5. Open questions
 

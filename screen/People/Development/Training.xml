@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.DevelopmentServices.store#Training" out-map="stored"
                     in-map="{trainingClassId:(trainingClassId || null), startDate:(startDate || null), endDate:(endDate || null),
-                        location:(location ?? null), description:(description ?? null), trainerPartyId:(trainerPartyId || null),
+                        location:(location ?? null), facilityId:(facilityId ?? null), description:(description ?? null), trainerPartyId:(trainerPartyId || null),
                         capacity:(capacity || null), assessmentFormId:(assessmentFormId || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Session scheduled</message></if>
         </actions>
@@ -107,14 +107,21 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-dialog id="ScheduleSessionDialog" button-text="Schedule session" icon="sym_o_event" type="primary" width="760"
                         title="Schedule a training session" condition="canSchedule &amp;&amp; courseOptions.length">
                     <label type="p" style="text-caption m-muted"
-                            text="The session is a private event in the calendars of its trainer and the people enrolled. Its results answer the assessment form."/>
+                            text="The session is a private event in the calendars of its trainer and the people enrolled. A room is booked for it, by the room's rules; its results answer the assessment form."/>
                     <form-single name="ScheduleSession" transition="storeTraining">
                         <field name="trainingClassId">
                             <default-field title="Course"><drop-down><list-options list="courseOptions" key="${key}" text="${text}"/></drop-down></default-field>
                         </field>
                         <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
                         <field name="endDate"><default-field title="Ends"><date-time/></default-field></field>
-                        <field name="location"><default-field title="Place"><text-line size="40"/></default-field></field>
+                        <field name="facilityId">
+                            <default-field title="Room" tooltip="A bookable meeting room, booked for the session; empty for a place off site">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'rooms'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="location"><default-field title="Place" tooltip="Off site, without a room"><text-line size="40"/></default-field></field>
                         <field name="trainerPartyId">
                             <default-field title="Trainer" tooltip="Someone who works for the course's employer">
                                 <drop-down>
@@ -135,7 +142,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-layout>
                             <field-ref name="trainingClassId"/>
                             <field-row><field-ref name="startDate"/><field-ref name="endDate"/></field-row>
-                            <field-row><field-ref name="location"/><field-ref name="capacity"/></field-row>
+                            <field-row><field-ref name="facilityId"/><field-ref name="location"/></field-row>
+                            <field-ref name="capacity"/>
                             <field-row><field-ref name="trainerPartyId"/><field-ref name="assessmentFormId"/></field-row>
                             <field-ref name="description"/>
                             <field-ref name="submitButton"/>

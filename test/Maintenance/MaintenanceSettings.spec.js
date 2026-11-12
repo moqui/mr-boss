@@ -8,7 +8,8 @@
 // row rules are Mantle's MaintenanceImport; the access cases are MaintenanceAccess'; the "usable when" is the acceptance
 // MaintenanceSetupWalk. P8: Teams' one qvt render (People's compressor team read only, its lead and members with their dates, the
 // link to People's organization structure, its dispatch defaults), the team a People unit of its employer that People's
-// membership service reaches (impl-people's Maintenance merge review).
+// membership service reaches (impl-people's Maintenance merge review); Facilities maintenance too, its agents members, both apps
+// reading Services as its organization (impl-people follow-up 3).
 // Standalone over the demo: a spec-local organization for the policy and the readiness (the demo's organization keeps its
 // defaults for the other specs), and spec-local data operators.
 // Run: ./moq test mr-boss --spec MaintenanceSettings
@@ -349,10 +350,30 @@ feature(
                     })
                 )
             )
-            return {rendered, peopleTeam}
+            // impl-people follow-up 3 (the user's call): Facilities maintenance is a People unit too (its rollup under Services), and
+            // a team takes its employer's agents, so People reaches it and refuses maint.tech2 only as a member already; both apps
+            // read Services as its organization
+            const facilitiesTeam = asUser(users.system, () =>
+                system(() =>
+                    refusal("mantle.humanres.OrganizationServices.store#Membership", {
+                        unitPartyId: ids.teamId,
+                        partyId: ids.tech2PartyId,
+                        memberRole: "member"
+                    })
+                )
+            )
+            const facilitiesUnit = asUser(users.system, () =>
+                system(() => invoke("mantle.humanres.OrganizationServices.get#Unit", {partyId: ids.teamId}))
+            ).unit
+            const teams = as(users.admin, S + "find#MaintenanceTeams", {}).teamList || []
+            const facilitiesRow = teams.find(row => row.teamPartyId == ids.teamId) || {}
+            return {rendered, peopleTeam, facilitiesTeam, facilitiesUnit, facilitiesRow}
         },
-        then({rendered, peopleTeam}) {
+        then({rendered, peopleTeam, facilitiesTeam, facilitiesUnit, facilitiesRow}) {
             peopleTeam.includes("ALREADY_MEMBER")
+            facilitiesTeam.includes("ALREADY_MEMBER")
+            facilitiesUnit.employerPartyId == ids.organizationId
+            facilitiesRow.organizationPartyId == ids.organizationId
             rendered.errors.length == 0
             rendered.output.includes("Compressor and field service")
             rendered.output.includes("Facilities maintenance")
