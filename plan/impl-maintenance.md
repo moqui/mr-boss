@@ -379,7 +379,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built and reviewed Nov 12, merged |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
-| P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
+| P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | built and reviewed Nov 12, merged |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12, merged |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
@@ -4316,7 +4316,7 @@ Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exp
   get#MaintenanceStatusReport; ss-inventory's P17 line (no baseline form).
 - Design edits: design-maintenance's header, §1.4 Shipped reports, §8 Reports (Overview as built) and WorkStatusReport as built;
   impl-insights §7's "What waits on Maintenance" (built).
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F303 to F313 in order:
   - A resource-down alert needs outage data, which the plan's two documents (work orders, occurrences) do not carry: a third
     document and dataset, BossMaintenanceOutage and `boss-maintenance-outages`, over ResourceUnavailability (its organization field;
     a reader takes the row in force, F119). Its threshold is the alert query's end (`now-4h`), which the copier changes.
@@ -4405,7 +4405,7 @@ P14–P18, the framework's tx-commit outbox), 1882a13c and this note's commit (b
     none of Services', even asking for Services by name; Services' reader the air handler's. It fails with the filter on another
     field.
   - MaintenanceAccess: each user's shell data rendered once in the spec (the purchases feature rendered the supervisor's twice).
-- Findings:
+- Findings, numbered by the lead F314 to F318 in order:
   - The report options are not in the CSV: the CSV is the form-list's own (F72), whose rows carry their state and measures; the
     options are in the print and in the page. Putting them in the export needs an export of the report's own (as Commerce's and
     Purchasing's reports have) or a framework form-list option; left as built.
@@ -5029,6 +5029,8 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P14: the generation job's every-organization scope is the job's own (no user) or a system administrator's; anyone else generates in their own scope; reminders for assigned PM work a day before the due date; the job seeded paused; job-made work waits for a supervisor under the default zero threshold | The lead's acceptance of the reviewer's and worker's recommendations, by the plan's text |
 | Nov 12, 2026 | P11: Projects' money readers see a repair's cost total per work order; no estimate before anyone is assigned. P19: the due-PM calendar is for MAINTENANCE_VIEW holders | The lead's acceptance of the workers' recommendations |
 | Nov 12, 2026 | P19: an internal caller brings up only the work they reported or are assigned; a customer or vendor caller their organization's open work | The user's call (P19) |
+| Nov 12, 2026 | P17: a third dataset `boss-maintenance-outages` (a resource down past four hours); the generation-failure alert reads the server log (`otel_logs`), owned by a holder of the log dataset; Maintenance supervisors and administrators read the datasets through Insights | The lead's acceptance of the worker's recommendations |
+| Nov 12, 2026 | P12: the storer's cost access decides whether the stored intervention report shows amounts, and the agent sends it as stored; no demo customer repair (a spec fixture) | The lead's acceptance of the worker's recommendations |
 
 ## 5. Open questions
 
@@ -5356,6 +5358,22 @@ paths under `mr-boss/`.
 | F300 | P19 review: The call context's equipment branch takes the first 10 assets the organization owns, with or without work, then their work | P19's Review note |
 | F301 | P19 review: The due projection pages `find#MaintenanceDue` (200) before it keeps the user's teams | P19's Review note |
 | F302 | P19 review: The video call's join link lives as long as the call plus a day (at least 24 hours, at most 90 days) | P19's Review note |
+| F303 | P17: A resource-down alert needs outage data, which the plan's two documents (work orders, occurrences) do not carry | P17's Built note |
+| F304 | P17: A failed generation batch leaves no record a business dataset reads | P17's Built note |
+| F305 | P17: The overdue-PM dataset holds the obligations a generation or a decision brought due (MaintenanceOccurrence rows) | P17's Built note |
+| F306 | P17: WorkEffort has no created date | P17's Built note |
+| F307 | P17: Design §8's "report options appear in exports" | P17's Built note |
+| F308 | P17: Insights' catalog calls an owner's `catalogueService` as the viewer under Insights' grant | P17's Built note |
+| F309 | P17: Overdue is past the root's current `estimatedCompletionDate` | P17's Built note |
+| F310 | P17: In a test render rooted at Maintenance.xml a `//Maintenance/...` shared link renders disabled, so specs check a row by its id, not its link. | P17's Built note |
+| F311 | P17: No Insights record screen exists for a Maintenance document, so Insights' drill (Drill.js `recordScreens`) shows no record link for the Maintenance datasets | P17's Built note |
+| F312 | P17: The internal flow map's template version is 2 | P17's Built note |
+| F313 | P17: An existing database needs `BossMaintenanceReportData.xml` and the P17 block of BossSetupMaintenanceData.xml loaded on upgrade, then each dataset's index refreshed (Admin's readiness offers it). | P17's Built note |
+| F314 | P17 review: The report options are not in the CSV | P17's Review note |
+| F315 | P17 review: Maintenance's supervisors' and administrators' dataset grant (BOSS_MNT_DATASETS and the documents' rows) opens the rows only to one who also reads datasets through Insights (the report engine's `query#Documents` is the Insights groups') | P17's Review note |
+| F316 | P17 review: A completion reopened across periods and completed again counts in each period whose end saw it complete (rework), by R1's rule | P17's Review note |
+| F317 | P17 review: The Overview's Downtime card shows to every reader | P17's Review note |
+| F318 | P17 review: Upgrade (for P20's release notes) | P17's Review note |
 
 
 ## 7. Later
