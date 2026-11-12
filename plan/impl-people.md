@@ -5286,6 +5286,62 @@ generally. mr-mantle b936d768 and mr-boss (this commit), branch `ppl/cal`.
   - by the rule, an attendee who may already change an event (an editor of its team calendar) makes their own calendar's editors
     its editors too when they put it there.
 
+**Review Nov 12 (calendar follow-up).** Every write path was walked against the rule: Mantle EventServices (update, cancel and
+restore#EventOccurrence, store#EventRecurrence, send#EventInvitations, remove#EventAttendee, book#Resource, cancel and
+check#ResourceBookings all check `check#EventAccess` edit), CalendarServices (`add#CalendarEvent` marks, `store#CalendarFeedEvents`
+skips viewOnly and kept events for feeds, `import#Calendar` and CalDAV), CalendarDavServices (PUT by name and by UID, DELETE), the
+BOSS Commons event and calendar services and screens (every change behind `get#EventAccessInfo` edit; `duplicate#Event` and
+`save#EventOverview` add through `add#CalendarEvent`), Projects' calendar (a WetEvent through the same check, other items through
+`move#TimelineItem`'s task and project access), Manufacturing (runs are not events to `get#EventAccessInfo`, F39), ShiftRoster
+(ShiftAssignment rows, no events) and holidays (no organizer, no calendar). Sound: an attendee, their delegates, a shared calendar's
+editors and a phone change or cancel no invitation they did not organize; kept events change only in People; the organizer's own,
+the delegate of the organizer's calendar and the team calendar it was made in are as before (CalendarServices' Dee, Calendar spec).
+The system scope (no user, authorization off) is reached only by `runAsSystem`, scheduler jobs, data loads and the mail sync;
+the anonymous services and screens (PublishedCalendar, `fetch#CalendarSubscriptions`, `send#DueReminders`, the call link token
+routes, `create#ApplicationFromEmail`) pass no request-chosen event to an event write service, so it is safe as built.
+- R1 (High; the follow-up's first finding): attendee links made before the fix still gave edit. `migrate#CalendarViewOnlyLinks`
+  (CalendarServices, run from the new seed file `data/CalendarSeedData.xml`, as P10's `migrate#ProductionCostRates`) marks each
+  link with no viewOnly: Y when the event has an organizer who neither owns nor edits the calendar and the calendar's owner could
+  not change the event through another calendar link, else N (the organizer's own, a delegate's or team member's, an event with
+  no organizer, a feed's). Each link in its own transaction, a failure logged and counted. `add#CalendarEvent` now writes N for
+  an editor's link, so a later load judges no new link again. Spec: CalendarServices (Ben's old link Y, he and Cy refused;
+  Ada's own, Dee's delegated call, the all-hands Ben edits through the team calendar and an event with no organizer N; a second
+  run does nothing).
+- R2 (Medium; the follow-up's third finding, in part): `cancel#Interview` closes the interview's video call link: the recruiter
+  who scheduled it through the framework's `revoke#CallLink` (guests removed at once), another recruiter of the employer as the
+  system (the link revoked, so its token and guests are refused, and the guests' credentials ended for `expire#Calls`), with
+  `revoke#CallLink`'s preconditions checked first so no error rolls the cancel back. Spec: Recruiting (both paths: the link
+  revoked, the token refused, the guest out).
+- R3 (Low): a phone's delete of an invitation the attendee's calendar only shows was refused (403), so it came back on the phone
+  with no way to drop it there (before the follow-up the delete took it out of that calendar); it now takes it out of that
+  calendar and leaves the event as it was. A kept event's delete is still 403. Spec: Dav (204, the calendar empty, the event
+  unchanged; the organizer's delete still cancels it).
+- Provisional findings (for the lead to number):
+  - `tellAttendees` (schedule, change and cancel#Interview) catches a failing `send#EventInvitations`, but the failure has
+    already marked the transaction rollback-only (docs/logic/Services.md), so the interview change rolls back while the screen
+    says it was made and the attendees were not told; the invitations want to go after commit (pre-existing in schedule since P16);
+  - Leave's WetTimeOff projections are owned by the employee, so Mantle's event services (update, cancel and restore#EventOccurrence,
+    `add#CalendarEvent` and then CalDAV) let the employee move or cancel their approved leave's "Out of office" on a direct call;
+    the BOSS screens refuse it (`get#EventAccessInfo` is WetEvent only) and no remote endpoint reaches it today. An EventManager
+    row on LeaveRequestSegment.workEffortId (with an index) would close it; production runs (WepProductionRun, guarded in BOSS
+    only, F39) likewise by an EventManager on WorkEffort with that purpose;
+  - as the system, `send#EventInvitations` no longer leaves out the acting user, so a recruiter on the panel who changes or
+    cancels an interview is notified of their own change;
+  - a cancelled interview's scorecards stay open to submit (`submit#Scorecard` does not look at the event);
+  - the migration errs toward view only on a shared calendar: a link an editor of the event (not its organizer) put in a shared
+    calendar is marked Y unless the calendar's owner edits the event through another calendar; the organizer and that other
+    calendar's editors still change it.
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): Mantle Training, Recruiting, Dav,
+  CalendarServices, CalendarChanges, CommonsToday, LeaveRequests, ShiftRoster, PeopleChecklists, Qualifications, Offers,
+  BusinessTime 91 of 91 (52.5 s, features 28.1 s); BOSS Calendar, EventDetail, Schedules, CalendarSettings, PublishedCalendar,
+  SyncSettings, TodayPanel, QuickCreate, PeopleRecruiting, PeopleTraining, PeopleLeave, PeopleRoster, PeopleTime,
+  ManufacturingAccess, PeopleAccess, PeopleSelfService 145 of 145 (48.5 s, features 24.9 s). New checks: the migration feature
+  0.42 s, the call link feature 0.22 s, the changed Dav feature 0.12 s; each fails on the code before the fixes. Prettier clean on
+  Recruiting.js and Recruiting.spec. The seed file was not loaded into a database here (the service is spec'd directly).
+- For the lead: budget share mr-mantle about +0.65 s, mr-boss none. Merge hot spots: CalendarServices.xml, CalendarDavServices.xml,
+  Recruiting.js, Recruiting.spec, impl-people.md; nothing in P21's files. R3 departs from the follow-up's "DELETE refused to
+  non-editors" for a link the calendar only shows (it changes the user's calendar, never the event): the user may want to confirm.
+
 ### P20 — Reviews and goals
 
 Design §11 ReviewCycles, Reviews, ReviewDetail, Goals; PE-16. After P16 (an assessment is a response of a review
