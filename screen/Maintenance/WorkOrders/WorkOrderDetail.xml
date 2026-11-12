@@ -26,7 +26,10 @@ along with this software (see the LICENSE.md file). If not, see
     and History (90). The other tabs of design §3 join with their phases at their gaps: Parts (40, P9: built, the planned parts and the parts used),
     Purchasing (50, P10: the work's purchase requests and order lines, Request a purchase, Accept outside service, whose service line
     Complete also offers to accept) and Costs (100, P11: built, the cost reader's only, BOSS_MNT_COSTS). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
-    and the header says when the target is out of service. No cost. -->
+    and the header says when the target is out of service. P19 (design §1.4 Meetings, §12): More offers Print work order (the
+    Instructions print, with the QR of the work order's link), Add to calendar (.ics of its planned window) and, for a planner,
+    supervisor or its assigned technician, Add video call (a Commons event with a call link, the vendor's expert and the
+    technicians invited; add#MaintenanceVideoCall). No cost outside the Costs tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work order" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
@@ -39,6 +42,42 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <transition-include name="lifecycleAction" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <!-- P19: the planned window as a calendar file, and a video call about the work order (Mantle checks the work and the authority) -->
+    <transition name="calendarFile" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceCalendarFile" out-map="calendar" in-map="{workEffortId:workEffortId}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <script>ec.web.sendTextResponse(calendar.text, 'text/calendar', calendar.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="videoAttendees" read-only="true">
+        <actions>
+            <service-call name="ironstone.commons.CalendarServices.search#Attendees" in-map="{term:term}" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found?.optionList || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="addVideoCall">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.add#MaintenanceVideoCall" out-map="videoCall"
+                    in-map="{workEffortId:workEffortId, attendeePartyId:attendeePartyId, startDate:startDate, durationMinutes:durationMinutes,
+                        note:note, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()"><script><![CDATA[
+                const eventLink = '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(videoCall.eventWorkEffortId)
+                ec.message.addMessage(videoCall.skippedCount ? 'Video call added; ' + videoCall.skippedCount + ' could not be invited'
+                        : 'Video call added and the invitations sent', videoCall.skippedCount ? 'warning' : 'success')
+                ec.message.addMessage('The call is in your calendar: ' + eventLink, 'info')
+            ]]></script></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
     <subscreens default-item="Overview"/>
     <actions>
         <if condition="recordFound">
@@ -56,6 +95,11 @@ along with this software (see the LICENSE.md file). If not, see
                 WeComplete:'teal', WeClosed:'grey-7', WeCancelled:'negative'}[workOrder.statusId] || 'grey-8'"/>
         <set field="captionText" from="[workOrder.targetName, workOrder.organizationName, [workOrder.kindText, workOrder.typeText].filter(Boolean).join(', '),
                 workOrder.priority != null ? 'priority ' + workOrder.priority : null, workOrder.teamName].filter(Boolean).join(' · ')"/>
+        <!-- P19: the print, and who may add a video call (a planner or supervisor, or the assigned technician; Mantle checks again) -->
+        <set field="printParameters" from="{workEffortId:workEffortId, renderMode:'html-print', lastStandalone:'true'}"/>
+        <set field="canAddCall" from="!['WeClosed', 'WeCancelled'].includes(workOrder.statusId) &amp;&amp; (ec.user.hasPermission('MAINTENANCE_PLAN')
+                || ec.user.hasPermission('MAINTENANCE_SUPERVISE') || (ec.user.hasPermission('MAINTENANCE_EXECUTE') &amp;&amp; !!workOrderDetail?.assigned))"/>
+        <set field="videoValues" from="{workEffortId:workEffortId, durationMinutes:'30', operationKey:'video-' + ec.user.randomString(24)}"/>
         <set field="windowText" from="[workOrder.estimatedStartText ? 'Planned from ' + workOrder.estimatedStartText : null,
                 workOrder.estimatedCompletionText ? 'due ' + workOrder.estimatedCompletionText + (workOrder.overdue ? ' (overdue)' : '') : null]
                 .filter(Boolean).join(', ')"/>
@@ -139,7 +183,31 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="No action is open while the work order is ${workOrder.statusText}." type="p" style="m-muted"
                                         condition="!actionRows.length"/>
                             </container-dialog>
+                            <container-dialog id="VideoCallDialog" button-text="Add video call" icon="sym_o_video_call"
+                                    title="Video call about work order ${workEffortId}" width="560" condition="canAddCall">
+                                <label text="An event in your calendar with a call link; the person you choose and the work order's technicians are invited. Someone without an account gets the invitation by email and joins from its link."
+                                        type="p" style="text-caption m-muted"/>
+                                <form-single name="VideoCallForm" transition="addVideoCall" map="videoValues">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="attendeePartyId">
+                                        <default-field title="Invite" tooltip="The vendor's expert or another person; someone without an account needs an email address">
+                                            <drop-down allow-empty="true"><dynamic-options transition="videoAttendees" server-search="true" min-length="2"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
+                                    <field name="durationMinutes">
+                                        <default-field title="Minutes"><text-line size="5" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="note"><default-field title="Note to the attendees"><text-area rows="3" cols="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Add video call"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
                             <button-menu text="More" icon="more_horiz">
+                                <link url="Instructions" text="Print work order" icon="sym_o_print" target-window="_blank"
+                                        parameter-map="printParameters"/>
+                                <link url="calendarFile" text="Add to calendar (.ics)" icon="sym_o_event" link-type="anchor"
+                                        parameter-map="{workEffortId:workEffortId}" condition="workOrder.estimatedStartText"/>
                                 <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="Equipment" icon="sym_o_build"
                                         parameter-map="{assetId:workOrder.assetId}" condition="workOrder.assetId"/>
                                 <link url="${sharedLinks['Facilities/FacilityDetail']}" text="Facility" icon="sym_o_domain"

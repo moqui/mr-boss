@@ -21,13 +21,22 @@ along with this software (see the LICENSE.md file). If not, see
     facilities. Everything goes through Mantle's mantle.work.MaintenanceServices (report#MaintenanceProblem: the reporter is the
     user, one target, an operation key so a second submit answers the first), which checks MAINTENANCE_REQUEST and the organization
     itself; no ironstone.maintenance service, which a requester may not call. The transition answers JSON, so the dialog closes, with
-    a link to the request in Commons, where the reporter follows it. -->
+    a link to the request in Commons, where the reporter follows it. P19 (the user's call of Nov 12, F135, F142): Comms' Report a
+    problem on a chat message, a voicemail or a mail opens it here (mounted under each, screen-extend/basic-comms) with the
+    message's ids; Mantle's get#MaintenanceProblemSource reads the message under its owner's check and prefills What is wrong and
+    Details, and report#MaintenanceProblem reads it again and files a chat message or a mail on the request. A message the user may
+    not read prefills nothing and is not sent on. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Report a problem" default-menu-include="false" server-static="qvt">
     <parameter name="recordEntity"/>
     <parameter name="recordId"/>
     <parameter name="assetId"/>
     <parameter name="facilityId"/>
+    <!-- P19: the message it is reported from (the Comms actions) -->
+    <parameter name="chatRoomId"/>
+    <parameter name="eventSeq"/>
+    <parameter name="voicemailId"/>
+    <parameter name="emailMessageId"/>
     <!-- the equipment and facilities the user may report on (Mantle's find#MaintenanceReportTargets) -->
     <transition name="reportTargets" read-only="true">
         <actions>
@@ -47,7 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
                 const out = ec.service.sync().name('mantle.work.MaintenanceServices.report#MaintenanceProblem').parameters({
                     assetId: reportAssetId || null, facilityId: reportFacilityId || null, summary: summary || null,
                     description: description || null, observedDate: observedDate || null, priority: priority || null,
-                    contentFile: contentFile || null, operationKey: operationKey || null}).call() || {}
+                    contentFile: contentFile || null, operationKey: operationKey || null, chatRoomId: sourceChatRoomId || null,
+                    eventSeq: sourceEventSeq || null, voicemailId: sourceVoicemailId || null, emailMessageId: sourceEmailMessageId || null}).call() || {}
                 const url = out.requestId ? '/qapps/Commons/Requests/RequestDetail?requestId=' + encodeURIComponent(out.requestId) : null
                 ec.web.sendJsonResponse(ec.message.hasError() ? {} : {requestId: out.requestId, url: url,
                     messageInfos: [{type: 'success', link: url, message: 'Problem reported as request ' + out.requestId}]})
@@ -59,12 +69,31 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the equipment or facility of the page under the dialog, or of the link that opened it -->
         <set field="fromAsset" from="assetId || (recordEntity == 'mantle.product.asset.Asset' ? recordId : null)"/>
         <set field="fromFacility" from="facilityId || (recordEntity == 'mantle.facility.Facility' ? recordId : null)"/>
+        <!-- P19: the message it is reported from, read as the user may read it (nothing when they may not) -->
+        <set field="problemSource" from="null"/>
+        <if condition="chatRoomId || voicemailId || emailMessageId">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceProblemSource" out-map="problemSource" transaction="force-new"
+                    ignore-error="true" in-map="{chatRoomId:chatRoomId, eventSeq:eventSeq, voicemailId:voicemailId, emailMessageId:emailMessageId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="problemSource" from="problemSource?.sourceKind ? problemSource : null"/>
+        </if>
         <set field="reportValues" from="{targetKey:(fromAsset ? 'asset:' + fromAsset : (fromFacility ? 'facility:' + fromFacility : '')),
-                priority:'5', operationKey:'problem-' + ec.user.randomString(24)}"/>
+                priority:'5', operationKey:'problem-' + ec.user.randomString(24), summary:(problemSource?.summary || null),
+                description:(problemSource?.description || null), sourceChatRoomId:(problemSource?.sourceKind == 'chat' ? chatRoomId : null),
+                sourceEventSeq:(problemSource?.sourceKind == 'chat' ? eventSeq : null),
+                sourceVoicemailId:(problemSource?.sourceKind == 'voicemail' ? voicemailId : null),
+                sourceEmailMessageId:(problemSource?.sourceKind == 'email' ? emailMessageId : null)}"/>
     </actions>
     <widgets>
+        <label text="From ${problemSource?.sourceText}" type="p" style="text-caption m-muted" condition="problemSource"/>
+        <label text="The message is not available, so nothing is filled in from it." type="p" style="text-caption text-warning"
+                condition="!problemSource &amp;&amp; (chatRoomId || voicemailId || emailMessageId)"/>
         <form-single name="ReportProblem" transition="reportProblem" map="reportValues" focus-field="summary">
             <field name="operationKey"><default-field><hidden/></default-field></field>
+            <field name="sourceChatRoomId"><default-field><hidden/></default-field></field>
+            <field name="sourceEventSeq"><default-field><hidden/></default-field></field>
+            <field name="sourceVoicemailId"><default-field><hidden/></default-field></field>
+            <field name="sourceEmailMessageId"><default-field><hidden/></default-field></field>
             <field name="targetKey">
                 <default-field title="Equipment or facility">
                     <drop-down allow-empty="true">

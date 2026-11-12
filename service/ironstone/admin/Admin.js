@@ -418,6 +418,9 @@ const mountRoutes = {
     accountingTaxStatements: {url: "/qapps/Accounting/Tax/TaxStatements", plain: true},
     accountingInvoiceBatch: {url: "/qapps/Accounting/Receivables/InvoiceBatch", plain: true},
     projectsWorkItems: {url: "/qapps/Projects/WorkItems/List", plain: true},
+    // Maintenance's list exports (impl-maintenance P19); the PM list's maintenanceDue joins with DueMaintenance (P14)
+    maintenanceWorkOrders: {url: "/qapps/Maintenance/WorkOrders/Find", plain: true},
+    maintenanceBookingRequests: {url: "/qapps/Maintenance/Scheduling/BookingRequests", plain: true},
     // another app's page is a plain URL: Commerce's store integration (a system message's registered owner, by its remote)
     // and Comms' mail accounts (a mail account's message in the mail queue, the mail reception's owner)
     storeIntegration: {url: "/qapps/Commerce/Integrations/IntegrationDetail", idParameter: "systemMessageRemoteId", plain: true},

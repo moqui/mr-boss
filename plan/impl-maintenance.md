@@ -381,7 +381,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
-| P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | — |
+| P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12 |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -4504,6 +4504,249 @@ Design §1.4 (Assist, Comms hooks, Sync, Meetings), §12 (the outputs not built 
 - **Usable when** (`acceptance/Maintenance/MaintenanceStackWalk`): Assist summarizes the compressor's history from
   its page and drives Report a problem through the terminal UI; a phone's calendar shows next week's assigned work
   orders and cannot change them; a vendor joins a call from the invitation.
+
+**Built Nov 12 (P19).** mr-mantle 066e52ce, mr-boss 7cbc3ddb and this note's commit (branch `mnt/p19`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): the provider hooks and their interfaces (basic-comms `ProviderInterfaces.xml`:
+  `record#Lookup` info, card, search and links, `call#Context`; `ChatScreenServices.lookup#Records` keeps the first provider's answer
+  per record, in `sequence` order, Comms' `boss.records` at 0), `ext-action` (xml-screen-3.xsd, `screen/ext.rs`: a `screen` target is
+  a path from the declaring screen, left out for a user who may not view it; screen-extend merges `subscreens`), the Comms
+  screen-extends (Chat's `chat-message-actions`, Voicemail's `voicemail-actions`, MessageDetail with no message slot, F-P6-2) and
+  Customer Service's reads of a message (`Channels.js caseFromMessage`), `findOrCreate#ChatCommunicationEvent` (the room check, the
+  encrypted refusal; it writes an event), `VoicemailServices.get#Voicemail`, `EmailClientServices.get#Thread`,
+  `link#CommunicationEventRecord` (a request's own join, RequestCommEvent); People P12's projected kind (`CalendarProjection`,
+  `define#ProjectionOwner`, `get#ProjectionObjects`, the 403 of a PUT) and `Leave.js getAbsenceProjection` as the model; P13's
+  `find#MaintenanceDue` (active plans, MAINTENANCE_VIEW, the next due per plan, `plannedDate`) and the term's `teamPartyId`;
+  `get#EventIcsMaps`, `create#Event`, `send#EventInvitations` (attendees by WorkEffortParty, iMIP by mail to a party with no account),
+  `CallServices.create#CallLink` (`/call/<token>`, the token in the answer only) and an event's join link (`infoUrl`, Comms'
+  meetings source); the shell's `assist-prompt` and `response-action` (paths from the apps root; Admin's and Commerce's LogNote as the
+  model; no app had built "Send as message"); Manufacturing's Traveler print with `ec.resource.barcodeSvg`; the wizard export targets
+  (BossSetupData.xml's Projects row) and Admin.js `mountRoutes`, and the admin paths of Nov 11-12 (F117); WorkOrders' list already
+  exported CSV (`show-csv-button`), BookingRequests' did not; DueMaintenance is not on master (P14), so the PM export is a seam.
+- Mantle (`service/mantle/work/MaintenanceStack.js`, appended to `MaintenanceServices.xml`; `data/MaintenanceStackData.xml`):
+  - `get#MaintenanceProblemSource`: the chat message (chatRoomId, eventSeq: `get#RoomAccess` canRead, a message of the room not
+    redacted, its last edit; SOURCE_ENCRYPTED for an end-to-end encrypted room), the user's own voicemail (its transcript) or a mail
+    the user reads (its subject and text), as a summary (first line or subject, 100 characters), a description (4000) and sourceText,
+    for MAINTENANCE_REQUEST; SOURCE_UNAVAILABLE for one the user may not read, ONE_SOURCE for two; nothing written.
+  - `report#MaintenanceProblem` (`MaintenanceIntake.js`, two lines) takes the same four ids: it reads the message again before any
+    write (a report from a message the user may not read is refused) and, after the request, files a chat message
+    (`findOrCreate#ChatCommunicationEvent`) or a mail as a communication event on it (RequestCommEvent); a voicemail's transcript is the
+    description and nothing more is filed (its audio stays in Comms).
+  - The projected collections, seeded as `CalendarProjection` rows on People P12's kind: `MaintenanceMyWork` ("My work orders",
+    `get#MaintenanceWorkProjection`: the open work orders assigned to the user with a planned window in the range, through
+    `find#MaintenanceWorkOrders` mine; "Work order {id}: {name} · {target}", tentative while held; admitted for a work reader) and
+    `MaintenanceTeamDue` ("Due maintenance", `get#MaintenanceDueProjection`: the next calendar due of the active plans of the teams the
+    user is a member of, else of every team, through P13's `find#MaintenanceDue`; "Due: {plan} · {target}" for an hour at the planned
+    time; a meter plan left out; admitted for MAINTENANCE_VIEW as Plans is). Read only: the DAV server and `put#`/`delete#DavObject`
+    refuse a change (403). No cost, rate or reporter.
+  - `get#MaintenanceCalendarFile`: a work order the user reads (`requireWork`) as .ics over `get#EventIcsMaps`, titled "Work order {id}:
+    {name}" (NOT_SCHEDULED with no planned window), or a plan's next calendar due (`get#MaintenanceDue`; NO_DUE_DATE for a meter plan);
+    ICALENDAR_UNAVAILABLE when the tool is off, never an empty file.
+  - `add#MaintenanceVideoCall`: a planner or supervisor of the work order or its assigned technician (`requireWork`, then the
+    capability; WORK_CLOSED for a closed or cancelled one), an attendee with an account or an email address (ATTENDEE_REQUIRED,
+    ATTENDEE_UNREACHABLE), a start not in the past (DATE_PAST), 5 to 480 minutes (30 by default): a lobby video call link
+    (`create#CallLink`), a Commons event (`create#Event`, the user its owner, the join URL as `infoUrl` and in its description, the
+    note), `WeatRelatesTo` from the work order, the user an accepted attendee and the vendor's expert and the work order's current
+    technicians offered with an answer asked, and `send#EventInvitations`; once under an operation key.
+- BOSS:
+  - Assist: `skill/maintenance-report-problem.md` (Commons' ReportProblem, the page's record or the drop-down, presses nothing),
+    `maintenance-close-work-order.md` (WorkOrderDetail's Lifecycle and the tabs that hold blockers; never Complete or Close) and
+    `maintenance-equipment-history.md` (EquipmentDetail's header, Maintenance and Meters tabs and Downtime; never the Book tab), each
+    `risk` confirm or reversible and costs never in an answer; `aliases.json` gains work order, equipment and problem; nine cases in
+    `test/skill-retrieval.json`. The root's (`screen/Maintenance.xml`, one group after the today-source) chips "Summarize history"
+    (EquipmentDetail, an Asset), "What blocks completion?" (WorkOrderDetail, a WorkEffort) and "Report a problem" (Home), and the
+    response actions "Log as note" (`Maintenance/LogNote`: a work order, equipment or a facility through `check#Record`, then
+    `log#RecordNote`) and "Send as message" (`Maintenance/SendMessage`: a person or mailbox Comms' internal search offers, sent as an
+    internal message through `ironstone.comms.ComposeServices.send#Compose`, filed on the page's record when Maintenance admits the
+    user to it). No AgentToolExposure row.
+  - Comms: `ironstone.maintenance.StackServices` over `Stack.js`: `lookup#Records` (record-lookup `maintenance.records`, sequence -10:
+    info and card of a work order, equipment or a facility through Maintenance.js `recordOf`, a work order's status, its Maintenance
+    link; search through the palette's finds; links of Maintenance URLs) and `get#CallContext` (call-context `maintenance.work`: the
+    caller's parties by number as Customer Service's, their organizations (an organization, or the one a person works for, is an agent
+    or a contact of), its open work orders when it is an internal organization and those on equipment it owns, as the user's
+    `find#MaintenanceWorkOrders` reads them, and its equipment under repair (an asset of open work in progress); at most 20; no cost).
+    Maintenance.js exports `scope`, `recordOf`, `recordUrl` and `searchFinds` (its last line).
+  - Report a problem from a message (the user's call of Nov 12; F135, F142): screen-extend `basic-comms` mounts Commons' ReportProblem
+    under Chat (ext-action `maintenance.reportProblem`, `chat-message-actions`, a `screen` target: chatRoomId, eventSeq), Voicemail
+    (`voicemail-actions`: voicemailId) and MessageDetail (a "Report a problem" dynamic dialog beside Link to a record for a holder of
+    MAINTENANCE_REQUEST: emailMessageId); each is shown by ReportProblem's own grant (`BOSS_MNT_REPORT_PROBLEM`). ReportProblem takes
+    the ids, prefills What is wrong and Details from `get#MaintenanceProblemSource` with "From {sourceText}", or says the message is
+    not available, and passes the ids it read on to `report#MaintenanceProblem`.
+  - Outputs: WorkOrderDetail (`WorkOrderDetail.xml`: three transitions before the subscreens, three actions, the header's dialog and
+    two More links) offers Print work order (`WorkOrderDetail/Instructions.xml`, html-print, not a tab: the organization, work order,
+    target, kind, priority, team and technicians, the planned window, when printed, a QR of the work order's link, the description and
+    the execution tree's steps with instructions, what each records and Done by; no cost), Add to calendar (.ics) when it has a planned
+    window, and Add video call (for a planner, supervisor or the assigned technician; a person drop-down over Commons'
+    `search#Attendees`, start, minutes, note). PlanDetail's More gains Add next due to calendar (.ics) for an active calendar plan
+    (`dueCalendarFile`; DueMaintenance's rows take the same transition, P14). BookingRequests exports CSV (`show-csv-button`).
+    `BossSetupMaintenanceData.xml` registers `maintenanceWorkOrderList` and `maintenanceBookingList` as wizard export targets with
+    owner routes `maintenanceWorkOrders` and `maintenanceBookingRequests`, added to Admin.js `mountRoutes` (F117, F53); the PM export
+    (`maintenanceDueList` at `maintenanceDue`) is a one-line seam there for DueMaintenance.
+  - Demo: none added.
+- Specs:
+  - Mantle `test/work/MaintenanceStack` (5 features, 0.87 s): My work orders lists the technician's scheduled work order (not the
+    unscheduled one) read only, a PUT refused 403, not offered to a user without maintenance or the team due to a technician; due PM
+    gives the planner his team's plan only and a reader on no team both; the calendar file of the work order and of a plan's due,
+    NOT_SCHEDULED and NOT_ASSIGNED; a chat message prefills the report (first line, text, room), another user outside the room is
+    SOURCE_UNAVAILABLE for the prefill and the report, a reader without MAINTENANCE_REQUEST PERMISSION_DENIED, two messages ONE_SOURCE,
+    the report files the message (RequestCommEvent); the video call's event (infoUrl the call link, owner the technician, related to
+    the work order, the vendor offered), another technician NOT_ASSIGNED, an unreachable attendee and a past start refused.
+  - BOSS `test/Maintenance/MaintenanceStack` (4 features, 0.51 s): Kenji's number gives the planner Services' open work orders and
+    "Equipment under repair: Air handler AHU-2", Maintenance links only, no "$" or "cost", the technician only their work; the record
+    cards (info of a work order, the compressor and the building, a Commons task left out; the card's title and status; the
+    technician's card of another's work null; search and links); the Instructions print's one html-print render (the oil service, its
+    team and technician, the QR, no procedure, Completed by, no "$"); LogNote's and SendMessage's one qvt render each, a note and an
+    internal message filed on the work order (WorkEffortCommEvent +2), Retail's planner refused. `MaintenanceAccess` gains the stack
+    providers' case (0.31 s: the planner's card and call context, not the resource administrator, Retail's planner or the requester;
+    the Chat's Report a problem action for the requester, not customerservice.read); `MaintenanceWorkOrders`' existing header render
+    checks Print work order, Add to calendar (.ics) and Add video call. The skills: `./moq test mr-boss --skills` recall@3 1.00 (36 of 36).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceStackWalk` (5 features: the planner's chips and response
+    actions, the compressor's Maintenance tab in tui and Log as note on it; Report a problem in tui from Commons and from a chat
+    message through the Comms action, the message filed; maint.tech2's phone: My work orders next week, read only, a PUT 403 and the
+    work order unchanged, the .ics; a video call about the oil service and the vendor's expert joining as a guest from the link
+    (`check#CallLinkToken`, `join#AsGuest`); Admin's Exports listing the two targets).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceStack, MaintenanceIntake, LeaveRequests and
+  MaintenanceManagedWork 22 of 22 (5.2 s feature time); mr-boss MaintenanceStack, MaintenanceAccess, MaintenanceWorkOrders,
+  MaintenanceRequests, MaintenancePlans, MaintenanceScheduling, Chat, Inbox, CommsHome, AdminExports, AdminAccess,
+  CustomerServiceChannels, Chatter and QuickCreate 145 of 145 (17.9 s); basic-comms BasicCommsChat and BasicCommsCalls 12 of 12 (1.0 s);
+  `./moq test mr-boss --skills` 36 of 36. `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before, none in the new
+  or changed screens; both symlinked binaries unchanged. Prettier (`npx prettier` with the repo's `.prettierrc.json`, from each
+  component) on the new files; the changed lines of Maintenance.js, MaintenanceAccess.spec.js and MaintenanceWorkOrders.spec.js are
+  clean (those files are not clean on master and were not reformatted whole). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's get#EventIcsMaps and send#EventInvitations rows and an Added table for P19's services; ss-inventory has
+  no row of these contributions (no baseline form maps to them).
+- Design edits: design-maintenance's header, §1.4 and §12 as built; design-drawers-commons' and design-admin's headers (owner
+  contracts); impl-drawers-commons' and impl-admin's logs.
+- Findings (provisional, unnumbered):
+  - `create-from` is built as a Comms screen action, not the `create-from` hook: the hook makes a record from the message, and the
+    user's call is a prefilled form. The message's attachments are not copied onto the request (they stay on the filed chat message
+    or mail); a voicemail's audio stays in Comms.
+  - Due PM for my teams admits a holder of MAINTENANCE_VIEW only, as P13's Plans; a technician with the assigned view alone has My
+    work orders and no due PM calendar. "My teams" is the OrgTeam teams the user is a current member of, else every team of the scope
+    (a planner is on none in the demo). The user's call below.
+  - The call context takes the caller's organizations from PrtEmployee, PrtAgent and PrtContact: any employee of an internal
+    organization calling a planner brings up that organization's open work (up to 10), which is the design's "caller organization's
+    open work orders" taken literally.
+  - Maintenance's record-lookup has sequence -10 so it answers before Comms' generic `boss.records` (0): otherwise a managed work
+    order's card would be the generic one with a Commons link that Commons refuses (F104).
+  - The video call's join link (its token) is the event's `infoUrl` and description, so every attendee and every reader of the event
+    can join (the lobby admits them); the operation record's result keeps it too. The invitation's iMIP carries it as the event URL.
+  - Send as message is an internal message (Comms' Compose, internal mode) to a person or a mailbox, not a chat message or an email; a
+    user with no party cannot send one.
+  - No demo work order has a procedure instance, so the print's steps branch is rendered by no regression spec (the walk prints none
+    either); MaintenanceChecklists makes one and could take the check.
+  - The prefill reads a chat message itself (as `findOrCreate#ChatCommunicationEvent` does, without writing an event on a GET): there is
+    no read-only Mantle reader of one chat message.
+- For the lead:
+  - Budget share: mr-mantle +0.9 s (MaintenanceStack); mr-boss server +0.9 s (MaintenanceStack 0.51 s, MaintenanceAccess +0.31 s, the
+    header checks nothing measurable); client unchanged.
+  - Merge hot spots: mr-boss `screen/Maintenance.xml` (one group after the today-source), `WorkOrderDetail.xml` (transitions before
+    `subscreens`, actions before `windowText`, the dialog and two links before and in More: P11's Costs tab does not touch them),
+    `Preventive/Plans/PlanDetail.xml` (a transition after planAction and a More link: P14 edits PlanDetail), `BookingRequests.xml` (one
+    attribute), `Commons/ReportProblem.xml`, `service/ironstone/maintenance/Maintenance.js` (its last line), `Admin.js` mountRoutes,
+    `data/BossSetupMaintenanceData.xml` (the end), `MaintenanceAccess.spec.js` (header and end), `MaintenanceWorkOrders.spec.js` (four
+    lines), `skill/aliases.json`, `test/skill-retrieval.json`, the screen-extends under `basic-comms`, usl-inventory, the design and
+    plan headers; mr-mantle `MaintenanceServices.xml` (report#MaintenanceProblem's parameters and the end) and `MaintenanceIntake.js`
+    (reportProblem, two lines).
+  - The PM export and DueMaintenance's .ics: when P14 is merged, `maintenanceDueList` (route `maintenanceDue`, its list's CSV) and a
+    row link to PlanDetail's `dueCalendarFile` (or its own transition over `get#MaintenanceCalendarFile`) are a few lines.
+  - The user's call needed: should a technician (MAINTENANCE_ASSIGNED_VIEW, on a team) get the due PM calendar of their teams? Built
+    meanwhile: MAINTENANCE_VIEW only, as Plans is.
+
+**Review Nov 11 (P19).** mr-mantle febab0aa, mr-boss 754b3032 and this note's commit (branch `mnt/p19`), over mr-mantle 066e52ce and
+mr-boss 7cbc3ddb, 05665825; master not merged (P18, P14 and P11 first, at the lead's word). Reviewed `git diff master...mnt/p19` of
+both repos against the phase's text, §2, design §1.4 and §12, the admin paths of Nov 11-12 and the Built note, reading the owners'
+code each piece leans on (Comms' `findOrCreate#ChatCommunicationEvent` and `get#RoomAccess`, `check#RecordVisible` and BOSS's
+`get#RecordLinkInfo` hook, `VoicemailServices.get#Voicemail`, `EmailClientServices.get#Thread`, Customer Service's `Channels.js`,
+Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `ProviderInterfaces.record#Lookup`).
+- Checked and found sound:
+  - The voicemail and the mail are read under their owners' own checks, which are the user's (the user's own voicemail; the mail
+    accounts the user reads, `get#EmailAccountAccess`), so calling them with authorization disabled widens nothing; a message of
+    an end-to-end encrypted room, a removed one and its last edit are as `findOrCreate#ChatCommunicationEvent` has them;
+    `report#MaintenanceProblem` reads the message again before any write, and ReportProblem passes on only the ids it read
+    (`problemSource.sourceKind`). The room check itself was not Comms' own in one respect: R1.
+  - The screen-extends: Chat's and Voicemail's `ext-action` with a `screen` target and MessageDetail's dynamic dialog mount
+    Commons' ReportProblem, which keeps its own grant (`BOSS_MNT_REPORT_PROBLEM`, inheritable) wherever it is mounted; Comms' own
+    actions and Customer Service's are unchanged, and the basic-comms specs pass. An acceptable owner contract: the same shape as
+    Customer Service's Create a case, and Mantle checks MAINTENANCE_REQUEST and the message again.
+  - The call context: the rows are Mantle's `find#MaintenanceWorkOrders` as the user (`lib.probe`; Mantle checks its own scope,
+    a technician their assigned work), at most 10 per organization and 20 in all, an id, name, target and status each: nothing the
+    planner does not read in Maintenance, no cost. The caller's parties and organizations never appear.
+  - The record lookup: info and card through `recordOf` (Mantle's scope); search through the palette's scoped finds; links answer
+    only the ids a message's own links name, as Comms' `boss.records` does, each card checked per reader by info.
+  - The projected collections: My work orders is `find#MaintenanceWorkOrders` mine (open statuses, the scope), Due maintenance P13's
+    `find#MaintenanceDue` under its read scope for MAINTENANCE_VIEW (the lead's call); id, name and target only; read only (the
+    PUT 403 is in Mantle's spec). No title of work the user cannot read.
+  - The calendar files: the work order through `requireWork`, the plan through `get#MaintenanceDue`'s `scheduleOf`; the screens
+    check the record first. The video call: the token is in the event's `infoUrl` and description, the join link Commons' events
+    and Comms' meetings source already read from `infoUrl`; the lobby admits a guest only when the host lets them in. No other
+    app builds a call link into an event, so this is the first such use; no wider than the event's readers (its owner, its
+    attendees, calendar viewers). The operation record's copy (`PostingOperation`) is shown by no screen.
+  - Assist: the three skills read their screens as the user, press nothing that writes and say costs are never in an answer;
+    `--skills` recall@3 1.00. Log as note checks the record in its transition (`check#Record`) and `log#RecordNote` again. Send as
+    message did not on submit: R2.
+  - Exports: `maintenanceWorkOrders` and `maintenanceBookingRequests` are in Admin.js `mountRoutes`, their URLs exist; both lists'
+    CSV are the framework's `show-csv-button` (current filters, the columns shown; Work orders' picker included).
+  - The print: Instructions is under WorkOrderDetail, so the parent's always-actions check the record (a technician prints their
+    assigned work only); its QR is the work order's Maintenance link; it shows no cost to anyone (none is read).
+- Fixes:
+  - R1 (high, access: another organization's chat message): `quietly` and `lib.call` disable authorization, and
+    `get#MaintenanceProblemSource` and `report#MaintenanceProblem` called `get#RoomAccess` that way (the latter also
+    `findOrCreate#ChatCommunicationEvent`). A record room is read by those who may see its record (`check#RecordVisible`), whose
+    hook (`get#RecordLinkInfo`) applies no per-user rule and the entity filters do not apply with authorization disabled: any
+    MAINTENANCE_REQUEST holder could prefill from, and file on their request, a message of any organization's record room. Both
+    now run with the caller's authorization, exactly as `findOrCreate#ChatCommunicationEvent` calls `get#RoomAccess` and Customer
+    Service calls `findOrCreate#ChatCommunicationEvent`. Spec: MaintenanceAccess "Report a problem from a chat message reads it
+    under Comms' room check with the user's own filters" (a record room of Retail's forklift: Services' requester's report from it
+    refused, no request; a public room's message reported and filed), through ReportProblem's transition with authorization on;
+    it fails without the fix (the forklift's message was reported).
+  - R2 (medium, access: a write on a record the user may not reach): Send as message checked the page's record only when the form
+    rendered; the transition sent the hidden `messageRecordEntity`/`messageRecordId` to Comms' `send#Compose`, which filed it on
+    Services' work order for Retail's planner and for a technician it is not assigned to. The transition now checks the record again (`check#Record`, a work order, equipment
+    or a facility only). Spec: MaintenanceStack's Assist feature posts the forged record as Retail's planner and as maint.tech2
+    (not assigned), each refused; it fails without the fix.
+  - R3 (low, access): `add#MaintenanceVideoCall` invited any party by id; Commons' attendees leave out a disabled party and
+    another user's personal contact. It now refuses those as ATTENDEE_UNAVAILABLE. Spec: Mantle MaintenanceStack's video call
+    feature (the technician's personal contact, to the planner); it fails without the fix. Design §1.4 Meetings says so.
+  - R4 (medium, the user's call of Nov 12, given during the review): the call context of a colleague (a person who is an employee
+    or agent of one of the internal organizations) names only the open work orders they reported (their requests' work orders,
+    RequestWorkEffort) or are assigned, read as the user's Maintenance scope reads them; a customer's or vendor's caller still
+    brings up their organization's open work and the work on its equipment. Stack.js `colleaguesOf`/`colleagueWork`;
+    StackServices and design §1.4 say so. Spec: MaintenanceStack's call context feature (Kenji, who reported and is assigned
+    nothing: none of Services' work; the requester: the air handler's work order and its equipment under repair, not the oil
+    service; maint.tech2: the oil service; a contact of Services: both, no cost; the technician of that call: their own only),
+    with spec-local work numbers; it fails without the fix. MaintenanceAccess's stack providers case calls the requester's
+    spec-local number in place of Kenji's.
+- Findings (provisional, unnumbered):
+  - Comms' `send#Compose` filed an internal message on a Services work order for Retail's planner and for an unassigned technician (R2's cases without the check),
+    called under Maintenance's root. Its "a record the user may not see is refused" did not hold there: worth a Comms look at
+    Compose's record check under another app's inheritable root (not changed here: Comms' owner contract).
+  - The call context's equipment branch takes the first 10 assets the organization owns, with or without work, then their work:
+    a customer with many assets may show none of its open work. A small change (assets of open work first) when it matters.
+  - The due projection pages `find#MaintenanceDue` (200) before it keeps the user's teams: a planner's team plans beyond the first
+    200 of the scope are left out. Rare at the demo's size.
+  - The video call's join link lives as long as the call plus a day (at least 24 hours, at most 90 days); a cancelled event
+    leaves its call link live until then.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceStack and MaintenanceIntake 13 of 13 (25.3 s run;
+  MaintenanceStack's features 1.0 s), MaintenanceManagedWork and LeaveRequests 9 of 9; mr-boss MaintenanceStack,
+  MaintenanceAccess, MaintenanceWorkOrders, MaintenanceRequests, Chat, Inbox, CommsHome and CustomerServiceChannels 77 of 77
+  (34.8 s run, 12.7 s feature time; MaintenanceAccess's new feature 0.12 to 0.28 s, MaintenanceStack's Assist feature 0.45 s);
+  basic-comms BasicCommsChat and BasicCommsCalls 12 of 12; `./moq test mr-boss --skills` 36 of 36, recall@3 1.00. Each new case
+  was run once against the code before its fix and failed. `./moq run --debug --nobuild lint --screens`: nothing flagged in
+  SendMessage or the other P19 screens; both symlinked binaries unchanged. Prettier on MaintenanceStack.js and both
+  MaintenanceStack specs; the new MaintenanceAccess feature matches Prettier. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-boss server +0.3 s (the R1 feature, the R2 posts); mr-mantle unchanged.
+  - Merge hot spots: as the Built note's, plus `screen/Maintenance/SendMessage.xml` (the transition) and
+    `MaintenanceAccess.spec.js`'s end (one feature after the stack providers' case) and header.
+  - Merged master (P14, P18, P11) at the lead's word, keeping both sides; then the seam: `maintenanceDueList`, a `wizard` export
+    target at P14's `maintenanceDue` route (Due maintenance's list now `show-csv-button`), and a dated row's .ics link on Due
+    maintenance, through `dueCalendarFile`, moved from PlanDetail into `template/MaintenancePlanParts.xml` so both include it.
+    WorkOrderDetail's header comment keeps P11's Costs tab ("No cost outside the Costs tab").
+    After the merge: mr-mantle MaintenanceStack, MaintenanceGeneration and MaintenanceCosts 18 of 18; mr-boss MaintenanceStack,
+    MaintenanceAccess, MaintenanceWorkOrders, MaintenancePlans, MaintenanceSettings, MaintenanceCosts and AdminExports 47 of 47
+    (25.1 s feature time). The first, cold run flagged a spec over 15 seconds; the rerun did not, and MaintenanceAccess alone is
+    8.7 s of features: watch it as it grows.
+  - The user's call on an internal colleague's call context is decided (Nov 12) and built as R4.
 
 ### P20 — Finish
 

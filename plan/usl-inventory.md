@@ -1179,6 +1179,16 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | mantle.ledger.SetupServices | store#PostingDefault, get#PostingDefaults (mapping kind maintenance: MaintenanceCostPolicy) | Accounting/Settings/PostingDefaults (Maintenance expense) |
 | ironstone.maintenance.MaterialServices | get#MaterialSource, get#MaterialAction | Maintenance/WorkOrders/MaterialIssueReceipt |
 
+### Added in the Maintenance build: Assist, Comms, sync and outputs (P19)
+
+| Service | Verbs | Implemented in |
+| --- | --- | --- |
+| mantle.work.MaintenanceServices | get#MaintenanceProblemSource; report#MaintenanceProblem (the message it is reported from) | Commons/ReportProblem (prefilled from a chat message, a voicemail or a mail; mounted as Comms/Chat/ReportProblem, Comms/Calls/Voicemail/ReportProblem and Comms/Inbox/MessageDetail/ReportProblem) |
+| mantle.work.MaintenanceServices | get#MaintenanceWorkProjection, get#MaintenanceDueProjection | CalDAV (projected-MaintenanceMyWork, projected-MaintenanceTeamDue; CalendarDavServices' projected kind) |
+| mantle.work.MaintenanceServices | get#MaintenanceCalendarFile | Maintenance/WorkOrders/WorkOrderDetail (Add to calendar (.ics)); Maintenance/Preventive/Plans/PlanDetail (Add next due to calendar (.ics)) |
+| mantle.work.MaintenanceServices | add#MaintenanceVideoCall | Maintenance/WorkOrders/WorkOrderDetail (Add video call) |
+| ironstone.maintenance.StackServices | lookup#Records, get#CallContext | the Maintenance root's record-lookup and call-context providers (Comms' record cards, the ring bar and the call) |
+
 ### Added in the Products build
 
 | Service XML | Service | Designed in | Implemented in |
@@ -1496,13 +1506,13 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CalendarServices | find#OwnedCalendars | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.calendars participant) (Admin P6) |
 | CalendarServices | transfer#CalendarOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
 | EventServices | check#EventAccess | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | get#EventIcsMaps | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Preventive/DueMaintenance | Commons/Calendar/EventDetail |
+| EventServices | get#EventIcsMaps | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Preventive/DueMaintenance | Commons/Calendar/EventDetail; Maintenance/WorkOrders/WorkOrderDetail (Add to calendar (.ics), through MaintenanceServices.get#MaintenanceCalendarFile, impl-maintenance P19) |
 | EventServices | store#EventRecurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | update#EventOccurrence | Marketing/Calendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | cancel#EventOccurrence | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | respond#EventInvitation | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Comms/Inbox/Mail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | get#InvitationDigest |  | Commons/Calendar/EventDetail |
-| EventServices | send#EventInvitations | Marketing/Events/EventDetail; People/Staffing/ApplicantDetail; People/Staffing/InterviewsCalendar; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | send#EventInvitations | Marketing/Events/EventDetail; People/Staffing/ApplicantDetail; People/Staffing/InterviewsCalendar; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar ; Maintenance/WorkOrders/WorkOrderDetail (Add video call, through MaintenanceServices.add#MaintenanceVideoCall, impl-maintenance P19) |
 | EventServices | remove#EventAttendee |  | Commons/Calendar/EventDetail |
 | EventServices | get#FreeBusy | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/EventDetail; — Maintenance/Scheduling/ResourceCalendar reads get#FullCalendarData's unavailableList and get#ResourceAvailability instead (impl-maintenance P16) |
 | EventServices | book#Resource | Maintenance/Scheduling/ResourceCalendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (Book, through ScheduleServices.book#ResourceSlot, impl-maintenance P16) |

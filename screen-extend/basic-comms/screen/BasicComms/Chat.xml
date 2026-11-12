@@ -13,9 +13,13 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone's message actions in the BasicComms Chat (plans/Comms-Framework.md §3.3): a task, a request, an event, (Customer
-    Service) a case, (People P15) a line of the user's own expense claim or (People P16) a job application made from a message, through Chat's createFrom transition and the create-from provider boss.records (Comms.xml), which files the
+    Service) a case, (People P15) a line of the user's own expense claim (People P16) a job application made from a message, or (Maintenance) a problem reported from it, through Chat's createFrom transition and the create-from provider boss.records (Comms.xml), which files the
     message on the new record. -->
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- Maintenance P19: Commons' Report a problem mounted here, so its action below is a dialog of this screen -->
+    <subscreens>
+        <subscreens-item name="ReportProblem" location="component://mr-boss/screen/Commons/ReportProblem.xml" menu-include="false"/>
+    </subscreens>
     <ext-action name="boss.createTask" slot="chat-message-actions" sequence="10" label="Create a task" icon="sym_o_task_alt" transition="createFrom" hook="create-from">
         <parameter name="chatRoomId"/><parameter name="eventSeq"/><parameter name="kind" value="task"/>
     </ext-action>
@@ -40,5 +44,11 @@ along with this software (see the LICENSE.md file). If not, see
         refused for a user who does not change recruiting and for the user's own message -->
     <ext-action name="boss.createApplication" slot="chat-message-actions" sequence="60" label="Create application" icon="sym_o_person_search" transition="createFrom" hook="create-from">
         <parameter name="chatRoomId"/><parameter name="eventSeq"/><parameter name="kind" value="application"/>
+    </ext-action>
+    <!-- Maintenance P19 (the user's call of Nov 12): Report a problem prefilled from the message, Commons' ReportProblem mounted here
+        so the action is a dialog of the Chat; shown to a user who may report (its BOSS_MNT_REPORT_PROBLEM grant); Mantle reads the
+        message under the room check and files it on the request -->
+    <ext-action name="maintenance.reportProblem" slot="chat-message-actions" sequence="70" label="Report a problem" icon="sym_o_report_problem" screen="ReportProblem">
+        <parameter name="chatRoomId"/><parameter name="eventSeq"/>
     </ext-action>
 </screen-extend>

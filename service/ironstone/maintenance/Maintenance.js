@@ -1288,4 +1288,5 @@ function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Maintenance operation " + op)
     return operations[op](p || {})
 }
-;({execute: run})
+// P19: the record check, the canonical links and the palette's finds, for the stack providers (StackServices, Stack.js)
+;({execute: run, scope, recordOf, recordUrl, searchFinds})
