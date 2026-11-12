@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Work orders › InterventionReport (design-maintenance §12 "Customer service/intervention report"; impl-maintenance
+    P12): a customer repair's report as of now from Mantle's get#InterventionReport, for a reader of the work order (check#Record):
+    the customer-safe work done, the claim and the customer's equipment, the parts used with their quantities and the hours worked
+    (never a price, cost or total, whoever reads or stores it: the user's call of Nov 12), and the customer's acknowledgment. Opened from WorkOrderDetail's More menu; Print opens it as html-print (renderMode=html-print), PDF
+    downloads it (the stored one when there is one), and Store for the customer (the work's planner, supervisor or assigned
+    technician, once the work is complete) stores it on the work order with the customer's acknowledgment file
+    (store#InterventionReport); Customer Service's RepairLinks sends the stored report. Printing and storing post nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Intervention report" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <transition name="reportPdf" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.get#InterventionReport" out-map="report"
+                    in-map="{workEffortId:workEffortId, pdf:(stored != 'true')}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <script><![CDATA[
+                if (stored == 'true' && report.stored?.contentLocation)
+                    ec.web.sendResourceResponse(report.stored.contentLocation, true, report.stored.contentLocation.split('/').pop())
+                else ec.web.sendBytesResponse(report.pdfBytes, 'application/pdf', true, report.fileName)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="storeReport">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.store#InterventionReport" out-map="storedOut"
+                    in-map="{workEffortId:workEffortId, acknowledgmentFile:(acknowledgmentFile || null),
+                        acknowledgmentText:(acknowledgmentText || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">The intervention report of work order ${workEffortId} is stored for the customer</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="checked" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+        <!-- an ignored error leaves no message: the answer's record says whether the work order is the user's -->
+        <set field="recordFound" from="!!checked?.recordId"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#InterventionReport" out-map="report" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?[A-Z_]+: /, '') : ''"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="printBody" from="report?.printHtml ? String(report.printHtml).replace(/^[\s\S]*&lt;body[^&gt;]*&gt;/i, '')
+                .replace(/&lt;\/body&gt;[\s\S]*$/i, '') : ''"/>
+        <set field="printing" from="String(ec.web?.requestParameters?.renderMode || context.renderMode || '') == 'html-print'"/>
+        <set field="workOrder" from="workOrderDetail?.workOrder || {}"/>
+        <set field="caps" from="maintenance?.capabilities || {}"/>
+        <!-- the store is the work's planner's, supervisor's or assigned technician's, on completed or closed work (Mantle checks it again) -->
+        <set field="canStore" from="!printing &amp;&amp; !!printBody &amp;&amp; ['WeComplete', 'WeClosed'].includes(workOrder.statusId)
+                &amp;&amp; (caps.plan || caps.supervise || (caps.execute &amp;&amp; workOrderDetail?.assigned))"/>
+        <set field="storeValue" from="{workEffortId:workEffortId, acknowledgmentText:'', operationKey:'report-' + ec.user.randomString(20)}"/>
+    </actions>
+    <widgets>
+        <section name="ReportMissing" condition="!recordFound || !printBody">
+            <widgets>
+                <label text="${recordFound ? (reportError || 'The intervention report of work order ' + workEffortId + ' is not available to you') : 'Work order ' + workEffortId + ' is not available'}"
+                        type="p"/>
+                <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="Back to the work order" link-type="anchor"
+                        parameter-map="{workEffortId:workEffortId}" condition="recordFound"/>
+            </widgets>
+        </section>
+        <section name="Report" condition="recordFound &amp;&amp; printBody">
+            <widgets>
+                <section name="ReportActions" condition="!printing">
+                    <widgets>
+                        <container style="row items-center q-gutter-xs q-mb-sm">
+                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="Back to the work order" link-type="anchor"
+                                    icon="arrow_back" parameter-map="{workEffortId:workEffortId}"/>
+                            <link url="." text="Print" link-type="anchor-button" icon="sym_o_print" target-window="_blank"
+                                    parameter-map="{workEffortId:workEffortId, renderMode:'html-print'}"/>
+                            <link url="reportPdf" text="PDF" link-type="anchor-button" icon="sym_o_picture_as_pdf" target-window="_blank"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                            <link url="reportPdf" text="Stored report" link-type="anchor-button" icon="sym_o_inventory" target-window="_blank"
+                                    parameter-map="{workEffortId:workEffortId, stored:'true'}" condition="report.stored"/>
+                            <container-dialog id="StoreInterventionReport" button-text="Store for the customer" icon="sym_o_save" type="primary"
+                                    width="560" title="Store the intervention report of work order ${workEffortId}" condition="canStore">
+                                <form-single name="StoreInterventionReportForm" transition="storeReport" map="storeValue">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="acknowledgmentFile">
+                                        <default-field title="Customer acknowledgment" tooltip="The signed sheet or a photo of it; optional">
+                                            <file/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acknowledgmentText">
+                                        <default-field title="Acknowledged by"><text-line size="40"/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Store">
+                                            <submit confirmation="Store this report on work order ${workEffortId}? Customer Service sends the stored one."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                                <label text="The parts' quantities and the hours are in it; no price, cost or total is."
+                                        type="p" style="text-caption m-muted q-mb-none"/>
+                            </container-dialog>
+                        </container>
+                        <label text="Stored ${report.stored.storedText}: Customer Service sends it from the claim." type="p"
+                                style="text-caption m-muted" condition="report.stored"/>
+                    </widgets>
+                </section>
+                <render-mode>
+                    <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Intervention report of work order " + workEffortId + ": print it from the browser"})}]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

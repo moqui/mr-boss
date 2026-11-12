@@ -26,7 +26,9 @@ along with this software (see the LICENSE.md file). If not, see
     and History (90). The other tabs of design §3 join with their phases at their gaps: Parts (40, P9: built, the planned parts and the parts used),
     Purchasing (50, P10: the work's purchase requests and order lines, Request a purchase, Accept outside service, whose service line
     Complete also offers to accept) and Costs (100, P11: built, the cost reader's only, BOSS_MNT_COSTS). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
-    and the header says when the target is out of service. P19 (design §1.4 Meetings, §12): More offers Print work order (the
+    and the header says when the target is out of service. P12: a customer repair's header names its customer and claim and
+    says when Customer Service's decision stops the repair (a missing or changed consent); More opens its intervention report, and its
+    equipment only where the user's Maintenance scope covers the customer's asset (it is read through the repair). P19 (design §1.4 Meetings, §12): More offers Print work order (the
     Instructions print, with the QR of the work order's link), Add to calendar (.ics of its planned window) and, for a planner,
     supervisor or its assigned technician, Add video call (a Commons event with a call link, the vendor's expert and the
     technicians invited; add#MaintenanceVideoCall). No cost outside the Costs tab. -->
@@ -135,6 +137,11 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="workOrder.statusId == 'WeOnHold'"/>
                             <label text="${workOrder.outage?.text}" type="div" style="text-caption text-negative"
                                     condition="workOrder.outage?.open"/>
+                            <!-- P12: the customer repair's customer and claim, and Customer Service's blocker -->
+                            <label text="Customer repair for ${workOrder.repair?.customerName} · claim ${workOrder.repair?.requestId}" type="div"
+                                    style="text-caption m-muted" condition="workOrder.repair"/>
+                            <label text="${workOrder.repair?.blockerText}: the repair waits for Customer Service" type="div"
+                                    style="text-caption text-negative" condition="workOrder.repair &amp;&amp; !workOrder.repair.allowed"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
                             <render-mode>
@@ -209,7 +216,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="calendarFile" text="Add to calendar (.ics)" icon="sym_o_event" link-type="anchor"
                                         parameter-map="{workEffortId:workEffortId}" condition="workOrder.estimatedStartText"/>
                                 <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="Equipment" icon="sym_o_build"
-                                        parameter-map="{assetId:workOrder.assetId}" condition="workOrder.assetId"/>
+                                        parameter-map="{assetId:workOrder.assetId}"
+                                        condition="workOrder.assetId &amp;&amp; (!workOrder.repair || workOrder.repair.assetInScope)"/>
+                                <link url="${sharedLinks['WorkOrders/InterventionReport']}" text="Intervention report" icon="sym_o_description"
+                                        parameter-map="{workEffortId:workEffortId}" condition="workOrder.repair"/>
                                 <link url="${sharedLinks['Facilities/FacilityDetail']}" text="Facility" icon="sym_o_domain"
                                         parameter-map="{facilityId:workOrder.facilityId}" condition="workOrder.facilityId"/>
                                 <link url="${sharedLinks['WorkOrders/Find']}" text="All work orders" icon="sym_o_list"/>

@@ -27,7 +27,11 @@ along with this software (see the LICENSE.md file). If not, see
       repair's estimate and the customer's consent);
     - RepairLinks: the repairs (AssetMaintenance with its WepMaintenance task) and returns linked, Add repair
       (link#WarrantyWork) and each repair's update (update#WarrantyWork: in process, completed with its result, cancelled);
-      a repair finished tells the agent and leaves the case open. -->
+      a repair finished tells the agent and leaves the case open. impl-maintenance P12 (owner contract, F57): a repair that is a
+      managed maintenance work order shows its safe summary (the work order's status, finish and outcome; no time, people's detail
+      or cost), opens WorkOrderDetail for a user Maintenance admits to the work order, is moved in Maintenance rather than by
+      Update repair, and gains Send intervention report once Maintenance has stored the report: send#InterventionReport mails it
+      to an address of the customer or its contacts through Customer Service's own mail draft and files it on the case. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Warranty claim" default-menu-include="false">
     <parameter name="requestId"/>
@@ -78,6 +82,20 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="requestId"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- impl-maintenance P12: the stored intervention report of a managed repair, mailed to the customer -->
+    <transition name="sendReport">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.WarrantyServices.send#InterventionReport" out-map="sent"
+                    in-map="{operationKey:operationKey, requestId:requestId, assetMaintenanceId:assetMaintenanceId, toAddress:toAddress,
+                        emailAccountId:(emailAccountId || null), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Sent the intervention report to ${sent.recipient} (${sent.status})</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."><parameter name="requestId"/></error-response>
+    </transition>
     <transition name="updateWork">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.check#Record"
@@ -107,6 +125,32 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="decisionList" from="claimOut?.decisions || []"/>
         <set field="current" from="claimOut?.currentDecision || null"/>
         <set field="repairList" from="claimOut?.repairs || []"/>
+        <!-- impl-maintenance P12: a managed repair opens WorkOrderDetail for a user Maintenance admits to its work order; the report's
+            recipients and senders once a stored report can be sent -->
+        <script><![CDATA[
+            for (const repair of repairList) {
+                repair.workOrderUrl = null
+                if (!repair.workEffortId) continue
+                ec.message.pushErrors()
+                try {
+                    const checked = ec.service.sync().name('ironstone.maintenance.AccessServices.check#Record')
+                            .parameters({appRoot: 'Maintenance', recordType: 'workOrder', recordId: repair.workEffortId}).call()
+                    if (checked?.recordId && !ec.message.hasError())
+                        repair.workOrderUrl = '/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=' + encodeURIComponent(repair.workEffortId)
+                } catch (error) {
+                    // not a Maintenance user: no link
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+            }
+            reportOptions = {recipients: [], senders: []}
+            if (claim && customerService?.capabilities?.caseEdit && repairList.some(row => row.reportStored)) {
+                const orders = ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js')
+                reportOptions = {recipients: claim.customerPartyId ? orders.recipientOptions([claim.customerPartyId]) : [],
+                    senders: orders.senderOptions()}
+            }
+        ]]></script>
         <set field="returnList" from="claimOut?.returns || []"/>
         <set field="can" from="claimOut?.actions || {}"/>
         <set field="traceList" from="coverage?.trace || []"/>
@@ -435,12 +479,54 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-header title="Repair ${repair.assetMaintenanceId} · ${repair.statusText}"/>
                                     <box-body>
                                         <label type="p" text="${repair.comments}" condition="repair.comments"/>
-                                        <label type="p" style="text-caption m-muted"
+                                        <label type="p" style="text-caption m-muted" condition="!repair.managed"
                                                 text="${['started ' + repair.startedText, repair.taskName ? 'task ' + repair.taskWorkEffortId + ' ' + repair.taskStatusText : '',
                                                     repair.dueText ? 'due ' + repair.dueText : '', repair.assigneeName].filter(Boolean).join(' · ')}"/>
+                                        <!-- impl-maintenance P12: the managed repair's safe summary, its work order and its report -->
+                                        <section name="ManagedRepair" condition="repair.managed">
+                                            <widgets>
+                                                <label type="p" style="text-caption m-muted"
+                                                        text="${['Work order ' + repair.workEffortId + ' · ' + repair.workStatusText, repair.finishedText ? 'finished ' + repair.finishedText : '',
+                                                            repair.outcomeText, repair.assigneeName, repair.reportStored ? 'report stored' : 'no report stored yet'].filter(Boolean).join(' · ')}"/>
+                                                <container style="row items-center q-gutter-xs">
+                                                    <link url="${repair.workOrderUrl}" url-type="plain" text="Open work order" icon="sym_o_handyman"
+                                                            link-type="anchor-button" condition="repair.workOrderUrl"/>
+                                                    <container-dialog id="SendReport_${repair.assetMaintenanceId}" button-text="Send intervention report"
+                                                            icon="sym_o_send" width="560" title="Send the intervention report of repair ${repair.assetMaintenanceId}"
+                                                            condition="repair.reportStored &amp;&amp; can.updateWork &amp;&amp; reportOptions.recipients.length">
+                                                        <form-single name="SendReport_${repair.assetMaintenanceId}" transition="sendReport"
+                                                                map="{requestId:requestId, assetMaintenanceId:repair.assetMaintenanceId,
+                                                                    operationKey:'report-' + ec.user.randomString(20), toAddress:reportOptions.recipients[0]?.value,
+                                                                    emailAccountId:reportOptions.senders[0]?.value}">
+                                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                                            <field name="assetMaintenanceId"><default-field><hidden/></default-field></field>
+                                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                            <field name="toAddress">
+                                                                <default-field title="To">
+                                                                    <drop-down><list-options list="reportOptions.recipients" key="${value}" text="${label}"/></drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="emailAccountId">
+                                                                <default-field title="From">
+                                                                    <drop-down><list-options list="reportOptions.senders" key="${value}" text="${label}"/></drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="note"><default-field title="Note"><text-area rows="3"/></default-field></field>
+                                                            <field name="submitButton">
+                                                                <default-field title="Send">
+                                                                    <submit confirmation="Send the stored intervention report to the customer? It is filed on the case."/>
+                                                                </default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </container>
+                                                <label type="p" style="text-caption m-muted" condition="repair.open"
+                                                        text="The repair is worked in Maintenance; you are told when it finishes."/>
+                                            </widgets>
+                                        </section>
                                         <container-dialog id="UpdateRepair_${repair.assetMaintenanceId}" button-text="Update repair"
                                                 icon="sym_o_build" title="Update repair ${repair.assetMaintenanceId}" width="480"
-                                                condition="repair.open &amp;&amp; can.updateWork">
+                                                condition="repair.open &amp;&amp; can.updateWork &amp;&amp; !repair.managed">
                                             <form-single name="UpdateRepair_${repair.assetMaintenanceId}" transition="updateWork"
                                                     map="{requestId:requestId, assetMaintenanceId:repair.assetMaintenanceId, statusId:'AsMntCompleted', comments:''}">
                                                 <field name="requestId"><default-field><hidden/></default-field></field>
