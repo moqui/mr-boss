@@ -1310,18 +1310,16 @@ feature(
 )
 
 // P12: a customer repair (a spec-local organization's, lib.customerRepair) has its report stored by its assigned technician
-// (store#InterventionReport), not its organization's Customer Service agent (no maintenance permission) or Services' technician;
-// the customer's unit is read through the repair (the work order and its report screen open to the technician, the asset's own
-// record does not); Customer Service's send#InterventionReport is its organization's agent's (past the scope, the recipient
-// check), not the technician's or Services' agent, with the same parameters
+// (store#InterventionReport: past the permission and scope to WORK_NOT_DONE on the work not yet complete, so nothing is rendered
+// or stored here; WarrantyManagedRepair stores it), not its organization's Customer Service agent (no maintenance permission) or
+// Services' technician; the customer's unit is read through the repair (the work order and its report screen open to the
+// technician, the asset's own record does not); Customer Service's send#InterventionReport is its organization's agent's (past
+// the scope to REPORT_REQUIRED), not the technician's or Services' agent, with the same parameters
 feature(
     "a customer repair's report is stored by its technician and sent by the claim's agent; the customer's unit is read through it (P12)",
     {
         when() {
             const repair = lib.customerRepair("ACCESS")
-            system(() =>
-                call("update#mantle.work.effort.WorkEffort", {workEffortId: repair.workEffortId, statusId: "WeComplete"})
-            )
             const as = (user, service, parameters) =>
                 asUser(user, () => {
                     ec.artifactExecution.disableAuthz()
@@ -1339,20 +1337,27 @@ feature(
             const check = (recordType, recordId) =>
                 asUser(repair.tech, () => refusal(access + "check#Record", {appRoot: "Maintenance", recordType, recordId}))
             const holder = store(repair.tech)
+            const agentStores = store(repair.agent)
+            const otherOrganization = store(users.tech)
+            const agent = send(repair.agent)
+            // completed, the report screen offers the store to its technician (its one qvt render)
+            system(() =>
+                call("update#mantle.work.effort.WorkEffort", {workEffortId: repair.workEffortId, statusId: "WeComplete"})
+            )
             return {
                 holder,
-                agentStores: store(repair.agent),
-                otherOrganization: store(users.tech),
+                agentStores,
+                otherOrganization,
+                agent,
                 report: asUser(repair.tech, () => page("WorkOrders/InterventionReport", {workEffortId: repair.workEffortId})),
                 workOrder: check("workOrder", repair.workEffortId),
                 asset: check("asset", repair.assetId),
-                agent: send(repair.agent),
                 techSends: send(repair.tech),
                 otherAgent: send("customerservice.services")
             }
         },
         then(r) {
-            r.holder == ""
+            r.holder.includes("WORK_NOT_DONE")
             r.agentStores.includes("PERMISSION_DENIED")
             r.otherOrganization.includes("RECORD_UNAVAILABLE")
             r.report.errors.length == 0
@@ -1361,7 +1366,7 @@ feature(
             r.report.output.includes("Store for the customer")
             r.workOrder == ""
             r.asset.includes("RECORD_UNAVAILABLE")
-            r.agent.includes("RECIPIENT_UNCHECKED")
+            r.agent.includes("REPORT_REQUIRED")
             r.techSends.includes("PERMISSION_DENIED")
             r.otherAgent.includes("RECORD_UNAVAILABLE")
         }
