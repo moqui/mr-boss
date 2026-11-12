@@ -2178,8 +2178,8 @@ Mantle services Customer Service P11 added or calls that had no row.
 | request/WarrantyServices | save#WarrantyClaim | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Record evidence); CustomerService/Cases/NewCase (a warranty claim's serial, sale and fault after create#Case) (Customer Service P11) |
 | request/WarrantyServices | get#WarrantyCoverage | CustomerService/Returns/WarrantyAssessment; Shared/Customer360 | CustomerService/Returns/WarrantyAssessment (Coverage, through get#WarrantyClaim); Shared/Customer360/ServiceDeliveredItems (through find#DeliveredItems) (Customer Service P11) |
 | request/WarrantyServices | decide#WarrantyClaim | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Decide, Record consent) (Customer Service P11) |
-| request/WarrantyServices | link#WarrantyWork | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Add repair: an AssetMaintenance with its WepMaintenance task) (Customer Service P11) |
-| request/WarrantyServices | update#WarrantyWork |  | CustomerService/Returns/WarrantyAssessment (Update repair: in process, finished, cancelled) (Customer Service P11) |
+| request/WarrantyServices | link#WarrantyWork | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Add repair: an AssetMaintenance with its WepMaintenance task) (Customer Service P11); with the organization's MaintenancePolicy managing warranty repairs the repair is also made a managed work order, its task the root (impl-maintenance P12) |
+| request/WarrantyServices | update#WarrantyWork |  | CustomerService/Returns/WarrantyAssessment (Update repair: in process, finished, cancelled) (Customer Service P11); a managed repair moves through transition#MaintenanceWorkOrder under the caller's maintenance permission, and RepairLinks offers no Update repair for it (impl-maintenance P12) |
 | request/WarrantyServices | notify#WarrantyWorkFinished |  | (internal: the WarrantyWorkFinished rule on AssetMaintenance; the WarrantyRepairFinished topic; Customer Service P11) |
 | request/WarrantyServices | store#ServiceAgreement | Shared/Customer360 | Shared/Customer360/ServiceStatistics (ServiceAgreements: New agreement and Change, SUPPORT_POLICY_EDIT, after check#Record; Customer Service P14); the demo and Mantle's spec call it (Customer Service P11) |
 | request/WarrantyServices | find#DeliveredItems | Shared/Customer360 | Shared/Customer360/ServiceDeliveredItems (DeliveredItems, crosscut §3.2) (Customer Service P11) |
@@ -2364,3 +2364,14 @@ are the cost reader's, BOSS_MNT_COSTS; the service checks MAINTENANCE_COST_VIEW 
 | --- | --- | --- | --- |
 | work/MaintenanceReportServices | get#MaintenanceCosts | Maintenance/WorkOrders/WorkOrderDetail (WorkCosts); Maintenance/Reports/MaintenanceCostReport | Maintenance/WorkOrders/WorkOrderDetail/Costs (cost by currency, estimate, sources); Maintenance/Reports/MaintenanceCostReport (CostOptions, CostTotals, CostSources, Export CSV, Print) |
 | work/MaintenanceSettingsServices | store#MaintenancePolicy (its cost threshold) | Maintenance/Settings | Maintenance/Settings/WorkPolicy (Approve planned work estimated up to, Cost threshold currency) |
+
+Added in `work/MaintenanceServices.xml` and `request/WarrantyServices.xml` (impl-maintenance P12; `MaintenanceRepairs.js`, `Warranty.js`):
+the customer repair, called by built screens after `ironstone.maintenance.AccessServices.check#Record` (Maintenance) or
+`ironstone.customerservice.AccessServices.check#Record` (Customer Service):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenanceServices | get#InterventionReport | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/InterventionReport (the report, Print as html-print, PDF and the stored report) |
+| work/MaintenanceServices | store#InterventionReport | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/InterventionReport (Store for the customer, with the customer's acknowledgment file) |
+| request/WarrantyServices | check#WarrantyRepair |  | (internal: Maintenance's Start and parts issue of a customer repair, MaintenanceRepairs.js; WorkOrderDetail's blocker) |
+| request/WarrantyServices | send#InterventionReport | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (RepairLinks' Send intervention report) |

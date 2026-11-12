@@ -20,7 +20,9 @@
 // import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
 // plan refused; the compliance a reader's, not a technician's or Retail's),
-// and Maintenance's rows in Admin's capability and
+// P12's customer repair (its intervention report stored by its technician, not its agent or another organization's technician; the
+// customer's unit read through the repair, not by Maintenance's equipment scope; the report sent by the claim's agent, not the
+// technician or another organization's agent), and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
 // asset's organization, assignment) are Mantle's MaintenanceScope. The access and isolation walk is the acceptance
@@ -1222,6 +1224,65 @@ feature(
             !out.retailScopes.includes(ids.organizationId)
             out.adminReadiness == ""
             out.resourcesReadiness.includes("PERMISSION_DENIED")
+        }
+    }
+)
+
+// P12: a customer repair (a spec-local organization's, lib.customerRepair) has its report stored by its assigned technician
+// (store#InterventionReport), not its organization's Customer Service agent (no maintenance permission) or Services' technician;
+// the customer's unit is read through the repair (the work order and its report screen open to the technician, the asset's own
+// record does not); Customer Service's send#InterventionReport is its organization's agent's (past the scope, the recipient
+// check), not the technician's or Services' agent, with the same parameters
+feature(
+    "a customer repair's report is stored by its technician and sent by the claim's agent; the customer's unit is read through it (P12)",
+    {
+        when() {
+            const repair = lib.customerRepair("ACCESS")
+            system(() =>
+                call("update#mantle.work.effort.WorkEffort", {workEffortId: repair.workEffortId, statusId: "WeComplete"})
+            )
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const store = user =>
+                as(user, "mantle.work.MaintenanceServices.store#InterventionReport", {workEffortId: repair.workEffortId})
+            const send = user =>
+                as(user, "mantle.request.WarrantyServices.send#InterventionReport", {
+                    operationKey: "access-p12-" + user,
+                    requestId: repair.requestId,
+                    assetMaintenanceId: repair.assetMaintenanceId,
+                    toAddress: "nobody@example.com"
+                })
+            const check = (recordType, recordId) =>
+                asUser(repair.tech, () => refusal(access + "check#Record", {appRoot: "Maintenance", recordType, recordId}))
+            const holder = store(repair.tech)
+            return {
+                holder,
+                agentStores: store(repair.agent),
+                otherOrganization: store(users.tech),
+                report: asUser(repair.tech, () => page("WorkOrders/InterventionReport", {workEffortId: repair.workEffortId})),
+                workOrder: check("workOrder", repair.workEffortId),
+                asset: check("asset", repair.assetId),
+                agent: send(repair.agent),
+                techSends: send(repair.tech),
+                otherAgent: send("customerservice.services")
+            }
+        },
+        then(r) {
+            r.holder == ""
+            r.agentStores.includes("PERMISSION_DENIED")
+            r.otherOrganization.includes("RECORD_UNAVAILABLE")
+            r.report.errors.length == 0
+            r.report.output.includes("Intervention report")
+            r.report.output.includes("Repair spec customer ACCESS")
+            r.report.output.includes("Store for the customer")
+            r.workOrder == ""
+            r.asset.includes("RECORD_UNAVAILABLE")
+            r.agent.includes("RECIPIENT_UNCHECKED")
+            r.techSends.includes("PERMISSION_DENIED")
+            r.otherAgent.includes("RECORD_UNAVAILABLE")
         }
     }
 )
