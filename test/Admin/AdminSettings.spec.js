@@ -161,7 +161,7 @@ feature("ReferenceData links a kind to its owner only for a viewer the owner's s
             // the screen's list is the settings index's Reference data group: what it gives the configuration administrator
             configure: asUser(users.configure, () =>
                 Array.from(
-                    invoke("ironstone.admin.RegistryServices.find#Settings", {settingsGroupEnumId: "AdmSgReference"}).entries ||
+                    invoke("org.moqui.admin.ReadinessServices.find#Settings", {settingsGroupEnumId: "AdmSgReference"}).entries ||
                         []
                 ).map(entry => entry.settingsKey)
             )

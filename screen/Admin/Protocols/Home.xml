@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ProtocolSection), whose rows link a mail account's and the phone system's own screens by the mount's routes: Comms' mail
     accounts (Admin.js mountRoutes) and Voice (BasicComms' System › Voice, from the settings index, set here when the
     viewer opens it). Admin adds: OwnerLinks, a person's or a team's mail accounts and text blocks in Comms and the phone
-    system's own screens; TransportHealth, the Transport checks of ironstone.admin.RegistryServices.get#Readiness the
+    system's own screens; TransportHealth, the Transport checks of org.moqui.admin.ReadinessServices.get#Readiness the
     viewer may read (the same providers Health shows). Nothing is configured here. Reading needs ADMIN_CONNECTION_VIEW,
     ADMIN_SETTINGS_VIEW or ADMIN_OPERATION_VIEW, checked by the service. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -27,18 +27,17 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <service-call name="org.moqui.admin.ConfigurationServices.get#ProtocolReadiness" out-map="found" transaction="force-new" ignore-error="true"/>
-        <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="health" transaction="force-new" ignore-error="true"
-                in-map="{healthGroupEnumId:'AdmHgTransport'}"/>
-        <service-call name="ironstone.admin.RegistryServices.find#Settings" out-map="index" transaction="force-new" ignore-error="true"
-                in-map="{ownerApp:'Voice'}"/>
+        <set field="registry" from="ec.resource.script('component://mr-boss/template/AdminRegistry.js')"/>
+        <set field="health" from="registry.readiness({healthGroupEnumId:'AdmHgTransport'}).out"/>
+        <set field="index" from="registry.settings({ownerApp:'Voice'}).out"/>
         <script><![CDATA[
             ec.message.clearErrors()
             const voice = Array.from(index?.entries || []).find(entry => entry.settingsKey === 'voice.system')
             voiceUrl = voice?.url || ''
             // where the framework's protocol list links under Admin: the mount's routes, with the phone system's own screens
-            // when the viewer opens them (a plain URL: another app's)
+            // only when the viewer opens them (the settings index lists its entry to such a viewer alone)
             const standing = ec.resource.script('component://tools/template/AdminMount.js').state()
-            if (voiceUrl) standing.routes.voice = {url: voiceUrl, plain: true}
+            if (!voiceUrl) delete standing.routes.voice
             mount = standing
             transportChecks = Array.from(health?.checks || []).map(row => Object.assign({}, row, {
                 stateColor: row.state === 'ready' ? 'positive' : row.state === 'warning' ? 'warning' : row.state === 'failed' ? 'negative' : 'grey-7'}))

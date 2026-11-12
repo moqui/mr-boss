@@ -1,4 +1,4 @@
-// Insights' business datasets in Admin's registries (impl-insights P3, INS-03, INS-09; impl-admin F50, F53): each dataset's
+// Insights' business datasets in the framework's readiness and refresh registries (impl-insights P3, INS-03, INS-09; impl-admin F50, F53): each dataset's
 // readiness provider and index refresh, over the framework's business dataset services (org.moqui.report.ReportServices
 // find#BusinessDatasets and index#BusinessDataset), each called as the viewer so the engine checks the dataset's own artifact
 // (view to read, update to steward). The report builder's dataset screens (Datasets, DatasetDetail, DatasetFields, DatasetView)
@@ -36,7 +36,7 @@ function described(datasetId) {
     }
 }
 
-// ===== readiness and refresh (Admin's registries; impl-admin F50, F53) =====
+// ===== readiness and refresh (the framework's registries, first Admin's; impl-admin F50, F53) =====
 // check#DatasetReadiness: the readiness contract for one dataset's provider (insights.dataset.<id>): admitted with its checks
 // passing is ready, waiting for review a warning naming what fails, unavailable unavailable; the watermark is its index's last
 // build. A dataset the viewer may neither read nor steward is refused, so the registry leaves it out.
@@ -59,7 +59,7 @@ function readiness(p) {
                 state,
                 reasonCode: row.status === "admitted" ? null : "DATASET_" + String(row.status).toUpperCase(),
                 message,
-                // the index's last build, as the stamp Admin's providers answer
+                // the index's last build, as the stamp the framework's own providers answer
                 watermark: lastIndexed(datasetId),
                 // the index's size is every organization's documents together: the author's and the steward's to read, not
                 // a reader's, who reads the source's freshness (the P10 review, R4)
@@ -74,14 +74,17 @@ function readiness(p) {
 function lastIndexed(datasetId) {
     return one("moqui.report.BusinessDataset", {datasetId})?.lastIndexedDate ?? null
 }
-// refresh#DatasetIndex: Admin's request#Refresh of a registered Insights refresh (insights.dataset.<id>.index): the dataset is the
+// refresh#DatasetIndex: the framework's request#Refresh of a registered Insights refresh (insights.dataset.<id>.index): the dataset is the
 // registration's source, never a name from the request, and index#BusinessDataset runs as the viewer, so the dataset's own update
 // artifact guards it.
 function refresh(p) {
     insights.required()
-    const operation = one("ironstone.admin.RefreshOperation", {refreshKey: p.refreshKey || "_NA_"})
+    const operation = one("moqui.server.RefreshOperation", {refreshKey: p.refreshKey || "_NA_"})
     if (!operation || operation.ownerApp !== "Insights" || operation.sourceKindEnumId !== "AdmRsIndex" || !operation.sourceName)
         denied("REFRESH_UNAVAILABLE", "Refresh " + (p.refreshKey || "") + " is not available")
+    // the registration's permission again here: the registry asks it before it calls, and a direct call asks it too
+    if (operation.requiredPermission && !lib.access.has(operation.requiredPermission))
+        denied("REFRESH_DENIED", operation.requiredPermission + " is required to refresh " + operation.title)
     const out = asViewer(R + "index#BusinessDataset", {datasetId: operation.sourceName})
     return {documentsIndexed: out.documentsIndexed ?? 0}
 }

@@ -36,8 +36,10 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Monitoring" location="component://mr-boss/screen/Admin/Operations/Monitoring.xml" menu-title="Monitoring" menu-index="4"/>
         <subscreens-item name="Topics" location="component://mr-boss/screen/Admin/Operations/Topics.xml" menu-title="Notification topics" menu-index="5"/>
         <subscreens-item name="TopicDetail" location="component://mr-boss/screen/Admin/Operations/TopicDetail.xml" menu-include="false"/>
-        <!-- P19: the readiness and support summary (design §16), opened from Health and ServerConfiguration -->
-        <subscreens-item name="SupportSummary" location="component://mr-boss/screen/Admin/Operations/SupportSummary.xml" menu-include="false"/>
+        <!-- P19: the readiness and support summary (design §16), opened from Health and ServerConfiguration: the framework's
+            System › Operations › SupportSummary by location (no grant names it, its one transition answers the redacted JSON
+            through org.moqui.admin.ReadinessServices, which asks ADMIN_OVERVIEW_VIEW, and Admin adds nothing) -->
+        <subscreens-item name="SupportSummary" location="component://tools/screen/System/Operations/SupportSummary.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminOperationsPanel" type="tab"/>

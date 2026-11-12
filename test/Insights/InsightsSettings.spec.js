@@ -18,7 +18,7 @@ const {ids, users, asUser, system, refusal, invoke, page, transition} = lib
 const C = "ironstone.insights.ContextServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
-const REFRESH = "ironstone.admin.RegistryServices.request#Refresh"
+const REFRESH = "org.moqui.admin.ReadinessServices.request#Refresh"
 const salesId = "mantle-sales-orders"
 const sourceId = "boss-commerce-checkouts"
 const orders = {retail: "INS_DS_O1", services: "INS_DS_O2"}
@@ -176,7 +176,8 @@ feature(
             hidden == null
             waiting.state == "warning"
             author.includes("REFRESH_DENIED")
-            reader.includes("not authorized")
+            // the registry is the framework's, any signed-in user's: a reader is refused by the registration's permission
+            reader.includes("REFRESH_DENIED")
             offered.refreshKey == refreshKey
             refreshed.state == "requested"
             // the index's size, every organization's documents together, is not a reader's

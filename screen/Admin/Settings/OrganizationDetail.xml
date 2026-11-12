@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
       (store#OrganizationDefault), else by the application that uses it; and the organization's Constitution, inherited or its
       own, linking Admin › Settings › Constitution in this organization's scope (members read it in the Assist drawer's
       Constitution / Rules, with no Admin access, impl-admin F46);
-    - Setup: the setup checks of this organization the user may read (ironstone.admin.RegistryServices.get#Readiness), each with
+    - Setup: the setup checks of this organization the user may read (org.moqui.admin.ReadinessServices.get#Readiness), each with
       its owner's fix link when the user opens it; Accounting's setup is Accounting's reviewed action, never run by a save here.
     Every refusal is shown as its reason. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -139,9 +139,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.party.ConstitutionServices.get#OrganizationConstitution" out-map="constitution" transaction="force-new"
                     ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
             <script>ec.message.clearErrors()</script>
-            <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="readiness" transaction="force-new" ignore-error="true"
-                    in-map="{organizationPartyId:organizationPartyId}"/>
-            <script>ec.message.clearErrors()</script>
+            <set field="readiness" from="ec.resource.script('component://mr-boss/template/AdminRegistry.js').readiness({organizationPartyId:organizationPartyId}).out"/>
         </if>
         <script><![CDATA[
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''

@@ -31,7 +31,7 @@ const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, sh
 const context = "ironstone.people.ContextServices.get#SharedContext"
 const checkRecord = "ironstone.people.ContextServices.check#Record"
 const choices = "ironstone.people.ContextServices.get#Choices"
-const registry = "ironstone.admin.RegistryServices."
+const registry = "org.moqui.admin.ReadinessServices."
 // a refusal of a user without People: the service is not authorized for them, or it refuses them
 const refused = message => /PEOPLE_UNAVAILABLE|is not authorized/.test(message)
 const unauthorized = message => /^40[13] |is not authorized/.test(message)
@@ -356,7 +356,10 @@ feature(
     {
         when() {
             const readiness = asUser(users.system, () =>
-                invoke(registry + "get#Readiness", {providerKey: "people.setup", organizationPartyId: ids.organizationId})
+                invoke(registry + "get#Readiness", {
+                    providerKey: "people.setup",
+                    scopeParameters: {organizationPartyId: ids.organizationId}
+                })
             )
             const settingsKeys = user =>
                 Array.from(asUser(user, () => invoke(registry + "find#Settings", {})).entries || []).map(

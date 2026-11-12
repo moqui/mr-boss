@@ -250,9 +250,9 @@ feature("no Admin group's user is given a secret, on a page, a print, the suppor
                 providers: JSON.stringify(call(user, C + "find#IdentityProviders", {authFlowId: flowId}).out),
                 settings: JSON.stringify(call(user, C + "get#EffectiveSettings").out),
                 summaryJson: JSON.stringify(
-                    call(user, "ironstone.admin.RegistryServices.get#SupportSummary", {redacted: true}).out
+                    call(user, "org.moqui.admin.ReadinessServices.get#SupportSummary", {redacted: true}).out
                 ),
-                readiness: JSON.stringify(call(user, "ironstone.admin.RegistryServices.get#Readiness").out)
+                readiness: JSON.stringify(call(user, "org.moqui.admin.ReadinessServices.get#Readiness").out)
             }
             for (const [where, text] of Object.entries(seen)) if (holds(text)) problems.push(`${user}: a secret in ${where}`)
         }

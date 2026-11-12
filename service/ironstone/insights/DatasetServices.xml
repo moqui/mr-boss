@@ -12,14 +12,14 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights' business datasets in Admin's registries (design-insights §5, §11; impl-insights P3; impl-admin F50, F53;
+<!-- Insights' business datasets in the framework's readiness and refresh registries (design-insights §5, §11; impl-insights P3; impl-admin F50, F53;
     Datasets.js): each dataset's readiness provider and index refresh. Each calls the framework's business dataset services as
     the viewer, so the engine checks the dataset's own artifact. The report builder's dataset screens are the framework's
     Dashboards screens under Insights' mount and read through org.moqui.report.ReportServices (mr-moqui
     plans/Admin-Screens-Down.md, Track I). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="check" noun="DatasetReadiness" allow-remote="false">
-        <description>The readiness contract of a dataset's provider (Admin's ReadinessProvider insights.dataset.(id)): admitted with
+        <description>The readiness contract of a dataset's provider (moqui.server.ReadinessProvider insights.dataset.(id)): admitted with
             its checks passing is ready, waiting for review or retired a warning naming what fails, a missing source unavailable;
             the watermark is the index's last build. A dataset the viewer neither reads nor stewards is refused
             (RECORD_UNAVAILABLE), so the registry leaves it out.</description>
@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="refresh" noun="DatasetIndex" allow-remote="false">
-        <description>A dataset's index rebuild requested through Admin's request#Refresh (RefreshOperation insights.dataset.(id).index):
+        <description>A dataset's index rebuild requested through the framework's request#Refresh (moqui.server.RefreshOperation insights.dataset.(id).index):
             the dataset is the registration's source, never a name from the request, and index#BusinessDataset runs as the viewer, so
             the dataset's own update artifact guards it. Refuses an unknown or another app's registration (REFRESH_UNAVAILABLE).</description>
         <in-parameters>

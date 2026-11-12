@@ -12,151 +12,49 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Admin's registries (impl-admin §2, P1, P2; design-admin §13, §14): what Admin brings together from other owners without
-    becoming their editor: readiness, refresh, Home's overview and the settings
-    index over the owners' registrations (entity/AdminEntities.xml; Registry.js). -->
+<!-- Admin's part of the readiness registry (impl-admin §2, P1, P2; design-admin §13, §14; mr-moqui plans/Admin-Screens-Down.md
+    A6). The registries are the framework's (moqui.server ReadinessProvider, RefreshOperation and SettingsEntry, read by
+    org.moqui.admin.ReadinessServices: get#Readiness, request#Refresh, get#Overview, find#Settings, get#SupportSummary), and
+    every screen and app calls those. Here are the contract service its registrations name for the owners whose services keep
+    their own shapes, and the check of which registered places open to the viewer under Admin (Registry.js). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
-    <service verb="get" noun="Readiness" allow-remote="false">
-        <description>The readiness checks the viewer may read (design §10 Health, §14): each registered provider whose required
-            permission the viewer holds, called as the viewer, its answer read as checks with a state (ready, warning, failed,
-            unavailable), a reason code, a message, the organization or store, the checked time, the freshness facet of a data
-            source (watermark, expected frequency, lag; stale past its lag), the owner's fix link when the viewer opens it and the
-            refresh registered for it when the viewer may run it. A provider that fails is named in failedProviders and shown
-            unavailable, without its diagnostics, while the others answer; a provider the viewer cannot read is omitted, and an
-            organization an owner refuses is left out. Narrowed by provider, owner app, Health group, organization (refused
-            outside the viewer's scope, RECORD_UNAVAILABLE) and state. Admin Health, Home and Insights DataReadiness read it; it
-            is exposed to the Assistant and MCP (admin_get_readiness).</description>
-        <in-parameters>
-            <parameter name="providerKey"/>
-            <parameter name="ownerApp"/>
-            <parameter name="healthGroupEnumId"/>
-            <parameter name="organizationPartyId"/>
-            <parameter name="state"><description>ready, warning, failed or unavailable</description></parameter>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="checks" type="List"/>
-            <parameter name="providers" type="List"/>
-            <parameter name="failedProviders" type="List"/>
-            <parameter name="checkedText"/>
-        </out-parameters>
-        <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('readiness', context)"/>
-            <set field="checks" from="found.checks"/>
-            <set field="providers" from="found.providers"/>
-            <set field="failedProviders" from="found.failedProviders"/>
-            <set field="checkedText" from="found.checkedText"/>
-        </actions>
-    </service>
-    <service verb="request" noun="Refresh" allow-remote="false">
-        <description>Run a registered refresh operation (design §14) by its key: refused without the registration's own
-            permission (REFRESH_DENIED), for a key not registered or naming a missing service (REFRESH_UNAVAILABLE) and for an
-            organization outside the viewer's scope (RECORD_UNAVAILABLE). Calls the owner's service as the viewer with the
-            organization, the operation key, the reason and only the scope parameters the registration names; never a service
-            or index name from the request. Answers a safe result: requested, or failed when the owner's service fails.</description>
-        <in-parameters>
-            <parameter name="refreshKey" required="true"/>
-            <parameter name="organizationPartyId"/>
-            <parameter name="scopeParameters" type="Map"/>
-            <parameter name="reason"/>
-            <parameter name="operationKey"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="refreshKey"/>
-            <parameter name="title"/>
-            <parameter name="state"/>
-            <parameter name="message"/>
-            <parameter name="completedText"/>
-        </out-parameters>
-        <actions>
-            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('requestRefresh', context)"/>
-            <set field="refreshKey" from="result.refreshKey"/>
-            <set field="title" from="result.title"/>
-            <set field="state" from="result.state"/>
-            <set field="message" from="result.message"/>
-            <set field="completedText" from="result.completedText"/>
-        </actions>
-    </service>
-    <service verb="get" noun="Overview" allow-remote="false">
-        <description>Admin Home's summaries (design §3): Needs attention, the failing and warning readiness checks the viewer
-            may read, worst first, each with its fix link when the viewer opens it; and the health cards, failed job runs and
-            sign-in failures of the last day, unresolved system messages and backup coverage, each linking its list when the
-            viewer opens it, a count that cannot be read shown unavailable. Refuses a user without ADMIN_OVERVIEW_VIEW
-            (PERMISSION_DENIED).</description>
-        <in-parameters>
-            <parameter name="organizationPartyId"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="attention" type="List"/>
-            <parameter name="cards" type="List"/>
-            <parameter name="failedProviders" type="List"/>
-            <parameter name="checkedText"/>
-        </out-parameters>
-        <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('overview', context)"/>
-            <set field="attention" from="found.attention"/>
-            <set field="cards" from="found.cards"/>
-            <set field="failedProviders" from="found.failedProviders"/>
-            <set field="checkedText" from="found.checkedText"/>
-        </actions>
-    </service>
-    <service verb="get" noun="SupportSummary" allow-remote="false">
-        <description>The readiness and support summary (design §16; impl-admin P19), the one projection of SupportSummary, its print
-            and its redacted JSON: the instance (display name, framework version and package, when prepared and, unless
-            redacted, by whom), the readiness checks the viewer may read (get#Readiness), the protocols' states
-            (get#ProtocolReadiness) and the effective settings (get#EffectiveSettings, a secret only set or not), each section
-            read with the viewer's own permissions and marked unavailable with its reason when refused. No environment, host
-            facts, listeners, paths, users, fix links or diagnostics. Redacted also leaves out who prepared it and writes an email
-            address as [address]. Refuses a user without ADMIN_OVERVIEW_VIEW (PERMISSION_DENIED).</description>
-        <in-parameters>
-            <parameter name="redacted" type="Boolean" default="false"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="summary" type="Map"/>
-        </out-parameters>
-        <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('supportSummary', context)"/>
-            <set field="summary" from="found.summary"/>
-        </actions>
-    </service>
-    <service verb="find" noun="Settings" allow-remote="false">
-        <description>The settings index (design §7 SettingsHome, §14.2): the owners' registered settings landings the viewer
-            may open, each shown only when its destination opens to the viewer's own groups and its view permission holds,
-            with its owner, group (Company, Applications, Instance), scope, who configures it and a link to its readiness in
-            Health when the viewer opens Health. Searched by text (title, description, owner, who configures), by owner app and
-            by group. For an Admin user and for a BOSS user the settings index alone is granted to (impl-admin F46); refuses
-            anyone else (ADMIN_UNAVAILABLE).</description>
-        <in-parameters>
-            <parameter name="text"/>
-            <parameter name="ownerApp"/>
-            <parameter name="settingsGroupEnumId"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="entries" type="List"/>
-            <parameter name="appOptions" type="List"/>
-            <parameter name="groupOptions" type="List"/>
-        </out-parameters>
-        <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('settings', context)"/>
-            <set field="entries" from="found.entries"/>
-            <set field="appOptions" from="found.appOptions"/>
-            <set field="groupOptions" from="found.groupOptions"/>
-        </actions>
-    </service>
-    <service verb="check" noun="AdminSetup" allow-remote="false">
-        <description>One of Admin's own readiness checks (design §3), the provider its registration names (admin.mailServer,
-            admin.backup, admin.reportMail, admin.reportAlertTopic, admin.adminFactors, admin.jobRuns, admin.cluster,
-            admin.telemetry), answering the readiness contract's checks; it reads the framework's own records and names no
-            host, address or person. On a fresh instance the backup check warns that the nightly job is paused and that its
-            mirror has no sendUrl (impl-admin F9). Refuses a user without ADMIN_OVERVIEW_VIEW and an unknown check.</description>
+    <service verb="check" noun="OwnerReadiness" allow-remote="false">
+        <description>The framework's readiness contract (moqui.server.ReadinessProvider) over an owner whose service keeps its
+            own shape, by the provider key its registration names: accounting.setup (Mantle's setup readiness, for a holder of
+            ACCOUNTING_VIEW), products.catalogChecks (the catalog checks, PRODUCT_CATALOG_VIEW), commerce.storeReadiness (each
+            store: its findings for a Commerce reader, its summary otherwise) and constitution.organization (whether an
+            organization's own Constitution is valid). Each owner's service is called as the viewer for the organizations the
+            viewer administers (none for a caller without the Admin root), or the one named, refused outside that scope
+            (RECORD_UNAVAILABLE); a check carries its organization or store as subject and scope and, where it has one, the
+            key of its fix place. An organization the owner refuses the viewer is left out; one that fails is shown
+            unavailable (PROVIDER_FAILED) and the others go on. Refuses an unknown key.</description>
         <in-parameters>
             <parameter name="providerKey" required="true"/>
+            <parameter name="organizationPartyId"/>
         </in-parameters>
         <out-parameters>
             <parameter name="checks" type="List"/>
         </out-parameters>
         <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('adminSetup', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('ownerReadiness', context)"/>
             <set field="checks" from="found.checks"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OpenPaths" allow-remote="false">
+        <description>For each path under /qapps (a BOSS screen path or a framework app's route, with or without a query),
+            whether it opens to the viewer's own groups, as the framework decides a screen path (Admin.js destinationOpens).
+            Admin's own screens ask it for the places a registration's key resolves to under Admin's mount, so a fix link, a
+            health card's link and Health's link are shown only where they open (template/AdminRegistry.js). It answers
+            nothing but the caller's own access.</description>
+        <in-parameters>
+            <parameter name="paths" type="List"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="open" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('openPaths', context)"/>
+            <set field="open" from="found.open"/>
         </actions>
     </service>
 </services>

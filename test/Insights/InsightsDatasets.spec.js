@@ -309,13 +309,13 @@ feature("the dataset's readiness and index refresh are in Admin's registries, th
     when() {
         const providerKey = "insights.dataset." + salesId
         const readiness = asUser(users.steward, () =>
-            Array.from(invoke("ironstone.admin.RegistryServices.get#Readiness", {providerKey}).checks || [])
+            Array.from(invoke("org.moqui.admin.ReadinessServices.get#Readiness", {providerKey}).checks || [])
         )
         const refused = asUser(users.author, () =>
-            refusal("ironstone.admin.RegistryServices.request#Refresh", {refreshKey: providerKey + ".index"})
+            refusal("org.moqui.admin.ReadinessServices.request#Refresh", {refreshKey: providerKey + ".index"})
         )
         const refreshed = asUser(users.steward, () =>
-            invoke("ironstone.admin.RegistryServices.request#Refresh", {refreshKey: providerKey + ".index", reason: "spec"})
+            invoke("org.moqui.admin.ReadinessServices.request#Refresh", {refreshKey: providerKey + ".index", reason: "spec"})
         )
         const indexed = system(() => ec.entity.find("moqui.report.BusinessDataset").condition("datasetId", salesId).one())
         return {readiness, refused, refreshed, indexed: indexed?.lastIndexedCount}

@@ -547,11 +547,20 @@ feature("a BOSS user without Admin opens the settings index alone", {
         for (const [service, parameters] of [
             [context + "get#Choices", {choice: "organizations"}],
             [context + "check#Record", {recordType: "organization", recordId: ids.organizationId}],
-            ["ironstone.admin.RegistryServices.get#Readiness", {}]
+            ["ironstone.admin.RegistryServices.check#OwnerReadiness", {providerKey: "commerce.storeReadiness"}],
+            ["ironstone.admin.RegistryServices.get#OpenPaths", {paths: ["Admin/Home"]}]
         ]) {
             const message = asUser(user, () => refusal(service, parameters))
             if (!refused(message)) problems.push(`the manager gets ${service}: ${message || "accepted"}`)
         }
+        // the framework's readiness is any signed-in user's: it answers the manager no check of the instance or of an owner
+        // Admin's contract service reads (each needs a permission or Admin's grant)
+        const readiness = asUser(user, () => invoke("org.moqui.admin.ReadinessServices.get#Readiness", {}))
+        const theirs = Array.from(readiness.checks || []).filter(row =>
+            ["System", "Admin", "Accounting", "Products", "Commerce"].includes(row.ownerApp)
+        )
+        if (theirs.length || Array.from(readiness.failedProviders || []).length)
+            problems.push(`the manager's readiness: ${JSON.stringify(theirs)} ${readiness.failedProviders}`)
         // the launcher still has no Admin for them
         if (shell(user, false).apps.includes("Admin")) problems.push("the manager's launcher has Admin")
         return {problems}

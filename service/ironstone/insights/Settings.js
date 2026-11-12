@@ -12,10 +12,10 @@
 // none. A setting grants nothing: a default dashboard a viewer does not read is not shown to them.
 //
 // Data readiness. There is no registry here (design §11, review Z9): the sources are the readiness providers Insights
-// registered in Admin's registry, read through ironstone.admin.RegistryServices.get#Readiness as the viewer, so a source the
+// registered in the framework's registry, read through org.moqui.admin.ReadinessServices.get#Readiness as the viewer, so a source the
 // viewer may not read is left out and one that fails is named. This module adds what Insights knows of each source (its
 // domain owner and class, ironstone.insights.DatasetClass) and the organization's freshness policy: a ready source whose
-// last rebuild is older than the policy allows is stale, with its lag. A refresh is Admin's request#Refresh of the
+// last rebuild is older than the policy allows is stale, with its lag. A refresh is the framework's request#Refresh of the
 // registered operation, checked by the registration's own permission; nothing here names a service or an index.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const insights = ec.resource.script("component://mr-boss/service/ironstone/insights/Insights.js")
@@ -23,7 +23,7 @@ const admin = ec.resource.script("component://mr-boss/service/ironstone/admin/Ad
 const {find, one, rows, denied, reasonCode} = lib
 
 const R = "org.moqui.report.ReportServices."
-const READINESS = "ironstone.admin.RegistryServices.get#Readiness"
+const READINESS = "org.moqui.admin.ReadinessServices.get#Readiness"
 const providerPrefix = "insights.dataset."
 const freshnessType = "InsightsFreshnessPolicy"
 const weekStartType = "InsightsWeekStart"
@@ -126,7 +126,7 @@ function choices(organizationPartyId) {
 }
 
 // ===== get#Settings =====
-// Whether report mail is ready to send, from Admin's readiness registry as the viewer: its state for one who may read that
+// Whether report mail is ready to send, from the framework's readiness registry as the viewer: its state for one who may read that
 // check (an administrative reader), else where it is shown. One failure here is this row's, not the page's.
 function sending() {
     ec.message.pushErrors()
@@ -242,7 +242,7 @@ function sourceOwners() {
         }
         return stewards.get(userId)
     }
-    return rows("ironstone.admin.ReadinessProvider", {ownerApp: "Insights"})
+    return rows("moqui.server.ReadinessProvider", {ownerApp: "Insights"})
         .filter(row => row.disabled !== "Y" && String(row.providerKey).startsWith(providerPrefix))
         .map(row => {
             const datasetId = String(row.providerKey).slice(providerPrefix.length)

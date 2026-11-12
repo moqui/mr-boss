@@ -32,7 +32,8 @@ feature("Home names the mail and backup warnings with their fix links for an ins
         home.output.includes("The SYSTEM mail server has no SMTP host, so the instance sends no mail")
         home.output.includes("The nightly database backup is paused")
         home.output.includes("Backups are not mirrored off the server")
-        home.output.includes("/qapps/tools/Data/Grid?entityName=moqui.basic.email.EmailServer")
+        // the mail server's fix place is the mail relays, Admin's own (the framework's adminMailRelay route)
+        home.output.includes("/qapps/Admin/Protocols/MailRelays")
         home.output.includes("/qapps/Admin/Operations/JobDetail?jobName=backup_EmbeddedDatabase_daily")
         home.output.includes("/qapps/Admin/Integrations/ConnectionDetail?adapterKey=remote&connectionKey=EmbeddedDbBackup")
     }
@@ -42,14 +43,24 @@ feature("a finance reader without an Admin group reads Accounting's readiness in
     when() {
         const user = outsiders.financeReader
         return {
-            readiness: asUser(user, () => refusal("ironstone.admin.RegistryServices.get#Readiness", {})),
+            // Admin's contract service over Accounting is refused them, and the framework's readiness, any signed-in
+            // user's, answers them no check of Accounting's through it
+            readiness: asUser(user, () =>
+                refusal("ironstone.admin.RegistryServices.check#OwnerReadiness", {providerKey: "accounting.setup"})
+            ),
+            checks: asUser(user, () =>
+                Array.from(
+                    ec.service.sync().name("org.moqui.admin.ReadinessServices.get#Readiness").call()?.checks || []
+                ).filter(row => row.ownerApp === "Accounting")
+            ),
             adminHome: asUser(user, () => lib.page("Home", {}, "html")),
             health: asUser(user, () => lib.page("Operations/Health", {}, "html")),
             accountingHome: asUser(user, () => appPage("Accounting", "Home"))
         }
     },
-    then({readiness, adminHome, health, accountingHome}) {
+    then({readiness, checks, adminHome, health, accountingHome}) {
         ;/is not authorized|ADMIN_UNAVAILABLE/.test(readiness)
+        checks.length == 0
         !opened(adminHome)
         !opened(health)
         opened(accountingHome)

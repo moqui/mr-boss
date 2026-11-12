@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- ReferenceData (design-admin §7 ReferenceData; style-guide §3 settings landing): where each kind of reference data is changed.
-    ReferenceOwners lists the settings index's reference kinds (ironstone.admin.RegistryServices.find#Settings, the entries of the
+    ReferenceOwners lists the settings index's reference kinds (org.moqui.admin.ReadinessServices.find#Settings, the entries of the
     Reference data group: units, currencies, tax, payment terms, types, statuses and workflows), each with its owner app, what it
     applies to, who changes it and a link to the owner's screen, shown only to a viewer that screen opens to. Admin changes none
     of them: Products owns units, Accounting currencies, tax and terms, each app its own types and statuses, and the generic
@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="ownerApp"/>
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.find#Settings', {text:(text || null), ownerApp:(ownerApp || null), settingsGroupEnumId:'AdmSgReference'}, 'Reference data is not available to you.')"/>
+        <set field="called" from="ec.resource.script('component://mr-boss/template/AdminRegistry.js').settings({text:(text || null), ownerApp:(ownerApp || null), settingsGroupEnumId:'AdmSgReference'}, 'Reference data is not available to you.')"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="entries" from="found?.entries || []"/>

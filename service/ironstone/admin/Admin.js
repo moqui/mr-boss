@@ -359,6 +359,37 @@ const linkPaths = [
 // changes list (Audit › AuditChanges), GroupDetail's members, the Sessions list and the Data screens' owner links go by
 // this one table (mr-moqui plans/Admin-Screens-Down.md A3 to A5): a user's page is Users › UserDetail, and Admin's own
 // records have their places here.
+// The places of the settings index's entries (a SettingsEntry's destinationRoute) that are not the framework's own relative
+// path: Admin's own screens, and each app's settings as a plain URL. The index lists an entry only where its screen opens to
+// the viewer (the framework's find#Settings), so these are given as they are, to a BOSS user who opens the index alone too.
+const settingsRoutes = {
+    adminOrganizations: {url: "../../Settings/Organizations"},
+    adminConstitution: {url: "../../Settings/Constitution"},
+    adminReferenceData: {url: "../../Settings/ReferenceData"},
+    accountingSettings: {url: "/qapps/Accounting/Settings/Settings", plain: true},
+    accountingCurrencies: {url: "/qapps/Accounting/Settings/Currencies", plain: true},
+    accountingPaymentTerms: {url: "/qapps/Accounting/Settings/PaymentTerms", plain: true},
+    accountingTaxAuthorities: {url: "/qapps/Accounting/Tax/TaxAuthorities", plain: true},
+    productsSettings: {url: "/qapps/Products/Settings/Index", plain: true},
+    productsUnits: {url: "/qapps/Products/Units", plain: true},
+    productsIdentificationTypes: {url: "/qapps/Products/Settings/IdentificationTypes", plain: true},
+    commerceCheckoutSettings: {url: "/qapps/Commerce/Settings/CheckoutSettings", plain: true},
+    customerServiceSettings: {url: "/qapps/CustomerService/Settings/SettingsHome", plain: true},
+    customerServiceCaseTypes: {url: "/qapps/CustomerService/Settings/CaseTypes", plain: true},
+    customerServiceStatusCategories: {url: "/qapps/CustomerService/Settings/StatusCategories", plain: true},
+    purchasingSettings: {url: "/qapps/Purchasing/Settings/SettingsHome", plain: true},
+    warehouseSettings: {url: "/qapps/Warehouse/Settings/Index", plain: true},
+    manufacturingSettings: {url: "/qapps/Manufacturing/Settings/ProductionSettings", plain: true},
+    manufacturingReasonCodes: {url: "/qapps/Manufacturing/Settings/ReasonCodes", plain: true},
+    projectsSettings: {url: "/qapps/Projects/Settings/Index", plain: true},
+    projectsWorkItemTypes: {url: "/qapps/Projects/Settings/WorkItemTypes", plain: true},
+    projectsWorkflows: {url: "/qapps/Projects/Settings/Workflows", plain: true},
+    commsConsent: {url: "/qapps/Comms/Consent/List", plain: true},
+    insightsSettings: {url: "/qapps/Insights/Settings/AnalyticsSettings", plain: true},
+    peopleSettings: {url: "/qapps/People/Settings", plain: true},
+    voice: {url: "/qapps/system/Voice", plain: true},
+    toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
+}
 const mountRoutes = {
     adminUser: {url: "../../Users/UserDetail", idParameter: "userId"},
     adminInvitations: {url: "../../Users/Invitations"},
@@ -386,7 +417,21 @@ const mountRoutes = {
     // and Comms' mail accounts (a mail account's message in the mail queue, the mail reception's owner)
     storeIntegration: {url: "/qapps/Commerce/Integrations/IntegrationDetail", idParameter: "systemMessageRemoteId", plain: true},
     mailAccount: {url: "/qapps/Comms/Settings/MailAccounts", plain: true},
-    supportSummary: {url: "../../Operations/SupportSummary"}
+    // the registries' places (mr-moqui plans/Admin-Screens-Down.md A6): the keys of the readiness providers' and checks'
+    // fix places (fixRoute) and of the health cards, where they are not the framework's own relative path. The framework's
+    // Monitor, Constitution, users and visits are System's screens beside its areas: here Monitor is Admin's landing, the
+    // telemetry sources are System's own page and the rest are under Admin › System, which opens to an instance
+    // administrator. A link Admin's own screens show is checked first (RegistryServices.get#OpenPaths)
+    monitor: {url: "../../Operations/Monitoring"},
+    monitorSources: {url: "/qapps/system/Monitor/Sources", plain: true},
+    constitution: {url: "../../System/Constitution"},
+    adminUsers: {url: "../../System/Security/UserAccount"},
+    adminVisits: {url: "../../System/Visit"},
+    accountingSetup: {url: "/qapps/Accounting/Settings/Setup", plain: true},
+    productsCatalogChecks: {url: "/qapps/Products/CatalogChecks", plain: true},
+    commerceStore: {url: "/qapps/Commerce/Stores/StoreDetail", idParameter: "productStoreId", plain: true},
+    insightsDataset: {url: "/qapps/Insights/ReportBuilder/DatasetDetail", idParameter: "datasetId", plain: true},
+    ...settingsRoutes
 }
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")
@@ -402,7 +447,7 @@ function sharedContext(p) {
             linkBase: "//Admin",
             webBase: "/qapps/Admin",
             sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"},
-            mount: {routes: {adminUser: null}}
+            mount: {routes: Object.assign({adminUser: null}, settingsRoutes)}
         }
     const userScope = required(found)
     return {
