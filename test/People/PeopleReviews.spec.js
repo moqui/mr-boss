@@ -5,8 +5,10 @@
 // assessment read, Your assessment of him over the review form's own field and the rating, her private note, behind the AI opt-out)
 // and its one agent render (tui) as Hannah (neither the note nor the assessments reach the model), then her assessment posted
 // through its transition with authorization on; Goals' one qvt render as Tomas (his goal, never a task); ReviewRelease's one
-// html-print render as Tomas (the stored review, the assessment and rating, never the note). The rules are Mantle's Reviews; access
-// is PeopleAccess's.
+// html-print render as Tomas (the stored review, the assessment and rating, never the note). P20 review: People's Today source (the
+// review steps due: Tomas's self assessment, Hannah's assessments) and Employee360's reviews (find#Reviews by person: the state and,
+// once released, the result, to the person, the reviewer and development, none to a colleague). MyTeam's Reviews due box is checked
+// on PeopleSelfService's render of MyTeam. The rules are Mantle's Reviews; access is PeopleAccess's.
 // Run: ./moq test mr-boss --spec PeopleReviews
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -121,6 +123,13 @@ feature(
     "Reviews as Tomas: his self assessment to do; ReviewDetail as Hannah: his assessment read, hers to give over the form, her note, behind the AI opt-out",
     {
         when() {
+            // People's Today source: the review steps due, before Tomas submits
+            const today = user =>
+                asUser(user, () => system(() => invoke("ironstone.people.ContextServices.get#TodayItems", {})))
+                    .items.filter(item => item.kind == "review")
+                    .map(item => item.title)
+            const todayTomas = today(users.employee)
+            const todayHannah = today(users.manager)
             const reviews = asUser(users.employee, () => page("Performance/Reviews", {}))
             asUser(users.employee, () =>
                 system(() =>
@@ -153,9 +162,11 @@ feature(
                     .condition({performanceReviewId: state.reviewId, stepKindEnumId: "RskManager"})
                     .one()
             )
-            return {reviews, detail, agent, posted, step}
+            return {reviews, detail, agent, posted, step, todayTomas, todayHannah}
         },
-        then({reviews, detail, agent, posted, step}) {
+        then({reviews, detail, agent, posted, step, todayTomas, todayHannah}) {
+            todayTomas == ["Your self assessment for Spec store year, due 2027-01-15"]
+            todayHannah.includes("Assess Tomas Lindqvist · Spec store year, due 2027-01-15")
             reviews.status == 200 && reviews.errors.length == 0
             reviews.output.includes("Spec store year") && reviews.output.includes("Your self assessment")
             detail.status == 200 && detail.errors.length == 0
@@ -194,9 +205,19 @@ feature("Goals as Tomas: his goal, never a task; ReviewRelease as Tomas: the rev
         const release = asUser(users.employee, () =>
             page("Performance/ReviewRelease", {performanceReviewId: state.reviewId}, "html-print")
         )
-        return {goals, release}
+        // Employee360's reviews: Tomas's reviews as each reads them, the state and the released result
+        const byPerson = user =>
+            asUser(user, () => system(() => invoke(R + "find#Reviews", {partyId: ids.employeePartyId}))).reviews.filter(
+                row => row.performanceReviewId == state.reviewId
+            )
+        const person = {own: byPerson(users.employee), reviewer: byPerson(users.manager), hr: byPerson(users.hr)}
+        return {goals, release, person}
     },
-    then({goals, release}) {
+    then({goals, release, person}) {
+        person.own.length == 1 && person.own[0].resultText == "Fulfills expectations" && person.own[0].statusText == "Released"
+        person.reviewer.length == 1 && person.reviewer[0].resultText == "Fulfills expectations"
+        // the HR officer (no development reading) reads none of them
+        person.hr.length == 0
         goals.status == 200 && goals.errors.length == 0
         goals.output.includes("Spec goal: run a till audit") &&
             goals.output.includes("0 of 4 audits") &&

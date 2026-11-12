@@ -38,7 +38,10 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.humanres.DevelopmentServices.get#PersonDevelopment: the person's skills with their level and whether self-declared or
     evaluated, their qualifications as the reader may see them with their expiry, and their resume lines for the person, HR and
     development; a manager reads the skills and the verified qualifications' validity), with Add resume line for the person and an
-    HR or development editor (store#ResumeLine) and links to Qualifications and the skills matrix; reviews join with P20.
+    HR or development editor (store#ResumeLine) and links to Qualifications and the skills matrix. P20, under People: Reviews (the
+    second half of SkillsAndReviews; mantle.humanres.ReviewServices.find#Reviews by partyId: the reviews the user reads as the person,
+    the reviewer or development, each with its cycle, period, state and, once released, its result, the overall rating; never an
+    assessment, a feedback or a note), each opening ReviewDetail.
     Compensation (P23) and TimeAndLeave (P12) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
@@ -158,6 +161,12 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{partyId:partyId, checkOnly:true}"/>
             <script>ec.message.clearErrors()</script>
         </if>
+        <!-- P20: the person's reviews as the user reads them (People's mount): their state and released result -->
+        <if condition="recordFound &amp;&amp; employee?.showsDevelopment">
+            <service-call name="mantle.humanres.ReviewServices.find#Reviews" out-map="reviewsFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyId:partyId, pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <if condition="recordFound &amp;&amp; employee?.showsChanges">
             <service-call name="mantle.humanres.PeopleServices.find#EmploymentChanges" out-map="changesFound" transaction="force-new"
                     ignore-error="true" in-map="{partyId:partyId, includeDone:true}"/>
@@ -197,6 +206,11 @@ along with this software (see the LICENSE.md file). If not, see
             skillRows = Array.from(development?.skills || [])
             qualificationRows = Array.from(development?.qualifications || [])
             resumeRows = Array.from(development?.resumeLines || [])
+            // P20: the person's reviews, their state and released result
+            reviewRows = Array.from(reviewsFound?.reviews || [])
+            reviewStateColors = {PrvInProgress: 'primary', PrvApproval: 'warning', PrvFinalized: 'primary', PrvReleased: 'positive',
+                PrvAcknowledged: 'positive', PrvExcluded: 'grey-8'}
+            reviewDetailUrl = sharedLinks?.['Performance/ReviewDetail'] || null
             resumeTypeOptions = [{key: 'RltExperience', text: 'Experience'}, {key: 'RltEducation', text: 'Education'}, {key: 'RltOther', text: 'Other'}]
             qualificationsUrl = sharedLinks?.['Development/Qualifications'] || null
             skillsMatrixUrl = sharedLinks?.['Development/SkillsMatrix'] || null
@@ -517,6 +531,45 @@ along with this software (see the LICENSE.md file). If not, see
                                     </widgets>
                                 </section>
                             </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P20: Reviews (design §4 Employee360 SkillsAndReviews, its second half): the person's reviews the user reads, their
+                    state and released result -->
+                <section name="Reviews" condition="reviewRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Reviews"/>
+                            <box-body-nopad>
+                                <form-list name="ReviewRows" list="reviewRows" skip-form="true" paginate="false">
+                                    <field name="cycleName">
+                                        <conditional-field condition="reviewDetailUrl" title="Cycle">
+                                            <link url="${reviewDetailUrl}" url-type="plain" text="${cycleName}" link-type="anchor"
+                                                    parameter-map="{performanceReviewId:performanceReviewId}"/>
+                                        </conditional-field>
+                                        <default-field title="Cycle"><display/></default-field>
+                                    </field>
+                                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                                    <field name="reviewerName"><default-field title="Reviewer"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${reviewStateColors[statusEnumId] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultText"><default-field title="Result"><display/></default-field></field>
+                                    <field name="releasedText"><default-field title="Released"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="cycleName"/><field-ref name="periodText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="resultText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
                         </container-box>
                     </widgets>
                 </section>

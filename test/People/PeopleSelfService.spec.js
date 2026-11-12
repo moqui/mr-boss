@@ -145,6 +145,8 @@ feature("My team shows the manager their reports and the decisions waiting on th
         !rendered.output.includes("Leon Ferreira")
         !rendered.output.includes("Kenji Arakawa")
         rendered.output.includes("Decisions waiting on you")
+        // P20 review: the open reviews she gives
+        rendered.output.includes("Reviews due")
         // P10: each report's last week, and Remind missing time on the selected people
         rendered.output.includes("Last week")
         rendered.output.includes("Remind missing time")

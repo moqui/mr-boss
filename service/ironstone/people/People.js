@@ -54,6 +54,7 @@ const grievancesLocation = "component://mr-boss/screen/People/Employees/Grievanc
 // P20: Reviews & goals, which a self-service employee opens by its own grant (BOSS_PPL_PERFORMANCE)
 const performanceLocation = "component://mr-boss/screen/People/Performance.xml"
 const reviewDetailPath = "/qapps/People/Performance/ReviewDetail"
+const REVIEW = "mantle.humanres.ability.PerformanceReview"
 const caseDetailPath = "/qapps/People/Employees/RequestDetail"
 
 // ===== scope =====
@@ -1740,6 +1741,33 @@ function today(p) {
             }
         } catch (error) {
             ec.logger.error("People Today of " + ec.user.userId + ": the training due was left out: " + error.message)
+        }
+    }
+    // P20 review: a review step due: the user's own self assessment, the assessment of a person they review and feedback asked of
+    // them, waiting (find#Reviews' to do; the decisions are above, a release and an acknowledgment are on Reviews), each opening the
+    // review; the step and the cycle, the person reviewed to the reviewer and a giver, never a rating or an answer
+    if (ec.user.userAccount?.partyId && performanceAreaOpens()) {
+        try {
+            const found = lib.probe("mantle.humanres.ReviewServices.find#Reviews", {show: "todo", pageSize: 20})
+            const stepTodo = ["Your self assessment", "Assess", "Give feedback"]
+            for (const row of Array.from(found.reviews || [])) {
+                if (!stepTodo.includes(row.todoText)) continue
+                const what =
+                    row.todoText === "Your self assessment"
+                        ? "Your self assessment for " + row.cycleName
+                        : (row.todoText === "Assess" ? "Assess " : "Feedback on ") + row.personName + " · " + row.cycleName
+                items.push(
+                    item({
+                        kind: "review",
+                        title: what + (row.dueText ? ", due " + row.dueText : ""),
+                        dueDate: row.dueText || null,
+                        url: reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(row.performanceReviewId),
+                        record: {recordEntityName: REVIEW, recordId: row.performanceReviewId, recordName: row.cycleName}
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the review steps due were left out: " + error.message)
         }
     }
     if (keepsTimeHere()) {

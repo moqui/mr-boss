@@ -1590,7 +1590,7 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 | Cycles | list | Track review completion | name, employer/team, period, due dates, template, counts, state | progress counts | proposed `mantle.humanres.ReviewServices.find#Cycles` | Frappe Appraisal Cycle |
 | CycleSetup | dialog | Create a cycle and preview participants | scope, period, template, self/manager dates, reviewer rule, release policy | preview participant list | proposed `mantle.humanres.ReviewServices.store#Cycle`; proposed `mantle.humanres.ReviewServices.start#Cycle` | Frappe Appraisal Cycle |
 
-**Actions and states:** Start creates one review per intended person/cycle with independent results. Changed reporting lines do not silently disclose earlier feedback; reviewer reassignment is audited. Close only with explicit completion/exclusion outcomes.
+**Actions and states:** Start creates one review per intended person/cycle with independent results. Changed reporting lines do not silently disclose earlier feedback; reviewer reassignment is audited. (As built: the feedback given on a review is the review's, so a new reviewer reads it; the user's call of Nov 12, 2026, impl-people §4.) Close only with explicit completion/exclusion outcomes.
 
 
 
@@ -1676,13 +1676,23 @@ built; a step with no form is a written summary (and, for the reviewer, the over
 - **ReviewDetail** (`People/Performance/ReviewDetail`): the record header with one primary by state (Acknowledge, Approve, Release,
   Finalize) and More (Ask for feedback, Return the self assessment, Return the reviewer's assessment, Refuse, Change reviewer,
   Exclude); Steps (what the user reads of each: the person their self assessment and, once released, the reviewer's and the shared
-  feedback; a giver their own; the reviewer every step but feedback an earlier reviewer asked for; development and an approver every
-  step); Your self assessment, Your assessment of, Your feedback on (the step's review form as a dynamic form of its DbForm, a summary
-  and the reviewer's rating, submitted once); Your private notes (their author's alone, never released); the approval; the goals of
-  the review; Files (the review's content host: the reviewer's, development's and, once released, the person's). Every assessment's
+  feedback; a giver their own; the reviewer, development and an approver every step, the feedback an earlier reviewer asked for
+  included); Your self assessment, Your assessment of, Your feedback on (the step's review form as a dynamic form of its DbForm, a summary
+  and the reviewer's rating, submitted once); Your private notes (their author's alone, never released); the approval (its decisions
+  and reasons the full readers' alone, never the person's; a return's reason the step's assignee's and the full readers'); the goals
+  of the review; Files (the review's content host: the reviewer's, development's and, once released, the person's). The review's
+  notes and messages (People's record panel) open once it is released, when they are the person's too: nothing is filed on it
+  before (`link#CommunicationEventRecord` refuses `REVIEW_NOT_RELEASED`), and their mention and follower notices go to their named
+  recipients alone (`ConfidentialRecordType`). Every assessment's
   text, note and acknowledgment is opted out of AI. A new reviewer (development's reassignment, or the separation's re-route when the
-  reviewer leaves or the line changes while the assessment waits) reads no earlier reviewer's note or the feedback they asked for;
-  the reassignment is audit-logged with its reason.
+  reviewer leaves or the line changes while the assessment waits) reads the feedback already given on the review and withdraws what
+  still waits (it belongs to the review; the user's call of Nov 12, 2026), never an earlier reviewer's note, and never decides the
+  review's approval; the reassignment is audit-logged with its reason.
+- **Today, MyTeam and Employee360** (P20's review): People's Today source answers the user's review steps due (their self
+  assessment, the assessment of a person they review, feedback asked of them), each opening the review; MyTeam's Reviews due lists
+  the open reviews the manager gives (the person, the cycle, what waits, the due day); Employee360's Reviews (SkillsAndReviews'
+  second half, under People) lists the person's reviews the user reads as the person, the reviewer or development, with the state
+  and, once released, the overall rating, each opening ReviewDetail.
 - **Goals** (`People/Performance/Goals`): Mine, My team and All, open or closed, or a person's or a review's goals; Add goal (the one
   primary: the user's own, a report's for their manager, an employee's for a development editor; agreed in a review when opened from
   one), a row's Update progress, Change, Close (with its outcome: met, partly met, not met) and Cancel goal. A goal is a WorkEffort of

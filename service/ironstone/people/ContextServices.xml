@@ -250,7 +250,10 @@ along with this software (see the LICENSE.md file). If not, see
             qualification, mantle.humanres.DevelopmentServices.find#Qualifications' attention, PEOPLE_SELF_SERVICE: its type and
             expiry, never its number), each opening their qualifications; and P19 training due (kind training,
             DevelopmentServices.find#Training's due: the user's own enrolled sessions and those they train, starting within seven
-            days), each opening the session. Another user's Today gets none. Declared on both roots,
+            days), each opening the session; and P20 a review step due (kind review, mantle.humanres.ReviewServices.find#Reviews'
+            to do, where Reviews &amp; goals opens to the user: their own self assessment, the assessment of a person they review,
+            feedback asked of them, with the cycle and the due day, never a rating or an answer), each opening the review. Another
+            user's Today gets none. Declared on both roots,
             it is taken once.</description>
         <in-parameters>
             <parameter name="userId"/>
