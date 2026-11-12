@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Maintenance › Work orders › InterventionReport (design-maintenance §12 "Customer service/intervention report"; impl-maintenance
     P12): a customer repair's report as of now from Mantle's get#InterventionReport, for a reader of the work order (check#Record):
-    the customer-safe work done, the claim and the customer's equipment, parts and labor only for a reader of maintenance costs, and
-    the customer's acknowledgment. Opened from WorkOrderDetail's More menu; Print opens it as html-print (renderMode=html-print), PDF
+    the customer-safe work done, the claim and the customer's equipment, the parts used with their quantities and the hours worked
+    (never a price, cost or total, whoever reads or stores it: the user's call of Nov 12), and the customer's acknowledgment. Opened from WorkOrderDetail's More menu; Print opens it as html-print (renderMode=html-print), PDF
     downloads it (the stored one when there is one), and Store for the customer (the work's planner, supervisor or assigned
     technician, once the work is complete) stores it on the work order with the customer's acknowledgment file
     (store#InterventionReport); Customer Service's RepairLinks sends the stored report. Printing and storing post nothing. -->
@@ -117,7 +117,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                 </form-single>
-                                <label text="${report.costsShown ? 'Parts and labor are in it, as you read maintenance costs.' : 'Parts and labor are left out: you do not read maintenance costs.'}"
+                                <label text="The parts' quantities and the hours are in it; no price, cost or total is."
                                         type="p" style="text-caption m-muted q-mb-none"/>
                             </container-dialog>
                         </container>

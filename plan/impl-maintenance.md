@@ -3322,7 +3322,8 @@ note, reading the code each piece leans on (Customer Service's `linkWork`, `upda
 `OrderConfirmations.allowedRecipients`/`senderAccount`, `SupportCases.caseOf`; Maintenance's `adoptWith`/`adoptForOwner`,
 `refusalOf`, `downtimeOf`, ResourceOutages' `maintenanceAuthority`, `MaintenanceAccess.assetOrganization`/`requireWork`,
 `issuePlan`, ProcessChecks' guard, P4's production handoff). The lead's two calls (the storer's cost read decides the stored
-report's amounts and the agent sends it as stored; no demo customer repair) were taken as given.
+report's amounts and the agent sends it as stored; no demo customer repair) were taken as given; the first was replaced by the
+user's call of Nov 12 during the review (R6).
 - Checked and found sound:
   - Customer Service's owner contract: with the policy off `link#WarrantyWork` returns before any Maintenance write
     (`policyOf(...).warrantyRepairsManaged`) and `update#WarrantyWork` takes its old path (no MaintenanceWorkOrder row exists);
@@ -3337,8 +3338,7 @@ report's amounts and the agent sends it as stored; no demo customer repair) were
     `requireAsset`; `check#Record` refuses the asset itself to the technician (MaintenanceAccess); the issue refuses the equipment
     under repair (`NOT_STOCK`) and a customer's stock (`OWNER_MISMATCH`) after the standing check; More's Equipment link needs
     `repair.assetInScope`. A unit in the organization's custody (at its facility) is in scope by P2's rule, as design §1.1 allows.
-  - The report: the live one's parts and labor come from the reader's own `get#MaintenanceCosts` (costView first, its scope checked
-    again); stored as `WectInterventionReport` content through `asManagedOwner`; the guard admits a report or acknowledgment file
+  - The report: stored as `WectInterventionReport` content through `asManagedOwner`; the guard admits a report or acknowledgment file
     only inside that pass, and on closed work only for those two types (narrow); a stored report is never changed or removed.
   - `send#InterventionReport`: SUPPORT_CASE_EDIT and `claimOf` (the case's organization in the user's), the repair one the claim
     links, the work order's latest stored report and acknowledgment as the draft's attachments, the recipient checked against
@@ -3375,6 +3375,15 @@ report's amounts and the agent sends it as stored; no demo customer repair) were
     now protected once its file is saved (`protectedContent`: `WectAcknowledgment` with a location, so the content service's own
     save after create still runs). Not specced (the store's file upload is not driven from a Mantle spec); the report's protection
     is (below).
+  - R6 (medium, restricted values; the user's call of Nov 12, replacing "the storer's cost read decides"): a stored report with
+    amounts was readable by every reader of the work order (its Files tab, InterventionReport's Stored report download) and sent to
+    the customer by an agent who reads no costs. The intervention report, printed, previewed, stored or sent, now never carries a
+    price, cost or total, whoever makes it: one template listing the work, the parts issued less returned with their quantities
+    (`workDone`, from the tree's AssetIssuance and AssetReceipt rows), each person's finished hours and their total, the outcome and
+    the acknowledgment; `get#MaintenanceCosts` is no longer called and `costsShown` is gone from `get#InterventionReport` and the
+    screen. Costs stay in the Costs tab and MaintenanceCostReport. Spec: WarrantyManagedRepair's report feature (a part at a cost
+    issued 3, 1 returned, and 1.5 hours: the technician's print shows 2 and 1.5; a MAINTENANCE_COST_VIEW reader's print shows the
+    same and no "Amount", amount or currency); fails without the fix. Design §3 and §12 say so.
   - Tests added beyond the fixes: WarrantyManagedRepair "the stored report is kept; closed work takes a report only through the
     store; the agent's send is filed on the case" (the stored report's update and delete `EVIDENCE_PROTECTED`, a report created by
     another path `EVIDENCE_PROTECTED`, a plain file on the closed work `WORK_CLOSED`, a second store on closed work, a send to the
@@ -3385,12 +3394,6 @@ report's amounts and the agent sends it as stored; no demo customer repair) were
     `REPORT_REQUIRED` (past the scope); every case kept (holder, agent, other organization; the report screen's one qvt render with
     Store for the customer after completion). The feature 1.23 s → 0.60 s; the spec 8.7 s of 15 (was 9.3–9.9).
 - Findings (unnumbered):
-  - The stored report with amounts is readable by every reader of the work order, not only the agent: its file is in the work
-    order's Files tab (`record-files`) and InterventionReport's Stored report download, so a technician without
-    MAINTENANCE_COST_VIEW reads the parts and labor amounts a cost reader stored. A consequence of the accepted call that design
-    §1.1 ("costs are omitted from unauthorized prints") does not allow. Recommendation: the stored report never carries amounts
-    (parts and hours only; the amounts stay in the live print for a cost reader and in Accounting's invoice), which also settles
-    what the agent sends. A user's call; not changed.
   - A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent; RepairLinks' Add
     repair form offers no id) or a planner's `adopt#MaintenanceRecord` by id; no list shows such repairs (`find#UnmanagedMaintenance`
     leaves warranty repairs out, EquipmentDetail needs the unit in scope). Acceptable for a switch turned on once; a "Make work
@@ -3415,10 +3418,11 @@ report's amounts and the agent sends it as stored; no demo customer repair) were
     Budgets not changed.
   - Merge hot spots: mr-mantle `MaintenanceWork.js` (`adoptRepair`'s team, `refusalOf`'s resume, `actionsFor`'s needsOffline and
     needsFollowUp, `customerUnitAway` and `downtimeOf`'s first lines), `ProcessChecks.js` `protectedContent`,
-    `test/request/SupportWarranty.spec.js` (one matcher); mr-boss `MaintenanceAccess.spec.js` (the P12 feature), design-maintenance §3
+    `test/request/SupportWarranty.spec.js` (one matcher), `MaintenanceRepairs.js` `workDone`/`reportValues` and the report template
+    (R6); mr-boss InterventionReport.xml (R6), `MaintenanceAccess.spec.js` (the P12 feature), design-maintenance §3
     and §12's P12 lines.
-  - The user's call open: whether the stored intervention report may carry amounts at all (above; recommended: never). The two
-    calls the lead accepted stand as built.
+  - No user's call open: the report's amounts are settled (R6, the user's call of Nov 12); no demo customer repair stands as
+    built.
 
 ### P13 — Preventive plans and due maintenance
 
