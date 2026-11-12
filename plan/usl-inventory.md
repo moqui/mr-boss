@@ -2236,8 +2236,9 @@ after `ironstone.maintenance.AccessServices.check#Record`:
 | work/ResourceBookingServices | end#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (RestoreResource); P15: Maintenance/Scheduling/Blackouts (a block's End) |
 
 Added in `work/ResourceBookingServices.xml` (impl-maintenance P15; `ResourcePolicy.js`), the booking policy, its approvers and the one
-availability read, which `EventServices`' `book#Resource`, `check#ResourceBookings` (and through it `update#EventOccurrence` and
-the CalDAV event PUT), `create#Event`'s equipment, `get#FreeBusy` and `get#FullCalendarData` (its `unavailableList`) call:
+availability read, which `EventServices`' `book#Resource`, `check#ResourceBookings` (and through it `update#EventOccurrence`,
+`store#EventRecurrence` for a managed resource and the CalDAV event PUT), `create#Event`'s equipment, `get#FreeBusy` and
+`get#FullCalendarData` (its `unavailableList`, and a managed resource's hidden bookings answered Busy) call:
 
 | File | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |

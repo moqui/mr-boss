@@ -144,7 +144,10 @@ feature("maint.resources plans a blackout over both bookings: they are kept and 
             thruDate: wall("12:00"),
             description: "Window replacement (walk)"
         })
-        const listed = as(users.resources, R + "find#ResourceUnavailability", {unavailabilityKindEnumId: "RukPlanned", facilityId: room})
+        const listed = as(users.resources, R + "find#ResourceUnavailability", {
+            unavailabilityKindEnumId: "RukPlanned",
+            facilityId: room
+        })
         const blackouts = asUser(users.resources, () => page("Scheduling/Blackouts", {facilityId: room}))
         const under = as(users.planner, S + "book#ResourceSlot", {
             resourceType: "room",
@@ -153,7 +156,14 @@ feature("maint.resources plans a blackout over both bookings: they are kept and 
             end: wall("11:30"),
             purpose: "Quick sync"
         })
-        return {planned, listed, blackouts, under, plannerBooking: bookingOf(state.plannerBooking), approverBooking: bookingOf(state.approverBooking)}
+        return {
+            planned,
+            listed,
+            blackouts,
+            under,
+            plannerBooking: bookingOf(state.plannerBooking),
+            approverBooking: bookingOf(state.approverBooking)
+        }
     },
     then({planned, listed, blackouts, under, plannerBooking, approverBooking}) {
         planned.errors.length == 0

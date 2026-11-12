@@ -65,7 +65,10 @@ feature("Admin's lifecycle participant lists the rooms a leaver approves; the re
     when() {
         const listed = asUser("john.doe", () => {
             ec.artifactExecution.disableAuthz()
-            return invoke("ironstone.maintenance.LifecycleServices.find#Assignments", {userId: "BOSS_MNT_BOOKING"}).resourceList || []
+            return (
+                invoke("ironstone.maintenance.LifecycleServices.find#Assignments", {userId: "BOSS_MNT_BOOKING"}).resourceList ||
+                []
+            )
         })
         const moved = asUser(users.resources, () => {
             ec.artifactExecution.disableAuthz()
@@ -74,7 +77,12 @@ feature("Admin's lifecycle participant lists the rooms a leaver approves; the re
                 ec.service
                     .sync()
                     .name("mantle.work.ResourceBookingServices.store#ResourceApprover")
-                    .parameters({facilityId: ids.managedRoomId, partyId: "BOSS_MNT_BOOKING", end: "Y", replacementPartyId: "BOSS_MNT_RESOURCES"})
+                    .parameters({
+                        facilityId: ids.managedRoomId,
+                        partyId: "BOSS_MNT_BOOKING",
+                        end: "Y",
+                        replacementPartyId: "BOSS_MNT_RESOURCES"
+                    })
                     .requireNewTransaction(true)
                     .call()
                 return ec.message.hasError() ? ec.message.getErrorsString() : ""
