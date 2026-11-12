@@ -261,30 +261,67 @@ const partyLabel = partyId => {
     const row = partyId ? one("mantle.party.PartyDetail", {partyId}) : null
     return row ? row.organizationName || [row.firstName, row.lastName].filter(Boolean).join(" ") || partyId : partyId || ""
 }
-// people and organizations by name (custodians, warrantors, agencies), searched in the query; a party another user keeps private
-// is not offered
-function partyOptions(term, selected, partyTypeEnumId = null) {
+// The organizations a warrantor or an agency may be, by name, searched in the query: an organization no user keeps private, and
+// of the internal organizations only the scope's (another organization's people and private contacts are never offered).
+function organizationPartyOptions(userScope, term, selected) {
     const factory = ec.entity.conditionFactory
+    const internal = Array.from(find("mantle.party.PartyRole").condition("roleTypeId", "OrgInternal").selectField("partyId").list()).map(
+        row => row.partyId
+    )
+    const outside = internal.filter(partyId => !covers(userScope, partyId))
     let query = find("mantle.party.PartyDetail")
+        .condition("partyTypeEnumId", "PtyOrganization")
         .condition("disabled", "is-null", null)
         .condition("privateOwnerUserId", "is-null", null)
-        .orderBy("organizationName")
-        .orderBy("lastName")
-        .orderBy("firstName")
+        .orderBy("^organizationName")
         .limit(choiceLimit)
-    if (partyTypeEnumId) query = query.condition("partyTypeEnumId", partyTypeEnumId)
-    else query = query.condition("partyTypeEnumId", "in", ["PtyPerson", "PtyOrganization"])
+    if (outside.length) query = query.condition("partyId", "not-in", outside)
     if (term)
         query = query.condition(
             factory.makeCondition(
-                ["partyId", "organizationName", "firstName", "lastName"].map(field =>
-                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
-                ),
+                ["partyId", "organizationName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
                 "or"
             )
         )
-    const options = Array.from(query.list()).map(row => ({value: row.partyId, label: partyLabel(row.partyId)}))
-    return withSelected(options, selected, partyId => !!one("mantle.party.Party", {partyId}), partyLabel)
+    const options = Array.from(query.list()).map(row => ({value: row.partyId, label: row.organizationName || row.partyId}))
+    const admits = partyId => {
+        const row = one("mantle.party.PartyDetail", {partyId})
+        return !!row && row.partyTypeEnumId === "PtyOrganization" && !row.privateOwnerUserId && !outside.includes(partyId)
+    }
+    return withSelected(options, selected, admits, partyLabel)
+}
+// The holders equipment may be given to: the people employed now by the scope's organizations, and those organizations, by name
+// (as People's directory reaches them; nobody else's employees or contacts).
+function custodianOptions(userScope, term, selected) {
+    const factory = ec.entity.conditionFactory
+    const organizations = organizationIds(userScope)
+    if (!organizations.length) return []
+    let query = find("mantle.party.PartyFromAndRelationship")
+        .condition("relationshipTypeEnumId", "PrtEmployee")
+        .condition("toPartyId", "in", organizations)
+        .conditionDate("fromDate", "thruDate", null)
+        .selectField(["fromPartyId", "firstName", "lastName"])
+        .orderBy(["^firstName", "^lastName"])
+        .limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["fromPartyId", "firstName", "lastName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const byParty = new Map()
+    for (const row of Array.from(query.list()))
+        if (!byParty.has(row.fromPartyId))
+            byParty.set(row.fromPartyId, {value: row.fromPartyId, label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId})
+    const options = Array.from(byParty.values()).concat(organizationOptions(organizations, term, choiceLimit))
+    const employed = partyId =>
+        find("mantle.party.PartyRelationship")
+            .condition({relationshipTypeEnumId: "PrtEmployee", fromPartyId: partyId})
+            .condition("toPartyId", "in", organizations)
+            .conditionDate("fromDate", "thruDate", null)
+            .count() > 0
+    return withSelected(options, selected, partyId => organizations.includes(partyId) || employed(partyId), partyLabel)
 }
 // the choices of equipment and facility records, answered only to a user who reads them (resourceRead)
 const resourceChoices = [
@@ -295,7 +332,7 @@ const resourceChoices = [
     "custodyRoles",
     "readingReasons",
     "parties",
-    "people",
+    "custodians",
     "equipmentModels",
     "equipment",
     "meters",
@@ -367,9 +404,10 @@ const choiceSources = {
     readingReasons: (userScope, term, selected) =>
         enumOptions("AssetMeterReadingReason", term, selected, row => row.enumId !== "AmrCorrection")
     ,
-    // people and organizations: a custodian, a warrantor, a registration agency
-    parties: (userScope, term, selected) => partyOptions(term, selected),
-    people: (userScope, term, selected) => partyOptions(term, selected, "PtyPerson"),
+    // a warrantor or a registration agency: organizations, of the internal ones only the scope's
+    parties: (userScope, term, selected) => organizationPartyOptions(userScope, term, selected),
+    // a custodian or operator: the scope's organizations' employees, and the organizations
+    custodians: (userScope, term, selected) => custodianOptions(userScope, term, selected),
     // equipment models: products of equipment type
     equipmentModels: (userScope, term, selected) => {
         const factory = ec.entity.conditionFactory
@@ -440,8 +478,9 @@ const choiceSources = {
     // (facilityId)
     parentFacilities: (userScope, term, selected, p) => {
         const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {text: term || null, pageSize: choiceLimit})
+        // an unnamed node (a parent outside the scope, hidden-n) is no facility to choose
         const options = Array.from(found.facilityList || [])
-            .filter(row => row.facilityId !== p?.facilityId)
+            .filter(row => !row.hiddenAncestor && row.facilityId !== p?.facilityId)
             .map(row => ({value: row.facilityId, label: row.facilityName}))
         return withSelected(
             options,
@@ -491,7 +530,8 @@ const searchFinds = [
         rows: (userScope, text, limit) => {
             if (!userScope.mantle.capabilities.resourceRead) return []
             const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {text, pageSize: limit})
-            return Array.from(found.facilityList || []).map(row => ({
+            // an unnamed node (a parent outside the scope) is not a record to open
+            return Array.from(found.facilityList || []).filter(row => !row.hiddenAncestor).map(row => ({
                 title: row.facilityName,
                 subtitle: ["Facility", row.typeText, row.organizationName].filter(Boolean).join(" · "),
                 icon: recordKinds.facility.icon,

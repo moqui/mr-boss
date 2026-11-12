@@ -326,9 +326,8 @@ function facilityDetail(p) {
 // The header's row of the facility, as Mantle's facility list gives it (its parent named only when in the scope).
 function facilityRow(facility) {
     const found = call("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {
-        text: facility.facilityId,
-        includeClosed: true,
-        pageSize: 100
+        facilityId: facility.facilityId,
+        includeClosed: true
     })
     const row = Array.from(found.facilityList || []).find(item => item.facilityId === facility.facilityId) || {}
     return Object.assign({}, row, {ownerName: row.organizationName || ""})

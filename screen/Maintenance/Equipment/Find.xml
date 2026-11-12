@@ -239,7 +239,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <header-field title="Custodian">
                             <drop-down allow-empty="true">
                                 <dynamic-options transition="choices" server-search="true" min-length="0"
-                                        parameter-map="{choice:'parties', selected:custodianPartyId}"/>
+                                        parameter-map="{choice:'custodians', selected:custodianPartyId}"/>
                             </drop-down>
                         </header-field>
                     </field>

@@ -123,6 +123,11 @@ feature("the facility tree names no ancestor outside the scope; Facilities and F
         const tree = read(users.planner, facilities, {text: "leased"})
         const top = read(users.planner, facilities, {roots: true, pageSize: 100})
         const retail = read(users.retailPlanner, facilities, {text: "leased"})
+        // the palette and the parent choice offer the facility, never the unnamed node above it
+        const palette = asUser(users.planner, () => invoke("ironstone.maintenance.ContextServices.search#Records", {text: "leased"}).rows || [])
+        const parents = asUser(users.planner, () =>
+            invoke("ironstone.maintenance.ContextServices.get#Choices", {choice: "parentFacilities", term: "leased"}).options
+        )
         const listed = asUser(users.planner, () => page("Facilities/Find", {}))
         const rooms = asUser(users.resources, () =>
             page("Facilities/FacilityDetail/Rooms", {facilityId: ids.floorId, lastStandalone: "true"})
@@ -131,9 +136,9 @@ feature("the facility tree names no ancestor outside the scope; Facilities and F
         const detail = asUser(users.resources, () =>
             page("Facilities/FacilityDetail", {facilityId: ids.meetingRoomId, moveToParentId: ids.otherFloorId})
         )
-        return {tree, top, retail, listed, rooms, detail}
+        return {tree, top, retail, palette, parents, listed, rooms, detail}
     },
-    then({tree, top, retail, listed, rooms, detail}) {
+    then({tree, top, retail, palette, parents, listed, rooms, detail}) {
         detail.status == 200 && detail.errors.length == 0
         detail.output.includes("Room 101 Huddle") && detail.output.includes("America/Chicago (inherited)")
         detail.output.includes("Bookings to come") && detail.output.includes("Move it")
@@ -145,6 +150,8 @@ feature("the facility tree names no ancestor outside the scope; Facilities and F
         top.facilityList.some(row => row.facilityId == ids.siteId && row.timeZoneText == "America/Chicago")
         !top.facilityList.some(row => row.facilityId == ids.buildingId)
         retail.facilityList.length == 0
+        palette.some(row => row.recordId == leased) && palette.every(row => row.title && !String(row.recordId).startsWith("hidden-"))
+        parents.some(option => option.value == leased) && parents.every(option => !String(option.value).startsWith("hidden-"))
         listed.status == 200 && listed.errors.length == 0
         listed.output.includes("Service Center")
         listed.output.includes("A facility you do not have access to")

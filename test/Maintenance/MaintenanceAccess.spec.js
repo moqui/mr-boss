@@ -284,6 +284,12 @@ feature(
                 const facilities = invoke(choices, {choice: "facilities"}).options.map(option => option.value)
                 if (!facilities.includes(ids.facilityId) || facilities.includes(ids.otherFacilityId))
                     problems.push(`the planner's facilities: ${facilities}`)
+                // P2: a custodian is one of the scope's employees; a warrantor or agency an organization, never a person or
+                // another internal organization
+                const options = (choice, term) => invoke(choices, {choice, term}).options.map(option => option.value)
+                if (!options("custodians", "Kenji").includes(ids.custodianId)) problems.push("the planner's custodians lack Kenji")
+                if (options("parties", "Kenji").length) problems.push(`the planner's parties offer people: ${options("parties", "Kenji")}`)
+                if (options("parties", "Retail").includes(ids.otherOrganizationId)) problems.push("the planner's parties offer Retail")
             })
             asUser(users.retailPlanner, () => {
                 expect(
@@ -311,6 +317,8 @@ feature(
                 const organizations = invoke(choices, {choice: "organizations"}).options.map(option => option.value)
                 if (!organizations.includes(ids.otherOrganizationId) || organizations.includes(ids.organizationId))
                     problems.push(`Retail's planner's organizations: ${organizations}`)
+                const custodians = invoke(choices, {choice: "custodians", term: "Kenji"}).options.map(option => option.value)
+                if (custodians.includes(ids.custodianId)) problems.push("Retail's planner's custodians offer Services' Kenji")
             })
             return {problems}
         },
