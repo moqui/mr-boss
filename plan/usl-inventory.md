@@ -1415,7 +1415,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | WorkEffortServices | get#WorkEffortStartEnd |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | WorkEffortServices | get#WorkEffortContentLocation |  |  |
 | WorkEffortServices | create#WorkEffortContent | Commons/Tasks/TaskDetail; Projects/Projects/ProjectDetail/Files; Projects/WorkItems/WorkItemDetail; Shared/RecordFiles; Maintenance/Procedures/ProcedureDetail; Maintenance/RecordFiles; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
-| WorkEffortServices | update#WorkEffortContent | Projects/Projects/ProjectDetail/Files; Projects/WorkItems/WorkItemDetail; Maintenance/Procedures/ProcedureDetail; Maintenance/RecordFiles; Maintenance/WorkOrders/WorkOrderDetail |  (refuses a check's evidence, EVIDENCE_PROTECTED; Maintenance P7) |
+| WorkEffortServices | update#WorkEffortContent | Projects/Projects/ProjectDetail/Files; Projects/WorkItems/WorkItemDetail; Maintenance/Procedures/ProcedureDetail; Maintenance/RecordFiles; Maintenance/WorkOrders/WorkOrderDetail |  (refuses a check's evidence and a stored checklist, EVIDENCE_PROTECTED; Maintenance P7; the entity's guard WorkEffortEvidenceProtected covers every other path, P7 review) |
 | WorkEffortServices | save#WorkEffortContentFile | Commons/Tasks/TaskDetail; Shared/RecordFiles |  |
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
@@ -2277,10 +2277,10 @@ screens through WorkOrderDetail's Procedure tab after `ironstone.maintenance.Acc
 | --- | --- | --- | --- |
 | work/ProcessServices | get#ProcessExecution | Maintenance/WorkOrders/WorkOrderDetail (ProcedureSteps) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (the next step, the checklist, Checks, Waivers and amendments) |
 | work/ProcessServices | record#ProcessStep | Maintenance/WorkOrders/WorkOrderDetail (ProcedureSteps, StepResponse) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Start, Respond and Correct: template/MaintenanceChecklistParts.xml StepResponseForm; Skip) |
-| work/ProcessServices | transcribe#CheckVoiceNote | Maintenance/WorkOrders/WorkOrderDetail (StepResponse) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (after a response with a voice note, in a transaction of its own) |
+| work/ProcessServices | transcribe#CheckVoiceNote | Maintenance/WorkOrders/WorkOrderDetail (StepResponse) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (after a response with a voice note, in a transaction of its own; only when the organization's work policy turns transcription on, TRANSCRIPTION_OFF otherwise, P7 review) |
 | work/ProcessServices | waive#ProcessStep | Maintenance/WorkOrders/WorkOrderDetail (ProcedureSteps) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Waive) |
-| work/ProcessServices | amend#ProcessExecution | Maintenance/WorkOrders/WorkOrderDetail (ExecutionAmendment) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Amend: Preview, then Amend with the reason) |
+| work/ProcessServices | amend#ProcessExecution | Maintenance/WorkOrders/WorkOrderDetail (ExecutionAmendment) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Amend: change a step, add a step, or remove a step not started; Preview, then Amend with the reason; add and remove P7 review) |
 | work/ProcessServices | get#ProcessChecklist | Maintenance/WorkOrders/WorkOrderDetail (§12 the completed checklist) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Print checklist); stored at close by transition#MaintenanceWorkOrder |
 | work/ProcessServices | get#EvidencePolicy | Shared/RecordFiles (F69) | ironstone.shared.RecordFilesServices.get#ContentType (a managed work effort's files: changed only while the work is open, a check's evidence never removed or replaced) |
-| work/ProcessServices | check#EvidenceChange | (the content services) | none: WorkEffortServices.update#WorkEffortContent refuses a check's evidence with it |
+| work/ProcessServices | check#EvidenceChange | (the content services) | none: WorkEffortServices.update#WorkEffortContent and save#WorkEffortContentFile refuse a check's evidence and a stored checklist with it (save# P7 review) |
 

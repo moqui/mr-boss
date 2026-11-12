@@ -192,3 +192,26 @@ feature("the work order's Overview lists its follow-up task; WorkItemDetail in M
         otherTech.available == false
     }
 })
+
+// P7 review (the user's call of Nov 12): the Procedure tab's amendment dialog adds a step and removes one not started (WorkOrders.js
+// amendmentChange into Mantle's amend#ProcessExecution, previewed as the supervisor; the started group is refused)
+feature("the amendment dialog's add and remove reach amend#ProcessExecution's preview; a started group is not removed", {
+    when() {
+        const change = parameters => ec.resource.script("component://mr-boss/service/ironstone/maintenance/WorkOrders.js").amendmentChange(parameters)
+        const add = change({amendAction: "add", amendStepName: "Check the belt tension", amendResponseKindEnumId: "WsrPassFail", amendIsRequired: "N"})
+        const remove = change({amendAction: "remove", amendStepId: state.drain})
+        const preview = as(users.supervisor, W + "amend#ProcessExecution", {rootWorkEffortId: state.workOrder, changeList: [add, remove], preview: true})
+        const group = rows("mantle.work.effort.WorkEffort", {workEffortId: state.isolate})[0].parentWorkEffortId
+        const startedGroup = asUser(users.supervisor, () =>
+            system(() => refusal(W + "amend#ProcessExecution", {rootWorkEffortId: state.workOrder, changeList: [{action: "remove", workEffortId: group}], reason: "Spec"}))
+        )
+        return {add, remove, preview, startedGroup}
+    },
+    then({add, remove, preview, startedGroup}) {
+        add.action == "add" && add.workEffortName == "Check the belt tension" && add.isRequired == "N" && add.responseKindEnumId == "WsrPassFail"
+        remove.action == "remove" && remove.workEffortId == state.drain
+        Array.from(preview.changeList).map(row => row.action).join(",") == "add,remove"
+        Array.from(preview.removedList).map(row => row.workEffortId).join(",") == state.drain
+        startedGroup.includes("STEP_STARTED")
+    }
+})

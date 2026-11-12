@@ -23,12 +23,14 @@ along with this software (see the LICENSE.md file). If not, see
     the reason; the failure stays) and Correct (a new check that supersedes the accepted one, with the reason). A group has no
     response: its steps complete it. The checks (newest first, every failure and recheck), the waivers and the amendments follow.
     A supervisor amends an open execution (ExecutionAmendment: a step's requirement, bounds, evidence, comment, waiver or what it
-    waits for, previewed with the acceptances it invalidates, then confirmed with a reason). Print checklist: the completed
+    waits for, a step added under the work order or a group, or a step not yet started removed (the user's call of Nov 12, P7
+    review), previewed with the acceptances it invalidates, then confirmed with a reason). Print checklist: the completed
     checklist and exception record (stored when the work is closed). The work order's Complete waits for the required steps. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Procedure" default-menu-index="20">
     <parameter name="workEffortId"/>
     <parameter name="amendStepId"/>
+    <parameter name="amendAction"/>
     <transition-include name="startStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
     <transition-include name="respondStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
     <transition-include name="skipStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
@@ -50,20 +52,24 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="amendmentList" from="executionDetail?.amendmentList || []"/>
         <set field="nextStep" from="execution?.nextStepId ? stepList.find(row =&gt; row.workEffortId === execution.nextStepId) : null"/>
         <set field="progressText" from="execution?.requiredCount ? execution.doneCount + ' of ' + execution.requiredCount + ' required steps done' : ''"/>
-        <set field="stepOptions" from="stepList.filter(row =&gt; !row.isGroup).map(row =&gt; ({key: row.workEffortId, text: row.name}))"/>
+        <set field="stepOptions" from="stepList.filter(row =&gt; !row.isGroup &amp;&amp; !row.removed).map(row =&gt; ({key: row.workEffortId, text: row.name}))"/>
+        <!-- the steps an amendment names (a group to remove, marked), and what a step is added under (the work order or a group) -->
+        <set field="amendStepOptions" from="stepList.filter(row =&gt; !row.removed).map(row =&gt; ({key: row.workEffortId, text: row.name + (row.isGroup ? ' (group)' : '')}))"/>
+        <set field="parentOptions" from="[{key: '', text: 'The work order'}].concat(stepList.filter(row =&gt; row.isGroup &amp;&amp; row.statusId != 'WeCancelled').map(row =&gt; ({key: row.workEffortId, text: row.name})))"/>
         <!-- an amendment's preview, from previewAmendment's parameters (nothing is written) -->
         <set field="amendPreview" from="null"/>
-        <if condition="amendStepId &amp;&amp; execution?.canAmend">
+        <if condition="(amendStepId || amendAction == 'add') &amp;&amp; execution?.canAmend">
             <set field="amendChange" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').amendmentChange(context)"/>
             <service-call name="mantle.work.ProcessServices.amend#ProcessExecution" out-map="amendPreview" transaction="force-new"
                     ignore-error="true" in-map="{rootWorkEffortId:workEffortId, changeList:[amendChange], preview:true}"/>
             <script>ec.message.clearErrors()</script>
             <set field="amendValues" from="Object.assign({workEffortId:workEffortId, operationKey:'amend-' + workEffortId + '-' +
-                    ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS')}, Object.fromEntries(['amendStepId', 'amendIsRequired',
+                    ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS')}, Object.fromEntries(['amendAction', 'amendStepId', 'amendStepName',
+                    'amendParentId', 'amendResponseKindEnumId', 'amendIsRequired',
                     'amendEvidenceRequired', 'amendCommentRequired', 'amendWaiverAllowed', 'amendMinimumValue', 'amendMaximumValue',
                     'amendDependsOnIds'].map(name =&gt; [name, context[name] ?? null])))"/>
         </if>
-        <set field="amendDefaults" from="{workEffortId:workEffortId}"/>
+        <set field="amendDefaults" from="{workEffortId:workEffortId, amendAction:'change'}"/>
     </actions>
     <widgets>
         <section name="ProcedureFound" condition="execution">
@@ -114,12 +120,27 @@ along with this software (see the LICENSE.md file). If not, see
                                         parameter-map="{workEffortId:workEffortId}"/>
                                 <container-dialog id="AmendExecution" button-text="Amend" icon="sym_o_edit_note" title="Amend the checklist of ${workEffortId}"
                                         width="640" condition="execution.canAmend">
-                                    <label text="A change to an open checklist is previewed first: a completed step whose requirement changes is reopened."
+                                    <label text="A change to an open checklist is previewed first: a completed step whose requirement changes is reopened, a group a step is added to reopens, and only a step not yet started is removed."
                                             type="p" style="text-caption m-muted"/>
                                     <form-single name="AmendExecutionForm" transition="previewAmendment" map="amendDefaults">
                                         <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="amendAction">
+                                            <default-field title="Change">
+                                                <radio><option key="change" text="Change a step"/><option key="add" text="Add a step"/><option key="remove" text="Remove a step not started"/></radio>
+                                            </default-field>
+                                        </field>
                                         <field name="amendStepId">
-                                            <default-field title="Step"><drop-down><list-options list="stepOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                            <default-field title="Step" tooltip="The step changed or removed"><drop-down allow-empty="true"><list-options list="amendStepOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                        </field>
+                                        <field name="amendStepName"><default-field title="New step's name" tooltip="For a step that is added"><text-line size="50"/></default-field></field>
+                                        <field name="amendParentId">
+                                            <default-field title="Under" tooltip="For a step that is added">
+                                                <drop-down allow-empty="false"><list-options list="parentOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                        </field>
+                                        <field name="amendResponseKindEnumId">
+                                            <default-field title="Response" tooltip="For a step that is added">
+                                                <drop-down allow-empty="true"><option key="WsrCheckOff" text="Check off"/><option key="WsrPassFail" text="Pass or fail"/></drop-down>
+                                            </default-field>
                                         </field>
                                         <field name="amendIsRequired">
                                             <default-field title="Required">
@@ -164,7 +185,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <box-header title="Amendment preview"/>
                                             <box-body>
                                                 <section-iterate name="AmendChanges" list="amendPreview.changeList" entry="change">
-                                                    <widgets><label text="${change.name}: ${change.changedFields.length ? change.changedFields.join(', ') : 'no requirement change'}${change.dependsOnIds ? '; waits for ' + change.dependsOnIds.length + ' step(s)' : ''}" type="div"/></widgets>
+                                                    <widgets><label text="${change.action == 'add' ? 'Added: ' + change.name : change.action == 'remove' ? 'Removed: ' + change.name : change.name + ': ' + (change.changedFields.length ? change.changedFields.join(', ') : 'no requirement change')}${change.dependsOnIds ? '; waits for ' + change.dependsOnIds.length + ' step(s)' : ''}" type="div"/></widgets>
                                                 </section-iterate>
                                                 <section-iterate name="AmendInvalidated" list="amendPreview.invalidatedList" entry="invalid">
                                                     <widgets><label text="Reopened: ${invalid.name}, ${invalid.why}" type="div" style="text-negative"/></widgets>
@@ -175,7 +196,11 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <form-single name="AmendConfirmForm" transition="amendExecution" map="amendValues">
                                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
                                                     <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="amendAction"><default-field><hidden/></default-field></field>
                                                     <field name="amendStepId"><default-field><hidden/></default-field></field>
+                                                    <field name="amendStepName"><default-field><hidden/></default-field></field>
+                                                    <field name="amendParentId"><default-field><hidden/></default-field></field>
+                                                    <field name="amendResponseKindEnumId"><default-field><hidden/></default-field></field>
                                                     <field name="amendIsRequired"><default-field><hidden/></default-field></field>
                                                     <field name="amendEvidenceRequired"><default-field><hidden/></default-field></field>
                                                     <field name="amendCommentRequired"><default-field><hidden/></default-field></field>
@@ -183,7 +208,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <field name="amendMinimumValue"><default-field><hidden/></default-field></field>
                                                     <field name="amendMaximumValue"><default-field><hidden/></default-field></field>
                                                     <field name="amendDependsOnIds"><default-field><hidden/></default-field></field>
-                                                                <field name="reason"><default-field title="Why"><text-line size="60"/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="60"/></default-field></field>
                                                     <field name="submitButton"><default-field title="Amend"><submit type="primary"/></default-field></field>
                                                 </form-single>
                                             </box-body>

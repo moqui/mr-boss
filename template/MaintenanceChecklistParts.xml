@@ -19,11 +19,12 @@ along with this software (see the LICENSE.md file). If not, see
     - startStep: the step in progress (record#ProcessStep action start);
     - respondStep: StepResponse (record#ProcessStep): the outcome or reading, the notes, evidence files and a voice note uploaded
       with it, a correction of a check; a voice note is then transcribed in a transaction of its own (transcribe#CheckVoiceNote);
-      a response that leaves the step open says why;
+      a response that leaves the step open says why; the transcript only when the organization's work policy turns
+      transcription on;
     - skipStep: an optional step skipped with the reason;
     - waiveStep: a supervisor's waiver with the reason (waive#ProcessStep);
     - previewAmendment, amendExecution: ExecutionAmendment, its preview (the page shows what it invalidates) and its confirmation
-      (amend#ProcessExecution);
+      (amend#ProcessExecution): a step's requirement or what it waits for, a step added, or a step not yet started removed;
     - printChecklist: the completed checklist and exception record as a PDF (get#ProcessChecklist: the one stored at close, else
       made now).
     - StepResponseForm: the response form of one step (step; formPrefix names it), with the fields its response kind takes. -->
@@ -58,7 +59,8 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="!ec.message.hasError() &amp;&amp; recorded?.voiceContentId">
                 <service-call name="mantle.work.ProcessServices.transcribe#CheckVoiceNote" out-map="transcribed" transaction="force-new"
                         ignore-error="true" in-map="{workEffortCheckId:recorded.workEffortCheckId}"/>
-                <script>ec.message.clearErrors(); if (!transcribed?.transcribed) ec.message.addMessage('The voice note is kept; it was not transcribed', 'info')</script>
+                <script>ec.message.clearErrors(); if (!transcribed?.transcribed) ec.message.addMessage(transcribed?.reasonCode == 'TRANSCRIPTION_OFF'
+                        ? 'The voice note is kept; this organization does not transcribe voice notes' : 'The voice note is kept; it was not transcribed', 'info')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
@@ -93,7 +95,11 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response url=".">
             <parameter name="workEffortId"/>
+            <parameter name="amendAction"/>
             <parameter name="amendStepId"/>
+            <parameter name="amendStepName"/>
+            <parameter name="amendParentId"/>
+            <parameter name="amendResponseKindEnumId"/>
             <parameter name="amendIsRequired"/>
             <parameter name="amendEvidenceRequired"/>
             <parameter name="amendCommentRequired"/>

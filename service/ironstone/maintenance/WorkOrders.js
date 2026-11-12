@@ -270,10 +270,21 @@ function transferAssignments(p) {
 }
 
 // ===== the Procedure tab's amendment (P7) =====
-// ExecutionAmendment's form as one change of amend#ProcessExecution: the step and each field given (an empty one is left as it is);
-// what the step waits for only when steps are named.
+// ExecutionAmendment's form as one change of amend#ProcessExecution, by amendAction: change (the default; the step and each field
+// given, an empty one left as it is), add (a new step: its name, the group it goes under, its response kind, and the fields given;
+// the user's call of Nov 12, P7 review) or remove (a step not yet started); what the step waits for only when steps are named.
 function amendmentChange(p) {
-    const change = {workEffortId: text(p.amendStepId)}
+    const action = text(p.amendAction) || "change"
+    if (action === "remove") return {action, workEffortId: text(p.amendStepId)}
+    const change =
+        action === "add"
+            ? {
+                  action,
+                  workEffortName: text(p.amendStepName),
+                  parentWorkEffortId: text(p.amendParentId),
+                  responseKindEnumId: text(p.amendResponseKindEnumId) || "WsrCheckOff"
+              }
+            : {workEffortId: text(p.amendStepId)}
     const fields = {
         isRequired: "amendIsRequired",
         evidenceRequired: "amendEvidenceRequired",
