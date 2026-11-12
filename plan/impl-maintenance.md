@@ -372,7 +372,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | built and reviewed Nov 12, merged |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
-| P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | — |
+| P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
@@ -2798,7 +2798,7 @@ Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetai
   ss-inventory has no row naming these screens.
 - Design edits: design-maintenance's header, §3 (PurchaseLinks, CompleteWork, the OrderDetail mount row) and §13.3's
   OrderItemWorkEffortCheckComplete row as built; design-purchasing's header and "Maintenance purchases"; impl-purchasing's log.
-- Findings (provisional):
+- Findings, numbered by the lead F237 to F245 in order:
   - The request is filed through Purchasing's `create#PurchaseRequest`, not `RequestServices.create#Request` as the plan says: Purchasing
     P10 built the purchase request's path (its organization party, currency and line checks), and the plain create would skip them.
   - The order lines that fulfil a request are linked by an entity ECA on RequestItemOrder rather than inside Purchasing's sourcing: the
@@ -2891,7 +2891,7 @@ worker's call per the plan's text (acceptance stays under Purchasing's own check
     MaintenancePurchases (the approver reads the work order without its name, the planner with it, the description without it;
     fails with the name given to all), MaintenancePurchasing (purchasing.services sees the id, not "Compressor motor vibration").
     design-purchasing, impl-purchasing's log and usl-inventory as built.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F246 to F250 in order:
   - Under the `MclOnComplete` policy the work closes at completion, and acceptance is refused on closed work (STATUS_INVALID): the
     outside service is then accepted at Complete or in Purchasing, not from the tab afterwards.
   - A refused acceptance at Complete fails the completion (one transaction): the user asked for both; the tab's Accept stays open
@@ -4202,6 +4202,20 @@ paths under `mr-boss/`.
 | F234 | P16 review: A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers | P16's Review note |
 | F235 | P16 review: restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests). | P16's Review note |
 | F236 | P16 review: An unmanaged resource's series extended later (store#EventRecurrence) is not checked against blocks (P15's R4 recheck runs only for a managed one) | P16's Review note |
+| F237 | P10: The request is filed through Purchasing's `create#PurchaseRequest`, not `RequestServices.create#Request` as the plan says | P10's Built note |
+| F238 | P10: The order lines that fulfil a request are linked by an entity ECA on RequestItemOrder rather than inside Purchasing's sourcing | P10's Built note |
+| F239 | P10: Facility work has no AssetMaintenance, so AssetMaintenanceOrderItem cannot hold its lines | P10's Built note |
+| F240 | P10: Accepting outside service needs Purchasing's PURCHASE_ORDER_EDIT or STOCK_RECEIVE (accept#ServiceItem's own check, "buying stays Purchasing's") | P10's Built note |
+| F241 | P10: accept#ServiceItem accepts a line of a draft (OrderOpen) order | P10's Built note |
+| F242 | P10: The planner files the request but has no Purchasing root, so follows it on the work order's Purchasing tab, not in Purchasing. | P10's Built note |
+| F243 | P10: Request a purchase names a product (any, through the `parts` choice | P10's Built note |
+| F244 | P10: The evidence's OrderContent points at the work's file (the same contentLocation), not a copy. | P10's Built note |
+| F245 | P10: The request's description carries the work order's id and name, which a buyer reads | P10's Built note |
+| F246 | P10 review: Under the `MclOnComplete` policy the work closes at completion, and acceptance is refused on closed work (STATUS_INVALID) | P10's Review note |
+| F247 | P10 review: A refused acceptance at Complete fails the completion (one transaction) | P10's Review note |
+| F248 | P10 review: `get#MaintenanceOrder` reads each work in a try/catch that takes any error for "not readable" | P10's Review note |
+| F249 | P10 review: The ECA's failure path is reviewed, not tested | P10's Review note |
+| F250 | P10 review: Prices follow Manufacturing's subcontract rule (ACCOUNTING_VIEW and the supplier price permissions beside PURCHASE_ORDER_EDIT and MAINTENANCE_COST_VIEW) | P10's Review note |
 
 
 ## 7. Later
