@@ -135,17 +135,33 @@ feature(
     }
 )
 
-feature("Admin's offboarding lists a technician's open work orders under Maintenance's participant and not under Projects'", {
+feature("Admin's offboarding lists a technician's open work orders under Maintenance's participant and not under Projects', naming who moves them for an identity operator", {
     when() {
         const preview = asUser(users.system, () =>
             invoke("ironstone.admin.LifecycleServices.find#OwnedResources", {userId: "BOSS_MNT_TECH"})
         )
         const participant = key => Array.from(preview.participantList || []).find(row => row.participantKey == key) || {}
-        return {maintenance: participant("maintenance.assignments"), projects: participant("projects.assignments")}
+        // the identity operator holds no maintenance permission: the work orders are listed with who moves them, and are not
+        // offered as a transfer (the user's call, Nov 12); the lookup as Admin's offboarding runs it, under Admin's grant
+        const operator = asUser("admin.identity", () => {
+            ec.artifactExecution.disableAuthz()
+            try {
+                return invoke("ironstone.maintenance.LifecycleServices.find#Assignments", {userId: "BOSS_MNT_TECH"})
+            } finally {
+                ec.artifactExecution.enableAuthz()
+            }
+        })
+        return {
+            maintenance: participant("maintenance.assignments"),
+            projects: participant("projects.assignments"),
+            operator: Array.from(operator.resourceList || []).find(row => row.resourceId == "workOrders") || {}
+        }
     },
-    then({maintenance, projects}) {
+    then({maintenance, projects, operator}) {
         maintenance.state == "ready"
         maintenance.resourceList.some(row => row.resourceId == "workOrders" && row.resourceName.includes("(2)"))
+        operator.transferable === false
+        operator.resourceName.includes("(2)") && operator.resourceName.includes("Maintenance planner or supervisor")
         !Array.from(projects.resourceList || []).some(row => ["tasks", "workItems"].includes(row.resourceId))
     }
 })

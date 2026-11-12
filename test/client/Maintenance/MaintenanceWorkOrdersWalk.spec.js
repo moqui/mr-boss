@@ -80,7 +80,8 @@ feature(
             tech.getByRole("button", {name: "Start", exact: true}).first().click()
             tech.getByRole("dialog").getByRole("button", {name: "Start", exact: true}).click()
             waitForStatus(tech, "In Progress")
-            tech.goto(detail().replace("WorkOrderDetail?", "WorkOrderDetail/Time?")).status == 200
+            // the Time tab in the page (no reload)
+            tech.getByRole("tab", {name: "Time", exact: true}).click()
             waitForText(tech, "Your time:")
             tech.getByRole("button", {name: "Record time", exact: true}).click()
             const time = tech.getByRole("dialog")

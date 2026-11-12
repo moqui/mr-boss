@@ -152,18 +152,33 @@ function openAssignments(partyId) {
     ).map(row => row.assetId + "|" + row.roleTypeId)
     return found
 }
+// Who moves each kind (the user's call, Nov 12: offboarding stays with Maintenance's staff, no new permission): the services
+// below check these in the work's organization themselves. An identity operator without them sees the items, named with who
+// moves them, and gets no transfer step, so the offboarding hands them off and nothing fails for the operator.
+const movers = {
+    workOrders: {permissions: ["MAINTENANCE_PLAN", "MAINTENANCE_SUPERVISE"], who: "a Maintenance planner or supervisor"},
+    custody: {permissions: ["MAINTENANCE_RESOURCE_EDIT"], who: "a Maintenance resource administrator"}
+}
 function findAssignments(p) {
     const found = openAssignments(participantParty(p.userId, "ADMIN_IDENTITY_VIEW"))
     return {
         resourceList: Object.keys(assignmentNames)
             .filter(kind => found[kind].length)
-            .map(kind => ({
-                resourceId: kind,
-                resourceName: assignmentNames[kind] + " (" + found[kind].length + ")",
-                resourceKind: "assignment",
-                transferable: true,
-                note: found[kind].length + " open"
-            }))
+            .map(kind => {
+                const canMove = movers[kind].permissions.some(permission => ec.user.hasPermission(permission))
+                return {
+                    resourceId: kind,
+                    resourceName:
+                        assignmentNames[kind] +
+                        " (" +
+                        found[kind].length +
+                        ")" +
+                        (canMove ? "" : ", moved in Maintenance by " + movers[kind].who),
+                    resourceKind: "assignment",
+                    transferable: canMove,
+                    note: found[kind].length + " open" + (canMove ? "" : "; " + movers[kind].who + " moves them in Maintenance")
+                }
+            })
     }
 }
 // Each work order's technicians with the leaver replaced, through schedule#MaintenanceWorkOrder, and each holding through

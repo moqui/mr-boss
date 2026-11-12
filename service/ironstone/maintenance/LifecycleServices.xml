@@ -21,7 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="find" noun="Assignments" allow-remote="false" read-only="true">
         <description>What userId holds of Maintenance (the user's own, or another's with ADMIN_IDENTITY_VIEW): their open work orders
             (a current technician assignment) and the equipment they hold (a current custodian or operator), as counts by kind
-            (workOrders, custody), never the work's names.</description>
+            (workOrders, custody), never the work's names. A kind the caller may not move (MAINTENANCE_PLAN or _SUPERVISE for work
+            orders, MAINTENANCE_RESOURCE_EDIT for custody) is listed not transferable, its name saying who moves it in Maintenance:
+            an identity operator hands it off and gets no transfer step (the user's call, Nov 12).</description>
         <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceLookup"/>
         <actions>
             <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').execute('findAssignments', context)"/>
