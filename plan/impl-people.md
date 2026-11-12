@@ -4458,6 +4458,141 @@ Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
 - **Usable when** (`acceptance/People/PeopleOffersUsable`): a recruiter drafts an offer, HR approves, the candidate's
   acceptance is recorded, and HR hires from it; a second hire from the same offer is refused.
 
+**Built Nov 12 (P17).** mr-mantle b2b73796, mr-boss (branch `ppl/p17`).
+- Checked first (the code over the plan): P5's approval pattern (one approve and one refuse handler per topic over the domain's
+  decision, F110; `record#Decision`'s revision and self checks; routing by `chooseRules`), P6's hire (`planHire`, `hire#Employee`'s
+  operation key, `personAdmitted`, the draft record's whitelist), P9's `assign#Schedule` (a schedule from the hire's first day
+  changes that assignment in place), P15's printed claim (`ec.resource.xslFoTransform`, with the html page where there is no PDF
+  engine) and P16's applications and sharing. Found: with no rule a request about a person routes to their manager, so an offer
+  (about an applicant, who has none) would wait unresolved; P16's applications name their employer and not a position, so P6's
+  person search and admission (an applicant "to one of their positions", by `EmploymentApplication.emplPositionId`) found none of
+  P16's applicants by name and refused them by id; the test runtime has a PDF engine (a stored letter is a PDF, its text read with
+  `ec.resource.extractText`).
+- Mantle:
+  - `entity/PeopleRecruitingEntities.xml`: `mantle.humanres.recruitment.EmploymentOffer` (the dated terms of one application: a seat
+    of its opening, the department, manager, work location, working schedule, start, optional end, expiry and a note; the pay
+    amount, currency and payroll frequency; the state Draft, Waiting for approval, Approved, Issued, Accepted, Declined, Hired,
+    Withdrawn with its flow, an issued one past its expiry read as Expired; the answer, the signed acceptance, the hire it made; key
+    fields audit-logged) and `mantle.humanres.employment.EmploymentLetter` (a letter issued: of an offer or an employment change, its
+    stored file, type, whether it holds pay, who issued it and when); the kind `PakOffer`; `data/PeopleRecruitingSetupData.xml` the
+    topic `PeopleOfferApproval` (`approve#Offer`, `refuse#Offer`; its title names the position, never the person or pay);
+  - `RecruitingServices` over a new module `Offers.js`: `find#Offers`, `get#Offer` (the approval summary, the opening's seats for an
+    editor, an accepted offer's hireTerms for an HR editor), `store#Offer` (a recruiter with PEOPLE_RECRUIT_EDIT or an HR editor
+    drafts and changes the terms, checked as the hire checks them (Employment.js `checkTerms`, exported) and the seat one of the
+    opening's; the pay only a payroll editor's; changed terms make a waiting or approved offer a draft again and supersede its
+    approval; `APPLICATION_STAGE`, `OFFER_OPEN`, `OFFER_LOCKED`, `POSITION_NOT_OF_OPENING`, `PAY_INCOMPLETE` and the pay checks),
+    `change#OfferState` (submit, approve, refuse, withdraw, issue, accept, decline under the offer's lock; an action done answers as
+    it is), `approve#Offer` and `refuse#Offer`, `get#OfferLetter` (the stored letter, the one with pay for a payroll reader alone; the
+    preview before) and `get#OfferEvidence`. Readers: a recruiter, an HR reader and a payroll reader of the employer, and the
+    approver of the step waiting (without pay). Pay is absent without PAYROLL_VIEW on every path (the offer, the list, the
+    preview, the stored letter, the notice, the summary, the hire's terms);
+  - a new module `Letters.js`: the one letter template (the employer, date, reference, addressee, title, paragraphs, terms,
+    closing and signer, every value escaped; a preview marked as a draft), its storage (rendered once when issued, stored as the PDF
+    or the html-print page, read from storage after) and the lifecycle letters of an applied change (a hire's confirmation, a
+    transfer, a manager change, a leave of absence, a return, a separation; never the change's reason): `PeopleServices`
+    `get#EmploymentLetter` (an HR reader's: the stored letter or the preview) and `issue#EmploymentLetter` (an HR editor's, once per
+    change, the change locked; `CHANGE_NOT_APPLIED`, `LETTER_NOT_OFFERED`); `find#EmploymentChanges`' rows say whether a change's
+    letter is offered and issued;
+  - Approvals.js: the kind `PakOffer` and a kind's own default route (`defaultRole`): with no rule an offer goes to the employer's HR
+    officers (`ParHr`, "No rule: HR decides"), never the recruiter who submitted it or the applicant;
+  - Employment.js: `hire#Employee` and `preview#Hire` take `employmentOfferId` (the HireTerms interface and the draft whitelist):
+    the offer locked for the hire, its employer and applicant (admitted by the offer), its terms where none is given, its working
+    schedule from the first day (`assign#Schedule`), and consumed exactly once (`OFFER_USED`, `OFFER_NOT_ACCEPTED`, `OFFER_PERSON`,
+    `OFFER_EMPLOYER`, `OFFER_APPLICATION_CLOSED`; the offer and its application Hired; no pay and no account but HR's own Request an
+    account); the hire's person search and admission read P16's applications by employer as well as by position;
+  - Recruiting.js: Offer as a stage needs an open offer (drafting one moves the application there); `get#Application` answers a
+    recruiter the open offer, whether a new one is made and the opening's seats; the user's call of Nov 12 (§4): a resume is shared
+    with the interview panel when attached (`create#ApplicationContent` shares an `EactResume` file unless told not to; mail and
+    chat intake share the resume they keep), another file only when a recruiter shares it, and the recruiter can stop sharing it.
+- BOSS:
+  - `People/Staffing/OfferDetail` (out of the menu): the record header with one primary by state (Submit, Approve, Issue, Record
+    acceptance, Hire), under More Refuse, Declined by the candidate, Edit terms, Set pay (payroll's), Preview the letter, the issued
+    letter and Withdraw; Terms (the pay a payroll reader's, else "Set by payroll"), the candidate's answer with the signed letter,
+    Letter and Approval; `People/Staffing/OfferLetter` (the offer letter's html-print preview); `People/Employees/EmploymentLetter`
+    (a change's lifecycle letter's html-print preview, HR's: a member of `BOSS_PPL_EMPLOYMENT`);
+  - ApplicantDetail: Create offer (the primary once a scorecard is in, Schedule interview the primary before) and Offers; Shared with
+    the panel's wording for the resume default;
+  - HireEmployee: Identity's Accepted offers to hire from and Start from the offer (the draft from the offer's hireTerms), the steps
+    passing `employmentOfferId` to `preview#Hire` and `hire#Employee`; OfferDetail's Hire opens Identity with the offer;
+  - Employee360's Employment changes: Issue letter (with its preview) and Letter (the stored one), HR's under People
+    (`issueLetter`, `employmentLetter`);
+  - People.js link paths; People.xml's notification topic; Approvals lists `PeopleOfferApproval`; BossSetupData the topic's link to
+    OfferDetail and the EmploymentLetter screen in `BOSS_PPL_EMPLOYMENT`.
+- Specs: Mantle `test/humanres/Offers` (4 features, stepwise, 3.7 s: 0.74, 0.48, 1.90, 0.58: a recruiter's draft without pay, the
+  reader and another employer refused, a seat not of the opening refused, the pay payroll's alone and absent from the recruiter's
+  and HR's offer, the list and the letter's preview; the approval to HR, the recruiter's own decision `SELF_APPROVAL`, changed terms
+  a draft again and the old notice no longer decided, a refusal with its reason, the approval; the issued letter stored once, the
+  recruiter refused the letter holding pay, the payroll reader's letter unchanged in bytes after the opening and the person changed,
+  `OFFER_LOCKED` after issue, the acceptance, the recruiter refused the hire, `OFFER_PERSON`, the preview from the offer, the hire,
+  its retry, `OFFER_USED`, one employment, no account, no salary row, no account asked, the offer's schedule on the assignment; the
+  hire's lifecycle letter previewed, issued once and read from storage, refused to the recruiter); Recruiting gains one feature (0.10
+  s: a resume shared when attached, a cover letter not, the recruiter stopping it) and its mail feature the resume shared. BOSS
+  `test/People/PeopleOffers` (2 features, 1.75 s: OfferDetail's one qvt render as the recruiter (Submit, "Set by payroll", the
+  amount absent); ConfirmHire's one qvt render as the HR officer from the accepted offer's draft (the applicant, From the accepted
+  offer, no pay), the draft discarded and no hire made, so Retail's vacant seat stays vacant). `PeopleAccess` gains one feature (0.34
+  s: an offer read by Retail's recruiter and refused to the reader with the same parameters and to Retail's recruiter for Services'
+  offer; the pay refused to the HR officer with the parameters payroll is answered; the employment letter print HR's, the reader
+  refused). Acceptance, written and not run: `acceptance/People/PeopleOffersUsable` (3 features: the recruiter's offer from
+  ApplicantDetail, payroll's pay on OfferDetail, submit and the recruiter's own approval refused; HR's approval, the issue with the
+  letter payroll's, the acceptance; the hire through Identity's Start from the offer and ConfirmHire's Hire, the second hire
+  `OFFER_USED`, no account or salary, the application Hired; on a spec-local seat of Store Operations).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Offers, Recruiting, PeopleApprovals,
+  PeopleEmployment, PeopleScope, PeopleDirectory, PeopleScheduledChanges, PeopleSchedules, HumanResServices, PeopleChecklists and
+  FormDefinitions 60 of 60 (28.1 s of features), then Offers, Recruiting, PeopleApprovals, PeopleEmployment 26 of 26 and
+  ExpenseClaims, LeaveRequests, Attendance, PeopleScope, PeopleChecklists 26 of 26 after the last changes; BOSS PeopleOffers,
+  PeopleAccess, PeopleRecruiting, PeopleHire, PeopleEmployees, PeopleApprovals, PeopleSelfService, PeopleLifecycle, RecordFiles and
+  AdminLifecycle 60 of 60, then PeopleOffers, PeopleAccess, PeopleRecruiting, PeopleHire, PeopleEmployees, PeopleApprovals,
+  PeopleExpenses, PeopleSelfService, RecordFiles and Chat 76 of 76. One-off renders, not kept: ApplicantDetail before and after the
+  offer (qvt), OfferDetail as the recruiter (tui, html) and HR (qvt, waiting and accepted), OfferLetter (html-print, qvt, tui),
+  Identity with the accepted offer (qvt), EmploymentLetter for a manager change (html-print, tui) and Employee360 with Issue letter
+  (qvt, tui): no error. `moqui lint --screens` (release binary): 136 flagged sites, none in the People screens. Prettier clean on the
+  new and changed JavaScript (People.js was not clean on master and is left so). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People rows (RecruitingServices' offer services, `get#`/`issue#EmploymentLetter`, `preview#Hire`,
+  `hire#Employee` and `find#EmploymentChanges` from an offer and with letters); ss-inventory's P17 note (no baseline form).
+- Design edits: design-people (header; §3 SelfService's sharing; §4 HireEmployee and EmploymentChange as built; §5 ApplicantDetail
+  and OfferDetail as built; §12 the topic's handlers; §15 the letters row); design-drawers-commons §4 (the `PeopleOfferApproval`
+  row: its approve and refuse handlers); §4's resume row notes it is built.
+- Findings (provisional, numbered by the lead):
+  - with no rule an offer is decided by the employer's HR officers (a kind's own default route, `PakOffer`'s `ParHr`): the default of
+    a request about a person, their manager, leaves an applicant's offer unresolved; an employer's rules for the kind still route it;
+  - a payroll reader of the employer (PAYROLL_VIEW) reads its offers, the applicant's name and terms with the pay, since a payroll
+    editor sets the pay on OfferDetail; design §5 said "compensation terms by grant";
+  - an issued letter holding pay is read with PAYROLL_VIEW alone, so a recruiter without it issues the letter but cannot open it:
+    payroll (or HR holding PAYROLL_VIEW) hands it to the candidate; no delivery of a letter by mail or to the employee's
+    self-service is built (design §15 "restricted delivery");
+  - expiry is read, not stored: an issued offer past its date reads Expired and takes no answer; nothing moves it and no one is told;
+  - the candidate's refusal is Declined (`OfrDeclined`), apart from an approver's refusal, which makes the offer a draft again;
+    design §5's "refused";
+  - P6 and P16 left a gap this phase closes: P6's person search and admission read applications by position, and P16's name their
+    employer; the hire's search now reads both;
+  - a hire from an offer takes the offer's terms only where the wizard gives none, and HR may change them in the steps: the hire
+    records what HR confirmed, the offer what was offered; the offer's working schedule makes an `EckSchedule` change beside the hire;
+  - a withdrawn or declined offer leaves its application at Offer, for the recruiter to refuse or withdraw it; an offer of an
+    application closed since is not hired from (`OFFER_APPLICATION_CLOSED`) but stays accepted until withdrawn;
+  - one letter per offer or change: a letter is not issued again (a corrected offer is a new offer after a withdrawal); a change
+    withdrawn after its letter was issued keeps the letter; a change dated later has its letter issued before its date;
+  - HR finds the accepted offers to hire on the hire wizard's Identity; no notice tells HR an offer was accepted, and there is no
+    list of offers apart from an application's;
+  - an offer's issue renders its PDF in the request (about a second in the spec).
+- For the lead:
+  - budget share: mr-mantle about 3.8 s (Offers 3.7 s, Recruiting's new feature 0.1 s); mr-boss about 2.1 s (PeopleOffers 1.75 s,
+    PeopleAccess's P17 feature 0.34 s); no client spec;
+  - merge hot spots (P18 runs beside): mr-mantle `entity/PeopleRecruitingEntities.xml` (appended), `data/PeopleRecruitingSetupData.xml`
+    (appended), `Approvals.js` (the kinds table's end, `chooseRules`, `basisTexts`, the loaders), `Employment.js` (the loaders,
+    `draftFields.hire`, `relatedByName`, `personAdmitted`, `planHire`, `hireEmployee`, `findEmploymentChanges`, `changeRow`, the
+    exports), `Recruiting.js` (`stageProblem`, `getApplication`'s recruiter branch, `keepFiles`, the header), `PeopleServices.xml`
+    (HireTerms, hire#Employee's description, two services appended), `RecruitingServices.xml` (appended, `create#ApplicationContent`);
+    mr-boss `data/BossSetupData.xml` (appended at its end), `screen/People.xml` (the providers' end), `People/Approvals.xml`,
+    `People/Staffing.xml`, `Staffing/ApplicantDetail.xml`, `Employees/HireEmployee.xml` and its three steps, `Shared/Employee360.xml`
+    (two transitions, the change rows, the row actions), `service/ironstone/people/People.js` (linkPaths' end),
+    `test/People/PeopleAccess.spec.js` (the header, the appended feature), the inventories, design-people (header, §3, §4, §5, §12,
+    §15), design-drawers-commons §4, this file (§4's resume row);
+  - acceptance to run with the full suites: PeopleOffersUsable (new), PeopleRecruitingUsable (a mail application's resume is now
+    shared with the panel; read, it asserts nothing of the sharing) and PeopleHireUsable (the hire's code changed);
+  - for the user's call: who decides an offer when no rule names anyone (built: the employer's HR); whether payroll readers read
+    offers (built) or pay goes in by another path; who delivers an issued letter holding pay (built: payroll, no mail delivery);
+    whether employees read their own lifecycle letters in self-service (not built).
+
 ### P18 — Skills and qualifications
 
 Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels), Employee360's SkillsAndReviews
@@ -5086,7 +5221,7 @@ the owner's design.
 | Nov 12, 2026 | An expense approval notice names no amount in its title; its detail shows the approver the claim's total (the notice's `amount` and `currencyUomId`, which the notification lists show as the approval's summary) | The user's call on P15's question (built in P15's review, R3: Approvals.js `PakExpenseClaim`; PeopleExpenses) |
 | Nov 12, 2026 | An interviewer with self-service only answers their scorecard from SelfService: My interviews on SelfService (People/SelfService and Commons/People/SelfService) lists the interviews the user is on the panel of, each opening MyInterview beside it (People/MyInterview, Commons/People/MyInterview), where the panel member reads their own interview, the candidate's name, the opening and the materials HR shares with the panel, and submits their scorecard once. "Shared with the panel" is a file of the application a recruiter marks shared on ApplicantDetail (none by default, the resume either); a panel member reads nothing else of the application (its stage, source, contact, notes, other files or record host) there or in People. Grants on F28's non-inheritable pattern (`BOSS_PPL_INTERVIEW_SELF`) | The user's call (P16's review). Built in P16's review: `RecruitingServices.find#MyInterviews`, `get#MyInterview`, `share#ApplicationContent`, `get#ApplicationFile`, `EmploymentApplicationContent.panelShared`; design §3 SelfService, §5 ApplicantDetail |
 | Nov 12, 2026 | Free-text form answers (`FormResponseAnswer.valueText`) are opted out of AI for every app's forms, as P16's review built it, not only People's purposes | The user's call: respondents' words reach no model in any app (case feedback comments and tax statement answers included) |
-| Nov 12, 2026 | An applicant's resume is shared with the interview panel by default when attached; other files only when the recruiter marks them; the recruiter can unshare it | The user's call, after P16's review shared nothing by default; P17 builds it |
+| Nov 12, 2026 | An applicant's resume is shared with the interview panel by default when attached; other files only when the recruiter marks them; the recruiter can unshare it | The user's call, after P16's review shared nothing by default; P17 builds it (built in P17: `create#ApplicationContent` shares an `EactResume` file unless told not to, mail and chat intake share the resume they keep; Mantle Recruiting's spec; design-people §3, §5 ApplicantDetail) |
 | Nov 12, 2026 | A manager with a live reporting line evaluates that report's skills without `PEOPLE_DEVELOP_EDIT`: `store#Skill` records it as the manager's evaluation (`SkillSource` `SksManagerEvaluated`, the manager its assessor), which sets the accepted level and meets a requirement as an evaluation does; the matrix, its terminal twin and Employee360 offer it on the manager's reports. Certificate verification stays the development and HR verifiers' (`verify#Qualification` unchanged) | The user's call on P18's question (built in P18's review, R2; design-people §10 SkillsMatrix; Qualifications and PeopleAccess check a manager evaluating their report and refused another's) |
 | Nov 12, 2026 | A job requirement keeps its dated history: `EmplPositionClassSkill`'s primary key gains `fromDate` (a Mantle entity change), so each period is its own row and readers take the row in effect at their date; removing ends the row, a change ends the period in effect and starts a new one (a period not started yet is changed in place), and requiring the skill again starts a new row, never before the last one ended | The user's call on P18's question (built in P18's review, R3: Positions.js `store#JobRequirement`, `get#JobClass`, `classRows`; Development.js `classRequirements`; BossPeopleDemoData's requirement rows; design-people §5 JobClassDetail). No other reader or writer exists: Marble's HumanRes screens and the data files hold none beyond BOSS's demo |
 | Nov 12, 2026 | A staff reader of the employer sees whether a person's identity document or work permit is valid, expiring or expired, with its dates; only its number and file are the person's and HR's (as P18 built it) | The user's call, on P18's review finding |

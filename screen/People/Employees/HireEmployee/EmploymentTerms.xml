@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     assignment: the department, the position (the employer's seats in effect, vacant ones first, narrowed to the department; a
     position's department is the assignment's), the manager (one of the employer's employees) and the work location (a facility
     of the employer). Next checks the whole hire (mantle.humanres.PeopleServices.preview#Hire: an overlapping employment, a seat
-    held then, a department or manager not of the employer) and keeps the draft (the user's draft record). -->
+    held then, a department or manager not of the employer) and keeps the draft (the user's draft record). A hire from an accepted
+    offer (P17) starts with the offer's terms, which HR may change here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employment terms" default-menu-index="2" menu-image="sym_o_work" menu-image-type="icon">
 
@@ -41,7 +42,8 @@ along with this software (see the LICENSE.md file). If not, see
                     organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
                     lastName: draft.lastName, workEmail: draft.workEmail, confirmNewPerson: draft.confirmNewPerson === 'Y',
                     fromDate: draft.fromDate, thruDate: draft.thruDate, departmentPartyId: draft.departmentPartyId,
-                    emplPositionId: draft.emplPositionId, managerPartyId: draft.managerPartyId, facilityId: draft.facilityId}).call()
+                    emplPositionId: draft.emplPositionId, managerPartyId: draft.managerPartyId, facilityId: draft.facilityId,
+                    employmentOfferId: draft.employmentOfferId || null}).call()
                 if (ec.message.hasError()) return
                 for (const finding of Array.from(previewed?.findings || []))
                     if (finding.severity === 'error') ec.message.addError(finding.message)

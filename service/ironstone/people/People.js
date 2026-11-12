@@ -234,7 +234,11 @@ const linkPaths = [
     "Development",
     "Development/SkillsMatrix",
     "Development/SkillsMatrixTui",
-    "Development/Qualifications"
+    "Development/Qualifications",
+    // P17: an offer, its letter's print and an employment change's lifecycle letter (HR's)
+    "Staffing/OfferDetail",
+    "Staffing/OfferLetter",
+    "Employees/EmploymentLetter"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")

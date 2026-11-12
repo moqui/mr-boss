@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     with the draft's operation key, so a second press answers the first) and opens the person's Employee360; the draft record is discarded.
     P7: the onboarding checklists that start (a note of the preview) and the optional account request ("Request an account": Admin's
     lifecycle is asked, after the hire commits, for an invitation with BOSS_USERS and BOSS_PEOPLE_SELF; nobody gets a login merely to
-    be paid, the user's call). -->
+    be paid, the user's call). P17: a hire from an accepted offer consumes it, once (its finding says so; a second hire from it is
+    refused), and takes the offer's working schedule; the offer asks for no account and records no pay. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Confirm" default-menu-index="3" menu-image="sym_o_task_alt" menu-image-type="icon">
 
@@ -37,7 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
                     confirmNewPerson: draft.confirmNewPerson === 'Y', fromDate: draft.fromDate, thruDate: draft.thruDate,
                     departmentPartyId: draft.departmentPartyId, emplPositionId: draft.emplPositionId,
                     managerPartyId: draft.managerPartyId, facilityId: draft.facilityId, reason: String(reason ?? '').trim() || null,
-                    requestAccount: requestAccount === 'Y' || requestAccount === true, operationKey: hireOperationKey}).call()
+                    requestAccount: requestAccount === 'Y' || requestAccount === true, operationKey: hireOperationKey,
+                    employmentOfferId: draft.employmentOfferId || null}).call()
                 if (ec.message.hasError()) return
                 // the draft is done with
                 if (hireDraftId) ec.service.sync().name('mantle.humanres.PeopleServices.delete#EmploymentDraft').parameters({
@@ -62,7 +64,8 @@ along with this software (see the LICENSE.md file). If not, see
                         lastName:hireDraft.lastName, preferredName:hireDraft.preferredName, workEmail:hireDraft.workEmail,
                         confirmNewPerson:(hireDraft.confirmNewPerson == 'Y'), fromDate:hireDraft.fromDate, thruDate:hireDraft.thruDate,
                         departmentPartyId:hireDraft.departmentPartyId, emplPositionId:hireDraft.emplPositionId,
-                        managerPartyId:hireDraft.managerPartyId, facilityId:hireDraft.facilityId}"/>
+                        managerPartyId:hireDraft.managerPartyId, facilityId:hireDraft.facilityId,
+                        employmentOfferId:(hireDraft.employmentOfferId || null)}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <script><![CDATA[

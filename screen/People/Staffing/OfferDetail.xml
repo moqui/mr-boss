@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Offer (design-people §5 OfferDetail: Offer and OfferDecision; §15 the offer letter; style-guide §3.3 Detail;
+    impl-people P17): one offer of employment, from mantle.humanres.RecruitingServices.get#Offer, for a recruiter, an HR or a payroll
+    reader of its employer and for the approver of the step waiting (another is told it is not available). The record header (the
+    applicant, the position, the opening and employer, the state) with its one primary by state: Submit (a draft, for approval),
+    Approve (the approver of the step waiting; Refuse with a reason under More), Issue (an approved offer: its letter is rendered and
+    stored as it reads then, never again), Record acceptance (an issued offer before its expiry, with the signed letter; Declined
+    under More) and Hire (an accepted offer, for an HR editor: HireEmployee from it, which consumes it once); under More Edit terms
+    (a draft, waiting or approved offer: changed terms make it a draft again), Set pay (payroll's), the letter's preview or the
+    issued letter, and Withdraw. The boxes: Terms (the pay only for a payroll reader, others told payroll sets it), the candidate's
+    answer, the letter and the approval (the route, who decides each step and the decisions). Every People user opens it (the
+    Staffing area); change#OfferState and the other services check again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Offer" default-menu-include="false">
+    <parameter name="employmentOfferId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the terms (a recruiter's or HR's) and the pay (payroll's), each its own form: Mantle checks who changes what and the revision -->
+    <transition name="storeTerms">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.store#Offer" out-map="stored"
+                    in-map="{employmentOfferId:employmentOfferId, revision:(revision || null), emplPositionId:(emplPositionId ?? null),
+                        managerPartyId:(managerPartyId ?? null), facilityId:(facilityId ?? null), workingScheduleId:(workingScheduleId ?? null),
+                        fromDate:(fromDate ?? null), thruDate:(thruDate ?? null), expireDate:(expireDate ?? null), note:(note ?? null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${stored.changed ? (stored.statusId == 'OfrDraft' ? 'Terms saved; the offer is a draft to submit' : 'Terms saved') : 'Nothing changed'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="employmentOfferId"/></default-response>
+        <error-response url="."><parameter name="employmentOfferId"/></error-response>
+    </transition>
+    <transition name="storePay">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.store#Offer" out-map="stored"
+                    in-map="{employmentOfferId:employmentOfferId, revision:(revision || null), payAmount:(payAmount ?? ''),
+                        currencyUomId:(currencyUomId ?? null), timePeriodTypeId:(timePeriodTypeId ?? null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stored.changed ? 'Pay saved' : 'Nothing changed'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="employmentOfferId"/></default-response>
+        <error-response url="."><parameter name="employmentOfferId"/></error-response>
+    </transition>
+    <!-- submit, approve, refuse, withdraw, issue, accept or decline: Mantle checks who may, the revision and the approval again -->
+    <transition name="changeState">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.change#OfferState" out-map="changed"
+                    in-map="{employmentOfferId:employmentOfferId, action:action, revision:(revision || null), reason:(reason || null),
+                        sourceRevision:(sourceRevision || null), responseDate:(responseDate || null), responseNote:(responseNote || null),
+                        evidenceFile:(evidenceFile || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${changed.repeated ? 'Already done' : changed.stateText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="employmentOfferId"/></default-response>
+        <error-response url="."><parameter name="employmentOfferId"/></error-response>
+    </transition>
+    <!-- the issued letter as it was stored (get#OfferLetter checks the reader, and payroll's for a letter with pay) -->
+    <transition name="letter" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.get#OfferLetter" out-map="letterFound"
+                    in-map="{employmentOfferId:employmentOfferId}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !letterFound?.issued"><return error="true" message="The letter is not issued yet"/></if>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(letterFound.letter.location, true, letterFound.letter.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="employmentOfferId"/></error-response>
+    </transition>
+    <!-- the candidate's signed acceptance kept with the offer -->
+    <transition name="evidence" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.get#OfferEvidence" out-map="evidenceFound"
+                    in-map="{employmentOfferId:employmentOfferId}"/>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(evidenceFound.location, true, evidenceFound.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="employmentOfferId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.RecruitingServices.get#Offer" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{employmentOfferId:(employmentOfferId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="offer" from="found?.offer || null"/>
+        <set field="recordFound" from="!!offer"/>
+        <script><![CDATA[
+            const recruiter = Array.from(offer?.access || []).includes('recruiter')
+            headerCaption = offer ? [offer.positionName, offer.openingTitle, offer.organizationName].filter(Boolean).join(' · ') : ''
+            const payShown = offer?.paySees ? (offer.payText || 'None') : offer?.hasPayTerms ? 'Set by payroll' : 'Not set by payroll yet'
+            termRows = offer ? [['Position', offer.positionName], ['Department', offer.departmentName], ['Reports to', offer.managerName],
+                ['Work location', offer.facilityName], ['Working schedule', offer.scheduleName], ['Starts', offer.fromDateText],
+                ['Ends', offer.thruDateText || 'Open-ended'], ['Open until', offer.expireDateText], ['Pay', payShown],
+                ['Note for the letter', offer.note]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+            answerRows = offer && offer.responseDateText ? [[offer.statusId == 'OfrDeclined' ? 'Declined' : 'Accepted', offer.responseDateText],
+                ['Note', offer.responseNote]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+            approval = offer?.approval || null
+            stepRows = Array.from(approval?.steps || [])
+            decisionRows = Array.from(approval?.decisions || [])
+            seatOptions = Array.from(offer?.openingSeats || []).map(row => ({key: row.emplPositionId, text: row.positionName}))
+            termValues = offer ? {employmentOfferId: offer.employmentOfferId, revision: offer.revision, emplPositionId: offer.emplPositionId,
+                managerPartyId: offer.managerPartyId, facilityId: offer.facilityId, workingScheduleId: offer.workingScheduleId,
+                fromDate: offer.fromDate, thruDate: offer.thruDate, expireDate: offer.expireDate, note: offer.note,
+                organizationPartyId: offer.organizationPartyId} : {}
+            payValues = offer ? {employmentOfferId: offer.employmentOfferId, revision: offer.revision, payAmount: offer.payAmount,
+                currencyUomId: offer.currencyUomId, timePeriodTypeId: offer.timePeriodTypeId} : {}
+            stateValues = offer ? {employmentOfferId: offer.employmentOfferId, revision: offer.revision,
+                sourceRevision: approval?.sourceRevision || null, responseDate: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')} : {}
+            applicationUrl = recruiter ? sharedLinks?.['Staffing/ApplicantDetail'] || null : null
+            backUrl = sharedLinks?.['Staffing/ApplicantPipeline'] || null
+            hireUrl = offer?.canHire ? (sharedLinks?.['Employees/HireEmployee'] || null) : null
+            employeeUrl = offer?.hiredPartyRelationshipId ? sharedLinks?.['Employees/Employee360'] || null : null
+            printUrl = offer && !offer.letterIssued ? '/apps/People/Staffing/OfferLetter?renderMode=html-print&employmentOfferId='
+                + encodeURIComponent(offer.employmentOfferId) : null
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="OfferMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This offer is not available to you."/>
+                        <link url="${backUrl}" text="Back to applicants" link-type="anchor" condition="backUrl"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OfferRecord" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.humanres.recruitment.EmploymentOffer" record-id="${offer.employmentOfferId}"
+                        title="Offer to ${offer.applicantName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Offer ${offer.employmentOfferId}" type="span" style="text-caption m-muted"/>
+                            <label text="${offer.applicantName}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none" condition="headerCaption"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${offer.stateColor}">${
+                                    WebUtilities.encodeHtml(offer.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: offer.stateText})}]]></text>
+                                <text type="html">${offer.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${applicationUrl}" text="The application" link-type="anchor" icon="sym_o_arrow_back"
+                                    parameter-map="{employmentApplicationId:offer.employmentApplicationId}" condition="applicationUrl"/>
+                            <link url="${employeeUrl}" text="Hired ${offer.hiredDateText}" link-type="anchor" icon="sym_o_badge"
+                                    parameter-map="{partyId:offer.partyId, partyRelationshipId:offer.hiredPartyRelationshipId}" condition="employeeUrl"/>
+                            <label text="${offer.statusId == 'OfrWithdrawn' ? 'Withdrawn' : 'Not approved'}: ${offer.decisionReason}" type="span"
+                                    style="text-caption text-warning" condition="offer.decisionReason"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="changeState" text="Submit" icon="sym_o_send" link-type="hidden-form" btn-type="primary"
+                                    parameter-map="{employmentOfferId:offer.employmentOfferId, action:'submit', revision:offer.revision}"
+                                    condition="offer.canSubmit" confirmation="Submit the offer to ${offer.applicantName} for approval?"/>
+                            <container-dialog id="ApproveOfferDialog" button-text="Approve" icon="sym_o_check" type="primary" width="520"
+                                    title="Approve the offer to ${offer.applicantName}" condition="offer.canDecide">
+                                <label type="p" text="Once approved, the recruiter issues it: its letter is stored as it reads then."/>
+                                <form-single name="ApproveOffer" transition="changeState" map="stateValues">
+                                    <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                    <field name="action"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="changeState" text="Issue" icon="sym_o_mark_email_read" link-type="hidden-form" btn-type="primary"
+                                    parameter-map="{employmentOfferId:offer.employmentOfferId, action:'issue', revision:offer.revision}"
+                                    condition="offer.canIssue"
+                                    confirmation="Issue the offer to ${offer.applicantName}? Its letter is stored as it reads now and is not changed after."/>
+                            <container-dialog id="AcceptOfferDialog" button-text="Record acceptance" icon="sym_o_handshake" type="primary"
+                                    width="560" title="${offer.applicantName} accepted the offer" condition="offer.canRespond">
+                                <label type="p" text="Accepted is not hired: HR hires from the accepted offer, once."/>
+                                <form-single name="AcceptOffer" transition="changeState" map="stateValues">
+                                    <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                    <field name="revision"><default-field><hidden/></default-field></field>
+                                    <field name="action"><default-field><hidden default-value="accept"/></default-field></field>
+                                    <field name="responseDate"><default-field title="Accepted on"><date-time type="date"/></default-field></field>
+                                    <field name="responseNote"><default-field title="Note"><text-line size="40"/></default-field></field>
+                                    <field name="evidenceFile">
+                                        <default-field title="Signed letter" tooltip="Optional: kept with the offer, read by its readers"><file/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Record acceptance"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${hireUrl}" text="Hire" icon="sym_o_person_add" btn-type="primary" link-type="anchor-button"
+                                    parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="hireUrl"/>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="RefuseOfferDialog" button-text="Refuse" icon="sym_o_block" type="danger" width="520"
+                                        title="Refuse the offer to ${offer.applicantName}" condition="offer.canDecide">
+                                    <label type="p" text="The offer goes back to its recruiter as a draft, with your reason."/>
+                                    <form-single name="RefuseOffer" transition="changeState" map="stateValues">
+                                        <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                        <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="refuse"/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Refuse"><submit type="danger" confirmation="Refuse the offer to ${offer.applicantName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="DeclineOfferDialog" button-text="Declined by the candidate" icon="sym_o_do_not_disturb_on"
+                                        type="danger" width="520" title="${offer.applicantName} declined the offer" condition="offer.canRespond">
+                                    <form-single name="DeclineOffer" transition="changeState" map="stateValues">
+                                        <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                        <field name="revision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="decline"/></default-field></field>
+                                        <field name="responseDate"><default-field title="Declined on"><date-time type="date"/></default-field></field>
+                                        <field name="responseNote"><default-field title="Why, if they said"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Record"><submit type="danger" confirmation="Record that ${offer.applicantName} declined the offer?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EditTermsDialog" button-text="Edit terms" icon="sym_o_edit" width="720"
+                                        title="The terms of the offer to ${offer.applicantName}" condition="offer.canEdit">
+                                    <label type="p" style="text-caption m-muted" condition="offer.statusId != 'OfrDraft'"
+                                            text="Changed terms make the offer a draft again: it is submitted for approval again."/>
+                                    <form-single name="OfferTerms" transition="storeTerms" map="termValues">
+                                        <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                        <field name="revision"><default-field><hidden/></default-field></field>
+                                        <field name="emplPositionId">
+                                            <default-field title="Position" tooltip="A seat of the opening">
+                                                <drop-down><list-options list="seatOptions" key="${key}" text="${text}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="managerPartyId">
+                                            <default-field title="Reports to">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'employees', choiceOrganizationPartyId:termValues.organizationPartyId,
+                                                                selected:termValues.managerPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="facilityId">
+                                            <default-field title="Work location">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'workLocations', choiceOrganizationPartyId:termValues.organizationPartyId,
+                                                                selected:termValues.facilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="workingScheduleId">
+                                            <default-field title="Working schedule">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'workingSchedules', choiceOrganizationPartyId:termValues.organizationPartyId,
+                                                                selected:termValues.workingScheduleId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="Starts"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+                                        <field name="thruDate">
+                                            <default-field title="Ends" tooltip="Empty for an open-ended employment"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                                        </field>
+                                        <field name="expireDate">
+                                            <default-field title="Open until" tooltip="The candidate answers by then"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                                        </field>
+                                        <field name="note"><default-field title="Note for the letter"><text-area rows="3" cols="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="emplPositionId"/><field-ref name="managerPartyId"/></field-row>
+                                            <field-row><field-ref name="facilityId"/><field-ref name="workingScheduleId"/></field-row>
+                                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                            <field-ref name="expireDate"/>
+                                            <field-ref name="note"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="SetPayDialog" button-text="Set pay" icon="sym_o_payments" width="560"
+                                        title="The pay offered to ${offer.applicantName}" condition="offer.canEditPay">
+                                    <label type="p" style="text-caption m-muted"
+                                            text="Only payroll reads the pay. Changed pay makes the offer a draft again: it is submitted for approval again."/>
+                                    <form-single name="OfferPay" transition="storePay" map="payValues">
+                                        <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                        <field name="revision"><default-field><hidden/></default-field></field>
+                                        <field name="payAmount">
+                                            <default-field title="Amount" tooltip="Empty for no pay terms"><text-line size="12" input-type="number"/></default-field>
+                                        </field>
+                                        <field name="currencyUomId">
+                                            <default-field title="Currency">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                            <order-by field-name="description"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="timePeriodTypeId">
+                                            <default-field title="Pay frequency">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${timePeriodTypeId}" text="${description}">
+                                                        <entity-find entity-name="mantle.party.time.TimePeriodType" cache="true">
+                                                            <econdition field-name="timePeriodTypeId" operator="like" value="Payroll%"/>
+                                                            <order-by field-name="description"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${printUrl}" url-type="plain" text="Preview the letter" icon="sym_o_print" target-window="_blank"
+                                        condition="printUrl"/>
+                                <link url="letter" text="The issued letter" icon="sym_o_picture_as_pdf" target-window="_blank"
+                                        parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.letterIssued &amp;&amp; !offer.letterRestricted"/>
+                                <container-dialog id="WithdrawOfferDialog" button-text="Withdraw" icon="sym_o_cancel" type="danger" width="520"
+                                        title="Withdraw the offer to ${offer.applicantName}" condition="offer.canWithdraw">
+                                    <label type="p" text="A withdrawn offer is closed: it is not issued, answered or hired from."/>
+                                    <form-single name="WithdrawOffer" transition="changeState" map="stateValues">
+                                        <field name="employmentOfferId"><default-field><hidden/></default-field></field>
+                                        <field name="revision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="withdraw"/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Withdraw"><submit type="danger" confirmation="Withdraw the offer to ${offer.applicantName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-row>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Terms"/>
+                            <box-body-nopad>
+                                <form-list name="OfferTermRows" list="termRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="value"/></column></columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="CandidateAnswer" condition="answerRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="The candidate's answer"/>
+                                    <box-body-nopad>
+                                        <form-list name="AnswerRows" list="answerRows" skip-form="true" skip-header="true" paginate="false">
+                                            <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                        </form-list>
+                                        <link url="evidence" text="The signed letter" link-type="anchor" target-window="_blank" style="q-ma-md"
+                                                parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.hasEvidence"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </row-col>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Letter"/>
+                            <box-body>
+                                <label type="p" condition="offer.letterIssued" text="Issued ${offer.issuedDateText}: the letter is kept as it read then."/>
+                                <label type="p" style="m-muted" condition="offer.letterRestricted"
+                                        text="The issued letter holds the pay terms: payroll reads it."/>
+                                <link url="letter" text="Open the issued letter" link-type="anchor" target-window="_blank"
+                                        parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.letterIssued &amp;&amp; !offer.letterRestricted"/>
+                                <label type="p" style="m-muted" condition="!offer.letterIssued"
+                                        text="The letter is stored when the offer is issued, once approved."/>
+                                <link url="${printUrl}" url-type="plain" text="Preview the letter" link-type="anchor" target-window="_blank"
+                                        condition="printUrl"/>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-px-md q-pt-sm" text="${approval.waitingText}" condition="approval?.waitingText"/>
+                                <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                        <column><field-ref name="decisionDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!approval" text="Not submitted for approval yet."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
