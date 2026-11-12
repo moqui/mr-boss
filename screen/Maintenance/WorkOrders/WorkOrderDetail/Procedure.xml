@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Procedure tab (design-maintenance §3 ProcedureSteps, StepResponse and ExecutionAmendment, §4.3, §12;
+    impl-maintenance P7): the work order's checklist, its execution tree made of a procedure (not editable template content), read
+    by mantle.work.ProcessServices.get#ProcessExecution for a reader of the work order. On a phone it leads with the next step the
+    user can act on, its instruction and its response. Then the steps in order, each indented under its group, with its state
+    (a waived or skipped step says so), whether it is required, its response (check off, pass or fail, a reading in a unit with its
+    bounds; evidence or a comment it needs), what it waits for, its assignee, its current check (outcome, reading, findings, notes,
+    evidence) and failures, and its actions for the user: Start, Respond (StepResponse: the result or reading, notes, a photo or
+    file and a voice note), Skip (an optional step, with the reason), Waive (a supervisor, where the step's policy allows it, with
+    the reason; the failure stays) and Correct (a new check that supersedes the accepted one, with the reason). A group has no
+    response: its steps complete it. The checks (newest first, every failure and recheck), the waivers and the amendments follow.
+    A supervisor amends an open execution (ExecutionAmendment: a step's requirement, bounds, evidence, comment, waiver or what it
+    waits for, previewed with the acceptances it invalidates, then confirmed with a reason). Print checklist: the completed
+    checklist and exception record (stored when the work is closed). The work order's Complete waits for the required steps. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Procedure" default-menu-index="20">
+    <parameter name="workEffortId"/>
+    <parameter name="amendStepId"/>
+    <transition-include name="startStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <transition-include name="respondStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <transition-include name="skipStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <transition-include name="waiveStep" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <transition-include name="previewAmendment" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <transition-include name="amendExecution" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <transition-include name="printChecklist" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+    <actions>
+        <set field="executionDetail" from="null"/>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProcessServices.get#ProcessExecution" out-map="executionDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="execution" from="executionDetail?.execution || null"/>
+        <set field="stepList" from="executionDetail?.stepList || []"/>
+        <set field="checkList" from="executionDetail?.checkList || []"/>
+        <set field="waiverList" from="executionDetail?.waiverList || []"/>
+        <set field="amendmentList" from="executionDetail?.amendmentList || []"/>
+        <set field="nextStep" from="execution?.nextStepId ? stepList.find(row =&gt; row.workEffortId === execution.nextStepId) : null"/>
+        <set field="progressText" from="execution?.requiredCount ? execution.doneCount + ' of ' + execution.requiredCount + ' required steps done' : ''"/>
+        <set field="stepOptions" from="stepList.filter(row =&gt; !row.isGroup).map(row =&gt; ({key: row.workEffortId, text: row.name}))"/>
+        <!-- an amendment's preview, from previewAmendment's parameters (nothing is written) -->
+        <set field="amendPreview" from="null"/>
+        <if condition="amendStepId &amp;&amp; execution?.canAmend">
+            <set field="amendChange" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').amendmentChange(context)"/>
+            <service-call name="mantle.work.ProcessServices.amend#ProcessExecution" out-map="amendPreview" transaction="force-new"
+                    ignore-error="true" in-map="{rootWorkEffortId:workEffortId, changeList:[amendChange], preview:true}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="amendValues" from="Object.assign({workEffortId:workEffortId, operationKey:'amend-' + workEffortId + '-' +
+                    ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS')}, Object.fromEntries(['amendStepId', 'amendIsRequired',
+                    'amendEvidenceRequired', 'amendCommentRequired', 'amendWaiverAllowed', 'amendMinimumValue', 'amendMaximumValue',
+                    'amendDependsOnIds'].map(name =&gt; [name, context[name] ?? null])))"/>
+        </if>
+        <set field="amendDefaults" from="{workEffortId:workEffortId}"/>
+    </actions>
+    <widgets>
+        <section name="ProcedureFound" condition="execution">
+            <widgets>
+                <section name="NoProcedure" condition="!execution.hasSteps">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Procedure"/>
+                            <box-body>
+                                <label text="This work order was not made from a procedure: it has no checklist." type="p" style="m-muted"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="Checklist" condition="execution.hasSteps">
+                    <widgets>
+                        <!-- the next step the user can act on, first on a phone -->
+                        <section name="NextStep" condition="nextStep">
+                            <actions>
+                                <set field="step" from="nextStep"/>
+                                <set field="formPrefix" value="Next"/>
+                                <set field="correcting" from="false"/>
+                            </actions>
+                            <widgets>
+                                <container-box type="info">
+                                    <box-header title="Next: ${nextStep.name}"/>
+                                    <box-body>
+                                        <label text="${nextStep.responseText}" type="div" style="text-caption m-muted"/>
+                                        <section name="NextStart" condition="nextStep.canStart &amp;&amp; nextStep.statusId != 'WeInProgress'">
+                                            <widgets>
+                                                <link url="startStep" text="Start this step" icon="sym_o_play_arrow" link-type="hidden-form-link" btn-type="primary"
+                                                        parameter-map="{workEffortId:workEffortId, stepWorkEffortId:nextStep.workEffortId}"/>
+                                            </widgets>
+                                        </section>
+                                        <section name="NextRespond" condition="nextStep.canRespond">
+                                            <widgets>
+                                                <section-include name="StepResponseForm" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+                                            </widgets>
+                                        </section>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Checklist"/>
+                            <box-toolbar>
+                                <link url="printChecklist" text="Print checklist" icon="sym_o_print" link-type="anchor" target-window="_blank"
+                                        parameter-map="{workEffortId:workEffortId}"/>
+                                <container-dialog id="AmendExecution" button-text="Amend" icon="sym_o_edit_note" title="Amend the checklist of ${workEffortId}"
+                                        width="640" condition="execution.canAmend">
+                                    <label text="A change to an open checklist is previewed first: a completed step whose requirement changes is reopened."
+                                            type="p" style="text-caption m-muted"/>
+                                    <form-single name="AmendExecutionForm" transition="previewAmendment" map="amendDefaults">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="amendStepId">
+                                            <default-field title="Step"><drop-down><list-options list="stepOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                        </field>
+                                        <field name="amendIsRequired">
+                                            <default-field title="Required">
+                                                <drop-down allow-empty="true"><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="amendMinimumValue"><default-field title="Minimum"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="amendMaximumValue"><default-field title="Maximum"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="amendEvidenceRequired">
+                                            <default-field title="Evidence required">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="amendCommentRequired">
+                                            <default-field title="Comment required">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="amendWaiverAllowed">
+                                            <default-field title="A supervisor may waive it">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="amendDependsOnIds">
+                                            <default-field title="Waits for" tooltip="Empty leaves what it waits for as it is">
+                                                <drop-down allow-empty="true" allow-multiple="true"><list-options list="stepOptions" key="${key}" text="${text}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Preview"><submit type="primary"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${progressText}" type="p" style="text-caption m-muted" condition="progressText"/>
+                                <label text="${execution.gateText}" type="p" style="text-caption text-warning" condition="execution.gateText"/>
+                                <label text="Steps are worked while the work order is in progress." type="p" style="text-caption m-muted"
+                                        condition="!execution.working"/>
+                                <!-- an amendment's preview and its confirmation -->
+                                <section name="AmendPreview" condition="amendPreview?.changeList">
+                                    <widgets>
+                                        <container-box type="warning">
+                                            <box-header title="Amendment preview"/>
+                                            <box-body>
+                                                <section-iterate name="AmendChanges" list="amendPreview.changeList" entry="change">
+                                                    <widgets><label text="${change.name}: ${change.changedFields.length ? change.changedFields.join(', ') : 'no requirement change'}${change.dependsOnIds ? '; waits for ' + change.dependsOnIds.length + ' step(s)' : ''}" type="div"/></widgets>
+                                                </section-iterate>
+                                                <section-iterate name="AmendInvalidated" list="amendPreview.invalidatedList" entry="invalid">
+                                                    <widgets><label text="Reopened: ${invalid.name}, ${invalid.why}" type="div" style="text-negative"/></widgets>
+                                                </section-iterate>
+                                                <section-iterate name="AmendFindings" list="amendPreview.findingList" entry="finding">
+                                                    <widgets><label text="${finding.message}" type="div" style="text-warning"/></widgets>
+                                                </section-iterate>
+                                                <form-single name="AmendConfirmForm" transition="amendExecution" map="amendValues">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="amendStepId"><default-field><hidden/></default-field></field>
+                                                    <field name="amendIsRequired"><default-field><hidden/></default-field></field>
+                                                    <field name="amendEvidenceRequired"><default-field><hidden/></default-field></field>
+                                                    <field name="amendCommentRequired"><default-field><hidden/></default-field></field>
+                                                    <field name="amendWaiverAllowed"><default-field><hidden/></default-field></field>
+                                                    <field name="amendMinimumValue"><default-field><hidden/></default-field></field>
+                                                    <field name="amendMaximumValue"><default-field><hidden/></default-field></field>
+                                                    <field name="amendDependsOnIds"><default-field><hidden/></default-field></field>
+                                                                <field name="reason"><default-field title="Why"><text-line size="60"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Amend"><submit type="primary"/></default-field></field>
+                                                </form-single>
+                                            </box-body>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <section-iterate name="StepRows" list="stepList" entry="step">
+                                    <actions>
+                                        <set field="formPrefix" value="Row"/>
+                                        <set field="statusColor" from="{WeInPlanning:'grey-8', WeInProgress:'primary', WeComplete:'positive', WeClosed:'grey-7',
+                                                WeCancelled:'grey-6'}[step.statusId] || 'grey-8'"/>
+                                        <set field="stepCaption" from="[step.isGroup ? 'Group' : step.requiredText, step.isGroup ? null : step.responseText,
+                                                step.waitingText || null, step.assigneeText || null].filter(Boolean).join(' · ')"/>
+                                        <set field="currentText" from="step.current ? [step.current.outcomeText + (step.current.valueText ? ' ' + step.current.valueText : ''),
+                                                step.current.stateText, step.current.byName + ', ' + step.current.observedText,
+                                                step.current.findingList.join('; ') || null, step.current.comments || null, step.current.transcript || null,
+                                                step.current.fileText ? 'files: ' + step.current.fileText : null].filter(Boolean).join(' · ') : ''"/>
+                                    </actions>
+                                    <widgets>
+                                        <container style="row items-start q-py-xs m-divider-bottom">
+                                            <container style="col">
+                                                <render-mode>
+                                                    <text type="qvt"><![CDATA[<div style="padding-left: ${step.indentPx}px"><span class="${step.isGroup ? 'text-weight-medium' : ''}">${WebUtilities.encodeHtml(step.name)}</span> <q-chip dense square class="q-ma-none q-ml-xs m-tonal text-${statusColor}">${WebUtilities.encodeHtml(step.statusText)}</q-chip></div>]]></text>
+                                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: '  '.repeat(Math.max(0, step.depth - 1)) + step.name + ' [' + step.statusText + ']'})}]]></text>
+                                                    <text type="html">${step.name} (${step.statusText})</text>
+                                                </render-mode>
+                                                <label text="${stepCaption}" type="div" style="text-caption m-muted"/>
+                                                <label text="${step.instructionSummary}" type="div" style="text-caption" condition="step.instructionSummary &amp;&amp; !step.done"/>
+                                                <label text="${currentText}" type="div" style="${step.current?.accepted ? 'text-caption' : 'text-caption text-negative'}" condition="currentText"/>
+                                                <label text="Failures: ${step.failureCount}" type="div" style="text-caption text-negative" condition="step.failureCount &amp;&amp; step.current?.accepted"/>
+                                                <label text="Waived by ${step.waiver.byName}, ${step.waiver.waivedText}: ${step.waiver.reason}" type="div" style="text-caption text-warning" condition="step.waiver"/>
+                                            </container>
+                                            <container style="col-auto row items-center q-gutter-x-xs q-gutter-y-xs">
+                                                <link url="startStep" text="Start" icon="sym_o_play_arrow" link-type="hidden-form-link"
+                                                        condition="step.canStart &amp;&amp; step.statusId != 'WeInProgress'"
+                                                        parameter-map="{workEffortId:workEffortId, stepWorkEffortId:step.workEffortId}"/>
+                                                <section name="RowRespond" condition="step.canRespond">
+                                                    <actions><set field="correcting" from="false"/></actions>
+                                                    <widgets>
+                                                        <container-dialog id="Respond_${step.workEffortId}" button-text="Respond" icon="sym_o_task_alt" type="primary"
+                                                                title="${step.name}" width="640">
+                                                            <section-include name="StepResponseForm" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+                                                        </container-dialog>
+                                                    </widgets>
+                                                </section>
+                                                <section name="RowCorrect" condition="step.canCorrect">
+                                                    <actions><set field="correcting" from="true"/><set field="formPrefix" value="Correct"/></actions>
+                                                    <widgets>
+                                                        <container-dialog id="Correct_${step.workEffortId}" button-text="Correct" icon="sym_o_edit"
+                                                                title="Correct ${step.name}" width="640">
+                                                            <section-include name="StepResponseForm" location="component://mr-boss/template/MaintenanceChecklistParts.xml"/>
+                                                        </container-dialog>
+                                                    </widgets>
+                                                </section>
+                                                <container-dialog id="Skip_${step.workEffortId}" button-text="Skip" icon="sym_o_skip_next"
+                                                        title="Skip ${step.name}" width="560" condition="step.canSkip">
+                                                    <form-single name="SkipStep_${step.workEffortId}" transition="skipStep"
+                                                            map="{workEffortId:workEffortId, stepWorkEffortId:step.workEffortId}">
+                                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                        <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                        <field name="comments"><default-field title="Why it is skipped"><text-line size="50"/></default-field></field>
+                                                        <field name="submitButton"><default-field title="Skip"><submit/></default-field></field>
+                                                    </form-single>
+                                                </container-dialog>
+                                                <container-dialog id="Waive_${step.workEffortId}" button-text="Waive" icon="sym_o_approval"
+                                                        title="Waive ${step.name}" width="560" condition="step.canWaive">
+                                                    <label text="The step is complete without an accepted check; ${step.current ? 'its failed check stays on the record' : 'nothing was recorded on it'}."
+                                                            type="p" style="text-caption m-muted"/>
+                                                    <form-single name="WaiveStep_${step.workEffortId}" transition="waiveStep"
+                                                            map="{workEffortId:workEffortId, stepWorkEffortId:step.workEffortId, workEffortCheckId:(step.current?.accepted ? null : step.current?.workEffortCheckId)}">
+                                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                        <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                        <field name="workEffortCheckId"><default-field><hidden/></default-field></field>
+                                                        <field name="reason"><default-field title="Why it is waived"><text-line size="50"/></default-field></field>
+                                                        <field name="submitButton"><default-field title="Waive"><submit type="primary"/></default-field></field>
+                                                    </form-single>
+                                                </container-dialog>
+                                            </container>
+                                        </container>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Checks"/>
+                            <box-body>
+                                <label text="No check is recorded yet." type="p" style="m-muted" condition="!checkList.length"/>
+                                <form-list name="CheckRows" list="checkList" skip-form="true" paginate="false">
+                                    <field name="stepName"><default-field title="Step"><display/></default-field></field>
+                                    <field name="outcomeText"><default-field title="Outcome"><display text="${outcomeText}${valueText ? ' ' + valueText : ''}"/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="byName"><default-field title="By"><display/></default-field></field>
+                                    <field name="observedText"><default-field title="Observed"><display/></default-field></field>
+                                    <field name="comments"><default-field title="Notes"><display text="${[findingList.join('; '), comments, transcript, correctionReason ? 'correction: ' + correctionReason : ''].filter(Boolean).join(' · ')}"/></default-field></field>
+                                    <field name="fileText"><default-field title="Evidence"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepName"/><field-ref name="observedText"/></column>
+                                        <column><field-ref name="outcomeText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                        <section name="Decisions" condition="waiverList.length || amendmentList.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Waivers and amendments"/>
+                                    <box-body>
+                                        <section-iterate name="WaiverRows" list="waiverList" entry="waiver">
+                                            <widgets><label text="${waiver.stepName} waived by ${waiver.byName}, ${waiver.waivedText}: ${waiver.reason}${waiver.active ? '' : ' (invalidated)'}" type="div"/></widgets>
+                                        </section-iterate>
+                                        <section-iterate name="AmendmentRows" list="amendmentList" entry="amendment">
+                                            <widgets><label text="Amended ${amendment.amendedText}: ${amendment.reason}${amendment.summary ? ' · ' + amendment.summary : ''}" type="div"/></widgets>
+                                        </section-iterate>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

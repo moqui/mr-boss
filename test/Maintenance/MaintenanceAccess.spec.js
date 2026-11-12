@@ -9,7 +9,8 @@
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
 // Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
 // panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P6's procedure record (a reader of its
-// organization's procedures; an author's change),
+// organization's procedures; an author's change), P7's checklist (its technician reads it, not another or Retail; a waiver is a
+// supervisor's),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -853,3 +854,29 @@ feature(
         }
     }
 )
+
+// P7: a work order's checklist is read by its readers (Mantle's get#ProcessExecution: the technician it is assigned to, not another
+// technician, and not Retail's planner), and a waiver is a supervisor's (waive#ProcessStep: the technician refused before anything
+// else; the supervisor passes the permission and is refused only for naming the work order, not a step)
+feature("a work order's checklist is read by its technician, not another or Retail's planner; a waiver is a supervisor's", {
+    when() {
+        const call = (user, service, parameters) =>
+            asUser(user, () => {
+                ec.artifactExecution.disableAuthz()
+                return refusal(service, parameters)
+            })
+        const read = user => call(user, "mantle.work.ProcessServices.get#ProcessExecution", {workEffortId: ids.inProgressOrderId})
+        const waive = user =>
+            call(user, "mantle.work.ProcessServices.waive#ProcessStep", {workEffortId: ids.inProgressOrderId, reason: "Spec"})
+        const problems = []
+        if (read(users.tech) !== "") problems.push("the technician cannot read: " + read(users.tech))
+        if (!read(users.tech2).includes("NOT_ASSIGNED")) problems.push("another technician reads: " + read(users.tech2))
+        if (!read(users.retailPlanner).includes("RECORD_UNAVAILABLE")) problems.push("Retail reads: " + read(users.retailPlanner))
+        if (!waive(users.tech).includes("PERMISSION_DENIED")) problems.push("the technician waives: " + waive(users.tech))
+        if (!waive(users.supervisor).includes("STEP_REQUIRED")) problems.push("the supervisor: " + waive(users.supervisor))
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

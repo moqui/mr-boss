@@ -146,7 +146,9 @@ const linkPaths = [
     "Equipment/Downtime",
     // P6: Procedures and the procedure record (design §4)
     "Procedures/Find",
-    "Procedures/ProcedureDetail"
+    "Procedures/ProcedureDetail",
+    // P7: a work order's follow-up task, Commons' work item with the Maintenance context
+    "WorkOrders/WorkItemDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
