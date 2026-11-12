@@ -374,7 +374,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | built and reviewed Nov 12, merged |
-| P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
+| P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | built and reviewed Nov 12, merged |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built and reviewed Nov 12, merged |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
@@ -3494,7 +3494,7 @@ unchanged, no Rust built.
   `check#WarrantyRepair`, `send#InterventionReport`). ss-inventory: no mr-marble form maps to the report or the repair context.
 - Design edits: design-maintenance's header, §3 WorkOrderDetail and the record shape, §12's report row and §13.2's warranty adapter as
   built; design-customer-service's RepairLinks row; impl-customer-service §7's report item.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F336 to F342 in order:
   - A warranty repair's own task is the root: no second WorkEffort is made, so "linked twice has one root" is adoption once on the task,
     and a repair linked before the policy was on is adopted only by its id (`find#UnmanagedMaintenance` still leaves warranty repairs
     out, and EquipmentDetail's Adopt needs the asset in scope).
@@ -3606,7 +3606,7 @@ user's call of Nov 12 during the review (R6).
     technician's store on the work not yet complete reaches `WORK_NOT_DONE` (past the permission and scope), the agent's send
     `REPORT_REQUIRED` (past the scope); every case kept (holder, agent, other organization; the report screen's one qvt render with
     Store for the customer after completion). The feature 1.23 s → 0.60 s; the spec 8.7 s of 15 (was 9.3–9.9).
-- Findings (unnumbered):
+- Findings, numbered by the lead F343 to F345 in order:
   - A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent; RepairLinks' Add
     repair form offers no id) or a planner's `adopt#MaintenanceRecord` by id; no list shows such repairs (`find#UnmanagedMaintenance`
     leaves warranty repairs out, EquipmentDetail needs the unit in scope). Acceptable for a switch turned on once; a "Make work
@@ -5834,6 +5834,16 @@ paths under `mr-boss/`.
 | F333 | P8 review: The demo's leave stays the projection (a WetTimeOff "Out of office", the fields Leave.js `project` writes) | P8's Review note |
 | F334 | P8 review: The acceptance MaintenanceDispatchWalk renders Teams as the administrator | P8's Review note |
 | F335 | P8 review: Two stores of a team's defaults in the same millisecond would meet on the key (`teamPartyId`, `fromDate`) | P8's Review note |
+| F336 | P12: A warranty repair's own task is the root | P12's Built note |
+| F337 | P12: The consent recheck is the link's rule on the claim's current decision | P12's Built note |
+| F338 | P12: `update#WarrantyWork` for a managed repair needs the caller's maintenance permission (an agent has none), so RepairLinks offers no Update repair for it | P12's Built note |
+| F339 | P12: A customer's unit away from the organization's facilities is in no Maintenance scope | P12's Built note |
+| F340 | P12: Parts and labor are shown where the reader of the report may read costs, and the stored report is what Customer Service sends | P12's Built note |
+| F341 | P12: No PDF engine (Chromium) on a server | P12's Built note |
+| F342 | P12: No demo customer repair | P12's Built note |
+| F343 | P12 review: A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent | P12's Review note |
+| F344 | P12 review: `check#WarrantyRepair` returns the first blocker of every claim linking the repair, open claims first | P12's Review note |
+| F345 | P12 review: WorkOrderDetail's repair header and Equipment condition and Overview's CustomerRepair box have no regression render with a repair (the one WorkOrderDetail render is Services' work) | P12's Review note |
 
 
 ## 7. Later
