@@ -352,10 +352,20 @@ const linkPaths = [
 // names. Data only, never authority: a screen shown here still asks its service. A user's page is Admin's own, the staff
 // identity in the organizations administered, not System's account record. The paths are relative to a screen of an area
 // (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root. A
-// group's page is the same relative path under both roots (../../Access/GroupDetail), so it has no route; a user's is the
-// user route below, which GroupDetail's members and the Sessions list link (mr-moqui plans/Admin-Screens-Down.md A3).
+// record whose page is the same relative path under both roots has the framework's route and none here (a group's
+// ../../Access/GroupDetail, and so a sign-in provider, the instance settings, localization, a message type, the
+// connections, the mail relays, a system message, a job and a topic). The keys are the registrations' (an audit
+// projection's linkKey, a recovery descriptor's or a transfer target's ownerRoute), so the changes list (Audit ›
+// AuditChanges), GroupDetail's members and the Sessions list link by this one table (mr-moqui plans/Admin-Screens-Down.md
+// A3, A4): a user's page is Users › UserDetail, and Admin's own records have their places here.
 const mountRoutes = {
-    user: {url: "../../Users/UserDetail", idParameter: "userId"},
+    adminUser: {url: "../../Users/UserDetail", idParameter: "userId"},
+    adminInvitations: {url: "../../Users/Invitations"},
+    adminLifecycle: {url: "../../Users/LifecycleDetail", idParameter: "operationId"},
+    adminOrganization: {url: "../../Settings/OrganizationDetail", idParameter: "organizationPartyId"},
+    adminExports: {url: "../../Data/Exports"},
+    adminImport: {url: "../../Data/Imports"},
+    adminBackups: {url: "../../Data/Backups"},
     // another app's page is a plain URL: Commerce's store integration (a system message's registered owner, by its remote)
     // and Comms' mail accounts (a mail account's message in the mail queue, the mail reception's owner)
     storeIntegration: {url: "/qapps/Commerce/Integrations/IntegrationDetail", idParameter: "systemMessageRemoteId", plain: true},
@@ -376,7 +386,7 @@ function sharedContext(p) {
             linkBase: "//Admin",
             webBase: "/qapps/Admin",
             sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"},
-            mount: {routes: {user: null}}
+            mount: {routes: {adminUser: null}}
         }
     const userScope = required(found)
     return {

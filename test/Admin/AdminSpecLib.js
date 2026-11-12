@@ -116,7 +116,7 @@ function shell(user, menuOnly = false) {
 // under screen/Admin, the shared screens its areas mount (Data/DataImport) and the framework's System screens its areas mount
 // by location (mr-moqui plans/Admin-Screens-Down.md: Operations' Jobs, JobRuns and JobRunDetail, Mail and protocols' MailRelays
 // and MailRelayDetail, Access' Capabilities and RowRules, Security's SignInPolicy, IdentityProviders and
-// IdentityProviderDetail), but System, which is Tools' screens for ADMIN, swept with Tools.
+// IdentityProviderDetail, Audit's AuditChanges), but System, which is Tools' screens for ADMIN, swept with Tools.
 function sweepScreens() {
     const base = "component://mr-boss/screen/"
     const found = []

@@ -4,12 +4,16 @@
 // organization and none of another's; and reads the access log as the lines of the report engine's and monitoring's audit
 // targets written under its own organization's people, their addresses counted and their values left out, and no other log
 // line whatever is asked of the dataset; the dataset itself is granted to no group, so the engine answers its whole lines to
-// no Admin group. One html render each of AuditChanges and AccessLog (their lists' rows are in the
-// html). The framework's rules are its AdminAuditChanges spec, the organization scope of changes Mantle's IdentityAudit.
+// no Admin group. AuditChanges is the framework's System › Audit screen mounted by location (mr-moqui
+// plans/Admin-Screens-Down.md), over org.moqui.admin.AuditServices.find#Changes: a record's place is a route of the mount,
+// shown as a link the audit reader cannot follow where its screen does not open to them. One html render each of
+// AuditChanges and AccessLog (their lists' rows are in the html). The framework's rules are its AdminAuditChanges spec,
+// the organization scope of changes Mantle's IdentityAudit.
 // Run: ./moq test mr-boss --spec AdminAudit
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, page} = lib
 const A = "ironstone.admin.AuditServices."
+const CHANGES = "org.moqui.admin.AuditServices.find#Changes"
 const LOG = "moqui.entity.EntityAuditLog"
 const DATASET = "admin-access-log"
 const RELAY = "SPEC_ADM_AUD_RELAY"
@@ -204,11 +208,11 @@ feature("the audit reader follows a grant change and a credential's replacement 
     when() {
         const out = {searchAvailable: ec.search.isAvailable()}
         out.context = as(users.audit, "ironstone.admin.ContextServices.get#SharedContext", {})
-        out.grant = as(users.audit, A + "find#ChangeEvidence", {recordKey: GROUP})
-        out.relay = as(users.audit, A + "find#ChangeEvidence", {recordKey: RELAY})
-        out.exported = as(users.audit, A + "find#ChangeEvidence", {recordKey: RELAY, forExport: true})
-        // a user of another Admin group, who opens Admin and may call its services, reads none of it
-        out.dataOperator = as(users.data, A + "find#ChangeEvidence", {recordKey: RELAY})
+        out.grant = as(users.audit, CHANGES, {recordKey: GROUP})
+        out.relay = as(users.audit, CHANGES, {recordKey: RELAY})
+        out.exported = as(users.audit, CHANGES, {recordKey: RELAY, forExport: true})
+        // a user of another Admin group, who opens Admin and may call the service, reads none of it
+        out.dataOperator = as(users.data, CHANGES, {recordKey: RELAY})
         // AuditChanges' one render, in html, where the list's rows are: the newest changes the audit reader may read
         out.page = asUser(users.audit, () => page("Audit/AuditChanges", {}, "html"))
         out.dataPage = asUser(users.data, () => page("Audit/AuditChanges", {}, "html"))
@@ -226,17 +230,17 @@ feature("the audit reader follows a grant change and a credential's replacement 
         out.grant.error === "" && out.grant.changeListCount === 1
         out.grantRow.description === "Permission of a group ended"
         out.grantRow.recordText === "Group: Spec audited group · Permission: ADMIN_TRANSFER_RUN"
-        has(out.grantRow.afterText, /^\d{4}-\d\d-\d\d \d\d:\d\d$/)
+        has(out.grantRow.after, /^\d{4}-\d\d-\d\d \d\d:\d\d$/)
         out.grantRow.actorName === "admin.access (Admin Access administrator)"
         out.grantRow.reason === "Spec left the data team"
-        // the group's place is the access administrator's screen, which the audit reader cannot open: no link is offered
-        out.grantRow.recordUrl === ""
+        // the group's place is the access administrator's screen, by the key the mount's routes resolve
+        out.grantRow.linkKey === "adminGroup" && out.grantRow.linkId === GROUP
         // the credential: that it was replaced, by whom and why; the encrypted values of the entity's own row nowhere
         out.relay.changeListCount === 2
-        out.replaced.masked === true && out.replaced.beforeText === "(set)"
+        out.replaced.masked === true && out.replaced.before === "(set)"
         out.replaced.actorName === "admin.integrations (Admin Integration administrator)"
         out.replaced.reason === "Spec rotated after offboarding"
-        out.encrypted.masked === true && out.encrypted.afterText === "(changed; not shown)"
+        out.encrypted.masked === true && out.encrypted.marker === "changed" && out.encrypted.after == null
         !JSON.stringify(out.relay).includes("enc:") && !JSON.stringify(out.exported).includes("enc:")
         // the print and the file are the same projection
         out.exported.changeList.length === 2 && out.exported.truncated === false
@@ -245,8 +249,13 @@ feature("the audit reader follows a grant change and a credential's replacement 
         out.dataPage.status !== 200 || !out.dataPage.output.includes("Spec rotated")
         out.page.status === 200 && out.page.errors.join("\n") === ""
         out.page.output.includes("Spec rotated after offboarding") && out.page.output.includes("(replaced)")
-        out.page.output.includes("admin.integrations") && out.page.output.includes("not shown")
+        out.page.output.includes("admin.integrations") && out.page.output.includes("(changed; not shown)")
         !out.page.output.includes("enc:")
+        // a record's place is not the audit reader's to open (Access, Users, Protocols): the record is named, in a link the
+        // widget disables, and nothing leads there
+        out.page.output.includes("Spec audited group") && out.page.output.includes('aria-disabled="true"')
+        !out.page.output.includes("GroupDetail?")
+        !out.page.output.includes("UserDetail?") && !out.page.output.includes("MailRelays")
         // under the area's own grant too: the reader's organization's person, not the other organization's
         out.page.output.includes(people.retail.username + "@new.example")
         !out.page.output.includes(people.services.username)
@@ -257,20 +266,21 @@ feature("an audit reader reads the changes of its own organization's people and 
     when() {
         const out = {}
         const email = userId => ({recordKey: userId, auditProjectionId: "AccountEmail"})
-        out.own = as(users.audit, A + "find#ChangeEvidence", email(people.retail.userId))
-        out.other = as(users.audit, A + "find#ChangeEvidence", {recordKey: people.services.userId})
-        out.identity = as(users.audit, A + "find#ChangeEvidence", {category: "identity"})
+        out.own = as(users.audit, CHANGES, email(people.retail.userId))
+        out.other = as(users.audit, CHANGES, {recordKey: people.services.userId})
+        out.identity = as(users.audit, CHANGES, {category: "identity"})
         // an instance administrator reads every organization's (the administrator does through the area's own grant, which
         // names every organization: the acceptance walk's)
-        out.system = as(users.system, A + "find#ChangeEvidence", email(people.services.userId))
+        out.system = as(users.system, CHANGES, email(people.services.userId))
         out.ownRow = Array.from(out.own.changeList || [])[0] || {}
         return out
     },
     then(out) {
         out.own.error === "" && out.own.changeListCount === 1
-        out.ownRow.afterText === people.retail.username + "@new.example" && out.ownRow.reason === "Spec name change"
+        out.ownRow.after === people.retail.username + "@new.example" && out.ownRow.reason === "Spec name change"
         out.ownRow.recordText === "User: " + people.retail.username + " (Spec Audited)"
-        out.own.scopeText === "The organizations you administer"
+        // the user's place, by the key the mount's routes resolve to Users › UserDetail
+        out.ownRow.linkKey === "adminUser" && out.ownRow.linkId === people.retail.userId
         // Services' person: not found, not counted, by the key or in the whole area
         out.other.error === "" && out.other.changeListCount === 0 && out.other.changeList.length === 0
         out.identity.changeListCount > 0 && !JSON.stringify(out.identity).includes(people.services.username)

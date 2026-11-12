@@ -12,151 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- InstanceSettings (design-admin §7 InstanceSettings; style-guide §3 settings): the instance's registered settings, from the
-    framework's org.moqui.admin.ConfigurationServices.get#EffectiveSettings (ADMIN_SETTINGS_VIEW). InstancePresentation lists the
-    instance preferences (what the instance is called, the default locale and time zone, the new-device sign-in window, the group
-    recipient ceiling of scheduled reports), each changed through store#InstancePreference (ADMIN_SETTINGS_MANAGE): a registered
-    key only, typed and within its allowed values or limits, at the revision read, with a reason; an empty value goes back to
-    the configuration or the default. ConfigurationSources explains every setting: its key, effective value, where it comes
-    from (an instance preference, the deployment's configuration, the default), whether it is changed here, and for a
-    deployment value whether a change waits for a restart and how an operator makes it. A secret is never shown, only whether
-    it is set; no secret, endpoint, JSON or unregistered key is edited here. An instance administrator opens System's Conf for
-    the file and line of each value. For the configuration administrator and the administrator (BOSS_ADM_ORGANIZATIONS). -->
+<!-- InstanceSettings (design-admin §7 InstanceSettings; mr-moqui plans/Admin-Screens-Down.md): the framework's System ›
+    Settings instance settings at this location, which BOSS_ADM_ORGANIZATIONS opens to the configuration administrator
+    and the administrator, with its two transitions: valueOptions (the values a preference may take) and storePreference,
+    through org.moqui.admin.ConfigurationServices, which check ADMIN_SETTINGS_VIEW and ADMIN_SETTINGS_MANAGE and change a
+    registered preference only. The conf itself is linked for a user who opens System by their own grant. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Instance" menu-image="sym_o_tune" menu-image-type="icon">
 
-    <!-- the values a preference may take: its allowed values, yes or no, the instance's locales or the time zones matching the
-        term; of a registered setting only, read as the user -->
-    <transition name="valueOptions" read-only="true">
-        <actions>
-            <service-call name="org.moqui.admin.ConfigurationServices.get#EffectiveSettings" out-map="found"
-                    in-map="{settingKey:settingKey, kind:'preference'}"/>
-            <script><![CDATA[
-                const setting = Array.from(found?.settingList || [])[0]
-                const match = String(term || '').toLowerCase()
-                let options = []
-                if (setting?.valueType === 'timeZone') options = Array.from(ec.l10n.getAvailableTimeZones()).map(zone => ({value: String(zone), label: String(zone)}))
-                else if (setting?.valueType === 'locale') {
-                    options = Array.from(ec.l10n.getAvailableLocales()).map(row => ({value: String(row.locale), label: row.name + ' (' + row.locale + ')'}))
-                    if (setting.allowedValues.length) options = options.filter(row => setting.allowedValues.includes(row.value))
-                } else if (setting) options = Array.from(setting.allowedValues).map(value => ({value, label: value}))
-                ec.web.sendJsonResponse(options.filter(row => !match || row.label.toLowerCase().includes(match)).slice(0, 50))
-            ]]></script>
-        </actions>
-        <default-response type="none"/>
-    </transition>
-    <transition name="storePreference">
-        <actions>
-            <service-call name="org.moqui.admin.ConfigurationServices.store#InstancePreference" out-map="stored"
-                    in-map="{settingKey:settingKey, value:(value ?? ''), expectedRevision:(expectedRevision || ''), reason:(reason || null)}"/>
-            <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
-            </if>
-        </actions>
-        <default-response url="."/>
-        <error-response url="."/>
-    </transition>
+    <transition-include name="valueOptions" location="component://tools/screen/System/Settings/InstanceSettings.xml"/>
+    <transition-include name="storePreference" location="component://tools/screen/System/Settings/InstanceSettings.xml"/>
 
-    <actions>
-        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.get#EffectiveSettings', {}, 'The instance settings are not available to you.')"/>
-        <set field="found" from="called.out"/>
-        <set field="failure" from="called.failure"/>
-        <script><![CDATA[
-            const shownValue = row => row.masked ? (row.valueSet ? 'Hidden (set)' : 'Hidden (not set)') : (row.value === '' || row.value == null ? 'Not set' : row.value)
-            const settings = Array.from(found?.settingList || []).map(row => Object.assign({}, row, {
-                shownValue: shownValue(row),
-                limitText: row.valueType === 'integer' && (row.minValue != null || row.maxValue != null)
-                    ? [row.minValue, row.maxValue].map(limit => limit ?? '').join(' to ')
-                    : row.valueType === 'choice' ? row.allowedValues.join(', ') : '',
-                pickValue: ['choice', 'boolean', 'locale', 'timeZone'].includes(row.valueType),
-                changedText: row.changedDate ? [row.changedByName, ec.l10n.format(Date.parse(row.changedDate), 'yyyy-MM-dd HH:mm'), row.changeReason].filter(Boolean).join(' · ') : '',
-                editText: row.editable ? 'Here' : 'In the deployment',
-                restartText: row.editable ? 'At once' : row.restartRequired ? 'After a restart' : '',
-                // the value the change form starts from: the preference when one is set, else empty (the default applies)
-                storedValue: row.source === 'preference' ? row.value : ''
-            }))
-            preferences = settings.filter(row => row.editable)
-            sources = settings
-            canManage = !!found?.canManage
-        ]]></script>
-    </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col">
-                <label text="Instance settings" type="h5"/>
-                <label text="What this instance is called and its defaults. An organization's currency, calendar and policies are its own, in its app's settings."
-                        type="p" style="text-caption m-muted q-mb-none"/>
-            </container>
-        </container>
-        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
-        <container-box>
-            <box-header title="Instance preferences"/>
-            <box-body-nopad>
-                <form-list name="InstancePresentation" list="preferences" skip-form="true" paginate="false">
-                    <field name="title"><default-field title="Preference"><display/></default-field></field>
-                    <field name="settingGroup"><default-field title="Group"><display/></default-field></field>
-                    <field name="shownValue"><default-field title="Value"><display/></default-field></field>
-                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
-                    <field name="description"><default-field title="What it does"><display/></default-field></field>
-                    <field name="changedText"><default-field title="Last change"><display/></default-field></field>
-                    <field name="actions">
-                        <default-field title="">
-                            <container-dialog id="ChangePreference_${settingKey.replace(/\W/g, '_')}" button-text="Change" icon="sym_o_edit" width="560"
-                                    title="Change ${title}" condition="canEdit">
-                                <label type="p" text="${description}"/>
-                                <label type="p" style="m-muted" condition="limitText" text="Allowed: ${limitText}"/>
-                                <form-single name="ChangePreference" transition="storePreference"
-                                        map="{settingKey:settingKey, value:storedValue, expectedRevision:revision}">
-                                    <field name="settingKey"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="value">
-                                        <conditional-field condition="pickValue == true" title="Value" tooltip="Empty goes back to the configuration or the default (${defaultValue || 'none'})">
-                                            <drop-down allow-empty="true">
-                                                <dynamic-options transition="valueOptions" server-search="true" min-length="0" parameter-map="{settingKey:settingKey}"/>
-                                            </drop-down>
-                                        </conditional-field>
-                                        <default-field title="Value" tooltip="Empty goes back to the configuration or the default (${defaultValue || 'none'})">
-                                            <text-line size="40"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="title"/><field-ref name="shownValue"/></column>
-                        <column><field-ref name="sourceText"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
-                <label type="p" style="q-pa-md m-muted" condition="!preferences.length &amp;&amp; !failure" text="No instance preference is registered."/>
-            </box-body-nopad>
-        </container-box>
-        <container-box>
-            <box-header title="Where each value comes from"/>
-            <box-toolbar>
-                <link url="${sharedLinks['System']}/Conf" text="Open the conf" link-type="anchor-button" icon="sym_o_description"
-                        tooltip="The file and line of each deployment value" condition="admin.capabilities.system"/>
-            </box-toolbar>
-            <box-body-nopad>
-                <form-list name="ConfigurationSources" list="sources" skip-form="true" paginate="false">
-                    <field name="title"><default-field title="Setting"><display/></default-field></field>
-                    <field name="settingKey"><default-field title="Key"><display text="${propertyName || confAttribute || settingKey}"/></default-field></field>
-                    <field name="shownValue"><default-field title="Effective value"><display/></default-field></field>
-                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
-                    <field name="editText"><default-field title="Changed"><display/></default-field></field>
-                    <field name="restartText"><default-field title="Takes effect"><display/></default-field></field>
-                    <field name="operatorNote"><default-field title="For the operator"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="title"/><field-ref name="shownValue"/></column>
-                        <column><field-ref name="sourceText"/><field-ref name="restartText"/></column>
-                    </columns>
-                </form-list>
-                <label type="p" style="q-px-md q-pb-md m-muted" condition="!failure"
-                        text="A deployment value is set in the environment or the conf files by whoever runs the server; a secret is never shown here."/>
-            </box-body-nopad>
-        </container-box>
+        <include-screen location="component://tools/screen/System/Settings/InstanceSettings.xml" share-scope="true"/>
     </widgets>
 </screen>
