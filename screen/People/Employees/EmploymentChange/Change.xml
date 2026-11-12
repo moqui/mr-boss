@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Employment change, step 1, Change (design-people §4 EmploymentChange): from when, and what changes for the kind chosen: a
+    transfer's department, position, manager and work location (the terms now filled in; a position's department is the
+    assignment's), a manager change's manager, a leave's return date, a separation's type and reason (People's lookups, ended values
+    left out); and why (required for a change that waits for approval). Next checks it (mantle.humanres.PeopleServices
+    .preview#EmploymentChange: a date outside the employment or before a change set later, a seat held then, a manager not of the
+    employer or below the person, nothing changing) and keeps the draft (the user's draft record). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Change" default-menu-index="1" menu-image="sym_o_edit_calendar" menu-image-type="icon">
+
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="saveChange">
+        <actions>
+            <script><![CDATA[
+                const text = value => String(value ?? '').trim()
+                const draft = Object.assign({}, changeDraft, {
+                    effectiveDate: text(effectiveDate) || null,
+                    departmentPartyId: text(departmentPartyId),
+                    emplPositionId: text(emplPositionId),
+                    managerPartyId: text(managerPartyId),
+                    facilityId: text(facilityId),
+                    returnDate: text(returnDate) || null,
+                    terminationReasonEnumId: text(terminationReasonEnumId) || null,
+                    terminationTypeEnumId: text(terminationTypeEnumId) || null,
+                    reason: text(reason)
+                })
+                // kept in the user's draft record of this employment and kind (Back loses nothing; its operation key, made once)
+                ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'change',
+                    employmentDraftId: changeDraftId, partyRelationshipId, changeKind, draft}).call()
+                if (ec.message.hasError()) return
+                const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#EmploymentChange').parameters(
+                    ec.resource.script('component://mr-boss/service/ironstone/people/People.js').changeParameters(partyRelationshipId,
+                        changeKind, draft)).call()
+                if (ec.message.hasError()) return
+                for (const finding of Array.from(previewed?.findings || []))
+                    if (finding.severity === 'error') ec.message.addError(finding.message)
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <!-- the employment's terms now (a step loaded on its own runs its parents' always-actions only) -->
+        <service-call name="mantle.humanres.PeopleServices.preview#EmploymentChange" out-map="employment" transaction="force-new"
+                ignore-error="true" in-map="{partyRelationshipId:(partyRelationshipId || '_NA_'), changeKind:(changeKind || null)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const now = employment?.current || {}
+            // the terms now, then what the draft says
+            change = Object.assign({
+                effectiveDate: ec.l10n.format(new Date(ec.user.timestampMillis(ec.user.nowTimestamp) + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+                departmentPartyId: now.departmentPartyId || '',
+                emplPositionId: now.emplPositionId || '',
+                managerPartyId: now.managerPartyId || '',
+                facilityId: now.facilityId || ''
+            }, changeDraft)
+            organizationPartyId = employment?.organizationPartyId || null
+            effectiveTitle = {transfer: 'From', manager: 'From', leave: 'Leave starts', return: 'Back at work on',
+                separation: 'Ends on'}[changeKind] || 'From'
+            currentText = [now.departmentName, now.positionName, now.managerName ? 'manager ' + now.managerName : '',
+                now.facilityName].filter(Boolean).join(' · ') || 'No department, position or manager'
+            reasonRequired = changeKind == 'transfer' || changeKind == 'separation'
+        ]]></script>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="${changeKinds[changeKind] || 'Change'}"/>
+            <box-body>
+                <label type="p" style="m-muted" text="Now: ${currentText}"/>
+                <label type="p" style="text-caption m-muted" condition="reasonRequired"
+                        text="It waits for approval (by the person's manager unless the employer's rules say otherwise) and takes effect when approved."/>
+                <form-single name="EmploymentChangeForm" transition="saveChange" map="change" focus-field="effectiveDate">
+                    <!-- the employment and the kind, the screen's, posted with the step -->
+                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                    <field name="changeKind"><default-field><hidden/></default-field></field>
+                    <field name="effectiveDate"><default-field title="${effectiveTitle}"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+                    <field name="departmentPartyId">
+                        <conditional-field condition="changeKind == 'transfer'" title="Department">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'departments', choiceOrganizationPartyId:organizationPartyId,
+                                            selected:change.departmentPartyId}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="emplPositionId">
+                        <conditional-field condition="changeKind == 'transfer'" title="Position">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'positions', choiceOrganizationPartyId:organizationPartyId,
+                                            selected:change.emplPositionId}">
+                                    <depends-on field="departmentPartyId" parameter="choiceDepartmentPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="managerPartyId">
+                        <conditional-field condition="changeKind == 'transfer' || changeKind == 'manager'" title="Manager">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:organizationPartyId,
+                                            selected:change.managerPartyId}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="facilityId">
+                        <conditional-field condition="changeKind == 'transfer'" title="Work location">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workLocations', choiceOrganizationPartyId:organizationPartyId,
+                                            selected:change.facilityId}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="returnDate">
+                        <conditional-field condition="changeKind == 'leave'" title="Returns on" tooltip="Empty when not known yet">
+                            <date-time type="date" format="yyyy-MM-dd"/>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="terminationTypeEnumId">
+                        <conditional-field condition="changeKind == 'separation'" title="Type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'terminationTypes', selected:change.terminationTypeEnumId}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="terminationReasonEnumId">
+                        <conditional-field condition="changeKind == 'separation'" title="Reason for leaving">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'terminationReasons', selected:change.terminationReasonEnumId}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="reason">
+                        <default-field title="${reasonRequired ? 'Why' : 'Note'}"><text-line size="50"/></default-field>
+                    </field>
+                </form-single>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

@@ -17,8 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     EmployeeList shows one row per employment from mantle.humanres.PeopleServices.find#Employees: the public work identity (name,
     employer, job title, manager, location, work email and phone, state) and, for an HR reader, the employment's dates; never a
     private contact, identification or pay, which the service leaves out. The CSV export is the same projection, every row the
-    search finds up to the service's cap. Each person opens Employee360. Department and location filters come with P3's units and
-    P6's assignments; Hire employee with P6. -->
+    search finds up to the service's cap. Each person opens Employee360. P6: Hire employee, the one primary, for an HR officer
+    (the wizards' grant, BOSS_PPL_EMPLOYMENT), and each row's department (its assignment's). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employees" default-menu-index="1" menu-image="sym_o_badge" menu-image-type="icon">
     <parameter name="term"/>
@@ -49,7 +49,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
     </actions>
     <widgets>
-        <label text="Employees" type="h5"/>
+        <container style="row items-center q-mb-sm">
+            <label text="Employees" type="h5" style="q-my-none"/>
+            <container style="col"/>
+            <link url="${sharedLinks['Employees/HireEmployee']}" text="Hire employee" icon="sym_o_person_add" link-type="anchor-button"
+                    btn-type="primary" condition="people.capabilities.employment &amp;&amp; people.capabilities.hrEdit"/>
+        </container>
         <label text="The people of the employers you read, by their work identity. Private contacts, identifications and pay are not part of the directory."
                 type="p" style="text-caption m-muted"/>
         <form-single name="FindEmployees" transition="." map="findValues">
@@ -110,6 +115,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
                             <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
                             <field name="managerName"><default-field title="Manager"><display/></default-field></field>
                             <field name="workLocation"><default-field title="Location"><display/></default-field></field>
                             <field name="workEmail"><default-field title="Work email"><display/></default-field></field>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Employees › Hire employee (design-people §4 HireEmployee; style-guide §3.10 Wizard; impl-people P6): a hire as a
+    subscreens-panel type="wizard" over the steps in HireEmployee/: Identity (the employer and the person, an existing one found by
+    name, or a new one with their work contacts; mantle.humanres.PeopleServices.preview#Hire lists the people who may be them, a
+    person employed by another employer among them, so no second person is made), EmploymentTerms (start and optional end, and the
+    first assignment: department, position, manager and work location) and ConfirmHire (the reviewed hire: the plan, a new
+    employment, an orphan relationship completed or a rehire, the person's relationships with the employer and the findings;
+    Hire makes it in one transaction, hire#Employee, and opens the person's Employee360). Each step's transition checks its part
+    with preview#Hire and keeps the draft in a draft record (Mantle's EmploymentDraft, the HR user's own: store#EmploymentDraft;
+    style-guide §3.10, the user's call), so Back loses nothing and a hire left unfinished is resumed when the wizard is opened again
+    (or discarded); the draft carries the hire's operation key, so a Hire sent twice answers the first, and is discarded when the
+    hire is made. HR's (BOSS_PPL_EMPLOYMENT, data/BossSetupData.xml): the quick create "Hire employee" and
+    the directory's Hire employee open it; Mantle checks PEOPLE_HR_VIEW and PEOPLE_HR_EDIT and the employer again. The account
+    request and the onboarding checklist join ConfirmHire with P7. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Hire employee" default-menu-include="false">
+
+    <subscreens default-item="Identity"/>
+
+    <!-- the draft the steps keep (the user's own EmploymentDraft of a hire, resumed: get#EmploymentDraft), read by each step in
+        always-actions since the client loads a step on its own -->
+    <always-actions>
+        <service-call name="mantle.humanres.PeopleServices.get#EmploymentDraft" out-map="hireDraftFound" transaction="force-new"
+                ignore-error="true" in-map="{draftKind:'hire'}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            hireDraft = Object.assign({}, hireDraftFound?.draft || {})
+            hireDraftId = hireDraftFound?.employmentDraftId || null
+            hireOperationKey = hireDraftFound?.operationKey || null
+            hireDraftSince = hireDraftFound?.fromDateText || ''
+            hireOrganizations = Array.from(people.organizationPartyIds || [])
+        ]]></script>
+    </always-actions>
+
+    <!-- the draft given up: discarded, and the wizard starts again -->
+    <transition name="discardDraft">
+        <actions>
+            <if condition="hireDraftId">
+                <service-call name="mantle.humanres.PeopleServices.delete#EmploymentDraft" in-map="{employmentDraftId:hireDraftId}"/>
+            </if>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <widgets>
+        <container style="row items-center q-mb-sm">
+            <label type="h5" text="Hire employee" style="q-my-none"/>
+            <container style="col"/>
+            <link url="${sharedLinks['Employees']}" text="Employees" icon="sym_o_badge" style="q-ml-sm"/>
+        </container>
+        <label type="p" style="text-caption m-muted" condition="!(people.capabilities.hrView &amp;&amp; people.capabilities.hrEdit)"
+                text="Hiring is open to HR officers of the employer."/>
+        <container style="row items-center q-gutter-sm text-caption m-muted" condition="hireDraftId">
+            <label text="A hire you started ${hireDraftSince}, resumed"/>
+            <link url="discardDraft" link-type="hidden-form-link" text="Discard it" confirmation="Discard the hire you started and start again?"/>
+        </container>
+        <subscreens-panel id="HireWizard" type="wizard" finish-text="Hire"/>
+    </widgets>
+</screen>
