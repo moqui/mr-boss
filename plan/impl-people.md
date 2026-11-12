@@ -316,7 +316,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | built and reviewed Nov 11, merged |
 | P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | built and reviewed Nov 11, merged |
 | P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | built and reviewed Nov 11, merged |
-| P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | — |
+| P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | built and reviewed Nov 11, merged |
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | — |
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | — |
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | — |
@@ -2708,7 +2708,7 @@ missing time"; PE-18, PE-23.
 - Design edits: design-people (header; §1.2 the menu; §1.4 Today; §3 Home, MyTeam, SelfService; §13's as-built block; PE-23);
   design-projects §8 "As built for People" (owner contract); design-accounting §15 LaborCostingRates as built; design-manufacturing
   §3's costing rate; design-drawers-commons (header, §5 Home).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F180 to F189 in order:
   - `line` is set on Retail alone: Services is Projects' demo organization, where Joe's line manager (Bob) would replace john.doe
     as his approver, which Projects' specs read; People's Services employees (Amara's team) keep the project rule in the demo;
   - the timesheet topics' links (BossSetupData's `TimesheetApproval`, `TimesheetReturned`, `TimesheetApproved`, `TimesheetMissing`)
@@ -2825,7 +2825,7 @@ review: …").
     the shared fallback; working for A: A's row stored, B's and a shared one refused, B's End missing, A's list; a shared row with
     none chosen; a reader of A seeing A's and the shared rows, refused B's).
   - design-accounting §15, design-people (§3 MyTeam, §13, PE-23), design-projects §8 and usl-inventory say so.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F190 to F193 in order:
   - Accounting has no organization-scoped finance administration (`ACCOUNTING_ADMIN` is every internal organization, narrowed only
     by the active organization), so the "all-organizations grant" a shared costing row needs is read as finance administration
     working for every organization (no active organization chosen), and an organization's row as one in that scope; Accounting's
@@ -3412,7 +3412,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
