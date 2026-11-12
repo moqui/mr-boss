@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P11, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P12, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -590,6 +590,12 @@ the screens that call it.
 | LeaveServices | get#Balances, find#Ledger | People/Time/LeaveBalances | People/Time/LeaveBalances (BalancesAndLedger: the balances, an employee's movements with the CSV export and their historical leave) (People P11) |
 | LeaveServices | get#MyBalances | People/SelfService | Shared/PeopleSelfService (My leave balances); the Assistant's people_my_leave_balances tool (People P11) |
 | LeaveServices | run#Accrual, run#AccrualJob, accrue#Assignment | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Run accrual); the run_LeaveAccrual ServiceJob (People P11) |
+| LeaveServices | preview#Request, submit#Request | People/Time/LeaveRequests | People/Time/LeaveRequests (RequestLeave: the terms, the preview, Request leave) (People P12) |
+| LeaveServices | find#Requests | People/Time/LeaveRequests | People/Time/LeaveRequests (Requests: mine, to decide, all I see); Shared/PeopleSelfService (My leave requests); the palette's own leave requests (ironstone.people.ContextServices.search#Records) (People P12) |
+| LeaveServices | get#Request, decide#Request | People/Time/LeaveRequestDetail | People/Time/LeaveRequestDetail (RequestAndBalance, Decision: Approve, Refuse, Withdraw, Ask to cancel, Cancel leave); the LeaveRequest record-lookup (ContextServices.lookup#Records) (People P12) |
+| LeaveServices | approve#Request, refuse#Request | People/Approvals | People/Approvals (the PeopleLeaveApproval topic's approve and refuse, through Commons' Notifications) (People P12) |
+| LeaveServices | get#TeamAbsences | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui; People/MyTeam (Who is out); People's Today source (leave starting for my team) (People P12) |
+| LeaveServices | get#AbsenceProjection | — (CX-SYNC) | the Team absence projected CalDAV collection (mantle.work.CalendarDavServices, CalendarProjection PeopleTeamAbsence) (People P12) |
 
 ## Ledger (81 services)
 

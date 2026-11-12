@@ -25,7 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
     P10: My time (the user's own week, People's time area) and the missing-week card, the user's own weeks to submit
     (get#SelfService's weeksToSubmit, the rule of Projects' Today), opening the oldest in My time. P11: My leave balances, the user's own
     (mantle.humanres.LeaveServices.get#MyBalances, which takes no party), each leave type's balance and what is available, by the
-    policy in effect. The clock (P13), leave requests (P12), payslips (P26) and claims (P15) join with their phases. -->
+    policy in effect. P12: My leave requests, the user's own newest (mantle.humanres.LeaveServices.find#Requests with mine: days, leave
+    type, what each charges and its state, never a reason), each opening LeaveRequestDetail, and Request leave (People's Leave
+    requests, when the time area opens to them). The clock (P13), payslips (P26) and claims (P15) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -73,6 +75,15 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="leaveRows" from="Array.from(leaveFound?.balances || [])"/>
+        <!-- P12: the user's own leave requests, newest first -->
+        <if condition="available">
+            <service-call name="mantle.humanres.LeaveServices.find#Requests" out-map="leaveRequestsFound" transaction="force-new"
+                    ignore-error="true" in-map="{mine:true, pageSize:5}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="leaveRequestRows" from="Array.from(leaveRequestsFound?.requests || [])"/>
+        <set field="leaveRequestColors" from="{LrsRequested: 'warning', LrsApproved: 'positive', LrsRefused: 'negative', LrsWithdrawn: 'grey-8',
+                LrsCancelRequested: 'warning', LrsCancelled: 'grey-8'}"/>
         <set field="leaveEmployers" from="new Set(leaveRows.map(row => row.organizationPartyId)).size"/>
     </actions>
 
@@ -103,6 +114,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     icon="sym_o_approval" condition="links?.approvalsUrl"/>
                             <link url="${links.myTimeUrl}" url-type="plain" text="My time" link-type="anchor-button"
                                     icon="sym_o_schedule" condition="links?.myTimeUrl"/>
+                            <!-- P12 -->
+                            <link url="${links.leaveRequestsUrl}?request=Y" url-type="plain" text="Request leave" link-type="anchor-button"
+                                    icon="sym_o_event_busy" condition="links?.leaveRequestsUrl"/>
                         </container>
                     </container>
                 </container>
@@ -223,6 +237,43 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                         <label text="No leave policy applies to you yet: HR assigns one with your entitlement." type="p" style="m-muted q-pa-md"
                                 condition="!leaveRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- P12: My leave requests, the newest, each opening the request -->
+                <container-box>
+                    <box-header title="My leave requests"/>
+                    <box-toolbar>
+                        <link url="${links.leaveRequestsUrl}" url-type="plain" text="All my requests" link-type="anchor"
+                                condition="links?.leaveRequestsUrl"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="MyLeaveRequests" list="leaveRequestRows" skip-form="true" paginate="false" condition="leaveRequestRows.length">
+                            <field name="datesText">
+                                <conditional-field condition="links?.leaveRequestsUrl" title="Days">
+                                    <link url="/qapps/People/Time/LeaveRequestDetail" url-type="plain" link-type="anchor"
+                                            text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}" parameter-map="{leaveRequestId:leaveRequestId}"/>
+                                </conditional-field>
+                                <default-field title="Days"><display text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}"/></default-field>
+                            </field>
+                            <field name="leaveTypeText"><default-field title="Leave"><display/></default-field></field>
+                            <field name="chargedText" align="right"><default-field title="Charged"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${leaveRequestColors[statusEnumId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="datesText"/><field-ref name="leaveTypeText"/></column>
+                                <column><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No leave asked for yet." type="p" style="m-muted q-pa-md" condition="!leaveRequestRows.length"/>
                     </box-body-nopad>
                 </container-box>
 

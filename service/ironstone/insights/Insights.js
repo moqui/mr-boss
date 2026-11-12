@@ -204,19 +204,6 @@ function recipientCap(userScope = scope()) {
     const ids = active ? [active] : organizationIds(userScope).slice(0, 50)
     return Math.min(...(ids.length ? ids : [null]).map(partyId => capOf(organizationSettings(partyId).values, ceiling)))
 }
-// The organization's display zone and week start as the engine's calendar bucket parameters (time_zone, and offset for a
-// week: the week start's enumCode), for Insights' own typed queries; nothing for a choice left empty, where the viewer's
-// zone and the instance's week start apply as everywhere else.
-function calendarParameters(partyId, unit) {
-    const {values} = organizationSettings(partyId)
-    const parameters = {}
-    if (values.displayTimeZone) parameters.time_zone = values.displayTimeZone
-    if (unit === "week" && values.weekStart) {
-        const offset = one("moqui.basic.Enumeration", {enumId: values.weekStart, enumTypeId: "InsightsWeekStart"})?.enumCode
-        if (offset) parameters.offset = offset
-    }
-    return parameters
-}
 
 // ===== context =====
 // The Insights routes other screens link to (sharedLinks), by path under the root; each phase adds the screens it builds. The
@@ -327,7 +314,9 @@ function reportLinks(capabilities) {
 // - shareGroups: the wall displays, offered beside the sharer's own groups. Being here gives no right: the engine's save
 //   accepts the group only from a sharer whose own grant holds its share artifact
 //   (org.moqui.report.share.BOSS_INSIGHTS_DISPLAY: the author's, BossSetupData BOSS_INS_SHARE_DISPLAY);
-// - calendar: the display zone and week start of the organization in scope (calendarParameters), nothing where it set none.
+// - calendar: the display zone and week start (its enumCode, the engine's week offset) of the organization in scope, nothing
+//   where it set none; Insights' own Analysis (Analysis.js) reads it from this context through the framework's
+//   ReportAnalysis.js calendarParameters, as the framework's Analysis reads it under a mount.
 // The recipient cap (recipientCap above) is not read for every request: the areas that deliver add it (deliveryPolicy
 // below, set by Scheduled reports and by Business alerts through the framework's ReportMount.js policyWith).
 function reportPolicy(capabilities, settings) {
@@ -490,7 +479,6 @@ const operations = {context, shareGroups, deliveryPolicy}
     organizationSettings,
     recipientCeiling,
     recipientCap,
-    calendarParameters,
     partyName,
     organizationIds,
     // P12: a screen's read with its refusal as an answer (impl-admin F129)

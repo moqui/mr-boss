@@ -318,7 +318,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | built and reviewed Nov 11, merged |
 | P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | built and reviewed Nov 11, merged |
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | built and reviewed Nov 11, merged |
-| P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | — |
+| P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | built and reviewed Nov 11, merged |
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | — |
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | — |
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | — |
@@ -383,11 +383,11 @@ permissions, scope), PE-18 (the root).
   nothing for what is not) and `get#Readiness` (the checks of what is built: an employer with no department, an
   employee with no manager; later phases add theirs). `get#Readiness` answers the registry's contract with no adapter
   (F58): called with `providerKey` and an `organizationPartyId`, it returns `checks` of `checkKey`, `title`, `state`,
-  `reasonCode`, `message` and `fixPath`, and refuses an organization outside the caller's scope by reason code.
+  `reasonCode`, `message` and `fixRoute` (a route key the app showing it resolves), and refuses an organization outside the caller's scope by reason code.
 - **Admin's registries** (owner contracts, F27): People's capability bundles from crosscut §1.4's rows, as the
   built apps' are (BossSetupData.xml:2676-2687), `PEOPLE_IMPORT` in the HR bundle; the settings entry
   `people.settings` to `People/Settings` (the pattern of :2553-2556) and the readiness provider `people.setup` over
-  `get#Readiness`, scope `AdmScOrganization`, with `PEOPLE_CONFIGURE` and `fixPath` People/Settings (the row of
+  `get#Readiness`, scope `AdmScOrganization`, with `PEOPLE_CONFIGURE` and `fixRoute` `peopleSettings` (the row of
   :2550-2552; Accounting's and Products' services have adapters, People's answers the contract, F58).
 - **The People root** (design §1.2): the menu areas Home and Settings; each later phase adds its entries, and
   `later` entries stay absent. The eight placeholders are removed (each area's phase builds its real screens); the
@@ -418,7 +418,7 @@ permissions, scope), PE-18 (the root).
 - Checked first (the code over the plan): F1 (the root grant is live for `ADMIN` and `BOSS_PEOPLE_ADMIN`, ALWAYS, and the
   root's comment said otherwise), F2 (`PAYROLL_VIEW` and `PAYROLL_EDIT` in Mantle), F26 (the deny rows; there are thirteen,
   not twelve: Admin P6's `pause|reconcile|retry|transfer` row at the end of BossSetupData names the packages too), F27 and F58
-  (the readiness contract: Registry.js reads a provider with no adapter as the `checks` list and leaves out a refusal whose
+  (the readiness contract: Registry.js then, the framework's Readiness.js now, reads a provider's `checks` list and leaves out a refusal whose
   code is in its list, `ORGANIZATION_DENIED` among them), F39 and F49 (no PartyRelationship filter; `userOrgIds` reaches the
   direct `PrtOrgRollup` children only), F50 (manager to report), F59 (Party owner `_NA_`).
 - Access (`data/BossSetupData.xml`, appended but for the deny rows and the registry comment):
@@ -449,7 +449,7 @@ permissions, scope), PE-18 (the root).
     live manager, the first 20 by name, with `dueWorkCount`); no pay;
   - `get#Readiness`: the registry's contract with no adapter, `PEOPLE_CONFIGURE`, per employer in scope (or the one asked,
     `ORGANIZATION_DENIED` outside): for an employer with current employees, `people.departments` (warning
-    `NO_DEPARTMENT`) and `people.managers` (warning `EMPLOYEE_NO_MANAGER` with the count), `fixPath` People/Settings, each check
+    `NO_DEPARTMENT`) and `people.managers` (warning `EMPLOYEE_NO_MANAGER` with the count), `fixRoute` `peopleSettings`, each check
     that fails shown unavailable and the others going on; an employer with no employees answers no check.
 - BOSS `ironstone.people.ContextServices` over `service/ironstone/people/People.js` (tables `areas`, `recordKinds`,
   `searchFinds`, `choiceSources`, `linkPaths`): `get#SharedContext` (the root grant read from the user's own groups, as
@@ -544,7 +544,7 @@ repository ("People P1 review: …"; mr-mantle 07c5e38b).
     (`RECORD_UNAVAILABLE`); another and a forged organization are both `ORGANIZATION_DENIED`. Reads run with authorization off
     only after the check. `get#Home` refuses a caller who reads no employer, gives joins, exits and due work to an HR reader
     only and counts no pay. `get#Readiness` asks `PEOPLE_CONFIGURE`, answers the contract's fields, refuses an organization
-    by a code Registry.js leaves out (`refusalCodes`), and shows a failing check unavailable by name.
+    by a code the framework's Readiness.js leaves out (`refusalCodes`), and shows a failing check unavailable by name.
   - BOSS (`People.js`, ContextServices). The root grant is read from the user's own groups (ALWAYS over DENY over ALLOW);
     another `appRoot` is refused and the answer's `appRoot` is always People; `check#Record` admits a person through
     Mantle's `get#Scope` and refuses a missing and an unauthorized record alike; `get#Choices` is a table of named sources
@@ -3128,6 +3128,236 @@ Design §7 LeaveRequests, LeaveRequestDetail, §13 TeamCalendar, Employee360's T
   from Approvals; the team calendar and Projects' capacity show the absence without its reason; cancelling restores
   the balance.
 
+**Built Nov 11 (P12).** mr-moqui 798fe1fd (framework part, branch `ppl/p12`), mr-mantle and mr-boss (branch `ppl/p12`).
+- Checked first (the code over the plan): P11's Built and Review notes (`Leave.js`, its ledger with unique source keys, `lockEmployment`,
+  `get#MyBalances` the self-scope tool, `overlappingRequests` and `pending` left for P12, `find#Ledger` showing HR's allocation
+  reasons, F202); P9's `Schedules.js` exports (`scheduledDays` by party, primary assignments, and `holidaysOf` by calendar) and
+  capacity's own reading of WetTimeOff (an all-day event the day, a timed one its hours, `ResourceServices.get#PartyCapacity`); P5's
+  approval kinds (`Approvals.js` `kinds`, `request`, `sourceSummary`, `sourceChanged`, `record#Decision` at the source's revision,
+  the topic's approve and refuse services through `decide#NotificationMessage`, `waitingFor` read from notices) and P6's decide
+  pattern (`decide#EmploymentChange`); F22 and F67 (`CalendarDavServices`: four services branching on a fixed `tasks` collection, the
+  DAV server refusing a read-only collection before the adapter); `store#WorkEffortReminders` (the caller's own reminders only, so an
+  approver cannot set the person's); Manufacturing's ResourceCalendar (Commons' `Calendar.qvue` in its read-only resource mode, the
+  pattern TeamCalendar follows); the time area's grants (P10's inheritable ALLOW for self-service; P11's denials of HR's editors);
+  §5 Q8 (legacy `EmploymentLeave` read only).
+- Framework (mr-moqui 798fe1fd, PE-21, F24): `ai-opt-out="true"` on a form field, `section`, `section-iterate`, `screen` and an entity
+  field (xml-form-3, xml-screen-3, entity-definition-3). An agent's render (`RenderOrigin::Agent`: the Assist screen sessions, the data
+  tool's screen lists, the canvas read proxy; `agent-apps`; `sri.isAgentRender()`, also inside a render one of these started) writes
+  "Not shared with AI" in place of an opted-out field's value (a form field as a display, a list cell, a board or calendar card's
+  field), posts no hidden value of it, has no find field for it and runs nothing of an opted-out section or screen (`ScreenTui.js`);
+  `data` names a list's opted-out fields (`aiOff`) and refuses a `where` or `order` on one (`ai_opt_out`), and its entity reads never
+  read, find or sort by an opted-out entity field; Update with AI (`propose#AiFieldValue`) refuses one before any model call and leaves
+  opted-out fields out of the record it sends and of an approval's snapshot. In the browser the qvt and server-static qvt macros mark
+  an opted-out field's box or list cell (`data-ai-opt-out="field"`, `data-ai-field`) and wrap a section or screen in a
+  `display: contents` div; `m-rich-text` offers no text actions inside one (or with its `ai-opt-out` prop), the drawer leaves those
+  fields out of its page state and never fills them, and it does not dictate on an opted-out screen. `makeTest().agent()` renders as
+  an agent's screen session. docs/ai/Assist.md "AI opt-out", the JS-* references, `moqui-host.d.ts`, the gallery's
+  `textRichPrivate`, Remaining-Work's row built; not built: routing to a local model.
+- Mantle:
+  - `entity/PeopleLeaveEntities.xml`: `LeaveRequest` (its own id; the employment, person, employer, department on the first day,
+    leave type, policy, unit; `LeaveRequestStatus` waiting, approved, refused, withdrawn, cancellation asked, cancelled; first and last
+    day; what it charges; the person's `reason`, `ai-opt-out`; `overrideBlocked`; the consumption and reversal entries; an operation
+    key) and `LeaveRequestSegment` (days, a whole day or the morning or afternoon of one day, `LeaveDayPart`; its projection's work
+    effort); `PakLeave` in `PeopleApprovalKind`; the `PeopleLeaveApproval` topic (approve and refuse services, its title naming the
+    person and days, never the type or reason) and `PeopleLeaveDecision` (the person's decision notice); `CalendarProjection`
+    (mantle.work.calendar, the projected CalDAV kind) seeded with Team absence;
+  - `LeaveServices` over `Leave.js`: `preview#Request` (the employment's schedule days by `scheduledDays`, none: Monday to Friday 8
+    hours; holidays of the schedule's calendar and the employer's WepHoliday rows; a whole working day 1 day or its hours, a half day
+    half; the balance (every posted entry), the other requests waiting, available and left; blocked and mandatory days of the employer,
+    its department or a unit above it and the type; the approvers by `Approvals.js previewRoute`; problems `NO_POLICY`,
+    `NOTHING_CHARGED`, `BALANCE_INSUFFICIENT` (a policy needing an entitlement, below the negative limit), `OVERLAP` (another request of
+    the person holding the day and part), `BLOCKED_DAY`, `DATE_OUTSIDE`, `NO_APPROVER`; warnings `BLOCKED_OVERRIDABLE`, `MANDATORY_DAYS`,
+    `EVIDENCE_REQUIRED`), `submit#Request` (assessed again under the employment's lock; the person, or an HR editor for an employee;
+    a People approval of `PakLeave` with no justification; an operation key's retry answers the first), `get#Request` (the person,
+    who asked, HR, the manager at the employer and the approvers; the days, the balance statement, blocks, the approval, the decision
+    notice, the reason only to the person, who asked, the approvers and HR, what the caller may do), `decide#Request` (approve and
+    refuse through `record#Decision`; the last approval recounts, checks overlaps and the balance with the other reservations and posts
+    the leave taken once, `leave:<id>`, only when the policy needs an entitlement, then projects it: one "Out of office" WetTimeOff
+    work effort a segment, all day for whole days, 08:00 or 13:00 for half the day's hours for a half day, with a reminder a day
+    before for the person; withdraw by the person or who asked; cancel: the person asks it of approved leave, decided by the same
+    route, an HR editor cancels at once with a reason; a cancellation reverses once, `leave-reversal:<id>`, and cancels the
+    projection; the person and who asked are told by `PeopleLeaveDecision`), `approve#Request` and `refuse#Request` (the topic's),
+    `find#Requests` (own, a manager's reports', those the user decides, an HR reader's employers'; never a reason), `get#TeamAbsences`
+    and `get#AbsenceProjection` (approved leave of the people the user sees, "{person} · Out", never the type or reason);
+    `get#Balances` reads pending from the requests waiting; `store#BlockedInterval` answers `overlappingRequests`; `find#Ledger`
+    names a taken or reversed leave by its days and gives an allocation's or adjustment's reason to HR alone (F202, decided here:
+    HR's working note, not the employee's to read);
+  - `CalendarDavServices`: `define#ProjectionOwner`, `get#ProjectionObjects`, and `get#DavCollections` and `get#DavObjects` listing and
+    answering `projected-{projectionId}` (VEVENT, read only) for a user its owner admits; `put#` and `delete#DavObject` refuse it (403).
+    No Rust.
+- BOSS:
+  - `People/Time/LeaveRequests` (menu 4, key `g l`; Mine, To decide, All I see; Request leave in two steps, the terms then the preview
+    with the reason, never in the URL, and Request leave), `Time/LeaveRequestDetail` (the record header; the decision notice; Request
+    and balance; the reason in a section and field opted out of AI; the approval; Approve the primary and Refuse, Withdraw, Ask to
+    cancel, Cancel leave by what the user may do), `Time/TeamCalendar` with `TeamCalendarTui` (Commons' calendar, read only, over
+    `get#TeamAbsences`; an absence the user reads opens its request); all under the time area's grants (every People user, a
+    self-service employee by BOSS_PPL_TIME), with no group of their own;
+  - SelfService's Request leave and My leave requests (`find#Requests` added to BOSS_PPL_LEAVE_SELF), MyTeam's Who is out and a leave
+    decision opening LeaveRequestDetail; Approvals lists `PeopleLeaveApproval`; People.xml's quick create `peopleRequestLeave`, the two
+    topics, "Explain my balance" on LeaveRequestDetail and LeaveBalances; People.js: the links, the palette's own leave requests, the
+    LeaveRequest record-lookup (person, days, charge, state), Today's leave starting for my team (a manager's reports, today or
+    tomorrow), a leave decision's link; the self-service context's three leave links; the topics' links in BossSetupData; the skill
+    `people-leave-balance` with the alias `leave` and three retrieval cases.
+- Specs: framework `AiOptOut` (4 features, 0.1 s); Mantle `test/humanres/LeaveRequests` (5 features, stepwise, 2.0 s: 0.40, 0.50,
+  0.38, 0.46, 0.30: a morning and an afternoon of one day, a second morning refused, a preview over the weekend and the employer's
+  holiday; an approval the balance cannot hold with the other reservations refused and nothing recorded, the refusal freeing its
+  reservation, an approval posting once with its projection and reminder; the reason read by the person, the approver and HR and
+  absent from the list, the calendar, the projection, the CalDAV collection (read only, put refused) and the notices; a cancellation
+  asked and approved reversing once and HR's at once; a blocked day refused, an overridable one a warning, the review list of a
+  block); BOSS `test/People/PeopleLeave` (2 features, stepwise, 0.7 s: LeaveRequestDetail's one qvt render as the deciding manager
+  and its agent render with "Not shared with AI" in place of the reason; the team calendar's events and Leave requests' list without
+  the reason or type, and the employee told another's request is not available); PeopleAccess's menu and context features updated
+  (the Time group's two new screens, the key `g l`, Request leave in quick create, the self-service context's leave links).
+  Acceptance, written and not run: `acceptance/People/PeopleLeaveUsable` (3 features: Tomas asks a morning and an afternoon of one
+  day at phone width through the preview and Request leave; Hannah approves both from Approvals; the team calendar shows both without
+  the reason or type and capacity takes the day; Tomas cancels the afternoon, Hannah approves, the half day back once).
+- Tests run (this worktree's Debug binary, `--debug --nobuild`, this phase's runtime): cargo tests of the framework's touched crates
+  (moqui-core 1720, moqui-llm 339, moqui-db, moqui-entity, moqui-tools, moqui-devkit; goldens reviewed); framework AiOptOut 4 of 4,
+  WebrootAssist 58 of 58, WebrootVue.qvt 36 of 36; Mantle LeaveRequests, LeaveLedger, PeopleApprovals, PeopleChecklists, WorkResources
+  and PeopleSchedules 27 of 27 then 18 of 18 after formatting; BOSS PeopleAccess, PeopleSelfService, PeopleApprovals, PeopleTime,
+  PeopleSchedules, PeopleEmployees and PeopleLeave 40 of 40 (mr-boss 15.4 s of features), then PeopleLeave, PeopleAccess and
+  PeopleSelfService 24 of 24 after formatting (PeopleAccess ran 33.8 s, over 15 s, with the machine at a load average of 40 to 46
+  from other builds; 148 s for its 17 features alone at that load, 4.4 s its longest); skill retrieval recall@3 1.00 (27 of 27);
+  `moqui lint --screens`: 135 flagged sites as before, none in the screens P12 touched, no TUI worklist entry. Prettier clean on the
+  changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- Inventories: usl-inventory's People Added rows (P1 to P12: the leave request services); ss-inventory's P12 note.
+- Design edits: design-people (header; §1.4 Today, Quick create, Palette, Comms hooks; §3 MyTeam and SelfService; §7 LeaveRequests
+  and LeaveRequestDetail as built; §13 TeamCalendar as built; PE-21 as built); design-crosscut CX-SYNC (the projected kind as built).
+- Findings, numbered by the lead F206 to F215 in order:
+  - a request's supporting file is not built: there is no LeaveRequest content host (PE-01 Y9), so a policy needing evidence is a
+    warning to give it to HR;
+  - Leave requests asks one segment at a time (`submit#Request` takes several), so a morning and an afternoon of a day are two
+    requests, as design §14.3 wants;
+  - with no working schedule a day is a standard Monday-to-Friday 8-hour day, not the timesheet policy's week; holidays are the
+    schedule calendar's and the employer's own WepHoliday rows;
+  - the leave taken is posted only when the policy needs an entitlement (`allocationRequired`); unpaid or sick leave under a policy
+    without it is approved and projected with no ledger entry; the balance checked is every posted entry (an accrual dated later
+    counts), less the other requests waiting;
+  - a half day is projected at 08:00 or 13:00 for half the day's planned hours (the schedule's own interval times are not read), so
+    capacity takes the right hours but the calendar's times are nominal;
+  - the leave-start reminder is written directly for the person (a day before, by notification): `store#WorkEffortReminders` sets
+    only the caller's own;
+  - the team calendar shows the user's own leave, a manager's reports' and an HR reader's employers'; an employee sees no colleague's
+    absence (no team scope beyond a manager's lines), waiting requests are not shown, and its `.ics` export is not built;
+  - To decide reads the user's notices (`Approvals.js waitingFor`): a request whose step no one may decide is in no one's list (it
+    cannot be made: `NO_APPROVER` refuses it, but a route can lose its approver later);
+  - a cancellation after payroll finalization, the paid and unpaid payroll inputs, and Employee360's TimeAndLeave are not built (P24,
+    P26 and later);
+  - F202 decided: an allocation's and an adjustment's reason is HR's working note; `find#Ledger` gives it to HR of the employer alone;
+  - the framework part's own: a service tool's result, the search index, a `section-include` of an opted-out section and a `screen`
+    `go` query's find parameter are not covered by the opt-out (docs/ai/Assist.md); a canvas reads as the agent and shows the
+    placeholder too.
+- For the lead:
+  - budget share: framework about 0.1 s (AiOptOut); mr-mantle about 2.0 s (LeaveRequests); mr-boss about 0.7 s (PeopleLeave), the
+    PeopleAccess features' times unchanged in kind (two menu and context lists longer); the client walk unchanged. PeopleAccess as a
+    whole should be timed again on a quiet machine: it passed 15 s under this run's load;
+  - merge hot spots: mr-mantle `Leave.js` (the P12 block before `operations`, the balance rows' pending, `sourceText` and
+    `findLedger`'s HR reasons, `storeBlockedInterval`'s `overlappingRequests`), `LeaveServices.xml` (the header and the services
+    appended), `PeopleLeaveEntities.xml` (the two entities appended), `Approvals.js` (the `PakLeave` kind and `previewRoute`),
+    `PeopleApprovalEntities.xml` (the kind), `data/PeopleApprovalSetupData.xml` (the topic before the P6 job comment),
+    `data/PeopleLeaveSetupData.xml`, `CalendarDavServices.xml`, `WorkEffortEntities.xml` (CalendarProjection after
+    CalendarWorkEffort); mr-boss `data/BossSetupData.xml` (BOSS_PPL_LEAVE_SELF's added service and the P12 block appended at the end),
+    `screen/People.xml` (the header, the key `g l`, the shell providers appended), `People.js` (linkPaths, the self-service links,
+    searchFinds, lookup, today, selfServiceContext), `ContextServices.xml`, `screen/Shared/PeopleSelfService.xml`, `screen/People/MyTeam.xml`,
+    `screen/People/Approvals.xml`, `screen/People/Time.xml` (the header), `test/People/PeopleSpecLib.js` (the Time menus, keys,
+    `reportEmploymentId`), `test/People/PeopleAccess.spec.js` (the self-service context's links, quick create), `skill/aliases.json`,
+    `test/skill-retrieval.json`, the inventories, design-people (§1.4, §3, §7, §13, PE-21), design-crosscut CX-SYNC; mr-moqui the
+    framework commit (the screen macros, `WebrootAssist.js`, `m-rich-text`, the data tool, `screen/definition.rs`, the shared golden
+    fixtures);
+  - the acceptance test to run with the full suites is PeopleLeaveUsable (new); the framework part adds no acceptance test;
+  - for the user's call: F202 decided as above (HR's allocation reasons not shown to the employee); whether an employee should see
+    their colleagues' absences on the team calendar (built: only a manager's reports and HR's employers').
+
+**Review Nov 11 (P12).** A fresh review of `git diff master...ppl/p12` in mr-moqui (the framework part, PE-21), mr-mantle and mr-boss
+against the phase's text, §2, §4, design §7 LeaveRequests and LeaveRequestDetail, §13 TeamCalendar, PE-21 and PE-24, with the
+reason's confidentiality on every path, the opt-out's reach, the decide service's lock, consumption and reversal, and scope first;
+the user's two calls of Nov 11 built or recorded in §4; fixes committed apart per repository ("People P12 review: …").
+- Rebased first: master had moved in all three repositories (mr-moqui: Admin screens down's System and Dashboards screens, the Assist
+  evaluation rounds, Terminal fixes; mr-boss and mr-mantle: Admin and Insights onto the framework's screens and registries). `ppl/p12`
+  rebased onto master cleanly in each, with no conflict (the framework's P12 commit is 6773098c, the Built note's 798fe1fd; mr-mantle
+  d9c2034e; mr-boss 00bd36d5), and the goldens needed nothing (the cargo tests pass on the rebased tree). The opt-out over the moved
+  screens: System's and Dashboards' screens an agent reads render through the same tui agent render (`RenderOrigin::Agent`,
+  `ScreenTui.js`), so a field, section or screen they mark is covered as any other; none is marked today. Master's agent changes (the
+  data tool's whole-value hint and date spans, the screen session's closed-find and row opening) add no path around it: a find field
+  of an opted-out column is still left out of the agent's render, and a row is found by the text the render shows.
+- Checked and found sound:
+  - The framework part is generic: the attribute, `agent_render()` (any agent frame on the render stack, so a render an agent's
+    render starts is covered), the tui branches, the data tool's `aiOff` refusal and entity reads, `propose#AiFieldValue`'s refusal
+    and the approval snapshot name no People record; the person's own tui render is unchanged (`$isAgent()` false) and their qvt
+    render only gains the markers and a `display: contents` wrapper (WebrootVue.qvt passes); goldens reviewed (node literals with
+    the attribute, the new branches).
+  - The reason: `LeaveRequest.reason` is `ai-opt-out`; `get#Request` gives it to the person, who asked, HR of the employer and the
+    approvers alone; no list (`find#Requests`), calendar, projection, CalDAV object, notice title or message, approval label, palette
+    row, record-lookup card, Today item, MyTeam row or skill has it; LeaveRequestDetail's section and field are opted out; the
+    agent render of PeopleLeave shows the placeholder.
+  - Decide: every decision locks the employment first; the last approval recounts, checks overlaps and the balance with the other
+    reservations and posts `leave:<id>` once (a refused check rolls the decision back with it); a cancellation reverses
+    `leave-reversal:<id>` once and cancels the projection; Approvals' route excludes the person and the requester (no self-approval,
+    an HR editor who asked for someone is not their approver); a blocked day is refused at submit and again at the last approval.
+  - The projected calendar kind is generic: `CalendarProjection` names an owner service, `get#ProjectionObjects` calls it as the user
+    and reads no owner record; put and delete answer 403 (after the DAV server's own read-only refusal).
+  - Scope: `find#Requests` and the calendar reach the user's own, a manager's live reports at the line's employers and an HR
+    reader's employers; a supplied person or employer only narrows; another employer's HR gets `RECORD_UNAVAILABLE`.
+- Fixes:
+  - **R1 (medium, AI opt-out).** An agent's screen session could read an opted-out column through the list's Text export: an export
+    is the session's raw request (`lookups.raw`), rendered as the agent in the mode its URL names, and the text and csv macros have
+    no opt-out branch; the tui session shows a text export's body as a dialog. An agent's render of a list with an `ai-opt-out` field
+    now offers no export but Show all (`ScreenTui.js`); a navigation is always rendered in tui, so no other agent path asks another
+    mode. Spec: AiOptOut's first feature (the agent's list has no exports, the person's has CSV and Text; failed on the code as
+    rebased); docs/ai/Assist.md.
+  - **R2 (medium, no self-approval).** An HR editor cancelled their own approved leave at once (their `hrEdit` kind on their own
+    request), giving the days back with no one else deciding. HR cancels another person's leave at once, never their own, which
+    they ask to cancel as anyone does (`canCancel` false). Spec: LeaveRequests' fourth feature (HR's own leave, approved by Max,
+    refused `NOT_YOURS`).
+  - **R3 (low, record).** HR's cancellation at once required a reason and kept none, and the person's decision notice then named the
+    earlier approval's decider and date as who cancelled it. The request records who and why (`cancelledByUserId`, `cancelReason`)
+    and the notice shows them. Spec: LeaveRequests' fourth feature (the notice names Leave HR and "Shop closed").
+  - **R4 (low, scope).** `decide#Request`'s approve and refuse went to `record#Decision` with no read check, which told one who reads
+    nothing of a request that it exists (`PERMISSION_DENIED`, `NOT_APPROVER`, `NOT_PENDING` against `RECORD_UNAVAILABLE` for a
+    missing one). It is answered as missing first. Spec: LeaveRequests' second feature (an outsider on a real and a missing id).
+  - **R5 (low, operations).** `submit#Request` looked its operation key up only before the employment's lock, so a retry waiting on
+    the lock made a second request; it looks again under the lock (as `allocate#Leave` does). No spec: a race of two
+    transactions.
+  - The user's call 1 built: `get#TeamAbsences` and `get#AbsenceProjection` add an employee's colleagues (`colleaguesOf`: a current
+    `PrtMember` of the same department or team, or a live line of the same manager, at an employer of both), their approved days
+    alone, never openable; MyTeam's Who is out and Today's leave starting for my team keep to what they open (the reports, an HR
+    reader's employers'), so a manager's own peers stay on the calendar only. Spec: LeaveRequests' third feature (Col by the manager
+    and Tea by a team see Ana's approved morning, not her waiting afternoon, the type or the reason, and do not open it; Out sees
+    nothing). The user's call 2 recorded, with LeaveLedger's fifth feature checking it (HR reads "First quarter", the person does
+    not).
+  - PeopleAccess timed on quiet runs (load 3 to 4): 9.5 s and 8.2 s of features with the Debug binary, under 15 s, so it is not
+    split; the Built note's 33.8 s was the load.
+- Findings, numbered by the lead F216 to F220 in order:
+  - the opt-out's remaining gaps beside docs/ai/Assist.md's: a dynamic drop-down's options and a dialog body the agent's session
+    looks up run as the agent but answer whatever their transition writes (a transition that names an opted-out field's text is not
+    marked), and the canvas read proxy's transition reads answer service results as they are;
+  - Approvals' `record#Decision` answers an outsider `NOT_APPROVER` or `NOT_PENDING` for every kind (P5's), telling them a request
+    exists; R4 closes it for leave only;
+  - a blocked interval added after a request was made refuses that request's last approval (`BLOCKED_DAY`), with no override
+    (`store#BlockedInterval` lists it for review); HR withdraws or the person does;
+  - HR's cancellation reason is told to the person (as a refusal's is); a manager also sees their own colleagues' days on the
+    team calendar, as an employee;
+  - the worker's findings stand otherwise.
+- Tests (this worktree's Debug binary, `--debug --nobuild`, this phase's runtime): cargo tests of moqui-core (1761), moqui-llm (344),
+  moqui-db, moqui-entity, moqui-tools and moqui-devkit, all passing, no golden changed; framework AiOptOut 4 of 4 (0.2 s; its new
+  check failed on the code as rebased); WebrootAssist and WebrootVue.qvt 94 of 94 (offline, 15.2 s); Mantle LeaveRequests,
+  LeaveLedger, PeopleApprovals, PeopleSchedules, PeopleChecklists, WorkResources and Dav 40 of 40 (LeaveRequests 2.6 s, LeaveLedger
+  2.8 s); BOSS PeopleLeave, PeopleAccess, PeopleSelfService, PeopleApprovals, PeopleTime, PeopleSchedules and PeopleEmployees 40 of
+  40 (15.3 s then 13.0 s of features; PeopleAccess 8.2 s). The new checks fail on the code as rebased (each run against the phase's
+  Leave.js: R2's on HR's own cancel, R3's on the notice naming Leave MAX, R4's on `PERMISSION_DENIED`, F202's on the person reading
+  the reason, the colleague's on an empty calendar). `moqui lint --screens`: 135 flagged sites as
+  before, none in People. Prettier clean on the changed Mantle and BOSS JavaScript. Not run: `./moq test-apps`,
+  `./moq test-framework`, the acceptance suite.
+- For the lead:
+  - budget share: framework unchanged (AiOptOut 0.2 s); mr-mantle about +0.6 s over the Built note (LeaveRequests 2.6 s with the
+    colleagues and HR's own leave, LeaveLedger's F202 check); mr-boss unchanged;
+  - the rebase rewrote the phase commits (mr-moqui 6773098c, mr-mantle d9c2034e, mr-boss 00bd36d5); the review commits are mr-moqui
+    ea6b53ee, mr-mantle b057d0df, mr-boss 0da5fad4;
+  - merge hot spots beside the Built note's: mr-moqui `ScreenTui.js` (`exportsOff` in the form-list's exports block); mr-mantle
+    `Leave.js` (`colleaguesOf` before `absences`, `submitRequest`, `getRequest`'s notice, `decideRequest`, `cancelTaken`),
+    `PeopleLeaveEntities.xml` (LeaveRequest's two fields); mr-boss `People.js` (`today`), `MyTeam.xml`;
+  - the user's two calls of Nov 11 are in §4 (the colleagues' days built, F202 as built); nothing waits on the user.
+
 ### P13 — Attendance and time import
 
 Design §6 (attendance), Attendance, TimeImport, SelfService's Clock; PE-05 (without the kiosk), PE-19.
@@ -3612,6 +3842,8 @@ the owner's design.
 | Nov 11, 2026 | `RateAmount` gains an optional `organizationPartyId`, used for `RaprCost` rows: `get#CostingRate` prefers the employer's row, then a shared one; `store#`/`end#CostingRate` and Accounting's Labor costing box are scoped by organization (a shared row needs an all-organizations grant to change, as pay grades do); Projects' rate rows unchanged | The user's call on P10's finding (built in P10's review, R4, with LaborCostingRate's spec; design-accounting §15, design-people PE-23) |
 | Nov 11, 2026 | A shared (no-organization) costing rate is changed by an Accounting administrator working with no active organization chosen, or by ADMIN, as P10's review built it; there is no `ACCOUNTING_ALL_ORGANIZATIONS` permission | The user's call on P10's first finding (F190): kept as built (design-accounting §15) |
 | Nov 11, 2026 | Leave policies (with LeavePolicyDetail) and Allocations stay under Time & leave as HR's own screens (`People/Time/LeavePolicies`, `LeavePolicyDetail`, `LeaveAllocations`, `BOSS_PPL_LEAVE`), not under People Settings as design §7 placed them, as Holidays | The lead's call, following the user's call of Nov 11 that moved HR's editors out of Settings (P7's review); as built in P11 (design-people §2, §7) |
+| Nov 11, 2026 | The team calendar (and its Team absence CalDAV collection) shows an employee their own team's absences: the approved leave of the people who share their department, one of their teams or their manager, at an employer of both, as the days alone ("{person} · Out", a morning or an afternoon said so), never the leave type, the reason or a waiting request, and never opening the request; managers and HR see what P12 built (their reports', their employers'). MyTeam's Who is out and Today's leave starting for my team stay a manager's reports' | The user's call on P12's finding (built in P12's review: `Leave.js colleaguesOf`, LeaveRequests checks a colleague by manager and by team; design-people §13 TeamCalendar, §3, §1.4) |
+| Nov 11, 2026 | A leave ledger allocation's or adjustment's reason is HR's working note, shown only to HR of the employer (`find#Ledger`), as P12 built it (F202) | The user's call on F202, as built; LeaveLedger checks the person does not read it and HR does (P12's review) |
 
 ## 5. Open questions
 
@@ -3630,7 +3862,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
@@ -3661,7 +3893,7 @@ under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-bos
 | F24 | P0: the per-field AI switch, the decimal evaluator and the device credential are unbuilt framework asks (mr-moqui plans/Remaining-Work.md:208-210); there is no `ExpressionServices` or `DeviceServices` | P12, P22; P30 waits on Admin P18 |
 | F25 | P0: the built framework pieces the design uses exist: `scan-input` (xml-form-3.xsd:1368), `view-tree` (:350), `view-board` (:247), `density` handheld (xml-screen-3.xsd:128), `record-lookup` (:600), `create-from` (:604), `quick-create` (:681), `today-source` (:694), `palette-source` (:714), `assist-prompt` (:762), `response-action` (:774), tx-commit SECAs (service-eca-3.xsd:83), `run#Extract` (AiTaskServices.xml:85), `create#CallLink` (CallServices.xml:304), mail rule actions as Mantle's `createRequest` (BasicEntities.xml:1162-1163; data/MantleSetupData.xml:464). There is no `view-timeline` element | As designed; P14 checks the timeline |
 | F26 | P0: the client deny pattern names each `ironstone` package; its longest row is 237 characters (BossSetupData.xml:445) and ProjectsAccess fails on a write verb it does not deny (test/Projects/ProjectsAccess.spec.js:637) | P1 adds `people`: the longest rows become 244 (:445) and 240 (:459), and none is split. `maintenance` then takes them to 256 and 252, so Maintenance's P1 splits both rows as it adds its name. Sales' P1 and Marketing's P1 add theirs and split a row only if it would pass 255; after Maintenance's split none should (the longest is 254 with `marketing`). A write verb new to the `ironstone` packages is added to a row by the phase that adds it |
-| F27 | P0: the registries' built contracts (since Nov 11, 2026 ReadinessProvider and SettingsEntry are the framework's `moqui.server` entities, impl-admin §9): ReadinessProvider (entity/AdminEntities.xml:21-50; Products' row BossSetupData.xml:2557-2560; an adapter or the contract's checks list, service/ironstone/admin/Registry.js:145, :684), SettingsEntry (:2553-2556), capability bundles (:2676-2687; People left out, plan/impl-admin.md:932), LifecycleParticipant (:4041-4044), ReportCatalogEntry (:3438-3446), MetricRegistration (:3741-3753), AttentionProvider (:3863-3868), FlowTarget (:4545-4548), DatasetClass with `InsDcPeople` already seeded (:4782-4785); the internal flow map's People step is information only (report/insights-flowmap-internal.json:208) | P1, P5, P29 |
+| F27 | P0: the registries' built contracts (since Nov 11, 2026 ReadinessProvider and SettingsEntry are the framework's `moqui.server` entities, impl-admin §9): ReadinessProvider (read at entity/AdminEntities.xml:21-50, now mr-moqui framework/entity/ServerEntities.xml:856; Products' row BossSetupData.xml:2557-2560; an adapter or the contract's checks list, service/ironstone/admin/Registry.js:145, :684), SettingsEntry (:2553-2556), capability bundles (:2676-2687; People left out, plan/impl-admin.md:932), LifecycleParticipant (:4041-4044), ReportCatalogEntry (:3438-3446), MetricRegistration (:3741-3753), AttentionProvider (:3863-3868), FlowTarget (:4545-4548), DatasetClass with `InsDcPeople` already seeded (:4782-4785); the internal flow map's People step is information only (report/insights-flowmap-internal.json:208) | P1, P5, P29 |
 | F28 | P0: a screen for users without its app's launcher is a non-inheritable grant on that screen and its context service (BossSetupData.xml:2528-2535) | P8's self-service grants |
 | F29 | P0: AC-23 is designed (plan/design-accounting.md:818-831, :2991) and is in no phase of impl-accounting | P27 builds it, as an owner contract (§4) |
 | F30 | P0: design §8 gates native finalization on AC-23 but names PayrollExchange's external processing as the live path until then, though its results create the same payroll invoices (§8.3 makes the projection a prerequisite of payroll exposure) | §4: P28's live external results are gated on AC-23 as finalization is; design-accounting's AC-23 row says so, and design-people §8, §8.3, §8.4 and §14.4 changed |

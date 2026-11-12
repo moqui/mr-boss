@@ -121,7 +121,8 @@ feature(
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
-                Object.keys(employee.sharedLinks || {}).join() !== "SelfService,Time/MyTime" ||
+                Object.keys(employee.sharedLinks || {}).join() !==
+                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -151,11 +152,12 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
         if (JSON.stringify(keys) !== JSON.stringify(ids.keys)) problems.push(`the HR officer's people keys: ${keys}`)
-        // P6: the HR officer's quick create is Hire employee (the wizard's grant); a directory reader is offered none
+        // P6: the HR officer's quick create is Hire employee (the wizard's grant); a directory reader is offered none of HR's; P12:
+        // Request leave is every People user's (Leave requests opens to them)
         const quick = shell => (shell.providers?.quickCreate || []).map(entry => entry.kind).join()
-        if (quick(hr) !== "peopleHireEmployee") problems.push(`the HR officer's quick create: ${quick(hr)}`)
+        if (quick(hr) !== "peopleHireEmployee,peopleRequestLeave") problems.push(`the HR officer's quick create: ${quick(hr)}`)
         const reader = shell(users.reader)
-        if (quick(reader)) problems.push(`the reader's quick create: ${quick(reader)}`)
+        if (quick(reader) !== "peopleRequestLeave") problems.push(`the reader's quick create: ${quick(reader)}`)
         // P3: Employees is a menu group of the directory, Organization and Org chart; P7: and, for HR, Checklists and Employee import
         const group = shell(users.hr, true, "Employees/OrgChart", "Employees")
         if (JSON.stringify(group.names) !== JSON.stringify(ids.hrEmployeesMenu))

@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Admin's part of the readiness registry (impl-admin §2, P1, P2; design-admin §13, §14; mr-moqui plans/Admin-Screens-Down.md
     A6). The registries are the framework's (moqui.server ReadinessProvider, RefreshOperation and SettingsEntry, read by
-    org.moqui.admin.ReadinessServices: get#Readiness, request#Refresh, get#Overview, find#Settings, get#SupportSummary), and
+    org.moqui.admin.ReadinessServices: get#Readiness, request#Refresh, get#Overview, get#HealthCards, find#Settings,
+    get#SupportSummary, check#InstanceSetup), and
     every screen and app calls those. Here are the contract service its registrations name for the owners whose services keep
     their own shapes, and the check of which registered places open to the viewer under Admin (Registry.js). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">

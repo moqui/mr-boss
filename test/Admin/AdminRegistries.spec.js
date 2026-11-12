@@ -278,8 +278,12 @@ feature("Health shows the reader the checks of an organization they administer, 
         health.errors == []
         health.output.includes("Organization")
         health.output.includes("Store readiness")
+        // a check is named by its title alone where it is its provider's, "Provider: Check" where they differ
+        !health.output.includes("Store readiness: Store readiness")
         health.output.includes("Check again")
         health.output.includes("Support summary")
+        // the framework's header, with the sign-in failures of the last day for a reader of the overview's
+        health.output.includes("Sign-in failures, last 24 hours")
         // the instance's checks take no organization: with one asked for they are left out
         !health.output.includes("Outgoing mail")
         !health.output.includes("/qapps/Commerce/Stores/StoreDetail")
