@@ -442,30 +442,35 @@ along with this software (see the LICENSE.md file). If not, see
             not in this pattern: each checks the client's access itself. The verbs are split over several rows, as an
             artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to (admin and insights were added
             in Admin P1 and the two rows they took past 255 split, impl-admin F14: twelve rows; people in People P1, impl-people
-            F26: the longest 244) -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut)#.*"
+            F26: the longest 244; maintenance in Maintenance P1, impl-maintenance F50: the add and record rows split, fifteen rows
+            here and Admin P6's transfer row below, the longest 238, so sales and marketing fit every row) -->
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(bulk|cancel|change|claim|clockIn|clockOut)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refresh|refuse|release|remove|rename|reopen|replace|reply)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refresh|refuse|release)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(remove|rename|reopen|replace|reply)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees)"
@@ -2669,7 +2674,8 @@ along with this software (see the LICENSE.md file). If not, see
         Warehouse, Manufacturing, Accounting, Projects, Insights and Admin), each with the permissions it carries (its
         UserGroupPermission rows above and in BossAccountingSetupData; kind view, edit, export or sensitive: costs, supplier prices,
         pay and credit) and, for an app's root user group, its launcher as an artifact binding with the root's filter sets. Left out:
-        the groups of the apps not built (Sales, Marketing, Maintenance; People's are with its groups, People P1), the Projects
+        the groups of the apps not built (Sales, Marketing; People's and Maintenance's are with their groups, People P1 and
+        Maintenance P1), the Projects
         client contacts' BOSS_PROJECT_CLIENT
         (external users, given in Projects) and the service teams. The privileged groups are registered: the privileged-group EECA
         and AccessServices still refuse a non-member. A later phase or app adds its own rows; the registry describes and never
@@ -4086,7 +4092,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the client deny pattern (BOSS_PROJECTS_INTERNAL, impl-admin F14): P6's new write verb, transfer
         (ironstone.admin.LifecycleServices transfer#OwnedResource, transfer#Assignments) -->
     <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL">
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
     </artifactGroups>
 
@@ -5206,4 +5212,141 @@ along with this software (see the LICENSE.md file). If not, see
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/></authz>
     </artifactGroups>
+    <!-- Maintenance P1 (impl-maintenance P1, F1, F35, F50; design-maintenance §1.1, design-crosscut §1.4): the root user group and
+        the capability groups; the administrator group BOSS_MAINTENANCE_ADMIN is above, with its ALWAYS on the root (F1). Groups are
+        not nested: a Maintenance user is in BOSS_USERS, BOSS_MAINTENANCE and a capability group, the administrator in BOSS_USERS
+        and BOSS_MAINTENANCE_ADMIN. BOSS_MAINTENANCE_REQUEST gets no grant on the root: a requester reports a problem from Commons'
+        intake (P4) and has no Maintenance launcher. -->
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE" description="Maintenance app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_READ" description="Maintenance reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_REQUEST" description="Maintenance requester"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_PLAN" description="Maintenance planner"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_EXECUTE" description="Maintenance technician"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_SUPERVISE" description="Maintenance supervisor"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_PROCEDURE" description="Procedure author"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" description="Procedure approver"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" description="Resource approver"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" description="Resource administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_COST" description="Maintenance cost reader"/>
+    <!-- the root user group's authorization on the Maintenance root and the app's services (ironstone.maintenance: its access,
+        context, choices and palette), beside the administrators' rows of the BOSS_MAINTENANCE artifact group above. The root grant
+        opens navigation only; each Mantle maintenance service checks the maintenance permissions and scope itself
+        (mantle/work/MaintenanceAccess.js), and no raw update#WorkEffort, update#AssetMaintenance or /mantle work or asset REST path
+        is granted (impl-maintenance §2). -->
+    <artifactGroups artifactGroupId="BOSS_MAINTENANCE" description="IronStone Maintenance App (via root screen)">
+        <artifacts artifactName="ironstone\.maintenance\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MAINTENANCE_ROOT" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the Settings area (design §9), the Maintenance administrator's: denied to the root user group, as People's; BOSS_MAINTENANCE_ADMIN
+        and ADMIN open it through their ALWAYS on the root. A later phase that puts another group's editor under Settings allows
+        that group here. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_SETTINGS" description="Maintenance settings">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_SETTINGS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- design §1.1's table (Mantle seeds the permissions, each granted to ADMIN, data/MaintenanceSetupData.xml): the reader
+        MAINTENANCE_VIEW and WORK_PROCESS_VIEW; the requester MAINTENANCE_REQUEST and _REQUEST_VIEW_OWN; the planner MAINTENANCE_PLAN
+        with the views; the technician MAINTENANCE_ASSIGNED_VIEW and _EXECUTE; the supervisor MAINTENANCE_SUPERVISE with the views;
+        the procedure author WORK_PROCESS_EDIT, the approver WORK_PROCESS_APPROVE, each with WORK_PROCESS_VIEW; the resource approver
+        RESOURCE_BOOKING_VIEW_ASSIGNED and _APPROVE (with a current BookingApprover assignment, P16); the resource administrator
+        FACILITY_EDIT for facility writes, MAINTENANCE_RESOURCE_VIEW and _EDIT, MAINTENANCE_IMPORT for the equipment import (§4) and
+        RESOURCE_POLICY_VIEW and _EDIT; the cost reader MAINTENANCE_VIEW and MAINTENANCE_COST_VIEW; the Maintenance administrator
+        MAINTENANCE_SETTINGS_EDIT with the operational views (work, procedures, equipment and policies) to administer them, and no
+        plan, execute, stock, payroll or finance authority. The planner, supervisor and resource administrator also hold People's
+        PEOPLE_DIRECTORY_VIEW, so Employee360's public work card of a custodian opens for them under Maintenance (impl-maintenance
+        F62, P2). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_EXECUTE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_SUPERVISE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_VIEW_ASSIGNED" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="FACILITY_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_SETTINGS_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" fromDate="0"/>
+    <!-- Maintenance's capability bundles in Admin's registry (owner contract, impl-maintenance F35; design-crosscut §1.4's rows, which
+        Admin P3 left out as unbuilt): each group with the permissions it carries (view, edit, or sensitive: costs) and the root
+        user group's launcher with the root's filter sets; MAINTENANCE_IMPORT in the resource administrator's bundle. -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_ADMIN" appName="Maintenance" description="Maintenance administrator" scopeDependency="organization" sequenceNum="1300"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_SETTINGS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE" appName="Maintenance" description="Maintenance app users (the launcher)" scopeDependency="organization" sequenceNum="1310"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE" artifactGroupId="BOSS_MAINTENANCE" description="Maintenance launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_READ" appName="Maintenance" description="Maintenance reader" scopeDependency="organization" sequenceNum="1320"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_REQUEST" appName="Maintenance" description="Maintenance requester" scopeDependency="own requests" sequenceNum="1330"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_PLAN" appName="Maintenance" description="Maintenance planner" scopeDependency="organization" sequenceNum="1340"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_EXECUTE" appName="Maintenance" description="Maintenance technician" scopeDependency="assigned work and steps" sequenceNum="1350"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_EXECUTE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_SUPERVISE" appName="Maintenance" description="Maintenance supervisor" scopeDependency="organization" sequenceNum="1360"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_SUPERVISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_PROCEDURE" appName="Maintenance" description="Procedure author" scopeDependency="organization, maintenance templates" sequenceNum="1370"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" appName="Maintenance" description="Procedure approver" scopeDependency="organization, maintenance templates" sequenceNum="1380"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" appName="Maintenance" description="Resource approver" scopeDependency="resources the user approves" sequenceNum="1390"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_VIEW_ASSIGNED" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" appName="Maintenance" description="Resource administrator" scopeDependency="organization, facility" sequenceNum="1400"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="FACILITY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_IMPORT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_COST" appName="Maintenance" description="Maintenance cost reader" scopeDependency="organization" sequenceNum="1410"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
+        administrator's settings of each organization; its readiness provider (check#MaintenanceReadiness) is set in P18. -->
+    <ironstone.admin.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"
+            description="Work policy, teams, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" screenPath="Maintenance/Settings" viewPermission="MAINTENANCE_SETTINGS_EDIT"
+            configuredBy="Maintenance administrator" sequenceNum="75"/>
 </entity-facade-xml>

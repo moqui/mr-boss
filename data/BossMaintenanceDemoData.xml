@@ -12,11 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Maintenance work orders section of IronStone Maintenance (initial-design.md app table);
-    design-maintenance.md decides its screens. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Maintenance work orders" default-menu-index="4" menu-image="sym_o_checklist" menu-image-type="icon">
-    <widgets>
-        <label text="Placeholder: Maintenance work orders." type="p"/>
-    </widgets>
-</screen>
+<!-- The Maintenance demo (impl-maintenance P1): its records, which each phase adds with what it builds, the equipment and
+    facilities of Ziziwork Services first (P2). The demo users are in BossUsersDemoData.xml. -->
+<entity-facade-xml type="demo">
+</entity-facade-xml>

@@ -34,6 +34,8 @@ Proposed groups grant Moqui permissions in setup data: Mantle seeds the maintena
 
 Stock actions also require the current Warehouse stock permission for the source/destination facility; buying and financial actions retain their owners' permissions. Equipment movement uses the stock movement guard where stock is affected. Read authority is always explicit: broad work view, assigned-work view and own-request view are separate permissions; a write permission alone opens no list. Costs, supplier prices and restricted employee rates are omitted from unauthorized service answers, exports, shell context and prints. The service organization on a work order is authoritative even when its target is customer-owned.
 
+As built (impl-maintenance P1): Mantle seeds the eighteen permissions of the table in `data/MaintenanceSetupData.xml`, each granted to ADMIN, and `mantle/work/MaintenanceAccess.js` is the one scope module the services call (capabilities from the permissions, with the reads `workRead`, `resourceRead` and `anyRead` from view permissions only; the user's organizations from the facility scope, none for a caller who reads nothing; a facility's organization from its nearest owning ancestor, an asset's from its internal owner or else its facility, a work effort's from its root's owner or else its facility; assignment to a root or step; reason codes). `BOSS_MAINTENANCE` is the root user group (ALLOW with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, the `ironstone\.maintenance\..*` services on the same artifact group); `BOSS_MAINTENANCE_REQUEST` has no root grant; the Settings area is denied to the root user group (`BOSS_MNT_SETTINGS`), so the administrator and ADMIN open it. The administrator holds `MAINTENANCE_SETTINGS_EDIT` with the operational views (`MAINTENANCE_VIEW`, `WORK_PROCESS_VIEW`, `MAINTENANCE_RESOURCE_VIEW`, `RESOURCE_POLICY_VIEW`); the planner, supervisor and resource administrator also hold People's `PEOPLE_DIRECTORY_VIEW`, so Employee360's public work card opens for them (impl-maintenance F62). A shared device's request calls no context service and is served no Chatter or RecordFiles panel (F74).
+
 XML is the default, including list/board/calendar/tree views already in the XSD. Every screen works in `qvt` and `tui`; custom Commons calendars keep their existing terminal alternative. WorkOrderDetail, intake, meters and booking decisions work at phone width. Lists have record links, names, state words/chips, server paging, saved finds and two useful mobile columns. Record screens use the standard header, one current primary action, More actions and named confirmations. Errors preserve input; inaccessible records have a not-available state; missing measurements or costs are not zero.
 
 ### 1.2 Menu and shell contributions
@@ -57,6 +59,8 @@ XML is the default, including list/board/calendar/tree views already in the XSD.
   - Work status — `WorkStatusReport`; PM compliance — `PreventiveComplianceReport`; costs — `MaintenanceCostReport`.
 - Settings — `Settings`.
   - Teams — `Teams`; lookups — `Lookups`.
+
+As built (P1): the menu is Home (every Maintenance user's) and Settings (the administrator's); each area joins with its phase. The root's providers are the `maintenance` keymap (`g m` Maintenance home) and the palette source `ironstone.maintenance.ContextServices.search#Records`, which answers nothing until equipment and facilities (P2) and work orders (P3) join it.
 
 Record routes are contextual, not additional menu depth. Later screens in §10 are omitted from the released menu until built. Home shows open, unassigned, overdue/due PM, high-priority and currently unavailable resource counts, my work and team cards, each linking to the same authorized filtered list. It does not show MTBF/MTTR before the later metrics contract exists.
 
@@ -152,6 +156,8 @@ Paths below are relative to the BOSS root. `parity` means baseline function reta
 | Counters | display | Open filtered queues | open, unassigned, high priority, overdue PM, unknown meters, down resources | number-card | proposed mantle.work.MaintenanceReportServices.get#MaintenanceHome | Odoo team counters; Carbon Resources |
 | MyWork | list, read | Resume assigned work | work ID/name, target, next step, due, state | record links | proposed mantle.work.MaintenanceServices.find#MaintenanceWorkOrders | Carbon MES assigned-to-me |
 | TeamWork | list, read | Expose workload and exceptions | team, active, unscheduled, blocked, due | filtered links | proposed get#MaintenanceHome | Odoo team dashboard |
+
+As built (P1): HomeFilters holds organization, facility and as-of (the team filter joins with work orders, P3), each value checked by `ironstone.maintenance.AccessServices.check#Record`; Counters lists the six counts as Not configured, never zero, until their records exist; the administrator's Settings shortcut is the one built area. MyWork and TeamWork are P3's.
 
 **Actions/navigation.** New work order for P, otherwise Report a problem for Q; counters preserve scope. Empty state offers authorized setup or intake. A failed due projection shows Unavailable and its source age. **Source.** Research §1, §15. **Needs.** MT-01, MT-02, MT-05, MT-07, MT-11.
 

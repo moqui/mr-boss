@@ -12,9 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Maintenance: root of the app for facilities and equipment managers (initial-design.md app table); its
-    sections follow design-maintenance.md when that file is written. Not yet implemented: its BOSS_MAINTENANCE
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Maintenance (design-maintenance §1): the root of the app for facilities and equipment managers, planners,
+    technicians, supervisors, procedure authors and approvers, resource approvers and administrators, and cost readers. The root
+    user group BOSS_MAINTENANCE and the administrator group BOSS_MAINTENANCE_ADMIN open it (data/BossSetupData.xml), as ADMIN
+    does (impl-maintenance F1: the grant was live for ADMIN and BOSS_MAINTENANCE_ADMIN before P1, whatever this comment said);
+    BOSS_MAINTENANCE_REQUEST has no root grant (a requester reports a problem from Commons' intake, P4). The root grant opens
+    navigation only: ironstone.maintenance.ContextServices.get#SharedContext checks the user and resolves their capabilities,
+    organizations and links for every subscreen, and each Mantle maintenance service checks the permissions and scope again
+    (mantle/work/MaintenanceAccess.js). The menu of design §1.2 grows by phase: P1 builds Home (every Maintenance user's) and
+    Settings (the Maintenance administrator's, BOSS_MNT_SETTINGS); each later phase adds its area, and the design's later entries
+    stay absent. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Maintenance" menu-image="sym_o_build" menu-image-type="icon">
 
@@ -22,14 +29,41 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Maintenance"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <!-- a shared device's request (a later TechnicianKiosk's route group; impl-maintenance F74) runs as a display account, which
+            is no Maintenance user: it calls no context service, gets no capability or link, and is served no Chatter or
+            RecordFiles panel, as Insights' root does for its wall displays -->
+        <if condition="UserSecurityChecks.currentDevice()"><then>
+            <set field="maintenance" from="{capabilities: {}, organizationPartyIds: [], sharedLinks: {}}"/>
+            <script><![CDATA[
+                const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+                const panelName = pathNames[pathNames.indexOf('Maintenance') + 1]
+                if (panelName === 'Chatter' || panelName === 'RecordFiles')
+                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files are not available on a shared device')
+            ]]></script>
+        </then><else>
+            <service-call name="ironstone.maintenance.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="maintenance"/>
+        </else></if>
+        <set field="sharedLinks" from="maintenance.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
         <!-- the record panels the chatter and record-files elements load under this app root, hidden from the menu
-            (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
+            (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5); Maintenance's record
+            hosts (a work order, a step, a template, equipment, a facility) join with their phases (P3) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
+
+    <!-- P1: the maintenance keymap and the palette source (design §1.2; its records join with their screens: equipment and
+        facilities P2, work orders P3, procedures P6). Quick create (Report a problem, New work order), Today and the notification
+        topics (MaintenanceWork, MaintenanceDue, WorkProcessApproval, ResourceBooking) arrive with their records. -->
+    <shell-providers>
+        <palette-source group="Maintenance" label="Maintenance records" icon="sym_o_build"
+                service="ironstone.maintenance.ContextServices.search#Records" sequence="48"/>
+        <keymap scope="maintenance">
+            <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="maintenance-panel" type="popup"/></widgets>
 </screen>
