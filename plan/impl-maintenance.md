@@ -3625,7 +3625,11 @@ user's call of Nov 12 during the review (R6).
   CustomerServiceCases, CustomerServiceReports: 83 of 83 (24.3 s; MaintenanceAccess 8.7 s alone). R3's and R4's assertions fail with
   the fixes reverted. `moqui lint --screens` (`./moq run --debug --nobuild`): 137 flagged sites after the merge, none in
   InterventionReport, WorkOrderDetail, Overview or WarrantyAssessment; the release binary is still the symlink. Prettier on the
-  changed spec and lines. Not run: ./moq test-apps, the acceptance suite (MaintenanceCustomerRepairWalk unchanged by the review).
+  changed spec and lines. After R6 and a second merge of master (Maintenance P8 and P17: mr-mantle 865a07b5, Start's refusal keeps
+  P8's qualification block then P12's claim standing; mr-boss 8933fc9d, both sides kept): mr-mantle WarrantyManagedRepair,
+  SupportWarranty, MaintenanceWorkOrders, MaintenanceDispatch 21 of 21; mr-boss MaintenanceAccess, MaintenanceWorkOrders and the
+  thirteen CustomerService specs 98 of 98 (29.2 s; MaintenanceAccess 9.2 s alone, 27 features with P8's and P17's). Not run:
+  ./moq test-apps, the acceptance suite (MaintenanceCustomerRepairWalk unchanged by the review).
 - For the lead:
   - Budget share: mr-mantle +1.0 s over the worker's (WarrantyManagedRepair's two features); mr-boss −0.6 s (MaintenanceAccess).
     Budgets not changed.
