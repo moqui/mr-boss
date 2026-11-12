@@ -16,12 +16,14 @@ along with this software (see the LICENSE.md file). If not, see
     F56; WorkOrders.js): a leaver's open work order assignments and the equipment they hold, read under ADMIN_IDENTITY_VIEW as
     Projects' participant reads its own, and moved through Mantle's schedule#MaintenanceWorkOrder and change#MaintenanceCustody,
     which check the caller's maintenance permissions and the new person themselves. Admin's Projects participant leaves managed
-    work out. -->
+    work out. P15: the rooms and equipment the leaver approves bookings of (BookingApprover), handed over through Mantle's
+    store#ResourceApprover (RESOURCE_POLICY_EDIT), the leaver ended and the new person approving from then. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="find" noun="Assignments" allow-remote="false" read-only="true">
         <description>What userId holds of Maintenance (the user's own, or another's with ADMIN_IDENTITY_VIEW): their open work orders
-            (a current technician assignment) and the equipment they hold (a current custodian or operator), as counts by kind
-            (workOrders, custody), never the work's names. A kind the caller may not move (MAINTENANCE_PLAN or _SUPERVISE for work
+            (a current technician assignment), the equipment they hold (a current custodian or operator) and the resources whose
+            bookings they approve (a current BookingApprover, P15), as counts by kind (workOrders, custody, bookingApprovals), never
+            the work's names. A kind the caller may not move (MAINTENANCE_PLAN or _SUPERVISE for work
             orders, MAINTENANCE_RESOURCE_EDIT for custody) is listed not transferable, its name saying who moves it in Maintenance:
             an identity operator hands it off and gets no transfer step (the user's call, Nov 12).</description>
         <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceLookup"/>
@@ -31,10 +33,10 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="transfer" noun="Assignments" allow-remote="false">
-        <description>One kind (assignmentKind: workOrders or custody) of fromUserId's moved to toUserId (ADMIN_IDENTITY_MANAGE for
+        <description>One kind (assignmentKind: workOrders, custody or bookingApprovals) of fromUserId's moved to toUserId (ADMIN_IDENTITY_MANAGE for
             another's): each work order's technicians with the leaver replaced (schedule#MaintenanceWorkOrder: MAINTENANCE_PLAN or
             _SUPERVISE in its organization, and the new person of it), each holding to the new person (change#MaintenanceCustody:
-            MAINTENANCE_RESOURCE_EDIT). An error names the first refusal and how many were not moved; the others are moved.</description>
+            MAINTENANCE_RESOURCE_EDIT), each resource's approval handed over (store#ResourceApprover: RESOURCE_POLICY_EDIT). An error names the first refusal and how many were not moved; the others are moved.</description>
         <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceTransfer"/>
         <in-parameters><parameter name="assignmentKind" required="true"/></in-parameters>
         <actions>
