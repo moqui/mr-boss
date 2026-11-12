@@ -176,13 +176,16 @@ feature("with the mapping ended in Posting defaults the next issue stops with th
                 ),
                 "Accounting"
             )
+        // a mapping ends no earlier than now (P9 review R3): end it a moment ahead, and issue once that moment has passed
+        const endsAt = Date.now() + 500
         const ended = save({
             maintenanceCostPolicyId: policy.maintenanceCostPolicyId,
             glAccountId: policy.glAccountId,
             fromDate: policy.fromDate,
-            thruDate: new Date(Date.now() - 1000),
+            thruDate: new Date(endsAt),
             lastUpdatedStamp: policy.lastUpdatedStamp
         })
+        while (Date.now() <= endsAt + 50) {}
         const refused = post(users.tech, material("materialAction"), {
             workEffortId: state.work,
             lineKey: state.work + "__" + filterId,

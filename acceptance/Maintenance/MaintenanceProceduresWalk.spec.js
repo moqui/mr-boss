@@ -117,7 +117,7 @@ feature("the author builds the compressor service on ProcedureDetail and asks fo
             contentText: "Drain warm; refill with 2 l of ISO 46."
         })
         const requested = post(users.author, "Procedures/ProcedureDetail/requestApproval", {workEffortId: state.procedure})
-        const detail = asUser(users.author, () => page("Procedures/ProcedureDetail/Steps", {workEffortId: state.procedure}))
+        const detail = asUser(users.author, () => page("Procedures/ProcedureDetail/Steps", {workEffortId: state.procedure, lastStandalone: "true"}))
         return {created, waits, part, instruction, requested, detail}
     },
     then({created, waits, part, instruction, requested, detail}) {
@@ -233,7 +233,7 @@ feature(
             one("mantle.work.effort.WorkEffort", {workEffortId: state.procedure}).statusId == "WeInPlanning"
             blocked.errors.join(" ").includes("PROCESS_NOT_APPROVED")
             firstPressure.workEffortName == "Read the discharge pressure"
-            Number(policy.minimumValue) == 7
+            Number(String(policy.minimumValue)) == 7
             instruction.instructionList[0].text.includes("ISO 46")
             !tags.some(object => object.workEffortId == state.procedure || object.workEffortId == state.oil)
             time != ""

@@ -9,7 +9,7 @@
 // not activate it. The rules are Mantle's MaintenanceDue and BOSS's MaintenancePlans and MaintenanceAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePlansWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
-const {ids, users, asUser, invoke, page} = lib
+const {ids, users, asUser, system, invoke, page} = lib
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 const P = "mantle.work.MaintenancePlanServices."
 const state = {}
@@ -52,9 +52,19 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
+        state.startedAt = Date.now()
     },
     cleanupSpec() {
         ec.message.clearErrors()
+        // the start counter's reading this walk recorded is removed, so the contactor check's reading is stale again for later
+        // walks (MaintenancePreventiveWalk's generation is blocked on it)
+        system(() =>
+            ec.entity
+                .find("mantle.product.maintenance.AssetMeter")
+                .condition({assetId: ids.compressorId, productMeterId: "BOSS_MNT_COMP_STARTS"})
+                .condition("readingDate", ">=", new Date(state.startedAt))
+                .deleteAll()
+        )
         login("john.doe")
     }
 })
