@@ -3632,6 +3632,134 @@ Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its rost
   shift over approved leave, publishes, and the workers see the shifts in SelfService and on the team calendar; the
   terminal makes the same change.
 
+**Built Nov 12 (P14).** mr-mantle bea7ed7d, mr-boss (branch `ppl/p14`).
+- Checked first (the code over the plan): F53 and F68 against `Timeline.qvue` as built (resource mode entered only under a path
+  segment `ProductionSchedule`; lanes keyed by `facilityId`, bars by operation fields, the wording, the plant filter and the
+  transitions `schedule`, `moveOperation` and `decideOverride` fixed in the component) and its callers: ManufacturingSchedule reads the
+  answer's `laneList[].facilityId` and `operationList` and posts `moveOperation` with production parameters, ProductionScheduleTui is
+  its own table, and the client regression ProjectsPlanningResponses drives the component's resource methods directly; P9's
+  `Schedules.js scheduledDays` (one read for capacity's parties, the WetAvailable read skipped only when every day is planned) and
+  `get#PartyCapacity`'s holiday and leave arithmetic (leave `min(base, leave)`, so an approved leave's projection counts once);
+  P12's approved-leave states and segments, its `colleaguesOf` (not exported), the projected kind (`CalendarProjection`,
+  `define#ProjectionOwner`) and Commons' `Calendar.qvue` kinds (`workHours` drawn as work hours with no change); P13's `accessKinds`
+  (a manager's write on a live line with PEOPLE_TEAM_VIEW, P13's corrections) and its zone rule (the working schedule's, else the
+  user's); the time area's grants (Time.xml's inheritable ALLOW for self-service, `BOSS_PPL_SCHEDULES` HR's and the managers') and
+  SelfService's non-inheritable grant. §15 names the roster print ("Shift/attendance/timesheet" from ShiftRoster).
+- Mantle:
+  - `entity/PeopleScheduleEntities.xml`: `mantle.humanres.schedule.ShiftAssignment` (an employment's shift: person, employer,
+    `ShiftAssignmentStatus` draft, published, removed (audit-logged), start and end instants (audit-logged), the zone its day is
+    attributed in and that day (`shiftDate`), break, work location, comments, who created and published it and when, an operation
+    key); never deleted;
+  - `ScheduleServices` over a new module `Shifts.js`: `get#Roster` (the employments a manager's live lines reach at their employers
+    and an HR reader's employers' overlapping the days, at most 200 by name, each with whether the caller rosters it, its zone and
+    schedule, the schedule's working intervals (`Schedules.js plannedIntervals`, factored out of `scheduledDays`), holidays and
+    approved leave by half day, never its type or reason; the draft and published shifts with their conflicts now; the drafts the
+    caller may publish; the employers and work locations), `store#Shift` (preview, apply, remove; times as wall times in a given zone;
+    `TIME_INVALID`, `TOO_LONG`, `DATE_PAST`, `BREAK_INVALID`, `DATE_OUTSIDE`, `EMPLOYMENT_ENDED`, `OVERLAP` across the person's
+    employments, `LEAVE_CONFLICT` on the half day an approved leave holds; warnings `LEAVE_REQUESTED`, `HOLIDAY`; assessed again under
+    the person's Party row lock; an operation key's retry answers the first; a change at the shift's revision, `REVISION_CHANGED`,
+    `SHIFT_STARTED`, `SHIFT_REMOVED`, `PERSON_CHANGE` for a published shift), `publish#Shifts` (the drafts of the days or named, each
+    assessed again in its own transaction, a refused one named and left a draft; each worker told once), `get#MyShifts` (the caller's
+    own, no party), `get#TeamShifts` (the published shifts of the people the team calendar's absences reach: own, colleagues'
+    (`Leave.js colleaguesOf`, now exported), a manager's reports' at the line's employers, an HR reader's employers'), and
+    `get#ShiftProjection` (`define#ProjectionOwner`: the user's own published shifts); a manager (PEOPLE_TEAM_VIEW, a live line at the
+    employer) or an HR editor (PEOPLE_HR_VIEW and PEOPLE_HR_EDIT) rosters, an HR reader reads; no permission of its own;
+  - capacity (owner contract with Projects): `Schedules.js scheduledDays` overlays each person's published shifts (`Shifts.js
+    shiftDays`) on the days they count on, in place of the schedule's hours (`shift: true`), and `get#PartyCapacity` lets no holiday
+    take a shift's day; a person with shifts and no schedule keeps the WetAvailable or policy hours on the other days; a failure to
+    read the shifts is logged and the schedule's days stay;
+  - `data/PeopleRosterSetupData.xml`: the `PeopleShiftChange` topic (the worker's: "Your shifts {days}: {n shifts published | a shift
+    changed | a shift removed}", never who rostered or why) and the `PeopleMyShifts` projection ("My shifts").
+- BOSS:
+  - Projects' `Timeline.qvue` (owner contract with Projects and Manufacturing, F68): resource mode is any mount's (a screen other than
+    Projects' own Timeline and ProjectDetail's Plan tab), transitions relative to the mount's own screen; the lanes, bars, shades,
+    notices and conflicts generic keys, and the wording, legend, filter, print link, dialog fields, header actions, create on a free
+    time, keep-length moves and the move and decide transitions from the answer's `resource` (the contract in its header);
+    `ProductionSchedule.xml` answers it beside its own fields (`barList` the operations with `moveParameters`, `noticeList` the override
+    requests, conflicts by `barId`, its wording) and `moveOperation` takes `laneId` and `remove`; its screens, specs and terminal twin
+    unchanged; ProjectsPlanningResponses sets the mount's resource on the component it drives;
+  - `People/Time/ShiftRoster` (menu 12, key `g h`; the timeline over `get#Roster`, `moveShift` over `store#Shift` and `publishShifts`
+    over `publish#Shifts`; Add shift, Publish (n) the primary while drafts wait, Print), `Time/ShiftRosterTui` (a person and day table a
+    week, the shifts of the days, Shift with the preview box and Save shift, Remove shift, Publish, week before and after),
+    `Time/ShiftRosterPrint` (html-print, as of now) and `template/PeopleRoster.xml` (the table both include); all in
+    `BOSS_PPL_SCHEDULES` (HR's and the managers'; the root user group and self-service denied);
+  - SelfService's My shifts (`get#MyShifts` through `BOSS_PPL_SHIFTS_SELF`, shown when there are any, linking the team calendar;
+    `get#SelfServiceContext`'s `teamCalendarUrl`); TeamCalendar and TeamCalendarTui show the published shifts beside the absences ("Who
+    is out and on shift"); People's root: the key `g h` and the topic; the topic's link opens the team calendar on its first day;
+    People.js: link paths.
+- Specs: Mantle `test/humanres/ShiftRoster` (2 features, stepwise, 1.4 s: 0.70, 0.69: a preview writing nothing, a draft and its
+  retry, an overlap, approved leave, an ended employment, a past start and a shift over a day refused, waiting leave a warning; the
+  person refused `PERMISSION_DENIED`, an HR reader and another employer's HR `RECORD_UNAVAILABLE`, HR of the employer rostering; the
+  manager's, reader's and B's rosters; drafts plan nothing, a published 10-hour Monday replacing the schedule's 8 (not 18), Tuesday
+  4, Saturday 4, the leave day 0; the worker told once of three, their shifts, team calendar and projection, B's HR not admitted; a
+  later draft changing nothing, a published shift shortened and another removed changing capacity again, a stale revision refused,
+  told twice more). BOSS `test/People/PeopleRoster` (2 features, stepwise, 0.33 s: the schedule transition's contract as the manager
+  (wording, transitions, fields, legend, her reports as lanes), a drop on Tomas previewed and saved through moveShift, the draft bar,
+  Publish (1) and its post, Tomas's own shift; ShiftRosterTui's one tui render as HR with the table, the shift and the commands).
+  PeopleAccess gains one feature (0.30 s: ShiftRoster opened by the manager and HR, refused to the reader and the employee; Tomas's
+  shift rostered by his manager, the reader refused `PERMISSION_DENIED` with the same parameters, Services' employee
+  `RECORD_UNAVAILABLE` to Retail's HR; the employee's `get#MyShifts` by its own grant) and its menus and keys (`hrTimeMenu`,
+  `managerTimeMenu`, `g h`). Acceptance, written and not run: `acceptance/People/PeopleRosterUsable` (3 features: Tomas's Wednesday
+  asked and approved; Hannah rosters his week through the timeline's transitions, a preview and Save shift each, the Wednesday refused
+  `LEAVE_CONFLICT` and shaded without its reason; she publishes, Tomas's SelfService (under Commons) and the team calendar show the
+  four shifts and he is told once; HR changes his Friday through ShiftRosterTui's Shift, preview and Save shift, and he is told).
+- Tests run (release binary, `--nobuild`, this phase's runtime): Mantle ShiftRoster, PeopleSchedules, WorkResources, LeaveRequests,
+  WorkTimesheets, Dav, BusinessTime, Attendance and ProductionSchedule 50 of 50 (mr-mantle 14.5 s of features); BOSS PeopleRoster,
+  PeopleAccess, PeopleLeave, PeopleSelfService, PeopleSchedules and ManufacturingSchedule 38 of 38 (mr-boss 11.1 s of features),
+  then after formatting Mantle ShiftRoster, PeopleSchedules, WorkResources and LeaveRequests 18 of 18 (mr-mantle 8.3 s) and BOSS
+  PeopleRoster, PeopleAccess, PeopleLeave, PeopleSelfService, PeopleSchedules, ManufacturingSchedule, Resources and PeopleTime 47 of
+  47 (mr-boss 13.6 s); the client regression ProjectsPlanningResponses 7 of 7 offline (4.2 s; run on a copy of this runtime whose
+  parent holds a `Cargo.toml`, as the offline `/files/` root needs). One-off checks, not kept: the component mounted offline as
+  ShiftRoster with a roster answer (lanes, a dashed draft, shades, the dialog's post with the bar's parameters and fields, Publish's
+  post) and ProductionSchedule's schedule and moveOperation answers in the generic contract over Manufacturing's fixture; the print,
+  SelfService's My shifts, ShiftRoster's tui container and TeamCalendarTui rendered. `moqui lint --screens`: 135 flagged sites as
+  before, none in the screens P14 touched, no TUI worklist entry. Prettier clean on the new and changed JavaScript
+  (ProjectsPlanningResponses was not clean on master and is left so). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People rows (ScheduleServices' six P14 services) and `get#PartyCapacity`'s; ss-inventory's P14 note (no
+  baseline form is mapped).
+- Design edits: design-people (header; §1.2; §3 SelfService; §6 ShiftRoster as built; §13 TeamCalendar; §15 the roster print);
+  design-projects (header; §5 Timeline, the resource mode as a contract); design-manufacturing (ProductionSchedule as changed);
+  design-crosscut CX-SYNC (My shifts).
+- Findings (provisional, numbered by the lead):
+  - a manager rosters their live reports with PEOPLE_TEAM_VIEW, a view permission, as P13's correction requests do; there is no
+    roster permission, so an employer cannot keep its managers from rostering (HR rosters with PEOPLE_HR_EDIT);
+  - a published shift changed stays published and is told to its worker at once (no state of unpublished changes); a draft is never
+    shown to the worker, on the team calendar or in capacity;
+  - a published shift on a holiday counts its hours (no holiday takes a rostered day); the preview warns of it;
+  - leave approved after a shift was published neither refuses the approval nor removes the shift: capacity takes the leave once,
+    and the roster marks the shift's conflict for the rosterer to remove (leave's decision does not read shifts);
+  - the team calendar shows the published shifts of the people its absences reach, colleagues included (the user's call of Nov 11 on
+    absences); the My shifts collection is the worker's own alone;
+  - a shift's day is attributed in the employment's working schedule's zone at its start, else the rostering user's; the roster
+    draws every lane in the viewer's wall time (one frame), with a lane's own local times in the bar's tip and the dialog only;
+  - a lane is an employment, so a person employed by two employers the user reads has two lanes; overlaps are checked across both;
+  - Publish publishes every draft the user rosters on the days shown (narrowed by the employer filter); the browser does not publish
+    one person or one shift alone (the service takes shift ids);
+  - the roster print is html-print, a week a table; design §15's CSV and XLSX of the roster are not built;
+  - ProductionSchedule's answer carries its operations twice (`operationList` for its specs and readers, `barList` for the
+    component), up to 300 operations;
+  - Shift roster is menu 12, last in Time & leave (design §1.2 places it after Working schedules; the indexes between are taken);
+  - no demo shift is seeded;
+  - tooling: an offline client spec (`server: false`) run against a phase worktree's runtime finds no `/files/` (the runtime's parent
+    is the repo only when it holds `crates/` or `Cargo.toml`), so the Projects client regressions fail there and pass on master's
+    runtime or a copy whose parent has the marker.
+- For the lead:
+  - budget share: mr-mantle about 1.4 s (ShiftRoster); mr-boss about 0.6 s (PeopleRoster 0.33 s, PeopleAccess's feature 0.30 s); the
+    client walk unchanged; ProjectsPlanningResponses' time unchanged;
+  - merge hot spots: mr-mantle `Schedules.js` (`plannedIntervals` factored out of `scheduledDays`, the overlay, the exports),
+    `ResourceServices.xml` (`get#PartyCapacity`'s description, comment and holiday line), `Leave.js` (the module value exports
+    `colleaguesOf`), `ScheduleServices.xml` (the header and the services appended), `PeopleScheduleEntities.xml` (the entity appended);
+    mr-boss `screen/Projects/WorkItems/Timeline.qvue` (the resource mode rewritten: its template block, the r* computed and methods, the
+    data, the watchers, the styles), `screen/Manufacturing/Planning/ProductionSchedule.xml`, `test/client/Projects/ProjectsPlanningResponses.spec.js`,
+    `data/BossSetupData.xml` (`BOSS_PPL_SCHEDULES`' pattern; the P14 block appended at the end), `screen/People.xml` (the header, the key
+    `g h`, the topic), `screen/People/Time.xml` (the header), `TeamCalendar.xml`, `TeamCalendarTui.xml`, `screen/Shared/PeopleSelfService.xml`,
+    `People.js` (`areas`' comment, `linkPaths`, `selfServiceContext`), `ContextServices.xml`, `test/People/PeopleSpecLib.js` (the Time
+    menus, keys), `PeopleAccess.spec.js` (the header, the appended feature), the inventories, design-people (header, §1.2, §3, §6, §13,
+    §15), design-projects (header, §5), design-manufacturing (ProductionSchedule), design-crosscut CX-SYNC;
+  - acceptance to run with the full suites: PeopleRosterUsable (new) and Manufacturing's ManufacturingScheduleWalk (its component
+    changed under it);
+  - for the user's call: whether rostering needs a permission of its own (the first finding); nothing else waits on the user.
+
 ### P15 — Expense claims and advances
 
 Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDetail (claims); PE-13, PE-24

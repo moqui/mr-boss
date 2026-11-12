@@ -48,6 +48,10 @@ are new records (`AttendancePunch`, design-people §14.2 "Attendance punch captu
 Projects' work-time clock (a time entry on a work item), which stays blank as before (impl-projects §7); their Implemented in is in
 usl-inventory's People rows.
 
+**People P14 (Nov 12, 2026):** no baseline form is mapped to ShiftRoster, its terminal twin or its print, or to SelfService's My
+shifts: shifts are new records (`ShiftAssignment`, design-people §6 ShiftRoster); their Implemented in is in usl-inventory's People
+rows.
+
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own
 record (`LeaveRequest`).

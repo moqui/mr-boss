@@ -16,9 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     Commons Calendar component (screen/Commons/Calendar.qvue) in its resource mode, read only, with the transitions it calls answered
     by mantle.humanres.LeaveServices.get#TeamAbsences: who is out among the people the user sees in People (their own leave and their
     colleagues', the people sharing a department, team or manager with them, a manager's reports', an HR reader's employers'), each approved absence as "{person} · Out" (a morning or an afternoon said so),
-    never its leave type, its reason or a refused request; one the user reads opens LeaveRequestDetail. Nothing moves or is edited
-    here: changes are the request's. The same absences are the Team absence CalDAV collection (read only, CX-SYNC). Shifts join with
-    P14. The terminal: an agenda of the next two weeks (TeamCalendarTui). Every People user's and a self-service employee's (the time
+    never its leave type, its reason or a refused request; one the user reads opens LeaveRequestDetail. P14: the published shifts of
+    the same people (mantle.humanres.ScheduleServices.get#TeamShifts: "{person} · Shift" with its work location, never a draft), as
+    work hours. Nothing moves or is edited here: changes are the request's and the roster's. The same absences are the Team
+    absence CalDAV collection, a worker's own shifts My shifts (read only, CX-SYNC). The terminal: an agenda of the next two weeks
+    (TeamCalendarTui). Every People user's and a self-service employee's (the time
     area's own grant). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Team calendar" default-menu-index="6" menu-image="sym_o_calendar_month" menu-image-type="icon"
@@ -33,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
             ec.message.clearErrors()
             ec.web.sendJsonResponse({calendarList: [], defaultCalendarId: null, defaults: out.defaults || {}, timeZone: out.timeZone,
                 todayText: out.todayText, nowText: out.nowText, me: out.me, roomOptions: [], failedSources: [],
-                resource: {title: ec.l10n.localize('Who is out'), readOnly: true}})
+                resource: {title: ec.l10n.localize('Who is out and on shift'), readOnly: true}})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
@@ -42,11 +44,16 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('mantle.humanres.LeaveServices.get#TeamAbsences').parameters({start: start || '', end: end || ''}).call() || {}
             const failed = ec.message.hasError()
             ec.message.clearErrors()
+            // P14: the published shifts of the same people, each a source of its own (one that fails leaves the other)
+            const shifts = ec.service.sync().name('mantle.humanres.ScheduleServices.get#TeamShifts').parameters({start: start || '', end: end || ''}).call() || {}
+            const shiftsFailed = ec.message.hasError()
+            ec.message.clearErrors()
             const detail = '/qapps/People/Time/LeaveRequestDetail?leaveRequestId='
-            ec.web.sendJsonResponse(failed ? {eventList: [], failedSources: ['absences'], skippedCalendarIdList: []} : {
-                eventList: Array.from(out.eventList || []).map(event => Object.assign({}, event,
-                    {url: event.openable ? detail + encodeURIComponent(event.leaveRequestId) : null})),
-                failedSources: [], skippedCalendarIdList: []})
+            const absences = failed ? [] : Array.from(out.eventList || []).map(event => Object.assign({}, event,
+                {url: event.openable ? detail + encodeURIComponent(event.leaveRequestId) : null}))
+            const shiftEvents = shiftsFailed ? [] : Array.from(shifts.eventList || []).map(event => Object.assign({}, event, {url: null}))
+            ec.web.sendJsonResponse({eventList: absences.concat(shiftEvents),
+                failedSources: (failed ? ['absences'] : []).concat(shiftsFailed ? ['shifts'] : []), skippedCalendarIdList: []})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>

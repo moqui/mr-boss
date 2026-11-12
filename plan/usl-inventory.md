@@ -604,6 +604,12 @@ the screens that call it.
 | AttendanceServices | approve#Correction, refuse#Correction | People/Approvals | People/Approvals (the PeopleAttendanceApproval topic's approve and refuse, through Commons' Notifications) (People P13) |
 | AttendanceServices | preview#Import, import#Records, get#Import | People/Time/TimeImport | People/Time/TimeImport (FileAndMapping, ImportResults) (People P13) |
 | AttendanceServices | find#ImportRuns | — (Admin's Imports) | the time-and-attendance transfer target's findService (TransferTarget timeAndAttendance), Admin's Imports opening People/Time/TimeImport (People P13) |
+| ScheduleServices | get#Roster | People/Time/ShiftRoster | People/Time/ShiftRoster (Roster: the shared timeline's lanes and bars, through its schedule transition), ShiftRosterTui and ShiftRosterPrint (template/PeopleRoster.xml, a person and day table) (People P14) |
+| ScheduleServices | store#Shift | People/Time/ShiftRoster | People/Time/ShiftRoster (AssignShift: the timeline's dialog, preview, Save shift and Remove shift, through moveShift); ShiftRosterTui (Shift, its preview box, Save shift, Remove shift) (People P14) |
+| ScheduleServices | publish#Shifts | People/Time/ShiftRoster | People/Time/ShiftRoster and ShiftRosterTui (Publish; the PeopleShiftChange notice) (People P14) |
+| ScheduleServices | get#MyShifts | Shared/PeopleSelfService (MySummary's next shift) | Shared/PeopleSelfService (My shifts) (People P14) |
+| ScheduleServices | get#TeamShifts | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui (the published shifts beside the absences) (People P14) |
+| ScheduleServices | get#ShiftProjection | — (CalDAV, CX-SYNC) | the My shifts projected collection (CalendarProjection PeopleMyShifts) (People P14) |
 
 ## Ledger (81 services)
 
@@ -1568,7 +1574,7 @@ Existing capacity service mapped by the People design (Oct 31, 2026); source ver
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders | People/Time/WorkingScheduleDetail (Capacity preview, through ScheduleServices.get#CapacityPreview); Projects/Resources/PersonDetail and TeamPlanner and the timesheets' expected hours (get#TeamPlan, TimesheetServices.get#WeekDays), a People working schedule read first (People P9, F23) |
+| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders | People/Time/WorkingScheduleDetail (Capacity preview, through ScheduleServices.get#CapacityPreview); Projects/Resources/PersonDetail and TeamPlanner and the timesheets' expected hours (get#TeamPlan, TimesheetServices.get#WeekDays), a People working schedule read first (People P9, F23), a published shift's hours in place of it on its day (People P14) |
 
 ## General (2 services)
 

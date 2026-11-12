@@ -30,7 +30,9 @@ along with this software (see the LICENSE.md file). If not, see
     requests, when the time area opens to them). P13: the Clock (template/PeopleClock.xml: the user's own employments with clocking
     on, mantle.humanres.AttendanceServices get#MyClock and record#Punch, which take no party; the worker is the session's), shown only
     where an employment has clocking on, and then the page's primary action in place of Open my employee record (design §3
-    SelfService); My attendance links People's Attendance. Payslips (P26) and claims (P15) join with their phases. -->
+    SelfService); My attendance links People's Attendance. P14: My shifts, the user's own published shifts of the next two weeks
+    (mantle.humanres.ScheduleServices.get#MyShifts, which takes no party), shown when they have any, linking the team calendar.
+    Payslips (P26) and claims (P15) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -96,6 +98,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="clocking" from="!!myClock?.clocking"/>
+        <!-- P14: the user's own published shifts of the next two weeks (get#MyShifts takes no party) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.ScheduleServices.get#MyShifts" out-map="myShifts" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="shiftRows" from="Array.from(myShifts?.shifts || [])"/>
+        <set field="shiftEmployers" from="new Set(shiftRows.map(row => row.organizationPartyId)).size"/>
     </actions>
 
     <widgets>
@@ -296,6 +305,31 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="No leave asked for yet." type="p" style="m-muted q-pa-md" condition="!leaveRequestRows.length"/>
                     </box-body-nopad>
                 </container-box>
+
+                <!-- P14: My shifts, the user's published shifts of the next two weeks, shown when they have any -->
+                <section name="MyShiftsSection" condition="shiftRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My shifts"/>
+                            <box-toolbar>
+                                <link url="${links.teamCalendarUrl}" url-type="plain" text="Team calendar" link-type="anchor"
+                                        condition="links?.teamCalendarUrl"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="MyShifts" list="shiftRows" skip-form="true" paginate="false">
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                    <field name="hoursText" align="right"><default-field title="Hours"><display/></default-field></field>
+                                    <field name="organizationName" hide="shiftEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="whenText"/><field-ref name="facilityName"/></column>
+                                        <column><field-ref name="hoursText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <section-include name="EmergencyContacts" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
             </widgets>

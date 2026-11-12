@@ -37,7 +37,7 @@ function planningPage(kind) {
             const name = url.split('/').pop(); calls.push({name,params:options.params});
             if (name === 'backlog') return Promise.resolve({json:{backlog}});
             if (name === 'timeline') return Promise.resolve({json:{timeline}});
-            if (name === 'schedule') return Promise.resolve({json:{}});
+            if (name === 'schedule') return Promise.resolve({json:{resource:{moveTransition:'moveOperation',decideTransition:'decideOverride'}}});
             return new Promise((resolve,reject) => pending.push({name,params:options.params,resolve,reject}));
         };
         fetch('/files/runtime/component/mr-boss/screen/Projects/WorkItems/${kind}.qvue').then(response => response.text()).then(text => {
@@ -163,31 +163,31 @@ feature("Manufacturing previews remain attached to their operation and submitted
         page.evaluate(() => {
             const screen = vm.$refs.screen
             vm.currentPathList = ["Manufacturing", "Planning", "ProductionSchedule"]
+            // the mount names its transitions in its schedule answer's resource (impl-people P14, F68)
+            screen.rMeta = {resource: {moveTransition: "moveOperation", decideTransition: "decideOverride"}}
             screen.sched = {
                 fromText: "2026-11-09 00:00",
                 thruText: "2026-11-11 00:00",
                 nowText: "2026-11-09 08:00",
                 laneList: [
-                    {facilityId: "WC-A", facilityName: "Center A"},
-                    {facilityId: "WC-B", facilityName: "Center B"}
+                    {laneId: "WC-A", laneName: "Center A"},
+                    {laneId: "WC-B", laneName: "Center B"}
                 ],
-                operationList: []
+                barList: []
             }
             screen.rOpenMove({
-                workEffortId: "OP-A",
-                operationName: "Operation A",
-                facilityId: "WC-A",
+                barId: "OP-A",
+                title: "Operation A",
+                laneId: "WC-A",
                 startText: "2026-11-09 08:00",
-                expectedRevision: 1,
-                expectedRunRevision: 1
+                moveParameters: {operationWorkEffortId: "OP-A", expectedRevision: "1", expectedRunRevision: "1"}
             })
             screen.rOpenMove({
-                workEffortId: "OP-B",
-                operationName: "Operation B",
-                facilityId: "WC-B",
+                barId: "OP-B",
+                title: "Operation B",
+                laneId: "WC-B",
                 startText: "2026-11-09 09:00",
-                expectedRevision: 2,
-                expectedRunRevision: 2
+                moveParameters: {operationWorkEffortId: "OP-B", expectedRevision: "2", expectedRunRevision: "2"}
             })
             answer("moveOperation", {preview: {facilityName: "Wrong old target", refusals: [], conflicts: []}})
             return true
@@ -313,20 +313,21 @@ feature("Manufacturing writes preserve target and decision text edited after sub
         page.evaluate(() => {
             const screen = vm.$refs.screen
             vm.currentPathList = ["Manufacturing", "Planning", "ProductionSchedule"]
+            // the mount names its transitions in its schedule answer's resource (impl-people P14, F68)
+            screen.rMeta = {resource: {moveTransition: "moveOperation", decideTransition: "decideOverride"}}
             screen.sched = {
                 fromText: "2026-11-09 00:00",
                 thruText: "2026-11-11 00:00",
                 nowText: "2026-11-09 08:00",
-                laneList: [{facilityId: "WC-A", facilityName: "Center A"}],
-                operationList: []
+                laneList: [{laneId: "WC-A", laneName: "Center A"}],
+                barList: []
             }
             screen.rOpenMove({
-                workEffortId: "OP-A",
-                operationName: "Operation A",
-                facilityId: "WC-A",
+                barId: "OP-A",
+                title: "Operation A",
+                laneId: "WC-A",
                 startText: "2026-11-09 08:00",
-                expectedRevision: 1,
-                expectedRunRevision: 1
+                moveParameters: {operationWorkEffortId: "OP-A", expectedRevision: "1", expectedRunRevision: "1"}
             })
             answer("moveOperation", {preview: {facilityName: "Center A", refusals: [], conflicts: []}})
             return true
@@ -356,7 +357,7 @@ feature("Manufacturing writes preserve target and decision text edited after sub
         )
         page.evaluate(() => {
             const screen = vm.$refs.screen
-            screen.rOpenDecide({scheduleChangeId: "CHANGE-A"}, "refuse")
+            screen.rOpenDecide({noticeId: "CHANGE-A", decideParameters: {scheduleChangeId: "CHANGE-A"}}, "refuse")
             screen.decide.reason = "Submitted reason"
             window.submittedDecisionKey = screen.decide.key
             screen.rDecide()

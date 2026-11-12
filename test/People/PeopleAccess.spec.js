@@ -37,6 +37,9 @@
 // P13: the employee's clock on SelfService under Commons by its own grant (BOSS_PPL_CLOCK_SELF; the reader refused the punch with
 // the same parameters), Time import HR's (the reader, the manager and the employee refused the screen; the reader refused the import
 // with the parameters HR is answered, Services' employer refused to Retail's HR).
+// P14: the Shift roster HR's and the managers' (the reader and the employee refused the screen), a shift of Tomas rostered by his
+// manager (the reader refused with the same parameters, Services' employee refused to Retail's HR), and the employee's own shifts
+// through get#MyShifts by its own grant (BOSS_PPL_SHIFTS_SELF).
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1011,6 +1014,49 @@ feature(
                     readerImport: "PERMISSION_DENIED",
                     hrOther: "ORGANIZATION_DENIED"
                 }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "the shift roster: HR's and the managers' screen; Tomas's shift rostered by his manager, the reader refused with the same parameters, Services' employee refused to Retail's HR; the employee's own shifts by their own grant",
+    {
+        when() {
+            const S = "mantle.humanres.ScheduleServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            const day = ec.l10n.format(new Date(Date.now() + 30 * 86400000), "yyyy-MM-dd", null, "America/Chicago")
+            const shift = {
+                partyRelationshipId: ids.employmentId,
+                startText: day + " 09:00",
+                endText: day + " 17:00",
+                timeZone: "America/Chicago"
+            }
+            const codes = {
+                manager: code(asUser(users.manager, () => system(() => refusal(S + "store#Shift", shift)))),
+                reader: code(asUser(users.reader, () => system(() => refusal(S + "store#Shift", shift)))),
+                hrOther: code(
+                    asUser(users.hr, () =>
+                        system(() =>
+                            refusal(S + "store#Shift", Object.assign({}, shift, {partyRelationshipId: ids.otherEmploymentId}))
+                        )
+                    )
+                ),
+                employeeShifts: code(asUser(users.employee, () => refusal(S + "get#MyShifts", {})))
+            }
+            for (const user of [users.manager, users.hr]) {
+                const opened = screenRefusal(user, "Time/ShiftRoster")
+                if (opened) problems.push(`${user}'s ShiftRoster: ${opened}`)
+            }
+            for (const user of [users.reader, users.employee]) {
+                const refused = screenRefusal(user, "Time/ShiftRoster")
+                if (!unauthorized(refused)) problems.push(`${user} opens ShiftRoster: ${refused || "opened"}`)
+            }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes == {manager: "accepted", reader: "PERMISSION_DENIED", hrOther: "RECORD_UNAVAILABLE", employeeShifts: "accepted"}
             problems.join("\n") == ""
         }
     }

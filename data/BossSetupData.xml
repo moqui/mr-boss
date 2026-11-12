@@ -5261,7 +5261,8 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_PPL_SCHEDULES" description="People working schedules">
-        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail)\.xml"
+        <!-- P14: the shift roster, its terminal twin and its print, HR's and the managers' as the working schedules -->
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail|ShiftRoster|ShiftRosterTui|ShiftRosterPrint)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_PPL_SCHEDULES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
@@ -5386,4 +5387,19 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="PeopleAttendanceApproval"
             linkTemplate="/qapps/People/Time/Attendance?attendanceDayId=${attendanceDayId}"/>
+    <!-- impl-people P14 (design-people §6 ShiftRoster, §3 SelfService, §13 TeamCalendar): the Shift roster is HR's and the managers'
+        (BOSS_PPL_SCHEDULES above: its screens are in that group's pattern), denied to the root user group and to self-service; what
+        each rosters is Mantle's ScheduleServices' check (a manager their live reports at the line's employers, an HR editor the
+        employer's employees). A worker's published shifts are on the team calendar (the time area's grant opens it and its
+        transitions to every People user and a self-service employee) and on SelfService, whose own grant is non-inheritable, so its
+        call of get#MyShifts (no party: the caller's own alone) needs its own row here. The worker's notice (Mantle's
+        PeopleShiftChange) opens the team calendar on the first day it names. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_SHIFTS_SELF" description="People own shifts">
+        <artifacts artifactName="mantle.humanres.ScheduleServices.get#MyShifts" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_SHIFTS_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleShiftChange" linkTemplate="/qapps/People/Time/TeamCalendar?date=${firstDay}"/>
 </entity-facade-xml>
