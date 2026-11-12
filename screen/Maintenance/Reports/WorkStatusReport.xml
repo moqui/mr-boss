@@ -42,11 +42,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, assetId:assetId || null,
                 teamPartyId:teamPartyId || null, sourceEnumId:sourceEnumId || null, maintenanceKindEnumId:maintenanceKindEnumId || null,
                 fromDate:fromDate || null, thruDate:thruDate || null, groupBy:groupBy || null}"/>
-        <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" out-map="report" transaction="force-new"
-                ignore-error="true" in-map="Object.assign({}, options, {measure:measure || null, groupKey:groupKey || null,
-                    pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true})"/>
-        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- read through AdminCalls (a service-call with ignore-error clears the message), so a refusal shows its own reason -->
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport',
+                Object.assign({}, options, {measure:measure || null, groupKey:groupKey || null, pageIndex:pageIndex, pageSize:pageSize,
+                    pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true}), 'This report is not available to you.')"/>
+        <set field="report" from="called.out"/>
+        <set field="reportError" from="called.failure"/>
         <set field="reportFound" from="!!report?.summary"/>
         <set field="summary" from="report?.summary || {}"/>
         <set field="groupRows" from="report?.groupList || []"/>

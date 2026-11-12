@@ -14,6 +14,7 @@ const {ids, users, asUser, system, invoke, page, shell} = lib
 const state = {}
 const M = "mantle.work.MaintenanceServices."
 const ASSET = "mantle.product.asset.Asset"
+const MEDIA_NODE = "boss-maintenance-stack-walk"
 let keySeq = 0
 const key = prefix => prefix + "-" + Date.now() + "-" + ++keySeq
 
@@ -54,11 +55,40 @@ spec({
                 })
             }
             state.vendorPartyId = partyId
+            // a CallMediaNode row stands in for a media node (as Comms' CallTarget spec), so the guest's join opens a session; no
+            // media flows
+            call("org.moqui.call.CallServices.register#MediaNode", {instanceId: MEDIA_NODE, mediaAddress: "127.0.0.1:10000"})
+            // the planner invites by email from their own address, which the demo's planner has none of: one for the walk, put
+            // back at the end
+            const account = ec.entity.find("moqui.security.UserAccount").condition("userId", "BOSS_MNT_PLANNER").one()
+            state.plannerEmail = account.emailAddress || null
+            if (!state.plannerEmail) {
+                account.emailAddress = "maint.planner@ziziwork.example"
+                account.update()
+            }
         })
     },
     cleanupSpec() {
         ec.message.clearErrors()
         login("john.doe")
+        system(() => {
+            for (const session of Array.from(
+                ec.entity
+                    .find("moqui.call.CallSession")
+                    .condition("mediaNodeId", MEDIA_NODE)
+                    .condition("statusId", "!=", "CssEnded")
+                    .list()
+            )) {
+                session.statusId = "CssEnded"
+                session.update()
+            }
+            ec.entity.find("moqui.call.CallMediaNode").condition("instanceId", MEDIA_NODE).deleteAll()
+            const account = ec.entity.find("moqui.security.UserAccount").condition("userId", "BOSS_MNT_PLANNER").one()
+            if (account && !state.plannerEmail) {
+                account.emailAddress = null
+                account.update()
+            }
+        })
     }
 })
 
@@ -80,15 +110,18 @@ feature("Assist offers the compressor's history from its page, and its summary i
                 .condition({recordEntityName: ASSET, recordId: ids.compressorId})
                 .count()
         )
-        return {providers, history, logged, notes}
-    },
-    then({providers, history, logged, notes}) {
-        Array.from(providers.assistPrompts || []).some(
-            prompt =>
-                String(prompt.url || prompt.screen || "").includes("Equipment/EquipmentDetail") && /history/i.test(prompt.label)
+        // the chip on the compressor's page and the answer actions, read off the shell's lists here (Array.from and JSON.parse in a
+        // then block's condition answered [] and {})
+        const historyPrompt = Array.from(providers.assistPrompts || []).some(
+            prompt => String(prompt.url || "").includes("Equipment/EquipmentDetail") && /history/i.test(prompt.label)
         )
-        Array.from(providers.responseActions || []).some(action => action.label == "Log as note")
-        Array.from(providers.responseActions || []).some(action => action.label == "Send as message")
+        const actionLabels = Array.from(providers.responseActions || []).map(action => String(action.label))
+        return {historyPrompt, actionLabels, history, logged, notes}
+    },
+    then({historyPrompt, actionLabels, history, logged, notes}) {
+        historyPrompt == true
+        actionLabels.includes("Log as note")
+        actionLabels.includes("Send as message")
         history.errors.length == 0
         history.output.includes(ids.plannedOrderId)
         !history.output.includes("$")
@@ -147,13 +180,14 @@ feature("Report a problem is driven through the terminal client, from Commons an
                 .condition("requestId", chatRequestId || "_NA_")
                 .count()
         )
-        return {form, reported, actions, prefilled, fromChat, chatRequestId, filed}
+        const reportedRequestId = JSON.parse(reported.output || "{}").requestId
+        return {form, reported, reportedRequestId, actions, prefilled, fromChat, chatRequestId, filed}
     },
-    then({form, reported, actions, prefilled, fromChat, chatRequestId, filed}) {
+    then({form, reported, reportedRequestId, actions, prefilled, fromChat, chatRequestId, filed}) {
         form.errors.length == 0
         form.output.includes("What is wrong")
         reported.errors.length == 0
-        !!JSON.parse(reported.output || "{}").requestId
+        !!reportedRequestId
         actions.some(action => action.name == "maintenance.reportProblem" && action.kind == "screen")
         prefilled.errors.length == 0
         prefilled.output.includes("Room 101's projector will not turn on")
@@ -258,14 +292,14 @@ feature("a vendor's expert invited to a video call about the work order joins it
 
 feature("Admin's Exports lists the work order and booking lists in Maintenance's own place", {
     when() {
-        return asUser("admin.data", () => invoke("org.moqui.admin.DataTransferServices.find#ExportRuns").targetList || [])
+        const targets = Array.from(
+            asUser("admin.data", () => invoke("org.moqui.admin.DataTransferServices.find#ExportRuns").targetList || [])
+        )
+        // each target's id and owner route, as then reads them (a block's value reaches then only as an object)
+        return {routes: targets.map(target => target.targetId + " " + target.ownerRoute)}
     },
-    then(targets) {
-        Array.from(targets).some(
-            target => target.targetId == "maintenanceWorkOrderList" && target.ownerRoute == "maintenanceWorkOrders"
-        )
-        Array.from(targets).some(
-            target => target.targetId == "maintenanceBookingList" && target.ownerRoute == "maintenanceBookingRequests"
-        )
+    then({routes}) {
+        routes.includes("maintenanceWorkOrderList maintenanceWorkOrders")
+        routes.includes("maintenanceBookingList maintenanceBookingRequests")
     }
 })

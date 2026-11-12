@@ -19,7 +19,12 @@ function post(user, path, parameters) {
             .render(path, parameters, "post")
         const errors = Array.from(result.errorMessages || [])
         ec.message.clearErrors()
-        return {status: result.status, errors, location: String(result.header("Location") || ""), output: String(result.output || "")}
+        return {
+            status: result.status,
+            errors,
+            location: String(result.header("Location") || ""),
+            output: String(result.output || "")
+        }
     })
 }
 // A Mantle read as the user under the root's inheritable grant (the artifact check aside; the service's own scope decides).
@@ -53,9 +58,7 @@ feature("the resource administrator registers a compressor in a room and records
             facilityId: ids.mechanicalRoomId,
             warrantyThruDate: "2027-12-31"
         })
-        const created = system(() =>
-            ec.entity.find("mantle.product.asset.Asset").condition("serialNumber", "AC200-WALK-9").one()
-        )
+        const created = system(() => ec.entity.find("mantle.product.asset.Asset").condition("serialNumber", "AC200-WALK-9").one())
         state.assetId = created?.assetId
         const meter = post(users.resources, "Equipment/EquipmentDetail/Meters/recordMeter", {
             assetId: state.assetId,
@@ -142,7 +145,11 @@ feature("the resource administrator changes a custodian from a date, and prints 
             )
         )
         const tags = asUser(users.resources, () =>
-            page("Equipment/AssetTags", {assetIds: [state.assetId, ids.compressorId].join(","), lastStandalone: "true"}, "html-print")
+            page(
+                "Equipment/AssetTags",
+                {assetIds: [state.assetId, ids.compressorId].join(","), lastStandalone: "true"},
+                "html-print"
+            )
         )
         const svgCount = (tags.output.match(/<svg/g) || []).length
         return {later, changed, holders, tags, svgCount}
@@ -160,16 +167,33 @@ feature("the resource administrator changes a custodian from a date, and prints 
 feature("a scanned tag opens EquipmentDetail for a reader; Retail's planner sees none of it", {
     when() {
         const link = "/qapps/Maintenance/Equipment/EquipmentDetail?assetId=" + state.assetId
-        const scanned = asUser(users.reader, () => invoke("ironstone.maintenance.AccessServices.resolve#EquipmentScan", {scanText: link}))
-        const opensDetail = post(users.reader, "Equipment/Find/openScanned", {assetId: state.assetId})
-        const detail = asUser(users.reader, () => page("Equipment/EquipmentDetail/Identity", {assetId: state.assetId, lastStandalone: "true"}))
+        const scanned = asUser(users.reader, () =>
+            invoke("ironstone.maintenance.AccessServices.resolve#EquipmentScan", {scanText: link})
+        )
+        // posted under the web root, as the browser posts it: the transition answers Maintenance's shared link (//Maintenance/...),
+        // which names the app from the apps root
+        const opensDetail = asUser(users.reader, () => {
+            const result = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .render("apps/Maintenance/Equipment/Find/openScanned", {assetId: state.assetId}, "post")
+            const errors = Array.from(result.errorMessages || [])
+            ec.message.clearErrors()
+            return {errors, location: String(result.header("Location") || "")}
+        })
+        // with EquipmentDetail's header (page's two last levels), which names the equipment
+        const detail = asUser(users.reader, () => page("Equipment/EquipmentDetail/Identity", {assetId: state.assetId}))
         const retailScan = asUser(users.retailPlanner, () =>
             invoke("ironstone.maintenance.AccessServices.resolve#EquipmentScan", {scanText: link})
         )
         const retailList = asUser(users.retailPlanner, () => page("Equipment/Find", {text: "compressor"}))
-        const retailFacilities = read(users.retailPlanner, "mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {
-            text: "Room"
-        })
+        const retailFacilities = read(
+            users.retailPlanner,
+            "mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities",
+            {
+                text: "Room"
+            }
+        )
         const retailDetail = asUser(users.retailPlanner, () => page("Equipment/EquipmentDetail", {assetId: state.assetId}))
         return {scanned, opensDetail, detail, retailScan, retailList, retailFacilities, retailDetail}
     },

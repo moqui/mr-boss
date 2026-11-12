@@ -8,6 +8,8 @@
 const lib = ec.resource.script("component://mr-boss/test/ServerStaticLib.js")
 const maintenance = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 let screens, repair
+const mountPaths = new Set()
+const isMounted = path => mountPaths.has(path)
 
 // [app, path, marked] of a shared screen mounted under Maintenance, unless it is a .qvue screen or a placeholder (as
 // ServerStaticLib.screens leaves those out)
@@ -29,6 +31,7 @@ spec({
             if (row && !seen.has(path)) {
                 screens.push(row)
                 seen.add(path)
+                mountPaths.add(path)
             }
             // a mount's tabs its menu shows: a file of the mount's own directory, or another shared screen it mounts
             for (const tab of maintenance.mountTabs(path, maintenance.sweepParameters(path))) {
@@ -40,6 +43,7 @@ spec({
                 if (tabRow) {
                     screens.push(tabRow)
                     seen.add(tab)
+                    mountPaths.add(tab)
                 }
             }
         }
@@ -54,7 +58,15 @@ function sharedTab(location, tabName) {
 
 feature("the full check of every Maintenance XML screen, shared mount and mounted tab; each one marked server-static is clean", {
     when() {
-        return {rows: lib.check(screens, (app, path) => maintenance.sweepParameters(path, repair))}
+        // a shared tab its owner marked server-static (FacilityDetail's Files and Conversation) is checked as the qvt client loads it,
+        // its own level alone (lastStandalone): its parent's header, rendered with it in a full-path html render, is no part of
+        // its template, and a link to another app's route in that header resolves only under the web root
+        const markedMounts = new Set(screens.filter(([, path, marked]) => marked && isMounted(path)).map(([, path]) => path))
+        return {
+            rows: lib.check(screens, (app, path) =>
+                Object.assign(markedMounts.has(path) ? {lastStandalone: "true"} : {}, maintenance.sweepParameters(path, repair))
+            )
+        }
     },
     then({rows}) {
         rows.length > 70
