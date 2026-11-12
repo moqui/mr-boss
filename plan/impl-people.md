@@ -5272,6 +5272,266 @@ Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends sta
   half): an employee files a case; only the intake handler sees it, in the list, the palette, search, files and
   Assist; assigning a task to IT opens nothing of the case to its assignee.
 
+**Built Nov 12 (P21).** mr-mantle a82a3456, mr-boss (branch `ppl/p21`).
+- Checked first (the code over the plan): F19 (Shared/RequestDetail branches by `appRoot`, each app's section in a template, the
+  Commerce and Purchasing pattern), F20 (RequestTriageNotice, SupportCaseRule, SupportCaseCustomerRule and SupportCaseSlaRule on
+  every request; `complete#RequestFromWork` knowing no HR type), P2's F66 (`get#RecordLinkInfo`'s visibility branches, RecordFiles'
+  `get#ContentType`, the Records drive's folder map), P7's `hiddenTaskIds` and its seven call sites (each prefiltering on
+  `ChecklistStep.isProtected`), P12's opt-out and its uncovered paths (a service tool's result, the search index, a `section-include`
+  of an opted-out section, a `go` query), P16's `get#CaseResponse` fix (one app's service reading another's records). A survey of
+  every reader of requests found a case would have surfaced, with its name or comments, through: Commons' request list, Home's
+  assigned requests, request detail and access check; a contact's Requests tab; a call's screen pop; a task's linked records
+  (Commons' TaskDetail, Projects' WorkItemDetail, Today's record caption); Admin's open assignments; `lookup#ById` (the palette's
+  Go to id, Comms' link search, Assist mentions); `search#Universal` and the MantleRequest and MantleCommunicationEvent documents
+  (which index comment bodies); a party's Chatter timeline (`find#PartyCommunicationEvents`, every note's text); the record
+  notices (`notify#RecordMention`, `notify#RecordFollowers`: the record's name and the start of the text, to anyone made a
+  follower); `get#RecordLinkInfo`'s staff, no-organization-filter and authorization-off paths, and its communication event bypasses.
+  Customer Service, Commerce, Warehouse, Purchasing, Manufacturing and Insights read requests by a case profile, store, facility,
+  type or dataset a case never has. The data tool reads `moqui.basic` alone; no agent tool reads requests.
+- Mantle:
+  - `entity/PeopleCaseEntities.xml`: the type `RqtHrCase`, an Enumeration of its own type `RequestConfidentialType` (not a
+    `RequestType`: no request type list offers it and every type check that asks for a RequestType refuses it), and `PeopleCase`
+    (the employer, the employment, subject, details, the day, how to contact the employee, the outcome note, opted out of AI; an
+    operation key). The case's Request row says nothing: "Confidential case", no description, project, store, facility, category,
+    customer or organization party; its people are its RequestParty rows, the employee (Reporter) and the handlers (Assignee);
+  - `data/PeopleCaseSetupData.xml`: the topic `PeopleCaseUpdate` (no push, `titleTemplate` a fixed sentence: "A confidential case
+    was filed with you", "… assigned to you", "… you are on was updated") and the PartySetting type `PeopleCaseIntake` (the
+    employer's designated intake handlers, party ids);
+  - `RequestServices` (`PeopleCaseServices.xml`, included by `service-include`; `PeopleCases.js`): `create#PeopleCase`,
+    `find#PeopleCases`, `get#PeopleCase`, `change#PeopleCase`, `assign#PeopleCaseHandler`, `add#PeopleCaseTask`,
+    `check#PeopleCaseAccess`, `notify#PeopleCaseUpdate`, `get#CaseDocumentData` (their codes in the descriptions). A handler is an
+    Assignee of the case holding PEOPLE_CASE_HANDLE; filing needs a current employment of the employee's and no permission (as a
+    claim); the intake handlers must hold PEOPLE_CASE_HANDLE through an enabled account and work for the employer, never the
+    employee; the case's people follow it from filing, so a note tells them;
+  - the rule other readers apply, in `PeopleCases.js` (`caseIds`, `hiddenRequestIds`, `caseEvents`, `caseTaskIds`,
+    `protectedTaskIds`): `get#RecordLinkInfo` admits a case, its files (`RequestContent`) and a communication event filed on one
+    (the event or its thread's root, by RequestCommEvent or a CommunicationEventRecord) to its people alone, for every caller,
+    authorization disabled or not, ADMIN and the staff rule included, before the client and finance rules; a task linked to a case
+    to its current assignee alone, the same way. `Checklists.js protectedTaskIds` takes case tasks too, so the seven P7 call sites
+    (CalDAV's Tasks, `get#MyTasks`, `get#FullCalendarData`, Today, search, Commons' task list, the record rule) leave them out;
+  - the Request rules (F20): RequestTriageNotice, SupportCaseRule and SupportCaseSlaRule are conditioned on the type;
+    `notify#RequestTriage`, `ensure#CaseProfile` (`CONFIDENTIAL_CASE`, so SupportCaseCustomerRule and the message and work clock
+    rules find no profile) and `complete#RequestFromWork` leave a case alone; `create#Request` and `update#Request` refuse the type
+    (`CASE_TYPE_RESERVED`) and `update#Request` a case ("not found");
+  - the other readers: `notify#RecordMention` and `notify#RecordFollowers` send a case's notice on PeopleCaseUpdate to its people
+    alone; `follow#Record` refuses a follower who is not one of them; `find#PartyCommunicationEvents` leaves out a note filed on a
+    case; `search#Universal` drops a case and a note on one; `lookup#ById` finds no case; Today's record caption names no case;
+    MantleRequest and MantleCommunicationEvent have `get#CaseDocumentData` as their manual data service and a post-query
+    condition, so a case and its notes are never indexed; `save#RequestContentFile` keeps a case's files under `peoplecase/`, a
+    folder the Records drive does not map (as an employment's).
+- BOSS:
+  - Screens: `People/Employees/Grievances` (menu 4 of Employees, every People user's and a self-service employee's by
+    `BOSS_PPL_CASES_SELF`; the screen `ai-opt-out`): the user's cases (Show open, closed, all; phone columns; the state chip with its
+    tui text) and Raise a concern (SubmitCase, the primary); `People/Employees/RequestDetail`: Shared/RequestDetail with People's
+    branch (`template/PeopleCaseDetail.xml`, inside a section `ai-opt-out`, since a section-include does not carry an included
+    section's): the record header with one primary by state (Start, Resolve, Reopen; the employee's Withdraw), a handler's More
+    (Close without action, Add a handler, Remove a handler, Ask for work), the case, its people, the work asked of others, the
+    conversation (Chatter of the request) and its files; no shell record context. SelfService links Grievances ("Raise a concern");
+  - the People root's panels serve a case (and no other request) beside the HR hosts; the topic is declared there, its link
+    (BossSetupData) opens RequestDetail; RecordFiles' change right on a case is `check#PeopleCaseAccess`'s; `get#RecordLink` opens a
+    case under People for its people (`People.js caseLink`), else nowhere; Chatter's `send#Message` refuses a case;
+  - every other app leaves a case out for everyone: Commons' `get#RequestAccess` ("not available", as an RFQ, so Commons' and
+    Projects' request detail and services and Manufacturing's), `find#RequestRows`, Home's assigned requests, a contact's Requests
+    tab, a call's screen pop, Commons' TaskDetail and Projects' WorkItemDetail linked records, Admin's open assignments
+    (`Lifecycle.js`, an owner contract: design-admin's Offboarding preview says so);
+  - grants: `BOSS_PPL_CASES_SELF` (Grievances, Shared/RequestDetail and Shared/Chatter by location for `BOSS_PEOPLE_SELF`, on
+    `BOSS_PPL_FILES_SELF`'s ground); demo: Retail's intake handler is people.case (`BossPeopleDemoData.xml`); Services has none.
+- Specs: Mantle `test/request/PeopleCases` (5 features, 2.5 s feature time: filing with the intake handler, its people reading it
+  and the manager, HR without it, another employer's handler, ADMIN and the task's assignee refused its valid id, a retry, no
+  employment and no handler refused, the notice's fixed title and no push; no triage notice, case profile or completion from work,
+  the generic create and update refused; the record rule for the case, a note and a file with authorization disabled and a call
+  with no user, the note telling its people alone and absent from the timeline, no outside follower, the search documents left out
+  as the feed assembles them; the protected task out of CalDAV and other lists, its assignee refused the case; the moves at their
+  revision, the last handler kept, the withdrawal). BOSS `PeopleAccess` gains the case rule (0.5 s: the handler and employee read it,
+  the manager, HR, the People administrator and ADMIN refused with the same parameters; no Commons list, access check or lookup
+  holds it; RequestDetail's one qvt render as the handler inside the opt-out, and its html render as the employee, opened by their own
+  grant; Grievances by its own grant, refused another app's user; the Employees group with Grievances). Acceptance, written and not run:
+  `acceptance/People/PeopleCasesUsable` (3 features: Tomas raises a concern from Grievances; only people.case sees it, through the
+  list, the detail, its notes and files, and the manager, HR, the People administrator and ADMIN see nothing of it in Grievances,
+  RequestDetail, the record rule, Commons' list and detail, the lookup and search, nor an agent's render of the handler's page; the
+  handler asks IT for work, and IT reads the task and nothing of the case, the task out of their CalDAV and everyone else's reach).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle PeopleCases 5 of 5 (2.5 s); the
+  readers and Request rules it changed: CalendarChanges, CalendarServices, CommonsToday, ContactBooks, CrmMiscServices,
+  InboxThreads, InternalMessages, Mailboxes, MantleSearch, PeopleChecklists, PeopleDirectory, RecordLinks, RecordVisibility,
+  ReportLookups, StaffIdentity, SupportCases, SupportSla, UniversalSearch, WorkGitReview, WorkMyTasks, WorkProjectClients,
+  WorkProjectPlan, WorkProjectRequests, WorkProjectServices, WorkTimesheets, CaseFeedback, SupportAssignment, SupportChannels,
+  Recruiting, LeaveRequests (306 of 306), PurchaseRequests, RecordNotes, ReplenishmentRoutes, SupportRelations, WarehouseTransfers,
+  WorkPlanToCashBasicFlow, WorkTimeEntries, SupportKnowledge, SupportPortal, SupportReplies, SupportTemplates, SupportWarranty (136
+  of 136). BOSS PeopleAccess 23 of 23 (the new feature 0.5 s); the Commons, Comms, Projects, Purchasing, Customer Service,
+  Commerce, Warehouse, Manufacturing, Admin, Insights and People specs over the changed readers (AccountingAccess, AdminAccess,
+  AdminLifecycle, Calendar, Chat, Chatter, ClientBilling, CommerceAccess, CommonsSettings, CommsHome, Compose, Contacts,
+  CustomerServiceAccess, CustomerServiceCases, CustomerServiceChannels, CustomerServiceWarranty, EventDetail, Files,
+  InsightsRecords, ManufacturingAccess, ManufacturingDowntime, Notifications, PeopleAttendance, PeopleLeave, PeopleLifecycle,
+  PeopleSelfService, PeopleTime, PeopleEmployees, PeopleSkills, PeopleExpenses, PeopleRecruiting, ProjectDetail, ProjectRequests,
+  ProjectsAccess, PurchasingAccess, PurchasingRequests, PurchasingSourcing, QuickCreate, RecordFiles, Requests, Tasks, TodayPanel,
+  WarehouseAccess, WarehouseTransfers, WorkItemDetail, WorkItems: 482 of 482). `moqui lint --screens`: 136 flagged sites, none in
+  the changed screens; no TUI-text finding in them. Prettier clean on the new and changed JavaScript but People.js, which was not
+  clean on master (its additions are). Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- Inventories: usl-inventory's People rows gain the case services with their screens; ss-inventory notes no baseline form maps to
+  Grievances or People's RequestDetail.
+- Design edits: design-people (header, §4 Grievances and §13 RequestDetail as built), design-crosscut §3.11's People row,
+  design-admin's Offboarding preview (a case is no open assignment).
+- Findings (provisional, numbered by the lead):
+  - The intake handlers are designated by the employer's PartySetting `PeopleCaseIntake` (seeded for Retail in the demo); there is
+    no screen to set it until P29's Settings, and an employer with none refuses a filing (`NO_CASE_HANDLER`) rather than sending it
+    to every holder of PEOPLE_CASE_HANDLE there (ADMIN holds it, so "every holder" would make the instance administrator a handler).
+  - The phase's "usable when" says only the intake handler sees the case "in the list, the palette, search, files and Assist". As
+    built, the list, files and notes are its people's, and the palette, universal search, the id lookup, record-lookup and Assist
+    answer a case to nobody, its people included (design §2's Grievances and RequestDetail rows: no `Request requestId` exposed to
+    Assist, and Assist's search reuses the palette's rows). The acceptance test checks nobody else finds it there.
+  - The confidential type is an Enumeration of its own type, not a `RequestType`, so no type list or type check of another app
+    takes it; `Request.requestTypeEnumId`'s relationship names the Enumeration by id alone, so nothing else changes.
+  - A task linked to a case is reached only by its current assignee for every caller, authorization disabled too: stricter than
+    P7's protected tasks (whose rule holds with authorization on). Its assignee is told on PeopleTaskAssigned, whose link opens the
+    task in Commons, where its linked records leave the case out.
+  - A party's timeline drops a case's notes after its query's page, so that page can show fewer rows than its size.
+  - A message a case's people link to the case (Comms' Link to record) then follows the case: its own sender and recipients no
+    longer see it outside People. The participants decide that; linking is not refused.
+  - A Chatter or RecordFiles panel of a case requested under another root (Commons') still answers its people, by the record rule;
+    only People's screens link a case. The panel check of each other root is not changed.
+  - A handler who leaves keeps their Assignee row (reading needs PEOPLE_CASE_HANDLE as well, which an access end removes), Admin's
+    lifecycle does not move cases, and nothing re-routes a case whose only handler left: its employee still reads it and nobody
+    handles it. A re-route like P6's for approvals waits on the user's call.
+  - `get#RecordLinkInfo` on a communication event now reads its case links (up to three queries) for every caller.
+  - SupportCaseCustomerReply, SupportCaseSlaMessage and SupportCaseSlaWork still run on a case's messages and work; each finds no
+    case profile and does nothing.
+  - `BOSS_PPL_CASES_SELF` grants Shared/RequestDetail and Shared/Chatter by location (as `BOSS_PPL_FILES_SELF` grants RecordFiles),
+    so a self-service employee may open them under any root whose path admits it; what they show is decided per record.
+- For the lead:
+  - budget share: mr-mantle about 2.5 s (PeopleCases); mr-boss about 0.5 s (PeopleAccess's feature); no client spec;
+  - merge hot spots (P17 and P19 touch Approvals.js, People.js, People.xml, PeopleSpecLib.js, PeopleAccess.spec.js,
+    BossSetupData.xml, Approvals.xml and Employee360.xml): mr-mantle `service/mantle/party/CommunicationServices.xml`
+    (`get#RecordLinkInfo`'s case rule before the client rule, `protectedHidden`, the description; `find#PartyCommunicationEvents`,
+    `notify#RecordMention`, `notify#RecordFollowers`, `follow#Record`), `service/mantle/request/RequestServices.xml` (the guards in
+    create, update, triage, save of a file and complete from work; the includes at its end), `Checklists.js` (`protectedTaskIds`),
+    `service/mantle/work/TaskServices.xml`, `WorkEffortServices.xml`, `CalendarDavServices.xml`, `search/UniversalSearchServices.xml`,
+    `GeneralServices.xml`, `SupportCaseServices.xml`, `entity/Request.eecas.xml`, `data/MantleDocumentData.xml`,
+    `MantleDocumentWorkData.xml`; mr-boss `service/ironstone/people/People.js` (the grievances location, `grievancesOpen`,
+    `caseLink`, `selfServiceContext`, the exports), `ContextServices.xml` (self-service links), `screen/People.xml` (header, panel
+    check, topic), `screen/People/Employees.xml`, `screen/Shared/RequestDetail.xml` (the transition-includes, the People branch of
+    its actions, the wrapped section-include and RequestNotFound's condition), `screen/Shared/PeopleSelfService.xml`,
+    `data/BossSetupData.xml` and `data/BossPeopleDemoData.xml` (appended at their ends), `test/People/PeopleSpecLib.js` (the
+    Employees menus, the ids' end), `PeopleAccess.spec.js` (header, appended feature), `service/ironstone/commons/RequestServices.xml`,
+    `TaskServices.xml`, `ContactServices.xml`, `PaletteServices.xml`, `screen/Commons/Home.xml`, `comms/ComposeServices.xml`,
+    `projects/WorkItemServices.xml`, `shared/ChatterServices.xml`, `shared/RecordFilesServices.xml`, `admin/Lifecycle.js`, the
+    inventories, design-people (header, §4, §13), design-crosscut §3.11, design-admin;
+  - for the user's call: how an employer's intake handlers are designated (a setting, as built, or every case handler working
+    there) and what happens to a case whose last handler leaves; and whether a case's people should find it in the palette and
+    search (built: nobody does).
+
+**Review Nov 12 (P21).** A fresh review of `git diff master...ppl/p21` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 Grievances, §13 RequestDetail, crosscut §3.11, PE-01 and PE-21, confidentiality first and adversarially (as the manager,
+an HR officer without the case, the People administrator, ADMIN, a linked task's assignee, a colleague and other apps' staff, each
+with a valid id, through every app's request screens and services, the record rule, Chatter, RecordFiles, notices, search, the
+palette, Assist and the lifecycle); the user's three calls of Nov 12 recorded in §4; fixes committed apart per repository ("People
+P21 review: …"). Both branches were rebased onto master after P17's and P19's merges: mr-mantle with no conflict (P19's
+EventServices and CalendarServices changes untouched); mr-boss with BossPeopleDemoData (P19's fire warden course, then Retail's
+intake handler), BossSetupData (P17's offer topic and letter grant, P19's training topics and Assessment forms, then
+`BOSS_PPL_CASES_SELF` and the case topic), People.xml (header and topics), PeopleSelfService (My training, then Raise a concern),
+ContextServices and People.js (`trainingUrl`, then `grievancesUrl`), PeopleSpecLib (the course ids, then the handler), PeopleAccess
+(header, P17's and P19's features, then the case feature, appended), design-people's header and usl-inventory, each keeping both
+sides; the phase commits are now mr-mantle 5b92eeeb and mr-boss b58793c0. PeopleCases, Training, Offers, SupportCases and WorkProjectRequests (37 of 37) and PeopleAccess, Requests, ProjectRequests,
+CustomerServiceCases and PurchasingRequests (61 of 61) passed after it.
+- Checked and found sound:
+  - The case services take the caller's own party and never a supplied one: filing under a current employment of the caller's
+    (another's is RECORD_UNAVAILABLE), the intake handlers from the employer's setting, each eligible (an enabled account holding
+    PEOPLE_CASE_HANDLE, working for the employer, never the employee); a handler is an Assignee row and the permission, the
+    employee their Reporter row; anyone else, a missing case alike, is RECORD_UNAVAILABLE on get, change, assign, task and the
+    list's id; the moves name the revision, the last handler stays, the employee only withdraws.
+  - The record rule: `get#RecordLinkInfo` admits a case, its RequestContent and a note or message filed on it (the event or its
+    thread's root, by RequestCommEvent or CommunicationEventRecord) to its people alone before every other branch (staff, client,
+    ADMIN, authorization disabled, no user), and a task linked to a case to its current assignee alone; RecordFiles, Chatter's
+    reads, Comms' links, Commons' event and knowledge links and the Records drive below the manage level all go through it.
+  - Other apps (F20): RequestTriageNotice, SupportCaseRule and SupportCaseSlaRule are conditioned on the type alone (every other
+    request takes the same branch as before); `ensure#CaseProfile` answers CONFIDENTIAL_CASE, so the customer, message and work
+    clock rules find no profile; `notify#RequestTriage` and `complete#RequestFromWork` skip it; `create#Request` and
+    `update#Request` refuse the type, `update#Request` a case. Customer Service, Commerce, Purchasing, Warehouse, Manufacturing,
+    Insights (its RequestDetail source is the service clocks) and Projects (a project or a triaged RequestType) read requests by
+    something a case never has; Commons' and Projects' detail go through `get#RequestAccess`. Their specs pass unchanged.
+  - The AI opt-out: PeopleCase's subject, details, contact preference and outcome are `ai-opt-out`; Grievances is opted out as a
+    screen and RequestDetail's People branch as a section (an agent render runs nothing of it); the data tool reads no request
+    entity; MantleRequest and MantleCommunicationEvent mark a case and its notes out of the index (their manual data service and a
+    post-query condition), and `search#Universal` drops an older hit; the notice's title is a fixed sentence and holds no text.
+  - The palette, search, the id lookup, record-lookup and Assist answer no case for anyone (the user's call, as built); Today's
+    record caption, a party's timeline, Home, a contact's Requests tab, a call's screen pop, TaskDetail, WorkItemDetail and Admin's
+    open assignments leave it out; CalDAV's Tasks and every task list but its assignee's leave out a task linked to a case, and
+    TaskDetail and WorkItemDetail show its assignee no case.
+- Fixed:
+  - R1 (high): a note on a case was reachable through its author's party record, where the record rule is not asked of the event:
+    Chatter's `check#CommEventOnRecord` (an attachment of the note downloaded, a reply posted into the case's thread copying its
+    subject, its unlink's answer telling it is there) and Mantle's `check#RecordNoteAccess` (ADMIN deleted a case note by the
+    handler's party; its errors told whether a note was there); `reply#CommunicationEvent` checked a Message parent's visibility
+    but not a Comment's; `link#CommunicationEventRecord` linked any event to a record the caller sees (its subject and text then
+    on that record's timeline and in its followers' notices); the request comment services (`add#RequestComment`,
+    `check#RequestComment` for update and ADMIN's delete), `get#RequestContentLocation` and `replace#RequestParty` (which could make
+    anyone a handler) did not know a case. `PeopleCases.js hiddenEventIds` (the events filed on a case the caller is no part of)
+    now answers such a note as missing in each, the request services refuse a case to anyone but its people, and
+    `replace#RequestParty` refuses a case for everyone (its people change through `assign#PeopleCaseHandler`). Specs PeopleCases
+    (the administrator's delete by party, the manager's reply and link, ADMIN's comment delete, HR's comment, ADMIN's party change
+    refused; the handler's edit kept) and PeopleAccess (the administrator's Chatter reply on the handler's party record refused);
+    each fails on the code as it was.
+  - R2 (high, PE-21): an agent's render of the case's Chatter or Files panel as its handler (Assist's screen session going to
+    `People/Chatter` or `RecordFiles` with the case, whose tui twins render the timeline's text and the file names) sent the
+    case's notes to a model: RequestDetail's opted-out section does not cover the panels, which load as their own requests.
+    ChatterTui and RecordFilesTui now answer a case as not available to an agent's render (`sri.isAgentRender()`). Spec
+    PeopleAccess (the handler's agent render of the case's Chatter shows no note; fails on the code as it was).
+  - R3 (low): Commons' `get#RequestAccess` answered a case `found` (then refused), which Projects' `get#ProjectRequestAccess` and
+    `get#RequestDetail` pass on: a case is now answered as a missing request. Spec PeopleAccess (the manager's check).
+  - R4 (the user's call of Nov 12, 2026; the worker's finding of a case whose only handler left): a handler who leaves the
+    employer is taken off its open cases, and a case left with no handler goes back to the employer's intake handlers, who are
+    told on PeopleCaseUpdate ("A confidential case was assigned to you"). `PeopleCases.js rerouteCases` (each open case of the
+    employer: a handler who no longer handles cases there, or a named leaver, has their Assignee row ended and stops following
+    it; with none left, the eligible intake handlers but the employee are added, follow it and are told; with no intake handler
+    the case waits, logged, and the next call routes it; each case failure-tolerant) runs from Employment.js when a separation
+    is applied in effect (the leaver named, in the apply's transaction) and from the daily job's `rerouteDueChanges` for the
+    employers of the changes come since (their separations' people named). People's lifecycle participant
+    (`find#OwnedApprovals`) lists the user's open cases as `case:<id>`, "Confidential case", not transferable, with no subject,
+    employee or employer (`ownedCases`); `transfer#ApprovalOwner` refuses one (NOT_TRANSFERABLE); BossSetupData's participant
+    description and design-admin's Offboarding preview say so. Spec PeopleCases (Hope, the case's only handler, lists it by name
+    alone, is refused its transfer, leaves; the daily job takes her off, the case goes back to Hal, who is told once and reads it,
+    and she reads it no more).
+- Provisional findings (for the lead to number):
+  - The instance administrator's own tools read a case whole: Tools' Data (browse, grid, export, documents) and SQL, System's
+    Resource (the `peoplecase/` files) and Audit (the request's status rows), Mantle's REST (`/rest/s1/mantle`, ADMIN's: its
+    communication event and work effort reads); `/rest/e1` is refused for want of an entity grant on `mantle.*`. Attack-Surface
+    keeps the designed admin tools privileged on purpose; adding `mantle.request.PeopleCase` (and the case's note bodies) to the
+    framework's restricted entities, and `peoplecase/` to the Records drive's managed exclusion, is a framework change for the
+    user to decide.
+  - A NotificationTopicUser row with `allNotifications` on PeopleCaseUpdate (an instance administrator's, set in Tools) would
+    receive every case notice (the case's id, a fixed title). The framework's notification has `direct_only`, which the JS API
+    does not expose; once it does, `PeopleCases.js tell` sends direct-only.
+  - Chatter's and RecordFiles' JSON transitions (the browser's panel) do not ask `isAgentRender()`; an agent's screen session
+    renders tui, where R2 holds. The same panels of an employment's or a qualification's notes (P2, P18) are not opted out for an
+    agent render either.
+  - A message a case's people link to the case stays readable to its own sender and recipients in Comms through their party
+    (the record rule now answers it as the case's): the worker's finding, unchanged.
+  - `merge#Parties` reports a count of moved request parties that includes cases, and `delete#Contact` names a RequestParty or
+    `Request.filedByPartyId` reference; both are a contact administrator's and say no more than that a case row exists.
+  - A Records drive manager (`RdpManage` of `BOSS_RECORDS`, none seeded) sees the `peoplecase/` folder.
+  - The search index's case mark on a message is computed when it is indexed; a message filed onto a case later stays indexed
+    until reindexed (`search#Universal` drops it when read; a dataset over the `mantle` index would not).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase, as above; after the
+  fixes, Mantle PeopleCases 7 of 7 (3.3 s feature time; the two new features 0.6 s), and the specs over what the fixes changed,
+  RecordNotes, RecordLinks, InboxThreads, InternalMessages, PeopleEmployment, PeopleScheduledChanges, PeopleApprovals,
+  PeopleChecklists, SupportCases, WorkProjectRequests, CaseFeedback, Training and Offers (115 of 115); BOSS PeopleAccess 26 of 26
+  (the case feature 0.7 s), Chatter, RecordFiles, Requests, ProjectRequests, AdminLifecycle, PeopleLifecycle, PeopleApprovals,
+  Inbox, CustomerServiceCases and PurchasingRequests (97 of 97). `moqui lint --screens`: 136 flagged sites as before, none new.
+  Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about 3.3 s (PeopleCases, up 0.8 s from the Built note); mr-boss about 0.7 s (PeopleAccess's case
+    feature, up 0.2 s); no client spec;
+  - merge hot spots beyond the Built note's: mr-mantle `humanres/Employment.js` (the apply's reroute and `rerouteDueChanges`),
+    `humanres/Approvals.js` (`findOwnedApprovals`, `transferApprovalOwner`), `PeopleApprovalServices.xml`,
+    `party/CommunicationServices.xml` (`reply#CommunicationEvent`, `link#CommunicationEventRecord`, `check#RecordNoteAccess`),
+    `request/RequestServices.xml` (`replace#RequestParty`, the comment services, `get#RequestContentLocation`); mr-boss
+    `shared/ChatterServices.xml` (`check#CommEventOnRecord`), `Shared/ChatterTui.xml`, `Shared/RecordFilesTui.xml`,
+    `commons/RequestServices.xml` (`get#RequestAccess`), `data/BossSetupData.xml` (People's lifecycle participant), design-admin,
+    design-people §4 Grievances, P29's section (the intake setting's screen);
+  - the user's calls (§4, Nov 12): intake by the `PeopleCaseIntake` setting with P29's screen (as built); a leaver's cases back
+    to the intake handlers and listed in Admin's lifecycle (built here, R4); no palette, search, record-lookup or Assist for
+    anyone (as built). For the user: the instance administrator's tools and the `allNotifications` subscription (the first two
+    findings) need a framework decision. Gate 3 is the lead's to mark.
+
 ### P22 — Pay components, structures and groups
 
 Design §8.1, §8.4 (the legacy disposition), PayComponents, PayComponentDetail, PayStructures, PayStructureDetail,
@@ -5429,7 +5689,12 @@ Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, As
   `PeopleAttendanceEntities.xml`), audit-logged as a change of the employer's preferences, by a People administrator or an HR editor
   of the employer; P13's `Attendance.js isClockingOn` stays the one reader (an employment's own Y or N first), so the self-service
   clock, the + menu's Clock in and Who clocks follow it with no change. Should PeoplePreferences be one JSON setting as Projects'
-  settings are, `isClockingOn` reads its key instead and the `PeopleClocking` rows move into it.
+  settings are, `isClockingOn` reads its key instead and the `PeopleClocking` rows move into it. The employer's confidential case
+  intake handlers (P21; the user's call of Nov 12, 2026): `store#Settings` writes the `PartySetting` `PeopleCaseIntake` (party
+  ids) by the People administrator of the employer, each checked as `create#PeopleCase` reads it (an enabled account holding
+  PEOPLE_CASE_HANDLE, working for the employer), audit-logged; PeoplePreferences shows it with the handlers' names (never a case),
+  and SetupReadiness warns for an employer with employees and no eligible intake handler (a filing there is refused,
+  `NO_CASE_HANDLER`).
 - **Insights' registrations** (owner contracts, F27): `report/boss-people-*.json` (a headcount and turnover dataset, a
   leave-balance dataset, a dashboard and the alert templates), each dataset's class row (`InsDcPeople`), catalog
   entries, metrics and attention providers on the built patterns, and the People step of the internal flow map
@@ -5577,6 +5842,9 @@ the owner's design.
 | Nov 12, 2026 | Employees see their own issued lifecycle letters (hire, transfer, manager change, leave, return, separation) in SelfService's My letters under both self-service mounts (People and Commons), whole, pay included since the letter is theirs; another person's letter is refused; grants on F28's non-inheritable pattern | The user's call on P17's question (built in P17's review, R2: `find#MyLetters`, `get#MyLetter`, `BOSS_PPL_SELF`; design-people §3 SelfService, §15) |
 | Nov 12, 2026 | A trainer's passing assessment grants the course's qualification as verified: the course is the authority (not the trainer's own verification rights); the grant is recorded with the trainer (its verifier) and the session (the place its reference); development can revoke it | The user's call on P19's question (as built: `complete#Training`'s grant; revoked by `verify#Qualification`, which leaves the issued certificate as it was) |
 | Nov 12, 2026 | A trainee sees only the outcome and score of their own assessment (with its date and assessor); the assessor's answers and evidence stay with development and the session's trainer | The user's call on P19's question (as built: `get#Training`'s results; the assessment's response read only through it) |
+| Nov 12, 2026 | An employer's confidential case intake handlers are named by its `PartySetting` `PeopleCaseIntake` (as built in P21); an employer with none refuses a filing with a clear message (`NO_CASE_HANDLER`: "Your employer has nobody to take confidential cases yet; ask HR who handles them"); P29's Settings gives the setting a screen | The user's call on P21's question (as built; P29's section names the screen) |
+| Nov 12, 2026 | When a case's last handler leaves the employer (a separation), the case goes back to the employer's intake handlers, who are told on `PeopleCaseUpdate` with a title naming nothing; Admin's lifecycle lists the leaver's open cases as an owned resource of People's lifecycle participant, without their content | The user's call on P21's question (built in P21's review: `PeopleCases.js rerouteCases` from the separation's apply and the daily job, the leaver taken off every open case of the employer; `ownedCases` in `find#OwnedApprovals`, "Confidential case", not transferable; spec PeopleCases) |
+| Nov 12, 2026 | Confidential cases reach no palette, search, record-lookup or Assist for anyone, their people included; people open them from Grievances | The user's call on P21's question (as built) |
 
 ## 5. Open questions
 

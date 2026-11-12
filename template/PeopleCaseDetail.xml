@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestDetail's People branch (design-people §13 RequestDetail, §4 Grievances; crosscut §3.11's People row; impl-people P21,
+    F19): the section Shared/RequestDetail includes, inside a section opted out of AI (PE-21), when appRoot is People, over
+    mantle.request.RequestServices.get#PeopleCase (read in RequestDetail's actions as caseOut): a confidential case for its people
+    alone, the employee who filed it and its handlers; anyone else, a missing case and any other request alike, is told it is not
+    available. The record header (the case, the caller's part, the employer, the day it was filed, the state) with the moves of the
+    caller's part: a handler's Start, Resolve (with an outcome note), Close without action and Reopen, the employee's Withdraw, each at
+    the revision read; a handler's More: Add a handler, Remove a handler, and Ask for work (a task linked to the case for someone,
+    whose assignee reads nothing of the case). The case (what the employee wrote, the outcome), its people, the work asked of others
+    (handlers), the conversation (its people's notes: Chatter of the request, which tells its people on PeopleCaseUpdate) and its
+    files. No link completion, triage notice or Assist reaches it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="changeCase">
+        <actions>
+            <service-call name="mantle.request.RequestServices.change#PeopleCase" out-map="changed"
+                    in-map="{requestId:requestId, action:caseAction, outcomeNote:(outcomeNote ?? null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Case ${requestId} is ${changed.stateText.toLowerCase()}</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="assignCaseHandler">
+        <actions>
+            <service-call name="mantle.request.RequestServices.assign#PeopleCaseHandler" out-map="assigned"
+                    in-map="{requestId:requestId, partyId:handlerPartyId, remove:(remove == 'true' || remove == 'Y'),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${assigned.removed ? 'The handler is off the case' : 'The handler is on the case'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addCaseTask">
+        <actions>
+            <service-call name="mantle.request.RequestServices.add#PeopleCaseTask" out-map="added"
+                    in-map="{requestId:requestId, workEffortName:(workEffortName ?? null), assigneePartyId:(assigneePartyId || null),
+                        dueDate:(dueDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">The task is asked; its assignee reads nothing of the case</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PeopleCase" condition="appRoot == 'People'">
+            <widgets>
+                <section name="PeopleCaseMissing" condition="!peopleCaseFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Case ${requestId} is not available: it does not exist, or you are not one of its people."/>
+                                <link url="../Grievances" text="Back to grievances" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="PeopleCaseFound" condition="peopleCaseFound">
+                    <actions>
+                        <set field="pc" from="caseOut.peopleCase"/>
+                        <set field="moveOf" from="Object.fromEntries(Array.from(caseOut.moves || []).map((move) =&gt; [move.action, move.label]))"/>
+                        <set field="caseTasks" from="Array.from(caseOut.tasks || [])"/>
+                        <set field="handlerOptions" from="Array.from(caseOut.handlerOptions || [])"/>
+                        <set field="currentHandlers" from="Array.from(pc.handlers || []).map((one) =&gt; ({partyId: one.partyId, label: one.name}))"/>
+                        <set field="caseCaption" from="[pc.roleText, pc.organizationText, 'filed ' + pc.submittedDateText].filter(Boolean).join(' · ')"/>
+                        <set field="moveValues" from="{requestId:requestId, expectedRevision:pc.revision}"/>
+                        <set field="taskValues" from="{requestId:requestId}"/>
+                    </actions>
+                    <widgets>
+                        <container style="q-mb-xs"><link url="../Grievances" link-type="anchor" text="Grievances" icon="arrow_back"/></container>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${pc.referenceText} · ${pc.subject}" type="h5"/>
+                                    <label text="${caseCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${pc.stateColor}">${
+                                            WebUtilities.encodeHtml(pc.stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: pc.stateText})}]]></text>
+                                        <text type="html">${pc.stateText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-sm m-record-actions">
+                                <!-- one primary, by state: Start a filed case, Resolve one in progress, Reopen a resolved one -->
+                                <link url="changeCase" text="Start" icon="sym_o_play_arrow" link-type="hidden-form" btn-type="primary"
+                                        parameter-map="{requestId:requestId, caseAction:'start', expectedRevision:pc.revision}" condition="moveOf.start"
+                                        confirmation="Start work on case ${requestId}?"/>
+                                <container-dialog id="ResolveCaseDialog" button-text="Resolve" icon="sym_o_task_alt" type="primary" width="560"
+                                        title="Resolve case ${requestId}" condition="moveOf.resolve &amp;&amp; !moveOf.start">
+                                    <form-single name="ResolveCase" transition="changeCase" map="moveValues">
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="caseAction"><default-field><hidden default-value="resolve"/></default-field></field>
+                                        <field name="outcomeNote" ai-opt-out="true">
+                                            <default-field title="Outcome" tooltip="Its people read it"><text-area rows="3"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Resolve"><submit confirmation="Resolve case ${requestId}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="changeCase" text="Reopen" icon="sym_o_restart_alt" link-type="hidden-form" btn-type="primary"
+                                        parameter-map="{requestId:requestId, caseAction:'reopen', expectedRevision:pc.revision}" condition="moveOf.reopen"
+                                        confirmation="Reopen case ${requestId}?"/>
+                                <link url="changeCase" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" btn-type="danger"
+                                        parameter-map="{requestId:requestId, caseAction:'withdraw', expectedRevision:pc.revision}" condition="moveOf.withdraw"
+                                        confirmation="Withdraw case ${requestId}? Its handlers are told it is closed."/>
+                                <section name="PeopleCaseMore" condition="caseOut.canHandle">
+                                    <widgets>
+                                        <button-menu text="More" icon="more_horiz">
+                                            <container-dialog id="ResolveFiledCaseDialog" button-text="Resolve" icon="sym_o_task_alt" type="default" width="560"
+                                                    title="Resolve case ${requestId}" condition="moveOf.resolve &amp;&amp; moveOf.start">
+                                                <form-single name="ResolveFiledCase" transition="changeCase" map="moveValues">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="caseAction"><default-field><hidden default-value="resolve"/></default-field></field>
+                                                    <field name="outcomeNote" ai-opt-out="true">
+                                                        <default-field title="Outcome" tooltip="Its people read it"><text-area rows="3"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Resolve"><submit confirmation="Resolve case ${requestId}?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="CloseCaseDialog" button-text="Close without action" icon="sym_o_block" type="danger" width="560"
+                                                    title="Close case ${requestId} without action" condition="moveOf.close">
+                                                <form-single name="CloseCase" transition="changeCase" map="moveValues">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="caseAction"><default-field><hidden default-value="close"/></default-field></field>
+                                                    <field name="outcomeNote" ai-opt-out="true">
+                                                        <default-field title="Why" tooltip="Its people read it"><text-area rows="3"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Close"><submit type="danger" confirmation="Close case ${requestId} without action?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="AddCaseHandlerDialog" button-text="Add a handler" icon="sym_o_person_add" type="default" width="520"
+                                                    title="Add a handler to case ${requestId}" condition="pc.open &amp;&amp; handlerOptions.length">
+                                                <label type="p" text="A case handler of the employer; they read the whole case."/>
+                                                <form-single name="AddCaseHandler" transition="assignCaseHandler" map="moveValues">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="handlerPartyId">
+                                                        <default-field title="Handler"><drop-down><list-options list="handlerOptions" key="${partyId}" text="${label}"/></drop-down></default-field></field>
+                                                    <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="RemoveCaseHandlerDialog" button-text="Remove a handler" icon="sym_o_person_remove" type="default" width="520"
+                                                    title="Remove a handler from case ${requestId}" condition="currentHandlers.length &gt; 1">
+                                                <form-single name="RemoveCaseHandler" transition="assignCaseHandler" map="moveValues">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="remove"><default-field><hidden default-value="true"/></default-field></field>
+                                                    <field name="handlerPartyId">
+                                                        <default-field title="Handler"><drop-down><list-options list="currentHandlers" key="${partyId}" text="${label}"/></drop-down></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Remove"><submit type="danger" confirmation="Take this handler off case ${requestId}?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="AddCaseTaskDialog" button-text="Ask for work" icon="sym_o_add_task" type="default" width="560"
+                                                    title="Ask someone for work on case ${requestId}" condition="pc.open">
+                                                <label type="p" text="A task for someone, such as IT or facilities: they read the task alone, never the case. Name it in words that say nothing of the case."/>
+                                                <form-single name="AddCaseTask" transition="addCaseTask" map="taskValues">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortName"><default-field title="Task"><text-line size="50"/></default-field></field>
+                                                    <field name="assigneePartyId">
+                                                        <default-field title="Who does it">
+                                                            <drop-down><dynamic-options transition="assigneeSearch" server-search="true" min-length="0"/></drop-down></default-field></field>
+                                                    <field name="dueDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Ask"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </button-menu>
+                                    </widgets>
+                                </section>
+                            </container>
+                        </container>
+
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-7">
+                                <container-box>
+                                    <box-header title="The case"/>
+                                    <box-body>
+                                        <label type="p" text="${pc.details || 'Nothing more was written.'}"/>
+                                        <label type="p" style="text-caption m-muted" text="Happened ${pc.incidentDateText}" condition="pc.incidentDateText"/>
+                                        <label type="p" style="text-caption m-muted" text="Contact: ${pc.contactPreference}" condition="pc.contactPreference"/>
+                                        <label type="p" style="text-weight-medium q-mb-none" text="Outcome" condition="pc.outcomeNote"/>
+                                        <label type="p" text="${pc.outcomeNote}" condition="pc.outcomeNote"/>
+                                    </box-body>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <label type="p" style="text-caption m-muted" text="Notes here are read by the case's people alone."/>
+                                        <chatter id="PeopleCaseChatter" record-entity="mantle.request.Request" record-id="${requestId}" default-tab="log"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                            <container style="col-12 col-md-5">
+                                <container-box>
+                                    <box-header title="People"/>
+                                    <box-body>
+                                        <label type="p" text="Filed by ${pc.filedByText}" condition="pc.filedByText"/>
+                                        <label type="p" text="Handled by ${pc.handlersText}"/>
+                                    </box-body>
+                                </container-box>
+                                <section name="PeopleCaseWork" condition="caseOut.canHandle">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Work asked of others"/>
+                                            <box-body-nopad>
+                                                <form-list name="PeopleCaseTasks" list="caseTasks" skip-form="true" paginate="false" condition="caseTasks.length">
+                                                    <field name="workEffortName"><default-field title="Task"><display/></default-field></field>
+                                                    <field name="assigneeText"><default-field title="With"><display/></default-field></field>
+                                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                                    <field name="dueDateText"><default-field title="Due"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="workEffortName"/><field-ref name="assigneeText"/></column>
+                                                        <column><field-ref name="statusText"/><field-ref name="dueDateText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                                <label type="p" style="q-pa-md m-muted" condition="!caseTasks.length"
+                                                        text="No work asked of others. Ask for work in More asks someone for a task without showing them the case."/>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="PeopleCaseFiles" record-entity="mantle.request.Request" record-id="${requestId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

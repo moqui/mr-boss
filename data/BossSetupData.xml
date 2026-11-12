@@ -5156,7 +5156,7 @@ along with this software (see the LICENSE.md file). If not, see
         offboard, hold it. Openings and review steps join the same lookup with their phases: P16's review adds the draft and open
         openings the user is the recruiting owner of, handed to a new owner who works for the employer. -->
     <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
-            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, and the requests waiting for their decision."
+            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, the requests waiting for their decision, and the open confidential cases they handle (by name alone; each goes back to the employer's case intake handlers when they leave)."
             resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
             transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
@@ -5539,4 +5539,21 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- impl-people P21 (design-people §4 Grievances, §13 RequestDetail): Grievances (People/Employees/Grievances) is every People user's
+        through the root, and a self-service employee's without the launcher by this inheritable ALLOW (as their Time & leave), to raise
+        a concern and follow their own cases; a case's RequestDetail (People/Employees/RequestDetail, the shared request detail's
+        People branch) and its Chatter panel are theirs by the same group, as their record files are (BOSS_PPL_FILES_SELF): both
+        locations are those Commons mounts, which every BOSS user opens there already, and what they show is decided per record
+        (Mantle's get#PeopleCase and get#RecordLinkInfo admit a case's people alone), so the grant reaches no record Commons' does not.
+        A case handler holds PEOPLE_CASE_HANDLE (BOSS_PEOPLE_CASE) and reads only the cases they are assigned. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_CASES_SELF" description="People grievances for self-service employees">
+        <artifacts artifactName="component://mr-boss/screen/People/Employees/Grievances.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/RequestDetail.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/Chatter.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_CASES_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleCaseUpdate" linkTemplate="/qapps/People/Employees/RequestDetail?requestId=${requestId}"/>
 </entity-facade-xml>

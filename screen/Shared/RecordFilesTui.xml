@@ -37,6 +37,14 @@ along with this software (see the LICENSE.md file). If not, see
             const recordOut = ec.service.sync().name('ironstone.shared.ChatterServices.get#RecordInfo').parameters({recordEntityName: recordEntity,
                 recordId: recordId}).call()
             visible = !ec.message.hasError() && recordOut.visible === true
+            // a confidential case's notes and files reach no model (impl-people P21 review, PE-21): an agent's render of this
+            // panel (Assist's screen session, the data tool) is told it is not available, as its RequestDetail's opted-out section
+            if (visible && sri.isAgentRender()) {
+                let entityName = ''
+                try { entityName = ec.entity.makeValue(String(recordEntity)).getEntityName() } catch (error) { entityName = '' }
+                if (entityName === 'mantle.request.Request' && ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js')
+                        .isCase(String(recordId))) visible = false
+            }
             if (visible) {
                 recordTitle = [recordOut.typeLabel, recordOut.title].filter((part) => part).join(': ')
                 const out = ec.service.sync().name('ironstone.shared.RecordFilesServices.get#RecordFiles').parameters({recordEntityName: recordEntity,

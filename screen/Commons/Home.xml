@@ -88,6 +88,8 @@ along with this software (see the LICENSE.md file). If not, see
             <econdition field-name="partyId"/>
             <econdition field-name="roleTypeId" value="Assignee"/>
             <econdition field-name="statusId" operator="not-in" value="ReqCompleted,ReqCancelled"/>
+            <!-- a confidential case is People's alone (impl-people P21) -->
+            <econdition field-name="requestTypeEnumId" operator="not-equals" value="RqtHrCase" or-null="true"/>
             <select-field field-name="requestId,requestName,statusId,priority,responseRequiredDate,requestTypeEnumId"/>
             <order-by field-name="priority,requestDate"/>
         </entity-find>

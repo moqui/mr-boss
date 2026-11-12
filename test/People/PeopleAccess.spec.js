@@ -67,6 +67,11 @@
 // development administrator, the employee's Training by the area's own grant, and Training in the Development group. P19 review:
 // the assessment forms the development administrator's (the HR officer and the employee refused the screen), the employee's
 // self-service link to their training.
+// P21: a confidential case read by its handler and its employee, and refused to the manager, the HR officer, the People
+// administrator and the instance administrator with the same parameters; no Commons list, access check or id lookup holds it;
+// RequestDetail's one qvt render as the handler (the case inside its AI opt-out) and the employee's html render by their own
+// grant; Grievances opened to the self-service employee by its own grant and refused another app's user, and the Employees group
+// with Grievances.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1656,6 +1661,113 @@ feature(
                     readerAssesses: "RECORD_UNAVAILABLE",
                     trainerAssesses: "accepted",
                     otherEmployer: "RECORD_UNAVAILABLE"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "confidential cases: the employee files a case with Retail's case handler, who reads it; the manager, the HR officer and the administrators are refused it with the same parameters; no other app's request list, detail or lookup holds it; RequestDetail shows it behind the AI opt-out to its handler and to the employee by their own grant; the employee opens Grievances by its own grant",
+    {
+        when() {
+            const R = "mantle.request.RequestServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const subject = "People access spec: a confidential concern"
+            const problems = []
+            const requestId = asUser(users.employee, () =>
+                system(
+                    () =>
+                        invoke(R + "create#PeopleCase", {subject, details: "Spec details", incidentDate: "2026-11-02"}).requestId
+                )
+            )
+            const get = {requestId}
+            const codes = {
+                handler: code(asUser(users.caseHandler, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                filer: code(asUser(users.employee, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                manager: code(asUser(users.manager, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                hr: code(asUser(users.hr, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                admin: code(asUser(users.admin, () => system(() => refusal(R + "get#PeopleCase", get)))),
+                system: code(asUser(users.system, () => system(() => refusal(R + "get#PeopleCase", get))))
+            }
+            // the handler's own requests in Commons, its access check there and the id lookup hold no case
+            asUser(users.caseHandler, () =>
+                system(() => {
+                    const rows = Array.from(
+                        invoke("ironstone.commons.RequestServices.find#RequestRows", {list: "all"}).rowList || []
+                    )
+                    if (rows.some(row => row.requestId === requestId))
+                        problems.push("the case is in the handler's Commons requests")
+                    const access = invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId, need: "check"})
+                    if (access.visible) problems.push("Commons' request access admits the case")
+                    if (invoke("mantle.GeneralServices.lookup#ById", {lookupId: requestId}).requestId)
+                        problems.push("the id lookup finds the case")
+                })
+            )
+            // P21 review: Commons answers the case as a missing request (found false), to the manager as to anyone
+            const commonsAccess = asUser(users.manager, () =>
+                system(() => invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId, need: "check"}))
+            )
+            if (commonsAccess.found || commonsAccess.visible) problems.push("Commons tells the manager the case exists")
+            // P21 review: the handler's note on the case is on no other record, for the instance administrator either (a reply on
+            // the handler's party record, Chatter's party branch)
+            const noteText = "People access spec: the handler's note"
+            const noteId = asUser(users.caseHandler, () =>
+                system(() => invoke("mantle.request.RequestServices.add#RequestComment", {requestId, body: noteText}))
+            ).communicationEventId
+            const reply = asUser(users.system, () =>
+                system(() =>
+                    refusal("ironstone.shared.ChatterServices.reply#Entry", {
+                        recordEntityName: "mantle.party.Party",
+                        recordId: ids.caseHandlerPartyId,
+                        parentCommEventId: noteId,
+                        body: "People access spec: a reply from outside"
+                    })
+                )
+            )
+            if (!/is not on this record/.test(reply))
+                problems.push(`the administrator replies to the case note: ${reply || "replied"}`)
+            // P21 review: an agent's render of the case's Chatter panel as its handler (Assist's screen session) shows nothing of it
+            const agentChatter = asUser(users.caseHandler, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/People.xml")
+                    .renderMode("tui")
+                    .agent()
+                    .render(
+                        "Chatter/ChatterTui",
+                        {recordEntity: "mantle.request.Request", recordId: requestId, appRoot: "People"},
+                        null
+                    )
+                ec.message.clearErrors()
+                return String(result.output || "")
+            })
+            if (agentChatter.includes(noteText) || !agentChatter.includes("This record is not available"))
+                problems.push("an agent's render of the case's Chatter shows it")
+            // RequestDetail under People: the handler's one qvt render (the case behind the opt-out), HR's html render (not available)
+            const handlerPage = asUser(users.caseHandler, () => page("Employees/RequestDetail", {requestId}))
+            if (handlerPage.errors.length) problems.push(`the handler's RequestDetail: ${handlerPage.errors.join(" | ")}`)
+            if (!handlerPage.output.includes(subject)) problems.push("the handler's RequestDetail lacks the case")
+            if (!handlerPage.output.includes('data-ai-opt-out="section"')) problems.push("the case is not opted out of AI")
+            // the employee's html render: their own case, opened under People by its own grant (BOSS_PPL_CASES_SELF)
+            const filerPage = asUser(users.employee, () => page("Employees/RequestDetail", {requestId}, "html"))
+            if (filerPage.status != 200 || filerPage.errors.length || !filerPage.output.includes(subject))
+                problems.push(`the employee's RequestDetail: ${filerPage.status} ${filerPage.errors.join(" | ")}`)
+            const own = screenRefusal(users.employee, "Employees/Grievances")
+            if (own) problems.push(`the employee's Grievances: ${own}`)
+            if (!unauthorized(screenRefusal(users.otherApp, "Employees/Grievances")))
+                problems.push("another app's user opens Grievances")
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    handler: "accepted",
+                    filer: "accepted",
+                    manager: "RECORD_UNAVAILABLE",
+                    hr: "RECORD_UNAVAILABLE",
+                    admin: "RECORD_UNAVAILABLE",
+                    system: "RECORD_UNAVAILABLE"
                 }
             problems.join("\n") == ""
         }

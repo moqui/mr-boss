@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Employees › Grievances (design-people §4 Grievances; style-guide §3.2 List; impl-people P21): the user's confidential
+    cases, those they filed and those they handle (mantle.request.RequestServices.find#PeopleCases), open, closed or all; each opens
+    its RequestDetail under People (Shared/RequestDetail with People's branch). "Raise a concern" is the primary (SubmitCase,
+    create#PeopleCase): what happened, when, and how they want to be contacted, filed with the employer's designated case handlers;
+    files are attached on the case after filing. Nobody else reads a case: not the employee's manager, not HR, not the
+    administrator. The whole screen is opted out of AI (PE-21): an assistant reads and fills nothing here. Every People user's
+    and a self-service employee's (its own grant, BOSS_PPL_CASES_SELF). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Grievances" default-menu-index="4" menu-image="sym_o_shield_person" menu-image-type="icon" ai-opt-out="true">
+    <parameter name="show"/>
+    <parameter name="pageIndex"/>
+    <transition name="fileCase">
+        <actions>
+            <service-call name="mantle.request.RequestServices.create#PeopleCase" out-map="filed"
+                    in-map="{partyRelationshipId:(partyRelationshipId || null), subject:(subject ?? null), details:(details ?? null),
+                        incidentDate:(incidentDate || null), contactPreference:(contactPreference ?? null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Your case is filed with the case handlers</message></if>
+        </actions>
+        <default-response url="../RequestDetail"><parameter name="requestId" from="filed?.requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="showing" from="['open', 'closed', 'all'].includes(show) ? show : 'open'"/>
+        <service-call name="mantle.request.RequestServices.find#PeopleCases" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{show:showing, pageIndex:(pageIndex || 0)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            cases = Array.from(found?.cases || [])
+            casesCount = found?.casesCount || 0
+            casesPageIndex = found?.casesPageIndex || 0
+            casesPageSize = found?.casesPageSize || 20
+            casesPageMaxIndex = found?.casesPageMaxIndex || 0
+            casesPageRangeLow = found?.casesPageRangeLow || 0
+            casesPageRangeHigh = found?.casesPageRangeHigh || 0
+            canFile = !!found?.canFile
+            employerOptions = Array.from(found?.employerOptions || [])
+            findValues = {show: showing}
+            fileValues = {partyRelationshipId: employerOptions.length === 1 ? employerOptions[0].partyRelationshipId : null,
+                operationKey: 'CASE' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8)}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Grievances" type="h5"/>
+                <label text="Confidential cases: only you and the case handlers your employer names read them, never your manager or HR."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="SubmitCaseDialog" button-text="Raise a concern" icon="sym_o_shield_person" type="primary" width="720"
+                        title="Raise a confidential concern" condition="canFile">
+                    <label type="p" style="text-caption m-muted"
+                            text="It goes to your employer's case handlers alone. Attach documents on the case once it is filed."/>
+                    <form-single name="SubmitCase" transition="fileCase" map="fileValues">
+                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                        <field name="partyRelationshipId">
+                            <conditional-field condition="employerOptions.length &gt; 1" title="Employer">
+                                <drop-down><list-options list="employerOptions" key="${partyRelationshipId}" text="${label}"/></drop-down>
+                            </conditional-field>
+                            <default-field><hidden/></default-field>
+                        </field>
+                        <field name="subject" ai-opt-out="true"><default-field title="What is it about"><text-line size="50"/></default-field></field>
+                        <field name="details" ai-opt-out="true"><default-field title="What happened"><text-area rows="6" cols="60"/></default-field></field>
+                        <field name="incidentDate"><default-field title="When it happened"><date-time type="date"/></default-field></field>
+                        <field name="contactPreference" ai-opt-out="true">
+                            <default-field title="How to contact you" tooltip="A phone number, a time of day, or in person"><text-line size="50"/></default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="File the case"><submit/></default-field></field>
+                        <field-layout>
+                            <field-ref name="partyRelationshipId"/>
+                            <field-ref name="subject"/>
+                            <field-ref name="details"/>
+                            <field-row><field-ref name="incidentDate"/><field-ref name="contactPreference"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+
+        <form-single name="FindCases" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio>
+                        <option key="open" text="Open"/>
+                        <option key="closed" text="Closed"/>
+                        <option key="all" text="All"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="show"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+
+        <container-box>
+            <box-body-nopad>
+                <form-list name="CaseList" list="cases" skip-form="true" paginate="true" condition="cases.length">
+                    <field name="referenceText">
+                        <default-field title="Case">
+                            <link url="../RequestDetail" text="${referenceText}" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                        </default-field>
+                    </field>
+                    <field name="subject" ai-opt-out="true"><default-field title="About"><display/></default-field></field>
+                    <field name="roleText"><default-field title="Yours"><display/></default-field></field>
+                    <field name="handlersText"><default-field title="Handled by"><display/></default-field></field>
+                    <field name="filedByText"><default-field title="Filed by"><display/></default-field></field>
+                    <field name="submittedDateText"><default-field title="Filed"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="referenceText"/><field-ref name="subject"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="submittedDateText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!cases.length &amp;&amp; showing == 'open'"
+                        text="You have no open case.${canFile ? ' Raise a concern files one, in confidence, with the case handlers of your employer.' : ''}"/>
+                <label type="p" style="q-pa-md m-muted" condition="!cases.length &amp;&amp; showing != 'open'" text="No case here."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
