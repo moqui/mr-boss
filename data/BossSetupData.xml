@@ -2417,10 +2417,23 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.copy#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.restore#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- the groups a saver may share a definition with, by name (their own, and those their own grant lets them name):
+            what the framework's share dialogs ask (mr-moqui plans/Admin-Screens-Down.md, Track I, I4) -->
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ShareGroups" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_DATA" userGroupId="BOSS_INSIGHTS_DATA"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Sharing with the wall displays (the author): the engine's save takes a group the saver is not in only from one whose own
+        grant holds that group's share artifact (org.moqui.report.share.<userGroupId>, definitions.rs, checked by its own rows
+        whatever screen asks). No person is in BOSS_INSIGHTS_DISPLAY, so the author, who shares a dashboard or a playlist with
+        the wall displays (the root's reportPolicy offers the group, features.share is the author's), holds its artifact; a
+        steward and a distributor, who also hold the engine's save, do not, and no Insights group holds any other group's. -->
+    <artifactGroups artifactGroupId="BOSS_INS_SHARE_DISPLAY" description="Insights: sharing a definition with the wall displays">
+        <artifacts artifactName="org.moqui.report.share.BOSS_INSIGHTS_DISPLAY" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_SHARE_DISPLAY_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <!-- Saving a dataset definition (the steward): the engine's own check (definitions.rs, org.moqui.report.dataset update), which
         reads no dataset; P3 guards index#BusinessDataset by the dataset's update artifact. -->

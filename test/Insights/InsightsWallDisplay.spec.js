@@ -2,12 +2,18 @@
 // its dashboards with the wall displays, a display account holding the reader and wall display bundles is registered for it,
 // and its browser, once its code is redeemed, opens WallDisplay (the bare page, its qvt island, the data transition) as that
 // account: the registered playlist whatever the browser asks for, a dashboard the account may not read left out and refused,
-// and every other Insights screen and transition refused by the route group. Playlists lists the devices showing a playlist and
-// offers Register as display to an access administrator. The credential itself is the framework's (DeviceCredential,
+// and every other Insights screen and transition refused by the route group, the framework's own wall display under Tools
+// too. Sharing is the framework Playlists' sharePlaylist through Insights' route, under Insights' policy: an author shares
+// their playlist with the wall displays (the policy's group, whose share artifact is the author's); a group that is neither
+// theirs nor the policy's, a reader, and a distributor who saves a definition with the wall displays' group by the engine
+// itself are refused. Playlists lists the devices showing a playlist and offers Register as display to an access administrator. The credential itself is the framework's (DeviceCredential,
 // SecurityDevice, which also has the plain refusal page over HTTP), registering Admin's (AdminDevices).
 // Run: ./moq test mr-boss --spec Insights/InsightsWallDisplay
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
-const {ids, users, asUser, system, invoke, refusal} = lib
+const {ids, users, asUser, system, invoke, refusal, transition} = lib
+const webroot = "component://webroot/screen/webroot.xml"
+const sharePlaylist = (user, definitionId, userGroupId) =>
+    transition(user, webroot, "apps/Insights/Playlists/sharePlaylist", {shareDefinitionId: definitionId, userGroupId})
 const reports = "org.moqui.report.ReportServices."
 const DEVICE = "moqui.security.DeviceCredential"
 const playlistId = "SPEC_WALL_PLAYLIST"
@@ -46,18 +52,18 @@ feature("an author shares a playlist with the wall displays, and a display accou
                 if (!refusal(reports + "get#Definition", {definitionId: definition.id})) return
                 invoke(reports + "save#Definition", {definition, note: "Wall display spec"})
             }
-            const board = (id, title) => ({id, type: "dashboard", title, body: {panels: {note: {title, visualization: "text", text: title}}, layout: {type: "autoGrid"}}})
+            // the instance administrator shares with any group (the framework's share grant of ADMIN)
+            const display = "BOSS_INSIGHTS_DISPLAY"
+            const board = (id, title, userGroupId) => ({id, type: "dashboard", title, userGroupId, body: {panels: {note: {title, visualization: "text", text: title}}, layout: {type: "autoGrid"}}})
             // the shown board also has a panel whose query fails: a wall shows it as not available, not the failure's text
-            const shown = board("SPEC_WALL_SHOWN", "Spec floor board")
+            const shown = board("SPEC_WALL_SHOWN", "Spec floor board", display)
             shown.body.panels.broken = {title: "Broken", visualization: "table", queries: [{refId: "A", datasetId: "otel_spans"}]}
             save(shown)
             save(board("SPEC_WALL_PRIVATE", "Spec private board"))
-            save(board("SPEC_WALL_ALSO", "Spec other board"))
-            const playlist = (id, dashboards) => ({id, type: "report", title: id, body: {kind: "playlist", seconds: 20, playlist: dashboards.map(definitionId => ({definitionId}))}})
+            save(board("SPEC_WALL_ALSO", "Spec other board", display))
+            const playlist = (id, dashboards) => ({id, type: "report", title: id, userGroupId: display, body: {kind: "playlist", seconds: 20, playlist: dashboards.map(definitionId => ({definitionId}))}})
             save(playlist(playlistId, ["SPEC_WALL_SHOWN", "SPEC_WALL_PRIVATE"]))
             save(playlist("SPEC_WALL_OTHER", ["SPEC_WALL_ALSO"]))
-            for (const definitionId of ["SPEC_WALL_SHOWN", "SPEC_WALL_ALSO", playlistId, "SPEC_WALL_OTHER"])
-                invoke("ironstone.insights.DashboardServices.share#Dashboard", {definitionId, userGroupId: "BOSS_INSIGHTS_DISPLAY"})
         })
         // an author shares their own with the wall displays, and with another group they are not in is still refused
         asUser(users.author, () => {
@@ -67,12 +73,19 @@ feature("an author shares a playlist with the wall displays, and a display accou
                 invoke(reports + "save#Definition", {definition: {id: "SPEC_WALL_AUTHORS", type: "report", title: "Spec authors' playlist",
                     body: {kind: "playlist", seconds: 30, playlist: [{definitionId: "SPEC_WALL_AUTHOR_BOARD"}]}}, note: "Wall display spec"})
             }
-            out.byAuthor = refusal("ironstone.insights.DashboardServices.share#Dashboard", {definitionId: "SPEC_WALL_AUTHORS", userGroupId: "BOSS_INSIGHTS_DISPLAY"})
-            out.otherGroup = refusal("ironstone.insights.DashboardServices.share#Dashboard", {definitionId: "SPEC_WALL_AUTHORS", userGroupId: "BOSS_ADMIN"})
         })
+        const groupOf = definitionId => system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", definitionId).one())?.userGroupId || null
+        // through Insights' route: the wall displays (the policy's group, the author's to name), then a group that is neither
+        out.byAuthor = sharePlaylist(users.author, "SPEC_WALL_AUTHORS", "BOSS_INSIGHTS_DISPLAY").errors
+        out.authorsGroup = groupOf("SPEC_WALL_AUTHORS")
+        out.otherGroup = sharePlaylist(users.author, "SPEC_WALL_AUTHORS", "BOSS_ADMIN").errors
         // a reader, who does not author, shares nothing
-        out.byReader = asUser(users.reader, () =>
-            refusal("ironstone.insights.DashboardServices.share#Dashboard", {definitionId: "SPEC_WALL_AUTHORS", userGroupId: "BOSS_INSIGHTS_DISPLAY"}))
+        out.byReader = sharePlaylist(users.reader, "SPEC_WALL_AUTHORS", "BOSS_INSIGHTS_DISPLAY").errors
+        // a distributor holds the engine's save, not the wall displays' share artifact: the save itself refuses the group
+        out.byDistributor = asUser(users.distributor, () =>
+            refusal(reports + "save#Definition", {definition: {id: "SPEC_WALL_DISTRIBUTORS", type: "report", title: "Spec distributor's playlist",
+                userGroupId: "BOSS_INSIGHTS_DISPLAY", body: {kind: "playlist", seconds: 30, playlist: [{definitionId: "SPEC_WALL_SHOWN"}]}}, note: "Wall display spec"}))
+        out.afterRefusals = groupOf("SPEC_WALL_AUTHORS")
         out.shared = system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", playlistId).one())
         // the display account (Retail's, the reader and wall display bundles) and its device, registered by an administrator
         display = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.wall.display").one())
@@ -89,8 +102,11 @@ feature("an author shares a playlist with the wall displays, and a display accou
         login("john.doe")
         return out
     },
-    then({byAuthor, byReader, otherGroup, shared}) {
-        byAuthor == "" && otherGroup.includes("SHARE_GROUP_UNAVAILABLE") && byReader.includes("INSIGHTS_AUTHOR_REQUIRED")
+    then({byAuthor, authorsGroup, byReader, otherGroup, byDistributor, afterRefusals, shared}) {
+        byAuthor == "" && authorsGroup == "BOSS_INSIGHTS_DISPLAY"
+        otherGroup.includes("Share only with a group you belong to") && byReader.includes("Sharing is not offered to you here")
+        byDistributor.includes("SHARE_GROUP_UNAVAILABLE")
+        afterRefusals == "BOSS_INSIGHTS_DISPLAY"
         shared.userGroupId == "BOSS_INSIGHTS_DISPLAY"
         display != null && display.displayAccount == "Y"
         cookie.includes(".")
@@ -109,10 +125,13 @@ feature("the device plays its registered playlist on the bare page as its displa
             playlists: request("apps/Insights/Playlists", {}, cookie),
             playlistData: request("apps/Insights/Playlists/data", {index: "0"}, cookie),
             dashboard: request("apps/Insights/Dashboard", {definitionId: "SPEC_WALL_SHOWN"}, cookie),
-            shell: request("qapps/Insights/WallDisplay", {}, cookie)
+            shell: request("qapps/Insights/WallDisplay", {}, cookie),
+            // the framework's own wall display, under Tools: not the device's route
+            tools: request("apps/dashboards/WallDisplay", {}, cookie),
+            toolsData: request("apps/dashboards/WallDisplay/data", {index: "0"}, cookie)
         }
     },
-    then({html, island, first, hidden, playlists, playlistData, dashboard, shell}) {
+    then({html, island, first, hidden, playlists, playlistData, dashboard, shell, tools, toolsData}) {
         // the bare page: the qvt client's files and this screen as an island, with no navigation or app menu
         html.status == 200 && html.errors == ""
         html.output.includes("<!DOCTYPE html>") && html.output.includes('data-moqui-island="wall-display"')
@@ -131,6 +150,7 @@ feature("the device plays its registered playlist on the bare page as its displa
         hidden.errors != "" && !outside(hidden) && !hidden.output.includes("Spec private board")
         // nothing else of Insights, nor the shell
         outside(playlists) && outside(playlistData) && outside(dashboard) && outside(shell)
+        outside(tools) && outside(toolsData)
     }
 })
 

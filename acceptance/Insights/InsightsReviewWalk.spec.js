@@ -368,14 +368,14 @@ feature("a wall display opens its registered playlist alone, as its display acco
         const playlistId = "REVIEW_WALL_" + run
         const boardId = "REVIEW_WALL_BOARD_" + run
         asUser(users.system, () => {
-            invoke(R + "save#Definition", {definition: {id: boardId, type: "dashboard", title: "Review wall " + run, body: {
+            // shared with the wall displays as they are saved (the instance administrator names any group; an author shares
+            // through Dashboard's and Playlists' share)
+            invoke(R + "save#Definition", {definition: {id: boardId, type: "dashboard", title: "Review wall " + run, userGroupId: "BOSS_INSIGHTS_DISPLAY", body: {
                 panels: {orders: {title: "Orders by vendor", visualization: "table", queries: [{datasetId: salesId,
                     aggregations: [{id: "v", type: "terms", role: "group", params: {field: "vendorPartyId", size: 20}}, {id: "n", type: "count", role: "metric"}]}]}},
                 layout: {type: "autoGrid"}}}, note: "Review walk"})
-            invoke(R + "save#Definition", {definition: {id: playlistId, type: "report", title: "Review wall " + run,
+            invoke(R + "save#Definition", {definition: {id: playlistId, type: "report", title: "Review wall " + run, userGroupId: "BOSS_INSIGHTS_DISPLAY",
                 body: {kind: "playlist", seconds: 30, playlist: [{definitionId: boardId}]}}, note: "Review walk"})
-            for (const definitionId of [boardId, playlistId])
-                invoke("ironstone.insights.DashboardServices.share#Dashboard", {definitionId, userGroupId: "BOSS_INSIGHTS_DISPLAY"})
         })
         const display = invoke("mantle.party.IdentityServices.create#DisplayAccount", {displayName: "Review wall display " + run,
             organizationPartyId: own, bundleGroupIdList: ["BOSS_INSIGHTS_READ", "BOSS_INSIGHTS_DISPLAY"]})

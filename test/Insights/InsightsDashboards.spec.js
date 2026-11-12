@@ -3,21 +3,25 @@
 // its links (appLinks) under Insights, a library panel over a dataset the author may not read said to be not available (Mantle's
 // sales orders wait for the steward's admission, P3), Share for the owner and the panel's measure meaning (P4); a panel inspect
 // keeps the scope. The mounted editor copies and
-// saves under Insights, keeps the group over a posted one and takes only its own types. Sharing: the owner shares with their
-// own group and makes the dashboard private again; another group, a reader and a shipped dashboard are refused. The access
+// saves under Insights, keeps the group over a posted one and takes only its own types. Sharing is the framework Dashboard's
+// share transition through Insights' route, under Insights' policy: the owner, an author, shares with their own group and
+// makes the dashboard private again; a distributor, who holds the engine's save and not the policy's share feature, is
+// refused the same request on a dashboard of their own; a group that is neither the owner's nor the policy's, a reader, a
+// shipped dashboard and a stale version are refused, by the transition and by the engine's save itself. The access
 // rules of the editors and the engine are InsightsAccess's; the golden walk is the client InsightsDashboardsWalk; the "usable
 // when" scenario is the acceptance InsightsDashboardsUsable.
 // Run: ./moq test mr-boss --spec InsightsDashboards
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke} = lib
 const reports = "org.moqui.report.ReportServices."
-const share = "ironstone.insights.DashboardServices.share#Dashboard"
 // the spec's definitions: a library panel over Mantle's sales orders (not readable by the Insights groups until P3), shared with
 // the Insights users by ADMIN, and the author's own dashboard over it with an organization variable
 const panelId = "INS_DASH_SPEC_PANEL"
 const boardId = "INS_DASH_SPEC_BOARD"
 const copyId = "INS_DASH_SPEC_COPY"
-const definitionIds = [panelId, boardId, copyId, copyId + "_S", copyId + "_A"]
+// a distributor's own dashboard (the engine's save is theirs, for digests; sharing is not)
+const distributorBoardId = "INS_DASH_SPEC_DISTRIBUTOR"
+const definitionIds = [panelId, boardId, copyId, copyId + "_S", copyId + "_A", distributorBoardId]
 const insightsScreens = "component://mr-boss/screen/Insights.xml"
 
 // Insights under the webroot, as the shell requests it, so its report links resolve to /apps/Insights/... as in the browser.
@@ -220,25 +224,46 @@ feature("the mounted editor saves a copy and a version and returns under Insight
     }
 })
 
-feature("the owner shares a dashboard with their group and makes it private; another group, a reader and a shipped one refused", {
+feature("the owner, an author, shares a dashboard with their group and makes it private; a distributor, another group, a reader and a shipped one refused", {
     when() {
         const problems = []
-        const shared = asUser(users.author, () => invoke(share, {definitionId: boardId, userGroupId: "BOSS_INSIGHTS"}))
-        if (shared.userGroupId !== "BOSS_INSIGHTS") problems.push(`shared: ${JSON.stringify(shared)}`)
+        const group = id => system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", id).one())?.userGroupId || null
+        const board = definitionId => asUser(users.author, () => invoke(reports + "get#Definition", {definitionId}).definition)
+        // the author's own dashboard and one of their own groups, through Insights' route
+        const shared = post(users.author, "Dashboard/share", {definitionId: boardId, userGroupId: "BOSS_INSIGHTS"})
+        if (shared.errors !== "" || group(boardId) !== "BOSS_INSIGHTS") problems.push(`shared: ${shared.errors} ${group(boardId)}`)
+        if (!shared.location.includes("/Insights/Dashboard?definitionId=" + boardId)) problems.push(`shared goes to ${shared.location}`)
         const readerSees = asUser(users.reader, () => refusal(reports + "get#Definition", {definitionId: boardId}))
         if (readerSees !== "") problems.push(`the reader does not read the shared dashboard: ${readerSees}`)
-        const other = asUser(users.author, () => refusal(share, {definitionId: boardId, userGroupId: "BOSS_ADMIN_ADMIN"}))
-        if (!other.includes("SHARE_GROUP_UNAVAILABLE")) problems.push(`another group: ${other || "accepted"}`)
-        const reader = asUser(users.reader, () => refusal(share, {definitionId: boardId, userGroupId: "BOSS_INSIGHTS"}))
-        if (!reader.includes("INSIGHTS_AUTHOR_REQUIRED")) problems.push(`the reader shares: ${reader || "accepted"}`)
-        const shipped = asUser(users.author, () =>
-            refusal(share, {definitionId: "boss-commerce-store-operations", userGroupId: "BOSS_INSIGHTS"})
+        // the same request by a distributor on a dashboard of their own: the engine's save is theirs, the share feature is not
+        asUser(users.distributor, () =>
+            invoke(reports + "save#Definition", {
+                definition: {id: distributorBoardId, type: "dashboard", title: "Spec distributor board", body: {panels: {}}},
+                note: "spec"
+            })
         )
-        if (!shipped.includes("DASHBOARD_NOT_OWNED")) problems.push(`a shipped dashboard: ${shipped || "accepted"}`)
-        const stale = asUser(users.author, () => refusal(share, {definitionId: boardId, expectedVersion: 1}))
-        if (!/changed since it was read/.test(stale)) problems.push(`a stale version: ${stale || "accepted"}`)
-        const privateAgain = asUser(users.author, () => invoke(share, {definitionId: boardId}))
-        if (privateAgain.userGroupId != null) problems.push(`made private: ${JSON.stringify(privateAgain)}`)
+        const distributor = post(users.distributor, "Dashboard/share", {definitionId: distributorBoardId, userGroupId: "BOSS_INSIGHTS"})
+        if (!distributor.errors.includes("Sharing is not offered to you here") || group(distributorBoardId) !== null)
+            problems.push(`the distributor shares: ${distributor.errors || "accepted"} ${group(distributorBoardId)}`)
+        // a group that is neither the owner's nor the policy's: refused by the transition, and by the engine's save itself
+        const other = post(users.author, "Dashboard/share", {definitionId: boardId, userGroupId: "BOSS_ADMIN_ADMIN"})
+        if (!other.errors.includes("Share only with a group you belong to")) problems.push(`another group: ${other.errors || "accepted"}`)
+        const current = board(boardId)
+        const direct = asUser(users.author, () =>
+            refusal(reports + "save#Definition", {
+                definition: {id: boardId, type: "dashboard", title: current.title, body: current.body, userGroupId: "BOSS_ADMIN_ADMIN"}
+            })
+        )
+        if (!direct.includes("SHARE_GROUP_UNAVAILABLE")) problems.push(`another group by the engine's save: ${direct || "accepted"}`)
+        if (group(boardId) !== "BOSS_INSIGHTS") problems.push(`the group after the refusals: ${group(boardId)}`)
+        const reader = post(users.reader, "Dashboard/share", {definitionId: boardId, userGroupId: "BOSS_INSIGHTS"})
+        if (!reader.errors.includes("Sharing is not offered to you here")) problems.push(`the reader shares: ${reader.errors || "accepted"}`)
+        const shipped = post(users.author, "Dashboard/share", {definitionId: "boss-commerce-store-operations", userGroupId: "BOSS_INSIGHTS"})
+        if (!shipped.errors.includes("Only the owner shares a dashboard")) problems.push(`a shipped dashboard: ${shipped.errors || "accepted"}`)
+        const stale = post(users.author, "Dashboard/share", {definitionId: boardId, expectedVersion: "1"})
+        if (!/changed since it was read/i.test(stale.errors)) problems.push(`a stale version: ${stale.errors || "accepted"}`)
+        const privateAgain = post(users.author, "Dashboard/share", {definitionId: boardId})
+        if (privateAgain.errors !== "" || group(boardId) !== null) problems.push(`made private: ${privateAgain.errors} ${group(boardId)}`)
         const hidden = asUser(users.reader, () => refusal(reports + "get#Definition", {definitionId: boardId}))
         if (hidden === "") problems.push("the reader still reads the private dashboard")
         return {problems}

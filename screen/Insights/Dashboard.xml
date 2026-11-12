@@ -18,8 +18,10 @@ along with this software (see the LICENSE.md file). If not, see
     P8). BusinessContext: the organization in scope from get#Context (a requested one only when it is the user's) is fixed as the
     dashboard's organizationPartyId variable (with none chosen, the user's organizations), and as its vendorPartyId variable when
     that one is over Mantle's sales datasets (the selling organization, F-P5-6), so a viewer's var-* never replaces them; the range defaults to
-    Insights' (get#Context) and currencies stay apart. ShareDashboard: the owner, an author, shares the dashboard with one of
-    their groups or makes it private (DashboardServices.share#Dashboard). MeasureMeaning (P4): each panel's registered measure,
+    Insights' (the root's reportPolicy, which the framework screen reads) and currencies stay apart. ShareDashboard is the
+    framework screen's (its share transition, taken in here): the owner, an author (reportPolicy features.share), shares the
+    dashboard with one of their groups or the wall displays (reportPolicy shareGroups) or makes it private, and the report
+    engine's save checks the owner, the version read and the group. MeasureMeaning (P4): each panel's registered measure,
     its version, grain, basis, denominator, exclusions and the comparison rules (RegistryServices.find#PanelMeasures; the
     meaning is the owner's registration, never Insights' own formula). Every query runs as the viewer: a panel over a dataset
     the viewer may not read says so (P3 admits the business datasets), never a zero. -->
@@ -55,32 +57,15 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="inspectPanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="duplicatePanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="removePanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
-    <transition name="shareDashboard" method="post">
-        <service-call name="ironstone.insights.DashboardServices.share#Dashboard"/>
-        <default-response url="."><parameter name="definitionId"/></default-response>
-        <error-response url="."><parameter name="definitionId"/></error-response>
-    </transition>
+    <transition-include name="share" location="component://tools/screen/Dashboards/Dashboard.xml"/>
 
     <actions>
-        <set field="from" from="from || businessContext.defaults.from"/>
-        <set field="thru" from="thru || businessContext.defaults.thru"/>
         <set field="organizationOptions" from="businessContext.organizations"/>
-        <!-- ShareDashboard: the owner's own dashboard, for an author -->
-        <set field="shareable" from="businessContext.capabilities.author &amp;&amp; found.definition.type === 'dashboard' &amp;&amp;
-                !found.definition.readOnly &amp;&amp; found.definition.ownerId === ec.user.userId"/>
-        <set field="expectedVersion" from="found.definition.version"/>
-        <set field="userGroupId" from="found.definition.userGroupId || ''"/>
         <!-- MeasureMeaning: the panels that name a registered measure, read only when the dashboard has any -->
         <service-call name="ironstone.insights.RegistryServices.find#PanelMeasures" in-map="{definitionId:definitionId}"
                 out-map="meaning" transaction="force-new" ignore-error="true"/>
         <script>ec.message.clearErrors()</script>
         <set field="measures" from="meaning?.measures || []"/>
-        <if condition="shareable">
-            <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share"/>
-            <set field="shareGroups" from="share.groups"/>
-            <!-- a definition has one group (P12): the group it is shared with now, which another choice replaces -->
-            <set field="sharedWithLabel" from="userGroupId ? (shareGroups.find(group =&gt; group.value === userGroupId)?.label || userGroupId) : ''"/>
-        </if>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
@@ -115,18 +100,6 @@ along with this software (see the LICENSE.md file). If not, see
                             <column><field-ref name="basis"/><field-ref name="exclusions"/></column>
                         </columns>
                     </form-list>
-                </container-dialog>
-                <container-dialog id="ShareDashboard" button-text="Share" condition="shareable">
-                    <label type="p" style="m-muted" text="A dashboard is shared with one group at a time. It is shared with ${sharedWithLabel} now: choosing another group, or the wall displays, takes it from ${sharedWithLabel}." condition="sharedWithLabel"/>
-                    <label type="p" style="m-muted" text="A dashboard is shared with one group at a time: the one you choose, or the wall displays." condition="!sharedWithLabel"/>
-                    <form-single name="ShareDashboardForm" transition="shareDashboard">
-                        <field name="definitionId"><default-field><hidden/></default-field></field>
-                        <field name="expectedVersion"><default-field><hidden/></default-field></field>
-                        <field name="userGroupId"><default-field title="Share with" tooltip="Leave it empty to keep the dashboard private. A group sees the dashboard; each person still sees only the data they may read.">
-                            <drop-down allow-empty="true"><list-options list="shareGroups" key="${value}" text="${label}"/></drop-down>
-                        </default-field></field>
-                        <field name="save"><default-field><submit text="Save sharing"/></default-field></field>
-                    </form-single>
                 </container-dialog>
             </container>
         </container>

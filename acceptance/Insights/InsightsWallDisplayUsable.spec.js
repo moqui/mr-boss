@@ -72,9 +72,10 @@ feature("an author makes Retail's operations playlist and shares it and its dash
                 layout: {type: "autoGrid"}}}, note: "Wall display walk"})
             invoke(reports + "save#Definition", {definition: {id: playlistId, type: "report", title: "Retail operations wall " + run,
                 body: {kind: "playlist", seconds: 30, playlist: [{definitionId: boardId}]}}, note: "Wall display walk"})
-            invoke("ironstone.insights.DashboardServices.share#Dashboard", {definitionId: boardId, userGroupId: "BOSS_INSIGHTS_DISPLAY"})
+            // Dashboard's Share, with the wall displays
+            request("apps/Insights/Dashboard/share", {definitionId: boardId, userGroupId: "BOSS_INSIGHTS_DISPLAY"}, null, null, "post")
             // Playlists' Share with wall displays
-            const shared = request("apps/Insights/Playlists/sharePlaylist", {definitionId: playlistId, shareWithDisplays: "Y"}, null, null, "post")
+            const shared = request("apps/Insights/Playlists/sharePlaylist", {shareDefinitionId: playlistId, userGroupId: "BOSS_INSIGHTS_DISPLAY"}, null, null, "post")
             return {
                 shared,
                 row: system(() => find("moqui.report.Definition", {definitionId: playlistId}).one()),
@@ -128,7 +129,7 @@ feature("the plant wall plays the playlist with no one signed in, Retail's numbe
             explore: request("apps/Insights/ReportBuilder/Explore", {}, cookie),
             shell: request("qapps/Insights/WallDisplay", {}, cookie),
             apps: request("apps/AppList", {}, cookie),
-            write: request("apps/Insights/Playlists/sharePlaylist", {definitionId: playlistId}, cookie, null, "post"),
+            write: request("apps/Insights/Playlists/sharePlaylist", {shareDefinitionId: playlistId}, cookie, null, "post"),
             // the author's Playlists: the playlist is on the wall displays. Its devices are listed to a reader of the playlist
             // who sees devices (ADMIN_ACCESS_VIEW), here nobody but the display account: a definition has one group (P12), and
             // the regression InsightsWallDisplay lists them for an owner who registers devices
