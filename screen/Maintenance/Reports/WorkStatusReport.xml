@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     organization, facility (with those inside it), equipment, team, source, kind and the grouping (team by default; state,
     resource, source, kind or none). StatusTotals: the six counts and the groups, each count opening its rows. StatusRows: the work
     orders counted (of one measure and one group when chosen), each opening WorkOrderDetail; its CSV is the form-list's own (the
-    columns chosen, every row), and Print renders the page with its options (renderMode=html-print). No cost, rate or amount. -->
+    columns chosen, every row; the totals are left out of an export, review R2), and Print renders the page with its options (renderMode=html-print). No cost, rate or amount. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work status" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -62,6 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="linkOptions" from="Object.fromEntries(Object.entries(options).filter(([, value]) =&gt; value != null &amp;&amp; value !== ''))"/>
         <set field="printUrl" from="'/apps/Maintenance/Reports/WorkStatusReport?' + Object.entries(Object.assign({renderMode:'html-print'}, linkOptions,
                 measure ? {measure} : {}, groupKey ? {groupKey} : {}, {pageNoLimit:'true'})).map(([key, value]) =&gt; key + '=' + encodeURIComponent(value)).join('&amp;')"/>
+        <!-- an export (CSV, XLSX) is StatusRows alone, not the totals' lists before it (review R2) -->
+        <set field="exporting" from="['csv', 'xlsx'].includes(sri.getRenderMode())"/>
         <set field="optionsText" from="'From ' + (summary.fromText || '') + ' to ' + (summary.asOfText || '') + ' · grouped by ' +
                 (groupOptions.find(row =&gt; row.value == (groupBy || 'team'))?.label || groupBy).toLowerCase()"/>
     </actions>
@@ -143,57 +145,61 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="StatusFound" condition="reportFound">
             <widgets>
                 <label text="${optionsText}. ${summary.noteText}" type="p" style="text-caption m-muted"/>
-                <container-box>
-                    <box-header title="Totals"/>
-                    <box-body>
-                        <form-list name="StatusMeasures" list="measureRows" skip-form="true" paginate="false">
-                            <field name="label">
-                                <default-field title="Measure">
-                                    <link url="." text="${label}" link-type="anchor" condition="count"
-                                            parameter-map="Object.assign({measure: key}, linkOptions)"/>
-                                    <label text="${label}" type="span" condition="!count"/>
-                                </default-field>
-                            </field>
-                            <field name="count" align="right"><default-field title="Work orders"><display/></default-field></field>
-                        </form-list>
-                    </box-body>
-                </container-box>
-                <section name="GroupsFound" condition="groupRows.length">
+                <section name="StatusSummary" condition="!exporting">
                     <widgets>
                         <container-box>
-                            <box-header title="By ${(groupOptions.find(row =&gt; row.value == (groupBy || 'team'))?.label || '').toLowerCase()}"/>
-                            <box-body-nopad>
-                                <form-list name="StatusTotals" list="groupRows" skip-form="true" paginate="false">
-                                    <field name="groupText">
-                                        <default-field title="Group">
-                                            <link url="." text="${groupText}" link-type="anchor" parameter-map="Object.assign({groupKey: groupKey}, linkOptions)"/>
+                            <box-header title="Totals"/>
+                            <box-body>
+                                <form-list name="StatusMeasures" list="measureRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="Measure">
+                                            <link url="." text="${label}" link-type="anchor" condition="count"
+                                                    parameter-map="Object.assign({measure: key}, linkOptions)"/>
+                                            <label text="${label}" type="span" condition="!count"/>
                                         </default-field>
                                     </field>
-                                    <field name="openedCount" align="right"><default-field title="Opened"><link url="." text="${openedCount}" link-type="anchor"
-                                            condition="openedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'opened'}, linkOptions)"/>
-                                        <label text="0" type="span" condition="!openedCount"/></default-field></field>
-                                    <field name="completedCount" align="right"><default-field title="Completed"><link url="." text="${completedCount}" link-type="anchor"
-                                            condition="completedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'completed'}, linkOptions)"/>
-                                        <label text="0" type="span" condition="!completedCount"/></default-field></field>
-                                    <field name="cancelledCount" align="right"><default-field title="Cancelled"><link url="." text="${cancelledCount}" link-type="anchor"
-                                            condition="cancelledCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'cancelled'}, linkOptions)"/>
-                                        <label text="0" type="span" condition="!cancelledCount"/></default-field></field>
-                                    <field name="backlogCount" align="right"><default-field title="Backlog"><link url="." text="${backlogCount}" link-type="anchor"
-                                            condition="backlogCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'backlog'}, linkOptions)"/>
-                                        <label text="0" type="span" condition="!backlogCount"/></default-field></field>
-                                    <field name="overdueCount" align="right"><default-field title="Overdue"><link url="." text="${overdueCount}" link-type="anchor"
-                                            condition="overdueCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'overdue'}, linkOptions)"/>
-                                        <label text="0" type="span" condition="!overdueCount"/></default-field></field>
-                                    <field name="unassignedCount" align="right"><default-field title="Unassigned"><link url="." text="${unassignedCount}" link-type="anchor"
-                                            condition="unassignedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'unassigned'}, linkOptions)"/>
-                                        <label text="0" type="span" condition="!unassignedCount"/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="groupText"/><field-ref name="backlogCount"/></column>
-                                        <column><field-ref name="completedCount"/><field-ref name="overdueCount"/></column>
-                                    </columns>
+                                    <field name="count" align="right"><default-field title="Work orders"><display/></default-field></field>
                                 </form-list>
-                            </box-body-nopad>
+                            </box-body>
                         </container-box>
+                        <section name="GroupsFound" condition="groupRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="By ${(groupOptions.find(row =&gt; row.value == (groupBy || 'team'))?.label || '').toLowerCase()}"/>
+                                    <box-body-nopad>
+                                        <form-list name="StatusTotals" list="groupRows" skip-form="true" paginate="false">
+                                            <field name="groupText">
+                                                <default-field title="Group">
+                                                    <link url="." text="${groupText}" link-type="anchor" parameter-map="Object.assign({groupKey: groupKey}, linkOptions)"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="openedCount" align="right"><default-field title="Opened"><link url="." text="${openedCount}" link-type="anchor"
+                                                    condition="openedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'opened'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!openedCount"/></default-field></field>
+                                            <field name="completedCount" align="right"><default-field title="Completed"><link url="." text="${completedCount}" link-type="anchor"
+                                                    condition="completedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'completed'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!completedCount"/></default-field></field>
+                                            <field name="cancelledCount" align="right"><default-field title="Cancelled"><link url="." text="${cancelledCount}" link-type="anchor"
+                                                    condition="cancelledCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'cancelled'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!cancelledCount"/></default-field></field>
+                                            <field name="backlogCount" align="right"><default-field title="Backlog"><link url="." text="${backlogCount}" link-type="anchor"
+                                                    condition="backlogCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'backlog'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!backlogCount"/></default-field></field>
+                                            <field name="overdueCount" align="right"><default-field title="Overdue"><link url="." text="${overdueCount}" link-type="anchor"
+                                                    condition="overdueCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'overdue'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!overdueCount"/></default-field></field>
+                                            <field name="unassignedCount" align="right"><default-field title="Unassigned"><link url="." text="${unassignedCount}" link-type="anchor"
+                                                    condition="unassignedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'unassigned'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!unassignedCount"/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="groupText"/><field-ref name="backlogCount"/></column>
+                                                <column><field-ref name="completedCount"/><field-ref name="overdueCount"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                     </widgets>
                 </section>
                 <container-box>

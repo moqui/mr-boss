@@ -46,13 +46,23 @@ function screenRefusalIn(user, path) {
     const rendered = asUser(user, () => page(path, {}, "html", "Commons"))
     return rendered.status === 200 && rendered.errors.length === 0 ? "" : rendered.status + " " + rendered.errors.join(" | ")
 }
-// the quick create kinds of the user's + menu (the shell's data)
-const quickCreates = user =>
-    JSON.stringify(
-        asUser(user, () =>
-            JSON.parse(ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output)
+// the shell's data of the user (the launcher's apps, the + menu's quick creates), rendered once a user in the spec: no feature
+// changes a demo user's groups
+const shellDataCache = new Map()
+const shellData = user => {
+    if (!shellDataCache.has(user))
+        shellDataCache.set(
+            user,
+            asUser(user, () =>
+                JSON.parse(
+                    ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output
+                )
+            )
         )
-    )
+    return shellDataCache.get(user)
+}
+// the quick create kinds of the user's + menu
+const quickCreates = user => JSON.stringify(shellData(user))
 // a spec-local Maintenance user whose only capability group holds MAINTENANCE_PLAN, an agent of Services
 const editOnly = "MNT_SPEC_EDIT_ONLY"
 
@@ -1156,7 +1166,7 @@ feature(
                 ),
                 otherAsks: as(users.retailPlanner, S + "link#MaintenancePurchase", Object.assign({requestName: "Bearings"}, work)),
                 // the supervisor holds STOCK_RECEIVE through Warehouse's receiving group (R1), which opens no Warehouse screen
-                supervisorApps: shell(users.supervisor).apps,
+                supervisorApps: shellData(users.supervisor).apps.map(app => app.name),
                 supervisorQuickCreates: quickCreates(users.supervisor)
             }
         },

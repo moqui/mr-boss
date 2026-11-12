@@ -3,7 +3,9 @@
 // (P11's) to the cost reader alone, and refuses a technician and another app's user, and Insights' catalog shows the same entries;
 // the registrations name existing services and screens; the shipped datasets' documents carry no amount, cost or rate and every
 // shipped definition loads; Work status's and the Reports landing's one qvt render each (the supervisor's: the demo's open work by
-// team, its rows opening WorkOrderDetail, the CSV and Print offered; the landing's cards and report links). The counting rules are
+// team, its rows opening WorkOrderDetail, the CSV and Print offered; the landing's cards and report links); each report's CSV is its
+// rows alone, every outcome named (review R2); the work orders dataset read through Insights is each reader's own organization's,
+// a Retail reader never Services' rows whatever they send (review R3). The counting rules are
 // Mantle's MaintenanceReports; the access rule is MaintenanceAccess'; the "usable when" is the acceptance MaintenanceReportsWalk.
 // Run: ./moq test mr-boss --spec MaintenanceReports
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
@@ -137,5 +139,89 @@ feature("Work status's and the Reports landing's one render each, as the supervi
         overview.output.includes("PM compliance · on time")
         overview.output.includes("Downtime · resources down")
         overview.output.includes("Reports/WorkStatusReport")
+    }
+})
+
+// Review R2: an export is the report's rows alone (no totals' list before them, whose conditional labels left blank cells), with the
+// columns of the form and no other, and PM compliance names each outcome (its render-mode cell wrote nothing in a CSV)
+feature("each report's CSV is its rows alone, every column named and filled", {
+    when() {
+        const csv = (path, parameters) =>
+            asUser(users.supervisor, () =>
+                page(path, Object.assign({pageNoLimit: "true", lastStandalone: "true"}, parameters), "csv")
+            )
+        const lines = out => out.output.split("\n").filter(line => line.trim())
+        const status = csv("Reports/WorkStatusReport", {organizationPartyId: ids.organizationId})
+        const compliance = csv("Reports/PreventiveComplianceReport", {fromDate: "2026-08-01", thruDate: "2026-10-31"})
+        return {
+            status: lines(status),
+            statusErrors: status.errors,
+            compliance: lines(compliance),
+            complianceErrors: compliance.errors
+        }
+    },
+    then({status, statusErrors, compliance, complianceErrors}) {
+        statusErrors == []
+        status[0] == "Work order,Name,State at the end,Counted as,For,Team,Technicians,Due,Days open,Source,Kind,Organization"
+        status.some(line => line.startsWith(ids.inProgressOrderId + ","))
+        !status.some(line => /^(Measure|Group),/.test(line))
+        !/amount|cost/i.test(status.join("\n"))
+        complianceErrors == []
+        compliance[0] == "Plan,For,Due,Outcome,Satisfied,Work order,Note"
+        // the demo filter plan's August, September and October obligations: on time, late and skipped, each named
+        compliance.length == 4
+        compliance.slice(1).map(line => line.split(",")[3]) == ["On time", "Late", "Skipped"]
+    }
+})
+
+// Review R3: the work orders dataset through Insights is scoped by Mantle's organization row filter on the document's
+// organization: Retail's Insights reader reads Retail's work orders and never Services', whatever filter they send, and
+// Services' reader Services' alone. The documents are indexed here (the demo's air handler leak and a
+// spec-local Retail work order's document), the Retail one deleted at the end.
+feature("the work orders dataset is each reader's own organization's, through Insights", {
+    when() {
+        const R = "org.moqui.report.ReportServices."
+        const retailDocId = "MNT_RPT_RETAIL_DOC"
+        const datasetId = "boss-maintenance-work-status"
+        const range = {from: "now-1d", thru: "now+1d"}
+        system(() => {
+            const services = Array.from(
+                ec.entity.getDataDocuments("BossMaintenanceWorkOrder", {workEffortId: ids.inProgressOrderId})
+            )
+            const retail = Object.assign({}, services[0], {
+                _id: retailDocId,
+                workEffortId: retailDocId,
+                workEffortName: "Retail forklift spec work",
+                organizationPartyId: ids.otherOrganizationId,
+                assetId: ids.otherAssetId,
+                facilityId: ids.otherFacilityId
+            })
+            ec.search.indexDocuments(services.concat([retail]))
+        })
+        const seen = (user, extra) =>
+            asUser(user, () => {
+                const out = invoke(R + "query#Documents", Object.assign({datasetId, pageSize: 200}, range, extra || {}))
+                return Array.from(out.hits || [])
+                    .map(hit => hit.body?.workEffortId)
+                    .filter(id => id === ids.inProgressOrderId || id === retailDocId)
+                    .sort()
+                    .join(",")
+            })
+        try {
+            return {
+                retailDocId,
+                retail: seen("insights.reader"),
+                forged: seen("insights.reader", {queryString: "organizationPartyId:" + ids.organizationId}),
+                services: seen("insights.services")
+            }
+        } finally {
+            system(() => ec.search.deleteDocument("BossMaintenanceWorkOrder", retailDocId))
+        }
+    },
+    then({retailDocId, retail, forged, services}) {
+        retail == retailDocId
+        // asking for Services' rows by name finds none of them
+        forged == ""
+        services == ids.inProgressOrderId
     }
 })

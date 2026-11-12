@@ -444,7 +444,7 @@ along with this software (see the LICENSE.md file). If not, see
         reader's alone, MAINTENANCE_COST_VIEW, as its screen's BOSS_MNT_COSTS is) -->
     <ironstone.insights.ReportCatalogEntry entryId="Maintenance.WorkStatus" version="1" ownerApp="Maintenance" title="Work status"
             description="Maintenance work orders opened, completed and cancelled in a period, and the backlog, overdue and unassigned at its end, by state, team, resource or source."
-            purpose="Maintenance" basis="Opened, first completed and cancelled in the period; backlog as of a time"
+            purpose="Maintenance" basis="Opened, completed (once, while still complete) and cancelled in the period; backlog as of a time"
             routePath="Maintenance/Reports/WorkStatusReport" parameterContract="organizationPartyId,fromDate,thruDate"
             sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" metricIds="Maintenance.Backlog"
             catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue" catalogueKey="Maintenance.WorkStatus"
