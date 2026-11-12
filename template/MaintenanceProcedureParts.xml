@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of Maintenance's procedure screens (impl-maintenance P6; design-maintenance §4 Procedures and ProcedureDetail). A screen
+    includes each transition it uses by name (transition-include), so a form here posts to the screen it is on. Each runs Maintenance's
+    record check of the procedure (check#Record procedure: a reader of its organization's procedures) and then the Mantle service of
+    mantle.work.ProcessServices, which checks the permission (WORK_PROCESS_EDIT to author, _APPROVE to decide) and scope again.
+    - storeProcedure: a new procedure (opens its ProcedureDetail) or a change of its header and applicability;
+    - storeStep, moveStep, storeDependency, storeRequirement, storeInstruction: the definition's steps, order, dependencies,
+      planned requirements and draft instructions;
+    - requestApproval, approveProcedure, refuseProcedure, retireProcedure: its publication. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storeProcedure">
+        <actions>
+            <if condition="workEffortId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'procedure', recordId:workEffortId}"/>
+            </if>
+            <service-call name="mantle.work.ProcessServices.store#WorkProcess" out-map="saved"
+                    in-map="{workEffortId:(workEffortId || null), organizationPartyId:organizationPartyId, workEffortName:workEffortName,
+                        description:description, estimatedWorkTime:estimatedWorkTime, maintenanceTypeEnumId:maintenanceTypeEnumId,
+                        applicableProductId:applicableProductId, applicableAssetClassEnumId:applicableAssetClassEnumId,
+                        applicableFacilityTypeEnumId:applicableFacilityTypeEnumId, sourceWorkEffortId:(sourceWorkEffortId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="isNew" from="!workEffortId"/>
+                <set field="workEffortId" from="saved.workEffortId"/>
+                <message type="success">${isNew ? 'Procedure ' + saved.workEffortId + ' created as a draft' : 'Procedure saved'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Procedures/ProcedureDetail']}">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeStep">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:rootWorkEffortId}"/>
+            <!-- dependsOnIds only from the dependency form (dependencyForm Y): an empty choice removes them -->
+            <set field="dependsOnList" from="dependencyForm != 'Y' ? null : (Array.isArray(dependsOnIds) ? dependsOnIds
+                    : (dependsOnIds &amp;&amp; typeof dependsOnIds === 'object' ? Array.from(dependsOnIds) : String(dependsOnIds || '').split(',').filter(Boolean)))"/>
+            <service-call name="mantle.work.ProcessServices.store#ProcessStep" out-map="saved"
+                    in-map="{rootWorkEffortId:rootWorkEffortId, workEffortId:(stepWorkEffortId || null),
+                        parentWorkEffortId:(parentWorkEffortId || null), workEffortName:workEffortName, description:description,
+                        estimatedWorkTime:estimatedWorkTime, isRequired:isRequired, responseKindEnumId:responseKindEnumId,
+                        measurementTypeId:measurementTypeId, measurementUomId:measurementUomId, minimumValue:minimumValue,
+                        maximumValue:maximumValue, evidenceRequired:evidenceRequired, commentRequired:commentRequired,
+                        waiverAllowed:waiverAllowed, dependsOnIds:dependsOnList, end:(endStep == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endStep == 'Y' ? 'Step removed from new work' : 'Step saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></error-response>
+    </transition>
+    <transition name="moveStep">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:rootWorkEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.move#ProcessStep"
+                    in-map="{rootWorkEffortId:rootWorkEffortId, workEffortId:stepWorkEffortId, direction:direction}"/>
+        </actions>
+        <default-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></error-response>
+    </transition>
+    <transition name="storeRequirement">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:rootWorkEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.store#ProcessRequirements"
+                    in-map="{rootWorkEffortId:rootWorkEffortId, workEffortId:(stepWorkEffortId || null), kind:kind,
+                        productId:(kind == 'asset' ? null : productId), assetProductId:(kind == 'asset' ? productId : null),
+                        skillTypeEnumId:skillTypeEnumId, estimatedQuantity:estimatedQuantity, estimatedNumPeople:estimatedQuantity,
+                        estimatedDuration:estimatedDuration, remove:(remove == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'Y' ? 'Requirement removed' : 'Requirement saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></error-response>
+    </transition>
+    <transition name="storeInstruction">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:rootWorkEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.store#ProcessInstruction"
+                    in-map="{rootWorkEffortId:rootWorkEffortId, workEffortId:(stepWorkEffortId || null), contentText:contentText,
+                        description:description, end:(endInstruction == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Instruction saved as a draft; the next approval publishes it</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId" from="rootWorkEffortId"/></error-response>
+    </transition>
+    <transition name="requestApproval">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.request#WorkProcessApproval" out-map="requested"
+                    in-map="{workEffortId:workEffortId, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${requested.repeated ? 'Approval was requested already' : 'Approval requested from ' + requested.notifiedCount + ' approver(s)'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="approveProcedure">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.approve#WorkProcess" out-map="approved"
+                    in-map="{workEffortId:workEffortId, effectiveDate:effectiveDate, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Procedure approved; ${approved.publishedCount} instruction(s) published</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="refuseProcedure">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.refuse#WorkProcess" in-map="{workEffortId:workEffortId, reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Approval refused; the procedure stays a draft</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="retireProcedure">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'procedure', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.retire#WorkProcess" in-map="{workEffortId:workEffortId, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Procedure retired: no new work is made of it</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+</screen>

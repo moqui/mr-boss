@@ -564,8 +564,8 @@ the screens that call it.
 | PeopleServices | find#DueWork | People/Home; People/MyTeam | People/Home (DueWork: no manager and lifecycle tasks; a manager's decisions count); People/MyTeam (Decisions); Shared/PeopleSelfService (My People tasks); ironstone.people.ContextServices.get#TodayItems (Today's decisions waiting, on the People and Commons roots) (People P8) |
 | PeopleServices | store#EmergencyContact | People/Employees/Employee360; People/SelfService | People/Employees/Employee360 and Commons/People/Employee360 (Personal information's emergency contacts); Shared/PeopleSelfService (Emergency contacts) (template/PeopleEmergencyContacts.xml) (People P8) |
 | PeopleServices | notify#PeopleTaskAssigned | (TaskServices.notify#TaskAssigned for People's lifecycle work) | none: the PeopleTaskAssigned notice, opening the task in Commons (People P8) |
-| ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7) |
-| ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7) |
+| ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7); Maintenance/Procedures/ProcedureDetail/Steps (Add step, Edit, Waits for, Remove: store#ProcessStep's checked path); Maintenance/WorkOrders/NewWorkOrder (instantiate#WorkProcess' checked path, through create#MaintenanceWorkOrder) (Maintenance P6) |
+| ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7); also add#TaskTime, add#TaskDependency, remove#TaskDependency and clone#WorkEffort (Maintenance P6, F110) |
 | IdentityServices | request#Provisioning, request#AccessEnd | People/Employees/HireEmployee; People/Employees/Employee360 | People's tx-commit rules (mr-boss service/PeopleLifecycle.secas.xml) and Employee360's Request access again, through ironstone.admin.LifecycleServices; Admin/Users/LifecycleDetail retries their waiting steps (People P7) |
 | ScheduleServices | find#Schedules | People/Time/WorkingSchedules | People/Time/WorkingSchedules (Schedules) (People P9) |
 | ScheduleServices | get#Schedule | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (the header, Week, Assignments) (People P9) |
@@ -2197,9 +2197,9 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | --- | --- | --- | --- |
 | work/MaintenanceServices | find#MaintenanceWorkOrders | Maintenance/WorkOrders; Maintenance/Home | Maintenance/WorkOrders/Find (WorkRows, board, calendar, through ironstone.maintenance.WorkOrderServices.find#WorkOrderRows); Maintenance/Equipment/EquipmentDetail/Maintenance; Maintenance/Facilities/FacilityDetail/WorkOrders; Maintenance's Today source and palette |
 | work/MaintenanceServices | get#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (header, Lifecycle; Overview, Time, History) |
-| work/MaintenanceServices | create#MaintenanceWorkOrder | Maintenance/WorkOrders | Maintenance/WorkOrders/NewWorkOrder (NewWork; the quick create's) |
+| work/MaintenanceServices | create#MaintenanceWorkOrder | Maintenance/WorkOrders | Maintenance/WorkOrders/NewWorkOrder (NewWork; the quick create's; P6: from a procedure, Use procedure) |
 | work/MaintenanceServices | store#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (WorkHeaderEdit) |
-| work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer) |
+| work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer; P6: replacePartyId on the root and its steps, F113) |
 | work/MaintenanceServices | transition#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (primary action, Lifecycle, CompleteWork); Maintenance/WorkOrders/Find (board moves) |
 | work/MaintenanceServices | act#MaintenanceWorkOrders | Maintenance/WorkOrders | Maintenance/WorkOrders/Find (Approve, Cancel on the selection) |
 | work/MaintenanceServices | adopt#MaintenanceRecord | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Maintenance (Adopt) |
@@ -2234,3 +2234,24 @@ after `ironstone.maintenance.AccessServices.check#Record`:
 | work/ResourceBookingServices | find#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime (DowntimeRows, the correction history); Maintenance/WorkOrders/WorkOrderDetail/Downtime |
 | work/ResourceBookingServices | correct#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (Correct) |
 | work/ResourceBookingServices | end#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (RestoreResource) |
+Added in `work/ProcessServices.xml` (impl-maintenance P6; `MaintenanceProcedures.js`, the checked path of the WppMaintenanceProcedure
+policy), called by built screens through the Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`
+(recordType procedure):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/ProcessServices | find#WorkProcesses | Maintenance/Procedures | Maintenance/Procedures/Find (ProcedureRows); Maintenance's palette; the procedures choice of Maintenance/WorkOrders/NewWorkOrder (usable) |
+| work/ProcessServices | get#WorkProcess | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail (header and every tab) |
+| work/ProcessServices | store#WorkProcess | Maintenance/Procedures | Maintenance/Procedures/Find (NewProcedure); Maintenance/Procedures/ProcedureDetail (Copy as a new draft; Overview's Edit) |
+| work/ProcessServices | move#ProcessStep | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Steps (Up, Down) |
+| work/ProcessServices | store#ProcessDependency | Maintenance/Procedures/ProcedureDetail | none yet: Steps' Waits for writes through store#ProcessStep's dependsOnIds |
+| work/ProcessServices | store#ProcessRequirements | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Resources (Add requirement, Remove) |
+| work/ProcessServices | store#ProcessInstruction | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Instructions (Edit, Remove) |
+| work/ProcessServices | find#ProcessInstructions | Maintenance/WorkOrders/WorkOrderDetail | none yet: an execution step's instruction, for P7's checklist |
+| work/ProcessServices | request#WorkProcessApproval | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail (Request approval; Approval) |
+| work/ProcessServices | approve#WorkProcess | Maintenance/Procedures/ProcedureDetail; Commons/Notifications | Maintenance/Procedures/ProcedureDetail (Approve; Approval); Commons' approvals inbox (the WorkProcessApproval topic's approve service) |
+| work/ProcessServices | refuse#WorkProcess | Maintenance/Procedures/ProcedureDetail; Commons/Notifications | Maintenance/Procedures/ProcedureDetail/Approval (Refuse); Commons' approvals inbox (the topic's refuse service) |
+| work/ProcessServices | retire#WorkProcess | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail (More › Retire; Approval) |
+| work/ProcessServices | find#ProcessExecutions | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Usage (ProcessUsage) |
+| work/ProcessServices | check#ProcessApplicability | Shared/Product360 | Products' CatalogRecordServices.store#CatalogRow (a maintenance default's work template; Product360's Equipment tab) |
+

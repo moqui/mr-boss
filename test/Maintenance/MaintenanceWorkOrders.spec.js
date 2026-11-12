@@ -213,6 +213,8 @@ feature(
             policy.errors.length == 0
             policy.output.includes("Approve planned work up to (hours)")
             policy.output.includes("The defaults are in effect")
+            // P6: procedure self-approval, off by default
+            policy.output.includes("A procedure's last author may approve it")
         }
     }
 )

@@ -69,6 +69,11 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="term"/>
             <parameter name="selected"/>
             <parameter name="organizationPartyId"><description>facilities: the organization whose facilities are offered</description></parameter>
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+            <parameter name="rootWorkEffortId"><description>P6, procedureSteps: the procedure whose steps are offered</description></parameter>
+            <parameter name="workEffortId"><description>procedureSteps: the step not offered</description></parameter>
+            <parameter name="measurementTypeId"><description>measurementUoms: the measurement whose units are offered</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
@@ -81,8 +86,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="search" noun="Records" allow-remote="false" read-only="true">
         <description>The palette's Maintenance records, each opening its Maintenance screen, with recordEntity and recordId for
-            Assist's search (Maintenance.js searchFinds). None yet: equipment and facilities join with their screens (P2), work
-            orders (P3), procedures (P6). No rows for a user without Maintenance.</description>
+            Assist's search (Maintenance.js searchFinds): equipment and facilities (P2), work orders (P3) and procedures (P6), each
+            through its Mantle scoped find. No rows for a user without Maintenance.</description>
         <in-parameters>
             <parameter name="text"/>
             <parameter name="limit" type="Integer"/>

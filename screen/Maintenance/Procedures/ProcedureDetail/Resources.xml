@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProcedureDetail's Resources tab (design-maintenance §4 ProcessResources; impl-maintenance P6): the planned requirements by step: parts
+    (WorkEffortProduct, consumed), equipment needed (WorkEffortAssetNeeded) and skills (WorkEffortSkillStandard; the minimum skill level
+    joins with People's P18, impl-maintenance F75), each copied to the work made of the procedure. For an author: Add requirement and
+    Remove (store#ProcessRequirements). No cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Resources" default-menu-index="3">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeRequirement" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <actions>
+        <!-- ProcedureDetail's actions read the procedure when it renders with the tab; alone (a reloaded tab, the terminal) it reads
+            it here -->
+        <if condition="procedureDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.ProcessServices.get#WorkProcess" out-map="procedureDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="procedure" from="procedureDetail?.procedure || null"/>
+        <set field="canEdit" from="!!procedureDetail?.canEdit"/>
+        <set field="stepNames" from="Object.fromEntries((procedureDetail?.stepList || []).map(row =&gt; [row.workEffortId, row.workEffortName]))"/>
+        <set field="requirementList" from="(procedureDetail?.requirementList || []).map(row =&gt; Object.assign({}, row, {
+                rootId: workEffortId, stepId: row.workEffortId,
+                stepName: stepNames[row.workEffortId] || 'The whole procedure',
+                kindText: {product: 'Part', asset: 'Equipment', skill: 'Skill'}[row.kind] || row.kind,
+                quantityText: row.quantity != null ? String(row.quantity) : '',
+                durationText: row.duration != null ? row.duration + ' h' : ''}))"/>
+        <set field="newRequirement" from="{rootWorkEffortId: workEffortId, kind: 'product', estimatedQuantity: 1}"/>
+    </actions>
+    <widgets>
+        <section name="ResourcesFound" condition="procedure">
+            <widgets>
+                <container-box>
+                    <box-header title="Resources and materials"/>
+                    <box-toolbar>
+                        <container-dialog id="AddRequirement" button-text="Add requirement" icon="sym_o_add" title="Add a requirement"
+                                width="640" condition="canEdit">
+                            <form-single name="AddRequirementForm" transition="storeRequirement" map="newRequirement">
+                                <field name="rootWorkEffortId"><default-field><hidden/></default-field></field>
+                                <field name="stepWorkEffortId">
+                                    <default-field title="Step" tooltip="Empty: the whole procedure">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedureSteps', choiceRootWorkEffortId:workEffortId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="kind">
+                                    <default-field title="Kind">
+                                        <radio><option key="product" text="A part"/><option key="asset" text="Equipment"/><option key="skill" text="A skill"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Part or equipment">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'parts'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="skillTypeEnumId">
+                                    <default-field title="Skill">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'skillTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="estimatedQuantity">
+                                    <default-field title="Quantity or people"><text-line size="6" input-type="number"/></default-field>
+                                </field>
+                                <field name="estimatedDuration">
+                                    <default-field title="Hours needed" tooltip="Equipment and skills"><text-line size="6" input-type="number"/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="RequirementList" list="requirementList" skip-form="true">
+                            <field name="stepName"><header-field title="Step"/><default-field><display/></default-field></field>
+                            <field name="kindText"><header-field title="Kind"/><default-field><display/></default-field></field>
+                            <field name="name"><header-field title="Requirement"/><default-field><display/></default-field></field>
+                            <field name="quantityText" align="right"><header-field title="Quantity"/><default-field><display/></default-field></field>
+                            <field name="durationText" align="right"><header-field title="Hours"/><default-field><display/></default-field></field>
+                            <field name="remove">
+                                <header-field title=""/>
+                                <default-field>
+                                    <link url="storeRequirement" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" condition="canEdit"
+                                            parameter-map="{rootWorkEffortId:rootId, stepWorkEffortId:stepId, kind:kind,
+                                                productId:key, skillTypeEnumId:key, remove:'Y'}"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <label text="No requirement is planned." type="p" style="m-muted q-pa-sm" condition="!requirementList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

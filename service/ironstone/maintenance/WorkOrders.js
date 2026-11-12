@@ -122,8 +122,8 @@ function participantParty(userId, permission) {
     if (!ec.user.hasPermission(permission)) denied("PERMISSION_DENIED", permission + " is required")
     return one("moqui.security.UserAccount", {userId: text(userId)})?.partyId || null
 }
-// A party's open work orders (a current Assignee on an open managed root) and the equipment it holds now (a current custodian
-// or operator), as ids; counts are what the participant shows.
+// A party's open work orders (a current Assignee on an open managed root or on a step of one, P6/F113) and the equipment it holds
+// now (a current custodian or operator), as ids; counts are what the participant shows.
 function openAssignments(partyId) {
     const found = {workOrders: [], custody: []}
     if (!partyId) return found
@@ -134,9 +134,19 @@ function openAssignments(partyId) {
             .list()
     ).map(row => row.workEffortId)
     if (assigned.length) {
+        // a step counts as its work order (its root)
+        const roots = new Set(assigned)
+        for (const row of Array.from(
+            find("mantle.work.effort.WorkEffort")
+                .condition("workEffortId", "in", Array.from(new Set(assigned)))
+                .condition("rootWorkEffortId", "is-not-null", null)
+                .selectField("workEffortId,rootWorkEffortId")
+                .list()
+        ))
+            roots.add(row.rootWorkEffortId)
         const orders = Array.from(
             find("mantle.work.maintenance.MaintenanceWorkOrderDetail")
-                .condition("workEffortId", "in", Array.from(new Set(assigned)))
+                .condition("workEffortId", "in", Array.from(roots))
                 .condition("statusId", "in", openStatuses)
                 .selectField("workEffortId")
                 .list()
@@ -195,16 +205,11 @@ function transferAssignments(p) {
     for (const id of ids) {
         try {
             if (kind === "workOrders") {
-                const current = Array.from(
-                    find("mantle.work.effort.WorkEffortParty", {workEffortId: id, roleTypeId: "Assignee"})
-                        .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
-                        .selectField("partyId")
-                        .list()
-                ).map(row => row.partyId)
-                const wanted = Array.from(new Set(current.filter(partyId => partyId !== fromPartyId).concat([to.partyId])))
+                // the leaver replaced on the root and on each step of the work order (P6, F113)
                 lib.probe("mantle.work.MaintenanceServices.schedule#MaintenanceWorkOrder", {
                     workEffortId: id,
-                    assigneePartyIds: wanted
+                    replacePartyId: fromPartyId,
+                    withPartyId: to.partyId
                 })
             } else {
                 const [assetId, roleTypeId] = id.split("|")

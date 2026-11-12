@@ -321,4 +321,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_ADMIN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_ACTIVE_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <!-- impl-maintenance P6: a procedure waiting for approval (Mantle's WorkProcessApproval topic and its registration) opens
+        ProcedureDetail under Maintenance; it is approved or refused from Commons' approvals inbox (approve#WorkProcess and
+        refuse#WorkProcess, as the user deciding) or from ProcedureDetail -->
+    <moqui.security.user.NotificationTopic topic="WorkProcessApproval"
+            linkTemplate="/qapps/Maintenance/Procedures/ProcedureDetail?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

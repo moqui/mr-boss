@@ -647,7 +647,7 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
 | `SalesQuoteApproval` | Sales | quote (`OrderHeader`) at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote`; the topic is Mantle's, seeded beside `OrderChangeApproval` as the purchase topics are (impl-sales P9, F26) |
 | `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval`; seeded with Marketing's setup data, as the built apps seed theirs, each with a topic registration naming `MARKETING_APPROVE` (impl-marketing P2, F42) |
 | `ResourceBooking` | Maintenance | booking request for a managed meeting room or equipment | proposed `mantle.work.ResourceBookingServices.decide#ResourceBooking` |
-| `WorkProcessApproval` | Maintenance | work process (procedure) definition | proposed `mantle.work.ProcessServices.approve#WorkProcess` |
+| `WorkProcessApproval` | Maintenance | work process (procedure) definition | `mantle.work.ProcessServices.approve#WorkProcess` and `refuse#WorkProcess` (a reason required), each checking the approver's permission, the organization and that the decider is not the procedure's last author (as built, impl-maintenance P6; seeded in Mantle's data/MaintenanceProcedureData.xml with its TopicRegistration) |
 
 ### LiveCall
 

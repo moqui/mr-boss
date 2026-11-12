@@ -43,6 +43,8 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**Maintenance P6 (Nov 12, 2026):** no baseline form is mapped to the procedures (Procedures and ProcedureDetail are new, design-maintenance §4); their Implemented in is in usl-inventory's ProcessServices rows. Product360's maintenance default (CreateProductMaintenance) takes only a procedure the applicability check admits.
+
 **People P13 (Nov 11, 2026):** no baseline form is mapped to Attendance, TimeImport or SelfService's Clock: attendance punches
 are new records (`AttendancePunch`, design-people §14.2 "Attendance punch capture is new"), and PartyTimeEntries' ClockInForm is
 Projects' work-time clock (a time entry on a work item), which stays blank as before (impl-projects §7); their Implemented in is in
@@ -455,7 +457,7 @@ is unchanged.
 | EditProduct | ProductLocationList | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
 | EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
 | EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
-| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
+| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment (its work template a maintenance procedure the applicability check admits, impl-maintenance P6) |
 | EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
 | FindProduct | NewProductForm | Products/Products | Products/Products/NewProduct |
 | FindProduct | ProductsForm | Products/Products | Products/Products/List |
