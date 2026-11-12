@@ -361,7 +361,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F75); items waiting on People P9/P10/P12/P18 left open |
-| P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | — |
+| P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | built and reviewed Nov 11, merged |
 | P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | — |
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | — |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
@@ -587,7 +587,7 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
 - Design edits: design-maintenance §1.1 (as built: the permissions, the scope module, the root user group, the Settings area,
   the administrator's views, `PEOPLE_DIRECTORY_VIEW`, the device's request), §1.2 (the menu, keymap and palette source), §3
   Home (the filters and counters as built).
-- Findings (provisional):
+- Findings, numbered by the lead F76 to F80 in order:
   - the administrator's grants are not in design §1.1 ("operational permissions granted explicitly in data"); P1 gives
     `MAINTENANCE_SETTINGS_EDIT` and the four views and no plan, supervise or edit permission. Maintenance has no
     all-organizations permission of its own: `FACILITY_ALL_ORGANIZATIONS` (FacilityScope.js) widens it, as it does facility and
@@ -647,7 +647,7 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
     sensitive, the views view, the rest edit). MaintenanceAccess: the administrator's capabilities exactly, its context every
     organization, `MAINTENANCE_IMPORT` in the resource administrator's and the administrator's bundles.
   - Design §1.1 (the administrator's row and the as-built text: the scope, the grants, the panels) and the setup comments.
-- Findings:
+- Findings, numbered by the lead F81 to F84 in order:
   - the Built note's lint was run with the release binary; the Debug binary gives the same 136 sites (the one new is the root's
     `UserSecurityChecks.currentDevice()`, static-class, as Insights' root), before and after R2;
   - P2 mounts the shared EquipmentDetail and FacilityDetail, whose `record-files` and `chatter` name `mantle.product.asset.Asset`
@@ -1398,6 +1398,9 @@ design-maintenance.md or the owner's design.
 | Nov 11, 2026 | The planned-work approval threshold is by estimated duration or estimated cost, as design §9 has it, from what exists, with no stored estimated-cost field. Duration is the root's `WorkEffort.estimatedWorkTime` with its steps', against a threshold in hours, zero by default (P3). Cost is computed at the Approve gate: the planned parts' `WorkEffortProduct.estimatedQuantity` at the product's approved standard cost, plus the estimated hours at `get#CostingRate`, against a threshold unset by default; an estimate that cannot be priced is over it, and the planner sees no amount (P11, once P9's planned parts and impl-people P10's rate exist) | The user's call: as the design has it, estimated cost or duration, using features that exist; a piece count could be a third measure later, not for now (§7). WorkEffort has no estimated cost field (mr-mantle entity/WorkEffortEntities.xml:254) and none is added; `estimatedWorkTime` (:235), WorkEffortProduct's `estimatedQuantity` (:919) and `get#ApprovedStandardCost` (service/mantle/product/CostServices.xml:176) exist, and `get#CostingRate` is impl-people P10's |
 | Nov 11, 2026 | Gate 1 is released on its own. The phase order of §1 stands as written | The user's call, as recommended: corrective work with equipment, intake and downtime replaces the baseline's maintenance forms for a small organization; each later gate adds an area to the menu |
 | Nov 11, 2026 | P8, P11, P12, P19 and P17's cost entry wait for People P9 and P18, P10, and P12; the other phases are built now, stages 3, 4 and 5 starting after P7 (P15 after P5, beside P7) | The user's call (the build request): People is being built at the same time; P8 needs People P9's capacity and P18's `minimumSkillLevel` and `check#Qualifications`, P11 People P10's `RaprCost` and `get#CostingRate`, P12 P11's cost summary, P17's cost entry P11, and P19 People P12's projected collection kind. Stages 3 to 5 use P3 and P6, not P8. A phase built now that touches one of those pieces leaves a seam and says so: P6's skill standards carry no level (F75) |
+| Nov 11, 2026 | Maintenance has its own all-organizations permission, `MAINTENANCE_ALL_ORGANIZATIONS`, granted to `BOSS_MAINTENANCE_ADMIN` alone; `FACILITY_ALL_ORGANIZATIONS` no longer widens Maintenance's scope | The user's call (P1, F76), as People's `PEOPLE_ALL_ORGANIZATIONS`; built in P1's review (R3) |
+| Nov 11, 2026 | `BOSS_MAINTENANCE_ADMIN` holds every `MAINTENANCE_*`, `WORK_PROCESS_*` and `RESOURCE_*` permission, and its bundle follows | The user's call (P1, F76); design §1.1 named none; built in P1's review (R4) |
+| Nov 11, 2026 | The planner, supervisor and resource administrator groups hold `PEOPLE_DIRECTORY_VIEW`, so Employee360's public work card opens under Maintenance | The user's call (P0's F62), kept after P1 |
 
 ## 5. Open questions
 
@@ -1498,6 +1501,16 @@ paths under `mr-boss/`.
 | F73 | P0: Admin P17 is built: `AuditServices.find#Changes` reads only entities with a registered `moqui.server.AuditProjection` (entity, field, category, value mode, source service, view permission, key kinds, link; framework entity/ServerEntities.xml:816-847), an organization's records through an owner source implementing `find#OwnedChanges` (ids only, the owner checking `ADMIN_AUDIT_VIEW` and its scope; framework service/org/moqui/admin/AuditServices.xml:31-56). A business entity is registered only if its owner seeds a projection, and its history is otherwise its owner's screen's (impl-admin F257); People registers none (impl-people F56) | Maintenance registers no projection: the work order, check, waiver, schedule term and booking decision histories are WorkOrderDetail's History and its owners' screens (P3, P7, P13, P16), read from EntityAuditLog by Maintenance's services in its scope. Whether they belong in AuditChanges is F257, the user's call (§7) |
 | F74 | P0: Admin P18 is built: a route group is a `moqui.security.DeviceRouteGroup` its owner seeds (framework entity/SecurityEntities.xml:472-497: an artifact group as an allow-list, `homePath`, one fixed parameter, idle timeout, lifetime); a device's request runs as a display account and cannot load the `/qapps` shell, so a kiosk is a page of its own, and Insights' root calls no context service for a device's request (screen/Insights.xml:44-56, `UserSecurityChecks.currentDevice()`); People P30 is replanned on it (impl-people F55) | Nothing built here blocks TechnicianKiosk if P1's root does as Insights' does: no context service and no Chatter or RecordFiles for a device's request. TechnicianKiosk stays later (§7), a page of its own with Maintenance's route group |
 | F75 | P0: still not in the code, as the user deferred them (§4): `WorkEffortSkillStandard.minimumSkillLevel` and `check#Qualifications` (People P18), `RaprCost` and `get#CostingRate` (People P10; no match in mr-mantle's entities, services or data), the schedule read of `get#PartyCapacity` and HolidayCalendars (People P9) and a projected kind in `get#DavCollections` (People P12; CalendarDavServices.xml:143). P6's `store#ProcessRequirements` names `minimumSkillLevel` | Left open: rechecked when those People phases land, for P8, P11, P12, P19 and P17's cost entry. P6 writes skill standards without a level and P8 adds it |
+| F76 | P1: design §1.1 lists no grants for the administrator, and Maintenance had no all-organizations permission (FACILITY_ALL_ORGANIZATIONS widened it) | §4: the user's calls; P1's review R3, R4 |
+| F77 | P1: Commons' Schedules ResourceDetail links "Open in Maintenance" to `//Maintenance/Facilities` and `//Maintenance/Equipment` (screen/Commons/Calendar/Schedules/ResourceDetail.xml:60), hidden while those areas are absent | P2 keeps the paths or changes the link |
+| F78 | P1: a requester holds no Maintenance root, so `ironstone.maintenance` services (`get#Capabilities`) are refused to them | P4: Commons' intake reads Mantle's MaintenanceAccess or adds its own grant |
+| F79 | P1: the demo technicians are agents, not People employees | P8 (deferred): skills, capacity and qualifications need employed technicians |
+| F80 | P1: Chatter and RecordFiles under the root opened no Maintenance host | P1's review R2 restricts the panels; P2 and P3 add their hosts (F82) |
+| F81 | P1 review: the Built note's lint was on the release binary; the Debug binary gives the same 136 sites (one new, the root's `currentDevice()`, as Insights') | None |
+| F82 | P1 review: the root serves Chatter and RecordFiles only for the entities in its `panelHosts`, empty in P1 | P2 adds Asset and Facility with their checks; P3 the work order and step |
+| F83 | P1 review: a holder of `MAINTENANCE_ALL_ORGANIZATIONS` sees every organization even with an active one chosen (FacilityScope's rule); People narrows to the active one | P3's lists decide; People's rule recommended |
+| F84 | P1 review: the root's ALWAYS gives the administrator and `ADMIN` every area | With F76's grants the administrator holds what each area reads |
+
 
 ## 7. Later
 
