@@ -347,6 +347,8 @@ feature("out of office to contacts and people inside: Mary, john.doe's personal 
             const hook = sys(() => call("org.moqui.mail.EmailClientServices.filter#ContactAddresses", { userId: "EX_JOHN_DOE",
                 emailAddressList: ["mary.doe@example.com", "stranger@nowhere.example"] }))
             const out = sys(() => call("org.moqui.mail.EmailClientServices.send#OutOfOfficeReplies", { emailAccountId: ownId, emailMessageIdList: ids }))
+            // each reply is claimed in a transaction of its own and sent once it commits, on a service worker
+            assert(ec.factory.waitWorkerPoolEmpty(50), "Automatic reply worker pool did not drain")
             return { hook, out, captured: Array.from(capture.getMessages()), sent: rows("moqui.basic.email.EmailOutOfOfficeSent", { emailAccountId: ownId }) }
         } finally {
             capture.reset()
