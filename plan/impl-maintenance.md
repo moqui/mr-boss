@@ -377,7 +377,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
-| P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
+| P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | — |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | — |
@@ -3441,7 +3441,7 @@ approval kind; MT-07 (decisions), MT-01, MT-11.
   cancel#ResourceBooking (and get#FreeBusy, not called) for ResourceCalendar; ss-inventory's AssetCalendar NewEventForm names it.
 - Design edits: design-maintenance's header, §1.2, §7.1 (F171, F165, F172), BookingRequests and ResourceCalendar as built;
   design-drawers-commons' header and its ResourceBooking topic row; impl-manufacturing's log (F171).
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F224 to F233 in order:
   - The plan's one `ResourceBooking` topic cannot tell the organizer: the inbox makes every unviewed message of a topic with an approve
     service an approval card (CommonsServices decorate#Notifications). The organizer's notices are `ResourceBookingNotice`.
   - A request already holds the resource: book#Resource refuses an overlapping request as a conflict (P15's guard reads requested
@@ -3542,7 +3542,7 @@ get#RecordLink, ProductionSchedule.js's offline path and the production scripts'
     KnowledgeReview, CommonsSettings, TodayPanel, MaintenanceProcedures, PeopleApprovals, PeopleAttendance, PeopleSchedules, PeopleTime
     (BOSS) and WorkTimesheets, PeopleEmployment (Mantle) pass unchanged.
   - Design: design-maintenance §7.1 (the move's lock) and BookingRequests (a cancelled booking or event leaves the inboxes).
-- Findings (for the lead to number):
+- Findings, numbered by the lead F234 to F236 in order:
   - A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers; a planned block's
     correction does.
   - restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests).
@@ -3739,6 +3739,8 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P9: a supplies part issued to managed maintenance work is routed to the cost policy's expense account; supplies elsewhere post as today | The user's call (P9) |
 | Nov 12, 2026 | P13: a procedure is optional on a plan; one named (or the model default's) must qualify; with none P14 generates an ad hoc work order with the term's estimate; activation needs a time zone. A draft's terms change in place until activation, dated rows from it | The user's calls (P13); the estimate optional and the model default inherited, as the review recommended |
 | Nov 12, 2026 | P16: an approver sees a meeting's title only when it is shared with them; Commons' own Rooms and equipment are unchanged (blackouts shown later, in a Commons change) | The lead's acceptance of the worker's recommendations (P16) |
+| Nov 12, 2026 | P16: resource administrators and supervisors read BookingRequests read only; Commons' approvals inbox opens an approval topic's own link first, so a ResourceBooking card opens BookingRequests | The user's calls (P16) |
+| Nov 12, 2026 | P10: accepting outside service stays under Purchasing's own check (`accept#ServiceItem`); the demo supervisor holds `STOCK_RECEIVE` through a Warehouse capability group that opens no Warehouse screen | The lead's decision, by the phase's text |
 
 ## 5. Open questions
 
@@ -3987,6 +3989,19 @@ paths under `mr-boss/`.
 | F221 | P7 review: A service failure inside the close's transaction may still mark it rollback-only | P7's Review note |
 | F222 | P7 review: Correction to the Built note | P7's Review note |
 | F223 | P7 review: Prettier 3.10.1 was run on ProcessChecks.js, WorkProcesses.js, WorkOrders.js and the three changed specs (ProcessChecks.js and the specs were not prettier-clean before | P7's Review note |
+| F224 | P16: The plan's one `ResourceBooking` topic cannot tell the organizer | P16's Built note |
+| F225 | P16: A request already holds the resource | P16's Built note |
+| F226 | P16: An approver sees a request's purpose only when the event is shared with them (check#EventAccess) | P16's Built note |
+| F227 | P16: F172 is "as before" except that a hidden event in a conflict is still Busy (P15's rule for every resource), a privacy change kept. | P16's Built note |
+| F228 | P16: F165's range check costs a get#EventInstances call for each recurring booking of any resource, up to 500 meetings within 365 days. | P16's Built note |
+| F229 | P16: Maintenance's ResourceCalendar books through Commons' book#ResourceSlot, which books a room (FcTpRoom) or equipment (AstTpEquipment, not AsClsMfgEquip) only | P16's Built note |
+| F230 | P16: Commons' own Schedules does not show blackouts and outages (includeUnavailable is off for it, so its specs and behavior are as before) | P16's Built note |
+| F231 | P16: A request's age is the booking row's lastUpdatedStamp (WorkEffortFacility has no request date) or an asset booking's fromDate. | P16's Built note |
+| F232 | P16: The screen offers no approval over a soft conflict | P16's Built note |
+| F233 | P16: F119 needed no change | P16's Built note |
+| F234 | P16 review: A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers | P16's Review note |
+| F235 | P16 review: restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests). | P16's Review note |
+| F236 | P16 review: An unmanaged resource's series extended later (store#EventRecurrence) is not checked against blocks (P15's R4 recheck runs only for a managed one) | P16's Review note |
 
 
 ## 7. Later
