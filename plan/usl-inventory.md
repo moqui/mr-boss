@@ -667,6 +667,10 @@ the screens that call it.
 | DevelopmentServices | mark#TrainingAttendance | People/Development/TrainingDetail (Enrollment's attendance) | People/Development/TrainingDetail (a place's Attendance) (People P19) |
 | DevelopmentServices | complete#Training | People/Development/TrainingDetail (Results) | People/Development/TrainingDetail (Record a result: the assessment form's DbForm, outcome, score, evidence) (People P19) |
 | DevelopmentServices | get#TrainingCertificate | People/Development/TrainingDetail (the completion certificate, design §15) | People/Development/TrainingCertificate (html-print, the stored page); People/Development/TrainingDetail (certificatePdf, the stored PDF) (People P19) |
+| request/RequestServices (PeopleCaseServices.xml, included) | create#PeopleCase, find#PeopleCases | People/Employees/Grievances (SubmitCase, Cases) | People/Employees/Grievances (Raise a concern, fileCase; CaseList and Show) (People P21) |
+| request/RequestServices (PeopleCaseServices.xml, included) | get#PeopleCase, change#PeopleCase, assign#PeopleCaseHandler, add#PeopleCaseTask | People/Employees/RequestDetail | People/Employees/RequestDetail (Shared/RequestDetail's People branch, template/PeopleCaseDetail.xml: the header's Start, Resolve, Reopen, Withdraw, More's Close without action, Add a handler, Remove a handler and Ask for work) (People P21) |
+| request/RequestServices (PeopleCaseServices.xml, included) | check#PeopleCaseAccess | People/RecordFiles; People/Chatter (the case host, PE-01) | People/Employees/RequestDetail (Files and Conversation: get#RecordLinkInfo's case rule, RecordFiles' change right); the case's record link (People.js caseLink) (People P21) |
+| request/RequestServices (PeopleCaseServices.xml, included) | notify#PeopleCaseUpdate, get#CaseDocumentData | — (record notices; the search documents) | the PeopleCaseUpdate notice in place of ChatterMention and RecordFollow on a case; MantleRequest's and MantleCommunicationEvent's manual data service, which keeps a case out of the index (People P21) |
 
 ## Ledger (81 services)
 

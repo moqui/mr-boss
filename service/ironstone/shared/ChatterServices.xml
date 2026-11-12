@@ -803,6 +803,10 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.shared.ChatterServices.get#RecordInfo" out-map="recordOut"
                     in-map="{recordEntityName:recordEntityName, recordId:recordId, requireVisible:true}"/>
             <if condition="ec.message.hasError()"><return/></if>
+            <!-- a confidential case (impl-people P21): its conversation is its people's notes; no message from it goes to anyone else -->
+            <if condition="recordOut.info.recordEntityName == 'mantle.request.Request' &amp;&amp;
+                    ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(recordId)">
+                <return error="true" message="A confidential case's conversation is its notes: write a note for its people"/></if>
             <service-call name="ironstone.shared.ChatterServices.get#UserIdsParties" in-map="{userIds:toUserIds}" out-map="toOut"/>
             <if condition="!toOut.partyIdList?.length"><return error="true" message="Choose who to send the message to"/></if>
             <if condition="!String(body).replace(/&lt;[^&gt;]*&gt;/g, '').replace(/&amp;nbsp;/g, ' ').trim()">

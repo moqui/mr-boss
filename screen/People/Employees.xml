@@ -22,12 +22,17 @@ along with this software (see the LICENSE.md file). If not, see
     the quick create and Employee360. P7: EquipmentDetail (the shared equipment detail, Shared/EquipmentDetail.xml, with People's
     context: custody and the return at a separation), out of the menu, opened from Employee360's equipment and a return task;
     Checklists (ChecklistTemplates) and Employee import (EmployeeImport, the shared import wizard for the `employees` target), files
-    under Employees/, HR's by their grant BOSS_PPL_HR_AREA (moved out of Settings by the user's call of Nov 11). -->
+    under Employees/, HR's by their grant BOSS_PPL_HR_AREA (moved out of Settings by the user's call of Nov 11). P21: Grievances (menu
+    index 4, a file under Employees/: the user's confidential cases, every People user's and a self-service employee's by its own
+    grant, BOSS_PPL_CASES_SELF) and RequestDetail (the shared request detail, Shared/RequestDetail.xml, with People's branch: a
+    confidential case for its people alone; any other request is not available here), out of the menu. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employees" default-menu-index="4" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
         <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml" menu-include="false"/>
+        <!-- P21: a confidential case (People's branch of the shared request detail) -->
+        <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>
         <!-- P3: OrgStructure (menu index 2) and OrgChart (3) are files under Employees/ -->
     </subscreens>
     <widgets>

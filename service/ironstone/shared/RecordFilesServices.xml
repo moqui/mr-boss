@@ -137,6 +137,13 @@ along with this software (see the LICENSE.md file). If not, see
                     .parameters({partyQualificationId:info.recordId}).disableAuthz().call()
                 contentType.catalogCanChange = !!access?.canEdit
             }
+            // P21: a confidential case's files: its people add them while it is open, nobody else (Mantle's check#PeopleCaseAccess)
+            if (info.recordEntityName === 'mantle.request.Request' && info.recordId
+                    && ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(info.recordId)) {
+                const access = ec.service.sync().name('mantle.request.RequestServices.check#PeopleCaseAccess')
+                    .parameters({requestId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
+            }
             if (info.recordEntityName === 'mantle.party.Party') {
                 const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess')
                     .parameters({partyId:info.recordId}).disableAuthz().call()

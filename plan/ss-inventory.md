@@ -66,6 +66,11 @@ the Claims list over find#Claims), EditExpenseInvoice's EditInvoice and EditExpe
 People/Expenses/ExpenseClaimDetail (ClaimHeader over store#Claim, ClaimItems over store#ClaimItem, with receipts and Read
 receipt). The two WorkerInvoice forms stay Projects' MyTime and blank. No baseline form maps to EmployeeAdvances, Accounting's
 Employee advances tab or People's InvoiceDetail.
+**People P21 (Nov 12, 2026):** no baseline form is mapped to Grievances or People's RequestDetail branch: Marble has no grievance
+screen, and a confidential case's forms (SubmitCase, the handler's moves, Add a handler, Ask for work) are People's own over the case
+services; its notes and files are the shared Chatter and RecordFiles of the request (EditRequest's NewNoteForm and NewContentForm),
+under People for the case's people alone. Their Implemented in is in usl-inventory's People rows.
+
 **People P18 (Nov 12, 2026):** no baseline form is mapped to SkillsMatrix, its terminal twin, Qualifications or Employee360's Skills
 and reviews: Marble's HumanRes has no skill, qualification or resume form, and qualifications, skill evaluations and resume lines are
 new records (`PartyQualification`, `PartySkillEvaluation`, `PartyResume`, refined from Mantle's commented sketches, design-people §10);

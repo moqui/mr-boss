@@ -53,7 +53,9 @@ along with this software (see the LICENSE.md file). If not, see
             found = true
             // a purchase RFQ is Purchasing's alone (QuoteRequestDetail): not available in Commons or Projects (impl-purchasing
             // P11, R-PUR-13)
-            if (row.requestTypeEnumId === 'RqtPurchaseRfq') {
+            // a confidential case is People's alone (its RequestDetail under People, for its people; impl-people P21): not
+            // available in Commons, Projects or any app that reads a request through this service, for anyone
+            if (row.requestTypeEnumId === 'RqtPurchaseRfq' || row.requestTypeEnumId === 'RqtHrCase') {
                 if (need !== 'check') ec.message.addError(notAvailable())
                 return
             }
@@ -168,8 +170,8 @@ along with this software (see the LICENSE.md file). If not, see
                 closed: () => true
             }
             const statusPart = (key) => key === 'closed' ? closedOf : openOf
-            // a purchase RFQ is in no Commons list (impl-purchasing P11, R-PUR-13)
-            const all = Array.from(entries.entries()).filter(([id, entry]) => entry.row != null && entry.row.requestTypeEnumId !== 'RqtPurchaseRfq').map(([id, entry]) => ({id: id, entry: entry, row: entry.row}))
+            // a purchase RFQ is in no Commons list (impl-purchasing P11, R-PUR-13), nor a confidential case (People's, impl-people P21)
+            const all = Array.from(entries.entries()).filter(([id, entry]) => entry.row != null && !['RqtPurchaseRfq', 'RqtHrCase'].includes(entry.row.requestTypeEnumId)).map(([id, entry]) => ({id: id, entry: entry, row: entry.row}))
             for (const key of lists) counts[key] = all.filter((item) => statusPart(key)(item.row) && rest[key](item.row, item.entry)).length
 
             // the find

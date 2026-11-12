@@ -48,6 +48,10 @@ const expensesLocation = "component://mr-boss/screen/People/Expenses.xml"
 // P18: Skills & training, whose Qualifications a self-service employee opens by the area's own grant (BOSS_PPL_DEVELOPMENT)
 const developmentLocation = "component://mr-boss/screen/People/Development.xml"
 const projectsLocation = "component://mr-boss/screen/Projects.xml"
+// P21: Grievances (the user's confidential cases), every People user's under Employees and a self-service employee's by its own grant
+// (BOSS_PPL_CASES_SELF), and a case's RequestDetail under People
+const grievancesLocation = "component://mr-boss/screen/People/Employees/Grievances.xml"
+const caseDetailPath = "/qapps/People/Employees/RequestDetail"
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Insights.js and Commerce.js): screenAuthz reads the groups' rows once, and
@@ -1718,6 +1722,19 @@ function qualificationLink(partyQualificationId) {
         encodeURIComponent(partyQualificationId)
     )
 }
+// P21: whether Grievances opens to the user: through the root, or by its own grant for a self-service employee.
+function grievancesOpen(grants = rootGrants()) {
+    if (grants.systemAdmin || grants.read) return true
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(grievancesLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P21: a confidential case's People link (a notice, Chatter's and RecordFiles' record, the record link): its RequestDetail under
+// People for its people (Mantle's check#PeopleCaseAccess), else none.
+function caseLink(requestId) {
+    if (!ec.user.userId || !requestId || !grievancesOpen()) return null
+    const found = call("mantle.request.RequestServices.check#PeopleCaseAccess", {requestId})
+    return found.recordVisible ? caseDetailPath + "?requestId=" + encodeURIComponent(requestId) : null
+}
 // P10: whether the user keeps their time under People and not in Projects: People's time area opens to them and Projects' root
 // does not (its own Today source answers a Projects user's weeks to submit).
 function keepsTimeHere() {
@@ -1754,7 +1771,9 @@ function selfServiceContext(p) {
         // P18: their own qualifications, under Skills & training when it opens to them
         qualificationsUrl: developmentAreaOpens(grants) ? qualificationsPath + "?show=mine" : null,
         // P19 review: their own training places, under the same area
-        trainingUrl: developmentAreaOpens(grants) ? trainingPath + "?show=mine" : null
+        trainingUrl: developmentAreaOpens(grants) ? trainingPath + "?show=mine" : null,
+        // P21: their confidential cases (Grievances), and filing one
+        grievancesUrl: grievancesOpen(grants) ? "/qapps/People/Employees/Grievances" : null
     }
 }
 
@@ -1811,4 +1830,4 @@ function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown People operation " + op)
     return operations[op](p || {})
 }
-;({execute: run, employmentLink, changeParameters, decisionUrl, qualificationLink})
+;({execute: run, employmentLink, changeParameters, decisionUrl, qualificationLink, caseLink})

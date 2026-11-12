@@ -290,9 +290,9 @@ along with this software (see the LICENSE.md file). If not, see
             const statusPart = (key) => key === 'done' ? doneOf : openOf
             // a protected People task (offboarding, an equipment return) only for an assignee who is not the person it is about
             // (Mantle's Checklists.js hiddenTaskIds; impl-people P7 review, F22): the holder of a return task's equipment does not list it
+            // (P21: a task linked to a confidential case too, Mantle's PeopleCases.js protectedTaskIds)
             const sliceIds = Array.from(entries.keys())
-            if (sliceIds.length && ec.entity.find('mantle.humanres.checklist.ChecklistStep').condition('workEffortId', 'in', sliceIds)
-                    .condition('isProtected', 'Y').disableAuthz().count() > 0)
+            if (sliceIds.length && ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').protectedTaskIds(sliceIds).length > 0)
                 for (const id of ec.resource.script('component://mr-mantle/service/mantle/humanres/Checklists.js').hiddenTaskIds(sliceIds, partyId))
                     entries.delete(id)
             const all = Array.from(entries.entries()).filter(([id, entry]) => entry.row != null).map(([id, entry]) => ({id: id, entry: entry, row: entry.row}))
@@ -1014,7 +1014,11 @@ along with this software (see the LICENSE.md file). If not, see
                     seenRecords.add(key)
                     linkedRecordList.push({recordEntityName: recordEntityName, recordId: recordId})
                 }
-                for (const link of ec.entity.find('mantle.request.RequestWorkEffort').condition('workEffortId', workEffortId).list()) addRecord('mantle.request.Request', link.requestId)
+                // a confidential case is not shown on its task: the task's assignee reads nothing of it (impl-people P21)
+                const requestLinks = Array.from(ec.entity.find('mantle.request.RequestWorkEffort').condition('workEffortId', workEffortId).list())
+                const caseIds = requestLinks.length ? ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js')
+                        .caseIds(requestLinks.map((link) => link.requestId)) : []
+                for (const link of requestLinks) if (!caseIds.includes(link.requestId)) addRecord('mantle.request.Request', link.requestId)
                 for (const link of ec.entity.find('mantle.work.effort.WikiPageWorkEffort').condition('workEffortId', workEffortId).list()) addRecord('moqui.resource.wiki.WikiPage', link.wikiPageId)
                 for (const link of ec.entity.find('mantle.work.effort.WorkEffortRecord').condition('workEffortId', workEffortId).orderBy('linkedDate').list())
                     addRecord(link.recordEntityName, link.recordId)

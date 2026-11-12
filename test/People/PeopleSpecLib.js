@@ -82,9 +82,10 @@ const ids = {
     ],
     // P16: Forms, the survey builder with People's registration
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms"],
-    employeesMenu: ["List", "OrgStructure", "OrgChart"],
+    // P21: Grievances, every People user's
+    employeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings
-    hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "ChecklistTemplates", "EmployeeImport"],
+    hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances", "ChecklistTemplates", "EmployeeImport"],
     // P16: Openings, Applicants and Interviews, every People user's (Mantle decides what each reads)
     staffingMenu: ["Positions", "JobClasses", "PayGrades", "Openings", "ApplicantPipeline", "InterviewsCalendar"],
     // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers;
@@ -146,7 +147,9 @@ const ids = {
     otherQualificationId: "BOSS_PPL_QL_KENJI_ELEC",
     // P19: Retail's fire warden course (assessed, granting the fire warden certificate for 24 months)
     fireWardenCourseId: "BOSS_PPL_TC_FIREWARDEN",
-    fireWardenTypeId: "BOSS_PPL_QT_FIREWARDEN"
+    fireWardenTypeId: "BOSS_PPL_QT_FIREWARDEN",
+    // P21: Retail's confidential case intake handler (people.case; Retail's PartySetting PeopleCaseIntake)
+    caseHandlerPartyId: "BOSS_PPL_CASE"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

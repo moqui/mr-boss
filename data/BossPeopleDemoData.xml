@@ -628,4 +628,8 @@ along with this software (see the LICENSE.md file). If not, see
             title="Fire warden training" trainingClassTypeEnumId="TrctBasic" qualificationTypeEnumId="BOSS_PPL_QT_FIREWARDEN"
             validityMonths="24" assessmentRequired="Y" createdDate="2026-01-05 09:00:00" createdByUserId="BOSS_PPL_DEVELOP"
             description="Raising the alarm, evacuating the store and using an extinguisher"/>
+
+    <!-- impl-people P21: Retail's confidential case intake handler (People Case handler, people.case, BOSS_PEOPLE_CASE, an agent of
+        Retail); Services has none, so a case filed there is refused until one is named -->
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="PeopleCaseIntake" settingValue="BOSS_PPL_CASE"/>
 </entity-facade-xml>

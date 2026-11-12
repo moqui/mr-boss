@@ -547,8 +547,10 @@ along with this software (see the LICENSE.md file). If not, see
                 .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).selectField('requestId').limit(50).list()).map((r) => r.requestId)))
             if (!requestIds.length) return
             const statusText = (statusId) => ec.entity.find('moqui.basic.StatusItem').condition('statusId', statusId).useCache(true).disableAuthz().one()?.description || statusId
+            // a confidential case is People's alone, never on a screen pop (impl-people P21)
             for (const request of ec.entity.find('mantle.request.Request').condition('requestId', 'in', requestIds)
-                    .condition('statusId', 'not-in', ['ReqCompleted', 'ReqCancelled']).orderBy('-requestDate').limit(10).list()) {
+                    .condition('statusId', 'not-in', ['ReqCompleted', 'ReqCancelled'])
+                    .condition(cf.makeCondition('requestTypeEnumId', 'not-equals', 'RqtHrCase', true)).orderBy('-requestDate').limit(10).list()) {
                 recordList.push({title: request.requestName || request.requestId, status: statusText(request.statusId),
                     url: '/qapps/Commons/Requests/RequestDetail?requestId=' + encodeURIComponent(request.requestId)})
             }

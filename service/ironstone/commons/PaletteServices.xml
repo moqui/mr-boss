@@ -70,6 +70,13 @@ along with this software (see the LICENSE.md file). If not, see
                 icon = 'sym_o_workspace_premium'
                 return
             }
+            // a confidential case (People's grievances, impl-people P21): its RequestDetail under People for its people, else nowhere
+            if ((recordEntityName === 'mantle.request.Request' || docType === 'MantleRequest')
+                    && ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(id)) {
+                url = ec.resource.script('component://mr-boss/service/ironstone/people/People.js').caseLink(id)
+                icon = 'sym_o_shield_person'
+                return
+            }
             const financeKind = financeTypes[docType] || financeTypes[recordEntityName]
             if (financeKind && ec.user.userId) {
                 // Accounting's own permission check (the Mantle finance permissions), not group names

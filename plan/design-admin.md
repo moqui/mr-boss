@@ -289,7 +289,7 @@ Direct account creation remains for explicitly authorized service accounts and e
 Setting another user's password needs the sealed `ADMIN_PASSWORD`.
 
 **Offboarding.** Ending access to one organization differs from globally disabling the identity.
-- **Preview.** It names grants, credentials, sessions, owned reports/alerts/jobs/agent triggers, shared mail resources and outstanding assignments.
+- **Preview.** It names grants, credentials, sessions, owned reports/alerts/jobs/agent triggers, shared mail resources and outstanding assignments. A confidential People case the user handles is not among them (impl-people P21): its handlers change on the case (People's Add a handler), and the lifecycle neither counts nor moves it.
 - **Global disable.** It blocks authentication at once and revokes sessions, login keys, app passwords and SSH access through `revoke#AccountAccess`. A future effective date is written to `UserAccount.terminateDate`, so sign-in stops at that date without a job.
 - **Organization removal.** It ends that organization's relationships and grants without touching unrelated access.
 

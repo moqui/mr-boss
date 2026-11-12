@@ -192,6 +192,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P19 review: their own training places (Training's Mine) -->
                             <link url="${links.trainingUrl}" url-type="plain" text="My training" link-type="anchor-button"
                                     icon="sym_o_school" condition="links?.trainingUrl"/>
+                            <!-- P21: their confidential cases, and filing one -->
+                            <link url="${links.grievancesUrl}" url-type="plain" text="Raise a concern" link-type="anchor-button"
+                                    icon="sym_o_shield_person" condition="links?.grievancesUrl"/>
                         </container>
                     </container>
                 </container>
