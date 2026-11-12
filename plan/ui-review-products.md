@@ -30,7 +30,7 @@ evidence of this review's outcomes.
   intended workflows, delivered functionality, prior findings and deferrals.
 - [Projects review](ui-review-projects.md), [drawers, Commons and Comms review](ui-review-drawers-commons.md),
   [framework UI review guide](../../../../docs/dev/UI-Review.md) and
-  [framework review](../../../../plans/UI-Refinement.md): activity/evidence method and established refinements.
+  [framework review](../../../../plans/archive/UI-Refinement.md): activity/evidence method and established refinements.
 - [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md), [Products implementation notes](../docs/ProductsImplementation.md) and
   [shared catalog screens](../docs/ProductsSharedScreens.md). The last two contain historical statements that must be

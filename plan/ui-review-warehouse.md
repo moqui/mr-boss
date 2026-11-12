@@ -33,7 +33,7 @@ start the live review; acceptance runs follow §5.
   [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
   [drawers, Commons and Comms review](ui-review-drawers-commons.md),
   [framework UI review guide](../../../../docs/dev/UI-Review.md) and
-  [framework review](../../../../plans/UI-Refinement.md).
+  [framework review](../../../../plans/archive/UI-Refinement.md).
 - [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md) (§8.2 handheld
   density), [crosscut design](design-crosscut.md), and current Purchasing, Manufacturing, Customer Service, Products
   and Accounting designs/contracts where their work enters or leaves Warehouse.
