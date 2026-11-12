@@ -199,7 +199,12 @@ const linkPaths = [
     // employee's by the time area's own grant
     "Time/LeaveRequests",
     "Time/LeaveRequestDetail",
-    "Time/TeamCalendar"
+    "Time/TeamCalendar",
+    // P13: attendance (every People user's and a self-service employee's by the time area's own grant), the clock (the quick create
+    // Clock in) and HR's time import
+    "Time/Attendance",
+    "Time/Clock",
+    "Time/TimeImport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -225,7 +230,10 @@ function sharedContext(p) {
                 // P12: their own leave requests and the team calendar (the time area's own grant)
                 "Time/LeaveRequests": "//People/Time/LeaveRequests",
                 "Time/LeaveRequestDetail": "//People/Time/LeaveRequestDetail",
-                "Time/TeamCalendar": "//People/Time/TeamCalendar"
+                "Time/TeamCalendar": "//People/Time/TeamCalendar",
+                // P13: their own attendance and clock (the time area's own grant)
+                "Time/Attendance": "//People/Time/Attendance",
+                "Time/Clock": "//People/Time/Clock"
             }
         }
     }
@@ -1195,6 +1203,8 @@ function decisionUrl(row) {
         return "/qapps/People/Employees/Employee360?partyId=" + encodeURIComponent(row.partyId)
     // P12: a leave request (or its cancellation) on LeaveRequestDetail
     if (row.approvalKindEnumId === "PakLeave") return leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(row.sourceId)
+    // P13: an attendance correction, among the days to decide on Attendance
+    if (row.approvalKindEnumId === "PakAttendance") return "/qapps/People/Time/Attendance?show=decide"
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1322,7 +1332,9 @@ function selfServiceContext(p) {
         // P10: the user's own week, under People's time area when it opens to them (the root or the area's own grant)
         myTimeUrl: timeAreaOpens(grants) ? "/qapps/People/Time/MyTime" : null,
         // P12: their leave requests and the team calendar, under the same area
-        leaveRequestsUrl: timeAreaOpens(grants) ? "/qapps/People/Time/LeaveRequests" : null
+        leaveRequestsUrl: timeAreaOpens(grants) ? "/qapps/People/Time/LeaveRequests" : null,
+        // P13: their own attendance days, under the same area
+        attendanceUrl: timeAreaOpens(grants) ? "/qapps/People/Time/Attendance?show=mine" : null
     }
 }
 

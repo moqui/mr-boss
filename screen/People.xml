@@ -36,7 +36,9 @@ along with this software (see the LICENSE.md file). If not, see
     (BOSS_PPL_LEAVE_BALANCES, BOSS_PPL_LEAVE) and the key g b; P12 Leave requests and the Team calendar under Time & leave (every
     People user's and a self-service employee's, by the area's grant), the quick create Request leave, the leave topics, the palette's
     own leave requests, the LeaveRequest record-lookup (the people.records provider), Today's leave starting for my team, the key g l
-    and the prompt "Explain my balance". The Chatter and RecordFiles panels under this root open only People's own record hosts (the
+    and the prompt "Explain my balance"; P13 Attendance under Time & leave (every People user's and a self-service employee's, by the
+    area's grant) with HR's Time import (BOSS_PPL_TIME_IMPORT) and the Clock in screen (the quick create, declared on Commons' root),
+    the attendance topic and the key g d. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
     grant opens no other record's panel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -94,6 +96,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g b" label="Leave balances" screen="People/Time/LeaveBalances"/>
             <!-- P12: the leave requests -->
             <key keys="g l" label="Leave requests" screen="People/Time/LeaveRequests"/>
+            <!-- P13: attendance -->
+            <key keys="g d" label="Attendance" screen="People/Time/Attendance"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
@@ -123,6 +127,9 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="People/Time/LeaveRequestDetail" sequence="40"/>
         <assist-prompt label="Explain my balance" text="Explain my leave balance: what I was granted, accrued, took and have reserved, and what is left"
                 screen="People/Time/LeaveBalances" sequence="41"/>
+        <!-- P13: an attendance correction to approve (PeopleAttendanceApproval); the quick create Clock in is declared on Commons' root,
+            which a self-service employee opens too -->
+        <notification-topic topic="PeopleAttendanceApproval"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

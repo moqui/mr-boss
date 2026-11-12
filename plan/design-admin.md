@@ -1077,6 +1077,13 @@ Secrets, password hashes, arbitrary groups, privileged authz, executable service
 - **Preview and replay.** The same file staged again answers the same import (an operation key the caller gives is one import's: other content under it is refused). A validation changes nothing and answers a fingerprint over the content's hash, the mapping, the options, the registration's revision and each row's preview; an apply names it and is refused when stale. Each row is validated again and applied on its own under a key made of the batch, the row and its values; an applied row is never applied again, so a repeat or a resumed apply takes what is left and a retry only failed rows, each only if its source is as its preview read it (a row whose source changed is validated and reviewed again). A validation after a partial apply still counts the applied rows' keys.
 - **Not built:** spreadsheet files and sheet or header selection, an import mode beyond the catalog's own update mode, cancelling an apply under way, a corrected row as a linked revision (a corrected file is a new import), and the People, Sales, Marketing and Maintenance targets, which their owners' plans now pick up (the "Planned by their owners" bullet below; impl-admin §7).
 - **Planned by their owners** (Nov 11, 2026): People's `employees` (impl-people P7) and time-and-attendance (P13) targets, Maintenance's `equipment` (impl-maintenance P18), Sales' `opportunities` (impl-sales P6) and Marketing's `marketingAudience` (impl-marketing P4), as the table above has them.
+- **People's time and attendance, as built** (impl-people P13; owner contract): the `wizard` target `timeAndAttendance`, seeded in
+  Mantle (`data/PeopleAttendanceSetupData.xml`) on the statement imports' pattern: People's own batch (`mantle.humanres.attendance`
+  `AttendanceImport` and its rows) and wizard (People/Time/TimeImport, owner route `peopleTimeImport` in Admin's mount routes), its
+  `findService` `mantle.humanres.AttendanceServices.find#ImportRuns` (the imports of the employers an HR reader reads, granted to every
+  user and checking `PEOPLE_HR_VIEW` and People's scope itself), `importPermission` `PEOPLE_IMPORT,PEOPLE_HR_VIEW,PEOPLE_HR_EDIT` (all
+  required, what `preview#Import` and `import#Records` check again with the employer; People P13's review) and `viewPermission`
+  `PEOPLE_HR_VIEW`, no `ADMIN_*` permission.
 
 ### Imports
 

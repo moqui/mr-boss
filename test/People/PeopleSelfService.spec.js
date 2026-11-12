@@ -3,7 +3,8 @@
 // emergency contacts, and their record's link), with a supplied partyId changing nothing there or in Mantle's self-service and
 // another person's emergency contacts refused; Commons Home's People card for them; My team's one qvt render as the manager (their
 // reports and no one else; P10: their last week and Remind missing time); and People's Today source, the decisions waiting on a
-// decider and nothing for the employee (P10: their weeks to submit are PeopleTime's). P10: SelfService's My time and missing-week card. The access
+// decider and nothing for the employee (P10: their weeks to submit are PeopleTime's). P10: SelfService's My time and missing-week card.
+// P13: SelfService's clock (the employee's employment has clocking on) and My attendance. The access
 // cases (the self-service grant, which opens SelfService and nothing else of People, and My team the managers') are PeopleAccess's;
 // Mantle's rules (the team's employments, self-service's own party, due work, emergency contacts) are Mantle's PeopleScope,
 // PeopleDirectory, PeopleApprovals and PeopleChecklists. The usable-when walk is the acceptance PeopleSelfServiceUsable.
@@ -105,6 +106,10 @@ feature(
             // P10: their own week, under People's time area (its own grant), and the missing-week card
             rendered.output.includes("Weeks to submit")
             rendered.output.includes("/qapps/People/Time/MyTime")
+            // P13: his employment has clocking on, so the clock shows with its state and its button, and My attendance
+            rendered.output.includes("Clocked")
+            rendered.output.includes("ClockRows")
+            rendered.output.includes("/qapps/People/Time/Attendance")
         }
     }
 )
