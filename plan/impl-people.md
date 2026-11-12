@@ -326,7 +326,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | built and reviewed Nov 11, merged |
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | built and reviewed Nov 11, merged |
 | P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | built and reviewed Nov 11, merged |
-| P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | — |
+| P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | built and reviewed Nov 11, merged |
 | P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | built and reviewed Nov 11, merged |
 | P19 Training | Mantle, BOSS | Training, TrainingDetail | — |
 | P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | — |
@@ -4552,7 +4552,7 @@ Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
 - Design edits: design-people (header; §3 SelfService's sharing; §4 HireEmployee and EmploymentChange as built; §5 ApplicantDetail
   and OfferDetail as built; §12 the topic's handlers; §15 the letters row); design-drawers-commons §4 (the `PeopleOfferApproval`
   row: its approve and refuse handlers); §4's resume row notes it is built.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F305 to F315 in order:
   - with no rule an offer is decided by the employer's HR officers (a kind's own default route, `PakOffer`'s `ParHr`): the default of
     a request about a person, their manager, leaves an applicant's offer unresolved; an employer's rules for the kind still route it;
   - a payroll reader of the employer (PAYROLL_VIEW) reads its offers, the applicant's name and terms with the pay, since a payroll
@@ -4658,7 +4658,7 @@ PeopleHire, PeopleSkills (31 of 31) passed after it.
     first hire, since its operation key was checked before the lock. hire#Employee locks the offer first.
   - **R7 (low).** `get#EmploymentLetter` read a lifecycle letter holding pay without PAYROLL_VIEW (none holds pay today); it now
     refuses one as `get#OfferLetter` does.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F316 to F319 in order:
   - the email goes from the employer's EmailPrimary (else EmailWork) address; an employer with neither, as the demo employers may
     be, records "no email address to send from" and the recruiter sends it again once one is added; a reply goes to that address;
   - Send the letter again follows a failure only: a letter sent or queued is not sent again (a candidate who lost it is sent a copy
@@ -5343,7 +5343,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
