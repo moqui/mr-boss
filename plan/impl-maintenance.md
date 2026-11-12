@@ -2295,6 +2295,126 @@ the availability read).
   - the user's calls: none needed; built as the plan has it. Open to the user if they want them: whether an unmanaged resource's
     recurring booking should also be checked over its range, and who besides the resource administrator holds the override.
 
+**Review Nov 12 (P15).** mr-mantle d1092e9f, mr-boss 50f25b02 and this note's commit (branch `mnt/p15`), over the worker's 193f1559,
+3d8ffbbd and 3a1135a4, after merging master (Maintenance P4, People P13, the framework's quick-create condition) in both repos:
+mr-mantle a147bbc3 (clean), mr-boss 524ecf78 (BossSetupMaintenanceData, design-maintenance's header and §1.2, MaintenanceAccess'
+header and MaintenanceSpecLib's adminMenu, each keeping both sides; mr-moqui fast-forwarded to 4994093f). Reviewed
+`git diff master...mnt/p15` in both repos against P15's text, §2, §4, design §7.1, Resources, ResourcePolicyDetail and Blackouts,
+P5's review (R3), AGENTS.md and Practices-App-Dev; read every booking path of EventServices (book#, check#ResourceBookings,
+update#EventOccurrence, create#Event, store#EventRecurrence, get#FreeBusy, get#FullCalendarData), CalendarDavServices' event PUT and
+store#CalendarFeedEvents, ResourceOutages.js' planned blocks, ProductionSchedule's offline apply and withdraw, ProductionCalendar's
+offline read, Commons' ScheduleServices and Warehouse's Facilities.js (the two BOSS callers of get#FullCalendarData for a resource),
+and the framework's DAV status mapping (moqui-dav `status_of_error`).
+- Checked and found sound:
+  - The guard's hard refusals: an outage or planned block (an asset's own; a facility's own or one above it) refuses every resource
+    whatever allowConflicts, naming only "out of service" or the block's reason; a managed resource's not bookable, maximum, horizon,
+    series range and self-overlap are refused, and approval by approvers with none named is refused (APPROVER_REQUIRED). An unmanaged
+    resource keeps its approver fallback and allowConflicts (ResourceBookingPolicy's unmanaged case). The behavior an unmanaged
+    resource does change, all by design: a block refuses it, its row is locked for the write, and a conflict with an event the user
+    may not see is "Busy" in the error (Commons' specs pass; none asserted a title).
+  - `create#Event`'s new check: a managed asset through book#Resource, any other refused only by a block. Commons' calendar, quick
+    create, EventDetail, Schedules and PublishedCalendar specs pass; Room 101's demo policy breaks none of them.
+  - The CalDAV PUT: the check-only call gets a guard refusal as a hard conflict (409, nothing stored); after storing, the moved
+    bookings' allowConflicts recheck runs locked, and for a managed resource allowConflicts without a reason is refused, so a race
+    between the two calls rolls back.
+  - Blocks: a facility's block covers it and its descendants and nothing else (blocksOver walks up from the resource; a room's block
+    never reaches its building or siblings; equipment in a room is not covered, design §7.1); affectedBookings counts the subtree; a new
+    blackout flags the approved booking and cancels nothing (spec).
+  - Manufacturing's owner contract: store#WorkCenterOffline writes through record# (RurOffline) and its withdraw ends the row in
+    force; ProductionSchedule, ProductionShopFloor, ProductionDowntime, ProductionOrders, ProductionReports, ProductionPolicy,
+    ManufacturingServices and WorkCenters pass unchanged; a plant's blackout is the line's offline time (now in the spec).
+  - The replaced R3: correct# dispatches to the block path only for a RukPlanned row, correctBlock always writes a RukPlanned row of
+    the same resource, and the withdraw follows the chain and refuses anything but a RukPlanned row of its own center, so neither entry
+    point can supersede or end an equipment-fault outage through a block.
+  - Admin's participant: `bookingApprovals` lists current BookingApprover rows by id only, moved through store#ResourceApprover
+    (RESOURCE_POLICY_EDIT in the resource's organization, the leaver ended, the new person approving from then; AdminLifecycle and
+    PeopleLifecycle pass).
+  - RESOURCE_BOOKING_OVERRIDE: Mantle seeds it to ADMIN; BOSS grants it to BOSS_MAINTENANCE_RESOURCE_ADMIN and BOSS_MAINTENANCE_ADMIN
+    in their bundles (MaintenanceAccess' bundle check passes after the merge with P4's request rows).
+  - Seeds: MaintenanceWorkResourceData.xml sorts after MaintenanceWorkOutageData.xml (whose enumeration type RurClosure and
+    RurOffline are of) on a fresh load.
+  - The screens: every write goes to Mantle after check#Record; EquipmentDetail's Schedule and FacilityDetail's Schedules under
+    Maintenance read get#ResourceAvailability (hidden events Busy, no id); Warehouse's branch of Schedules is unchanged.
+- Privacy (the lead's question): the titles in get#FullCalendarData's eventList are a Commons read older than P15 (any caller asking by
+  facility, asset or party got every booking's title and organizer; Commons' ScheduleServices masks them itself, Warehouse's
+  FacilityDetail Schedules shows them). P15's own reads (the guard's conflicts, get#ResourceAvailability, preview's impact, the
+  blackout rows) mask correctly. But the phase names get#FullCalendarData among the reads that "call that read for a managed
+  resource", and Warehouse's Schedules tab of Room 101 (managed by P15's demo) showed hidden bookings' titles and organizers: fixed for
+  a managed resource (R1); an unmanaged resource's eventList is as before, so no Commons spec changed.
+- Fixes:
+  - **R1 (medium, confidentiality; §2).** get#FullCalendarData answered a managed resource's bookings with their titles, links, places
+    and organizers to any caller. A booking of an asked managed resource the user may not open (check#EventAccess, read once per
+    event) is now free/busy: title Busy, freeBusyOnly, no url, location or organizer. ResourceBookingPolicy: Bob's read of the managed
+    room shows Ann's event as Busy with no organizer and his own by its title (fails without).
+  - **R2 (medium, access; organization isolation).** The override checked `RESOURCE_BOOKING_OVERRIDE` with no organization, so a
+    resource administrator of Retail could book over a Services room's booking. It now needs the holder to work for the resource's
+    organization (their maintenance scope, or their own organizations for a holder with no Maintenance read; every organization for a
+    system administrator or an every-organization holder). MaintenanceAccess exports `ownOrganizations`. Spec: another
+    organization's holder with a reason is refused (fails without).
+  - **R3 (medium, correctness).** seriesInstances expanded a series from its first meeting, so a series begun long ago counted its
+    past meetings toward the 500-instance bound and was refused HORIZON_EXCEEDED on any booking or move. It is decided from now (the
+    meeting in progress included). Spec: a daily series begun 600 days ago and ending in 9 days books the managed room (fails without).
+  - **R4 (medium, correctness; "the whole recurrence is checked").** The range was checked only when the booking was made or moved:
+    a booked three-day series made unbounded afterwards (Commons' EventDetail repeat, store#EventRecurrence) or by a phone (the CalDAV
+    PUT writes the rule directly, with no new time) kept its booking past the horizon. store#EventRecurrence now runs
+    check#ResourceBookings (reapprove false) for an event booking a managed resource, and the CalDAV PUT does the same for the series
+    after storing (a refusal rolls the change back; the DAV server answers it 409). create#Event stores the rule before booking its
+    equipment. Specs: ResourceBookingPolicy's extended rule refused and kept as it was, and an unbounded projector series refused at
+    creation; Dav's phone rule refused, the event keeping no rule (each fails without its fix; the creation case is caught by either
+    the reorder or the recheck).
+  - **R5 (low, concurrency).** A booking locks its own resource, a blackout of a building locked only the building, so a room's
+    booking and its building's new blackout could each pass unseen by the other. Maintenance's record# and correct# of a facility's
+    block now lock the bookable facilities inside it in id order (a booking locks only its own row, so no cycle). Not covered by a
+    spec (two transactions).
+  - **R6 (low, robustness).** blockFor read a missing id as a TypeError; it is RECORD_UNAVAILABLE.
+  - **R7 (low, style).** The worker's note says prettier was clean; ResourcePolicy.js, ResourceOutages.js, ProductionSchedule.js,
+    ProductionCalendar.js, ResourceBookingPolicy.spec.js, MaintenanceScheduling.spec.js and MaintenanceResourcePolicyWalk.spec.js were
+    not (with the repository's .prettierrc.json); formatted.
+- Findings:
+  - Locking with Manufacturing: store#WorkCenterOffline's record# does not lock, so a booking of the work center (or of a facility
+    inside a plant being taken offline) can pass beside a new offline block. The hang the worker met is not a lock-order problem: the
+    offline call holds its transaction open while each move runs in a transaction of its own, which waits on the row the outer one
+    locked; no ordering fixes that. A fix is to lock a row the moves never write (for example the WorkCenter row, with the guard
+    locking it for a work center's booking) or to record the block in its own transaction before the moves, at the cost of the
+    offline call's single retry key. Work centers are seldom bookable and the result is a booking under a block, flagged in Blackouts
+    as one made before it would be; left for the lead.
+  - The guard's resourceOf refuses a stock asset, so book#Resource and create#Event of an inventory or supplies asset, which worked
+    before, now fail. Nothing in BOSS books one; left as is.
+  - A managed resource's Busy event in get#FullCalendarData keeps its id (FullCalendar needs one); EventDetail refuses it on open.
+  - ProductionCalendar shows a Maintenance blackout's description to Manufacturing's schedulers as the offline reason.
+  - The recurrence recheck (R4) runs check#ResourceBookings over every resource of the event once one is managed, so an unmanaged
+    room on the same event is checked too; and it does not ask an approved booking again (reapprove false: the booking decisions are
+    P16's).
+  - An existing database needs `MaintenanceWorkResourceData.xml` loaded (seed) before Manufacturing's offline change works: record#
+    refuses an unknown reason (REASON_INVALID), so until then store#WorkCenterOffline fails. A release note, as F129.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingPolicy, MaintenanceOutages, CalendarServices,
+  CalendarChanges, Dav, CommonsToday, ProductionSchedule, ProductionDowntime, ProductionShopFloor, ProductionOrders, ProductionReports,
+  ProductionPolicy, ManufacturingServices, WorkCenters, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceScope, WorkResources,
+  WorkProcess and MaintenanceIntake 160 of 160 (63.2 s); then ResourceBookingPolicy 8 of 8 (2.6 s of features) and Dav 9 of 9 after
+  the last spec changes. mr-boss MaintenanceAccess, MaintenanceDowntime, MaintenanceWorkOrders, MaintenanceEquipment,
+  MaintenanceScheduling, MaintenanceRequests, Schedules, EventDetail, Calendar, QuickCreate, PublishedCalendar, WarehouseFacilities,
+  ManufacturingWorkCenters, ManufacturingDowntime, ManufacturingSchedule, AdminLifecycle, PeopleLifecycle and PeopleSchedules 154 of 154
+  (44.4 s). Each new case run against the code without its fix failed (R1, R2, R3, R4's recheck, the plant's offline time without
+  ProductionCalendar's walk up). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before; the review changed no
+  screen; both binaries still symlinks. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +2.7 s (ResourceBookingPolicy 2.6 s, Dav's case 0.05 s); mr-boss unchanged from the worker's
+    (about +0.7 s server); budgets not changed.
+  - merge hot spots (added by the review): mr-mantle `EventServices.xml` (get#FullCalendarData's members and loop, create#Event's
+    order, store#EventRecurrence), `CalendarDavServices.xml` (put#DavObject after the moved loop), `ResourcePolicy.js` and
+    `ResourceOutages.js` (prettier: whole-file reformatting), `MaintenanceAccess.js` (exports), `ProductionSchedule.js` and
+    `ProductionCalendar.js` (prettier, a few lines), `test/work/Dav.spec.js` (appended); mr-boss design-maintenance (header, §7.1's
+    as-built paragraph), usl-inventory (the Added paragraph).
+  - the user's calls (optional, not built):
+    1. Unmanaged recurring bookings over their whole range: recommend yes for blocks only (an outage or blackout over any meeting
+       of the series, bounded at 365 days as for a managed resource), since the rule "an outage or blackout is never overridden" is
+       for every resource and a weekly series otherwise walks through a planned closure; keep conflicts on the first instance for an
+       unmanaged resource, so Commons' booking behaves as today.
+    2. Who holds the override besides the resource administrator: recommend keeping it to the resource administrator, the
+       Maintenance administrator and ADMIN, scoped to their organizations (R2); not supervisors (who plan blackouts) or booking
+       approvers (who decide requests, P16). If an office manager or front desk should override room bookings, grant it through a
+       Commons-side group of its own rather than widening a Maintenance group.
+
 ### P16 — Booking requests and the resource calendar
 
 Design BookingRequests, the ResourceCalendar mount row, §7.1 (approval), design-drawers-commons' `ResourceBooking`
