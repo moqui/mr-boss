@@ -61,11 +61,12 @@ feature("people.hr opens Home with Retail's counts and due work and not Services
         const services = asUser(users.hr, () => page("Home", {organizationPartyId: ids.otherOrganizationId}, "html"))
         if (services.output.includes("Headcount") || !services.output.includes("This employer is not available to you."))
             problems.push("the HR officer's Home for Services is given")
-        // the People administrator reads both employers' counts; a manager is told Home is not theirs
+        // the People administrator reads both employers' counts; a manager is told the summary is not theirs and given their own
+        // work (P8: their decisions waiting and My team)
         const both = asUser(users.admin, () => page("Home", {organizationPartyId: ids.otherOrganizationId}, "html"))
         if (!both.output.includes("Headcount")) problems.push("the administrator's Home for Services has no counts")
         const manager = asUser(users.manager, () => page("Home", {}, "html"))
-        if (!opened(manager) || !manager.output.includes("Nothing of it is open to you"))
+        if (!opened(manager) || !manager.output.includes("your own work is below") || !manager.output.includes("My team"))
             problems.push(`the manager's Home: ${manager.status} ${manager.errors}`)
         for (const entry of ids.adminMenu) {
             const rendered = asUser(users.employee, () => page(entry, {}, "html"))

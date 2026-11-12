@@ -37,12 +37,15 @@ const ids = {
     // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades; P5:
     // Approvals (every People user's own), and Settings' tabs the approval rules and lookups
     staffMenu: ["Home", "Approvals", "Employees", "Staffing"],
-    adminMenu: ["Home", "Approvals", "Employees", "Staffing", "Settings"],
+    adminMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Settings"],
+    // P8: My team, the managers' (and the administrator's, through the root's ALWAYS)
+    managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing"],
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings
     hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "ChecklistTemplates", "EmployeeImport"],
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
+    // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens)
     keys: ["g p", "g e", "g o", "g c", "g s", "g a"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",

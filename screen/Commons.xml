@@ -68,6 +68,9 @@ along with this software (see the LICENSE.md file). If not, see
 
         <!-- Today: the requests assigned to the user with a response due, beside the tasks, activities and events -->
         <today-source service="mantle.request.RequestServices.get#UserTodayRequests" label="Requests"/>
+        <!-- People's Today source (owner contract, impl-people P8, F64): declared here too, since a self-service employee opens no
+            People root and the shell gathers sources from the roots a user may open; Home and the panel take it once -->
+        <today-source service="ironstone.people.ContextServices.get#TodayItems" label="People"/>
 
         <notification-topic topic="ChatterMention"/>
         <notification-topic topic="RecordFollow"/>
