@@ -332,4 +332,8 @@ along with this software (see the LICENSE.md file). If not, see
         refuse#WorkProcess, as the user deciding) or from ProcedureDetail -->
     <moqui.security.user.NotificationTopic topic="WorkProcessApproval"
             linkTemplate="/qapps/Maintenance/Procedures/ProcedureDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P14: preventive work made from a plan (Mantle's MaintenanceDue topic and its registration, told to the
+        organization's planners) opens its work order under Maintenance -->
+    <moqui.security.user.NotificationTopic topic="MaintenanceDue"
+            linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

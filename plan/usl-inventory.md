@@ -2200,15 +2200,15 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | work/MaintenanceServices | create#MaintenanceWorkOrder | Maintenance/WorkOrders | Maintenance/WorkOrders/NewWorkOrder (NewWork; the quick create's; P6: from a procedure, Use procedure) |
 | work/MaintenanceServices | store#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (WorkHeaderEdit) |
 | work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer; P6: replacePartyId on the root and its steps, F113) |
-| work/MaintenanceServices | transition#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (primary action, Lifecycle, CompleteWork); Maintenance/WorkOrders/Find (board moves) |
+| work/MaintenanceServices | transition#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (primary action, Lifecycle, CompleteWork; a meter plan's reading, P14); Maintenance/WorkOrders/Find (board moves) |
 | work/MaintenanceServices | act#MaintenanceWorkOrders | Maintenance/WorkOrders | Maintenance/WorkOrders/Find (Approve, Cancel on the selection) |
 | work/MaintenanceServices | adopt#MaintenanceRecord | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Maintenance (Adopt) |
 | work/MaintenanceServices | start#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Start timer; then TimesheetServices.start#Timer) |
 | work/MaintenanceServices | stop#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Stop timer; then TimesheetServices.stop#Timer) |
 | work/MaintenanceServices | record#MaintenanceTime | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Record time; then TimeServices.store#TimeEntry) |
 | work/MaintenanceSettingsServices | get#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings) |
-| work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from now) |
-| work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work) |
+| work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from now; the preventive lead days, P14) |
+| work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work; the overdue PM and unknown meter counters, P14) |
 
 Added in `work/MaintenanceServices.xml` (impl-maintenance P4; `MaintenanceIntake.js`): the requests and intake, called by Maintenance's
 Requests and RequestDetail after `check#Record` and by Commons' Report a problem and RequestDetail (a requester holds no Maintenance
@@ -2280,4 +2280,17 @@ named:
 | work/MaintenancePlanServices | get#MaintenanceSchedule | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail (header, findings) and its Schedule tab (ScheduleTerms, the terms' history) |
 | work/MaintenancePlanServices | store#MaintenanceSchedule | Maintenance/Preventive/Plans; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/Find (NewPlan); PlanDetail (Activate, More › End plan: PlanAction) and its Schedule tab (Edit terms) |
 | work/MaintenancePlanServices | get#MaintenanceDue | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/Schedule (DueExplanation, through get#MaintenanceSchedule); the next due of every PlanRows row |
-| work/MaintenancePlanServices | find#MaintenanceDue | Maintenance/Preventive/DueMaintenance | none yet: DueMaintenance is P14's |
+| work/MaintenancePlanServices | find#MaintenanceDue | Maintenance/Preventive/DueMaintenance | Maintenance/Preventive/DueMaintenance (DueRows with the calendar view, GenerateWork's preview: each row's generation outcome; capped at 500 plans, P14) |
+
+Added in `work/MaintenancePlanServices.xml` and `work/MaintenanceReportServices.xml` (impl-maintenance P14; `MaintenancePlans.js`,
+design-maintenance §5.1 occurrences, DueMaintenance, §8), with the MaintenanceOccurrence record and the generate_MaintenanceWorkOrders
+job (`data/MaintenancePlanSetupData.xml`, paused; its registration, recovery and the MaintenanceDue topic in `data/MaintenancePlanData.xml`):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenancePlanServices | generate#MaintenanceWorkOrders | Maintenance/Preventive/DueMaintenance; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/DueMaintenance (GenerateWork, Generate on a row, the selection); PlanDetail (Generate work, its preview in the confirmation); template/MaintenancePlanParts.xml generateDue |
+| work/MaintenancePlanServices | run#MaintenanceGeneration | — (the job) | the generate_MaintenanceWorkOrders ServiceJob, Admin's Jobs (its JobRegistration, batchSize) and its recovery (RecoveryDescriptor maintenanceGenerationJob, ownerRoute maintenanceDue) |
+| work/MaintenancePlanServices | reconcile#MaintenanceSchedule | Maintenance/Preventive/DueMaintenance; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/DueMaintenance (ResolveDue: coalesce, skip); PlanDetail/DueHistory (missed due dates: coalesce, skip; Correct a completion); template/MaintenancePlanParts.xml resolveDue |
+| work/MaintenancePlanServices | find#MaintenanceOccurrences | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/DueHistory (OccurrenceHistory) and GeneratedWork |
+| work/MaintenancePlanServices | get#MaintenanceDueJob | Maintenance/Settings | Maintenance/Settings/WorkPolicy (the preventive generation job's state) |
+| work/MaintenanceReportServices | get#MaintenanceCompliance | Maintenance/Reports/PreventiveComplianceReport | Maintenance/Reports/PreventiveComplianceReport (ComplianceOptions, ComplianceSummary, ComplianceRows) |

@@ -109,6 +109,10 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P15: Scheduling (design §7), for a resource administrator, a resource approver, a supervisor and a resource reader -->
         <subscreens-item name="Scheduling" location="component://mr-boss/screen/Maintenance/Scheduling.xml" menu-index="8"
                 menu-include="ec.user.hasPermission('RESOURCE_POLICY_VIEW') || ec.user.hasPermission('RESOURCE_BOOKING_VIEW_ASSIGNED') || ec.user.hasPermission('MAINTENANCE_SUPERVISE') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
+        <!-- P14: Reports (design §8), for a reader of maintenance work (MAINTENANCE_VIEW): PM compliance first; P17 adds the landing,
+            work status and costs -->
+        <subscreens-item name="Reports" location="component://mr-boss/screen/Maintenance/Reports.xml" menu-index="9"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW')"/>
     </subscreens>
 
     <!-- P1: the maintenance keymap and the palette source (design §1.2; its records join with their screens: equipment and
@@ -127,6 +131,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P6: a procedure waiting for the user's approval (Mantle's topic, approved or refused from Commons' approvals inbox through
             ProcessServices approve#WorkProcess and refuse#WorkProcess; its link opens ProcedureDetail) -->
         <notification-topic topic="WorkProcessApproval"/>
+        <!-- P14: preventive work made from a plan, told to the organization's planners (Mantle's topic; its link opens the work order) -->
+        <notification-topic topic="MaintenanceDue"/>
         <today-source service="ironstone.maintenance.HomeServices.get#TodayItems" label="Maintenance"/>
         <keymap scope="maintenance">
             <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>

@@ -307,4 +307,47 @@ along with this software (see the LICENSE.md file). If not, see
             triggerEnumId="MstMeter" productMeterId="BOSS_MNT_COMP_STARTS" intervalQuantity="500" baselineValue="4200"
             baselineDate="2026-08-01 08:00:00" maxReadingAgeDays="30" templateWorkEffortId="BOSS_MNT_PROC_COMP"
             maintenanceTypeEnumId="MntTpPreventive" teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
+
+    <!-- P14 (design-maintenance §5.1 occurrences, DueMaintenance, §8): the air handler's monthly filter change, active since August,
+        ad hoc (no procedure; an hour), made a week ahead: August's done a day early (on time), September's done four days late,
+        October's skipped while the unit was shut down, and November 14's due now, its work not made yet (Due maintenance offers it;
+        PM compliance counts one on time of three due) -->
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_FILTER" scheduleName="Air handler AHU-2 filter change"
+            organizationPartyId="ORG_ZIZI_SERVICES" assetId="BOSS_MNT_AIR_HANDLER" statusId="MschActive" fromDate="2026-08-01 08:00:00"
+            revision="2" createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-07-28 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_FILTER" fromDate="2026-07-28 09:00:00"
+            triggerEnumId="MstCalendar" cadenceEnumId="MscFixed" intervalQuantity="1" intervalUomId="TF_mon" firstDueLocal="2026-08-14 09:00"
+            leadDays="7" maintenanceTypeEnumId="MntTpPreventive" teamPartyId="BOSS_MNT_TEAM" estimatedWorkTime="1"
+            changedByUserId="BOSS_MNT_PLANNER"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_FLT_AUG" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance"
+            ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeClosed" workEffortName="Air handler AHU-2 filter change"
+            facilityId="BOSS_MNT_FLOOR2" priority="5" estimatedWorkTime="1" estimatedStartDate="2026-08-13 09:00:00"
+            estimatedCompletionDate="2026-08-14 09:00:00" actualStartDate="2026-08-13 14:00:00" actualCompletionDate="2026-08-13 15:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_FLT_AUG" assetId="BOSS_MNT_AIR_HANDLER" statusId="AsMntCompleted"
+            maintenanceTypeEnumId="MntTpPreventive" maintenanceDate="2026-08-13 15:00:00" taskWorkEffortId="BOSS_MNT_WO_FLT_AUG"
+            comments="Air handler AHU-2 filter change"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_FLT_AUG" assetId="BOSS_MNT_AIR_HANDLER" assetMaintenanceId="BOSS_MNT_AM_FLT_AUG"
+            maintenanceKindEnumId="MkPreventive" maintenanceTypeEnumId="MntTpPreventive" sourceEnumId="MsrcSchedule" outcomeEnumId="MoutDone"
+            dispositionEnumId="MdispAvailable" maintenanceScheduleId="BOSS_MNT_PLAN_FILTER" revision="4"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_FLT_SEP" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance"
+            ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeClosed" workEffortName="Air handler AHU-2 filter change"
+            facilityId="BOSS_MNT_FLOOR2" priority="5" estimatedWorkTime="1" estimatedStartDate="2026-09-14 09:00:00"
+            estimatedCompletionDate="2026-09-14 10:00:00" actualStartDate="2026-09-18 10:00:00" actualCompletionDate="2026-09-18 11:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_FLT_SEP" assetId="BOSS_MNT_AIR_HANDLER" statusId="AsMntCompleted"
+            maintenanceTypeEnumId="MntTpPreventive" maintenanceDate="2026-09-18 11:00:00" taskWorkEffortId="BOSS_MNT_WO_FLT_SEP"
+            comments="Air handler AHU-2 filter change"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_FLT_SEP" assetId="BOSS_MNT_AIR_HANDLER" assetMaintenanceId="BOSS_MNT_AM_FLT_SEP"
+            maintenanceKindEnumId="MkPreventive" maintenanceTypeEnumId="MntTpPreventive" sourceEnumId="MsrcSchedule" outcomeEnumId="MoutDone"
+            dispositionEnumId="MdispAvailable" maintenanceScheduleId="BOSS_MNT_PLAN_FILTER" revision="4"/>
+    <mantle.work.maintenance.MaintenanceOccurrence maintenanceOccurrenceId="BOSS_MNT_OCC_FLT_AUG" maintenanceScheduleId="BOSS_MNT_PLAN_FILTER"
+            obligationKey="2026-08-14 09:00" dueLocal="2026-08-14 09:00" dueDate="2026-08-14 09:00:00" termFromDate="2026-07-28 09:00:00"
+            statusId="MocCompleted" workEffortId="BOSS_MNT_WO_FLT_AUG" generatedDate="2026-08-07 05:30:00" completedDate="2026-08-13 15:00:00" revision="2"/>
+    <mantle.work.maintenance.MaintenanceOccurrence maintenanceOccurrenceId="BOSS_MNT_OCC_FLT_SEP" maintenanceScheduleId="BOSS_MNT_PLAN_FILTER"
+            obligationKey="2026-09-14 09:00" dueLocal="2026-09-14 09:00" dueDate="2026-09-14 09:00:00" termFromDate="2026-07-28 09:00:00"
+            statusId="MocCompleted" workEffortId="BOSS_MNT_WO_FLT_SEP" generatedDate="2026-09-07 10:00:00" generatedByUserId="BOSS_MNT_PLANNER"
+            completedDate="2026-09-18 11:00:00" revision="2"/>
+    <mantle.work.maintenance.MaintenanceOccurrence maintenanceOccurrenceId="BOSS_MNT_OCC_FLT_OCT" maintenanceScheduleId="BOSS_MNT_PLAN_FILTER"
+            obligationKey="2026-10-14 09:00" dueLocal="2026-10-14 09:00" dueDate="2026-10-14 09:00:00" termFromDate="2026-07-28 09:00:00"
+            statusId="MocSkipped" decisionReason="Unit shut down for the coil cleaning" decidedByUserId="BOSS_MNT_PLANNER"
+            decidedDate="2026-10-08 10:00:00" revision="1"/>
 </entity-facade-xml>

@@ -154,7 +154,10 @@ const linkPaths = [
     "Procedures/ProcedureDetail",
     // P13: preventive plans and the plan record (design §5)
     "Preventive/Plans/Find",
-    "Preventive/Plans/PlanDetail"
+    "Preventive/Plans/PlanDetail",
+    // P14: the due list and the compliance report (design §5 DueMaintenance, §8)
+    "Preventive/DueMaintenance",
+    "Reports/PreventiveComplianceReport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
