@@ -99,8 +99,11 @@ along with this software (see the LICENSE.md file). If not, see
             teams under them), people (the current employees of those employers, the user's live reports and the user with
             self-service), employees (P3: the current employees of organizationPartyId, else of every employer the user reads,
             the managers and members OrgStructure and OrgChart choose), departments (P4: the departments of organizationPartyId, a
-            position's), jobClasses (the current job classes) and payGrades (the pay grades by name, never an amount). Refuses a
-            user without People and an unknown choice.</description>
+            position's), jobClasses (the current job classes), payGrades (the pay grades by name, never an amount), staff (P5:
+            organizationPartyId's employees and agents), positions (P6: organizationPartyId's seats in effect and not inactive,
+            vacant ones first, narrowed to departmentPartyId), workLocations (P6: organizationPartyId's facilities) and
+            terminationReasons and terminationTypes (P6: People's lookups, ended values left out). Refuses a user without People
+            and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
@@ -108,6 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="selected"/>
             <parameter name="organizationPartyId"><description>employees and departments: the employer whose employees or departments
                 are offered</description></parameter>
+            <parameter name="departmentPartyId"><description>positions: the department whose seats are offered</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
@@ -158,12 +162,18 @@ along with this software (see the LICENSE.md file). If not, see
                 hostEmploymentId (the employment host, when its files and activity are shown)</description></parameter>
             <parameter name="own" type="Boolean"/>
             <parameter name="editableFields" type="List"/>
+            <parameter name="canChangeEmployment" type="Boolean"><description>P6: People's mount, an HR editor of the opened
+                employment's employer who opens the employment change wizard</description></parameter>
+            <parameter name="showsChanges" type="Boolean"><description>P6: People's mount, which lists the employment changes the
+                user may see (mantle.humanres.PeopleServices.find#EmploymentChanges)</description></parameter>
             <parameter name="returnLabel"/>
             <parameter name="returnPath"/>
         </out-parameters>
         <actions>
             <set field="module" value="component://mr-boss/service/ironstone/people/People.js"/>
             <set field="found" from="ec.resource.script(module).execute('employee360', context)"/>
+            <set field="canChangeEmployment" from="!!found.canChangeEmployment"/>
+            <set field="showsChanges" from="!!found.showsChanges"/>
             <set field="recordFound" from="found.recordFound"/>
             <set field="regions" from="found.regions"/>
             <set field="record" from="found.record"/>

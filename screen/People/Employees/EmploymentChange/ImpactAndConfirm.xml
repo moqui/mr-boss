@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Employment change, step 2, ImpactAndConfirm (design-people §4 EmploymentChange): the change as
+    mantle.humanres.PeopleServices.preview#EmploymentChange reads it: the terms now and from the date, what else moves (the seat
+    vacated and the one taken, the department and reporting line; for a separation the employment's end, the reports left with no
+    manager, the units left with no lead, another employment that continues and the approvals routed again; later phases add
+    equipment, checklists and access), who decides it when it waits for approval, and the findings. The one primary asks for the
+    approval or applies the change (apply#EmploymentChange at the employment's revision read here and the draft's operation key) and
+    opens Employee360; the draft is cleared. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Impact and confirm" default-menu-index="2" menu-image="sym_o_fact_check" menu-image-type="icon">
+
+    <transition name="applyChange">
+        <actions>
+            <script><![CDATA[
+                const parameters = ec.resource.script('component://mr-boss/service/ironstone/people/People.js').changeParameters(
+                    partyRelationshipId, changeKind, changeDraft)
+                changed = ec.service.sync().name('mantle.humanres.PeopleServices.apply#EmploymentChange').parameters(Object.assign(
+                    parameters, {expectedRevision: expectedRevision || null, operationKey: changeDraft.operationKey || null})).call()
+                if (ec.message.hasError()) return
+                if (ec.web) ec.web.sessionAttributes.remove('peopleChangeDraft')
+                const what = changeKinds[changeKind] || 'Change'
+                ec.message.addMessage(changed.applied ? what + ' applied' : what + ' asked for' + (changed.waitingText ? ': ' +
+                    changed.waitingText.charAt(0).toLowerCase() + changed.waitingText.slice(1) : ''), 'success')
+                changedPartyId = ec.entity.find('mantle.party.PartyRelationship').condition('partyRelationshipId',
+                    partyRelationshipId).disableAuthz().one()?.fromPartyId || null
+            ]]></script>
+        </actions>
+        <default-response url="//People/Employees/Employee360">
+            <parameter name="partyId" from="changedPartyId"/>
+            <parameter name="partyRelationshipId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.humanres.PeopleServices.preview#EmploymentChange" out-map="preview" transaction="force-new"
+                ignore-error="true" in-map="ec.resource.script('component://mr-boss/service/ironstone/people/People.js')
+                    .changeParameters(partyRelationshipId, changeKind, changeDraft)"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const found = preview || {}
+            const before = found.current || {}
+            const after = found.terms || {}
+            reviewFound = !!found.partyId
+            compareRows = changeKind == 'separation' ? [] : [
+                ['Department', before.departmentName, after.departmentName],
+                ['Position', before.positionName, after.positionName],
+                ['Manager', before.managerName, after.managerName],
+                ['Work location', before.facilityName, after.facilityName]
+            ].filter(([, now, next]) => now || next).map(([label, now, next]) => ({label, now: now || 'None', next: next || 'None',
+                changes: (now || '') !== (next || '')}))
+            impactRows = Array.from(found.impact || [])
+            routeRows = Array.from(found.route || [])
+            const severityTexts = {error: 'Cannot apply', warning: 'Check', info: 'Note'}
+            findingRows = Array.from(found.findings || []).map(row => Object.assign({}, row, {severityText: severityTexts[row.severity] || ''}))
+            severityColors = {error: 'negative', warning: 'warning', info: 'grey-8'}
+            confirm = {expectedRevision: found.revision || '', partyRelationshipId, changeKind}
+            summaryText = (changeKinds[changeKind] || 'Change') + ' from ' + (found.effectiveDateText || '') +
+                (changeDraft.reason ? ' · ' + changeDraft.reason : '')
+            canApply = !!found.canApply
+            needsApproval = !!found.needsApproval
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="NoChange" condition="!reviewFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Nothing to review yet"/>
+                    <box-body><label type="p" text="Go back to say what changes."/></box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Review" condition="reviewFound">
+            <widgets>
+                <container-box>
+                    <box-header title="${summaryText}"/>
+                    <box-body>
+                        <form-list name="ChangeCompare" list="compareRows" skip-form="true" paginate="false" condition="compareRows.length">
+                            <field name="label"><default-field title=""><display/></default-field></field>
+                            <field name="now"><default-field title="Now"><display/></default-field></field>
+                            <field name="next"><default-field title="From the date"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/><field-ref name="now"/></column>
+                                <column><field-ref name="next"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="ChangeImpact" list="impactRows" skip-form="true" paginate="false" condition="impactRows.length">
+                            <field name="impactText"><default-field title="What else moves"><display/></default-field></field>
+                        </form-list>
+                        <form-list name="ChangeRoute" list="routeRows" skip-form="true" paginate="false"
+                                condition="needsApproval &amp;&amp; routeRows.length">
+                            <field name="stepText"><default-field title="Approval"><display/></default-field></field>
+                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="explanation"/></column>
+                                <column><field-ref name="stepText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="ChangeFindings" list="findingRows" skip-form="true" paginate="false" condition="findingRows.length">
+                            <field name="severityText">
+                                <default-field title="">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColors[severity] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(severityText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
+                                        <text type="html">${severityText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="message"><default-field title="Before applying"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="message"/></column>
+                                <column><field-ref name="severityText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-single name="ConfirmChangeForm" transition="applyChange" map="confirm">
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                            <field name="changeKind"><default-field><hidden/></default-field></field>
+                        </form-single>
+                        <label type="p" style="text-negative" condition="!canApply"
+                                text="This change cannot be made as it is: go back and change what the list says."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -15,14 +15,15 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- People › Approvals (design-people §13 Approvals, §12's approval topics; crosscut §3.15; impl-people P5, F18): the Commons
     Notifications list mounted with People's approval topics, the user's own notices only (org.moqui.ui.NotificationServices), so
     every People user opens it and sees the decisions waiting for them alone. Its rows are the steps waiting: a position's
-    activation (PeoplePositionApproval, one notice per step to its approvers). Approve and refuse (with a reason) call the topic's
-    services through the framework (mantle.humanres.PositionServices approve#PositionApproval and refuse#PositionApproval, which
-    recheck the approver and the position's revision); opening a row opens PositionDetail, whose Requisition shows the route
-    and the decisions. Later phases add their topics (leave, expenses, offers, employment changes, pay) to the list. -->
+    activation (PeoplePositionApproval, one notice per step to its approvers) and, P6, a transfer or separation
+    (PeopleEmploymentChangeApproval). Approve and refuse (with a reason) call the topic's services through the framework
+    (mantle.humanres.PositionServices approve#PositionApproval and refuse#PositionApproval, PeopleServices approve#EmploymentChange
+    and refuse#EmploymentChange, which recheck the approver and the source's revision); opening a row opens PositionDetail or the
+    person's Employee360, which show the route and the decisions. Later phases add their topics (leave, expenses, offers, pay). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="3" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
-        <set field="notificationTopics" from="['PeoplePositionApproval']"/>
+        <set field="notificationTopics" from="['PeoplePositionApproval', 'PeopleEmploymentChangeApproval']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">

@@ -51,8 +51,11 @@ feature(
             rendered.output.includes("lead Hannah Okafor")
             rendered.output.includes("Rafael Mbeki")
             rendered.output.includes("New unit")
-            rendered.output.includes("Add member")
-            rendered.output.includes("End membership")
+            // P6: a department's members are its assignments', read only here; the unit is closed with its people moved
+            !rendered.output.includes("Add member")
+            !rendered.output.includes("End membership")
+            rendered.output.includes("the employees assigned to it")
+            rendered.output.includes("Close unit")
             !rendered.output.includes("Service Delivery")
             // the reader reads the same unit and may change nothing (the screen's actions are conditioned on canEdit)
             readerUnit.organizationName == "Store Operations"

@@ -403,4 +403,33 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2024-01-15 09:00:00"/>
     <mantle.humanres.position.EmplPositionParty emplPositionId="BOSS_PPL_P_TECH1" partyId="BOSS_PPL_KENJI" roleTypeId="Employee"
             fromDate="2022-04-11 09:00:00"/>
+
+    <!-- People P6 (impl-people P6, the user's call of P3's review; design-people §4): an employment's department, position and
+        manager are its dated assignment's (EmploymentAssignment), whose projections are the department membership (the PrtMember
+        Assignee rows above, now the assignments'), the position held (the EmplPositionParty rows above) and the reporting line (the
+        PrtManager rows above). The employees P3 made department members get the assignment those rows already describe, from the
+        same date: Tomas, Ines and Rafael in Store Operations under Hannah (Tomas and Rafael on their sales associate seats), Leon in
+        Merchandising on the merchandiser seat with no manager, Kenji (technician seat), Sofia and Owen in Service Delivery under
+        Amara. The heads (Greta, Hannah, Priya, Amara) keep their lines as they were, with no assignment until their next change. -->
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_TOMAS_EA" partyRelationshipId="BOSS_PPL_TOMAS_EMP"
+            partyId="BOSS_PPL_TOMAS" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2023-06-12 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionId="BOSS_PPL_P_ASSOC1" managerPartyId="BOSS_PPL_HANNAH"/>
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_INES_EA" partyRelationshipId="BOSS_PPL_INES_EMP"
+            partyId="BOSS_PPL_INES" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2022-09-05 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_STORE" managerPartyId="BOSS_PPL_HANNAH"/>
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_RAFAEL_EA" partyRelationshipId="BOSS_PPL_RAFAEL_EMP"
+            partyId="BOSS_PPL_RAFAEL" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2026-10-26 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionId="BOSS_PPL_P_ASSOC2" managerPartyId="BOSS_PPL_HANNAH"/>
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_LEON_EA" partyRelationshipId="BOSS_PPL_LEON_EMP"
+            partyId="BOSS_PPL_LEON" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2024-01-15 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_MERCH" emplPositionId="BOSS_PPL_P_MERCH"/>
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_KENJI_EA" partyRelationshipId="BOSS_PPL_KENJI_EMP"
+            partyId="BOSS_PPL_KENJI" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2022-04-11 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_DELIVERY" emplPositionId="BOSS_PPL_P_TECH1" managerPartyId="BOSS_PPL_AMARA"/>
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_SOFIA_EA" partyRelationshipId="BOSS_PPL_SOFIA_EMP"
+            partyId="BOSS_PPL_SOFIA" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2023-11-20 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_DELIVERY" managerPartyId="BOSS_PPL_AMARA"/>
+    <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_OWEN_EA" partyRelationshipId="BOSS_PPL_OWEN_EMP"
+            partyId="BOSS_PPL_OWEN" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2021-07-19 09:00:00" isPrimary="Y" stateEnumId="EasActive"
+            departmentPartyId="BOSS_PPL_D_DELIVERY" managerPartyId="BOSS_PPL_AMARA"/>
 </entity-facade-xml>

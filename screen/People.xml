@@ -24,8 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     Positions, Job classes and Pay grades, every People user's, a grade's amounts payroll's alone); P5 Approvals (the Commons
     Notifications list of People's approval topics, every People user's own) and the Settings tabs Approval rules and Lookups
     (the People administrator's); each later phase adds its entries,
-    and the design's later entries stay absent. P2 adds the palette's directory and the Person record-lookup; quick create and
-    Today arrive with their records. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
+    and the design's later entries stay absent. P2 adds the palette's directory and the Person record-lookup; P6 the quick create
+    "Hire employee" (HR's: the wizard's grant decides who sees it) and the employment change topic; Today arrives with its records. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
     grant opens no other record's panel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -75,6 +75,11 @@ along with this software (see the LICENSE.md file). If not, see
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
+        <!-- P6: a transfer or separation to approve (PeopleEmploymentChangeApproval), and the quick create Hire employee for HR
+            (design §1.4), opening the hire wizard, which the HR officers' grant opens (BOSS_PPL_EMPLOYMENT) -->
+        <notification-topic topic="PeopleEmploymentChangeApproval"/>
+        <quick-create kind="peopleHireEmployee" label="Hire employee" icon="sym_o_person_add" screen="People/Employees/HireEmployee"
+                sequence="95"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

@@ -5159,4 +5159,23 @@ along with this software (see the LICENSE.md file). If not, see
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="PEOPLE_APPROVAL_OWNER_CHANGE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="PEOPLE_APPROVAL_OWNER_CHANGE" fromDate="0"/>
+    <!-- impl-people P6: an employment change to approve (Mantle's PeopleEmploymentChangeApproval topic, a transfer or a separation)
+        opens the person's record under People, whose changes waiting show the route and the decision to the approver; decided there,
+        from People's Approvals or from the notification tray -->
+    <moqui.security.user.NotificationTopic topic="PeopleEmploymentChangeApproval"
+            linkTemplate="/qapps/People/Employees/Employee360?partyId=${partyId}"/>
+    <!-- impl-people P6 (design-people §4 HireEmployee and EmploymentChange, §1.4's quick create "Hire employee for HR"): the hire and
+        employment change wizards are HR's: denied to the root user group, opened to the HR officers (ALWAYS, as the Products
+        price areas are) and to the People administrator and ADMIN through their ALWAYS on the root. Mantle's PeopleServices check
+        PEOPLE_HR_VIEW and PEOPLE_HR_EDIT and the employer again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_EMPLOYMENT" description="People hire and employment change">
+        <artifacts artifactName="component://mr-boss/screen/People/Employees/HireEmployee.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/People/Employees/EmploymentChange.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_EMPLOYMENT_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_EMPLOYMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

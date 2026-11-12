@@ -629,7 +629,7 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
 | `PeopleAdvanceApproval` | People | expense advance | proposed `mantle.humanres.ExpenseServices.decide#Advance` |
 | `PeoplePositionApproval` | People | planned position (`EmplPosition`) | `mantle.humanres.PositionServices.approve#PositionApproval` and `refuse#PositionApproval`, each calling the decision service `decide#PositionApproval` with the action (as built, impl-people P5: the framework passes no action to a topic's service, so each topic names an approve and a refuse handler, as the purchase topics do) |
 | `PeopleOfferApproval` | People | employment offer | proposed `mantle.humanres.RecruitingServices.change#OfferState` |
-| `PeopleEmploymentChangeApproval` | People | transfer, pay change or separation | proposed `mantle.humanres.PeopleServices.decide#EmploymentChange` |
+| `PeopleEmploymentChangeApproval` | People | transfer or separation (`EmploymentChange`; a pay change joins with P23) | `mantle.humanres.PeopleServices.approve#EmploymentChange` and `refuse#EmploymentChange`, each calling `decide#EmploymentChange` with the action; the last approval applies the change (as built, impl-people P6) |
 | `PeoplePayAdjustmentApproval` | People | payroll input adjustment | proposed `mantle.humanres.PayrollInputServices.decide#Adjustment` |
 | `PeopleTrainingApproval` | People | training enrollment | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
 | `PeopleReviewStep` | People | performance review step | proposed `mantle.humanres.ReviewServices.change#ReviewState` |

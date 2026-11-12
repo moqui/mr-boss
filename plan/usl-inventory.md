@@ -458,8 +458,8 @@ Added in Accounting P17 (returns and order changes):
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EmploymentServices | create#Employment |  |  |
-| EmploymentServices | update#Employment |  |  |
+| EmploymentServices | create#Employment | People/Employees/HireEmployee | People/Employees/HireEmployee (through PeopleServices.hire#Employee; its overlap check of PrtEmployee alone, F3) (People P6) |
+| EmploymentServices | update#Employment |  | — (its overlap check of PrtEmployee alone, F3; People ends an employment through apply#EmploymentChange) (People P6) |
 | EmploymentServices | delete#Employment |  |  |
 | EmploymentServices | create#EmploymentSalary | People/Employees/Employee360 |  |
 | EmploymentServices | check#NextPayrollTimePeriods |  |  |
@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
-**Added** (People P1 to P5, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P6, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -507,16 +507,16 @@ the screens that call it.
 | PeopleServices | get#Readiness | People/Settings | People/Settings/SettingsHome; Admin/Operations/Health (the readiness registry, people.setup) (People P1) |
 | PeopleServices | find#Employees | People/Employees | People/Employees/List (and its CSV export); the People palette's directory and the Person record-lookup (ironstone.people.ContextServices search#Records, lookup#Records) (People P2) |
 | PeopleServices | get#Employee360 | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360; Insights/Records/Employee360 (through get#Employee360Context) (People P2) |
-| PeopleServices | get#EmploymentHistory | People/Employees/Employee360 | People/Employees/Employee360 (Employment history) (People P2) |
+| PeopleServices | get#EmploymentHistory | People/Employees/Employee360 | People/Employees/Employee360 (Employment history; P6: the dated assignments) (People P2, P6) |
 | PeopleServices | store#PersonalInfo | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360 (the person's own) (People P2) |
 | PeopleServices | check#EmploymentAccess | People/Employees/Employee360 | Shared/Chatter; Shared/RecordFiles (through get#RecordLinkInfo and RecordFilesServices.get#ContentType, the employment host) (People P2) |
 | PeopleServices | create#EmploymentContent | People/Employees/Employee360 | Shared/RecordFiles under People/Employees/Employee360 (Files and activity) (People P2) |
 | OrganizationServices | find#Units | People/Employees/OrgStructure | People/Employees/OrgStructure (OrganizationTree and its unitChildren level) (People P3) |
 | OrganizationServices | get#Unit | People/Employees/OrgStructure | People/Employees/OrgStructure (the open unit: its facts, UnitParents, TeamMembers) (People P3) |
-| OrganizationServices | store#Unit | People/Employees/OrgStructure | People/Employees/OrgStructure (NewUnit, EditUnit) (People P3) |
-| OrganizationServices | store#Membership | People/Employees/OrgStructure | People/Employees/OrgStructure (AddMember, EndMember) (People P3) |
+| OrganizationServices | store#Unit | People/Employees/OrgStructure | People/Employees/OrgStructure (NewUnit, EditUnit; P6: CloseUnit, a department's people reassigned) (People P3, P6) |
+| OrganizationServices | store#Membership | People/Employees/OrgStructure | People/Employees/OrgStructure (AddMember, EndMember: a team's; P6: a department's members are its assignments') (People P3, P6) |
 | OrganizationServices | get#ReportingTree | People/Employees/OrgChart | People/Employees/OrgChart (ReportingTree and its reportChildren level) (People P3) |
-| OrganizationServices | change#Manager | People/Employees/OrgChart | People/Employees/OrgChart (ChangeManager) (People P3) |
+| OrganizationServices | change#Manager | People/Employees/OrgChart | People/Employees/OrgChart (ChangeManager; P6: an employment's manager change, its assignment's) (People P3, P6) |
 | PositionServices | find#JobClasses | People/Staffing/JobClasses | People/Staffing/JobClasses (FindJobClasses, JobClassList) (People P4) |
 | PositionServices | get#JobClass | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (the header, Job profile, Requirements) (People P4) |
 | PositionServices | store#JobClass | People/Staffing/JobClasses; People/Staffing/JobClassDetail | People/Staffing/JobClasses (NewJobClass); People/Staffing/JobClassDetail (EditJobClass, End job class) (People P4) |
@@ -524,7 +524,7 @@ the screens that call it.
 | PositionServices | find#Positions | People/Staffing/Positions | People/Staffing/Positions (FindPositions, PositionList as list and board) (People P4) |
 | PositionServices | get#Position | People/Staffing/PositionDetail | People/Staffing/PositionDetail (the header, Terms, Holders; P5: Approval, the latest activation request) (People P4, P5) |
 | PositionServices | store#Position | People/Staffing/Positions; People/Staffing/PositionDetail | People/Staffing/Positions (NewPosition); People/Staffing/PositionDetail (EditPosition, EndPosition) (People P4) |
-| PositionServices | store#PositionHolder | People/Employees/HireEmployee; People/Employees/EmploymentChange | — (no screen yet: a seat is filled by P6's hire and employment change) (People P4) |
+| PositionServices | store#PositionHolder | People/Employees/HireEmployee; People/Employees/EmploymentChange | — (no screen: P6's hire and employment change hold and end a seat through Positions.js holdSeat and endHolding, its checks, with the assignment's position) (People P4, P6) |
 | PayrollSetupServices | find#PayGrades | People/Staffing/PayGrades | People/Staffing/PayGrades (FindPayGrades, Grades, GradeBands; the amounts for PAYROLL_VIEW only) (People P4) |
 | PayrollSetupServices | store#PayGrade | People/Staffing/PayGrades | People/Staffing/PayGrades (NewPayGrade, NewBand) (People P4) |
 | PositionServices | request#PositionApproval | People/Staffing/PositionDetail | People/Staffing/PositionDetail (RequestActivation, the Requisition) (People P5) |
@@ -539,6 +539,14 @@ the screens that call it.
 | PeopleApprovalServices | transfer#ApprovalOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership of the people.approvals participant's rule rows) (People P5) |
 | PeopleServices | find#Lookups | People/Settings/Lookups | People/Settings/Lookups (FindLookups, LookupValues) (People P5) |
 | PeopleServices | store#Lookup | People/Settings/Lookups | People/Settings/Lookups (AddValue, EditValue, EndValue) (People P5) |
+| PeopleServices | preview#Hire | People/Employees/HireEmployee | People/Employees/HireEmployee (Identity, EmploymentTerms, ConfirmHire; the hirePeople choice) (People P6) |
+| PeopleServices | hire#Employee | People/Employees/HireEmployee | People/Employees/HireEmployee (ConfirmHire's Hire) (People P6) |
+| PeopleServices | preview#EmploymentChange | People/Employees/EmploymentChange | People/Employees/EmploymentChange (Change, ImpactAndConfirm) (People P6) |
+| PeopleServices | apply#EmploymentChange | People/Employees/EmploymentChange | People/Employees/EmploymentChange (ImpactAndConfirm's Apply or Ask for approval) (People P6) |
+| PeopleServices | decide#EmploymentChange | People/Approvals; People/Employees/Employee360 | People/Employees/Employee360 (Employment changes: ApproveChange, RefuseChange) (People P6) |
+| PeopleServices | approve#EmploymentChange | People/Approvals | People/Approvals and Commons' Notifications and tray (the PeopleEmploymentChangeApproval topic's approve service) (People P6) |
+| PeopleServices | refuse#EmploymentChange | People/Approvals | People/Approvals and Commons' Notifications and tray (the topic's refuse service) (People P6) |
+| PeopleServices | find#EmploymentChanges | People/Employees/Employee360 | People/Employees/Employee360 (Employment changes) (People P6) |
 
 ## Ledger (81 services)
 

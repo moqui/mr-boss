@@ -23,8 +23,12 @@ along with this software (see the LICENSE.md file). If not, see
     The regions, as boxes on one page: Overview (the work identity, employments and managers), Personal information (private
     contacts, birth date, gender and, for HR, identifications other than tax ones, masked; "Edit personal information" for the
     fields the user may change there), Employment history (HR and the person) and Files and activity (the employment content
-    host's RecordFiles and Chatter, an HR reader's). Compensation (P23), TimeAndLeave (P12), SkillsAndReviews (P18, P20) and
-    AssignedEquipment (P7) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
+    host's RecordFiles and Chatter, an HR reader's). P6, under People: the employment's department in the Overview, its dated
+    assignments in the history, Change employment for an HR editor of the opened employment's employer (a transfer, manager change,
+    leave of absence, return or separation, opening Employees/EmploymentChange), and the employment changes the user may see
+    (mantle.humanres.PeopleServices.find#EmploymentChanges: HR's, and a waiting one whose step the user decides, with Approve and
+    Refuse, decide#EmploymentChange). Compensation (P23), TimeAndLeave (P12), SkillsAndReviews (P18, P20) and AssignedEquipment
+    (P7) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
     <parameter name="partyId"/>
@@ -35,6 +39,20 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.PeopleServices.store#PersonalInfo" in-map="context"/>
             <if condition="!ec.message.hasError()"><message type="success">Personal information saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+
+    <!-- P6: an employment change's step decided by its approver: Mantle rechecks the approver and the change's revision; the last
+        approval applies the change -->
+    <transition name="decideChange">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.decide#EmploymentChange" out-map="decided"
+                    in-map="{employmentChangeId:employmentChangeId, peopleApprovalId:(peopleApprovalId || null),
+                        decision:(decision || 'approve'), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decided.applied ? 'Approved and applied' :
+                decision == 'refuse' ? 'Refused' : 'Approved'}</message></if>
         </actions>
         <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
@@ -55,6 +73,11 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{partyId:partyId}"/>
             <script>ec.message.clearErrors()</script>
         </if>
+        <if condition="recordFound &amp;&amp; employee?.showsChanges">
+            <service-call name="mantle.humanres.PeopleServices.find#EmploymentChanges" out-map="changesFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyId:partyId, includeDone:true}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <script><![CDATA[
             const employments = Array.from(overview.employments || [])
             const opened = employments.find(row => row.partyRelationshipId && row.partyRelationshipId === record.partyRelationshipId) || employments[0] || null
@@ -66,6 +89,20 @@ along with this software (see the LICENSE.md file). If not, see
             // the employments the record may be opened on (the person's and HR's, each with its id), when there is a choice
             employmentChoices = employments.filter(row => row.partyRelationshipId).length > 1 ? employments.filter(row => row.partyRelationshipId) : []
             historyRows = Array.from(historyFound?.history || [])
+            assignmentRows = Array.from(historyFound?.assignments || [])
+            // P6: the employment changes the user may see, the waiting ones first, and what each changes as text
+            changeRows = Array.from(changesFound?.changes || []).slice(0, 10).map(row => Object.assign({}, row, {
+                termsText: row.changeKindEnumId == 'EckSeparation'
+                    ? [row.terminationType, row.terminationReason].filter(Boolean).join(' · ')
+                    : row.changeKindEnumId == 'EckLeave' ? (row.returnDateText ? 'Returns ' + row.returnDateText : '')
+                    : [row.departmentName, row.positionName, row.managerName ? 'manager ' + row.managerName : '', row.facilityName]
+                        .filter(Boolean).join(' · '),
+                waitingText: row.approval?.waitingText || '',
+                peopleApprovalId: row.approval?.peopleApprovalId || null
+            }))
+            changeColors = {EchRequested: 'warning', EchApplied: 'positive', EchRefused: 'negative', EchSuperseded: 'grey-8'}
+            canChangeEmployment = !!employee?.canChangeEmployment && !!record.partyRelationshipId && opened?.state != 'ended'
+            changeEmploymentId = record.partyRelationshipId || null
             identificationRows = Array.from(personal.identifications || [])
             canEdit = editable.length > 0
             canEditHr = editable.includes('firstName')
@@ -129,6 +166,19 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="appRoot == 'Insights' &amp;&amp; ownerLink?.url"/>
                             <link url="${employee.returnPath}" text="${employee.returnLabel}" link-type="anchor-button" icon="sym_o_arrow_back"
                                     condition="appRoot != 'Insights' &amp;&amp; employee.returnPath"/>
+                            <!-- P6: the employment changes of the opened employment, HR's -->
+                            <button-menu text="Change employment" icon="sym_o_swap_horiz" condition="canChangeEmployment">
+                                <link url="${sharedLinks['Employees/EmploymentChange']}" text="Transfer" icon="sym_o_move_up"
+                                        parameter-map="{partyRelationshipId:changeEmploymentId, changeKind:'transfer'}"/>
+                                <link url="${sharedLinks['Employees/EmploymentChange']}" text="Manager change" icon="sym_o_supervisor_account"
+                                        parameter-map="{partyRelationshipId:changeEmploymentId, changeKind:'manager'}"/>
+                                <link url="${sharedLinks['Employees/EmploymentChange']}" text="Leave of absence" icon="sym_o_event_busy"
+                                        parameter-map="{partyRelationshipId:changeEmploymentId, changeKind:'leave'}"/>
+                                <link url="${sharedLinks['Employees/EmploymentChange']}" text="Return from leave" icon="sym_o_event_available"
+                                        parameter-map="{partyRelationshipId:changeEmploymentId, changeKind:'return'}"/>
+                                <link url="${sharedLinks['Employees/EmploymentChange']}" text="Separation" icon="sym_o_logout"
+                                        parameter-map="{partyRelationshipId:changeEmploymentId, changeKind:'separation'}"/>
+                            </button-menu>
                             <container-dialog id="EditPersonalInfo" button-text="Edit personal information" icon="sym_o_edit" width="720"
                                     title="Edit personal information of ${overview.personName}" condition="canEdit">
                                 <form-single name="EditPersonalInfoForm" transition="storePersonalInfo" map="personalValues">
@@ -235,6 +285,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <form-list name="Employments" list="employmentRows" skip-form="true" paginate="false" condition="employmentRows.length">
                             <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
                             <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="departmentName" hide="!employmentRows.some(row =&gt; row.departmentName)">
+                                <default-field title="Department"><display/></default-field></field>
                             <field name="fromDateText" hide="!employmentRows.some(row =&gt; row.fromDateText)">
                                 <default-field title="Started"><display/></default-field></field>
                             <field name="stateText"><default-field title="State"><display/></default-field></field>
@@ -245,6 +297,78 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body>
                 </container-box>
+
+                <!-- P6: the employment changes the user may see: waiting ones with who decides, and for their approver Approve and
+                    Refuse -->
+                <section name="EmploymentChanges" condition="changeRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Employment changes"/>
+                            <box-body-nopad>
+                                <form-list name="EmploymentChangeRows" list="changeRows" skip-form="true" paginate="false">
+                                    <field name="changeText"><default-field title="Change"><display/></default-field></field>
+                                    <field name="effectiveDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="termsText"><default-field title="What changes"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${changeColors[statusId] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="waitingText"><default-field title="Waiting for"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="ApproveChange_${employmentChangeId}" button-text="Approve" icon="sym_o_check"
+                                                    type="primary" width="520" title="Approve the ${changeText.toLowerCase()} of ${overview.personName}"
+                                                    condition="canDecide">
+                                                <label type="p" text="${changeText} from ${effectiveDateText}: ${termsText}. The last approval applies it."/>
+                                                <form-single name="ApproveChange" transition="decideChange"
+                                                        map="{partyId:partyId, partyRelationshipId:record.partyRelationshipId,
+                                                            employmentChangeId:employmentChangeId, peopleApprovalId:peopleApprovalId, decision:'approve'}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="employmentChangeId"><default-field><hidden/></default-field></field>
+                                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="RefuseChange_${employmentChangeId}" button-text="Refuse" icon="sym_o_block"
+                                                    type="danger" width="520" title="Refuse the ${changeText.toLowerCase()} of ${overview.personName}"
+                                                    condition="canDecide">
+                                                <label type="p" text="The employment stays as it is; the reason goes to the record of the request."/>
+                                                <form-single name="RefuseChange" transition="decideChange"
+                                                        map="{partyId:partyId, partyRelationshipId:record.partyRelationshipId,
+                                                            employmentChangeId:employmentChangeId, peopleApprovalId:peopleApprovalId, decision:'refuse'}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="employmentChangeId"><default-field><hidden/></default-field></field>
+                                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Refuse">
+                                                            <submit type="danger" confirmation="Refuse the ${changeText.toLowerCase()} of ${overview.personName}?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="changeText"/><field-ref name="effectiveDateText"/><field-ref name="termsText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <section name="PersonalInfo" condition="regions.includes('personalInfo')">
                     <widgets>
@@ -293,6 +417,24 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                                 <label text="No employment history is available." type="p" style="m-muted" condition="!historyRows.length"/>
+                                <!-- P6: the dated assignments of the employments: department, position, manager and work location from each
+                                    date, and the change that started each -->
+                                <form-list name="AssignmentRows" list="assignmentRows" skip-form="true" paginate="false"
+                                        condition="assignmentRows.length">
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                                    <field name="positionName"><default-field title="Position"><display/></default-field></field>
+                                    <field name="managerName"><default-field title="Manager"><display/></default-field></field>
+                                    <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="changeText"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromDateText"/><field-ref name="departmentName"/><field-ref name="positionName"/></column>
+                                        <column><field-ref name="changeText"/><field-ref name="managerName"/></column>
+                                    </columns>
+                                </form-list>
                             </box-body>
                         </container-box>
                     </widgets>

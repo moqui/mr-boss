@@ -1549,6 +1549,152 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
   contractor, completes an orphan relationship without a second one, rehires a leaver, transfers an employee after
   approval, and separates one whose other employment stays.
 
+**Built Nov 11 (P6).** mr-mantle af3bbb29, mr-boss (branch `ppl/p6`).
+- Checked first (the code over the plan): F3 (`create#Employment` and `update#Employment` refused any overlapping relationship of the
+  two, a contractor's `PrtAgent` and a contact's included), F5 (`create#PersonEmployee` makes no Employment), F59 (a Person's owner and
+  the Party filters), F81, F86 and F91 (a reporting line names no employer: P3's `linesOf` reads its employers from the employments, so
+  two people both employed by the same two employers shared one line at both, and P3's `change#Manager` refused `LINE_SHARED`), P4's
+  holder records (`EmplPositionParty` rows and `Employment.emplPositionId`, which TimeServices' rate lookup and the contact card read)
+  and P5's `reroute`, `record#Decision` and the topic pattern (one approve and one refuse service per topic, F110). Also: a declared
+  date parameter left out reaches a script as null, so an assignment's term not passed is kept and an empty one cleared; a wizard step
+  the client loads on its own runs its parents' `always-actions` only, and its form posts its own fields, not the parent's URL
+  parameters; `ec.user.nowTimestamp` is not a JavaScript `Date`.
+- Mantle (`entity/HumanResourcesEntities.xml`: `EmploymentAssignment` and `EmploymentChange` with their kinds, states and status flow;
+  `PakEmploymentChange` and the `PeopleEmploymentChangeApproval` topic in the approval seed):
+  - `mantle.humanres.PeopleServices` over a new module `Employment.js`: `preview#Hire` and `hire#Employee` (the HR editor's of the
+    employer: the person found among everyone People knows by name or email, with the filters off and public identity only and their
+    relationships with this employer alone, so a person employed by another employer is found and not made again; a new person someone
+    matches refused until confirmed, `PERSON_MATCHES`; one transaction for the Person (owner left as it is), the Employee role, exactly
+    one employment, new through `create#Employment`, an orphan `PrtEmployee` relationship completed with its Employment row, or a rehire
+    beside the ended one (`EMPLOYMENT_OVERLAP` otherwise), the work email (`EmailWork`) and phone, the first assignment and its
+    projections, and the hire's change row with its operation key, a retry answering the first; never `create#PersonEmployee`; the
+    terms' refusals `NOT_A_DEPARTMENT`, `DEPARTMENT_OUTSIDE`, `POSITION_NOT_IN_EFFECT`, `POSITION_INACTIVE`, `POSITION_DEPARTMENT`,
+    `POSITION_OCCUPIED`, `MANAGER_NOT_EMPLOYED`, `SELF_REPORTING`, `REPORTING_CYCLE`, `FACILITY_OUTSIDE`), `preview#EmploymentChange` and
+    `apply#EmploymentChange` (a transfer, manager change, leave of absence with an optional return, return and separation from a date, at
+    the employment's revision read: the terms now and after, the impact list and the route; a transfer and a separation wait for approval
+    on the new topic, routed by the employer's rules, the person's manager by default, and are applied by the last approval; the others
+    are applied at once; a new change supersedes a waiting one, its request and notices; refusals `REVISION_CHANGED`, `KIND_INVALID`,
+    `DATE_OUTSIDE`, `ASSIGNMENT_SCHEDULED`, `NOTHING_CHANGES`, `REASON_REQUIRED`, `ALREADY_ON_LEAVE`, `NOT_ON_LEAVE`, `VALUE_INVALID`,
+    `VALUE_ENDED` and the terms'), `decide#EmploymentChange` over `record#Decision` with the topic's `approve#` and
+    `refuse#EmploymentChange` (the change checked again when applied), and `find#EmploymentChanges` (HR's of their employers, and a
+    waiting one to the approver of its step);
+  - the assignment is the source of three projections written in the same transaction: the department membership (an `Assignee`
+    `PrtMember` row, P3's call), the seat held (`EmplPositionParty` through Positions.js `holdSeat` and `endHolding`, the checks of
+    `store#PositionHolder` without its caller check, so an approver applies a transfer) and the reporting line (a `PrtManager` row,
+    ended only when no other employment of the person uses it). The two holder records are settled: the occupancy rows are the dated
+    truth and `Employment.emplPositionId` follows the newest primary seat for its legacy readers (kept as the last seat at a
+    separation). A separation ends the employment (thruDate audited with the reason, its termination reason and type), the assignment
+    and its projections (the holding with it), the leaver's lead and team memberships at the employer and the lines they manage there
+    (each report's assignment continues with no manager, a reorganization of its own), leaves another employer's employment alone and
+    calls Approvals.js `reroute` for the employer, so a decision waiting on the leaver goes to the step's alternate, the HR fallback, or
+    waits; a manager change does too;
+  - People.js: `linesOf` reads the assignments (`assignmentsAt`): at an employer whose employment has an assignment the line is there only
+    when the assignment names its manager, and a line an assignment names is that employment's alone, never also the line at an employer
+    with no assignment (F81, F86, F91); `employmentRevision` (the relationship, Employment row and assignments); Approvals.js's
+    `PakEmploymentChange` kind (its revision the change's and the employment's; the notice names a separation's person nowhere in the
+    title);
+  - OrganizationServices: `change#Manager` is the employment's assignment change (the first assignment of an employment written before
+    People, from the date), so another employer's line never changes, its revision for an assigned employment the employment's
+    (`get#ReportingTree`'s `lineRevision`); `LINE_SHARED` is left for an orphan relationship with no Employment row; `store#Membership`
+    refuses a department (`DEPARTMENT_MEMBERSHIP`), a department's lead staying the unit's and not touching its members; `store#Unit`
+    with `close` closes a unit from a date no earlier than now (`UNIT_HAS_CHILDREN`, `UNIT_HAS_POSITIONS`, `MEMBERSHIP_SCHEDULED`), a
+    department's people moved to another department of the employer (`REASSIGNMENT_REQUIRED`, `REASSIGNMENT_INVALID`, `ASSIGNMENT_SCHEDULED`),
+    its memberships and rollup ended; `get#Unit`'s `membersEditable` (a team's);
+  - Employees.js: each employment row's department (the assignment's, public work identity), an HR row's `onLeave`, the history's dated
+    assignments and Employee360's `changeEmployment` capability; EmploymentServices' overlap checks of `PrtEmployee` alone (F3).
+- BOSS:
+  - Screens: `Employees/HireEmployee` (a wizard: Identity, EmploymentTerms, ConfirmHire; the draft and its operation key in the session;
+    Hire opens Employee360) and `Employees/EmploymentChange` (a wizard for one employment and kind: Change, ImpactAndConfirm; Apply or
+    Ask for approval), both HR's by a new grant `BOSS_PPL_EMPLOYMENT` (denied to `BOSS_PEOPLE`, ALWAYS for `BOSS_PEOPLE_HR`); the
+    directory's Hire employee (the one primary) and department column; Employee360's Change employment menu (Transfer, Manager change,
+    Leave of absence, Return from leave, Separation), Employment changes (Approve, the primary, and Refuse for the step's approver,
+    `decide#EmploymentChange`), the Overview's department and the history's assignments; OrgStructure's department members read only
+    and Close unit; Approvals lists the new topic.
+  - `ironstone.people`: the capability `employment` (the wizards' grant), the choices `hirePeople` (Mantle's matches, an HR editor's),
+    `positions` (an employer's seats in effect, vacant first, by department), `workLocations` and `terminationReasons` and
+    `terminationTypes` (ended values left out), `changeParameters` for the change wizard, `canChangeEmployment` and `showsChanges` in
+    Employee360's context, `sharedLinks` for the two wizards; the root's quick create `peopleHireEmployee` (Hire employee) and
+    notification topic; BossSetupData the topic's link (the person's Employee360) and the grant.
+  - Demo (`BossPeopleDemoData.xml`, appended): the seven employees P3 made department members get the assignment those rows describe,
+    from the same date (Tomas, Ines, Rafael in Store Operations under Hannah; Leon in Merchandising; Kenji, Sofia, Owen in Service
+    Delivery under Amara; the seats held), so P3's department memberships are the assignments'; the heads keep their lines.
+- Specs: Mantle `test/humanres/PeopleEmployment` (6 features, 2.4 s feature time: a contractor hired beside the contractor relationship,
+  a reader and another employer refused, the retry, the overlap, `create#Employment` beside a contact relationship; a person employed by
+  B found by A's HR by name alone and hired with no second Person, a new person matching refused until confirmed, an orphan completed,
+  a rehire, a new person's work email and a match by it; a transfer waiting for the manager, its stale revision, missing reason, preview,
+  route and impact, HR's own decision `SELF_APPROVAL`, the manager's approval through the notice applying it from its date with the
+  assignment, membership, seat, line and `Employment.emplPositionId` moved, a later transfer superseded by a manager change; the manager
+  per employment and the chart's change of an assigned employment; a separation with the leaver's lead membership, report and waiting
+  activation moved to the alternate; a leave and its return, a department's membership refused and a team's taken, a unit closed with
+  its seat ended first and its person moved). PeopleOrganization's two `LINE_SHARED` refusals become a feature of A's changes leaving B's
+  lines (0.2 s); PeopleDirectory's public fields gain `departmentName`. BOSS `test/People/PeopleHire` (3 features, 0.5 s: the hire
+  wizard's Identity step, one qvt render as HR, the person search finding Services' Kenji and the contractor with her relationship and
+  nothing for the reader; the change wizard's Change step, one qvt render for Tomas's transfer with his terms now, Services' employment
+  refused; the choices `positions`, `workLocations` and `terminationTypes` with a selected value off the page). `PeopleAccess` gains one
+  feature (0.35 s: the wizards opened to HR and refused to the reader, `preview#Hire` and `preview#EmploymentChange` answered for HR with
+  the parameters the reader is refused with, Services' employer and employment refused to Retail's HR), its menu feature the quick create
+  (HR's `peopleHireEmployee`, the reader's none) and its capability table `employment`; PeopleEmployees' Employee360 render checks the
+  department, the assignments and Change employment (and Commons' render its absence); PeopleOrganization's OrgStructure render a
+  department's members read only and Close unit. Client walk `test/client/People/PeopleHireWalk` (registered in `suite.js`; 8.9 s, two
+  runs 8.9 to 9.1 s): the HR officer finds no one in the directory, hires a new person through the wizard into Store Operations under
+  Hannah, lands on Employee360 with the department, and asks for the transfer to Merchandising, which waits for Hannah. Acceptance,
+  written and not run: `acceptance/People/PeopleHireUsable` (3 features: the contractor hired into the vacant seat beside her contractor
+  relationship with a second Hire answering the first and no login made, the orphan completed, Walter rehired, an overlap refused; Tomas's
+  transfer asked by HR, refused to HR's own decision, listed in Hannah's Approvals and on his record with Approve, approved from her
+  notice and applied, a looping manager change refused; Priya separated from Retail after the administrator names Hannah the HR
+  fallback, the impact keeping her Services employment and naming the unit she leads, her Services line kept, her record in the
+  terminal).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleEmployment, PeopleOrganization, PeopleApprovals,
+  PeoplePositions, PeopleScope, PeopleDirectory, HumanResServices, PayrollServices, PayrollAdjustments, WorkResources, BusinessTime,
+  ProductionShopFloor, WorkTimeEntries, InternalOrganizations and UserLifecycle, 95 of 95 (mr-mantle 22.7 s feature time); BOSS
+  PeopleHire, PeopleAccess (12 of 12), PeopleEmployees, PeopleOrganization, PeoplePositions, PeopleApprovals, AdminLifecycle, Resources,
+  Contacts, InsightsRecords, ManufacturingShopFloor, AppOrganizationFilters, ProjectsAccess and TimeEntries (with a dependency), 119 of
+  119 (mr-boss 23.7 s); the client walk PeopleHireWalk with `./moq test-client mr-boss --serve --spec PeopleHireWalk`, 1 of 1 (8.9 s).
+  `moqui lint --screens`: 135 flagged sites, as on master, none in the People screens. Prettier clean on the new and changed
+  JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's HumanRes rows `create#Employment` and `update#Employment` (F3) and the People Added table's eight
+  PeopleServices of P6 and the changed `store#PositionHolder`, `store#Unit`, `store#Membership`, `change#Manager` and
+  `get#EmploymentHistory`; ss-inventory's FindParty CreateEmployeeForm names HireEmployee.
+- Design edits: design-people (header; §1.4 the quick create; §4 the employment model as built; Employees, Employee360, HireEmployee,
+  EmploymentChange, OrgStructure and OrgChart as built; §12 the topic's handlers; §13 Approvals' topics); design-drawers-commons §4 (the
+  `PeopleEmploymentChangeApproval` row: its approve and refuse handlers).
+- Findings (provisional, numbered by the lead):
+  - only a transfer and a separation wait for approval (design §12's topic: transfer, pay change, separation); a manager change, a leave
+    of absence and a return are HR's at once, as P3's chart change was. The pay change waits for P23;
+  - `Employment.emplPositionId` follows the newest primary seat when a change is applied, also a change dated later, so TimeServices'
+    rate lookup reads the new class before the date; the dated truth is the occupancy rows;
+  - a separation (or a manager change) dated later calls `reroute` when it is applied, when the leaver still works for the employer:
+    their waiting decisions move at the next read or rule change after the date, not on it (F120's class);
+  - the hire's person search reads every Person by name or email (customers and contacts too) for an HR editor of any employer, their
+    name and preferred name and their relationships with that employer only: what F59 needs, and a confidentiality point for the review;
+  - the wizards keep their drafts in the session (the gallery's pattern), not a draft record (style-guide §3.10): a hire or change left
+    unfinished is lost with the session;
+  - the hire wizard defaults the employer to the HR officer's first organization, which for `people.hr` is Warehouse's returns center
+    under Retail (§4's call on internal children): it should prefer an employer with employees (the walk chooses Retail);
+  - a seat moved to another department (`store#Position`) leaves its holder's assignment in the old one, and closing a department is
+    refused while a seat is in it; a closure is HR's and asks no approval (design §4 OrgStructure says "and approvals");
+  - the assignment's schedule (design §4) waits for P9's schedules; the demo's heads (Greta, Hannah, Priya, Amara) have no assignment
+    until their next change, and no demo `Employment.emplPositionId` is set;
+  - `TerminationReason` has no seeded value, so the separation's reason drop-down is empty until the administrator adds one (Lookups);
+  - a department's lead assigned to it is listed twice in OrgStructure (as lead and member).
+- For the lead:
+  - the budget: mr-mantle's share PeopleEmployment about 2.4 s and PeopleOrganization's new feature 0.2 s; mr-boss's PeopleHire about
+    0.5 s and PeopleAccess's new feature 0.35 s; the client walk PeopleHireWalk about 9 s, a little over §4's estimate of 8 s for
+    People's client budget (its steps: the directory search, three hire steps, Employee360, two change steps);
+  - merge hot spots: mr-mantle `entity/HumanResourcesEntities.xml` (after EmploymentContent), `entity/PeopleApprovalEntities.xml` and
+    `data/PeopleApprovalSetupData.xml` (the kind and topic), `People.js` (`linesOf`, the exports), `Approvals.js` (the kinds table,
+    `revisionOf`), `Positions.js` (`storePositionHolder` split, the exports), `Organization.js` (`addMembership`, `storeMembership`,
+    `storeUnit`, `changeManager`, `reportingTree`), `Employees.js` (`employmentRows`, `employmentHistory`), `PeopleServices.xml` and
+    `OrganizationServices.xml` (appended and descriptions), `EmploymentServices.xml`; mr-boss `service/ironstone/people/People.js`
+    (`areas`, `linkPaths`, `choiceSources`, `employee360`, the exports), `ContextServices.xml`, `template/PeopleParts.xml`,
+    `screen/People.xml` (providers), `People/Approvals.xml`, `Employees.xml`, `Employees/List.xml`, `Employees/OrgStructure.xml`,
+    `Shared/Employee360.xml`, `data/BossSetupData.xml` and `BossPeopleDemoData.xml` (appended), `test/People/PeopleAccess.spec.js`
+    (header, menu and capability features, the appended feature), `PeopleEmployees.spec.js`, `PeopleOrganization.spec.js`,
+    `test/client/suite.js`, the inventories' HumanRes and People rows, design-people's header and §4, §12, §13, design-drawers-commons §4;
+  - the user's calls: which changes wait for approval (built: transfer and separation); whether `Employment.emplPositionId` follows the
+    newest seat (built) or only one in effect; whether the wizards keep a draft record rather than the session's; how wide the hire's
+    person search may look (built: everyone People knows, by name, public identity only).
+
 ### P7 — Checklists, equipment return, provisioning and employee import
 
 Design §4 (checklists, equipment, provisioning), §12 ChecklistTemplates and EmployeeImport, §13 WorkItemDetail and

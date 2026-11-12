@@ -17,8 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     subscreen Employees/List, so /qapps/People/Employees is the list), Organization (OrgStructure, P3) and Org chart (OrgChart,
     P3); Employee360 (the shared record, Shared/Employee360.xml, with People's context) is opened from a person. Every People user
     opens them: what each sees is what Mantle's services admit (a staff reader the employers they read, a manager their reports
-    in the directory, HR the HR columns and regions and the changes to units, memberships and reporting lines). HireEmployee
-    (P6) joins with its phase. -->
+    in the directory, HR the HR columns and regions and the changes to units, memberships and reporting lines). P6: HireEmployee and
+    EmploymentChange (wizards under Employees/, HR's by their grant BOSS_PPL_EMPLOYMENT), out of the menu, opened from the directory,
+    the quick create and Employee360. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employees" default-menu-index="4" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="List">

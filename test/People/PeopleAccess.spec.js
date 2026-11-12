@@ -16,7 +16,10 @@
 // officer answered the grade's name alone and refused its change; a shared grade changed by the People administrator and not by
 // Retail's payroll), and the Staffing menu group. P5: approval rules and HR vocabularies the People administrator's (the HR
 // officer refused with the same parameters), a route read by an HR reader of the employer (the directory reader refused, Services'
-// position refused to Retail's HR), a decision asked of an approver (the directory reader refused), and Settings' tabs.
+// position refused to Retail's HR), a decision asked of an approver (the directory reader refused), and Settings' tabs. P6: the
+// hire and employment change wizards and their quick create the HR officer's (the directory reader refused the screen and not
+// offered it), a hire and an employment change an HR editor's of the employer (the directory reader refused with the same
+// parameters, Services' employer and employment refused to Retail's HR).
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -124,7 +127,11 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
         if (JSON.stringify(keys) !== JSON.stringify(ids.keys)) problems.push(`the HR officer's people keys: ${keys}`)
-        if ((hr.providers?.quickCreate || []).length) problems.push("the HR officer is offered quick create")
+        // P6: the HR officer's quick create is Hire employee (the wizard's grant); a directory reader is offered none
+        const quick = shell => (shell.providers?.quickCreate || []).map(entry => entry.kind).join()
+        if (quick(hr) !== "peopleHireEmployee") problems.push(`the HR officer's quick create: ${quick(hr)}`)
+        const reader = shell(users.reader)
+        if (quick(reader)) problems.push(`the reader's quick create: ${quick(reader)}`)
         // P3: Employees is a menu group of the directory, Organization and Org chart
         const group = shell(users.hr, true, "Employees/OrgChart", "Employees")
         if (JSON.stringify(group.names) !== JSON.stringify(ids.employeesMenu))
@@ -173,20 +180,25 @@ const capabilityNames = [
     // a reader of an employer, from the view capabilities
     "staff",
     // the Settings area, the People administrator's
-    "settings"
+    "settings",
+    // P6: the hire and employment change wizards, the HR officer's
+    "employment"
 ]
 // design §1.1's table
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     {user: users.manager, granted: ["team", "requestApprove"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
-    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff"]},
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
     {user: users.develop, granted: ["developView", "developEdit", "staff"]},
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},
-    {user: users.admin, granted: ["configure", "payrollView", "payrollEdit", "allOrganizations", "staff", "settings"]},
+    {
+        user: users.admin,
+        granted: ["configure", "payrollView", "payrollEdit", "allOrganizations", "staff", "settings", "employment"]
+    },
     {user: "people.spec.editonly", granted: ["hrEdit"]},
     {user: users.system, granted: capabilityNames}
 ]
@@ -551,6 +563,50 @@ feature(
                     hrOtherRoute: "RECORD_UNAVAILABLE",
                     managerDecision: "RECORD_UNAVAILABLE",
                     readerDecision: "PERMISSION_DENIED"
+                }
+        }
+    }
+)
+
+feature(
+    "the hire and employment change are the HR officer's: the wizards and a hire's or change's check, Services' employer and employment refused to Retail's HR",
+    {
+        when() {
+            // Mantle's own checks with the user's identity: the previews change nothing, so the same parameters show the
+            // permission's refusal; Services' employer and Kenji's employment are outside Retail's HR officer's scope
+            const as = (user, service, parameters) =>
+                asUser(user, () => system(() => refusal("mantle.humanres.PeopleServices." + service, parameters)))
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const hire = {organizationPartyId: ids.organizationId, partyId: ids.contractorPartyId}
+            const otherHire = {organizationPartyId: ids.otherOrganizationId, partyId: ids.contractorPartyId}
+            const change = {partyRelationshipId: ids.employmentId, changeKind: "manager", managerPartyId: ids.managerPartyId}
+            const otherChange = {partyRelationshipId: ids.otherEmploymentId, changeKind: "manager"}
+            return {
+                screens: {
+                    hr: screenRefusal(users.hr, "Employees/HireEmployee"),
+                    reader: screenRefusal(users.reader, "Employees/HireEmployee") ? "refused" : "opened",
+                    readerChange: screenRefusal(users.reader, "Employees/EmploymentChange", change) ? "refused" : "opened"
+                },
+                codes: {
+                    hrHire: code(as(users.hr, "preview#Hire", hire)),
+                    readerHire: code(as(users.reader, "preview#Hire", hire)),
+                    hrOtherHire: code(as(users.hr, "preview#Hire", otherHire)),
+                    hrChange: code(as(users.hr, "preview#EmploymentChange", change)),
+                    readerChange: code(as(users.reader, "preview#EmploymentChange", change)),
+                    hrOtherChange: code(as(users.hr, "preview#EmploymentChange", otherChange))
+                }
+            }
+        },
+        then({screens, codes}) {
+            screens == {hr: "", reader: "refused", readerChange: "refused"}
+            codes ==
+                {
+                    hrHire: "accepted",
+                    readerHire: "PERMISSION_DENIED",
+                    hrOtherHire: "ORGANIZATION_DENIED",
+                    hrChange: "accepted",
+                    readerChange: "PERMISSION_DENIED",
+                    hrOtherChange: "RECORD_UNAVAILABLE"
                 }
         }
     }

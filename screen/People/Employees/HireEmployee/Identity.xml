@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Hire employee, step 1, Identity (design-people §4 HireEmployee): the employer and the person. An existing person is found by
+    name among everyone People knows (the hirePeople choice over mantle.humanres.PeopleServices.preview#Hire: public identity only,
+    with their relationships with the employer), a contractor or a person employed elsewhere among them; a new person is named with
+    their work email and phone. Next checks the person (preview#Hire: someone who matches a new person's names or email is refused
+    until chosen, or the new person confirmed) and keeps the draft. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Identity" default-menu-index="1" menu-image="sym_o_person_search" menu-image-type="icon">
+
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="saveIdentity">
+        <actions>
+            <script><![CDATA[
+                const text = value => String(value ?? '').trim()
+                const draft = Object.assign({}, hireDraft, {
+                    organizationPartyId: text(organizationPartyId) || null,
+                    partyId: text(partyId) || null,
+                    firstName: text(firstName),
+                    lastName: text(lastName),
+                    preferredName: text(preferredName),
+                    workEmail: text(workEmail),
+                    workPhone: text(workPhone),
+                    confirmNewPerson: confirmNewPerson === 'Y' ? 'Y' : ''
+                })
+                // a Hire sent twice answers the first: the draft's operation key, made once
+                if (!draft.operationKey) draft.operationKey = 'HIRE-' + ec.user.userId + '-' + ec.user.timestampMillis(ec.user.nowTimestamp)
+                if (ec.web) ec.web.sessionAttributes.peopleHireDraft = JSON.stringify(draft)
+                if (!draft.organizationPartyId) ec.message.addValidationError(null, 'organizationPartyId', null, 'Choose the employer', null)
+                if (!draft.partyId && !(draft.firstName && draft.lastName))
+                    ec.message.addValidationError(null, 'partyId', null, 'Choose the person, or give a new person\'s first and last names', null)
+                if (ec.message.hasError()) return
+                const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#Hire').parameters({
+                    organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
+                    lastName: draft.lastName, workEmail: draft.workEmail, confirmNewPerson: draft.confirmNewPerson === 'Y'}).call()
+                if (ec.message.hasError()) return
+                // the person's refusals belong to this step; the terms' to the next
+                for (const finding of Array.from(previewed?.findings || []))
+                    if (finding.severity === 'error' && ['PERSON_REQUIRED', 'PERSON_MATCHES'].includes(finding.code))
+                        ec.message.addError(finding.message)
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="identity" from="Object.assign({}, hireDraft)"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Who is hired"/>
+            <box-body>
+                <label type="p" style="m-muted"
+                        text="Find the person first: someone already known (a contractor, a former employee, a person another employer employs) is hired as they are, not made again. Give a new person's names only when no one found is them."/>
+                <form-single name="HireIdentity" transition="saveIdentity" map="identity" focus-field="partyId">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:identity.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="partyId">
+                        <default-field title="Existing person" tooltip="Type a name: everyone People knows, with their relationships with the employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="2" depends-optional="true"
+                                        parameter-map="{choice:'hirePeople', selected:identity.partyId}">
+                                    <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="firstName"><default-field title="First name"><text-line size="25"/></default-field></field>
+                    <field name="lastName"><default-field title="Last name"><text-line size="25"/></default-field></field>
+                    <field name="preferredName">
+                        <default-field title="Preferred name" tooltip="The name colleagues see beside the legal name"><text-line size="20"/></default-field>
+                    </field>
+                    <field name="workEmail"><default-field title="Work email"><text-line size="30"/></default-field></field>
+                    <field name="workPhone"><default-field title="Work phone"><text-line size="20"/></default-field></field>
+                    <field name="confirmNewPerson">
+                        <default-field title=" ">
+                            <check><option key="Y" text="A new person: none of the people found is them"/></check>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-ref name="organizationPartyId"/>
+                        <field-ref name="partyId"/>
+                        <fields-not-referenced/>
+                    </field-layout>
+                </form-single>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

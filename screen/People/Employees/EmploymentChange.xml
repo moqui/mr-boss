@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Employees › Employment change (design-people §4 EmploymentChange; style-guide §3.10 Wizard; impl-people P6): a dated
+    change of one employment (partyRelationshipId), of the kind Employee360's Change employment chose (changeKind: transfer, manager,
+    leave, return or separation), as a subscreens-panel type="wizard" over EmploymentChange/: Change (from when, the new terms or the
+    leave's return or the separation's reason and type, and why) and ImpactAndConfirm (the terms now and after, what else moves, who
+    decides it when it waits for approval, the findings; the one primary applies it or asks for it through
+    mantle.humanres.PeopleServices.apply#EmploymentChange at the employment's revision read, and opens Employee360). A transfer and
+    a separation wait for approval (the person's manager by default), the others are applied at once. Each step's transition checks
+    its part with preview#EmploymentChange and keeps the draft in the session, with the change's operation key. HR's
+    (BOSS_PPL_EMPLOYMENT); an employment outside the user's scope shows "Not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Employment change" default-menu-include="false">
+
+    <parameter name="partyRelationshipId"/>
+    <parameter name="changeKind"/>
+    <subscreens default-item="Change"/>
+
+    <!-- the draft of this employment's change of this kind (the session's), read by each step in always-actions since the client
+        loads a step on its own -->
+    <always-actions>
+        <script><![CDATA[
+            const sessionDraft = ec.web ? ec.web.sessionAttributes.get('peopleChangeDraft') : null
+            const kept = sessionDraft ? JSON.parse(sessionDraft) : {}
+            const draftKey = String(partyRelationshipId || '') + '/' + String(changeKind || '')
+            changeDraft = kept.draftKey === draftKey ? kept : {draftKey}
+            changeKinds = {transfer: 'Transfer', manager: 'Manager change', leave: 'Leave of absence', return: 'Return from leave',
+                separation: 'Separation'}
+        ]]></script>
+    </always-actions>
+
+    <actions>
+        <service-call name="mantle.humanres.PeopleServices.preview#EmploymentChange" out-map="employment" transaction="force-new"
+                ignore-error="true" in-map="{partyRelationshipId:(partyRelationshipId || '_NA_'), changeKind:(changeKind || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="employmentFound" from="!!employment?.partyId &amp;&amp; !!changeKinds[changeKind]"/>
+        <set field="changeTitle" from="employmentFound ? changeKinds[changeKind] + ' of ' + employment.personName : 'Employment change'"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-mb-sm">
+            <label type="h5" text="${changeTitle}" style="q-my-none"/>
+            <container style="col"/>
+            <link url="${sharedLinks['Employees/Employee360']}" text="Employee record" icon="sym_o_arrow_back" style="q-ml-sm"
+                    parameter-map="{partyId:employment.partyId, partyRelationshipId:partyRelationshipId}" condition="employmentFound"/>
+        </container>
+        <section name="EmploymentMissing" condition="!employmentFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This employment is not available to you to change."/>
+                        <link url="${sharedLinks['Employees']}" text="Back to employees" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+            <fail-widgets>
+                <label type="p" style="text-caption m-muted"
+                        text="${employment.organizationName} · employed since ${employment.employmentFromDateText} · ${employment.current.stateText}"/>
+                <subscreens-panel id="EmploymentChangeWizard" type="wizard"
+                        finish-text="${changeKind == 'transfer' || changeKind == 'separation' ? 'Ask for approval' : 'Apply'}"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>
