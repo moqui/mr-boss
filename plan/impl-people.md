@@ -325,7 +325,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | built and reviewed Nov 11, merged |
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | built and reviewed Nov 11, merged |
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | built and reviewed Nov 11, merged |
-| P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | — |
+| P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | built and reviewed Nov 11, merged |
 | P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | — |
 | P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | — |
 | P19 Training | Mantle, BOSS | Training, TrainingDetail | — |
@@ -4284,7 +4284,7 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
   CaseFeedbackServices' builder row; ss-inventory's P16 note (no baseline form is mapped).
 - Design edits: design-people (header; §5 Openings, ApplicantPipeline, ApplicantDetail as built; §13 InterviewsCalendar and Forms
   as built); design-crosscut's SurveyForms row.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F272 to F281 in order:
   - People's TeamCalendar (P12) called Commons' Calendar transitions: Calendar.qvue found its serving screen only by a `Calendar` or
     `ResourceCalendar` path segment, so under `People/Time/TeamCalendar` it read the user's Commons calendar; P16's change (a
     segment ending in `Calendar`) fixes both mounts; the client walks were not run;
@@ -4398,7 +4398,7 @@ PeopleRecruiting, PeopleAccess, PeopleExpenses (27 of 27) passed after it.
     the leaver and the task, no link) and `get#ChecklistTask`'s `exitInterview` (the answers for the task's people and HR of the
     employer, never the leaver); WorkItemDetail's People box shows it (template/PeopleWorkItem.xml, `submitExitInterview`), opted out
     of AI. Spec: PeopleChecklists.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F282 to F287 in order:
   - a recruiter's `create#Application` by email, and mail or chat intake, attach the application to the existing person of that
     exact address (any person not disabled or private, an employee or a customer of another organization too), whose name the
     recruiter then reads: whether an address belongs to someone, and their name;
@@ -4823,6 +4823,8 @@ the owner's design.
 | Nov 12, 2026 | "Read receipt" reading photos (an image or OCR input to `run#Extract`) is a framework ask for later; today a PDF's or text file's receipt is read and a photo's text is typed or pasted | The user's call on P15's question (§7; mr-moqui `plans/Remaining-Work.md`'s framework asks, added by the lead) |
 | Nov 12, 2026 | An expense approval notice names no amount in its title; its detail shows the approver the claim's total (the notice's `amount` and `currencyUomId`, which the notification lists show as the approval's summary) | The user's call on P15's question (built in P15's review, R3: Approvals.js `PakExpenseClaim`; PeopleExpenses) |
 | Nov 12, 2026 | An interviewer with self-service only answers their scorecard from SelfService: My interviews on SelfService (People/SelfService and Commons/People/SelfService) lists the interviews the user is on the panel of, each opening MyInterview beside it (People/MyInterview, Commons/People/MyInterview), where the panel member reads their own interview, the candidate's name, the opening and the materials HR shares with the panel, and submits their scorecard once. "Shared with the panel" is a file of the application a recruiter marks shared on ApplicantDetail (none by default, the resume either); a panel member reads nothing else of the application (its stage, source, contact, notes, other files or record host) there or in People. Grants on F28's non-inheritable pattern (`BOSS_PPL_INTERVIEW_SELF`) | The user's call (P16's review). Built in P16's review: `RecruitingServices.find#MyInterviews`, `get#MyInterview`, `share#ApplicationContent`, `get#ApplicationFile`, `EmploymentApplicationContent.panelShared`; design §3 SelfService, §5 ApplicantDetail |
+| Nov 12, 2026 | Free-text form answers (`FormResponseAnswer.valueText`) are opted out of AI for every app's forms, as P16's review built it, not only People's purposes | The user's call: respondents' words reach no model in any app (case feedback comments and tax statement answers included) |
+| Nov 12, 2026 | An applicant's resume is shared with the interview panel by default when attached; other files only when the recruiter marks them; the recruiter can unshare it | The user's call, after P16's review shared nothing by default; P17 builds it |
 
 ## 5. Open questions
 
@@ -4841,7 +4843,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
