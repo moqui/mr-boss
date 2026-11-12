@@ -32,7 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
     where an employment has clocking on, and then the page's primary action in place of Open my employee record (design §3
     SelfService); My attendance links People's Attendance. P14: My shifts, the user's own published shifts of the next two weeks
     (mantle.humanres.ScheduleServices.get#MyShifts, which takes no party), shown when they have any, linking the team calendar.
-    Payslips (P26) and claims (P15) join with their phases. -->
+    P15: My expenses and My advances link People's Expense claims and Advances (the expenses area's own grant). Payslips (P26) join
+    with their phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -143,6 +144,11 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P13 -->
                             <link url="${links.attendanceUrl}" url-type="plain" text="My attendance" link-type="anchor-button"
                                     icon="sym_o_fact_check" condition="links?.attendanceUrl"/>
+                            <!-- P15: their expense claims and advances (People's expenses area) -->
+                            <link url="${links.expenseClaimsUrl}" url-type="plain" text="My expenses" link-type="anchor-button"
+                                    icon="sym_o_receipt_long" condition="links?.expenseClaimsUrl"/>
+                            <link url="${links.advancesUrl}" url-type="plain" text="My advances" link-type="anchor-button"
+                                    icon="sym_o_payments" condition="links?.advancesUrl"/>
                         </container>
                     </container>
                 </container>

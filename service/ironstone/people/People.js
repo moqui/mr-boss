@@ -43,6 +43,8 @@ const selfServiceLocation = "component://mr-boss/screen/Shared/PeopleSelfService
 // P10: Time & leave (Projects' time screens mounted under People/Time), which a self-service employee opens by its own grant
 // (BOSS_PPL_TIME); and Projects' root, whose own Today source answers a Projects user's weeks to submit
 const timeLocation = "component://mr-boss/screen/People/Time.xml"
+// P15: Expenses (claims and advances), which a self-service employee opens by its own grant (BOSS_PPL_EXPENSES)
+const expensesLocation = "component://mr-boss/screen/People/Expenses.xml"
 const projectsLocation = "component://mr-boss/screen/Projects.xml"
 
 // ===== scope =====
@@ -209,7 +211,14 @@ const linkPaths = [
     // P14: the shift roster (HR's and the managers', with the working schedules), its terminal twin and its print
     "Time/ShiftRoster",
     "Time/ShiftRosterTui",
-    "Time/ShiftRosterPrint"
+    "Time/ShiftRosterPrint",
+    // P15: expense claims, a claim's detail and advances (every People user's and a self-service employee's by the expenses area's
+    // own grant), and Payroll's InvoiceDetail (an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE)
+    "Expenses",
+    "Expenses/ExpenseClaims",
+    "Expenses/ExpenseClaimDetail",
+    "Expenses/EmployeeAdvances",
+    "Payroll/InvoiceDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -238,7 +247,11 @@ function sharedContext(p) {
                 "Time/TeamCalendar": "//People/Time/TeamCalendar",
                 // P13: their own attendance and clock (the time area's own grant)
                 "Time/Attendance": "//People/Time/Attendance",
-                "Time/Clock": "//People/Time/Clock"
+                "Time/Clock": "//People/Time/Clock",
+                // P15: their own expense claims and advances (the expenses area's own grant)
+                "Expenses/ExpenseClaims": "//People/Expenses/ExpenseClaims",
+                "Expenses/ExpenseClaimDetail": "//People/Expenses/ExpenseClaimDetail",
+                "Expenses/EmployeeAdvances": "//People/Expenses/EmployeeAdvances"
             }
         }
     }
@@ -1210,6 +1223,10 @@ function decisionUrl(row) {
     if (row.approvalKindEnumId === "PakLeave") return leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(row.sourceId)
     // P13: an attendance correction, among the days to decide on Attendance
     if (row.approvalKindEnumId === "PakAttendance") return "/qapps/People/Time/Attendance?show=decide"
+    // P15: an expense claim on ExpenseClaimDetail, an advance among the advances to decide
+    if (row.approvalKindEnumId === "PakExpenseClaim")
+        return "/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=" + encodeURIComponent(row.sourceId)
+    if (row.approvalKindEnumId === "PakAdvance") return "/qapps/People/Expenses/EmployeeAdvances?show=decide"
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1312,6 +1329,13 @@ function timeAreaOpens(grants = rootGrants()) {
     const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
     return groupIds.length > 0 && screenGrants(timeLocation, screenAuthz(groupIds)).allowed.length > 0
 }
+// P15: whether People's expenses area opens to the user: through the root, or by the area's own grant for a self-service employee.
+function expensesAreaOpens(grants = rootGrants()) {
+    if (grants.systemAdmin) return true
+    if (grants.read) return areaGrant(grants, "Expenses")
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(expensesLocation, screenAuthz(groupIds)).allowed.length > 0
+}
 // P10: whether the user keeps their time under People and not in Projects: People's time area opens to them and Projects' root
 // does not (its own Today source answers a Projects user's weeks to submit).
 function keepsTimeHere() {
@@ -1341,7 +1365,10 @@ function selfServiceContext(p) {
         // P13: their own attendance days, under the same area
         attendanceUrl: timeAreaOpens(grants) ? "/qapps/People/Time/Attendance?show=mine" : null,
         // P14: their published shifts on the team calendar, under the same area
-        teamCalendarUrl: timeAreaOpens(grants) ? "/qapps/People/Time/TeamCalendar" : null
+        teamCalendarUrl: timeAreaOpens(grants) ? "/qapps/People/Time/TeamCalendar" : null,
+        // P15: their own expense claims and advances, under People's expenses area
+        expenseClaimsUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/ExpenseClaims?show=mine" : null,
+        advancesUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/EmployeeAdvances?show=mine" : null
     }
 }
 

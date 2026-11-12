@@ -1,5 +1,7 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 12, 2026 — impl-people P15 as built (owner contract): People's New claim quick create on Commons' root, with its condition
+(§1.5); "Add to my claim" among the chat's message actions, the create-from kind `claimLine` of the BOSS records provider (§13).
 Nov 11, 2026 — impl-people P10 as built (owner contract): People's Today source adds the user's own weeks to submit, opening
 People's My time, which Today's rows keep (a Projects timesheet item still opens Projects' My time); a timesheet's record link
 opens People's TimesheetDetail for a user who has People's time area and not Projects (§5 Home).
@@ -237,7 +239,8 @@ event, note, contact and request, and activity while a record is in context (all
 call. People's Clock in (impl-people P13; owner contract, as People's Today source) is declared on Commons' root too, since a
 self-service employee opens no People root: it opens `People/Time/Clock`, the user's own clock, and is offered only to someone who
 clocks (its `condition-service`, Mantle's `AttendanceServices.get#ClockOffer`; the framework's quick-create condition, People P13's
-review). Prefill from the screen context: a record in context becomes the link chip (the task,
+review). People's New claim (impl-people P15) is declared there the same way: it opens `People/Expenses/ExpenseClaims` with the
+new claim's form and is offered only to someone with a current employment of their own (`ExpenseServices.get#ClaimOffer`). Prefill from the screen context: a record in context becomes the link chip (the task,
 event, note or request is linked to it, §1.6); a party in context (a customer, supplier, contact
 or employee screen) becomes the contact's organization or the request's customer; a product in
 context is noted in the description. On a phone the menu is the same and each dialog is

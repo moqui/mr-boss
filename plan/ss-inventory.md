@@ -52,6 +52,13 @@ usl-inventory's People rows.
 shifts: shifts are new records (`ShiftAssignment`, design-people §6 ShiftRoster); their Implemented in is in usl-inventory's People
 rows.
 
+**People P15 (Nov 12, 2026):** MyAccount/Expense's five claim forms are People's expense claims: FindExpenseInvoice's
+CreateInvoice and InvoiceList are People/Expenses/ExpenseClaims (NewClaim through create#ProjectExpenseInvoice's claim write,
+the Claims list over find#Claims), EditExpenseInvoice's EditInvoice and EditExpenseInvoiceItems' two forms are
+People/Expenses/ExpenseClaimDetail (ClaimHeader over store#Claim, ClaimItems over store#ClaimItem, with receipts and Read
+receipt). The two WorkerInvoice forms stay Projects' MyTime and blank. No baseline form maps to EmployeeAdvances, Accounting's
+Employee advances tab or People's InvoiceDetail.
+
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own
 record (`LeaveRequest`).
@@ -98,12 +105,12 @@ is unchanged.
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | EditExpenseInvoice | WorkerInvoice | Projects/Time/MyTime |  |
-| EditExpenseInvoice | EditInvoice | People/Expenses/ExpenseClaimDetail |  |
-| EditExpenseInvoiceItems | CreateInvoiceItem | People/Expenses/ExpenseClaimDetail |  |
-| EditExpenseInvoiceItems | EditInvoiceItems | People/Expenses/ExpenseClaimDetail |  |
-| FindExpenseInvoice | CreateInvoice | People/Expenses/ExpenseClaims |  |
+| EditExpenseInvoice | EditInvoice | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (ClaimHeader, People P15) |
+| EditExpenseInvoiceItems | CreateInvoiceItem | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (Add expense, with its receipt; People P15) |
+| EditExpenseInvoiceItems | EditInvoiceItems | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (ClaimItems: Edit, Remove, Read receipt; People P15) |
+| FindExpenseInvoice | CreateInvoice | People/Expenses/ExpenseClaims | People/Expenses/ExpenseClaims (NewClaim, People P15) |
 | FindExpenseInvoice | WorkerInvoice | Projects/Time/MyTime |  |
-| FindExpenseInvoice | InvoiceList | People/Expenses/ExpenseClaims |  |
+| FindExpenseInvoice | InvoiceList | People/Expenses/ExpenseClaims | People/Expenses/ExpenseClaims (Claims, People P15) |
 | Account | ChangePasswordForm | Commons/Settings/Account | Commons/Settings/Account |
 | Account | SecondFactorSendForm | Commons/Settings/Account | Commons/Settings/Account |
 | Account | EditUser | Commons/Settings/Account | Commons/Settings/Account |

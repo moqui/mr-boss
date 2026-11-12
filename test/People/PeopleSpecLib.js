@@ -36,13 +36,16 @@ const ids = {
     // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
     // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades; P5:
     // Approvals (every People user's own), and Settings' tabs the approval rules and lookups; P10: Time & leave (every People
-    // user's) and Payroll (the payroll groups', and the administrator's through the root's ALWAYS)
-    staffMenu: ["Home", "Approvals", "Employees", "Staffing", "Time"],
-    adminMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Settings"],
+    // user's) and Payroll (the payroll groups', and the administrator's through the root's ALWAYS); P15: Expenses (every People
+    // user's)
+    staffMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses"],
+    adminMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Settings"],
     // P8: My team, the managers' (and the administrator's, through the root's ALWAYS)
-    managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time"],
-    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time"],
-    payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll"],
+    managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Expenses"],
+    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses"],
+    payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses"],
+    // P15: Expenses' menu, every People user's (and a self-service employee's by the area's own grant)
+    expensesMenu: ["ExpenseClaims", "EmployeeAdvances"],
     // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
     // managers') and holidays (HR's); P11's leave balances (HR's and the managers'), leave policies and allocations (HR's); P12's
     // leave requests and team calendar (every People user's); P13's attendance (every People user's); P14's shift roster (HR's and
@@ -81,8 +84,8 @@ const ids = {
     // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers;
     // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll; P11's g b, Leave balances, to HR and managers; P12's
     // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user; P14's g h, Shift roster, to HR and
-    // managers)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h"],
+    // managers; P15's g x, Expense claims, to every People user)
+    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h", "g x"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
     // P7: Retail's onboarding and offboarding checklists, and the laptop Ines holds

@@ -125,7 +125,7 @@ services are not rows. **Implemented in** is unchanged.
 | InvoiceServices | create#EntireOrderPartInvoice | Accounting/Records/OrderDetail | Accounting/Records/OrderDetail (through create#InvoiceFromSource) |
 | InvoiceServices | create#SalesShipmentInvoices | Accounting/Records/ShipmentDetail | Accounting/Records/ShipmentDetail (through mantle.account.InvoiceServices.create#InvoiceFromSource and create#PurchaseShipmentInvoices) |
 | InvoiceServices | create#PurchaseShipmentInvoices |  | Accounting/Records/ShipmentDetail; Accounting/Records/OrderDetail (through create#InvoiceFromSource, acceptedOnly) |
-| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue; People/Expenses/ExpenseClaims | — (not built; Accounting/Receivables/BillingQueue bills approved time only) |
+| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue; People/Expenses/ExpenseClaims | People/Expenses/ExpenseClaims (NewClaim, its expenseClaim write: employer authorization, self scope and the ExpenseClaim record, F21; People P15); Accounting/Receivables/BillingQueue bills approved time only |
 | InvoiceServices | create#ProjectInvoiceItems | Projects/Time/MyTime; Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Projects/Billing/Unbilled/CreateInvoice |
 | InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | — (replaced by mantle.account.InvoiceServices.create#InvoiceFromApprovedTime on Accounting/Receivables/BillingQueue) |
 | InvoiceServices | create#TimeEntryInvoiceItems | Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue (through mantle.account.InvoiceServices.create#InvoiceFromApprovedTime) |
@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P13, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P15, Nov 11 and 12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -610,6 +610,17 @@ the screens that call it.
 | ScheduleServices | get#MyShifts | Shared/PeopleSelfService (MySummary's next shift) | Shared/PeopleSelfService (My shifts) (People P14) |
 | ScheduleServices | get#TeamShifts | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui (the published shifts beside the absences) (People P14) |
 | ScheduleServices | get#ShiftProjection | — (CalDAV, CX-SYNC) | the My shifts projected collection (CalendarProjection PeopleMyShifts) (People P14) |
+| ExpenseServices | find#Claims, get#Claim | People/Expenses/ExpenseClaims, ExpenseClaimDetail | People/Expenses/ExpenseClaims (Claims: mine, to decide, all I see); People/Expenses/ExpenseClaimDetail (the claim, its expenses, FinanceAndSettlement, the approval); ExpenseClaimPrint (the PDF); People/Payroll/InvoiceDetail (People's branch of the shared InvoiceDetail, for a payroll reader) (People P15) |
+| ExpenseServices | store#Claim, store#ClaimItem, read#Receipt | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (ClaimHeader; ClaimItems: Add expense with its receipt, Edit, Remove; Read receipt over AiTaskServices.run#Extract, reviewed before save) (People P15) |
+| ExpenseServices | submit#Claim, decide#Claim | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (SubmitOrDecide: Submit, Approve, Return, Refuse, Withdraw, Cancel claim) (People P15) |
+| ExpenseServices | approve#Claim, refuse#Claim, approve#Advance, refuse#Advance | People/Approvals | People/Approvals (the PeopleExpenseApproval and PeopleAdvanceApproval topics' approve and refuse, through Commons' Notifications) (People P15) |
+| ExpenseServices | get#ClaimReceipt, get#ClaimEvidence | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (a receipt opened; the evidence bundle, ironstone.people Expenses.js) (People P15) |
+| ExpenseServices | get#ClaimOptions, get#ClaimOffer | People/Expenses | People/Expenses/ExpenseClaims and EmployeeAdvances (the employer, project and expense type choices); Commons' quick create New claim, its condition-service (People P15) |
+| ExpenseServices | find#Advances, request#Advance, decide#Advance | People/Expenses/EmployeeAdvances | People/Expenses/EmployeeAdvances (Advances, RequestAdvance, AdvanceDecision); Accounting/Payables/ExpensePosting (Employee advances, find#Advances with finance) (People P15) |
+| ExpenseServices | apply#Advance | Accounting/Payables/ExpensePosting | Accounting/Payables/ExpensePosting (Employee advances: Apply, a credit on the employee advances account; template/AccountingAdvances.xml; an approved advance's bill is approved in the expenses queue and paid by a payment run, P15's review) (People P15, owner contract) |
+| ExpenseServices | reserve#ClaimSettlement | — (P27's pay runs) | finance's approve#Payable reserves accounts payable itself (InvoiceWorkflow.js); the payroll route's caller is P27 (People P15) |
+| ExpenseServices | create#ClaimLineFromEmail | — (mail rules) | the EmailRuleAction createExpenseLine (ErActCreateExpenseLine), run by org.moqui.mail.EmailClientServices.run#EmailRules (People P15, F65) |
+| ExpenseServices | create#ClaimLineFromChat | — (chat message actions) | "Add to my claim" in the BasicComms chat (ironstone.comms.ChatServices.create#FromChat kind claimLine; screen-extend Chat.xml) (People P15) |
 
 ## Ledger (81 services)
 

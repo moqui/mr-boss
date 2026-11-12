@@ -118,7 +118,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="chatRoomId" required="true"/>
             <parameter name="eventSeq" type="Integer" required="true"/>
             <parameter name="kind" required="true"><description>task, request, event or case (Customer Service P6: a case for
-                the customer who sent it, ironstone.customerservice.ChannelServices.create#CaseFromMessage)</description></parameter>
+                the customer who sent it, ironstone.customerservice.ChannelServices.create#CaseFromMessage), or claimLine (People
+                P15, "Add to my claim": the caller's own message as a draft line of their expense claim,
+                mantle.humanres.ExpenseServices.create#ClaimLineFromChat)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="recordEntityName"/>
@@ -136,6 +138,19 @@ along with this software (see the LICENSE.md file). If not, see
                 recordId = made.recordId
                 url = made.url
                 message = made.message
+                roomRecordLinked = false
+                return
+            }
+            if (kind === 'claimLine') {
+                // People P15: the receipt in the user's own message added to their expense claim, a line to review there
+                const added = ec.service.sync().name('mantle.humanres.ExpenseServices.create#ClaimLineFromChat').parameters({chatRoomId: chatRoomId,
+                    eventSeq: eventSeq}).call()
+                if (ec.message.hasError()) return
+                recordEntityName = 'mantle.humanres.expense.ExpenseClaim'
+                recordId = added.invoiceId
+                url = '/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=' + encodeURIComponent(added.invoiceId)
+                message = ec.resource.expand(added.created ? 'Added to your claim ${id}: check the expense there' : 'Already on your claim ${id}',
+                    '', {id: added.invoiceId})
                 roomRecordLinked = false
                 return
             }
