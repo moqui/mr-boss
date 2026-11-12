@@ -363,7 +363,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F75); items waiting on People P9/P10/P12/P18 left open |
 | P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | built and reviewed Nov 11, merged |
 | P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | built and reviewed Nov 11, merged |
-| P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | — |
+| P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | built and reviewed Nov 12, merged |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | — |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | — |
@@ -1195,7 +1195,7 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
 - Design edits: design-maintenance's header, §1.1 (the work order panel and record check), §1.2, §3 Home, WorkOrders, WorkOrderDetail and
   the record shape as built, §9 Settings, §13.2's time row, §13.3's CalDAV and notice rows; design-drawers-commons and design-admin's
   header lines.
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F97 to F108 in order:
   - Manufacturing's WeApproved ↔ WeOnHold rows need `PRODUCTION_SUPERVISE`, and the framework admits a move only where some flow's
     row admits the user (F65), so a maintenance flow row with no permission let anyone hold an approved production run through raw
     `update#WorkEffort` (ProductionOrders' "seeded transitions carry their permission" failed). The maintenance rows need
@@ -1307,7 +1307,7 @@ removed and `target/debug/moqui` linked to the main checkout's Debug binary for 
   - **R6 (the user's call, Nov 12; tests).** The client estimate is 9 s. The walk opens the Time tab in the page instead of a
     reload: 8.45 s → 8.16 s, the golden path whole (create, assign, start, log time, complete, close).
   - Design: §1.1 (search), §3's as-built flow rows, §13's leavers row.
-- Findings (for the lead to number):
+- Findings, numbered by the lead F109 to F115 in order:
   - Commons' `get#TaskAccess` answers not found for managed work, so a technician's own work order in Commons' or Projects' task
     lists opens only a "open it in Maintenance" message; the palette and Today open WorkOrderDetail (as the worker noted).
   - The project-model task writers (plan items, dependencies, labels, ranks, `move#TaskSubtreeProject`, `clone#WorkEffort`, the
@@ -1905,6 +1905,9 @@ design-maintenance.md or the owner's design.
 | Nov 11, 2026 | The planner, supervisor and resource administrator groups hold `PEOPLE_DIRECTORY_VIEW`, so Employee360's public work card opens under Maintenance | The user's call (P0's F62), kept after P1 |
 | Nov 11, 2026 | A custodian Maintenance names is one of the scope's internal organizations, a person one of them employs now, or the equipment's own owner organization for a customer's equipment (`HOLDER_UNAVAILABLE`), in Mantle | The user's call (P2 review), as People's return; built as R7 |
 | Nov 11, 2026 | An ownerless facility belongs to its nearest owning ancestor in Warehouse's facility checks too (FacilityScope.js, FacilitySetup.js), as in Maintenance's; owned facilities unchanged; the stock guards still read the facility's own owner | The user's call (P2 review), an owner contract with Warehouse (design-warehouse §1, impl-warehouse §4); built as R8 |
+| Nov 12, 2026 | The client budget estimate for this build is 9 s (was 8 s) | The user's call (P3): MaintenanceWorkOrdersWalk took 8.5 s, 8.16 s after the review's trim |
+| Nov 12, 2026 | A leaver's work orders and custody are moved by Maintenance staff (a planner, supervisor, resource or Maintenance administrator); Admin's identity operator sees them in offboarding with who moves them, and holds no transfer permission | The user's call (P3); built as the review's R5 |
+| Nov 12, 2026 | Admin's settings registry is the framework's `moqui.server.SettingsEntry` (mr-moqui Admin-Screens-Down); Maintenance's row has the route `maintenanceSettings` in Admin.js, and P18's readiness provider goes where the framework's registry has it | Found at the P3 merge (F116) |
 
 ## 5. Open questions
 
@@ -2026,6 +2029,26 @@ paths under `mr-boss/`.
 | F94 | P2 review: `record#MaintenanceMeter` in work does not check the equipment is the work's target | P7 |
 | F95 | P2 review: EquipmentDetail's subscreens add `/Identity` to its URL under every mount | None; nothing renders there outside Maintenance |
 | F96 | P2 review: list rows read counts with per-row queries | Batch with P3's work-order counts |
+| F97 | P3: Manufacturing's WeApproved ↔ WeOnHold rows need `PRODUCTION_SUPERVISE`; the maintenance rows need `MAINTENANCE_SUPERVISE` (planned ↔ held `MAINTENANCE_PLAN`, P3 review R2) | Built |
+| F98 | P3: no path attaches a second AssetMaintenance; adoption of another order's record answers that order, a record linked elsewhere is `LINKED_WORK` | Built |
+| F99 | P3: no guarded AssetMaintenance writer exists; the raw path is not granted (§2) | None |
+| F100 | P3: `WorkEffortPartyDocsUsers` does nothing for a maintenance root | Not conditioned |
+| F101 | P3: Manufacturing's demo downtime has no AssetMaintenance; the adopted demo order is data | None |
+| F102 | P3: quick create's New work order shows to every Maintenance user | NewWorkOrder and Mantle refuse a non-planner |
+| F103 | P3: the identity operator lists but does not move a leaver's maintenance work | §4 (the user's call); review R5 |
+| F104 | P3: Commons answers not found for managed work | Palette and Today open WorkOrderDetail |
+| F105 | P3: `create#WorkEffortContent` checks only `check#WorkEffortOpen` | Its caller RecordFiles is gated by `get#RecordLinkInfo` (P3 review); evidence is P7's |
+| F106 | P3: Maintenance's Today lists dated work only | None |
+| F107 | P3: the approval threshold reads the root's estimate only | P6 adds the steps' |
+| F108 | P3: the client walk took 8.5 s | §4: estimate 9 s; 8.16 s after review R6 |
+| F109 | P3 review: a technician's work order in Commons' or Projects' lists opens only a message | None |
+| F110 | P3 review: the project-model task writers and `clone#WorkEffort` (also on REST) have no managed-work guard | P6 decides for steps |
+| F111 | P3 review: Projects' time import admits any root for an every-project reader | P6 refuses a managed item there |
+| F112 | P3 review: the operation key's index is not unique; two concurrent creates under one key can both make a root | Later (as People's F148) |
+| F113 | P3 review: Admin's Maintenance participant counts root assignments only | P6/P7 add steps |
+| F114 | P3 review: holders of `MAINTENANCE_PLAN`/`_SUPERVISE` could make the held moves on other work through a raw update where they have that path | No BOSS group has it (§2) |
+| F115 | P3 review: `assignedTo` counts declined and unassigned rows | Harmless while only schedule writes them |
+| F116 | P3 merge: master moved Admin's settings registry to the framework (`moqui.server.SettingsEntry`, `destinationRoute`, `screenLocation`) | P1's row moved at the merge; P18 follows the framework's readiness registry |
 
 
 ## 7. Later
