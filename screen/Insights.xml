@@ -26,9 +26,11 @@ along with this software (see the LICENSE.md file). If not, see
     list, with the hidden ScheduledReportDetail and ReportDelivery: the framework's, by location, each transition reaching
     the report engine's operations as the viewer, which are granted to who may schedule, deliver to others and read
     deliveries) and Management digest (each transition reaching a service that checks the INSIGHTS_* permissions itself),
-    every Insights user's to open; they replace the last copied screen (impl-insights F20). P8 adds Business alerts (the list, with the hidden AlertDetail), every Insights user's to open
-    for the alerts they receive, each transition reaching a service that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself;
-    a panel's New alert rule opens AlertDetail (reportLinks.alertRule), never Tools' AlertRule. P9 adds Business flows: Flow map
+    every Insights user's to open; they replace the last copied screen (impl-insights F20). P8 adds Business alerts (the list, with the hidden AlertDetail: the framework's alert screens, each included at Insights' own location with the
+    transitions Insights offers), every Insights user's to open for the alerts they receive, each change refused unless the
+    policy below lets the user set an alert (INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE: features.alert); a rule opens in
+    AlertDetail (reportLinks.alertRule), never Tools' AlertRule with its contact points, and a panel's New alert rule is
+    offered by the same feature. P9 adds Business flows: Flow map
     and Maps, with the hidden FlowMapEditor and ProcessStory, every Insights user's to open, each transition reaching
     ironstone.insights.FlowMapServices, which checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT, the map's organization and its owner
     itself; ProcessStory serves Commons Knowledge only to a user whose own grants open it. P10 adds Settings (Settings, the

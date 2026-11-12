@@ -65,10 +65,11 @@ feature(
                 policy.features?.share !== false ||
                 policy.recipientPermissionId !== "INSIGHTS_VIEW" ||
                 policy.datasetIdPrefix !== "insights-" ||
-                policy.datasetScopeParameter !== "organizationField" ||
                 policy.datasetScopeLabel !== "Organization field" ||
                 policy.alertAudience?.topic !== "InsightsBusinessAlert" ||
-                reader.reportLinks?.alerts !== "//Insights/Alerts/Rules"
+                reader.reportLinks?.alerts !== "//Insights/Alerts/Rules" ||
+                // a rule opens for every reader (the alerts they receive link it); setting one is the feature above
+                reader.reportLinks?.alertRule !== "//Insights/Alerts/AlertDetail"
             )
                 problems.push(`the reader's report policy: ${JSON.stringify(policy)}`)
             const authorFeatures = asUser(users.author, () => invoke(context, {})).reportPolicy?.features

@@ -1,20 +1,18 @@
-// Insights' management digests, and what its alert rules still share with delivery, ironstone.insights.DeliveryServices
-// (impl-insights P7; design-insights §7.1, §7.3 ManagementDigest, §3 DigestPreview; INS-06, INS-11).
+// Insights' management digests, ironstone.insights.DeliveryServices (impl-insights P7; design-insights §7.1, §7.3
+// ManagementDigest, §3 DigestPreview; INS-06, INS-11).
 //
 // The delivery itself is the framework's (mr-moqui crates/moqui-report/src/delivery.rs, docs/tools/Monitoring.md "Report
-// delivery"), and so are the screens of Scheduled reports (the framework's Dashboards screens Schedules, ScheduledReportDetail
-// and ReportDelivery, mounted by location under Insights with its reportPolicy: mr-moqui plans/Admin-Screens-Down.md,
-// Track I), which read and write through org.moqui.report.ReportServices as the viewer. What stays here is Insights' own:
+// delivery"), and so are the screens of Scheduled reports and of Business alerts (the framework's Dashboards screens, shown
+// under Insights with its reportPolicy: mr-moqui plans/Admin-Screens-Down.md, Track I), which read and write through
+// org.moqui.report.ReportServices as the viewer. What stays here is Insights' own:
 // - a management digest: a report definition (kind digest) over dashboards the composer reads, with a period and a short
 //   commentary, saved through the engine as its owner; its schedule is an ordinary schedule of it, made in Scheduled reports;
 //   who may compose one is the INSIGHTS_* permissions' (authoring or distribution);
-// - the caller's own preview of a digest or a dashboard as a file (ManagementDigest's previewFile);
-// - for the alert rules (Alerts.js, until they move to the framework's screens too): the engine call and a write's answer,
-//   the recipients a distributor may propose (Insights' readers) with their choices, and the display helpers.
+// - the caller's own preview of a digest or a dashboard as a file (ManagementDigest's previewFile).
 // A preview is always the caller's own render. Another recipient's content is never read here: the engine holds none.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const insights = ec.resource.script("component://mr-boss/service/ironstone/insights/Insights.js")
-const {find, denied, reasonCode} = lib
+const {denied, reasonCode} = lib
 
 const ENGINE = "org.moqui.report.ReportServices."
 const DIGEST_PREFERENCE = "InsightsDigest"
@@ -29,14 +27,6 @@ const periods = [
     {value: "now-30d", label: "The last 30 days"},
     {value: "now-90d", label: "The last 90 days"}
 ]
-const deliveryStates = {
-    RptDlvPending: ["Pending", "grey-7"],
-    RptDlvSending: ["Sending", "info"],
-    RptDlvSent: ["Sent", "positive"],
-    RptDlvSkipped: ["Skipped", "grey-7"],
-    RptDlvFailed: ["Failed", "negative"],
-    RptDlvUncertain: ["Not known", "warning"]
-}
 
 const text = value => String(value ?? "").trim()
 const idList = value =>
@@ -48,23 +38,11 @@ const idList = value =>
     )
         .map(text)
         .filter(Boolean)
-const dateText = millis => (millis == null || millis === "" ? "" : ec.l10n.format(new Date(Number(millis)), "yyyy-MM-dd HH:mm"))
 
 // ===== access =====
 function reader() {
     const capabilities = insights.required().capabilities
     if (!capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Reading Insights is required")
-    return capabilities
-}
-function scheduler() {
-    const capabilities = reader()
-    if (!capabilities.schedule) denied("INSIGHTS_SCHEDULE_REQUIRED", "Scheduling a report needs the schedule permission")
-    return capabilities
-}
-function distributor() {
-    const capabilities = scheduler()
-    if (!capabilities.distribute)
-        denied("INSIGHTS_DISTRIBUTE_REQUIRED", "Delivering a report to other people needs the distribute permission")
     return capabilities
 }
 function composer() {
@@ -110,25 +88,6 @@ function attempt(action, fallback) {
     }
 }
 
-// ===== names =====
-function userNames(userIds) {
-    const names = {}
-    if (!userIds.length) return names
-    for (const row of find("moqui.security.UserAccount")
-        .condition("userId", "in", userIds)
-        .selectField("userId,username,userFullName")
-        .list())
-        names[row.userId] = row.userFullName || row.username || row.userId
-    return names
-}
-function groupNames(groupIds) {
-    const names = {}
-    if (!groupIds.length) return names
-    for (const row of find("moqui.security.UserGroup").condition("userGroupId", "in", groupIds).list())
-        names[row.userGroupId] = row.description || row.userGroupId
-    return names
-}
-
 // ===== what a digest is made of =====
 // The dashboards and digests the viewer reads; Tools' telemetry dashboards and the wall display playlists are not offered.
 function definitions() {
@@ -163,62 +122,6 @@ function sections(definition) {
         }
     })
 }
-// ===== an alert rule's recipients (Alerts.js) =====
-// The people who may be proposed as recipients: Insights' readers (the holders of the permission the root's reportPolicy
-// names, Insights.js recipientPermissionId), by their groups' permission rows in date. A user id that is not one of them is
-// refused before the engine is asked, so the audience check says nothing of an account outside Insights.
-function readerIds() {
-    const groupIds = lib
-        .rows("moqui.security.UserGroupPermission", {userPermissionId: insights.recipientPermissionId})
-        .filter(row => lib.active(row))
-        .map(row => row.userGroupId)
-    if (!groupIds.length) return []
-    return Array.from(
-        new Set(
-            Array.from(find("moqui.security.UserGroupMember").condition("userGroupId", "in", groupIds).list())
-                .filter(row => lib.active(row))
-                .map(row => row.userId)
-        )
-    )
-}
-function proposable(userIds) {
-    const others = userIds.filter(userId => userId !== ec.user.userId)
-    if (!others.length) return
-    const readers = readerIds()
-    if (others.some(userId => !readers.includes(userId)))
-        denied("RECIPIENT_UNAVAILABLE", "Choose recipients among Insights' readers")
-}
-// find#RecipientChoices: the internal people a distributor may propose, Insights' readers (holders of INSIGHTS_VIEW), searched
-// by name in the query; a selected value outside the page is read on its own. Choosing one grants nothing: the check decides.
-function recipientChoices(p) {
-    distributor()
-    const memberIds = readerIds()
-    const label = row => ({value: row.userId, label: row.userFullName || row.username})
-    const accounts = ids =>
-        find("moqui.security.UserAccount").condition("userId", "in", ids).selectField("userId,username,userFullName,disabled")
-    const options = []
-    if (memberIds.length) {
-        let query = accounts(memberIds)
-        const term = text(p.term)
-        if (term)
-            query = query.condition(
-                ec.entity.conditionFactory.makeCondition(
-                    [
-                        ec.entity.conditionFactory.makeCondition("userFullName", "like", "%" + term + "%").ignoreCase(),
-                        ec.entity.conditionFactory.makeCondition("username", "like", "%" + term + "%").ignoreCase()
-                    ],
-                    "or"
-                )
-            )
-        for (const row of query.orderBy("userFullName").limit(20).list()) if (row.disabled !== "Y") options.push(label(row))
-    }
-    const missing = idList(p.selected).filter(
-        userId => memberIds.includes(userId) && !options.some(option => option.value === userId)
-    )
-    if (missing.length) for (const row of accounts(missing).list()) options.push(label(row))
-    return {options}
-}
-
 // preview#Report: the caller's own render of a dashboard or digest they read, as a file.
 function previewReport(p) {
     reader()
@@ -384,7 +287,6 @@ function digestPreview() {
 }
 
 const operations = {
-    recipientChoices,
     previewReport,
     getDigest,
     storeDigest,
@@ -392,14 +294,6 @@ const operations = {
     digestPreview
 }
 ;({
-    // P8: the engine call, a write's answer, the proposable recipients and the display helpers, for Alerts.js
-    engine,
-    attempt,
-    proposable,
-    userNames,
-    groupNames,
-    dateText,
-    deliveryStates,
     execute: (op, parameters) => {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown Insights delivery operation " + op)
         return operations[op](parameters || {})

@@ -275,10 +275,11 @@ const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Pr
 // The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
 // (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
 // authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or
-// save; a panel's New alert rule opens Insights' own AlertDetail (P8) for one who may set an alert (INSIGHTS_AUTHOR or
-// INSIGHTS_DISTRIBUTE), never Tools' AlertRule with its contact points; Insights mounts no log context or definition import
+// save; an alert rule opens in Insights' AlertDetail (P8; the framework's AlertRule there, without its contact points), for
+// every reader, since the alerts one receives link it, and a panel's New alert rule is offered only to one who may set an
+// alert (reportPolicy's features.alert below); Insights mounts no log context or definition import
 // (P12), and shares from its Dashboard (ShareDashboard), so the editor keeps a definition's group as it is. The alert list is
-// Insights' own (alerts); Insights has no shared contact points, silences or mute timings (alertShared).
+// Insights' Rules (alerts); Insights has no shared contact points, silences or mute timings (alertShared).
 function reportLinks(capabilities) {
     const authors = capabilities.author || capabilities.datasetEdit
     return {
@@ -290,7 +291,7 @@ function reportLinks(capabilities) {
         split: "//Insights/ReportBuilder/Split",
         playlist: "//Insights/Playlists",
         alerts: "//Insights/Alerts/Rules",
-        alertRule: capabilities.author || capabilities.distribute ? "//Insights/Alerts/AlertDetail" : null,
+        alertRule: "//Insights/Alerts/AlertDetail",
         alertShared: null,
         logContext: null,
         share: "//Insights/Dashboard",
@@ -299,26 +300,28 @@ function reportLinks(capabilities) {
     }
 }
 // Insights' policy for the framework report screens it shows, the reportPolicy map they read beside reportLinks (mr-moqui
-// docs/tools/Monitoring.md, "Mounting the report screens"; tools/template/ReportMount.js). Data only: each is what an
-// ironstone.insights service does itself today, and the service that acts still decides.
-// - features: who may set an alert (an author or a distributor, Alerts.js) and who may share a dashboard of their own (an
-//   author, share#Dashboard);
+// docs/tools/Monitoring.md, "Mounting the report screens"; tools/template/ReportMount.js). Data only, which the root sets and
+// no request supplies: the framework's transitions read it, and the engine's operation that acts still decides.
+// - features: who may set an alert (an author or a distributor: the framework's alert transitions refuse anyone else, a
+//   dataset steward too, who holds the engine's save) and who may share a dashboard of their own (an author,
+//   share#Dashboard);
 // - range: the default reporting range (get#Context's defaults);
 // - datasetIdPrefix: what a dataset created in Insights is named with; written here only: the steward group's grant is on
 //   org.moqui.report.dataset.insights-* (BossSetupData), and the engine creates a dataset only under an id its creator's
 //   own grant names;
-// - datasetScopeParameter, datasetScopeLabel and datasetScopeHelp: the dataset forms' scope field under Insights, the
-//   field that carries a row's organization: its words, and the rowFilterParameters entry it is sent in under a scope
-//   policy whose registration names none (Mantle's organization policy takes organizationField);
-// - recipientPermissionId: whom a distributor may propose and name, Insights' readers (the module's recipientPermissionId,
-//   one value: the framework's schedule screens ask find#ReportRecipients with it, and Delivery.js proposable reads it for
-//   an alert rule);
+// - datasetScopeLabel and datasetScopeHelp: the words of the dataset forms' scope field under Insights, the field that
+//   carries a row's organization (the rowFilterParameters entry it is sent in is the scope policy's own, which Mantle's
+//   organization policy registers as organizationField);
+// - recipientPermissionId: whom a distributor may propose and name, Insights' readers: the framework's schedule and alert
+//   screens ask find#ReportRecipients with it;
 // - reportEmailTemplateId: the message of a schedule saved under Insights, written here only;
-// - alertAudience: the fixed parts of an alert rule (Alerts.js TOPIC, TEMPLATE and DETAIL_LINK);
+// - alertAudience: the fixed parts of an alert rule set under Insights, written here only: Insights' private topic, the
+//   message sent to a recipient's own address and the link a notification opens, which the framework's alert
+//   transitions write into every rule in place of contact points;
 // - shareGroups: the wall displays, beside the sharer's own groups (get#ShareGroups);
 // - calendar: the display zone and week start of the organization in scope (calendarParameters), nothing where it set none.
-// The recipient cap (recipientCap above) is not read for every request: the area that delivers adds it (deliveryPolicy
-// below, set by Scheduled reports through the framework's ReportMount.js policyWith).
+// The recipient cap (recipientCap above) is not read for every request: the areas that deliver add it (deliveryPolicy
+// below, set by Scheduled reports and by Business alerts through the framework's ReportMount.js policyWith).
 function reportPolicy(capabilities, settings) {
     const weekOffset = settings.weekStart
         ? one("moqui.basic.Enumeration", {enumId: settings.weekStart, enumTypeId: "InsightsWeekStart"})?.enumCode || null
@@ -327,7 +330,6 @@ function reportPolicy(capabilities, settings) {
         features: {alert: !!(capabilities.author || capabilities.distribute), share: !!capabilities.author},
         range: {from: defaultRange.from, thru: defaultRange.thru},
         datasetIdPrefix: "insights-",
-        datasetScopeParameter: "organizationField",
         datasetScopeLabel: "Organization field",
         datasetScopeHelp: "The field that carries each row's organization",
         recipientPermissionId: capabilityPermissions.view,
@@ -510,8 +512,6 @@ const operations = {context, shareGroups, shareDashboard, deliveryPolicy}
     organizationSettings,
     recipientCeiling,
     recipientCap,
-    // whom a distributor may propose and name: Insights' readers (reportPolicy's recipientPermissionId)
-    recipientPermissionId: capabilityPermissions.view,
     calendarParameters,
     partyName,
     organizationIds,

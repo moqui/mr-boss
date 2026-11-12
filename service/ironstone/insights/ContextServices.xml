@@ -67,8 +67,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="DeliveryPolicy" allow-remote="false">
         <description>What an area of Insights that delivers adds to the root's reportPolicy for the framework's report screens it
-            shows (Scheduled reports; mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): recipientCap, the most
-            recipients a group delivery is saved and checked with, the cap of the organization the caller works in (else the
+            shows (Scheduled reports, Business alerts; mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"):
+            recipientCap, the most recipients a group delivery or an alert's audience is saved and checked with, the cap of the organization the caller works in (else the
             lowest of the organizations in their scope), never above the instance ceiling. It is read where it is used, not by
             get#Context for every request. Refuses a user without Insights (INSIGHTS_UNAVAILABLE).</description>
         <out-parameters><parameter name="recipientCap" type="Integer"/></out-parameters>

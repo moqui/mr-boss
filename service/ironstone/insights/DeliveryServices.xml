@@ -12,28 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights' management digests (design-insights §7.3; impl-insights P7, INS-11; Delivery.js), the caller's own preview of a
-    digest or dashboard as a file, and the recipient choices of an alert rule. Scheduled delivery itself is the framework's:
-    Scheduled reports mounts the framework's Dashboards screens, which read and write through
+<!-- Insights' management digests (design-insights §7.3; impl-insights P7, INS-11; Delivery.js) and the caller's own preview of a
+    digest or dashboard as a file. Scheduled delivery and business alerts themselves are the framework's: Scheduled reports
+    and Business alerts show the framework's Dashboards screens, which read and write through
     org.moqui.report.ReportServices (mr-moqui plans/Admin-Screens-Down.md, Track I). Every write answers a refusal as applied
     false with reasonCode and reason. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
-    <service verb="find" noun="RecipientChoices" allow-remote="false">
-        <description>The internal people a distributor may propose as recipients (INSIGHTS_DISTRIBUTE_REQUIRED): active holders of
-            INSIGHTS_VIEW, searched by name in the query, twenty a page, with the selected ones read on their own. Choosing one
-            grants nothing: the audience check decides.</description>
-        <in-parameters>
-            <parameter name="term"/>
-            <parameter name="selected" type="List"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="options" type="List"/>
-        </out-parameters>
-        <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Delivery.js').execute('recipientChoices', context)"/>
-            <set field="options" from="found.options"/>
-        </actions>
-    </service>
     <service verb="preview" noun="Report" allow-remote="false" transaction="ignore">
         <description>The caller's own render of a dashboard or digest they read, as a file (renderMode pdf, xlsx, csv or png), for
             OwnPreview and DigestPreview: the engine's preview#Report as the viewer.</description>

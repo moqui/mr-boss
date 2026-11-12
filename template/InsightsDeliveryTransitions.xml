@@ -12,19 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The transitions Insights' own delivery screens share (transition-include, one each): the recipient choices of an alert
-    rule's audience (Alerts › AlertDetail) and the caller's own preview of a digest as a file (ManagementDigest). A file is
-    answered as a small page with its download link, as the framework's report preview does; each service checks its own
-    permission. The schedule screens are the framework's, with their own transitions (mr-moqui plans/Admin-Screens-Down.md,
-    Track I). -->
+<!-- The transition Insights' own delivery screen takes in (transition-include): the caller's own preview of a digest as a
+    file (ManagementDigest), answered as a small page with its download link, as the framework's report preview does; its
+    service checks its own permission. The schedule and alert screens are the framework's, with their own transitions
+    (mr-moqui plans/Admin-Screens-Down.md, Track I). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
-    <transition name="recipientChoices" read-only="true">
-        <actions>
-            <service-call name="ironstone.insights.DeliveryServices.find#RecipientChoices" in-map="{term:term, selected:selected}" out-map="found"/>
-            <script>ec.web.sendJsonResponse(found.options)</script>
-        </actions>
-        <default-response type="none"/>
-    </transition>
     <transition name="previewFile" method="get" read-only="true">
         <actions>
             <service-call name="ironstone.insights.DeliveryServices.preview#Report" out-map="file"

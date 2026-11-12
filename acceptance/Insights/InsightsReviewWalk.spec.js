@@ -13,7 +13,7 @@
 // margin fields in Explore and a direct query, since a dataset has no field classes; Assist, MCP and drill refuse them.
 // Run: ./moq accept mr-boss --spec InsightsReviewWalk
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
-const {ids, users, asUser, system, invoke} = lib
+const {ids, users, asUser, system, invoke, transition} = lib
 const R = "org.moqui.report.ReportServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
@@ -266,41 +266,39 @@ feature("schedules and alerts reach only owner-equivalent recipients, each refus
         })
         const readerAudience = attempt(users.reader, R + "check#ReportAudience", {definitionId: "mantle-sales", recipientUserIds: [people.services]})
         const title = "Review walk breaches " + run
-        const copied = attempt(users.distributor, "ironstone.insights.AlertServices.copy#Alert", {definitionId: "boss-service-sla-breach", title})
+        // Business alerts' screens (the framework's, at Insights' locations), by the transitions a browser posts
+        const post = (path, parameters) => transition(users.distributor, webroot, "apps/Insights/Alerts/" + path, parameters)
+        const copied = post("Rules/copyAlert", {sourceDefinitionId: "boss-service-sla-breach", title})
+        const copiedId = String(
+            system(() => ec.entity.find("moqui.report.Definition").condition({title, definitionType: "alert"}).one())?.definitionId || ""
+        )
         let draft = {}
         let alert = {}
         let stored = {}
         try {
             // a copy is paused (not validated): its audience is a draft that tells nobody, and activating it is the engine's
-            // check of every recipient (AlertServices pause#Alerts), which refuses the Services reader
-            draft = attempt(users.distributor, "ironstone.insights.AlertServices.store#Alert", {
-                definitionId: copied.definitionId,
-                audienceGiven: "Y",
+            // check of every recipient, which refuses the Services reader
+            draft = post("AlertDetail/storeAudience", {
+                definitionId: copiedId,
                 audienceKind: "group",
-                recipientUserIds: [people.reader, people.services],
+                recipientUserIds: [people.reader, people.services].join(","),
                 userGroupId: "BOSS_INSIGHTS"
             })
-            const activated = attempt(users.distributor, "ironstone.insights.AlertServices.pause#Alerts", {
-                definitionIds: [copied.definitionId],
-                paused: "false"
-            })
-            alert = Array.from(activated.results || [])[0] || activated
-            stored = system(() => JSON.parse(String(ec.entity.find("moqui.report.Definition").condition("definitionId", copied.definitionId).one().bodyJson)))
+            alert = post("AlertDetail/pauseAlert", {definitionId: copiedId, paused: "false"})
+            stored = system(() => JSON.parse(String(ec.entity.find("moqui.report.Definition").condition("definitionId", copiedId).one().bodyJson)))
         } finally {
-            if (copied.definitionId)
-                attempt(users.distributor, "ironstone.insights.AlertServices.delete#Alert", {definitionId: copied.definitionId})
+            if (copiedId) post("AlertDetail/deleteAlert", {definitionId: copiedId})
         }
-        return {audience, readerAudience, copied, draft, alert, stored}
+        return {audience, readerAudience, copied, copiedId, draft, alert, stored}
     },
-    then({audience, readerAudience, copied, draft, alert, stored}) {
+    then({audience, readerAudience, copied, copiedId, draft, alert, stored}) {
         audience.eligibleCount == 1 && audience.refusedCount == 1
         !JSON.stringify(audience).includes(ids.otherOrganizationId)
         !!readerAudience.refused
-        copied.applied == true
-        draft.applied == true && draft.paused == true
-        alert.applied == false && alert.reasonCode == "RECIPIENT_REFUSED"
-        alert.reason.includes("Insights Services reader (scope-differs)")
-        !alert.reason.includes(ids.otherOrganizationId)
+        copied.errors == "" && copiedId != ""
+        draft.errors == ""
+        alert.errors.includes("Insights Services reader (scope-differs)")
+        !alert.errors.includes(ids.otherOrganizationId)
         // the refused activation left the rule paused: it tells nobody
         stored.paused == true
     }

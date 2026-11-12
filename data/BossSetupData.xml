@@ -4462,10 +4462,11 @@ along with this software (see the LICENSE.md file). If not, see
             settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/MailRelays"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
     <!-- Insights P8 (impl-insights P8; design-insights §8, §1.1; INS-07): business alerts. No screen grant is added: the root's
-        ALLOW opens Business alerts (the list and AlertDetail), each transition reaches an ironstone.insights AlertServices
-        operation that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself (reading one's own state and deliveries is every
-        reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. A rule is
-        saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
+        ALLOW opens Business alerts (the list and AlertDetail, the framework's alert screens included at Insights' own
+        locations: mr-moqui plans/Admin-Screens-Down.md, Track I), each transition they take in is refused unless Insights'
+        policy lets the caller set an alert (INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE; reading one's own state and deliveries
+        is every reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below.
+        A rule is saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
         (BOSS_INS_REPORT_DISTRIBUTE): the engine holds a rule over business data to an audience in place of contact points and
         checks every recipient (mr-moqui crates/moqui-report/src/alert_delivery.rs); telling anyone but oneself needs the
         engine's group delivery artifact, the distributor's (BOSS_INS_GROUP_DELIVERY). Alert evaluation stays the engine's job
