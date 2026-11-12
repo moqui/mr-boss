@@ -1,5 +1,8 @@
 # IronStone BOSS — People implementation
 
+Nov 11, 2026 — gate 1 built: P1–P8 (stage 1), People's first release (the employee record), each phase reviewed by a fresh
+agent and merged on its focused specs; the full suites and the acceptance suite run once at the end of the build (the
+user's call). Next: stage 2 (P9 beside P10, then P11–P14), time and leave.
 Nov 11, 2026 — P0 done: the checks left after the plan's review, F55–F71, against the code as Admin P17–P19 and Insights
 P11–P12 left it. P30 no longer waits: Admin P18 is built, and the kiosk is a page of its own that a device reads as a
 display account (F55). People registers no audit projection (F56). P10's time mounts change more of Projects' code than
@@ -311,7 +314,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | built and reviewed Nov 11, merged |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | built and reviewed Nov 11, merged |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | built and reviewed Nov 11, merged |
-| P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | — |
+| P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | built and reviewed Nov 11, merged |
 | P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | — |
 | P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | — |
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | — |
@@ -2242,7 +2245,7 @@ stage 1.
   SelfService, MyTeam or Home's due work; the emergency contacts are People's own record).
 - Design edits: design-people (header; §1.2 the menu; §1.4 Today and the topic; §3 Home, MyTeam and SelfService as built; §4
   Employee360's emergency contacts); design-drawers-commons (header; §5 Home's People card and SelfService, owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F156 to F164 in order:
   - the emergency contact's party is hidden by a new system account, `_PEOPLE_PRIVATE_`, as its `privateOwnerUserId` (the field
     has a foreign key to UserAccount, and the employee may have no account); an ADMIN user sees the account in Admin's users, as
     `_EDGE_` and `_AGENT_ASSIST_`. A party-level private flag would need a Mantle entity change and every reader's condition;
@@ -2331,7 +2334,7 @@ committed apart per repository ("People P8 review: …"; mr-mantle 0dc6354c).
     too (BossUsersDemoData; groups are not nested). PeopleAccess's capabilities table gives the manager `self`.
   - PeopleAccess's self-service feature now also checks the employee refused People's Home and their own Employee360 under People,
     Employee360's emergency-contact transition under People, and `get#Team`, `get#Employee360` and `get#Home` called directly.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F165 to F168 in order:
   - Commons' Add a relationship still offers the Emergency Contact type (it offers every `PartyRelationshipType`); a row made there is
     inert since R2 but visible as a relationship to whoever sees both parties. Leaving the type out of Commons' choice is an owner
     contract on ContactServices;
@@ -2972,7 +2975,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
