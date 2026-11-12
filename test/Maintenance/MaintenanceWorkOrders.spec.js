@@ -220,6 +220,8 @@ feature(
             policy.output.includes("A procedure's last author may approve it")
             // P7 review (the user's call of Nov 12): voice note transcription, off by default
             policy.output.includes("Transcribe technicians' voice notes")
+            // P18: a change starts from a date chosen
+            policy.output.includes("Starts")
         }
     }
 )

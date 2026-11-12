@@ -17,6 +17,7 @@ const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/Enti
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
 const procedures = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceProcedures.js")
 const plans = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenancePlans.js")
+const settings = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceSettings.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -167,7 +168,11 @@ const linkPaths = [
     "Preventive/DueMaintenance",
     "Reports/PreventiveComplianceReport",
     // P10: a purchase order of the work (the shared OrderDetail, read only)
-    "WorkOrders/OrderDetail"
+    "WorkOrders/OrderDetail",
+    // P18: the lookups, the setup readiness and the equipment import (design §9, §6)
+    "Settings/Lookups",
+    "Settings/Readiness",
+    "Equipment/EquipmentImport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -359,15 +364,28 @@ function withSelected(options, selected, admits, label) {
         options.push({value: selected, label: label(selected)})
     return options
 }
-// enumeration options of a type, searched by description, with the selected one
-function enumOptions(enumTypeId, term, selected, filter = null) {
+// enumeration options of a type, searched by description, with the selected one; a value ended in Maintenance's lookups (P18,
+// Enumeration.thruDate) is offered for no new choice, only as the selected one; onlyIds narrows the query itself (a filter
+// runs after its limit)
+function enumOptions(enumTypeId, term, selected, filter = null, onlyIds = null) {
+    const factory = ec.entity.conditionFactory
     let query = find("moqui.basic.Enumeration")
         .condition("enumTypeId", enumTypeId)
+        .condition(
+            factory.makeCondition(
+                factory.makeCondition("thruDate", "is-null", null),
+                "or",
+                factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+            )
+        )
         .orderBy("sequenceNum")
         .orderBy("description")
         .limit(choiceLimit * 2)
-    if (term)
-        query = query.condition(ec.entity.conditionFactory.makeCondition("description", "like", likeText(term)).ignoreCase())
+    if (term) query = query.condition(factory.makeCondition("description", "like", likeText(term)).ignoreCase())
+    if (onlyIds) {
+        if (!onlyIds.length) return withSelected([], selected, enumId => !!one("moqui.basic.Enumeration", {enumId, enumTypeId}), enumId => one("moqui.basic.Enumeration", {enumId})?.description || enumId)
+        query = query.condition("enumId", "in", onlyIds)
+    }
     let rows = Array.from(query.list())
     if (filter) rows = rows.filter(filter)
     const options = rows.slice(0, choiceLimit).map(row => ({value: row.enumId, label: row.description || row.enumId}))
@@ -378,6 +396,11 @@ function enumOptions(enumTypeId, term, selected, filter = null) {
         enumId => one("moqui.basic.Enumeration", {enumId})?.description || enumId
     )
 }
+// the ids of an enumeration type's values
+const enumIds = enumTypeId =>
+    Array.from(find("moqui.basic.Enumeration").condition("enumTypeId", enumTypeId).selectField("enumId").list()).map(
+        row => row.enumId
+    )
 const partyLabel = partyId => {
     const row = partyId ? one("mantle.party.PartyDetail", {partyId}) : null
     return row ? row.organizationName || [row.firstName, row.lastName].filter(Boolean).join(" ") || partyId : partyId || ""
@@ -732,7 +755,13 @@ const choiceSources = {
     maintenanceTypes: (userScope, term, selected) => enumOptions("MaintenanceType", term, selected),
     maintenanceSources: (userScope, term, selected) => enumOptions("MaintenanceSource", term, selected),
     severities: (userScope, term, selected) => enumOptions("MaintenanceSeverity", term, selected),
-    failureModes: (userScope, term, selected) => enumOptions("MaintenanceFailureMode", term, selected),
+    // P18: with the work's equipment (assetId, in the scope), the failure modes that apply to it (MaintenanceSettings.js)
+    failureModes: (userScope, term, selected, p) => {
+        const assetId = p?.assetId && lib.check(() => recordOf(userScope, "asset", p.assetId)).allowed ? p.assetId : null
+        // in the query, not after its limit: a failure mode that applies is offered however many there are (P18 review R3)
+        const applies = assetId ? Array.from(settings().applicableFailureModes(enumIds("MaintenanceFailureMode"), assetId)) : null
+        return enumOptions("MaintenanceFailureMode", term, selected, null, applies)
+    },
     holdReasons: (userScope, term, selected) => enumOptions("MaintenanceHoldReason", term, selected),
     cancelReasons: (userScope, term, selected) => enumOptions("MaintenanceCancelReason", term, selected),
     outcomes: (userScope, term, selected) => enumOptions("MaintenanceOutcome", term, selected),

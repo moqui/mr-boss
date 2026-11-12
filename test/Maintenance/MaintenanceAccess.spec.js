@@ -16,9 +16,10 @@
 // technician reads it, not another or Retail; a waiver is a supervisor's), P10's purchases of a work order (its planner reads
 // them, a resource administrator and Retail's planner do not; a technician asks for nothing, a planner links no order line the
 // work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
-// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P14's generation and
-// compliance (a planner generates, a reader does not, Retail's planner gets Services' plan refused; the compliance a reader's, not a
-// technician's or Retail's),
+// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P18's equipment
+// import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
+// administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
+// plan refused; the compliance a reader's, not a technician's or Retail's),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1149,6 +1150,62 @@ feature(
             supervisorApps.includes("Maintenance")
             !supervisorApps.includes("Warehouse")
             !supervisorQuickCreates.includes("warehouseNewReceipt")
+        }
+    }
+)
+
+// P18: the equipment import is run by a holder of MAINTENANCE_IMPORT with the resource edit permission (the resource administrator),
+// read by a reader of equipment, and its organizations are the importer's own; the setup readiness is the Maintenance
+// administrator's
+feature(
+    "the equipment import is the resource administrator's: the planner reads it and runs none, Retail's planner gets no Services import; readiness is the administrator's",
+    {
+        when() {
+            const mount = user =>
+                asUser(user, () => {
+                    ec.message.pushErrors()
+                    try {
+                        // the screen's grant aside (EquipmentImport carries the Equipment area's): the mount's own checks decide
+                        const found = system(() => invoke("ironstone.shared.DataImportServices.get#ImportMount", {appRoot: "Maintenance"}))
+                        return ec.message.hasError() ? {refused: ec.message.getErrorsString()} : found.importMount
+                    } catch (error) {
+                        return {refused: String(error.message)}
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                })
+            const scopes = user =>
+                asUser(user, () =>
+                    Array.from(
+                        invoke("mantle.product.MaintenanceImportServices.find#EquipmentImportScopes", {targetId: "equipment"})
+                            .scopeList || []
+                    ).map(scope => scope.scopeKey)
+                )
+            const readiness = user =>
+                asUser(user, () =>
+                    refusal("mantle.work.MaintenanceSettingsServices.check#MaintenanceReadiness", {
+                        organizationPartyId: ids.organizationId
+                    })
+                )
+            return {
+                holder: mount(users.resources),
+                planner: mount(users.planner),
+                requester: mount(users.requester),
+                holderScopes: scopes(users.resources),
+                retailScopes: scopes(users.retailPlanner),
+                adminReadiness: readiness(users.admin),
+                resourcesReadiness: readiness(users.resources)
+            }
+        },
+        then(out) {
+            out.holder.targetId == "equipment" && out.holder.canRun === true
+            out.planner.targetId == "equipment" && out.planner.canRun === false
+            !!out.requester.refused
+            out.holderScopes.includes(ids.organizationId)
+            !out.retailScopes.includes(ids.organizationId)
+            out.adminReadiness == ""
+            out.resourcesReadiness.includes("PERMISSION_DENIED")
         }
     }
 )

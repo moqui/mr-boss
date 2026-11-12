@@ -103,7 +103,7 @@ const ids = {
         "Reports",
         "Settings"
     ],
-    settingsMenu: ["SettingsHome", "WorkPolicy"],
+    settingsMenu: ["SettingsHome", "WorkPolicy", "Lookups", "Readiness"],
     keys: ["g m", "g w", "g r", "g p", "g l", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
