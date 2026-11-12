@@ -16,6 +16,7 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
 const procedures = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceProcedures.js")
+const plans = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenancePlans.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -151,6 +152,12 @@ const linkPaths = [
     // P6: Procedures and the procedure record (design §4)
     "Procedures/Find",
     "Procedures/ProcedureDetail",
+    // P9: a work order's parts issued and returned, and a part's stock (design §3 mount rows)
+    "WorkOrders/MaterialIssueReceipt",
+    "WorkOrders/InventoryAvailability",
+    // P13: preventive plans and the plan record (design §5)
+    "Preventive/Plans/Find",
+    "Preventive/Plans/PlanDetail",
     // P10: a purchase order of the work (the shared OrderDetail, read only)
     "WorkOrders/OrderDetail"
 ]
@@ -266,6 +273,21 @@ const recordKinds = {
                 detail: organizationName(found.organizationPartyId),
                 readOnly: !!found.readOnly,
                 assignedRead: !!found.assignedRead
+            }
+        }
+    },
+    // P13: a preventive plan, through Mantle's plan read (a maintenance reader of its organization)
+    plan: {
+        name: "Plan",
+        icon: "sym_o_event_repeat",
+        destination: "Preventive/Plans/PlanDetail",
+        parameter: "maintenanceScheduleId",
+        read: (userScope, maintenanceScheduleId) => {
+            const schedule = plans().requireSchedule(userScope.mantle, maintenanceScheduleId)
+            return {
+                organizationPartyId: schedule.organizationPartyId,
+                label: schedule.scheduleName || maintenanceScheduleId,
+                detail: organizationName(schedule.organizationPartyId)
             }
         }
     },
@@ -457,6 +479,8 @@ const procedureChoices = [
     "skillTypes",
     "parts"
 ]
+// P13: the choices of preventive plans, answered to a reader of maintenance work or a planner or supervisor
+const planChoices = ["planDefaults", "planMeters", "holidayCalendars"]
 const workChoices = [
     "maintenanceKinds",
     "maintenanceTypes",
@@ -472,7 +496,12 @@ const workChoices = [
     "workPeople",
     "workFacilities",
     "openWorkOrders",
-    "rejectReasons"
+    "rejectReasons",
+    // P9: a work order's charge and its parts
+    "costCenters",
+    "projects",
+    "stockParts",
+    "partFacilities"
 ]
 // The teams of the scope's organizations (one organization's with organizationPartyId): an OrgTeam an organization owns.
 function teamOptions(userScope, term, selected, p) {
@@ -854,6 +883,67 @@ const choiceSources = {
             uomId => one("moqui.basic.Uom", {uomId})?.description || uomId
         )
     },
+    // P13: the maintenance defaults of an equipment's model (assetId), for a plan that follows one
+    planDefaults: (userScope, term, selected, p) => {
+        const asset = p?.assetId ? one("mantle.product.asset.Asset", {assetId: p.assetId}) : null
+        if (!asset?.productId) return []
+        recordOf(userScope, "asset", asset.assetId)
+        return Array.from(find("mantle.product.maintenance.ProductMaintenance", {productId: asset.productId}).list())
+            .filter(
+                row =>
+                    !term ||
+                    String(row.description || row.productMaintenanceId)
+                        .toLowerCase()
+                        .includes(term.toLowerCase())
+            )
+            .slice(0, choiceLimit)
+            .map(row => ({value: row.productMaintenanceId, label: row.description || row.productMaintenanceId}))
+    },
+    // the counting meters of an equipment's model (assetId), the meters a plan reads
+    planMeters: (userScope, term, selected, p) => {
+        const asset = p?.assetId ? one("mantle.product.asset.Asset", {assetId: p.assetId}) : null
+        if (!asset?.productId) return []
+        recordOf(userScope, "asset", asset.assetId)
+        return Array.from(
+            find("mantle.product.maintenance.ProductMeter", {productId: asset.productId, isCumulative: "Y"}).list()
+        ).map(row => ({value: row.productMeterId, label: row.meterName || row.productMeterId}))
+    },
+    // People's holiday calendars (WcatHoliday categories) of the scope's organizations (one organization's with
+    // organizationPartyId) and the shared ones
+    holidayCalendars: (userScope, term, selected, p) => {
+        const owners = p?.organizationPartyId
+            ? covers(userScope, p.organizationPartyId)
+                ? [p.organizationPartyId]
+                : []
+            : organizationIds(userScope)
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.effort.WorkEffortCategory", {categoryTypeEnumId: "WcatHoliday"})
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("ownerPartyId", "is-null", null)].concat(
+                        owners.length ? [factory.makeCondition("ownerPartyId", "in", owners)] : []
+                    ),
+                    "or"
+                )
+            )
+            .orderBy("description")
+            .limit(choiceLimit)
+        if (term) query = query.condition(factory.makeCondition("description", "like", likeText(term)).ignoreCase())
+        const options = Array.from(query.list()).map(row => ({
+            value: row.workEffortCategoryId,
+            label: row.description || row.workEffortCategoryId
+        }))
+        const admits = id => {
+            const row = one("mantle.work.effort.WorkEffortCategory", {workEffortCategoryId: id})
+            return row?.categoryTypeEnumId === "WcatHoliday" && (!row.ownerPartyId || owners.includes(row.ownerPartyId))
+        }
+        return withSelected(
+            options,
+            selected,
+            admits,
+            id => one("mantle.work.effort.WorkEffortCategory", {workEffortCategoryId: id})?.description || id
+        )
+    },
     // the steps of a procedure (rootWorkEffortId) a step may wait for, never the step itself (workEffortId)
     procedureSteps: (userScope, term, selected, p) => {
         if (!p?.rootWorkEffortId) return []
@@ -876,13 +966,69 @@ const choiceSources = {
             )
             .slice(0, choiceLimit * 2)
             .map(row => ({value: row.workEffortId, label: row.workEffortName || row.workEffortId}))
+    },
+    // P9: the charge and the parts of a work order (organizationPartyId: the work's organization)
+    costCenters: (userScope, term, selected, p) => chargeOptions(userScope, term, selected, p, "costCenter"),
+    projects: (userScope, term, selected, p) => chargeOptions(userScope, term, selected, p, "project"),
+    // inventory and supplies (both issued to maintenance work and routed to its expense, the user's call of Nov 12)
+    stockParts: (userScope, term, selected) => productOptions(term, selected, ["AstTpInventory", "AstTpSupplies"]),
+    partFacilities: (userScope, term, selected, p) => {
+        const organizationPartyId = p?.organizationPartyId
+        if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
+        const options = Array.from(
+            find("mantle.facility.Facility", {ownerPartyId: organizationPartyId})
+                .condition("facilityTypeEnumId", "in", ["FcTpWarehouse", "FcTpWarehouseRoom", "FcTpRetailStore", "FcTpPlant"])
+                .orderBy("facilityName")
+                .limit(choiceLimit * 2)
+                .list()
+        )
+            .filter(row => !term || String(row.facilityName || row.facilityId).toLowerCase().includes(term.toLowerCase()))
+            .map(row => ({value: row.facilityId, label: row.facilityName || row.facilityId}))
+        return withSelected(
+            options,
+            selected,
+            facilityId => one("mantle.facility.Facility", {facilityId})?.ownerPartyId === organizationPartyId,
+            facilityName
+        )
     }
 }
-// Products by id or name, of an asset type when one is named (equipment models), with the selected one.
+// P9: the cost centres a work order may be charged to (its organization and the internal organizations rolling up to it) and
+// its organization's open projects, as Mantle's store#MaintenanceWorkOrder admits them.
+function chargeOptions(userScope, term, selected, p, kind) {
+    const organizationPartyId = p?.organizationPartyId
+    if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
+    let options
+    if (kind === "costCenter") {
+        const ids = [organizationPartyId].concat(
+            Array.from(
+                find("mantle.party.PartyRelationship", {toPartyId: organizationPartyId, relationshipTypeEnumId: "PrtOrgRollup"})
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .list()
+            ).map(row => row.fromPartyId)
+        )
+        options = ids.map(partyId => ({value: partyId, label: partyLabel(partyId)}))
+    } else
+        options = Array.from(
+            find("mantle.work.effort.WorkEffort", {workEffortTypeEnumId: "WetProject", ownerPartyId: organizationPartyId})
+                .condition("statusId", "not-in", ["WeClosed", "WeCancelled", "WeComplete"])
+                .orderBy("workEffortName")
+                .limit(choiceLimit * 2)
+                .list()
+        ).map(row => ({value: row.workEffortId, label: row.workEffortName || row.workEffortId}))
+    options = options.filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase())).slice(0, choiceLimit)
+    return withSelected(
+        options,
+        selected,
+        id => (kind === "costCenter" ? !!one("mantle.party.PartyRole", {partyId: id, roleTypeId: "OrgInternal"}) : !!one("mantle.work.effort.WorkEffort", {workEffortId: id})),
+        id => (kind === "costCenter" ? partyLabel(id) : one("mantle.work.effort.WorkEffort", {workEffortId: id})?.workEffortName || id)
+    )
+}
+// Products by id or name, of an asset type (or types) when one is named (equipment models, parts), with the selected one.
 function productOptions(term, selected, assetTypeEnumId) {
     const factory = ec.entity.conditionFactory
     let query = find("mantle.product.Product").orderBy("productName").limit(choiceLimit)
-    if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
+    if (Array.isArray(assetTypeEnumId)) query = query.condition("assetTypeEnumId", "in", assetTypeEnumId)
+    else if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
     if (term)
         query = query.condition(
             factory.makeCondition(
@@ -903,6 +1049,7 @@ function choices(p) {
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Maintenance choice " + p.choice)
     const caps = userScope.capabilities
     if (procedureChoices.includes(p.choice) && !caps.processView && !caps.plan && !caps.supervise) return {options: []}
+    if (planChoices.includes(p.choice) && !caps.view && !caps.plan && !caps.supervise) return {options: []}
     if (resourceChoices.includes(p.choice) && !userScope.capabilities.resourceRead) return {options: []}
     if (workChoices.includes(p.choice) && !userScope.capabilities.workRead && !userScope.capabilities.settingsEdit)
         return {options: []}

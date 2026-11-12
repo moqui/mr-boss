@@ -15,13 +15,18 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Work orders area of IronStone Maintenance (design-maintenance §3 WorkOrders and WorkOrderDetail, §1.2; impl-maintenance P3):
     Find, the work orders of the user's scope as a list, a board by status and a calendar of the planned windows; NewWorkOrder, the
     quick create's and Find's New work order; WorkOrderDetail, a work order's record with its lifecycle, assignments, time, files,
-    conversation and history, hidden from the menu; OrderDetail (P10), the shared screen read only for the purchase orders of the work, hidden too. Shown to a user who reads maintenance work (the root's menu condition); every
+    conversation and history, hidden from the menu; P9: MaterialIssueReceipt (Shared, the work order's parts issued and returned) and
+    InventoryAvailability (Shared, a part's stock in the user's facilities), hidden too; OrderDetail (P10), the shared screen read only
+    for the purchase orders of the work, hidden too. Shown to a user who reads maintenance work (the root's menu condition); every
     read and write is Mantle's mantle.work.MaintenanceServices after the root's check. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_handyman" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true">
         <subscreens-item name="NewWorkOrder" location="component://mr-boss/screen/Maintenance/WorkOrders/NewWorkOrder.xml" menu-include="false"/>
         <subscreens-item name="WorkOrderDetail" location="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail.xml" menu-include="false"/>
+        <!-- P9 (F31, F67): the shared material task with Maintenance's context, and the catalog's stock with Maintenance's facilities -->
+        <subscreens-item name="MaterialIssueReceipt" location="component://mr-boss/screen/Shared/MaterialIssueReceipt.xml" menu-include="false"/>
+        <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml" menu-include="false"/>
         <!-- P10: a purchase order of the work, the shared OrderDetail read only (crosscut §3.6; template/MaintenancePurchaseParts.xml) -->
         <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
     </subscreens>

@@ -29,7 +29,12 @@ function run(op, parameters) {
         // Warehouse's mount: the user's Warehouse facilities (facilityIds of its get#SharedContext branch, null for every one);
         // Customer Service's: the customer-serving facilities (impl-customer-service P3); Commerce's: its stores' facilities.
         const warehouseRoot = shared.appRoot === "Warehouse"
-        const scopedRoot = warehouseRoot || shared.appRoot === "CustomerService" || shared.appRoot === "Commerce"
+        // Maintenance's (impl-maintenance P9, F67): the facilities of its scope that hold stock.
+        const scopedRoot =
+            warehouseRoot ||
+            shared.appRoot === "CustomerService" ||
+            shared.appRoot === "Commerce" ||
+            shared.appRoot === "Maintenance"
         let facilities =
             scopedRoot && shared.facilityIds != null
                 ? rowsIn(F + "Facility", "facilityId", shared.facilityIds)
