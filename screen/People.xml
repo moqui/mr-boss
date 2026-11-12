@@ -57,7 +57,11 @@ along with this software (see the LICENSE.md file). If not, see
     PeopleTrainingDecision topic, the key g i and the Assessment forms under Skills and training (BOSS_PPL_ASSESSMENT_FORMS). P21
     Grievances under Employees (every People user's and a self-service employee's by its own grant, BOSS_PPL_CASES_SELF), a case's
     RequestDetail (Shared/RequestDetail with People's branch, its people's alone), the case as a record panel host (its notes and
-    files) and the PeopleCaseUpdate topic; no palette source, search, record-lookup or Assist tool answers a case. -->
+    files) and the PeopleCaseUpdate topic; no palette source, search, record-lookup or Assist tool answers a case. P20 Reviews & goals
+    (Performance: Reviews, Goals, every People user's and a self-service employee's by the area's grant, BOSS_PPL_PERFORMANCE; Review
+    cycles and Review forms the review administrator's, BOSS_PPL_REVIEW_ADMIN), a review as a record panel host (its files and notes,
+    the reviewer's, development's and, once released, the person's; never the reviewer's private notes, which are not Chatter), the
+    PeopleReviewStep and PeopleReviewUpdate topics and the key g f. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -77,11 +81,12 @@ along with this software (see the LICENSE.md file). If not, see
                 let entityName = String(wanted)
                 try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
                 // P16: an application's files; P18: a qualification's files (its content host, the person's and HR's); P21: a
-                // confidential case's notes and files (its people's, Mantle's record rule), never another request's
+                // confidential case's notes and files (its people's, Mantle's record rule), never another request's; P20: a review's
+                // files and notes (its content host, Mantle's check#ReviewAccess)
                 const confidentialCase = entityName === 'mantle.request.Request' && !!ec.context.recordId && ec.resource
                         .script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(String(ec.context.recordId))
                 if (!confidentialCase && !['mantle.humanres.employment.Employment', 'mantle.humanres.employment.EmploymentApplication',
-                        'mantle.humanres.ability.PartyQualification'].includes(entityName))
+                        'mantle.humanres.ability.PartyQualification', 'mantle.humanres.ability.PerformanceReview'].includes(entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
             }
         ]]></script>
@@ -135,6 +140,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g q" label="Qualifications" screen="People/Development/Qualifications"/>
             <!-- P19 review: the training sessions -->
             <key keys="g i" label="Training" screen="People/Development/Training"/>
+            <!-- P20: the reviews -->
+            <key keys="g f" label="Reviews" screen="People/Performance/Reviews"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
@@ -191,6 +198,10 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P21: a confidential case filed with, assigned to or changed for one of its people (PeopleCaseUpdate: no push, a title that
             names nothing) -->
         <notification-topic topic="PeopleCaseUpdate"/>
+        <!-- P20: a review's finalizing to approve (PeopleReviewStep; ReviewServices approve#ReviewStep and refuse#ReviewStep), and a review
+            step given, returned or a review released (PeopleReviewUpdate: a sentence, never a rating, an answer or a note) -->
+        <notification-topic topic="PeopleReviewStep"/>
+        <notification-topic topic="PeopleReviewUpdate"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

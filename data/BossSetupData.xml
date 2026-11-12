@@ -5156,7 +5156,7 @@ along with this software (see the LICENSE.md file). If not, see
         offboard, hold it. Openings and review steps join the same lookup with their phases: P16's review adds the draft and open
         openings the user is the recruiting owner of, handed to a new owner who works for the employer. -->
     <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
-            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, the requests waiting for their decision, and the open confidential cases they handle (by name alone; each goes back to the employer's case intake handlers when they leave)."
+            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, the requests waiting for their decision, the open confidential cases they handle (by name alone; each goes back to the employer's case intake handlers when they leave), and the open reviews they review and the feedback asked of them (by the person's name; a review goes to the person's manager and the feedback is withdrawn when they leave)."
             resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
             transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
@@ -5556,4 +5556,34 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="PeopleCaseUpdate" linkTemplate="/qapps/People/Employees/RequestDetail?requestId=${requestId}"/>
+    <!-- impl-people P20 (design-people §11, §1.2): Reviews & goals (People/Performance: Reviews, Goals, a review's detail and its
+        release print) is every People user's through the root, and a self-service employee's without the launcher by this inheritable
+        ALLOW on the area (as Skills & training, BOSS_PPL_DEVELOPMENT), for their own reviews and goals and the feedback asked of them:
+        Mantle's ReviewServices answer each user what they may read. Review cycles and Review forms (the survey builder with People's
+        Performance mount) are the review administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS), denied to the root user group and
+        to self-service, the People administrator and ADMIN through the root's ALWAYS (BOSS_PPL_REVIEW_ADMIN). A review's files are on
+        its own content host (PerformanceReview: the reviewer's, development's and, once released, the person's), whose panel is
+        People's RecordFiles; a self-service employee reaches it by BOSS_PPL_FILES_SELF. A review's finalizing to approve (Mantle's
+        PeopleReviewStep) and a review step given or a review released (PeopleReviewUpdate) open the review. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_PERFORMANCE" description="People reviews and goals, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Performance.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_PERFORMANCE_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_REVIEW_ADMIN" description="People review cycles and review forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Performance/Review(Cycles|Forms)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleReviewStep"
+            linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleReviewUpdate"
+            linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
 </entity-facade-xml>

@@ -294,6 +294,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="trainingUrl"><description>P19 review: the user's own training places (the same area)</description></parameter>
             <parameter name="grievancesUrl"><description>P21: the user's confidential cases and filing one (Grievances, when it
                 opens to them)</description></parameter>
+            <parameter name="reviewsUrl"><description>P20: the user's own reviews (People's Reviews &amp; goals area, when it opens to
+                them)</description></parameter>
+            <parameter name="goalsUrl"><description>P20: the user's own goals (the same area)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -310,6 +313,8 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="qualificationsUrl" from="found.qualificationsUrl"/>
             <set field="trainingUrl" from="found.trainingUrl"/>
             <set field="grievancesUrl" from="found.grievancesUrl"/>
+            <set field="reviewsUrl" from="found.reviewsUrl"/>
+            <set field="goalsUrl" from="found.goalsUrl"/>
         </actions>
     </service>
 

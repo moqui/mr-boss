@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P19, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P21, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -674,6 +674,16 @@ the screens that call it.
 | request/RequestServices (PeopleCaseServices.xml, included) | get#PeopleCase, change#PeopleCase, assign#PeopleCaseHandler, add#PeopleCaseTask | People/Employees/RequestDetail | People/Employees/RequestDetail (Shared/RequestDetail's People branch, template/PeopleCaseDetail.xml: the header's Start, Resolve, Reopen, Withdraw, More's Close without action, Add a handler, Remove a handler and Ask for work) (People P21) |
 | request/RequestServices (PeopleCaseServices.xml, included) | check#PeopleCaseAccess | People/RecordFiles; People/Chatter (the case host, PE-01) | People/Employees/RequestDetail (Files and Conversation: get#RecordLinkInfo's case rule, RecordFiles' change right); the case's record link (People.js caseLink) (People P21) |
 | request/RequestServices (PeopleCaseServices.xml, included) | notify#PeopleCaseUpdate, get#CaseDocumentData | — (record notices; the search documents) | the PeopleCaseUpdate notice in place of ChatterMention and RecordFollow on a case; MantleRequest's and MantleCommunicationEvent's manual data service, which keeps a case out of the index (People P21) |
+| ReviewServices | find#Cycles | People/Performance/ReviewCycles (Cycles) | People/Performance/ReviewCycles (FindCycles, CycleList with its progress counts, the Templates box) (People P20) |
+| ReviewServices | store#ReviewTemplate | People/Performance/ReviewCycles (CycleSetup's template) | People/Performance/ReviewCycles (Templates: New template, Change, End) (People P20) |
+| ReviewServices | store#Cycle, start#Cycle | People/Performance/ReviewCycles (CycleSetup) | People/Performance/ReviewCycles (New cycle, a draft's Change, Preview: who it reviews, Start reviews, a started cycle's Close) (People P20) |
+| ReviewServices | find#Reviews | People/Performance/Reviews (ReviewList) | People/Performance/Reviews (FindReviews: To do, Mine, I review, All; ReviewList) (People P20) |
+| ReviewServices | get#Review, store#Assessment, submit#Feedback | People/Performance/ReviewDetail (Assessment, Feedback) | People/Performance/ReviewDetail (the record header, Steps, Your self assessment, Your assessment of, Your feedback on: the step's review form as a dynamic form of its DbForm, the summary and the rating) (People P20) |
+| ReviewServices | change#ReviewState, approve#ReviewStep, refuse#ReviewStep | People/Performance/ReviewDetail (ReviewDecision); People/Approvals | People/Performance/ReviewDetail (Finalize, Approve, Release, Acknowledge; More's Ask for feedback, Return, Refuse, Change reviewer, Exclude; a step's Withdraw); People/Approvals and the notification tray (the PeopleReviewStep topic's handlers) (People P20) |
+| ReviewServices | store#ReviewNote | People/Performance/ReviewDetail (private notes) | People/Performance/ReviewDetail (Your private notes: Add note, Remove; their author's alone) (People P20) |
+| ReviewServices | get#ReviewRelease | People/Performance/ReviewDetail (the review release, design §15) | People/Performance/ReviewRelease (html-print, the stored page); People/Performance/ReviewDetail (releasePdf, the stored PDF) (People P20) |
+| ReviewServices | check#ReviewAccess, create#ReviewContent | People/RecordFiles; People/Chatter (the review host, PE-01) | People/Performance/ReviewDetail (Files: RecordFiles of PerformanceReview, through get#RecordLinkInfo and RecordFiles' get#ContentType) (People P20) |
+| ReviewServices | find#Goals, store#Goal | People/Performance/Goals (Goals, Goal) | People/Performance/Goals (FindGoals, GoalList, Add goal, a row's Update progress, Change, Close, Cancel goal; a review's goals from ReviewDetail) (People P20) |
 
 ## Ledger (81 services)
 

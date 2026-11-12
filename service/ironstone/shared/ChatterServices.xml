@@ -129,6 +129,13 @@ along with this software (see the LICENSE.md file). If not, see
                     .disableAuthz().one() : null
                 title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), kind?.description].filter(Boolean).join(' · ')
                 typeLabel = L('Qualification')
+            } else if (entityName === 'mantle.humanres.ability.PerformanceReview') {
+                // People's review host (impl-people P20): the person and the cycle, read after get#RecordLinkInfo admitted the user as
+                // its reviewer, a development reader of its employer or, once released, the person; never a rating or a note
+                const person = ec.entity.find('mantle.party.Person').condition('partyId', record.partyId).disableAuthz().one()
+                const cycle = ec.entity.find('mantle.humanres.ability.ReviewCycle').condition('reviewCycleId', record.reviewCycleId).disableAuthz().one()
+                title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), cycle?.cycleName].filter(Boolean).join(' · ')
+                typeLabel = L('Review')
             } else if (entityName === 'moqui.resource.GitMergeRequest') {
                 // a merge request by its number and title (get#RecordLinkInfo checked its repository's view right)
                 title = '!' + record.mergeRequestNum + ' ' + (record.title || '')
