@@ -76,6 +76,12 @@ const ids = {
     roomPlanId: "BOSS_MNT_PLAN_ROOM201",
     compressorPlanId: "BOSS_MNT_PLAN_COMP",
     stalePlanId: "BOSS_MNT_PLAN_STARTS",
+    // P8: Services' compressor team of employed technicians (BossZMaintenanceDemoData.xml): Kenji its lead (qualified), Sofia (her
+    // electrical safety certificate expired) and Owen (on leave the week of the compressor's oil service)
+    fieldTeamId: "BOSS_MNT_TEAM_FIELD",
+    qualifiedTechId: "BOSS_PPL_KENJI",
+    expiredTechId: "BOSS_PPL_SOFIA",
+    awayTechId: "BOSS_PPL_OWEN",
     // P14: the air handler's monthly filter change, active, its August done on time, September late, October skipped and November's
     // due now (BossZMaintenanceDemoData.xml)
     filterPlanId: "BOSS_MNT_PLAN_FILTER",
@@ -91,8 +97,8 @@ const ids = {
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor), preventive plans (P13, a reader of work or a planner or supervisor) and
     // equipment, and with Settings the Maintenance administrator's; a procedure author reads procedures alone; P14: Reports for a
-    // reader of work
-    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Reports"],
+    // reader of work; P8 review: Settings for its Teams tab alone, read by a planner or supervisor
+    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Reports", "Settings"],
     homeOnlyMenu: ["Home"],
     authorMenu: ["Home", "Procedures"],
     bookingMenu: ["Home", "Scheduling"],
@@ -108,7 +114,7 @@ const ids = {
         "Reports",
         "Settings"
     ],
-    settingsMenu: ["SettingsHome", "WorkPolicy", "Lookups", "Readiness"],
+    settingsMenu: ["SettingsHome", "WorkPolicy", "Teams", "Lookups", "Readiness"],
     keys: ["g m", "g w", "g r", "g p", "g l", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
@@ -227,6 +233,182 @@ function shell(user, menuOnly = false, path = "Home", group = "Maintenance") {
     })
 }
 
+// P12: a customer repair of a spec-local organization (Customer Service's specs read Services' and Retail's cases exactly, so no
+// claim is made in a demo organization): the organization with its policy managing warranty repairs, its customer with an address,
+// a unit it sold the customer last month (on the customer's premises: no facility, so no Maintenance scope covers it), a technician
+// and a Customer Service agent of it with maint.tech's and customerservice.services' groups, and a claim decided as a chargeable
+// repair the customer agreed to; with link, the agent's link#WarrantyWork, which makes the repair a work order assigned to the
+// technician. Made once per key: a second call answers the same records.
+function customerRepair(key, link = true) {
+    const base = "MNT_SPEC_" + key
+    const made = {
+        organizationPartyId: base + "_ORG",
+        customerPartyId: base + "_CUST",
+        assetId: base + "_UNIT",
+        requestId: base + "_CLAIM",
+        address: key.toLowerCase() + ".frontdesk@example.com",
+        tech: "mnt.spec." + key.toLowerCase() + ".tech",
+        techPartyId: base + "_TECH",
+        agent: "mnt.spec." + key.toLowerCase() + ".agent",
+        agentPartyId: base + "_AGENT"
+    }
+    const one = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().one()
+    const since = "2000-01-01T00:00:00Z"
+    if (!one("mantle.party.Party", {partyId: made.organizationPartyId}))
+        system(() => {
+            const organization = (partyId, name, roleTypeId, ownerPartyId) => {
+                call("create#mantle.party.Party", {partyId, partyTypeEnumId: "PtyOrganization", ownerPartyId})
+                call("create#mantle.party.Organization", {partyId, organizationName: name})
+                call("create#mantle.party.PartyRole", {partyId, roleTypeId})
+            }
+            organization(made.organizationPartyId, "Repair spec " + key, "OrgInternal", made.organizationPartyId)
+            organization(made.customerPartyId, "Repair spec customer " + key, "Customer", made.organizationPartyId)
+            call("create#mantle.party.contact.ContactMech", {
+                contactMechId: base + "_CM",
+                contactMechTypeEnumId: "CmtEmailAddress",
+                infoString: made.address
+            })
+            call("create#mantle.party.contact.PartyContactMech", {
+                partyId: made.customerPartyId,
+                contactMechId: base + "_CM",
+                contactMechPurposeId: "EmailPrimary",
+                fromDate: since
+            })
+            // the technician and the agent: the demo users' groups, agents of the spec's organization
+            for (const [username, userId, from] of [
+                [made.tech, made.techPartyId, users.tech],
+                [made.agent, made.agentPartyId, "customerservice.services"]
+            ]) {
+                call("create#mantle.party.Party", {partyId: userId, partyTypeEnumId: "PtyPerson"})
+                call("create#mantle.party.Person", {partyId: userId, firstName: "Repair spec", lastName: username})
+                call("create#mantle.party.PartyRelationship", {
+                    relationshipTypeEnumId: "PrtAgent",
+                    fromPartyId: userId,
+                    toPartyId: made.organizationPartyId,
+                    toRoleTypeId: "OrgInternal",
+                    fromDate: since
+                })
+                call("create#moqui.security.UserAccount", {
+                    userId,
+                    username,
+                    partyId: userId,
+                    currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                    passwordHashType: "SHA"
+                })
+                const fromUserId = one("moqui.security.UserAccount", {username: from}).userId
+                for (const member of Array.from(
+                    ec.entity
+                        .find("moqui.security.UserGroupMember")
+                        .condition("userId", fromUserId)
+                        .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                        .disableAuthz()
+                        .list()
+                ))
+                    call("create#moqui.security.UserGroupMember", {userId, userGroupId: member.userGroupId, fromDate: since})
+            }
+            call("create#mantle.work.maintenance.MaintenancePolicy", {
+                organizationPartyId: made.organizationPartyId,
+                fromDate: since,
+                approvalThresholdHours: 0,
+                warrantyRepairsManaged: "Y"
+            })
+            // the unit, sold to the customer last month (its sale says whose it is)
+            const orderId = base + "_SO"
+            call("create#mantle.order.OrderHeader", {orderId, statusId: "OrderCompleted", currencyUomId: "USD", entryDate: since})
+            call("create#mantle.order.OrderPart", {
+                orderId,
+                orderPartSeqId: "01",
+                vendorPartyId: made.organizationPartyId,
+                customerPartyId: made.customerPartyId,
+                statusId: "OrderCompleted"
+            })
+            call("create#mantle.order.OrderItem", {
+                orderId,
+                orderItemSeqId: "01",
+                orderPartSeqId: "01",
+                itemTypeEnumId: "ItemProduct",
+                productId: ids.modelId,
+                quantity: 1,
+                unitAmount: 900
+            })
+            call("create#mantle.product.asset.Asset", {
+                assetId: made.assetId,
+                productId: ids.modelId,
+                assetTypeEnumId: "AstTpInventory",
+                assetName: "Repair spec unit " + key,
+                serialNumber: base + "-SN",
+                statusId: "AstDelivered",
+                ownerPartyId: made.customerPartyId
+            })
+            call("create#mantle.product.issuance.AssetIssuance", {
+                assetId: made.assetId,
+                orderId,
+                orderItemSeqId: "01",
+                productId: ids.modelId,
+                issuedDate: new Date(Date.now() - 30 * 86400000),
+                quantity: 1
+            })
+            // the claim, a case of the organization assigned to the agent, decided as a chargeable repair the customer agreed to
+            call("create#mantle.request.Request", {
+                requestId: made.requestId,
+                requestName: "Repair spec " + key + ": the unit trips on start",
+                requestTypeEnumId: "RqtWarranty",
+                statusId: "ReqSubmitted",
+                requestDate: ec.user.nowTimestamp,
+                claimRevision: 0
+            })
+            call("create#mantle.request.support.CaseProfile", {requestId: made.requestId, intakeDate: ec.user.nowTimestamp})
+            for (const [partyId, roleTypeId] of [
+                [made.organizationPartyId, "OrgInternal"],
+                [made.customerPartyId, "Customer"],
+                [made.agentPartyId, "Assignee"]
+            ])
+                call("create#mantle.request.RequestParty", {requestId: made.requestId, partyId, roleTypeId, fromDate: since})
+            call("create#mantle.request.RequestRecord", {
+                requestId: made.requestId,
+                recordEntityName: "mantle.product.asset.Asset",
+                recordId: made.assetId,
+                linkedDate: ec.user.nowTimestamp
+            })
+            call("create#mantle.request.support.WarrantyDecision", {
+                requestId: made.requestId,
+                sourceRevision: 0,
+                organizationPartyId: made.organizationPartyId,
+                decisionEnumId: "WdRejected",
+                coverageBasisEnumId: "WcbNone",
+                reason: "Out of warranty: repaired at the customer's cost",
+                decisionDate: ec.user.nowTimestamp,
+                decidedByPartyId: made.agentPartyId,
+                chargeEstimate: 120,
+                chargeCurrencyUomId: "USD",
+                customerConsentRef: "Phone call"
+            })
+        })
+    const linked = () =>
+        Array.from(
+            ec.entity
+                .find("mantle.request.RequestRecord")
+                .condition({requestId: made.requestId, recordEntityName: "mantle.product.maintenance.AssetMaintenance"})
+                .disableAuthz()
+                .list()
+        )[0]?.recordId || null
+    if (link && !linked())
+        asUser(made.agent, () => {
+            ec.artifactExecution.disableAuthz()
+            invoke("mantle.request.WarrantyServices.link#WarrantyWork", {
+                requestId: made.requestId,
+                comments: "Test and replace the start capacitor",
+                assigneePartyId: made.techPartyId
+            })
+        })
+    made.assetMaintenanceId = linked()
+    made.workEffortId = made.assetMaintenanceId
+        ? one("mantle.product.maintenance.AssetMaintenance", {assetMaintenanceId: made.assetMaintenanceId})?.taskWorkEffortId ||
+          null
+        : null
+    return made
+}
+
 // P20, the screen sweeps (acceptance MaintenanceTui and MaintenanceServerStatic): the shared screens Maintenance mounts, as [path
 // under the root, location], read from each Maintenance screen file's subscreens-items (walkChildTree follows files, not mounts)
 function mountedScreens() {
@@ -289,13 +471,31 @@ const sweepRecords = {
     "Scheduling/ResourceCalendar": {date: "2026-11-17"},
     "Scheduling/ResourceCalendarTui": {date: "2026-11-17"},
     "Scheduling/BookingRequests": {fromDate: "2026-11-12"},
-    Settings: {organizationPartyId: ids.organizationId}
+    Settings: {organizationPartyId: ids.organizationId},
+    "Settings/Teams": {organizationPartyId: ids.organizationId, teamPartyId: ids.fieldTeamId}
 }
-function sweepParameters(path) {
+// (WorkOrders/InterventionReport needs a customer repair, which no demo record is: the sweeps pass customerRepair's as repair)
+function sweepParameters(path, repair = null) {
+    if (path === "WorkOrders/InterventionReport") return {workEffortId: repair?.workEffortId || ""}
     const key = Object.keys(sweepRecords)
         .filter(key => path === key || path.startsWith(key + "/"))
         .sort((a, b) => b.length - a.length)[0]
     return key ? sweepRecords[key] : {}
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell, mountedScreens, mountTabs, sweepParameters})
+;({
+    ids,
+    users,
+    asUser,
+    system,
+    refusal,
+    invoke,
+    page,
+    screenRefusal,
+    hit,
+    shell,
+    customerRepair,
+    mountedScreens,
+    mountTabs,
+    sweepParameters
+})

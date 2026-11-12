@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance demo's links to People's and Purchasing's demo records (impl-maintenance P2), in a file that loads after
     theirs (BossMaintenanceDemoData.xml loads before them): the custodians of Services' compressor and multimeter, Kenji and Sofia,
     Services' technicians in People's demo, and the supplier warranty's warrantor of the compressor and the air handler; P3's team
-    and work orders; P6's procedures; P13's preventive plans. -->
+    and work orders; P6's procedures; P13's preventive plans; P8's compressor team of employed technicians. -->
 <entity-facade-xml type="demo">
     <mantle.product.asset.AssetPartyAssignment assetId="BOSS_MNT_COMPRESSOR" partyId="BOSS_PPL_KENJI" roleTypeId="Custodian"
             fromDate="2026-01-05 08:00:00"/>
@@ -464,4 +464,49 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.time.Timesheet timesheetId="BOSS_MNT_TS_BELT" partyId="BOSS_MNT_TECH" statusId="TmshApproved"
             fromDate="2026-10-19 00:00:00" thruDate="2026-10-26 00:00:00" comments="Week of the compressor's belt"/>
     <mantle.work.time.TimeEntry timeEntryId="BOSS_MNT_TE_BELT1" timesheetId="BOSS_MNT_TS_BELT" emplPositionClassId="BOSS_PPL_JC_TECH"/>
+
+    <!-- P8 (design-maintenance §3 AssignSchedule, §9 Teams; review Y4 and Y8; impl-maintenance F79): Services' compressor team, People's
+        team of three employed technicians (Kenji its lead, Sofia and Owen), each evaluated in field service by their manager: Kenji at 4
+        with a valid electrical safety certificate (People's demo), Sofia at 3 with hers expired at the end of October, and Owen at 4 with
+        a valid one and approved leave all next week (as People's approval projects it: an all-day time off he is on, which capacity
+        reads). The AC-200 procedure's oil change asks field service at level 3 proved by the electrical safety certificate, so a
+        compressor service made of it ranks Kenji first, names Sofia's expired certificate and Owen's leave. -->
+    <mantle.party.Party partyId="BOSS_MNT_TEAM_FIELD" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_MNT_TEAM_FIELD" organizationName="Compressor and field service"/>
+    <mantle.party.PartyRole partyId="BOSS_MNT_TEAM_FIELD" roleTypeId="OrgTeam"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_KENJI" roleTypeId="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_FIELD_KENJI" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_KENJI" fromRoleTypeId="Manager" toPartyId="BOSS_MNT_TEAM_FIELD" toRoleTypeId="OrgTeam" fromDate="2026-02-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_FIELD_SOFIA" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_SOFIA" fromRoleTypeId="Assignee" toPartyId="BOSS_MNT_TEAM_FIELD" toRoleTypeId="OrgTeam" fromDate="2026-02-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_FIELD_OWEN" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_OWEN" fromRoleTypeId="Assignee" toPartyId="BOSS_MNT_TEAM_FIELD" toRoleTypeId="OrgTeam" fromDate="2026-02-01 00:00:00"/>
+    <mantle.work.maintenance.MaintenanceTeamDefaults teamPartyId="BOSS_MNT_TEAM_FIELD" fromDate="2026-02-01 00:00:00" organizationPartyId="ORG_ZIZI_SERVICES"
+            facilityId="BOSS_MNT_ROOM_102" defaultAssigneePartyId="BOSS_PPL_KENJI" comments="The mechanical room's equipment"/>
+    <mantle.party.PartySetting partyId="BOSS_MNT_TEAM_FIELD" partySettingTypeId="MntIntakePlusTag" settingValue="compressors"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_MNT_SE_SOFIA_FIELD" partyId="BOSS_PPL_SOFIA"
+            skillTypeEnumId="BOSS_PPL_SK_FIELD" sourceEnumId="SksManagerEvaluated" skillLevel="3" evaluationDate="2026-01-21 09:00:00"
+            assessorPartyId="BOSS_PPL_AMARA"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_SOFIA" skillTypeEnumId="BOSS_PPL_SK_FIELD" skillLevel="3" sourceEnumId="SksManagerEvaluated"
+            partySkillEvaluationId="BOSS_MNT_SE_SOFIA_FIELD" evaluatedDate="2026-01-21 09:00:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_MNT_SE_OWEN_FIELD" partyId="BOSS_PPL_OWEN"
+            skillTypeEnumId="BOSS_PPL_SK_FIELD" sourceEnumId="SksManagerEvaluated" skillLevel="4" evaluationDate="2026-01-21 10:00:00"
+            assessorPartyId="BOSS_PPL_AMARA"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_OWEN" skillTypeEnumId="BOSS_PPL_SK_FIELD" skillLevel="4" sourceEnumId="SksManagerEvaluated"
+            partySkillEvaluationId="BOSS_MNT_SE_OWEN_FIELD" evaluatedDate="2026-01-21 10:00:00"/>
+    <mantle.humanres.ability.PartyQualification partyQualificationId="BOSS_MNT_QL_SOFIA_ELEC" partyId="BOSS_PPL_SOFIA"
+            qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL" title="Electrical safety, low voltage" issuerName="Electrical Safety Board"
+            referenceNumber="ESB-41877" fromDate="2023-11-01 00:00:00" thruDate="2026-10-31 00:00:00" verificationStatusId="QlVerVerified"
+            submittedByUserId="BOSS_PPL_HR" submittedDate="2023-11-02 10:00:00" verifiedByUserId="BOSS_PPL_HR" verifiedDate="2023-11-03 10:00:00"/>
+    <mantle.humanres.ability.PartyQualification partyQualificationId="BOSS_MNT_QL_OWEN_ELEC" partyId="BOSS_PPL_OWEN"
+            qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL" title="Electrical safety, low voltage" issuerName="Electrical Safety Board"
+            referenceNumber="ESB-50212" fromDate="2025-03-01 00:00:00" thruDate="2028-02-29 00:00:00" verificationStatusId="QlVerVerified"
+            submittedByUserId="BOSS_PPL_HR" submittedDate="2025-03-02 10:00:00" verifiedByUserId="BOSS_PPL_HR" verifiedDate="2025-03-03 10:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_LEAVE_OWEN" workEffortTypeEnumId="WetTimeOff" workEffortName="Out of office"
+            statusId="WeApproved" ownerPartyId="BOSS_PPL_OWEN" timeUomId="TF_hr" allDayStart="2026-11-16" allDayEnd="2026-11-20"
+            estimatedStartDate="2026-11-16 00:00:00" estimatedCompletionDate="2026-11-21 00:00:00"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_LEAVE_OWEN" partyId="BOSS_PPL_OWEN" roleTypeId="Assignee"
+            fromDate="2026-11-02 09:00:00" statusId="WeptAssigned"/>
+    <mantle.work.effort.WorkEffortSkillStandard workEffortId="BOSS_MNT_PROC_COMP_OIL" skillTypeEnumId="BOSS_PPL_SK_FIELD" estimatedNumPeople="1"
+            minimumSkillLevel="3" qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL"/>
 </entity-facade-xml>

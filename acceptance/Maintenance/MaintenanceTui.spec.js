@@ -3,13 +3,13 @@
 // RecordFiles, EquipmentDetail, Product360, Employee360, FacilityDetail, RequestDetail, WorkItemDetail, MaterialIssueReceipt,
 // InventoryAvailability, OrderDetail and the equipment import's DataImport) and each tab of a mount that Maintenance's menu shows,
 // renders in the tui render mode as a document of the TUI model (v 1) with no error node, on the demo's records
-// (MaintenanceSpecLib.sweepParameters), as john.doe (ADMIN, who holds every MAINTENANCE_* permission) with artifact authorization
+// (MaintenanceSpecLib.sweepParameters; the intervention report on MaintenanceSpecLib.customerRepair's repair), as john.doe (ADMIN, who holds every MAINTENANCE_* permission) with artifact authorization
 // on. TuiRender does not sweep Maintenance. Each screen's own render checks are the phases' regression specs; the server-static
 // sweep is MaintenanceServerStatic.
 // Run: ./moq accept mr-boss --spec MaintenanceTui
 const root = "component://mr-boss/screen/Maintenance.xml"
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
-let screens
+let screens, repair
 
 // the paths under the Maintenance root of its own screen files, then the shared mounts and the tabs of each its menu shows
 function sweepScreens() {
@@ -61,6 +61,8 @@ spec({
     setupSpec() {
         login("john.doe")
         ec.artifactExecution.enableAuthz()
+        // P12's intervention report opens on a customer repair, which no demo record is
+        repair = lib.customerRepair("SWEEP")
         screens = sweepScreens()
     },
     cleanupSpec() {
@@ -73,7 +75,7 @@ feature("every Maintenance screen, shared mount and mounted tab renders in tui a
     when() {
         const failures = []
         for (const path of screens) {
-            const got = tui(path, lib.sweepParameters(path))
+            const got = tui(path, lib.sweepParameters(path, repair))
             if (got.status != 200 || got.errors) failures.push(`${path}: status ${got.status}, ${got.errors}`)
             else if (!got.doc || got.doc.v != 1) failures.push(`${path}: not a TUI document: ${got.output.substring(0, 160)}`)
             else if (got.nodeErrors.length) failures.push(`${path}: ${got.nodeErrors.join(" | ")}`)
@@ -90,6 +92,9 @@ feature("every Maintenance screen, shared mount and mounted tab renders in tui a
         screens.includes("Facilities/FacilityDetail")
         screens.includes("Requests/RequestDetail")
         screens.includes("Chatter")
+        screens.includes("WorkOrders/InterventionReport")
+        screens.includes("Settings/Teams")
+        !!repair.workEffortId
         failures.join("\n") == ""
     }
 })

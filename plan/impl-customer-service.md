@@ -3681,7 +3681,9 @@ Designed, not in this build:
 - **Other design items:**
   - external knowledge sources (product documents, the forum, an external knowledge API);
   - the chargeable repair's sales quote and the on-site intervention report (design §14), with Sales and Maintenance
-    (the quote picked up in impl-sales P8; the report, with the repair as a managed work order, in impl-maintenance P12);
+    (the quote picked up in impl-sales P8; the report, with the repair as a managed work order, built in impl-maintenance P12:
+    RepairLinks' Send intervention report and the managed repair's summary, an owner contract; with the organization's
+    Maintenance policy off the warranty services are as P11 built them);
   - who is viewing or typing on a case (design §14), unless P0 brings it into P5 (§4);
   - the Support app's terminal pages (design §8), when PASS gains a terminal UI;
   - Admin's PrivacyRequests and the PASS Account privacy page (Admin's `later`), which take over P2's interim privacy

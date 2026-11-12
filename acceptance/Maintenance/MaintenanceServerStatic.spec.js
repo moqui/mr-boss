@@ -1,13 +1,13 @@
 // Maintenance's server-static sweep (impl-maintenance P20; README "Significant redesigns" 3, mr-moqui plans/archive/QvtServerStatic.md;
 // AGENTS.md: one sweep per app per mode, in acceptance): ServerStaticLib's full check of each plain XML Maintenance screen, the
 // shared screens it mounts (MaintenanceSpecLib.mountedScreens) and each tab of a mount that Maintenance's menu shows, on the demo's
-// records (MaintenanceSpecLib.sweepParameters), as john.doe. A screen marked server-static="qvt" must come back clean (Commons'
+// records (MaintenanceSpecLib.sweepParameters; the intervention report on a customerRepair), as john.doe. A screen marked server-static="qvt" must come back clean (Commons'
 // Report a problem is Maintenance's marked one, in Commons' ServerStatic); the others and why are logged. The .qvue
 // ResourceCalendar is left out, as ServerStaticLib leaves every qvue screen out; its terminal twin is MaintenanceTui's.
 // Run: ./moq accept mr-boss --spec MaintenanceServerStatic
 const lib = ec.resource.script("component://mr-boss/test/ServerStaticLib.js")
 const maintenance = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
-let screens
+let screens, repair
 
 // [app, path, marked] of a shared screen mounted under Maintenance, unless it is a .qvue screen or a placeholder (as
 // ServerStaticLib.screens leaves those out)
@@ -20,6 +20,8 @@ function mounted(path, location) {
 spec({
     setupSpec() {
         login("john.doe")
+        // P12's intervention report opens on a customer repair, which no demo record is
+        repair = maintenance.customerRepair("SWEEP")
         screens = lib.screens(["Maintenance"])
         const seen = new Set(screens.map(([, path]) => path))
         for (const [path, location] of maintenance.mountedScreens()) {
@@ -52,7 +54,7 @@ function sharedTab(location, tabName) {
 
 feature("the full check of every Maintenance XML screen, shared mount and mounted tab; each one marked server-static is clean", {
     when() {
-        return {rows: lib.check(screens, (app, path) => maintenance.sweepParameters(path))}
+        return {rows: lib.check(screens, (app, path) => maintenance.sweepParameters(path, repair))}
     },
     then({rows}) {
         rows.length > 70

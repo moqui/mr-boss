@@ -3,7 +3,7 @@
 // and Settings grants), each entry of it opening and the others refused; maint.requester has no Maintenance launcher and is refused
 // the root and every ironstone.maintenance service, as a Projects client and a PASS public account are; Admin's Capabilities shows
 // the Maintenance bundles and an access administrator grants the planner bundle (its permissions, its artifact grants and the
-// launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities and menu, and not Settings;
+// launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities and menu (Settings for its Teams tab alone);
 // Admin's settings index lists Maintenance settings for maint.admin and not for maint.reader. The rules themselves are
 // MaintenanceAccess's and Mantle's MaintenanceScope; the review walk of every group is MaintenanceAccessWalk.
 // Run: ./moq accept mr-boss --spec MaintenanceFoundationWalk
@@ -15,7 +15,8 @@ const opened = rendered => rendered.status === 200 && rendered.errors.length ===
 // each group's menu (design §1.2 as built, Maintenance.xml's menu-include): Work orders, Preventive and Reports for a work reader
 // (an assigned technician Work orders alone), Requests for a planner or supervisor (BOSS_MNT_REQUESTS), Procedures for a reader of
 // procedures or a planner or supervisor, Equipment and Facilities for a reader of them, Scheduling for a resource administrator,
-// a booking approver and a supervisor; Settings the administrator's (BOSS_MNT_SETTINGS)
+// a booking approver and a supervisor; Settings the administrator's (BOSS_MNT_SETTINGS), and for its Teams tab alone a planner's
+// and a supervisor's (BOSS_MNT_TEAMS, P8)
 const readerMenu = ["Home", "WorkOrders", "Procedures", "Preventive", "Equipment", "Facilities", "Reports"]
 const techMenu = ["Home", "WorkOrders", "Equipment", "Facilities"]
 const supervisorMenu = [
@@ -27,7 +28,8 @@ const supervisorMenu = [
     "Equipment",
     "Facilities",
     "Scheduling",
-    "Reports"
+    "Reports",
+    "Settings"
 ]
 const menus = {
     [users.reader]: readerMenu,
@@ -194,9 +196,14 @@ feature("Capabilities shows the Maintenance bundles, and an access administrator
             "maint.accept.team",
             () => invoke("ironstone.maintenance.AccessServices.get#Capabilities", {}).capabilities
         )
-        return Object.assign(taken, {plannerPermissions, teamCapabilities, menu: shell("maint.accept.team")})
+        return Object.assign(taken, {
+            plannerPermissions,
+            teamCapabilities,
+            menu: shell("maint.accept.team"),
+            teamSettings: shell("maint.accept.team", true, "Settings", "Settings").names
+        })
     },
-    then({matrix, proposal, plannerPermissions, teamCapabilities, menu}) {
+    then({matrix, proposal, plannerPermissions, teamCapabilities, menu, teamSettings}) {
         JSON.stringify(matrix).includes("Maintenance planner")
         JSON.stringify(matrix).includes("Maintenance app users")
         proposal.proposal.canApply == true
@@ -206,9 +213,10 @@ feature("Capabilities shows the Maintenance bundles, and an access administrator
         teamCapabilities.view == true
         teamCapabilities.supervise == false
         menu.apps.includes("Maintenance")
-        // the planner's menu; Settings stays the administrator's though the team is no member of BOSS_MAINTENANCE, whose deny
-        // rows keep it from the planners
+        // the planner's menu, Settings for its Teams tab (the bundle carries BOSS_MNT_TEAMS); its other tabs stay the
+        // administrator's though the team is no member of BOSS_MAINTENANCE, whose deny rows keep them from the planners
         menu.names == ids.staffMenu
+        teamSettings == ["Teams"]
     }
 })
 

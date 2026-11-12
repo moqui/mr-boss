@@ -29,14 +29,15 @@ links and policy ([design-insights §4.2](plan/design-insights.md#42-framework-s
 built in one order ([impl-admin §1](plan/impl-admin.md#1-scope-and-order)).
 
 Maintenance (`screen/Maintenance/`) is built: work orders from intake to completion with downtime and restoration,
-requests and Report a problem, procedures with execution checklists and evidence, parts and their cost routing,
-purchasing and outside service, costs, preventive plans with generation and compliance, resource booking policy,
-blackouts and booking decisions, reports with Insights' datasets, settings, lookups, readiness and the equipment import,
-and Assist, Comms, CalDAV and the prints ([design](plan/design-maintenance.md), [impl-maintenance](plan/impl-maintenance.md));
-dispatch (teams, skills and qualifications) and customer repair are in review. Its rules are tested in `test/Maintenance/`
-with the golden-path walk `test/client/Maintenance/MaintenanceWorkOrdersWalk`; its scenario walks, the screen sweeps
-MaintenanceTui and MaintenanceServerStatic and the access walk MaintenanceAccessWalk are in `acceptance/Maintenance/`, the
-phone walk MaintenancePhoneWalk in `acceptance/client/Maintenance/`. A database made before Maintenance loads its seed as
+dispatch with teams, skills and qualifications, requests and Report a problem, procedures with execution checklists and
+evidence, parts and their cost routing, purchasing and outside service, costs, customer repair with its intervention report
+(which carries no price, cost or total, whoever reads or stores it), preventive plans with generation and compliance,
+resource booking policy, blackouts and booking decisions, reports with Insights' datasets, settings, lookups, readiness and
+the equipment import, and Assist, Comms, CalDAV and the prints ([design](plan/design-maintenance.md),
+[impl-maintenance](plan/impl-maintenance.md)). Its rules are tested in `test/Maintenance/` with the golden-path walk
+`test/client/Maintenance/MaintenanceWorkOrdersWalk`; its scenario walks, the screen sweeps MaintenanceTui and
+MaintenanceServerStatic and the access walk MaintenanceAccessWalk are in `acceptance/Maintenance/`, the phone walk
+MaintenancePhoneWalk in `acceptance/client/Maintenance/`. A database made before Maintenance loads its seed as
 [Upgrading](../mr-mantle/docs/Upgrading.md#maintenance-november-2026) says.
 
 UI review and refinement plans use `plan/ui-review-*.md`, starting with

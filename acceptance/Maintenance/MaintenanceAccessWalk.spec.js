@@ -19,6 +19,12 @@
 //   shift handover), in the calendar read and in Maintenance's resource calendar;
 // - a procedure is authored by its author only: every other group, and Retail's planner, is refused the procedure, step and
 //   approval services and ProcedureDetail's transitions, and the draft is unchanged.
+// - Teams (P8) is read by a planner and a supervisor (BOSS_MNT_TEAMS) and the administrator only, Retail's planner reads no Services
+//   team on it, in the team choice or by the service, and no one but the administrator writes a team's defaults;
+// - a customer repair (P12, MaintenanceSpecLib.customerRepair: a spec-local organization's claim made a work order assigned to its
+//   technician) shows to no Maintenance group user of Services or Retail: not its WorkOrderDetail, its intervention report (html
+//   and print) or the customer's unit, nor through the services; its technician reads the report, which carries no amount (the
+//   user's call of Nov 12).
 // maint.admin works every organization (MAINTENANCE_ALL_ORGANIZATIONS) and is left out of the isolation. The rules are
 // MaintenanceAccess's (one case each) and Mantle's; the menus per group are MaintenanceFoundationWalk's.
 // Run: ./moq accept mr-boss --spec MaintenanceAccessWalk
@@ -227,6 +233,8 @@ spec({
             state.vendorHourRate = entry ? entry.vendorHourRate : null
             if (entry) call("update#mantle.work.time.TimeEntry", {timeEntryId: "BOSS_MNT_TE_BELT1", vendorHourRate: "77.77"})
         })
+        // P12: a customer repair of a spec-local organization, linked and assigned to its own technician
+        state.repair = lib.customerRepair("P20WALK")
         const draft = one("mantle.work.effort.WorkEffort", {workEffortId: ids.draftProcedureId})
         state.draftDescription = draft?.description
         state.draftStatusId = draft?.statusId
@@ -601,3 +609,105 @@ feature(
         }
     }
 )
+
+feature(
+    "Teams is read by a planner, a supervisor and the administrator only; Retail's planner reads no Services team; defaults are the administrator's",
+    {
+        when() {
+            const problems = []
+            const team = {organizationPartyId: ids.organizationId, teamPartyId: ids.fieldTeamId}
+            const teamName = "Compressor and field service"
+            const readers = [users.planner, users.supervisor, users.admin]
+            for (const user of groupUsers) {
+                const got = render(user, "Settings/Teams", team)
+                if (readers.includes(user) && !(opens(got) && got.output.includes(teamName)))
+                    problems.push(`${user}, a reader of Teams, does not see the field team: ${got.errors}`)
+                if (!readers.includes(user) && got.output.includes(teamName))
+                    problems.push(`${user} sees the field team on Teams`)
+                if (user !== users.admin) {
+                    const stored = as(user, "mantle.work.MaintenanceSettingsServices.store#MaintenanceTeamDefaults", {
+                        teamPartyId: ids.fieldTeamId,
+                        intakeTag: "p20-walk"
+                    })
+                    if (!/PERMISSION_DENIED|RECORD_UNAVAILABLE/.test(stored.error))
+                        problems.push(`${user} stores the team's defaults: ${stored.error || "accepted"}`)
+                }
+            }
+            const retail = users.retailPlanner
+            const found = as(retail, "mantle.work.MaintenanceSettingsServices.find#MaintenanceTeams", {
+                teamPartyId: ids.fieldTeamId
+            })
+            if (!/RECORD_UNAVAILABLE|ORGANIZATION_DENIED/.test(found.error))
+                problems.push(`Retail's planner finds the field team: ${found.error || "accepted"}`)
+            const options =
+                as(retail, "ironstone.maintenance.ContextServices.get#Choices", {choice: "teams", selected: ids.fieldTeamId})
+                    .options || []
+            if (options.some(option => [ids.teamId, ids.fieldTeamId].includes(option.value)))
+                problems.push(`Retail's planner's team choice offers Services' teams: ${JSON.stringify(options)}`)
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature("a customer repair shows to no Maintenance user of Services or Retail; its technician reads the report, with no amount", {
+    when() {
+        const problems = []
+        const repair = state.repair
+        const customer = /Repair spec customer P20WALK/
+        const work = {workEffortId: repair.workEffortId}
+        const repairRoutes = [
+            ["WorkOrders/WorkOrderDetail", work, "html"],
+            ["WorkOrders/WorkOrderDetail/Overview", work, "html"],
+            ["WorkOrders/InterventionReport", work, "html"],
+            ["WorkOrders/InterventionReport", Object.assign({lastStandalone: "true"}, work), "html-print"],
+            ["Equipment/EquipmentDetail", {assetId: repair.assetId}, "html"],
+            ["WorkOrders/Find", {text: "Repair spec customer P20WALK"}, "html"]
+        ]
+        for (const viewer of servicesUsers.concat([users.retailPlanner])) {
+            for (const [path, parameters, mode] of repairRoutes)
+                if (customer.test(render(viewer, path, parameters, mode).output))
+                    problems.push(`${viewer} sees the repair on ${path} ${mode}`)
+            for (const [service, parameters] of [
+                [M + "get#MaintenanceWorkOrder", work],
+                [M + "get#InterventionReport", work],
+                [M + "store#InterventionReport", work],
+                [
+                    "ironstone.maintenance.AccessServices.check#Record",
+                    {appRoot: "Maintenance", recordType: "workOrder", recordId: repair.workEffortId}
+                ]
+            ]) {
+                const got = as(viewer, service, parameters)
+                if (!/RECORD_UNAVAILABLE|ORGANIZATION_DENIED|PERMISSION_DENIED|NOT_ASSIGNED/.test(got.error))
+                    problems.push(`${viewer} calls ${service} on the repair: ${got.error || "accepted"}`)
+            }
+        }
+        const report = render(repair.tech, "WorkOrders/InterventionReport", work, "html")
+        const print = render(
+            repair.tech,
+            "WorkOrders/InterventionReport",
+            Object.assign({lastStandalone: "true"}, work),
+            "html-print"
+        )
+        const amount = /\$\s?\d|USD/
+        return {
+            problems,
+            report,
+            print,
+            reportNamesCustomer: customer.test(report.output),
+            reportAmount: amount.test(report.output),
+            printAmount: amount.test(print.output)
+        }
+    },
+    then({problems, report, print, reportNamesCustomer, reportAmount, printAmount}) {
+        problems.join("\n") == ""
+        report.errors == ""
+        report.output.includes("Intervention report")
+        reportNamesCustomer == true
+        reportAmount == false
+        print.errors == ""
+        printAmount == false
+    }
+})

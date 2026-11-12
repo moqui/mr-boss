@@ -370,11 +370,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | built and reviewed Nov 12, merged |
-| P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
+| P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | built and reviewed Nov 12, merged |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | built and reviewed Nov 12, merged |
-| P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
+| P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | built and reviewed Nov 12, merged |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built and reviewed Nov 12, merged |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
@@ -2423,6 +2423,219 @@ built (impl-people P3, P9, P12, P14, P18; P0).
   its qualification half): the planner assigns the compressor service, sees the technician on leave ranked last and
   a warning on the expired qualification, and under the block policy cannot assign them. **Gate 2.**
 
+**Built Nov 12 (P8).** mr-mantle f0cd2a24 and 1feb587e, mr-boss 4aa5694e and 0af6397d (branch `mnt/p8`, master merged first).
+- Checked first (the code over the plan): People P3's teams (`store#Membership`: dated `PrtMember` rows from the person, from role
+  `Assignee` or `Manager`, to the `OrgTeam` unit, F60), P9's `get#PartyCapacity` (schedules first, holidays of the policy's organization
+  and the schedule's calendar, `WetTimeOff` leave), P14's shifts in the same read, P18's `WorkEffortSkillStandard.minimumSkillLevel`
+  and `check#Qualifications` (its Built and Review notes: the staffing projection; a self-declared level and an unverified, expired or
+  revoked certificate meet nothing; a caller with no People reach refused `PERMISSION_DENIED`, so a dispatcher could not call it, P18's
+  finding), Projects' `find#StaffingCandidates` (one skill, weekly hours or a percent, its pool time keepers, skill holders and role
+  holders, `partyIdList` People's bound), P3's `schedule#MaintenanceWorkOrder` (the added people, P14 review's `remindAssignees` after
+  it, P6/P7's `replacePartyId` leaving a done step's assignee), `act#MaintenanceWorkOrders` (transitions only), P18's `policyFields`,
+  P6's `store#ProcessRequirements` (a skill with no level, F75) and `copyRequirements` (F58), P4's mail intake (a team's plus-tag is
+  its `PartySetting` `MntIntakePlusTag`), F34, F64, F75, F79 (the demo's technicians are agents; People's Services employees Kenji,
+  Sofia and Owen are employed), F113 and F160, and MaintenanceAccess (one team row read as a work row by nothing: a team's
+  `WorkEffortParty` makes no member assigned).
+- Mantle:
+  - `entity`: `MaintenanceTeamDefaults` (MaintenanceSettingsEntities.xml; dated by team: the organization, the resource scope facility,
+    the default assignee, the project, who changed it and why; `thruDate` audited), `MaintenancePolicy.qualificationBlocks` (Y: refuse;
+    empty or N: warn) and `WorkEffortSkillStandard.qualificationTypeEnumId` (the qualification that proves the skill, a step's required
+    qualification as a job class requirement's is);
+  - `MaintenanceDispatch.js` (new): `find#MaintenanceCandidates` (MaintenanceServices; a planner's or supervisor's, a root in scope:
+    the organization's employees and agents through `find#StaffingCandidates` over the open nodes' skills at their highest least level
+    and the window, People's staffing answer for each, ranked the team's members first, then those with the hours, those not missing
+    or expired, the team's default assignee, then the staffing order; each with free and needed hours, skills with level and met,
+    qualification state and text, a one-line label), `find#MaintenanceTeams` and `store#MaintenanceTeamDefaults`
+    (MaintenanceSettingsServices; teams read by a reader, planner, supervisor or settings editor; defaults the settings editor's, a
+    facility of the team's organization, a current member, a project, and the intake tag written to the team's `MntIntakePlusTag`
+    setting, unique among the teams), and the qualification check `checkQualified`/`checkStart` (the work's requirements at its planned
+    start, or now for Start; missing or expired a warning, `QUALIFICATION_BLOCKED` under the policy);
+  - `MaintenanceWork.js`: `policyFields.qualificationBlocks`; `schedule#MaintenanceWorkOrder` checks the people it adds and answers
+    `qualificationWarnings`; Start's refusal under the block and its warnings in `transition#`'s answer; `act#MaintenanceWorkOrders`
+    takes `assign` (team and technicians) and `schedule` (window) through `schedule#` per order (`VALUE_REQUIRED` with neither), and a
+    refusal's code and message are read past the error text's `Error: ` (the bulk results had `reasonCode` null before);
+  - owner contracts: `ResourceServices.find#StaffingCandidates` takes `skillList` (each with a least level: `skills`, `skillsMet`,
+    `hasSkill` when all are met by a level not self-declared, `skillRating` the mean held) and a window (`windowFrom`, `windowThru`,
+    `windowHours`: each covered day's capacity less its share of the week's allocations; every person of `partyIdList` a candidate),
+    Projects' and People's callers passing none; People's `Development.js`: `check#Qualifications` reads a skill standard's
+    qualification type, and its core is `answerFor`, exported as `staffingAnswer` for Mantle's own checked callers (never a service's
+    parameters); `check#Qualifications` answers as before;
+  - `ProcessServices.store#ProcessRequirements` takes `minimumSkillLevel` (a current skill level, `VALUE_INVALID`) and
+    `qualificationTypeEnumId`, and the instantiation copies both; the requirement list shows them.
+- BOSS:
+  - Screens: `Settings/Teams` (new, tab 3; TeamList, a team's TeamMembers read only with their dates, the link to People's
+    OrganizationStructure for a user whose groups open People, TeamDefaults; the administrator's under Settings' grant), WorkPolicy's
+    qualification check (Warn, Block), WorkOrderDetail's Overview: Assign and schedule's Technicians the choice `technicians`, reloaded
+    as the team and window change (`depends-on`, `depends-optional`), the warnings on save and on Start (MaintenanceWorkOrderParts);
+    WorkOrders' Find: the selection's Assign and Schedule (BulkWork), its result counting those done of those chosen and naming each
+    warning and refusal; ProcedureDetail's Resources: At least and Proved by for a skill; SettingsHome's Teams row;
+  - `Maintenance.js`: the choices `technicians` (over `find#MaintenanceCandidates` for a planner or supervisor, the organization's
+    people otherwise; a date-time field's empty mask is no window) and `qualificationTypes`; ContextServices' `get#Choices` and the
+    choices transition pass the team and window;
+  - demo (`BossZMaintenanceDemoData.xml`, appended): Services' "Compressor and field service" team (Kenji its lead, Sofia, Owen), its
+    defaults (the mechanical room, Kenji) and intake tag `compressors`; Sofia's field service at 3 and her electrical safety certificate
+    expired Oct 31, Owen's at 4 with a valid one and a time off all of Nov 16 to 20 (the projection of approved leave), and the AC-200
+    procedure's oil change asking field service at 3 proved by the certificate.
+- Specs: Mantle `test/work/MaintenanceDispatch` (4 features, stepwise, 1.2 s: 0.22, 0.39, 0.47, 0.13: the picker ranking the one on
+  leave below the free ones, the expired certificate named and no number, another organization and a technician refused; assigning the
+  expired technician warns, the block refuses Start and the added person, the assignees unchanged, Start with the qualified one; team
+  membership grants no permission (a member with no permission `PERMISSION_DENIED`, a member technician `NOT_ASSIGNED` on the team's
+  work), the team with three members and its lead, defaults refused to the planner, a non-member, another organization's facility and
+  team, the default assignee ranked; a bulk assignment's refused order of another organization naming itself, the others assigned, a
+  warning in one's message, schedule with no window refused). MaintenanceProcesses: a skill at level 3 stored and copied, level 9
+  refused. BOSS: MaintenanceWorkOrders gains the ranked choice (0.25 s: the field team, Kenji first, Owen third with 0 h free; a
+  technician offered the people unranked) and checks on its existing renders (WorkOrders' Assign and Schedule, Work policy's check);
+  MaintenanceSettings gains Teams' one qvt render (0.08 s); MaintenanceProcedures' Resources render checks the level; MaintenanceAccess
+  one feature (0.15 s: the administrator stores defaults, the planner `PERMISSION_DENIED`, Retail's planner `RECORD_UNAVAILABLE`, Teams
+  refused to the planner); MaintenanceSpecLib the P8 ids and Settings' menu with Teams; the client MaintenanceWorkOrdersWalk's option
+  match (a label now names hours and team). Acceptance, written and not run: `acceptance/Maintenance/MaintenanceDispatchWalk` (3
+  features: the compressor service made of the procedure for the team in the demo's week, Kenji first, Sofia expired, Owen last with 0
+  h free, the requirement's level and certificate, no number or issuer; Sofia assigned with a warning, the administrator's Block, Sofia
+  refused beside Kenji; Teams read only).
+- Tests run (release binary from the main checkout, `--nobuild`, this worktree): Mantle MaintenanceDispatch, MaintenanceProcesses,
+  MaintenanceWorkOrders, Qualifications, WorkResources 28 of 28 (12.1 s of features); Qualifications, WorkResources,
+  MaintenanceGeneration, MaintenanceManagedWork, ProcessChecks, MaintenanceScope, WorkProcess, MaintenanceDue, MaintenanceIntake,
+  MaintenanceOutages, MaintenanceCosts, MaintenanceStack 67 of 67 (23.3 s); after the tag change MaintenanceDispatch and
+  MaintenanceIntake 12 of 12. BOSS MaintenanceAccess, MaintenanceWorkOrders, MaintenanceSettings, MaintenanceProcedures 41 of 41
+  (13.4 s); PeopleSkills, PeopleAccess, PeopleEmployees, PeopleLeave, PeopleTime, Resources, ProjectsAccess, MaintenanceChecklists,
+  MaintenancePlans, MaintenanceStack, MaintenanceScheduling, MaintenanceEquipment, MaintenanceParts, AdminSettings 77 of 77 (24.7 s);
+  after the tag change MaintenanceSettings, MaintenanceAccess, MaintenanceRequests 34 of 34. Client MaintenanceWorkOrdersWalk 1 of 1
+  (8.6 s). `./moq run --debug --nobuild lint --screens`: 137 flagged sites, none in the screens P8 touched, no TUI worklist entry for
+  them; the release symlink intact. Prettier: the new files and Development.js whole; the hunks of MaintenanceWork.js,
+  MaintenanceProcedures.js, Maintenance.js, MaintenanceAccess and MaintenanceWorkOrders (not clean before) as Prettier writes them. No
+  Rust built. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's `check#Qualifications`, `find#StaffingCandidates`, `schedule#`, `act#MaintenanceWorkOrders` and
+  `store#ProcessRequirements` rows, and the new `find#MaintenanceCandidates`, `find#MaintenanceTeams` and `store#MaintenanceTeamDefaults`
+  rows; ss-inventory's P8 note (no baseline form maps to the dispatch).
+- Design edits: design-maintenance (header; §3 AssignSchedule and BulkWork; §4.1 the step's qualification; §9 Teams; §13.4 the
+  owner services), design-people (the technician qualification decision's as-built), design-projects (§15 StaffAllocation's owner
+  contract).
+- Findings, numbered by the lead F319 to F329 in order:
+  - `check#Qualifications` refuses a caller with no People reach, and a dispatcher has none: Maintenance reads the same staffing answer
+    through Development.js `staffingAnswer` after its own check, adding no People permission (P18's finding answered in code);
+  - a step's required qualification is the skill standard's own field (proved by, as a job class requirement), so a qualification
+    is always asked with a skill; a qualification with no skill needs a skill row to carry it;
+  - `find#StaffingCandidates`' pool leaves out an employee who keeps no time and lacks the skill; with a window (Maintenance's alone)
+    every person given is a candidate;
+  - free hours are capacity (schedules, shifts, holidays, approved leave) less Projects' allocations; a technician's other maintenance
+    work in the window is not counted (no booking of technician time);
+  - only the people a schedule adds are checked; a technician assigned under the warning stays when the policy turns to Block, and
+    Start then refuses the work until they are replaced;
+  - the ranking groups the team's members first (the design's "ranked by skills and free hours" within the team), so with no team and
+    more than 30 people a person on leave may fall off the 30 shown (200 read);
+  - the row selection has no count to put in a confirmation: BulkWork confirms generically and its result counts those done;
+  - the intake tag is the team's `MntIntakePlusTag` setting P4's mail intake reads, not dated; the resource scope and project of the
+    defaults are stored and read by nothing yet (routing a request to a team, a work order's default project);
+  - Teams is under Settings, the administrator's (design §2's "P read" not built: a planner sees a team's members through Assign and
+    schedule); its link to People shows only to a user whose groups open People (`isPermittedOwn` on People's root);
+  - the demo's leave is the projection (a `WetTimeOff` Owen is on), with no People LeaveRequest: Services has no leave policy in the
+    demo;
+  - the bulk results' `reasonCode` was null for every refusal (the error text starts `Error: `); fixed in `actWorkOrders` for the
+    transitions too.
+- For the lead:
+  - budget share: mr-mantle about +1.3 s (MaintenanceDispatch 1.2 s, MaintenanceProcesses' two checks); mr-boss about +0.5 s
+    (0.25, 0.08, 0.15 and the added checks); client about +0.5 s (MaintenanceWorkOrdersWalk 8.6 s); budgets not changed;
+  - merge hot spots (P12 and P17 beside): mr-mantle `MaintenanceWork.js` (`policyFields`, `scheduleWorkOrder`'s end, `refusalOf`'s
+    start, `transitionWorkOrder`'s start and answer, `actWorkOrders`), `MaintenanceServices.xml` (schedule#, transition#, act#, the new
+    find#MaintenanceCandidates after act#), `MaintenanceSettingsServices.xml` (store#MaintenancePolicy's parameter, the team services
+    before P18's lookups), `MaintenanceEntities.xml` (the policy's field), `MaintenanceSettingsEntities.xml`, `WorkEffortEntities.xml`
+    (the skill standard), `ResourceServices.xml`, `Development.js`, `MaintenanceProcedures.js` (requirements), `ProcessServices.xml`;
+    mr-boss `Maintenance.js` (choice lists and sources), `ContextServices.xml` and `MaintenanceParts.xml` (the choices' team and window),
+    `MaintenanceWorkOrderParts.xml`, Overview, Find, WorkPolicy, Settings, SettingsHome, Resources, `BossZMaintenanceDemoData.xml`
+    (appended at its end), MaintenanceSpecLib (ids, settingsMenu), MaintenanceAccess (header, appended feature), MaintenanceWorkOrders,
+    MaintenanceSettings, MaintenanceProcedures, the client walk, the inventories, design-maintenance (header, §3, §4.1, §9, §13.4),
+    design-people, design-projects;
+  - for the user's calls: none blocks; the open ones above (Teams for planners, counting a technician's other maintenance work in free
+    hours, routing by a team's resource scope) are for later phases or the user.
+
+**Review Nov 12 (P8).** mr-mantle 213bd0ad (merge of master: P17, P19) and 973567c3, mr-boss 00a40b82 (merge of master: P17, P19),
+360f7dfa and this note's commit (branch `mnt/p8`), over the worker's f0cd2a24 and 1feb587e (mr-mantle) and 4aa5694e, 0af6397d and
+5933f1f3 (mr-boss); mr-moqui unchanged, no Rust built. The phase table's P8 row is back to "—" (the lead's).
+- Merge: mr-mantle merged cleanly; mr-boss conflicted only in MaintenanceAccess (the header names P17's and P8's rules, P17's report
+  feature before P8's team feature); BossSetupMaintenanceData's P17 registrations and P19's rows came in untouched by P8.
+- Checked and found sound:
+  - People's owner contract: `check#Qualifications` answers as before (its core moved into `answerFor`, its scope check and
+    `asOfDate`/`asOfText` kept; Qualifications and PeopleSkills pass unchanged). `staffingAnswer` is a module export, not a service:
+    its only caller is MaintenanceDispatch.js, after Maintenance's own permission and scope check, and nothing passes it a service's
+    parameters. With requirements given it never falls back to a person's own job class; it reads the people given, who are the
+    organization's current employees and agents (`find#MaintenanceCandidates` bounds `find#StaffingCandidates` by them), the people
+    `schedule#` adds (refused ASSIGNEE_UNAVAILABLE unless employees or agents) or Start's current assignees. What reaches the planner
+    is the staffing projection: per requirement the state, the level asked and held ("Level 2 of 3"), "Expired <date>", "Expires
+    <date>", "Waiting for verification" or "No verified qualification"; no reference, issuer, title, document, evaluation, skill note
+    or decision reason (spec: no `referenceNumber`). A restricted kind was the gap (R1).
+  - The ranking: free hours are People's capacity (schedules, shifts, holidays, approved leave as WetTimeOff) less Projects'
+    allocations, and Maintenance keeps only `freeHours`, `needHours` and `fits` of each candidate (not `currentProjects`, rates or
+    capacity days); the label is name, hours, skill levels, the qualification state and "team". A leave shows as 0 h free, never its
+    type or reason (the projection has neither). Within a group the one on leave ranks below the free ones (spec).
+  - The qualification check: `schedule#` checks the people it adds at the planned start, inside its transaction (a block leaves the
+    assignees as they were, spec); Start rechecks the current assignees, a refusal under the block (LifecycleActionRow shows why) and
+    warnings otherwise; `act#MaintenanceWorkOrders` assigns and schedules each order through `schedule#` in its own transaction, a
+    refusal named with its code. Membership grants nothing: a member with no permission is PERMISSION_DENIED, a member technician
+    NOT_ASSIGNED on the team's work (spec); a team's WorkEffortParty row makes no member assigned.
+  - `find#StaffingCandidates`: the new parameters change nothing when absent (the windowed branch and `skillList` only when given;
+    the score adds `20 * skillsMet`, 0 for Projects' and People's callers); WorkResources, PeopleSkills, Resources and ProjectsAccess
+    pass unchanged.
+  - `MaintenanceTeamDefaults`: a store ends the rows in effect at now and creates the next (never an update of values, never a
+    delete), `thruDate` audited, who and why on each row; the facility, assignee (a current member), tag and project validated; the
+    team in the caller's scope (RECORD_UNAVAILABLE across organizations).
+- Fixes:
+  - R1 (medium, confidentiality): a procedure editor could name People's restricted kinds (an identity document or a work permit) as
+    the qualification proving a step's skill, and the dispatch's staffing answer, read without People's scope, would then show a
+    planner every employee's work permit state and its expiry. `store#ProcessRequirements` refuses a restricted kind (VALUE_INVALID),
+    the `qualificationTypes` choice leaves them out, and `staffingAnswer` drops a restricted kind's qualification part from what it is
+    asked. Mantle MaintenanceProcesses (a work permit refused) and MaintenanceDispatch (the staffing answer asks no work permit); both
+    fail without the code. Design §4.1 as built.
+  - R2 (medium, design): Teams was the administrator's alone; design §2 has "P read". `BOSS_MNT_TEAMS` gives the planner and
+    supervisor groups a non-inheritable ALWAYS on Settings' frame (past the root user group's deny), on Teams, its `choices`
+    transition and `find#MaintenanceTeams` (Insights' dataset screens' pattern), carried in both bundles (Admin's registries check
+    passes); SettingsHome, WorkPolicy, Lookups, Readiness and `storeTeamDefaults` stay the administrator's (Mantle still refuses the
+    store). Settings lands a user without MAINTENANCE_SETTINGS_EDIT on Teams (`conditional-default`), and Teams shows them the lists
+    and the defaults as text with no form. The `settings` area capability counts only a grant that opens all of Settings (an
+    inheritable one), so Home's Settings shortcut stays the administrator's. The planner's, supervisor's and Retail planner's menu
+    gains Settings (staffMenu). MaintenanceAccess' P8 feature: Teams rendered as the planner (Owen listed, no Default technician) and
+    the supervisor, refused to the technician and the reader, WorkPolicy refused to the planner, Settings' tabs for the planner Teams
+    alone. Design §2's Teams row ("P and S read") and §9 as built.
+  - R3 (low, test): no case had a qualification refusal inside a bulk assignment. MaintenanceDispatch's bulk feature, under the block
+    policy, assigns the expired technician to the pump and the compressor: the compressor is refused QUALIFICATION_BLOCKED by name
+    with the reason, the pump assigned.
+- Findings, numbered by the lead F330 to F335 in order:
+  - `staffingAnswer` is reachable by any server script that loads Development.js (as `isRestricted` is), not by a service or a
+    screen's parameters; its one caller checks first. A People-side guard (asking the caller to hold a maintenance dispatch
+    permission) would tie People to Maintenance; left as built.
+  - The staffing answer gives the planner a little more than met, missing or expired: the expiry date of an expired or expiring
+    certificate, a held level against the one asked, and "Waiting for verification". That is People P18's staffing projection for
+    every caller; recommended as is (the date says when the technician is usable again), the user's call if not.
+  - The intake tag is the team's `PartySetting`, undated and overwritten. Judged acceptable: the tag is an address the mail intake
+    reads now and nothing reads a past one, and each change writes a dated defaults row with who and why (not the old tag). If the
+    tag's history must show, the store could copy it onto the defaults row.
+  - The demo's leave stays the projection (a WetTimeOff "Out of office", the fields Leave.js `project` writes): People's demo has no
+    LeaveRequest at all and Services no leave policy, so a real request would need a policy, its allocation and ledger, an employment
+    and an approval; not easy.
+  - The acceptance MaintenanceDispatchWalk renders Teams as the administrator; with R2 its "usable when" could show it to the
+    planner. Left for the lead (not run, as the brief has it). The acceptance MaintenanceFoundationWalk reads `ids.staffMenu`, which
+    now has Settings for the planner, supervisor and Retail's planner, as they now get it.
+  - Two stores of a team's defaults in the same millisecond would meet on the key (`teamPartyId`, `fromDate`); not reachable by hand.
+- Tests (release binary, `--nobuild`, this worktree after the merge and the fixes): mr-mantle MaintenanceDispatch (4 features, 1.3 s),
+  MaintenanceProcesses, MaintenanceWorkOrders, Qualifications, WorkResources, MaintenanceIntake, MaintenanceGeneration,
+  MaintenanceManagedWork, ProcessChecks, MaintenanceScope, WorkProcess: 66 of 66 (11 specs, 24.4 s of features); mr-boss
+  MaintenanceAccess (26 features, 8.4 s; its P8 feature 0.37 s, from 0.15 s: two Teams renders and four refusals), MaintenanceWorkOrders,
+  MaintenanceSettings, MaintenanceProcedures, PeopleSkills, PeopleAccess, PeopleEmployees, PeopleLeave, Resources, ProjectsAccess,
+  MaintenanceRequests, AdminSettings: 93 of 93 (12 specs, 32.7 s). Client MaintenanceWorkOrdersWalk 1 of 1, 8.04 s and 8.65 s (two
+  runs; under the 9 s estimate). `./moq run --debug --nobuild lint --screens`: 137 flagged sites (master's count, none in Settings
+  or Teams), the release symlink intact. Prettier clean on Development.js, MaintenanceDispatch, MaintenanceProcesses and
+  MaintenanceSpecLib; the hunks of MaintenanceProcedures.js, Maintenance.js and MaintenanceAccess (files not clean before) as
+  Prettier writes them. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle about +1.4 s (MaintenanceDispatch 1.3 s, MaintenanceProcesses' checks); mr-boss about +0.7 s
+    (MaintenanceAccess' P8 feature 0.37 s, the Teams render 0.08 s, the added checks); client about +0.5 s on the walk (8.0 to 8.7
+    s, the ranked choice computed on each search); budgets not changed.
+  - Merge hot spots: as the Built note, plus BossSetupMaintenanceData.xml (BOSS_MNT_TEAMS after BOSS_MNT_SETTINGS, the two bundle
+    rows after BOSS_MNT_COSTS'), Settings.xml's subscreens, Maintenance.js `areaGrant`, MaintenanceSpecLib's `staffMenu`, and
+    design §2's Teams row, §4.1 and §9. P12 may merge first: its hot spots overlap in MaintenanceWork.js and MaintenanceAccess.
+  - The user's calls: none blocks. Open, with recommendations: the staffing answer's dates and pending state (keep); counting a
+    technician's other maintenance work in free hours (later, with technician bookings); routing by a team's resource scope and the
+    default project (later); the intake tag's history (keep undated).
+
 ### P9 — Parts and stock
 
 Design §3 PlannedParts and PartsUsed, the InventoryAvailability and MaterialIssueReceipt mount rows, "Charging a
@@ -3199,6 +3412,234 @@ Design §3 (the customer repair context, the consent recheck), §12 (the interve
   repair", its repair half): an agent approves a warranty repair and links work; the technician executes it as a
   work order with a part; the agent is told when it finishes, sends the intervention report, and closes the case
   herself. **Gate 3.**
+
+**Built Nov 12 (P12).** mr-mantle 36a2a3a2, mr-boss bb908808 and this note's commit (branch `mnt/p12`); mr-moqui
+unchanged, no Rust built.
+- Checked first (the code over the plan): F12 and impl-customer-service F51, F67, F167 (`link#WarrantyWork` makes the AssetMaintenance
+  `MntTpWarranty` with a `WepMaintenance` task in `taskWorkEffortId`, owned by the claim's organization, and checks the asset's
+  organization and customer itself; `update#WarrantyWork` writes the AssetMaintenance and task directly; the `WarrantyWorkFinished`
+  rule fires on AsMntCompleted by any path); P3's `adopt#MaintenanceRecord` (`OWNER_PATH` for a warranty repair, `LINKED_WORK` for
+  one with a task) and its policy fields: `warrantyRepairsManaged` already exists (P3, a `policyFields` row since P18), so no row was
+  added; P4's production handoff (`adoptForOwner`, its failure logged), the pattern followed; P9's issue (`issuePlan`: a customer's
+  asset and another owner's stock are `OWNER_MISMATCH`, the equipment under repair `NOT_STOCK`); P11's `get#MaintenanceCosts`
+  (MAINTENANCE_COST_VIEW and the work read); P7's content guard (closed or cancelled managed work takes no file, a completed checklist
+  only through its own pass); Customer Service's `send#CaseSummary` (CaseSummary.js: OrderConfirmations' recipients and sender
+  account, `save#Draft`, `send#EmailDraft` filed on the case), the mail draft the send reuses; §5 Q5 (policy off: as today).
+  P19's work order print and QR are not used.
+- Mantle:
+  - `MaintenanceWork.js`: `adoptWith` sends a warranty repair to `adoptRepair`: once (a second link or a retry answers the root), only
+    where the task's organization's policy manages warranty repairs (else `OWNER_PATH`, as before); the task itself becomes the root
+    (`WorkEffortMaintenance` flow, approved or in progress, kept with its assignee and the policy's default team), a `MaintenanceWorkOrder`
+    of kind corrective, type `MntTpWarranty`, source `MsrcWarranty` (new, "Customer repair"); the work's organization is the task's
+    (the claim's) and the asset is never read through Maintenance's equipment scope or changed. Start's refusal adds the claim's
+    standing for the assigned technician or supervisor; `get#MaintenanceWorkOrder` answers `workOrder.repair` and a blocker while the
+    claim stops the repair.
+  - `MaintenanceRepairs.js` (new): `standingOf`/`requireStanding` (through `WarrantyServices.check#WarrantyRepair`), `summaryOf` (the
+    claim's safe summary, whether the user's scope covers the customer's asset, the stored report and acknowledgment), and
+    `MaintenanceServices.get#InterventionReport` (html for html-print, its PDF on asking, the stored one) and `store#InterventionReport`
+    (planner, supervisor or assigned technician; completed or closed work, `WORK_NOT_DONE`; `NOT_CUSTOMER_REPAIR`; the acknowledgment
+    file first as `WectAcknowledgment`, then the report as `WectInterventionReport`, a new one each time; html where the server has
+    no PDF engine; operation key). Template `template/work/InterventionReport.print.html.fancy`: the customer, claim and decision,
+    equipment, place, technicians, start and finish, the work, outcome and the equipment's state, parts and labor (with amounts) only
+    where `get#MaintenanceCosts` admits the reader, the acknowledgment, as of and by.
+  - `MaintenanceMaterials.js`: the issue rechecks the claim (`requireStanding`) after the work's status.
+  - `ProcessChecks.js` `guardEvidence`/`protectedContent`: the report and acknowledgment only through the store's pass, admitted on
+    closed work by it; a stored report is never changed, as the completed checklist.
+  - `Warranty.js` (Customer Service's owner contract): `link#WarrantyWork` calls `adoptForOwner` where the policy manages warranty
+    repairs and answers `workEffortId` (a refused adoption is logged, the repair stays Customer Service's); `update#WarrantyWork` moves a
+    managed repair through `transition#MaintenanceWorkOrder` (in process: Start; finished: Start and Complete with the outcome and
+    disposition it now takes; cancelled: Cancel with its reason) under the caller's maintenance permission; `check#WarrantyRepair`
+    (new, no case detail: an open case and a current decision covering the claim or a chargeable repair with consent, else
+    `CASE_CLOSED`, `NOT_DECIDED`, `NOT_APPROVED`, `CONSENT_REQUIRED`); `send#InterventionReport` (new: SUPPORT_CASE_EDIT, the claim's
+    repair, `NOT_MANAGED`, `REPORT_REQUIRED`, `RECIPIENT_REQUIRED`/`RECIPIENT_UNCHECKED`, the report and acknowledgment attached, filed
+    on the case, operation key); `get#WarrantyClaim`'s repairs carry the work order, its status, finish, outcome and whether a report
+    is stored. With the policy off nothing of Customer Service's changes.
+  - Seed (`MaintenanceWorkData.xml`): `MsrcWarranty`, `WectInterventionReport`, `WectAcknowledgment`.
+- BOSS:
+  - Screens: `Maintenance/WorkOrders/InterventionReport` (new, a hidden subscreen of WorkOrders and a shared link: the report, Print as
+    html-print, PDF, Stored report, Store for the customer with the acknowledgment file); WorkOrderDetail's header (the customer and
+    claim, Customer Service's blocker; More's Intervention report, and Equipment only where the scope covers the customer's asset);
+    Overview's CustomerRepair box (the claim, opening WarrantyAssessment for a user Customer Service admits to the case, decision and
+    coverage end, consent text never the amount, equipment, owner, report, acknowledgment). Customer Service's WarrantyAssessment
+    RepairLinks (owner contract, F57): a managed repair's safe summary, Open work order for a user Maintenance admits
+    (`ironstone.maintenance.AccessServices.check#Record`), Send intervention report once stored (the customer's addresses and the
+    agent's mailboxes, as CaseSummary), no Update repair.
+  - `Maintenance.js`: the `WorkOrders/InterventionReport` link. `MaintenanceSpecLib.js`: `customerRepair(key, link)`, a spec-local
+    organization's repair (see the findings).
+  - Demo: none (see the findings).
+- Specs:
+  - Mantle `test/request/WarrantyManagedRepair` (4 features, 1.35 s): with the policy off no work order; with it on a claim's repair
+    linked twice and retried under its key has one root (the task), corrective, of the claim's organization, the customer keeping
+    the asset and the technician reading it through the work order (not in scope); Start and a parts issue `CONSENT_REQUIRED` after
+    a decision without the consent, Start again with it; completing tells the agent and leaves the case open, the agent's
+    `update#WarrantyWork` refused (`PERMISSION_DENIED`, Maintenance's); the report stored by the technician (`WORK_NOT_DONE` before),
+    no labor for a non cost reader, `REPORT_REQUIRED` before it, `RECIPIENT_UNCHECKED` for a stranger, another organization's agent
+    `RECORD_UNAVAILABLE`.
+  - BOSS `MaintenanceAccess` (+1 feature, 1.6 s): the report stored by the repair's technician, not its agent (`PERMISSION_DENIED`) or
+    Services' technician (`RECORD_UNAVAILABLE`); InterventionReport's one qvt render; the work order checked for the technician and the
+    customer's unit refused (`RECORD_UNAVAILABLE`); the send the agent's (past the scope), not the technician's or Services' agent's.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceCustomerRepairWalk` (3 features, the usable-when in a
+    spec-local organization).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle WarrantyManagedRepair, SupportWarranty, MaintenanceWorkOrders,
+  MaintenanceMaterials, MaintenanceProcesses, MaintenanceManagedWork, MaintenanceIntake, MaintenanceCosts: 40 of 40 (16.6 s feature
+  time), before and after Prettier. mr-boss MaintenanceAccess, MaintenanceWorkOrders, MaintenanceChecklists, MaintenanceParts,
+  MaintenanceCosts, CustomerServiceWarranty, CustomerServiceAccess, CustomerServiceCases, CustomerServiceReports: 75 of 75 (26.6 s;
+  MaintenanceAccess 9.9 s). An earlier run with a demo Services claim failed CustomerServiceCases (see the findings); the demo was
+  removed. Customer Service's warranty specs (SupportWarranty, CustomerServiceWarranty) pass unchanged. `moqui lint --screens` (`./moq
+  run --debug --nobuild`): 136 flagged sites, as before, none in the new or changed screens; the release binary is still the symlink.
+  Prettier (the repo's `.prettierrc.json`) on the new and changed JavaScript, limited to this phase's lines in the shared files
+  (Warranty.js, MaintenanceWork.js, MaintenanceMaterials.js, ProcessChecks.js, Maintenance.js, MaintenanceAccess.spec.js: their older
+  unformatted lines left as they were). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's `link#` and `update#WarrantyWork` rows and a P12 table (`get#`/`store#InterventionReport`,
+  `check#WarrantyRepair`, `send#InterventionReport`). ss-inventory: no mr-marble form maps to the report or the repair context.
+- Design edits: design-maintenance's header, §3 WorkOrderDetail and the record shape, §12's report row and §13.2's warranty adapter as
+  built; design-customer-service's RepairLinks row; impl-customer-service §7's report item.
+- Findings, numbered by the lead F336 to F342 in order:
+  - A warranty repair's own task is the root: no second WorkEffort is made, so "linked twice has one root" is adoption once on the task,
+    and a repair linked before the policy was on is adopted only by its id (`find#UnmanagedMaintenance` still leaves warranty repairs
+    out, and EquipmentDetail's Adopt needs the asset in scope).
+  - The consent recheck is the link's rule on the claim's current decision; "changed consent" is a new decision without it, or a changed
+    claim (its revision supersedes the decision); a closed case also stops Start and the issue. No consent is copied onto the work.
+  - `update#WarrantyWork` for a managed repair needs the caller's maintenance permission (an agent has none), so RepairLinks offers no
+    Update repair for it; the agent follows the work order's summary and is told when it finishes.
+  - A customer's unit away from the organization's facilities is in no Maintenance scope: the work order reads it through the repair,
+    but Start with offline intent or Complete "Still unavailable" would record an outage through `requireAsset` and be refused for it
+    (not changed: the organization records no outage of a customer's unit).
+  - Parts and labor are shown where the reader of the report may read costs, and the stored report is what Customer Service sends: an
+    agent sends what the technician, planner or supervisor stored (with amounts only if that user read costs). A user's call.
+  - No PDF engine (Chromium) on a server: the stored report is the html-print document, so storing never fails for it.
+  - No demo customer repair: a Services claim in the demo broke CustomerServiceCases (`find#Cases` view all for
+    customerservice.services is exactly Services' one case), and Retail has no Maintenance staff; the specs and the walk make a
+    spec-local organization's repair (`MaintenanceSpecLib.customerRepair`, the demo users' groups, its own policy).
+- For the lead:
+  - Budget share: mr-mantle +1.4 s (WarrantyManagedRepair); mr-boss server +1.6 s (MaintenanceAccess' P12 case, now 9.9 s of 15);
+    client unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js` (header comment, a require after `costs`, `adoptWith`'s first lines and the removed
+    `OWNER_PATH` line, `adoptRepair` before store#, Start's refusal line, `getWorkOrder`'s `repair` and blocker), `MaintenanceServices.xml`
+    (two descriptions, two services before `get#PurchaseRequestWork`), `MaintenanceMaterials.js` (a require, one line in `issuePlan`),
+    `ProcessChecks.js` (`protectedContent`, `guardEvidence`), `MaintenanceWorkData.xml` (after `MsrcSchedule`), Customer Service's
+    `Warranty.js` and `WarrantyServices.xml`; mr-boss `WorkOrderDetail.xml` (comment, header labels, More), `Overview.xml` (comment,
+    actions after `assignmentList`, a box before Team and technicians), `WorkOrders.xml`, `Maintenance.js` (linkPaths' end),
+    `MaintenanceSpecLib.js` (the fixture before the export), `MaintenanceAccess.spec.js` (header line, a feature before P11's),
+    Customer Service's `WarrantyAssessment.xml`, the inventories and the designs' headers.
+  - The user's calls: whether a stored report with parts and labor may be sent by an agent who reads no maintenance costs (built: the
+    storer's read decides, the agent sends what was stored); whether the demo should carry a customer repair in its own organization
+    (built: none; the specs' fixture). Nothing blocking.
+
+**Review Nov 12 (P12).** mr-mantle and mr-boss review commits and this note's commit (branch `mnt/p12`), over the worker's mr-mantle
+36a2a3a2 and mr-boss bb908808, ed9a5abb; master merged first (mr-mantle 710cea66, mr-boss 2a6f2195: P19, People P14–P18, the
+tx-commit outbox; conflicts in WorkOrderDetail's More menu and comment, design-maintenance's dated lines and MaintenanceAccess's
+features, both sides kept). The phase table's P12 row is back to "—" (the lead's). Reviewed `git diff master...mnt/p12` of both
+repos against the phase's text, §2, design §1.1, §3, §12 and §13.2, crosscut §4.6, impl-customer-service §7 and F57, and the Built
+note, reading the code each piece leans on (Customer Service's `linkWork`, `updateWork`, `currentDecisionOf`, `CaseSummary.js`,
+`OrderConfirmations.allowedRecipients`/`senderAccount`, `SupportCases.caseOf`; Maintenance's `adoptWith`/`adoptForOwner`,
+`refusalOf`, `downtimeOf`, ResourceOutages' `maintenanceAuthority`, `MaintenanceAccess.assetOrganization`/`requireWork`,
+`issuePlan`, ProcessChecks' guard, P4's production handoff). The lead's two calls (the storer's cost read decides the stored
+report's amounts and the agent sends it as stored; no demo customer repair) were taken as given; the first was replaced by the
+user's call of Nov 12 during the review (R6).
+- Checked and found sound:
+  - Customer Service's owner contract: with the policy off `link#WarrantyWork` returns before any Maintenance write
+    (`policyOf(...).warrantyRepairsManaged`) and `update#WarrantyWork` takes its old path (no MaintenanceWorkOrder row exists);
+    SupportWarranty and CustomerServiceWarranty pass unchanged in their rules (one matcher of SupportWarranty fixed, R1). With it on,
+    the task is the root and a second link, a retry under the key and a link by the repair's id answer the same root (the Mantle
+    spec). Nothing closes the case or bills: `updateManaged` only transitions the work order, the case is untouched.
+  - The consent recheck reads the claim's current decision through `check#WarrantyRepair` (allow-remote false, no case detail
+    answered), with the link's own rule (approved decisions, or a chargeable one with consent), a superseded decision and a closed
+    case; Start and the parts issue call it after the caller's own checks. A resume into progress did not: R4.
+  - The customer's asset: never written (adoption creates the MaintenanceWorkOrder and changes the task only; the asset keeps its
+    owner, in the spec); read through the work order's organization (`requireWork` on the task's owner), never through
+    `requireAsset`; `check#Record` refuses the asset itself to the technician (MaintenanceAccess); the issue refuses the equipment
+    under repair (`NOT_STOCK`) and a customer's stock (`OWNER_MISMATCH`) after the standing check; More's Equipment link needs
+    `repair.assetInScope`. A unit in the organization's custody (at its facility) is in scope by P2's rule, as design §1.1 allows.
+  - The report: stored as `WectInterventionReport` content through `asManagedOwner`; the guard admits a report or acknowledgment file
+    only inside that pass, and on closed work only for those two types (narrow); a stored report is never changed or removed.
+  - `send#InterventionReport`: SUPPORT_CASE_EDIT and `claimOf` (the case's organization in the user's), the repair one the claim
+    links, the work order's latest stored report and acknowledgment as the draft's attachments, the recipient checked against
+    the customer and its contacts, the sender account one the user may send from, `send#EmailDraft` filing it on the case; the
+    transition checks the case first (`check#Record` caseEdit). No other organization's case or work order is reachable: the
+    other organization's agent gets `RECORD_UNAVAILABLE`, Services' technician `RECORD_UNAVAILABLE` on the store.
+  - RepairLinks: a managed repair shows the work order's status, finish, outcome and whether a report is stored (no time, cost or
+    the work's people beyond the assignee the unmanaged row already showed); Open work order only when Maintenance's
+    `check#Record` admits the user; Update repair hidden for a managed repair. Overview's claim link only when Customer Service's
+    `check#Record` admits the case.
+- Fixes:
+  - R1 (low, test: an owner's spec order-dependent): SupportWarranty's "a maintenance no claim links tells no one" counted
+    WarrantyRepairFinished notices whose JSON contained the plain repair's id as a substring; with WarrantyManagedRepair run first
+    the sequences aligned and a claim's requestId (100019) equalled the plain repair's id, so the spec failed in the phase's run.
+    It now matches the notice's `assetMaintenanceId` field. No rule changed.
+  - R2 (medium, correctness: a partial adoption): `adoptRepair` checked the policy's default team (`requireTeam`) after it had
+    moved the task to the maintenance flow and created the MaintenanceWorkOrder; `link#WarrantyWork` catches the refusal and goes
+    on, so a policy naming a team that is not one would leave a managed repair whose link answered no work order. The team is now
+    checked before any write (as `makeOrder` and P4's handoff do). Not specced (it needs a second policy row with a bad team in a
+    stepwise spec); the order of the code is the fix.
+  - R3 (medium, correctness, the lead's finding judged: a cleaner, named refusal): a customer's unit no facility of the user's
+    organizations holds is in no Maintenance scope, so Start with offline intent and Complete "still unavailable" went to
+    ResourceOutages' `requireAsset` and were refused as `RECORD_UNAVAILABLE` "Asset … is not available" (Complete refused outright:
+    a repair that left the unit unusable could not be completed), and a follow-up made a plain corrective work order on the
+    customer's unit with no claim behind it. Now (`customerUnitAway`): Start with offline intent and a follow-up are refused as
+    `CUSTOMER_EQUIPMENT` with what to do, Complete stores the disposition and records no outage, and the work order's action rows
+    ask neither (needsOffline, needsFollowUp false). A unit in custody at the organization's facility is unchanged. Spec:
+    WarrantyManagedRepair's last feature and its first's action row; fails without the fix.
+  - R4 (medium, correctness: the consent recheck): Resume of a repair held in progress went back to WeInProgress without the
+    claim's standing, so a repair held, then rejected or its consent withdrawn, resumed. Resume into progress now rechecks it as
+    Start does. Spec: WarrantyManagedRepair's last feature (held, rejected on a new look: `NOT_APPROVED`; covered again: resumes);
+    fails without the fix.
+  - R5 (low, integrity): the customer's acknowledgment the stored report names could be changed or removed by a file editor; it is
+    now protected once its file is saved (`protectedContent`: `WectAcknowledgment` with a location, so the content service's own
+    save after create still runs). Not specced (the store's file upload is not driven from a Mantle spec); the report's protection
+    is (below).
+  - R6 (medium, restricted values; the user's call of Nov 12, replacing "the storer's cost read decides"): a stored report with
+    amounts was readable by every reader of the work order (its Files tab, InterventionReport's Stored report download) and sent to
+    the customer by an agent who reads no costs. The intervention report, printed, previewed, stored or sent, now never carries a
+    price, cost or total, whoever makes it: one template listing the work, the parts issued less returned with their quantities
+    (`workDone`, from the tree's AssetIssuance and AssetReceipt rows), each person's finished hours and their total, the outcome and
+    the acknowledgment; `get#MaintenanceCosts` is no longer called and `costsShown` is gone from `get#InterventionReport` and the
+    screen. Costs stay in the Costs tab and MaintenanceCostReport. Spec: WarrantyManagedRepair's report feature (a part at a cost
+    issued 3, 1 returned, and 1.5 hours: the technician's print shows 2 and 1.5; a MAINTENANCE_COST_VIEW reader's print shows the
+    same and no "Amount", amount or currency); fails without the fix. Design §3 and §12 say so.
+  - Tests added beyond the fixes: WarrantyManagedRepair "the stored report is kept; closed work takes a report only through the
+    store; the agent's send is filed on the case" (the stored report's update and delete `EVIDENCE_PROTECTED`, a report created by
+    another path `EVIDENCE_PROTECTED`, a plain file on the closed work `WORK_CLOSED`, a second store on closed work, a send to the
+    customer's address (given in other letters' case) that goes out with the report attached and is filed on the case as a RequestCommEvent:
+    the phase had no positive send outside the acceptance walk), and a closed case's Start `CASE_CLOSED`.
+  - MaintenanceAccess trimmed: the P12 case no longer renders and stores a report (the store took 0.68 s, its PDF attempt): the
+    technician's store on the work not yet complete reaches `WORK_NOT_DONE` (past the permission and scope), the agent's send
+    `REPORT_REQUIRED` (past the scope); every case kept (holder, agent, other organization; the report screen's one qvt render with
+    Store for the customer after completion). The feature 1.23 s → 0.60 s; the spec 8.7 s of 15 (was 9.3–9.9).
+- Findings, numbered by the lead F343 to F345 in order:
+  - A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent; RepairLinks' Add
+    repair form offers no id) or a planner's `adopt#MaintenanceRecord` by id; no list shows such repairs (`find#UnmanagedMaintenance`
+    leaves warranty repairs out, EquipmentDetail needs the unit in scope). Acceptable for a switch turned on once; a "Make work
+    order" on RepairLinks for an open unmanaged repair would close it if it matters.
+  - `check#WarrantyRepair` returns the first blocker of every claim linking the repair, open claims first: a repair linked by an open
+    claim and also by a closed one is blocked (`CASE_CLOSED`). Linking one repair to two claims is rare (link refuses another
+    serial's maintenance); noted, not changed.
+  - WorkOrderDetail's repair header and Equipment condition and Overview's CustomerRepair box have no regression render with a repair
+    (the one WorkOrderDetail render is Services' work); `assetInScope` and the summary are asserted in Mantle and the acceptance walk
+    renders them.
+- Tests (release binary, `--nobuild`, this worktree, after the merge): mr-mantle WarrantyManagedRepair, SupportWarranty,
+  MaintenanceWorkOrders, MaintenanceMaterials, MaintenanceProcesses, MaintenanceManagedWork, MaintenanceIntake, MaintenanceCosts,
+  MaintenanceStack, MaintenanceOutages: 52 of 52 (20.2 s feature time; WarrantyManagedRepair 6 features, 2.35 s). Before R1 the
+  phase's own run failed SupportWarranty (as described). mr-boss MaintenanceAccess, MaintenanceWorkOrders, MaintenanceChecklists,
+  MaintenanceParts, MaintenanceCosts, MaintenanceDowntime, MaintenanceStack, CustomerServiceWarranty, CustomerServiceAccess,
+  CustomerServiceCases, CustomerServiceReports: 83 of 83 (24.3 s; MaintenanceAccess 8.7 s alone). R3's and R4's assertions fail with
+  the fixes reverted. `moqui lint --screens` (`./moq run --debug --nobuild`): 137 flagged sites after the merge, none in
+  InterventionReport, WorkOrderDetail, Overview or WarrantyAssessment; the release binary is still the symlink. Prettier on the
+  changed spec and lines. After R6 and a second merge of master (Maintenance P8 and P17: mr-mantle 865a07b5, Start's refusal keeps
+  P8's qualification block then P12's claim standing; mr-boss 8933fc9d, both sides kept): mr-mantle WarrantyManagedRepair,
+  SupportWarranty, MaintenanceWorkOrders, MaintenanceDispatch 21 of 21; mr-boss MaintenanceAccess, MaintenanceWorkOrders and the
+  thirteen CustomerService specs 98 of 98 (29.2 s; MaintenanceAccess 9.2 s alone, 27 features with P8's and P17's). Not run:
+  ./moq test-apps, the acceptance suite (MaintenanceCustomerRepairWalk unchanged by the review).
+- For the lead:
+  - Budget share: mr-mantle +1.0 s over the worker's (WarrantyManagedRepair's two features); mr-boss −0.6 s (MaintenanceAccess).
+    Budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js` (`adoptRepair`'s team, `refusalOf`'s resume, `actionsFor`'s needsOffline and
+    needsFollowUp, `customerUnitAway` and `downtimeOf`'s first lines), `ProcessChecks.js` `protectedContent`,
+    `test/request/SupportWarranty.spec.js` (one matcher), `MaintenanceRepairs.js` `workDone`/`reportValues` and the report template
+    (R6); mr-boss InterventionReport.xml (R6), `MaintenanceAccess.spec.js` (the P12 feature), design-maintenance §3
+    and §12's P12 lines.
+  - No user's call open: the report's amounts are settled (R6, the user's call of Nov 12); no demo customer repair stands as
+    built.
 
 ### P13 — Preventive plans and due maintenance
 
@@ -4968,8 +5409,7 @@ Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `Provide
   build changed, Remaining-Work, and the mr-boss README's Maintenance line.
 
 **Built Nov 12 (P20).** mr-boss, mr-mantle and mr-moqui commits on branch `mnt/p20` (hashes in the lead's reply); no Rust built.
-P8 and P12 were in review: what they change (WorkOrders' AssignSchedule and BulkWork, Teams, the repair context, RepairLinks) is
-not touched, and the sweeps and walks pick their screens up by enumeration where they can (below).
+Written while P8 and P12 were in review, then extended after master was merged with both (the last part of this note).
 - Checked first (the code over the plan): how the earlier sweeps enumerate (InsightsTui walks the root's files with
   `walkChildTree` and adds its mounts by hand: the walk follows files, not `subscreens-item` locations; ServerStaticLib leaves
   `.qvue` screens and placeholders out); Maintenance's mounts (twelve: Chatter, RecordFiles, EquipmentDetail, Product360,
@@ -5036,8 +5476,9 @@ not touched, and the sweeps and walks pick their screens up by enumeration where
   `./moq test-apps`, the acceptance suite (the new and changed acceptance specs included).
 - Findings (provisional):
   - A custom group given Maintenance's root artifact group in Admin is no member of `BOSS_MAINTENANCE`, whose deny rows keep
-    Settings, Requests and Costs from the ordinary groups; MaintenanceFoundationWalk now expects the team without Settings, and
-    the run tells whether the deny reaches it (if not, the bundles need a deny of their own, or the deny rows another holder).
+    Settings, Requests and Costs from the ordinary groups; MaintenanceFoundationWalk now expects the team's Settings to show Teams
+    alone (P8's BOSS_MNT_TEAMS, which the planner bundle carries), and the run tells whether the deny reaches it (if not, the
+    bundles need a deny of their own, or the deny rows another holder).
   - ProcedureDetail/Steps.xml's comment says Waits are written through `store#ProcessDependency`; they go through
     `store#ProcessStep`'s `dependsOnIds`, and `store#ProcessDependency` has no screen caller.
   - Maintenance's record panels serve no AssetMaintenance host; EquipmentDetail/Files lists older AssetMaintenanceContent read
@@ -5049,10 +5490,26 @@ not touched, and the sweeps and walks pick their screens up by enumeration where
   - Merge hot spots: `test/Maintenance/MaintenanceSpecLib.js` (the helpers at its end, before the export line; P8 and P12 may add
     ids above), `plan/impl-maintenance.md` (the phase table's P20 row and this note), `plan/design-maintenance.md` (status line and
     §2 rows beside P8's and P12's), the inventories' Maintenance rows, README's Maintenance paragraph and Remaining-Work's row.
-  - When P8 and P12 land: their screens are swept with no change (a record screen needs a `sweepRecords` entry); the access walk
-    gets Teams and the repair context where they show records; the menus in MaintenanceFoundationWalk get Teams; README, the
-    Remaining-Work row, design status line and the inventories' "in review" cells are updated.
   - The user's call: none.
+- After P8 and P12 (master merged into `mnt/p20` in all three repos): the conflicts were MaintenanceSpecLib.js (P12's
+  `customerRepair` and P20's sweep helpers both kept, one export), design-maintenance (P8's and P12's header lines and P20's
+  kept; §2 takes master's rows with P20's Impl cells, Teams and the repair context now built P8 and P12) and usl-inventory
+  (master's P8 cells). Then:
+  - MaintenanceFoundationWalk: the supervisor's menu gains Settings (the planner's and Retail planner's through `ids.staffMenu`),
+    and the custom team's Settings shows Teams alone.
+  - The sweeps: `sweepRecords` has Settings/Teams (Services and its field team); WorkOrders/InterventionReport opens on a
+    `customerRepair("SWEEP")` each sweep makes in its setup (no demo record is a customer repair), and MaintenanceTui checks both
+    are swept. Settings/Teams is a file under the root, so both sweeps found it already.
+  - MaintenanceAccessWalk gains two features: Teams is read by a planner, a supervisor and the administrator only (every group's
+    render), no other group stores a team's defaults, and Retail's planner gets no Services team from the service or the team
+    choice; and a customer repair (`customerRepair("P20WALK")`) shows to no Services or Retail Maintenance user on WorkOrderDetail,
+    Overview, the intervention report (html and print), the customer's unit or the list, nor through four services, while its
+    technician reads the report, which carries no amount (the user's call).
+  - The "in review" text: README's Maintenance paragraph (with the intervention report's no amounts), Remaining-Work's row
+    (P0–P20 built), design-maintenance's status line and §2, and the inventories' header bullets and cells. mr-mantle
+    `docs/Upgrading.md` names the rows P8 and P12 added to `MaintenanceWorkData` and `BossSetupMaintenanceData`.
+  - Tests run after the merge: mr-boss MaintenanceAccess and MaintenanceStack, 31 of 31 features (2 specs, 31.2 s). Prettier on
+    the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
 
 ## 4. Decisions
 
@@ -5117,6 +5574,8 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P11: Projects' money readers see a repair's cost total per work order; no estimate before anyone is assigned. P19: the due-PM calendar is for MAINTENANCE_VIEW holders | The lead's acceptance of the workers' recommendations |
 | Nov 12, 2026 | P19: an internal caller brings up only the work they reported or are assigned; a customer or vendor caller their organization's open work | The user's call (P19) |
 | Nov 12, 2026 | P17: a third dataset `boss-maintenance-outages` (a resource down past four hours); the generation-failure alert reads the server log (`otel_logs`), owned by a holder of the log dataset; Maintenance supervisors and administrators read the datasets through Insights | The lead's acceptance of the worker's recommendations |
+| Nov 12, 2026 | P8: Teams is read by planners and supervisors (as the design says) and changed by the administrator; the dispatch answer shows a qualification's state, expiry and level, never its documents, and leaves out People's restricted kinds; the intake tag stays undated; free hours counting other maintenance work and routing by a team's resource scope are later | The lead's acceptance of the reviewer's recommendations |
+| Nov 12, 2026 | P12: the stored and sent intervention report never carries amounts (work, parts and quantities, hours, outcome, acknowledgment); costs stay in the Costs tab and the cost report. Replaces the earlier row's "the storer's cost access decides" | The user's call (P12 review) |
 | Nov 12, 2026 | P12: the storer's cost access decides whether the stored intervention report shows amounts, and the agent sends it as stored; no demo customer repair (a spec fixture) | The lead's acceptance of the worker's recommendations |
 
 ## 5. Open questions
@@ -5461,6 +5920,33 @@ paths under `mr-boss/`.
 | F316 | P17 review: A completion reopened across periods and completed again counts in each period whose end saw it complete (rework), by R1's rule | P17's Review note |
 | F317 | P17 review: The Overview's Downtime card shows to every reader | P17's Review note |
 | F318 | P17 review: Upgrade (for P20's release notes) | P17's Review note |
+| F319 | P8: `check#Qualifications` refuses a caller with no People reach, and a dispatcher has none | P8's Built note |
+| F320 | P8: a step's required qualification is the skill standard's own field (proved by, as a job class requirement), so a qualification is always asked with a skill | P8's Built note |
+| F321 | P8: `find#StaffingCandidates`' pool leaves out an employee who keeps no time and lacks the skill | P8's Built note |
+| F322 | P8: free hours are capacity (schedules, shifts, holidays, approved leave) less Projects' allocations | P8's Built note |
+| F323 | P8: only the people a schedule adds are checked | P8's Built note |
+| F324 | P8: the ranking groups the team's members first (the design's "ranked by skills and free hours" within the team), so with no team and more than 30 people a person on leave may fall off the 30 shown (200 read) | P8's Built note |
+| F325 | P8: the row selection has no count to put in a confirmation | P8's Built note |
+| F326 | P8: the intake tag is the team's `MntIntakePlusTag` setting P4's mail intake reads, not dated | P8's Built note |
+| F327 | P8: Teams is under Settings, the administrator's (design §2's "P read" not built | P8's Built note |
+| F328 | P8: the demo's leave is the projection (a `WetTimeOff` Owen is on), with no People LeaveRequest | P8's Built note |
+| F329 | P8: the bulk results' `reasonCode` was null for every refusal (the error text starts `Error | P8's Built note |
+| F330 | P8 review: `staffingAnswer` is reachable by any server script that loads Development.js (as `isRestricted` is), not by a service or a screen's parameters | P8's Review note |
+| F331 | P8 review: The staffing answer gives the planner a little more than met, missing or expired | P8's Review note |
+| F332 | P8 review: The intake tag is the team's `PartySetting`, undated and overwritten. | P8's Review note |
+| F333 | P8 review: The demo's leave stays the projection (a WetTimeOff "Out of office", the fields Leave.js `project` writes) | P8's Review note |
+| F334 | P8 review: The acceptance MaintenanceDispatchWalk renders Teams as the administrator | P8's Review note |
+| F335 | P8 review: Two stores of a team's defaults in the same millisecond would meet on the key (`teamPartyId`, `fromDate`) | P8's Review note |
+| F336 | P12: A warranty repair's own task is the root | P12's Built note |
+| F337 | P12: The consent recheck is the link's rule on the claim's current decision | P12's Built note |
+| F338 | P12: `update#WarrantyWork` for a managed repair needs the caller's maintenance permission (an agent has none), so RepairLinks offers no Update repair for it | P12's Built note |
+| F339 | P12: A customer's unit away from the organization's facilities is in no Maintenance scope | P12's Built note |
+| F340 | P12: Parts and labor are shown where the reader of the report may read costs, and the stored report is what Customer Service sends | P12's Built note |
+| F341 | P12: No PDF engine (Chromium) on a server | P12's Built note |
+| F342 | P12: No demo customer repair | P12's Built note |
+| F343 | P12 review: A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent | P12's Review note |
+| F344 | P12 review: `check#WarrantyRepair` returns the first blocker of every claim linking the repair, open claims first | P12's Review note |
+| F345 | P12 review: WorkOrderDetail's repair header and Equipment condition and Overview's CustomerRepair box have no regression render with a repair (the one WorkOrderDetail render is Services' work) | P12's Review note |
 
 
 ## 7. Later

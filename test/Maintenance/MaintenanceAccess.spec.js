@@ -23,8 +23,11 @@
 // import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
 // plan refused; the compliance a reader's, not a technician's or Retail's), P17's work status and report catalogue (a reader's,
-// not a technician's; Retail's planner refused Services' organization),
-// and Maintenance's rows in Admin's capability and
+// not a technician's; Retail's planner refused Services' organization), P8's team defaults (the administrator's; the planner
+// refused, Retail's planner reads no Services team; Teams read by the planner and supervisor alone of Settings, review),
+// P12's customer repair (its intervention report stored by its technician, not its agent or another organization's technician; the
+// customer's unit read through the repair, not by Maintenance's equipment scope; the report sent by the claim's agent, not the
+// technician or another organization's agent), and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
 // asset's organization, assignment) are Mantle's MaintenanceScope. The access and isolation walk is the acceptance
@@ -1318,6 +1321,70 @@ feature(
     }
 )
 
+// P12: a customer repair (a spec-local organization's, lib.customerRepair) has its report stored by its assigned technician
+// (store#InterventionReport: past the permission and scope to WORK_NOT_DONE on the work not yet complete, so nothing is rendered
+// or stored here; WarrantyManagedRepair stores it), not its organization's Customer Service agent (no maintenance permission) or
+// Services' technician; the customer's unit is read through the repair (the work order and its report screen open to the
+// technician, the asset's own record does not); Customer Service's send#InterventionReport is its organization's agent's (past
+// the scope to REPORT_REQUIRED), not the technician's or Services' agent, with the same parameters
+feature(
+    "a customer repair's report is stored by its technician and sent by the claim's agent; the customer's unit is read through it (P12)",
+    {
+        when() {
+            const repair = lib.customerRepair("ACCESS")
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const store = user =>
+                as(user, "mantle.work.MaintenanceServices.store#InterventionReport", {workEffortId: repair.workEffortId})
+            const send = user =>
+                as(user, "mantle.request.WarrantyServices.send#InterventionReport", {
+                    operationKey: "access-p12-" + user,
+                    requestId: repair.requestId,
+                    assetMaintenanceId: repair.assetMaintenanceId,
+                    toAddress: "nobody@example.com"
+                })
+            const check = (recordType, recordId) =>
+                asUser(repair.tech, () => refusal(access + "check#Record", {appRoot: "Maintenance", recordType, recordId}))
+            const holder = store(repair.tech)
+            const agentStores = store(repair.agent)
+            const otherOrganization = store(users.tech)
+            const agent = send(repair.agent)
+            // completed, the report screen offers the store to its technician (its one qvt render)
+            system(() =>
+                call("update#mantle.work.effort.WorkEffort", {workEffortId: repair.workEffortId, statusId: "WeComplete"})
+            )
+            return {
+                holder,
+                agentStores,
+                otherOrganization,
+                agent,
+                report: asUser(repair.tech, () => page("WorkOrders/InterventionReport", {workEffortId: repair.workEffortId})),
+                workOrder: check("workOrder", repair.workEffortId),
+                asset: check("asset", repair.assetId),
+                techSends: send(repair.tech),
+                otherAgent: send("customerservice.services")
+            }
+        },
+        then(r) {
+            r.holder.includes("WORK_NOT_DONE")
+            r.agentStores.includes("PERMISSION_DENIED")
+            r.otherOrganization.includes("RECORD_UNAVAILABLE")
+            r.report.errors.length == 0
+            r.report.output.includes("Intervention report")
+            r.report.output.includes("Repair spec customer ACCESS")
+            r.report.output.includes("Store for the customer")
+            r.workOrder == ""
+            r.asset.includes("RECORD_UNAVAILABLE")
+            r.agent.includes("REPORT_REQUIRED")
+            r.techSends.includes("PERMISSION_DENIED")
+            r.otherAgent.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
+
 feature(
     "Report a problem from a chat message reads it under Comms' room check with the user's own filters: a room of Retail's record is refused, a public room's message filed",
     {
@@ -1454,6 +1521,52 @@ feature(
             out.retail.includes("ORGANIZATION_DENIED")
             out.readerCatalogue == ""
             out.techCatalogue.includes("PERMISSION_DENIED")
+        }
+    }
+)
+
+// P8: a team's dispatch defaults are the settings editor's (Mantle's store#MaintenanceTeamDefaults), Retail's planner reads no Services
+// team; P8 review: Teams is read by a planner and a supervisor (BOSS_MNT_TEAMS), the only Settings tab they open, without the form
+feature(
+    "a team's defaults are the administrator's; Teams is read by a planner and supervisor, its form and the other tabs not theirs",
+    {
+        when() {
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal("mantle.work.MaintenanceSettingsServices." + service, parameters)
+                })
+            const team = {teamPartyId: ids.fieldTeamId}
+            const teams = user =>
+                asUser(user, () =>
+                    page("Settings/Teams", {organizationPartyId: ids.organizationId, teamPartyId: ids.fieldTeamId}, "html")
+                )
+            const planner = teams(users.planner)
+            return {
+                holder: as(users.admin, "store#MaintenanceTeamDefaults", Object.assign({intakeTag: "compressors"}, team)),
+                planner: as(users.planner, "store#MaintenanceTeamDefaults", Object.assign({intakeTag: "compressors"}, team)),
+                retail: as(users.retailPlanner, "find#MaintenanceTeams", team),
+                plannerTab: planner.status + " " + planner.errors.join(" | "),
+                plannerReads: planner.output.includes("Owen Castillo"),
+                plannerForm: planner.output.includes("Default technician"),
+                supervisorTab: screenRefusal(users.supervisor, "Settings/Teams"),
+                techTab: screenRefusal(users.tech, "Settings/Teams"),
+                readerTab: screenRefusal(users.reader, "Settings/Teams"),
+                plannerPolicy: screenRefusal(users.planner, "Settings/WorkPolicy"),
+                // Settings lands a planner on Teams, its only tab for them
+                plannerTabs: shell(users.planner, true, "Settings", "Settings").names
+            }
+        },
+        then(r) {
+            r.holder == ""
+            r.planner.includes("PERMISSION_DENIED")
+            r.retail.includes("RECORD_UNAVAILABLE")
+            r.plannerTab == "200 "
+            r.plannerReads == true && r.plannerForm == false
+            r.supervisorTab == ""
+            r.techTab != "" && r.readerTab != ""
+            r.plannerPolicy != ""
+            JSON.stringify(r.plannerTabs) == JSON.stringify(["Teams"])
         }
     }
 )

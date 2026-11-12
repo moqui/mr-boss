@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     (pmLeadDays, a policy field), and the preventive generation job's state (paused or its schedule, its last run: mantle.work.MaintenancePlanServices.get#MaintenanceDueJob),
     whose schedule, pause and batch size are changed in Admin's Jobs. P11: the threshold's cost half (approvalThresholdCost and its
     currency, policy fields): planned work estimated above the amount, or that cannot be priced, waits for a supervisor; empty, the
-    cost is not compared. The qualification check joins with its phase (P8). P18: a change starts from a date chosen (now or later; the one in effect ends then, a
+    cost is not compared. P8: the qualification check of assignment and Start (qualificationBlocks, a policy field): a technician
+    missing or expired on the work's required qualifications is named as a warning (the default) or refused. P18: a change starts from a date chosen (now or later; the one in effect ends then, a
     later plan is withdrawn), and the policies planned and the last ended are listed (PolicyDates); a field a form does not post
     is kept from the policy in effect, so each phase's section stores its own fields. P18 review R4: a start before a planned policy is
     refused (PLAN_PENDING) unless Withdraw, which the form offers while a policy is planned. -->
@@ -39,7 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
                         fromDate:(fromDate || null), withdrawPlanned:(withdrawPlanned == 'Y'), closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
                         defaultTeamPartyId:defaultTeamPartyId, productionRequestsManaged:productionRequestsManaged,
                         warrantyRepairsManaged:warrantyRepairsManaged, procedureSelfApproval:procedureSelfApproval,
-                        voiceNoteTranscription:voiceNoteTranscription, pmLeadDays:pmLeadDays, approvalThresholdCost:approvalThresholdCost,
+                        voiceNoteTranscription:voiceNoteTranscription, qualificationBlocks:qualificationBlocks, pmLeadDays:pmLeadDays, approvalThresholdCost:approvalThresholdCost,
                         approvalThresholdCurrencyUomId:approvalThresholdCurrencyUomId, comments:comments}"/>
             <if condition="!ec.message.hasError()"><message type="success">Work policy saved</message></if>
         </actions>
@@ -76,6 +77,7 @@ along with this software (see the LICENSE.md file). If not, see
                 productionRequestsManaged: policy.productionRequestsManaged ? 'Y' : 'N',
                 warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', procedureSelfApproval: policy.procedureSelfApproval ? 'Y' : 'N',
                 voiceNoteTranscription: policy.voiceNoteTranscription ? 'Y' : 'N',
+                qualificationBlocks: policy.qualificationBlocks ? 'Y' : 'N',
                 pmLeadDays: policy.pmLeadDays,
                 approvalThresholdCost: policy.approvalThresholdCost == null ? '' : String(policy.approvalThresholdCost),
                 approvalThresholdCurrencyUomId: policy.approvalThresholdCurrencyUomId || '',
@@ -175,6 +177,13 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="Transcribe technicians' voice notes"
                                         tooltip="Yes sends a voice note on a checklist step to the speech model and keeps its text on the check; the recording is kept either way">
                                     <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                </default-field>
+                            </field>
+                            <!-- P8 (review Y8): the qualification check of assignment and Start -->
+                            <field name="qualificationBlocks">
+                                <default-field title="A technician missing a required qualification"
+                                        tooltip="Assigning or starting work with a technician whose required qualification is missing or expired: warn, or refuse it">
+                                    <radio><option key="N" text="Warn"/><option key="Y" text="Block"/></radio>
                                 </default-field>
                             </field>
                             <field name="pmLeadDays">

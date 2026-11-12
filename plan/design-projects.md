@@ -1972,6 +1972,11 @@ unless they ask for approval.
 | `AllocationDecision` | list, bulk | Approve or reject | reason for a rejection | | `mantle.work.ResourceServices.approve#Allocation`, `reject#Allocation` (new) | OpenProject allocation states |
 
 - **Needs:** Allocations; Capacity.
+- **Owner contract (impl-maintenance P8, Nov 12, 2026):** `find#StaffingCandidates` also takes `skillList` (several skills, each with
+  a least level: each candidate's `skills`, `skillsMet`, and `hasSkill` when every one is met by a level not self-declared) and a
+  window (`windowFrom`, `windowThru`, `windowHours`: the free hours of the days it covers, each day's capacity less its share of the
+  week's allocations; with a window every person of `partyIdList` is a candidate), Maintenance's technician assignment. Projects'
+  and People's callers pass none of them, and their answers are unchanged.
 - **Owner contract (impl-people P18, Nov 12, 2026):** `find#StaffingCandidates` also takes `partyIdList`, the people to bound
   the search to (People's skills matrix FindAvailable passes the people of the user's People scope), and each candidate carries
   `skillSelfDeclared` (the skill's level is the person's own claim, People's `SksSelfDeclared`), which People labels and no People

@@ -18,7 +18,13 @@ along with this software (see the LICENSE.md file). If not, see
     the revision read: name, description, priority, type, severity, failure mode, P9's cost centre and project; the estimate after
     approval a supervisor's), and
     its team and technicians with Assign and schedule (schedule#MaintenanceWorkOrder: the team, the technicians, the planned
-    window), the one writer of its assignments; and its follow-up tasks (P7), each opening WorkItemDetail's Maintenance context. -->
+    window), the one writer of its assignments; and its follow-up tasks (P7), each opening WorkItemDetail's Maintenance context. P12: a
+    customer repair's box: its claim (opening WarrantyAssessment for a user Customer Service admits to the case), customer, decision,
+    coverage end and whether the customer agreed to a charge (never its amount), whether the claim allows the repair now, and its
+    custody (the customer's equipment, which stays theirs), with the intervention report stored or not.
+    P8 (design §3 AssignSchedule, review Y8): the technicians are offered ranked for the window and team chosen (the choice
+    technicians over Mantle's find#MaintenanceCandidates: free hours with People's schedules and leave, skill, qualification state,
+    team), and saving names each one whose required qualification is missing or expired (refused under the work policy's block). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Overview" default-menu-index="10">
     <parameter name="workEffortId"/>
@@ -48,6 +54,23 @@ along with this software (see the LICENSE.md file). If not, see
                 ['Cost centre', workOrder.costCenterName], ['Project', workOrder.projectName]
             ].filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])})) : []"/>
         <set field="assignmentList" from="workOrderDetail?.assignmentList || []"/>
+        <!-- P12: the customer repair, and its claim's link for a user Customer Service admits to the case -->
+        <set field="repair" from="workOrder?.repair || null"/>
+        <set field="claimLink" from="null"/>
+        <if condition="repair">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="caseChecked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:'CustomerService', recordType:'case', recordId:repair.requestId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="claimLink" from="caseChecked?.recordId ? '/qapps/CustomerService/Returns/WarrantyAssessment?requestId='
+                    + encodeURIComponent(repair.requestId) : null"/>
+            <set field="repairRows" from="[['Customer', repair.customerName], ['Claim', repair.requestId + ' · ' + repair.requestName + ' (' + repair.claimStatusText + ')'],
+                    ['Decision', repair.decisionText + (repair.coverageEndText ? ', covered until ' + repair.coverageEndText : '')],
+                    ['Charge', repair.consentText], ['Equipment', [repair.productText, repair.assetText].filter(Boolean).join(' · ')],
+                    ['Owner', repair.assetOwnerName ? repair.assetOwnerName + ' (the customer keeps it)' : ''],
+                    ['Intervention report', repair.reportStored ? repair.reportText : 'Not stored yet'],
+                    ['Acknowledgment', repair.acknowledgmentText]
+                ].filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])}))"/>
+        </if>
         <!-- P7: the follow-up tasks -->
         <set field="followUpTaskList" from="null"/>
         <if condition="workOrder">
@@ -152,6 +175,32 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body>
                 </container-box>
+                <!-- P12: the customer repair (Customer Service's claim, read only here) -->
+                <section name="CustomerRepair" condition="repair">
+                    <widgets>
+                        <container-box type="${repair.allowed ? 'default' : 'warning'}">
+                            <box-header title="Customer repair"/>
+                            <box-toolbar>
+                                <link url="${claimLink}" url-type="plain" text="Open the claim" icon="sym_o_support_agent" link-type="anchor"
+                                        condition="claimLink"/>
+                                <link url="${sharedLinks['WorkOrders/InterventionReport']}" text="Intervention report" icon="sym_o_description"
+                                        link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${repair.blockerText}: Start and parts wait until Customer Service records it." type="p"
+                                        style="text-negative" condition="!repair.allowed"/>
+                                <form-list name="RepairFacts" list="repairRows" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Fact"><display/></default-field></field>
+                                    <field name="value"><default-field title="Value"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="value"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container-box>
                     <box-header title="Team and technicians"/>
                     <box-toolbar>
@@ -169,10 +218,16 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="assigneePartyIds">
-                                    <default-field title="Technicians">
+                                    <default-field title="Technicians"
+                                            tooltip="Ranked for the window and team: free hours (schedules, holidays, leave), the work's skills and qualifications, the team">
                                         <drop-down allow-multiple="true" allow-empty="true">
-                                            <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                    parameter-map="{choice:'workPeople', organizationPartyId:workOrder.organizationPartyId}"/>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                    parameter-map="{choice:'technicians', choiceWorkEffortId:workEffortId,
+                                                        organizationPartyId:workOrder.organizationPartyId}">
+                                                <depends-on field="teamPartyId" parameter="choiceTeamPartyId"/>
+                                                <depends-on field="estimatedStartDate" parameter="choiceWindowFrom"/>
+                                                <depends-on field="estimatedCompletionDate" parameter="choiceWindowThru"/>
+                                            </dynamic-options>
                                         </drop-down>
                                     </default-field>
                                 </field>
