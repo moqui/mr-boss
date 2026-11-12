@@ -370,7 +370,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | built and reviewed Nov 12, merged |
-| P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
+| P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | built and reviewed Nov 12, merged |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | built and reviewed Nov 12, merged |
@@ -2510,7 +2510,7 @@ built (impl-people P3, P9, P12, P14, P18; P0).
 - Design edits: design-maintenance (header; §3 AssignSchedule and BulkWork; §4.1 the step's qualification; §9 Teams; §13.4 the
   owner services), design-people (the technician qualification decision's as-built), design-projects (§15 StaffAllocation's owner
   contract).
-- Findings (provisional):
+- Findings, numbered by the lead F319 to F329 in order:
   - `check#Qualifications` refuses a caller with no People reach, and a dispatcher has none: Maintenance reads the same staffing answer
     through Development.js `staffingAnswer` after its own check, adding no People permission (P18's finding answered in code);
   - a step's required qualification is the skill standard's own field (proved by, as a job class requirement), so a qualification
@@ -2598,7 +2598,7 @@ built (impl-people P3, P9, P12, P14, P18; P0).
   - R3 (low, test): no case had a qualification refusal inside a bulk assignment. MaintenanceDispatch's bulk feature, under the block
     policy, assigns the expired technician to the pump and the compressor: the compressor is refused QUALIFICATION_BLOCKED by name
     with the reason, the pump assigned.
-- Findings:
+- Findings, numbered by the lead F330 to F335 in order:
   - `staffingAnswer` is reachable by any server script that loads Development.js (as `isRestricted` is), not by a service or a
     screen's parameters; its one caller checks first. A People-side guard (asking the caller to hold a maintenance dispatch
     permission) would tie People to Maintenance; left as built.
@@ -5243,6 +5243,8 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P11: Projects' money readers see a repair's cost total per work order; no estimate before anyone is assigned. P19: the due-PM calendar is for MAINTENANCE_VIEW holders | The lead's acceptance of the workers' recommendations |
 | Nov 12, 2026 | P19: an internal caller brings up only the work they reported or are assigned; a customer or vendor caller their organization's open work | The user's call (P19) |
 | Nov 12, 2026 | P17: a third dataset `boss-maintenance-outages` (a resource down past four hours); the generation-failure alert reads the server log (`otel_logs`), owned by a holder of the log dataset; Maintenance supervisors and administrators read the datasets through Insights | The lead's acceptance of the worker's recommendations |
+| Nov 12, 2026 | P8: Teams is read by planners and supervisors (as the design says) and changed by the administrator; the dispatch answer shows a qualification's state, expiry and level, never its documents, and leaves out People's restricted kinds; the intake tag stays undated; free hours counting other maintenance work and routing by a team's resource scope are later | The lead's acceptance of the reviewer's recommendations |
+| Nov 12, 2026 | P12: the stored and sent intervention report never carries amounts (work, parts and quantities, hours, outcome, acknowledgment); costs stay in the Costs tab and the cost report. Replaces the earlier row's "the storer's cost access decides" | The user's call (P12 review) |
 | Nov 12, 2026 | P12: the storer's cost access decides whether the stored intervention report shows amounts, and the agent sends it as stored; no demo customer repair (a spec fixture) | The lead's acceptance of the worker's recommendations |
 
 ## 5. Open questions
@@ -5587,6 +5589,23 @@ paths under `mr-boss/`.
 | F316 | P17 review: A completion reopened across periods and completed again counts in each period whose end saw it complete (rework), by R1's rule | P17's Review note |
 | F317 | P17 review: The Overview's Downtime card shows to every reader | P17's Review note |
 | F318 | P17 review: Upgrade (for P20's release notes) | P17's Review note |
+| F319 | P8: `check#Qualifications` refuses a caller with no People reach, and a dispatcher has none | P8's Built note |
+| F320 | P8: a step's required qualification is the skill standard's own field (proved by, as a job class requirement), so a qualification is always asked with a skill | P8's Built note |
+| F321 | P8: `find#StaffingCandidates`' pool leaves out an employee who keeps no time and lacks the skill | P8's Built note |
+| F322 | P8: free hours are capacity (schedules, shifts, holidays, approved leave) less Projects' allocations | P8's Built note |
+| F323 | P8: only the people a schedule adds are checked | P8's Built note |
+| F324 | P8: the ranking groups the team's members first (the design's "ranked by skills and free hours" within the team), so with no team and more than 30 people a person on leave may fall off the 30 shown (200 read) | P8's Built note |
+| F325 | P8: the row selection has no count to put in a confirmation | P8's Built note |
+| F326 | P8: the intake tag is the team's `MntIntakePlusTag` setting P4's mail intake reads, not dated | P8's Built note |
+| F327 | P8: Teams is under Settings, the administrator's (design §2's "P read" not built | P8's Built note |
+| F328 | P8: the demo's leave is the projection (a `WetTimeOff` Owen is on), with no People LeaveRequest | P8's Built note |
+| F329 | P8: the bulk results' `reasonCode` was null for every refusal (the error text starts `Error | P8's Built note |
+| F330 | P8 review: `staffingAnswer` is reachable by any server script that loads Development.js (as `isRestricted` is), not by a service or a screen's parameters | P8's Review note |
+| F331 | P8 review: The staffing answer gives the planner a little more than met, missing or expired | P8's Review note |
+| F332 | P8 review: The intake tag is the team's `PartySetting`, undated and overwritten. | P8's Review note |
+| F333 | P8 review: The demo's leave stays the projection (a WetTimeOff "Out of office", the fields Leave.js `project` writes) | P8's Review note |
+| F334 | P8 review: The acceptance MaintenanceDispatchWalk renders Teams as the administrator | P8's Review note |
+| F335 | P8 review: Two stores of a team's defaults in the same millisecond would meet on the key (`teamPartyId`, `fromDate`) | P8's Review note |
 
 
 ## 7. Later
