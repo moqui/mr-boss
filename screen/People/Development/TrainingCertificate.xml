@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Training certificate (design-people §15 Qualification/training completion; impl-people P19): a completed place's
+    completion certificate as it was issued, from mantle.humanres.DevelopmentServices.get#TrainingCertificate (stored when the
+    passing assessment was recorded, never rendered again), for the person, a development reader and an HR reader of the employer.
+    Printed from TrainingDetail as html-print (/apps/People/Development/TrainingCertificate?personTrainingId=...&renderMode=html-print);
+    its PDF, also stored when issued, is TrainingDetail's certificatePdf. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Training certificate" default-menu-include="false">
+    <parameter name="personTrainingId" required="true"/>
+    <actions>
+        <service-call name="mantle.humanres.DevelopmentServices.get#TrainingCertificate" out-map="certificate" transaction="force-new"
+                ignore-error="true" in-map="{personTrainingId:personTrainingId}"/>
+        <set field="certificateError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="printBody" from="certificate?.printHtml ? String(certificate.printHtml).replace(/^[\s\S]*&lt;body[^&gt;]*&gt;/i, '')
+                .replace(/&lt;\/body&gt;[\s\S]*$/i, '') : ''"/>
+    </actions>
+    <widgets>
+        <section name="CertificateMissing" condition="!printBody">
+            <widgets>
+                <label text="${certificateError.includes('No certificate') ? 'No certificate was issued for this training.' : 'This certificate is not available.'}" type="p"/>
+            </widgets>
+        </section>
+        <section name="Certificate" condition="printBody">
+            <widgets>
+                <render-mode>
+                    <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Training certificate " + personTrainingId + ": print it from the browser"})}]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

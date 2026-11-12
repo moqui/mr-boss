@@ -5514,4 +5514,29 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
             artifactName="component://mr-boss/screen/People/Employees/EmploymentLetter.xml" artifactTypeEnumId="AT_XML_SCREEN"
             inheritAuthz="Y"/>
+    <!-- impl-people P19 (design-people §10 Training and TrainingDetail): Training, a session's detail and a completed place's
+        certificate are under Skills & training (People/Development), so they open as the area does: every People user through the
+        root, a self-service employee by BOSS_PPL_DEVELOPMENT (the sessions of their employers, their own places, results and
+        certificates, and the sessions they train); what each reads and does is Mantle's DevelopmentServices' check. A place to
+        approve (Mantle's PeopleTrainingApproval topic) opens the session, where it is decided, as from People's Approvals or the
+        notification tray. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingApproval"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <!-- impl-people P19 review: the person's decision notice (Mantle's PeopleTrainingDecision) opens their place on the session.
+        Assessment forms (People/Development/AssessmentForms, the survey builder with People's Development mount) are the learning
+        administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS, as the skills matrix), denied to the root user group and to
+        self-service, the People administrator and ADMIN through the root's ALWAYS; Mantle's FormDefinitionServices check the
+        training assessment purpose's edit permission (PEOPLE_DEVELOP_EDIT or PEOPLE_CONFIGURE) and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingDecision"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_ASSESSMENT_FORMS" description="People training assessment forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/AssessmentForms.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

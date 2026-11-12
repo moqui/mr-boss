@@ -70,6 +70,10 @@ Employee advances tab or People's InvoiceDetail.
 and reviews: Marble's HumanRes has no skill, qualification or resume form, and qualifications, skill evaluations and resume lines are
 new records (`PartyQualification`, `PartySkillEvaluation`, `PartyResume`, refined from Mantle's commented sketches, design-people §10);
 their Implemented in is in usl-inventory's People rows.
+**People P19 (Nov 12, 2026):** no baseline form is mapped to Training, TrainingDetail or the training certificate: Marble's
+HumanRes has no training form, and courses, sessions, places and assessments are new records (`TrainingClass` and `PersonTraining`
+refined from Mantle's commented sketches, `TrainingSession` and `PersonTrainingResult`, design-people §10); their Implemented in is in
+usl-inventory's People rows.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

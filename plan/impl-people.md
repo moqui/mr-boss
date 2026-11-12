@@ -4987,6 +4987,256 @@ P18.
 - **Usable when** (`acceptance/People/PeopleTrainingUsable`): a session is scheduled, employees enroll, the trainer
   records results, and those who passed hold the qualification with its expiry.
 
+**Built Nov 12 (P19).** mr-mantle ce41a51d, mr-boss (branch `ppl/p19`).
+- Checked first (the code over the plan): F6 (the PersonTraining and TrainingClass sketches inside the review sketch's XML comment:
+  a training keyed by person, class and date with a Y/N approved flag, a class with a type and a description); P5's approvals
+  (`Approvals.js` kinds, `request`, `sourceChanged`, `sourceSummary`, `record#Decision` refusing without PEOPLE_REQUEST_APPROVE before
+  anything else, the topic's separate approve and refuse handlers, F110) and P15's advance as the nearest pattern; P16's survey builder
+  (the `DbfpTrainingAssessment` purpose and its registration, edited with PEOPLE_CONFIGURE and read with PEOPLE_DEVELOP_VIEW;
+  `FormDefinitions.publishedFormFor` and `recordAnswer`; the exit interview's FormInvitation with no link; FormPublication.eecas
+  locking an invited response) and P18's `Development.js` (`isRestricted`, the levels of projection, `check#Qualifications` reading
+  any verified qualification), the Development area and its grants (`BOSS_PPL_DEVELOPMENT` an inheritable ALLOW for self-service)
+  and Today's source on both roots (P8). Also: `WorkEffort`'s purpose field is `purposeEnumId` (`WepTraining` seeded);
+  `EventServices.create#Event` makes the event and `store#WorkEffortReminders` sets only the caller's own reminders; the
+  `PeopleApprovalKind` enumeration type is seeded after HumanResourcesEntities.xml, so a kind seeded in that file's seed-data fails
+  the whole file (the kind is in PeopleDevelopmentSetupData.xml).
+- Mantle:
+  - `entity/HumanResourcesEntities.xml`: the training sketches out of the comment (the review sketches stay in it for P20) and
+    refined: `TrainingClass` (a course of an employer: title, kind `TrainingClassType`, description, the qualification type passing
+    grants and its `validityMonths`, `assessmentRequired`, a default `assessmentFormId`, ended by `thruDate`), `TrainingSession` (the
+    facts of a WepTraining event keyed by its workEffortId: course, employer, trainer, capacity, assessment form), `PersonTraining`
+    (a place with its own id: person, employment, employer, department, session, course, `statusEnumId` audit-logged:
+    `PersonTrainingStatus` PtsRequested, PtsEnrolled, PtsCompleted, PtsRefused, PtsWithdrawn, PtsCancelled; reason, decision,
+    `attendedFlag` audit-logged and hours, completion, the qualification granted, the certificate's stored page and PDF and when it
+    was issued, an operation key) and `PersonTrainingResult` (each assessment, kept: `TrainingResult` TrrPassed or TrrFailed, score,
+    assessor, evidence opted out of AI, the form, its response and invitation, an operation key);
+  - `mantle.humanres.DevelopmentServices` over a new module `Training.js`: `find#Training`, `get#Training`, `store#TrainingClass`,
+    `store#Training`, `enroll#Training`, `decide#Enrollment`, `approve#Enrollment`, `refuse#Enrollment`, `mark#TrainingAttendance`,
+    `complete#Training` and `get#TrainingCertificate`, each with its reason codes (the service descriptions list them). Who: a
+    development reader (PEOPLE_DEVELOP_VIEW) of the employer reads every session, place and assessment, a development editor
+    (PEOPLE_DEVELOP_EDIT) changes courses and sessions, enrolls people, marks attendance and assesses; the session's trainer (a
+    person working for the employer, assigned by development) reads their session's places and assessments and no other's, marks
+    attendance and assesses; a self-service employee of the employer reads its sessions, asks for and withdraws their own place and
+    reads their own outcome (never the assessor's answers or evidence) and certificate; an approver of a waiting place reads that
+    place. No one marks or assesses their own place (`SELF_APPROVAL`); missing and unauthorized alike `RECORD_UNAVAILABLE`;
+  - the session is a private event made through Commons' `EventServices.create#Event` (`WetEvent`, `WepTraining`, `WevRestricted`,
+    owned by the scheduler), its trainer and each person enrolled a current `WorkEffortParty`, and each person enrolled a
+    `WorkEffortReminder` of their own a day before (written by the service: `store#WorkEffortReminders` sets only the caller's); a
+    change moves the event and the trainer's attendance, a cancellation cancels the event and every place (a waiting approval
+    superseded through `sourceChanged`);
+  - a place the person asks for waits for a People approval of kind `PakTraining` (Approvals.js's new kind; the notice names the
+    person, the course and the day, never the reason), routed as every People approval (no rule: the manager); the last approval
+    enrolls (refused `SESSION_FULL` with no seat), a refusal keeps its reason; a development editor's enrollment of a current
+    employee is made at once; seats count the places waiting and enrolled; the trainer holds no place in their own session;
+  - `complete#Training` locks the place: attendance first (`ATTENDANCE_REQUIRED`); with the session's form, the answers are checked
+    and kept as a FormResponse its FormInvitation locks (naming the person, the assessor, the session and the place; no link); a
+    failure is kept and the place stays enrolled; the pass completes it once, grants the course's qualification once (a verified
+    `PartyQualification` valid the course's months, the reference the place's id, renewing the person's latest verified one of the
+    type, so `check#Qualifications`, the skills matrix and the expiry reminder count it) and issues the completion certificate
+    (Mantle's `template/humanres/TrainingCertificate.print.html.fancy`, stored as its page and PDF under the place, never rendered
+    again; a PDF that fails is logged and the page kept); a completion retried, or a retry of its operation key, answers the first;
+  - `data/PeopleDevelopmentSetupData.xml`: the `PakTraining` kind and the `PeopleTrainingApproval` topic (approve and refuse
+    handlers, refusal reason required, a title naming the person, course and day).
+- BOSS:
+  - Screens: `People/Development/Training` (menu 3 of Skills & training: FindTraining (Upcoming, Mine, I train, Past, All, by course),
+    SessionList with the state and the user's own place as chips and a row's Ask for a place; Schedule session the one primary and
+    the Courses box (New course, Change, End) for a development editor), `Development/TrainingDetail` (out of the menu: the record
+    header with Ask for a place or Enroll a person as the primary and More's Change session and Cancel session; Enrollment with
+    Approve, Refuse, Withdraw, Attendance, Assess, Certificate and PDF per place; Record a result over the session's assessment form
+    as a dynamic form of its DbForm; Results, the answers and evidence opted out of AI; a not-available state) and
+    `Development/TrainingCertificate` (out of the menu: the stored page in html-print);
+  - `ironstone.people` People.js: the links, the self-service links (the three screens), the choices `trainers` (the employees and
+    agents of a development reader's employers) and `trainingForms` (an employer's published training assessments, or every
+    employer's), `decisionUrl` for PakTraining (TrainingDetail by the place) and Today's training due (`find#Training`'s due: the
+    user's own enrolled sessions and those they train, within seven days, opening the session); ContextServices' descriptions;
+    People.xml: the `PeopleTrainingApproval` topic; People/Approvals: the topic among `notificationTopics`; BossSetupData (appended):
+    the topic's link to TrainingDetail; BossPeopleDemoData (appended): Retail's fire warden course (`BOSS_PPL_TC_FIREWARDEN`, assessed,
+    granting `BOSS_PPL_QT_FIREWARDEN` for 24 months), no session. No new grant: the screens are under the Development area's.
+- Specs: Mantle `test/humanres/Training` (4 features, stepwise, 2.9 s: 0.57, 0.62, 1.33, 0.35: a restricted type and a validity
+  refused, a self-service employee and another employer refused a course, a past start, a missing form and a trainer of another
+  employer refused, the event's purpose and visibility, the trainer an attendee, the self-service employee's list and its Ask for
+  a place, another employer's development seeing none; a place asked waits, a retry by its key answers it, a second place, another
+  person's place, the trainer's place and the person's own and HR's decisions refused, the manager reading the place and its reason
+  and approving it, development enrolling Bo at once, the session full, the attendee and its reminder, Today's due; attendance before
+  the start, by HR and over the session's length refused, an absent person's assessment refused, no answers and invalid answers
+  refused, a failure kept with the place enrolled, the pass completing it and granting the qualification, the retry answering the
+  first, a failure after completion refused, one qualification valid 24 months, the staffing check qualified, the certificate read by
+  the person and refused to another, two locked responses; the trainer reading their session's assessments with the answers and
+  none of another session, the person their own outcomes without answers or evidence, another employer's development refused,
+  development reading the evidence, the trainer refused a cancellation, the cancellation cancelling a waiting place and superseding
+  its approval). BOSS `test/People/PeopleTraining` (3 features, 1.2 s: 0.23, 0.97, 0.04: Training's one qvt render as the learning
+  administrator with the session, Schedule session, New course, seats and what passing grants, the choices `trainers` and
+  `trainingForms` with a selected value off the page, Tomas's Today item; TrainingDetail's one qvt render as the trainer with Tomas's
+  place to assess over the form's field, the result posted through completeTraining with authorization on completing the place;
+  TrainingCertificate's one html-print render as Tomas). `PeopleAccess` gains one feature (0.48 s: a session scheduled by the
+  development administrator and refused to the HR officer with the same parameters, an assessment accepted for the trainer and
+  refused to the reader with the same parameters, Services' session refused to Retail's development administrator, the employee's
+  Training by the area's own grant), its menu feature's Development group (PeopleSpecLib `developmentMenu`, `readerDevelopmentMenu`,
+  the P19 ids) and the employee's context links. Acceptance, written and not run: `acceptance/People/PeopleTrainingUsable` (4
+  features: the learning administrator schedules a fire warden session from Training trained by Hannah; Tomas asks for a place from
+  Training, Hannah approves it on TrainingDetail, the learning administrator enrolls Rafael; after the session Hannah marks both
+  attended, Tomas passes, Rafael fails and passes a second attempt; both hold the fire warden certificate, verified, about two years,
+  the staffing check qualified, Tomas reads his own outcome without the answers and prints his certificate).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Training, PeopleApprovals,
+  Qualifications, HumanResServices, ExpenseClaims and Recruiting 36 of 36 (mr-mantle 16.1 s of features); BOSS PeopleTraining,
+  PeopleAccess, PeopleApprovals, PeopleSkills, PeopleSelfService, TodayPanel and PeopleRecruiting 49 of 49 (mr-boss 17.4 s). One-off
+  renders (a spec not kept): Training in tui and html as the self-service employee (Ask for a place), TrainingDetail in tui as him
+  after asking, in html as his manager (the place to decide, Approve and Refuse) and as the learning administrator (Enroll a person,
+  Change session), People's Approvals as the manager with the training place, and her Today's decision opening TrainingDetail; all
+  without error. `moqui lint --screens` (release binary): 136 flagged sites as before, none in the screens P19 added or touched, no
+  TUI worklist entry for them. Prettier clean on the new and changed JavaScript (People.js's earlier `openingOptions` lines left as
+  merged). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table (the eleven DevelopmentServices of P19), `create#Event`'s and
+  `store#WorkEffortReminders`' Implemented in; ss-inventory's P19 note (no baseline form is mapped).
+- Design edits: design-people (header; §1.2 Training; §1.4 Today and the topic; §10 Training and TrainingDetail as built; §12 the
+  topic's handlers; §15 the completion certificate); design-drawers-commons §4 (the `PeopleTrainingApproval` row).
+- Findings (provisional, numbered by the lead):
+  - the training assessment purpose stays edited with PEOPLE_CONFIGURE (P16's registration; Forms is under the People
+    administrator's Settings), so the learning administrator builds no assessment form; P16's finding offered PEOPLE_DEVELOP_EDIT;
+  - a trainer is any person working for the employer whom development assigns (an employee or agent, a self-service employee too);
+    their passing assessment grants a verified qualification although they are no qualification verifier (HR or development):
+    the authority is the assignment; a development editor assesses too;
+  - the person reads their own outcome, score, date and assessor, never the assessor's answers or evidence; HR readers read a
+    certificate (`get#TrainingCertificate`) but no session or place; a manager reads a report's place only as its approver;
+  - a development editor's enrollment of another person is made at once, with no approval (an assignment, not a request); the
+    person's own request always waits, whatever the person's permissions;
+  - the person is not told when their place is approved or refused (no decision topic, as leave's `PeopleLeaveDecision`); Today,
+    Training and the calendar's attendance show it;
+  - Sessions do not list due recertification (design §10's Sessions): nothing links a qualification expiring to a session that
+    renews it; Today's my qualification expiring (P18) and training due are separate items;
+  - a session's time changed on Commons' EventDetail by the event's owner (the scheduler) bypasses `store#Training`'s checks and
+    revision; a session is one occurrence (no series or multi-day schedule);
+  - attendance and assessment wait for the session's start; a place may be approved after the session started (only a request
+    is refused once it starts);
+  - `TrainingClassType` is not among Lookups' HR families, and courses are per employer (no shared course);
+  - a revoked granted qualification leaves the issued certificate as it was; no certificate is ever issued again;
+  - no key for Training, and SelfService has no training link (Today and the area cover it).
+- For the lead:
+  - budget share: mr-mantle about 2.9 s (Training); mr-boss about 1.7 s (PeopleTraining 1.2 s, PeopleAccess's feature 0.5 s); the
+    certificate's PDF is most of each completing feature; no client spec;
+  - merge hot spots (P17 runs beside): mr-mantle `Approvals.js` (the `PakTraining` kind after `PakAdvance`, where P17's offer kind
+    goes too), `entity/HumanResourcesEntities.xml` (the training entities after the review sketch's comment; P20 refines the review
+    sketch there), `data/PeopleDevelopmentSetupData.xml`, `DevelopmentServices.xml` (appended; P20 adds its services here);
+    mr-boss `service/ironstone/people/People.js` (`linkPaths`' end, the self-service links, the P19 choices block after P16's,
+    `decisionUrl`, Today's training due before the weeks to submit, `trainingDetailPath`), `ContextServices.xml` (two
+    descriptions), `screen/People.xml` (header, the topic after QualificationExpiring), `screen/People/Approvals.xml`
+    (`notificationTopics` and its comment; P17 adds its offer topic there), `screen/People/Development.xml`,
+    `data/BossSetupData.xml` and `data/BossPeopleDemoData.xml` (appended at their ends), `test/People/PeopleSpecLib.js` (the
+    Development menus, the P19 ids), `PeopleAccess.spec.js` (header, the employee's context links, the appended feature), the
+    inventories, design-people (header, §1.2, §1.4, §10, §12, §15), design-drawers-commons §4, this file;
+  - acceptance to run with the full suites: PeopleTrainingUsable (new), PeopleApprovalsUsable (a new approval kind and topic on
+    Approvals), PeopleSkillsUsable (the qualification a training grants is a verified PartyQualification as the matrix reads it);
+  - for the user's call: whether a trainer's passing assessment may grant a verified qualification (the second finding), and
+    whether the person reads the assessor's answers (the third). Nothing else waits on the user.
+
+**Review Nov 12 (P19).** A fresh review of `git diff master...ppl/p19` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §10 Training and TrainingDetail, §15 and PE-14, confidentiality first; the user's two calls of Nov 12 recorded in §4 (both as
+built); fixes committed apart per repository ("People P19 review: …"). Both branches were rebased onto master after P17's merge:
+mr-mantle with one conflict, `Approvals.js` (P17's `EMPLOYMENT_OFFER` and `PakOffer` with its `selfPartyIds`, then P19's
+`PERSON_TRAINING` and `PakTraining`, both kept); mr-boss with BossSetupData (P17's offer topic and EmploymentLetter grant, then the
+training topic), People.xml (both topics), People/Approvals (both topics in `notificationTopics` and the header), People.js
+(`linkPaths`: P17's offer screens, then training's) and PeopleAccess (header, P17's offer feature, its review's letters feature, then
+P19's training feature), each keeping both sides. The phase commits are now mr-mantle caaaf46c and mr-boss f316b1e4. Training,
+Qualifications, PeopleApprovals and Offers (20 of 20) and PeopleTraining, PeopleAccess, PeopleSkills, PeopleOffers and
+PeopleApprovals (36 of 36) passed after it.
+- Checked and found sound:
+  - Completion: `complete#Training` locks the place before its operation key's retry check and the completed check, so a completion
+    sent twice at once grants one qualification and answers the first (`repeated`, the same result and qualification); a failure is
+    its own result row, kept, with the place enrolled; a failure after completion is refused; the qualification is created only on
+    the pass, verified, the trainer its verifier (`verifiedByUserId`), the place its reference and the session in its comment, and
+    development (a qualification verifier of the employer) revokes it through `verify#Qualification`.
+  - The trainer reads the assessments (answers and evidence) of their own session alone: `sessionAccess` is computed per session
+    from `TrainingSession.trainerPartyId`; the trainer of another session reads it as any employee (their own place only, no
+    result). The person reads their own results with outcome, score, date and assessor, `evidence` null and no answers, on every
+    path (`get#Training` by session or by place); the certificate holds neither.
+  - The assessment's response: Training.js reads `FormResponse` and its answers only in `get#Training`, for development and the
+    trainer. No other path reaches it in the apps: People's survey registration has no responses screens (`responses: null`), its
+    purposes admit no publication access kind, so `ExternalAccess` makes no link for their invitations, the invitation key is an
+    idempotency key and no token, no self-service list reads `FormInvitation` by party, and `FormResponseAnswer.valueText` is opted
+    out of AI. What remains is the framework's `get#FormResponse` (no reader check, F62; artifact authorization guards its remote
+    use) and Marble's SimpleScreens Survey screens, which list every response to ADMIN alone (`SimpleScreensSurvey` has no other
+    grant).
+  - The certificate is rendered once, by the passing completion, stored as its page and PDF under the place, and read back as
+    stored (`get#TrainingCertificate`: the person, development and HR readers of the employer); its PDF downloads for the person
+    with artifact authorization on (now checked in PeopleTraining).
+  - No self-approval: the person's own request goes to People's approvals with the person as subject and requester, which
+    `record#Decision` refuses (`SELF_APPROVAL`) and the spec checks; no one marks or assesses their own place; a development
+    editor's enrollment of another is made at once, their own place waits.
+  - Scope by employer: development's reach is `PEOPLE_DEVELOP_VIEW` over the user's People organizations; a self-service employee
+    reads the sessions of their current employers; courses, sessions, enrollments and assessments are refused across employers
+    (Training and PeopleAccess); `trainers` and `trainingForms` choices are bounded the same way; Today's training due reads
+    `find#Training` as the user.
+- Fixed:
+  - R1 (medium): a session's time, status and attendees could be changed outside `store#Training`: its organizer (the scheduler)
+    through Commons' EventDetail (`update#EventOccurrence`, `cancel#EventOccurrence`, attendees), and any attendee (the trainer or a
+    person enrolled) by putting the event in a calendar of their own (`add#CalendarEvent` needed only view of the event), which made
+    them its editor (`check#EventAccess`'s calendar edit) and let CalDAV write it, bypassing the dates, the closed-session check, the
+    revision and the places. Commons' `check#EventAccess` now answers `managedBy` for a WepTraining event with a `TrainingSession`,
+    whose edit it refuses ("is changed on its People training session") while its view stands, and `add#CalendarEvent` refuses
+    such an event. Spec Training (the organizer's `check#EventAccess` and `update#EventOccurrence`, the trainer's
+    `add#CalendarEvent`; fails on the code as it was).
+  - R2 (low; worker's finding): a place could be approved after the session started; `decide#Enrollment` refuses an approval then
+    (`SESSION_CLOSED`); a refusal may still follow. Spec Training (Cy's late approval refused, his refusal recorded).
+  - R3 (low; worker's finding): the person was not told when their place was approved or refused; the new `PeopleTrainingDecision`
+    topic (Mantle's PeopleDevelopmentSetupData: private, "Your place in {course} on {day}: approved|refused", the message the
+    place, session, course, day and outcome, never the reason), sent by `decide#Enrollment` on the last approval or a refusal to
+    the person and who asked, failure-tolerant; BOSS links it to TrainingDetail and declares it on People's root. Spec Training (Ana
+    told of her approval, Cy of his refusal, neither reason in the message or title).
+  - R4 (low; worker's finding): the learning administrator could not build an assessment form. Mantle's training assessment
+    `FormPurpose` admits `PEOPLE_DEVELOP_EDIT` beside `PEOPLE_CONFIGURE` (FormDefinitions reads an edit or view permission as a
+    comma list, any one admitting); BOSS mounts the builder again as Skills & training › Assessment forms
+    (`People/Development/AssessmentForms`, menu 4, its List and FormDetail the shared SurveyForms and SurveyFormDetail) through a
+    `mounts.Development` entry of People's survey registration (the training purpose alone, edit by `developEdit` or `configure`,
+    its routes and words; the screen's always-actions set `surveyMount`), granted by `BOSS_PPL_ASSESSMENT_FORMS` (ALWAYS for
+    BOSS_PEOPLE_DEVELOP, denied to BOSS_PEOPLE and BOSS_PEOPLE_SELF; the People administrator and ADMIN through the root), so
+    Settings stays the People administrator's. Specs Training (a development editor's training assessment made, a review form
+    refused) and PeopleAccess (the learning administrator opens Assessment forms, the HR officer and the employee are refused). A
+    one-off probe, not kept: as the learning administrator the list offers New form for the training assessment alone, creating
+    one opens its FormDetail under Development with Add question.
+  - R5 (low): a trainer kept reading their session's places and assessments after leaving the employer; the trainer's access now
+    needs a current employee or agent relationship with the session's employer (`trainsIt`; find#Training's I train the same).
+    Spec Training (Tia, ended, refused the session and listing none).
+  - R6 (low): why a place was refused (`decisionReason`) was shown to every reader of the place, the trainer included; now as the
+    reason asked: development's, the person's and the approver's. Spec Training.
+  - R7 (worker's finding): SelfService links My training (`get#SelfServiceContext`'s `trainingUrl`, Training's Mine, on both
+    mounts when the area opens to the user) and the key `g i` opens Training. Spec PeopleAccess (the employee's link, the HR
+    officer's keys).
+- Provisional findings (for the lead to number):
+  - Commons-wide: `check#EventAccess` makes an editor of anyone with edit on a calendar the event is in, and `add#CalendarEvent`
+    asks only that the user may see the event, so an attendee of any private event (a meeting, P16's interview) who puts it in a
+    calendar of their own may move, change or cancel it, and CalDAV may write it; R1 closes it for training sessions only. An
+    interview's event (owned by the recruiter) is also changed on EventDetail outside the interview's services;
+  - Commons' calendar data (`ironstone.commons.CalendarServices` get#CalendarData) computes `canEdit` itself from ownership and
+    calendars, so the calendar still offers dragging a training session to its organizer; the move is refused by
+    `update#EventOccurrence`;
+  - a place still waiting when its session starts stays waiting until refused (the approver sees Approve, which is refused);
+  - a session cancelled tells no one but through the event's state and Today (no decision topic for a cancellation);
+  - the worker's findings that stand: courses per employer and `TrainingClassType` outside Lookups; Sessions do not list due
+    recertification; a session is one occurrence; a development editor's enrollment needs no approval; a revoked qualification
+    leaves its certificate; HR readers read a certificate but no session; a manager reads a report's place only as its approver;
+  - mr-boss People.js on master is still not Prettier-clean (P16's `openingOptions`); left as merged.
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase, 20 of 20 and 36 of 36
+  (above); after the fixes, Mantle Training, Qualifications, PeopleApprovals, Offers, FormDefinitions and LeaveRequests 27 of 27
+  (mr-mantle 17.6 s of features) and BOSS PeopleTraining, PeopleAccess, PeopleSkills, PeopleOffers, PeopleApprovals,
+  PeopleSelfService, PeopleRecruiting and PeopleTime 49 of 49 (mr-boss 16.1 s); Training last 3.3 s (0.81, 0.60, 1.45, 0.43),
+  PeopleTraining 0.65 s (0.25, 0.32, 0.08), PeopleAccess 11.0 s of features (its training feature 0.57 s). The new Training checks
+  were run on the unfixed code (the event's check failed first). `moqui lint --screens` (release binary): 136 flagged sites as
+  before, none in the screens P19 or this review touched. Prettier clean on the changed JavaScript but People.js (above). Not run:
+  test-apps, the acceptance suite.
+- For the lead:
+  - budget share beside the Built note's: mr-mantle about +0.4 s (Training's new checks); mr-boss about +0.1 s (PeopleAccess's
+    assessment forms and link checks, the PDF download);
+  - merge hot spots beside the Built note's (P21 rebases onto these): mr-mantle `work/EventServices.xml` (`check#EventAccess`),
+    `work/CalendarServices.xml` (`add#CalendarEvent`), `party/FormDefinitions.js` (`canEdit`, `canView`), `data/PeopleRecruitingSetupData.xml`
+    (the training purpose), `data/PeopleDevelopmentSetupData.xml` (the decision topic), `Training.js`; mr-boss
+    `service/ironstone/shared/SurveyApps.js` (People's `mounts`, `context`), `screen/People/Development/AssessmentForms.xml` (new),
+    `screen/People.xml` (the key and topic), `screen/Shared/PeopleSelfService.xml` and ContextServices (`trainingUrl`),
+    BossSetupData (the decision topic and `BOSS_PPL_ASSESSMENT_FORMS` after the training topic), PeopleSpecLib (`keys`),
+    PeopleAccess's training feature, design-people (header, §1.2, §10, §12, §13 Forms), usl-inventory, §4 here;
+  - acceptance: PeopleTrainingUsable, as written, approves Tomas's place before the session and is unaffected by R2; to run with the
+    full suites as the Built note says;
+  - the user's calls: both recorded in §4 as built; the Commons-wide calendar finding above may want one.
+
 ### P20 — Reviews and goals
 
 Design §11 ReviewCycles, Reviews, ReviewDetail, Goals; PE-16. After P16 (an assessment is a response of a review
@@ -5325,6 +5575,8 @@ the owner's design.
 | Nov 12, 2026 | Payroll readers (PAYROLL_VIEW) of the employer read its offers, the applicant's name and terms with the pay, to set the pay on OfferDetail | The user's call on P17's question (as built) |
 | Nov 12, 2026 | Issuing an offer emails its stored letter to the applicant's address as an attachment; the issuer need not be able to open it; the send is recorded on the offer, its outcome visible to recruiters without the letter's content; sent by Mantle's mail (an EmailTemplate), failure tolerant: a failed send is recorded and can be sent again, never undoing the issue | The user's call on P17's question (built in P17's review, R1: `send#OfferLetter`, template `PEOPLE_OFFER_LETTER`, the issue's tx-commit rule; design-people §5 OfferDetail, §15) |
 | Nov 12, 2026 | Employees see their own issued lifecycle letters (hire, transfer, manager change, leave, return, separation) in SelfService's My letters under both self-service mounts (People and Commons), whole, pay included since the letter is theirs; another person's letter is refused; grants on F28's non-inheritable pattern | The user's call on P17's question (built in P17's review, R2: `find#MyLetters`, `get#MyLetter`, `BOSS_PPL_SELF`; design-people §3 SelfService, §15) |
+| Nov 12, 2026 | A trainer's passing assessment grants the course's qualification as verified: the course is the authority (not the trainer's own verification rights); the grant is recorded with the trainer (its verifier) and the session (the place its reference); development can revoke it | The user's call on P19's question (as built: `complete#Training`'s grant; revoked by `verify#Qualification`, which leaves the issued certificate as it was) |
+| Nov 12, 2026 | A trainee sees only the outcome and score of their own assessment (with its date and assessor); the assessor's answers and evidence stay with development and the session's trainer | The user's call on P19's question (as built: `get#Training`'s results; the assessment's response read only through it) |
 
 ## 5. Open questions
 

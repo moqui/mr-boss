@@ -106,7 +106,9 @@ along with this software (see the LICENSE.md file). If not, see
             vacant ones first, narrowed to departmentPartyId), workLocations (P6: organizationPartyId's facilities) and
             terminationReasons and terminationTypes (P6: People's lookups, ended values left out), leaveTypes and leavePolicies (P11:
             People's leave types; an HR reader's policies not closed, of organizationPartyId when given); skillTypes, skillLevels
-            and qualificationTypes (P18: People's lookups, ended values left out; a level by its number). Refuses a user without
+            and qualificationTypes (P18: People's lookups, ended values left out; a level by its number); trainers (P19: the employees
+            and agents of a development reader's employers) and trainingForms (P19: the published training assessment forms of
+            organizationPartyId, else of every employer the user reads). Refuses a user without
             People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
@@ -246,7 +248,9 @@ along with this software (see the LICENSE.md file). If not, see
             (kind leave, PEOPLE_TEAM_VIEW: who is out, never why; not a colleague's day the team calendar shows), each opening the
             request; and P18 the user's own verified qualifications expiring within thirty days or expired and not renewed (kind
             qualification, mantle.humanres.DevelopmentServices.find#Qualifications' attention, PEOPLE_SELF_SERVICE: its type and
-            expiry, never its number), each opening their qualifications. Another user's Today gets none. Declared on both roots,
+            expiry, never its number), each opening their qualifications; and P19 training due (kind training,
+            DevelopmentServices.find#Training's due: the user's own enrolled sessions and those they train, starting within seven
+            days), each opening the session. Another user's Today gets none. Declared on both roots,
             it is taken once.</description>
         <in-parameters>
             <parameter name="userId"/>
@@ -287,6 +291,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="advancesUrl"><description>P15: the user's own advances (the same area)</description></parameter>
             <parameter name="qualificationsUrl"><description>P18: the user's own qualifications (People's Skills &amp; training
                 area, when it opens to them)</description></parameter>
+            <parameter name="trainingUrl"><description>P19 review: the user's own training places (the same area)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -301,6 +306,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="expenseClaimsUrl" from="found.expenseClaimsUrl"/>
             <set field="advancesUrl" from="found.advancesUrl"/>
             <set field="qualificationsUrl" from="found.qualificationsUrl"/>
+            <set field="trainingUrl" from="found.trainingUrl"/>
         </actions>
     </service>
 

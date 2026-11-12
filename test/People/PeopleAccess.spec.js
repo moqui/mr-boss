@@ -62,6 +62,11 @@
 // letter print HR's (the directory reader refused the screen). P17 review (the user's call of Nov 12, 2026): the employee reads
 // their own issued letter through SelfService's My letters (the services and the transition by its own grant) and is refused Ines's;
 // the reader (no self-service) is refused the employee's letter with the same parameters.
+// P19: a training session scheduled by the development administrator of its employer (the HR officer refused with the same
+// parameters), an assessment its trainer's (the reader refused the same assessment), Services' session refused to Retail's
+// development administrator, the employee's Training by the area's own grant, and Training in the Development group. P19 review:
+// the assessment forms the development administrator's (the HR officer and the employee refused the screen), the employee's
+// self-service link to their training.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -187,14 +192,15 @@ feature(
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
             // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances; P18: their
-            // qualifications)
+            // qualifications; P19: training, a session and a certificate)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
                 Object.keys(employee.sharedLinks || {}).join() !==
                     "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
-                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications" ||
+                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications," +
+                        "Development/Training,Development/TrainingDetail,Development/TrainingCertificate" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -1554,3 +1560,104 @@ feature("P17 review: an employee reads their own issued letters in self-service,
         opened == true
     }
 })
+
+feature(
+    "training: a session scheduled by the development administrator of its employer, the HR officer refused with the same parameters; an assessment the session's trainer's, the reader refused the same assessment; Services' session refused to Retail's development administrator; the employee's Training by the area's own grant and self-service link; the assessment forms the development administrator's",
+    {
+        when() {
+            const D = "mantle.humanres.DevelopmentServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const hour = 60 * 60 * 1000
+            const problems = []
+            // a spec-local course of Retail with no assessment form, and one session of Services' (its own course, Kenji training)
+            const trainingClassId = asUser(users.develop, () =>
+                system(() =>
+                    invoke(D + "store#TrainingClass", {
+                        organizationPartyId: ids.organizationId,
+                        title: "People access spec course"
+                    })
+                )
+            ).trainingClassId
+            const otherSessionId = system(() => {
+                const otherClassId = call("create#mantle.humanres.ability.TrainingClass", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    title: "People access spec Services course"
+                }).trainingClassId
+                const workEffortId = call("create#mantle.work.effort.WorkEffort", {
+                    workEffortTypeEnumId: "WetEvent",
+                    purposeEnumId: "WepTraining",
+                    workEffortName: "Training: People access spec Services course",
+                    statusId: "WeInPlanning",
+                    estimatedStartDate: new Date(Date.now() + 48 * hour),
+                    estimatedCompletionDate: new Date(Date.now() + 50 * hour)
+                }).workEffortId
+                call("create#mantle.humanres.ability.TrainingSession", {
+                    workEffortId,
+                    trainingClassId: otherClassId,
+                    organizationPartyId: ids.otherOrganizationId,
+                    trainerPartyId: ids.otherEmployeePartyId,
+                    capacity: 4
+                })
+                return workEffortId
+            })
+            const schedule = {
+                trainingClassId,
+                startDate: new Date(Date.now() + 24 * hour),
+                endDate: new Date(Date.now() + 26 * hour),
+                trainerPartyId: ids.managerPartyId,
+                capacity: "4"
+            }
+            const codes = {hrSchedules: code(asUser(users.hr, () => system(() => refusal(D + "store#Training", schedule))))}
+            const workEffortId = asUser(users.develop, () => system(() => invoke(D + "store#Training", schedule))).workEffortId
+            const personTrainingId = asUser(users.develop, () =>
+                system(() => invoke(D + "enroll#Training", {workEffortId, partyId: ids.employeePartyId}))
+            ).personTrainingId
+            // the session has taken place, and Hannah, its trainer, marked Tomas attended
+            system(() =>
+                call("update#mantle.work.effort.WorkEffort", {
+                    workEffortId,
+                    estimatedStartDate: new Date(Date.now() - 3 * hour),
+                    estimatedCompletionDate: new Date(Date.now() - hour)
+                })
+            )
+            asUser(users.manager, () => system(() => invoke(D + "mark#TrainingAttendance", {personTrainingId, attended: "Y"})))
+            const assess = {personTrainingId, outcome: "fail", evidence: "Access spec"}
+            Object.assign(codes, {
+                readerAssesses: code(asUser(users.reader, () => system(() => refusal(D + "complete#Training", assess)))),
+                trainerAssesses: code(asUser(users.manager, () => system(() => refusal(D + "complete#Training", assess)))),
+                otherEmployer: code(
+                    asUser(users.develop, () => system(() => refusal(D + "get#Training", {workEffortId: otherSessionId})))
+                )
+            })
+            const own = screenRefusal(users.employee, "Development/Training")
+            if (own) problems.push(`the employee's Training: ${own}`)
+            // P19 review: the training assessment forms are the learning administrator's, not the HR officer's or the employee's
+            const developForms = screenRefusal(users.develop, "Development/AssessmentForms")
+            if (developForms) problems.push(`the learning administrator's assessment forms: ${developForms}`)
+            for (const [user, who] of [
+                [users.hr, "the HR officer"],
+                [users.employee, "the employee"]
+            ]) {
+                const refused = screenRefusal(user, "Development/AssessmentForms")
+                if (!unauthorized(refused)) problems.push(`${who} opens the assessment forms: ${refused || "opened"}`)
+            }
+            // P19 review: the employee's self-service links their own training places
+            const links = asUser(users.employee, () =>
+                invoke("ironstone.people.ContextServices.get#SelfServiceContext", {appRoot: "Commons"})
+            )
+            if (links.trainingUrl !== "/qapps/People/Development/Training?show=mine")
+                problems.push(`the employee's training link: ${links.trainingUrl}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    hrSchedules: "PERMISSION_DENIED",
+                    readerAssesses: "RECORD_UNAVAILABLE",
+                    trainerAssesses: "accepted",
+                    otherEmployer: "RECORD_UNAVAILABLE"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)

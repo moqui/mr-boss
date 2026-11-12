@@ -46,9 +46,10 @@ const ids = {
     payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Development"],
     // P15: Expenses' menu, every People user's (and a self-service employee's by the area's own grant)
     expensesMenu: ["ExpenseClaims", "EmployeeAdvances"],
-    // P18: Skills & training's menu: the skills matrix development's, HR's and the managers', the qualifications every People user's
-    developmentMenu: ["SkillsMatrix", "Qualifications"],
-    readerDevelopmentMenu: ["Qualifications"],
+    // P18: Skills & training's menu: the skills matrix development's, HR's and the managers', the qualifications every People user's;
+    // P19: training every People user's
+    developmentMenu: ["SkillsMatrix", "Qualifications", "Training"],
+    readerDevelopmentMenu: ["Qualifications", "Training"],
     // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
     // managers') and holidays (HR's); P11's leave balances (HR's and the managers'), leave policies and allocations (HR's); P12's
     // leave requests and team calendar (every People user's); P13's attendance (every People user's); P14's shift roster (HR's and
@@ -90,8 +91,28 @@ const ids = {
     // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll; P11's g b, Leave balances, to HR and managers; P12's
     // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user; P14's g h, Shift roster, to HR and
     // managers; P15's g x, Expense claims, and P16's g n, Openings, and g v, Interviews, to every People user; P18's g k, Skills
-    // matrix, to development, HR and managers, and g q, Qualifications, to every People user)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h", "g x", "g n", "g v", "g k", "g q"],
+    // matrix, to development, HR and managers, and g q, Qualifications, to every People user; P19's g i, Training, to every People
+    // user)
+    keys: [
+        "g p",
+        "g e",
+        "g o",
+        "g c",
+        "g s",
+        "g a",
+        "g w",
+        "g t",
+        "g b",
+        "g l",
+        "g d",
+        "g h",
+        "g x",
+        "g n",
+        "g v",
+        "g k",
+        "g q",
+        "g i"
+    ],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
     // P16: an approved active seat of Retail (vacant) and one of Services, the seats the recruiting specs open openings on
@@ -122,7 +143,10 @@ const ids = {
     associatePartyId: "BOSS_PPL_RAFAEL",
     workPermitId: "BOSS_PPL_QL_RAFAEL_PERMIT",
     firstAidId: "BOSS_PPL_QL_RAFAEL_AID",
-    otherQualificationId: "BOSS_PPL_QL_KENJI_ELEC"
+    otherQualificationId: "BOSS_PPL_QL_KENJI_ELEC",
+    // P19: Retail's fire warden course (assessed, granting the fire warden certificate for 24 months)
+    fireWardenCourseId: "BOSS_PPL_TC_FIREWARDEN",
+    fireWardenTypeId: "BOSS_PPL_QT_FIREWARDEN"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Training session (design-people §10 TrainingDetail, §15 the completion certificate; style-guide §3.3 Detail;
+    impl-people P19): one session (workEffortId, or the session of a place: personTrainingId, as an approval notice opens it), from
+    mantle.humanres.DevelopmentServices.get#Training, for a development reader of its employer, its trainer, a self-service employee
+    of the employer, the people holding a place and an approver of a place waiting (another is told it is not available). The
+    record header (the course, the employer, when, where, the trainer, the seats, what passing grants, the state) with one primary:
+    Ask for a place (a self-service employee while seats are left: enroll#Training, waiting for their manager) or Enroll a person (a
+    development editor: enrolled at once), and under More Change session and Cancel session (store#Training at the revision read;
+    a cancellation cancels every place). Enrollment: the places the user reads (development and the trainer every one, an approver
+    the one they decide, the person their own), each with its state, attendance, attempts and what it granted, and its actions:
+    Approve and Refuse for an approver of the step waiting (decide#Enrollment, also from Approvals and the tray), Withdraw for the
+    person, who asked or development, Attended and Absent once the session started and Assess once attended for the trainer or a
+    development editor (never their own place), and the certificate (its stored page, TrainingCertificate, and PDF) for the person
+    and development. Assess opens the Record a result box: passed or failed, a score, evidence, and the session's assessment form
+    (a dynamic form over its DbForm; complete#Training: a failure kept, the pass granting the qualification once). Results: the
+    assessments the user reads, the assessor's answers and evidence the trainer's and development's alone, opted out of AI
+    (ai-opt-out, PE-21); the person reads their own outcome, score, date and assessor. Every People user's and a self-service
+    employee's by the area's grant. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Training session" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <parameter name="personTrainingId"/>
+    <!-- the place whose result is being recorded (the Record a result box) -->
+    <parameter name="assessId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the session changed or cancelled by a development editor, at the revision read -->
+    <transition name="storeTraining">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.store#Training"
+                    in-map="{workEffortId:workEffortId, startDate:(startDate || null), endDate:(endDate || null), location:(location ?? null),
+                        description:(description ?? null), trainerPartyId:(trainerPartyId || null), capacity:(capacity || null),
+                        assessmentFormId:(assessmentFormId ?? null), cancel:(cancel || null), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${cancel ? 'Session cancelled' : 'Session saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- a place: the user's own asked for (it waits for approval), or a person enrolled by a development editor -->
+    <transition name="enroll">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.enroll#Training" out-map="enrolled"
+                    in-map="{workEffortId:workEffortId, partyId:(partyId || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${enrolled.statusEnumId == 'PtsRequested' ? 'Place asked for: it waits for approval' : 'Enrolled'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- a place approved, refused or withdrawn: Mantle checks the approver, the revision and the seats -->
+    <transition name="decide">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.decide#Enrollment" out-map="decided"
+                    in-map="{personTrainingId:personTrainingId, decision:(decision || null), reason:(reason || null),
+                        peopleApprovalId:(peopleApprovalId || null), sourceRevision:(sourceRevision || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; decided">
+                <message type="success">${decided.repeated ? 'Already done' : decided.statusText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- attended (with the hours) or absent, by the trainer or a development editor once the session started -->
+    <transition name="markAttendance">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.mark#TrainingAttendance"
+                    in-map="{personTrainingId:personTrainingId, attended:(attended || 'N'), attendedHours:(attendedHours || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${attended == 'Y' ? 'Marked attended' : 'Marked absent'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- an assessment: the form's answers are the request's values, checked again in Mantle; a pass completes the place once -->
+    <transition name="completeTraining">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.complete#Training" out-map="completed"
+                    in-map="{personTrainingId:personTrainingId, outcome:(outcome || null), score:(score || null), evidence:(evidence || null),
+                        values:Object.assign({}, ec.web.parameters)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; completed">
+                <message type="success">${completed.resultEnumId == 'TrrPassed' ? 'Passed: the training is completed' : 'Failed: the result is kept, and another attempt may follow'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/><parameter name="assessId" from="personTrainingId"/></error-response>
+    </transition>
+    <!-- the stored PDF of a completed place's certificate, as issued (get#TrainingCertificate checks the reader) -->
+    <transition name="certificatePdf" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.get#TrainingCertificate" out-map="certificate"
+                    in-map="{personTrainingId:personTrainingId}"/>
+            <script>if (!ec.message.hasError() &amp;&amp; certificate?.pdfLocation) ec.web.sendResourceResponse(certificate.pdfLocation, false, certificate.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.DevelopmentServices.get#Training" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{workEffortId:(workEffortId || null), personTrainingId:(workEffortId ? null : (personTrainingId || null))}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="training" from="found?.session || null"/>
+        <set field="recordFound" from="!!training"/>
+        <script><![CDATA[
+            enrollmentRows = Array.from(found?.enrollments || [])
+            resultRows = Array.from(found?.results || [])
+            stateColors = {scheduled: 'primary', running: 'warning', ended: 'grey-8', cancelled: 'negative'}
+            placeColors = {PtsRequested: 'warning', PtsEnrolled: 'primary', PtsCompleted: 'positive', PtsRefused: 'negative',
+                PtsWithdrawn: 'grey-8', PtsCancelled: 'grey-8'}
+            headerCaption = training ? [training.organizationName, training.whenText, training.location,
+                training.trainerName ? 'Trainer ' + training.trainerName : ''].filter(Boolean).join(' · ') : ''
+            sessionValues = training ? {workEffortId: training.workEffortId, expectedRevision: training.revision,
+                startDate: training.startText, endDate: training.endText, location: training.location, description: training.description,
+                trainerPartyId: training.trainerPartyId, capacity: training.capacity, assessmentFormId: training.assessmentFormId} : {}
+            assessing = assessId ? enrollmentRows.find(row => row.personTrainingId == assessId && row.canAssess) || null : null
+            assessFormName = assessing && training?.assessmentFormId ? 'DbForm#' + training.assessmentFormId : 'AssessmentNone'
+            // development and the trainer read every place; an approver the one they decide; the person their own
+            placesTitle = found?.isDevelop || found?.isTrainer ? 'Enrollment'
+                : enrollmentRows.some(row => row.partyId != people?.partyId) ? 'Place to decide' : 'Your place'
+            primaryRequest = !!found?.canRequest
+            primaryEnroll = !primaryRequest && !!found?.canEnrollOthers
+            trainingUrl = sharedLinks?.['Development/Training'] || null
+            certificateUrl = '/apps/People/Development/TrainingCertificate'
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="SessionMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This training session is not available to you."/>
+                        <link url="${trainingUrl}" url-type="plain" text="Back to training" link-type="anchor" condition="trainingUrl"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SessionRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${training.title}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[training.state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(training.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: training.stateText})}]]></text>
+                                <text type="html">${training.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${trainingUrl}" url-type="plain" text="Training" link-type="anchor" icon="sym_o_arrow_back" condition="trainingUrl"/>
+                            <label text="${training.seatsText}" type="span" style="text-caption"/>
+                            <label text="Passing grants ${training.qualificationText}" type="span" style="text-caption" condition="training.qualificationText"/>
+                            <label text="You hold a place: ${training.myStatusText}" type="span" style="text-caption" condition="training.myStatusText"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="RequestPlaceDialog" button-text="Ask for a place" icon="sym_o_how_to_reg" type="primary" width="520"
+                                    title="Ask for a place in ${training.title}" condition="primaryRequest">
+                                <label type="p" text="Your place waits for your manager's approval."/>
+                                <form-single name="RequestPlace" transition="enroll" map="{workEffortId:training.workEffortId}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why" tooltip="Your approver reads it"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Ask for a place"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="EnrollDialog" button-text="Enroll a person" icon="sym_o_person_add" type="primary" width="560"
+                                    title="Enroll a person in ${training.title}" condition="primaryEnroll">
+                                <label type="p" text="A person you enroll holds the place at once; it is in their calendar, with a reminder a day before."/>
+                                <form-single name="EnrollPerson" transition="enroll" map="{workEffortId:training.workEffortId}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="partyId">
+                                        <default-field title="Person">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:training.organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Enroll"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="found.canChange">
+                                <container-dialog id="ChangeSessionDialog" button-text="Change session" icon="sym_o_edit" width="760"
+                                        title="Change the session of ${training.title}">
+                                    <form-single name="ChangeSession" transition="storeTraining" map="sessionValues">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
+                                        <field name="endDate"><default-field title="Ends"><date-time/></default-field></field>
+                                        <field name="location"><default-field title="Place"><text-line size="40"/></default-field></field>
+                                        <field name="trainerPartyId">
+                                            <default-field title="Trainer">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'staff', choiceOrganizationPartyId:training.organizationPartyId, selected:training.trainerPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="capacity"><default-field title="Seats"><text-line size="5" input-type="number"/></default-field></field>
+                                        <field name="assessmentFormId">
+                                            <default-field title="Assessment">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'trainingForms', choiceOrganizationPartyId:training.organizationPartyId,
+                                                                selected:training.assessmentFormId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="description"><default-field title="What to bring"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save session"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="startDate"/><field-ref name="endDate"/></field-row>
+                                            <field-row><field-ref name="location"/><field-ref name="capacity"/></field-row>
+                                            <field-row><field-ref name="trainerPartyId"/><field-ref name="assessmentFormId"/></field-row>
+                                            <field-ref name="description"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CancelSessionDialog" button-text="Cancel session" icon="sym_o_event_busy" width="520"
+                                        title="Cancel the session of ${training.title}">
+                                    <label type="p" text="Every place in it is cancelled and a place waiting for approval is withdrawn from its approver."/>
+                                    <form-single name="CancelSession" transition="storeTraining"
+                                            map="{workEffortId:training.workEffortId, expectedRevision:training.revision, cancel:'true'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="cancel"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Cancel session"><submit type="danger" confirmation="Cancel the session of ${training.title} on ${training.startText}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <section name="SessionAbout" condition="training.description || training.courseDescription">
+                    <widgets>
+                        <container-box>
+                            <box-header title="About"/>
+                            <box-body>
+                                <label type="p" text="${training.courseDescription}" condition="training.courseDescription"/>
+                                <label type="p" text="${training.description}" condition="training.description"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="${placesTitle}"/>
+                    <box-body-nopad>
+                        <form-list name="EnrollmentList" list="enrollmentRows" skip-form="true" paginate="false" condition="enrollmentRows.length">
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="Place">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${placeColors[statusEnumId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="waitingText"><default-field title="Approval"><display text="${waitingText || decisionReason}"/></default-field></field>
+                            <field name="attendanceText">
+                                <default-field title="Attendance">
+                                    <display text="${attendanceText}${attendedHours != null ? ' (' + attendedHours + ' h)' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <default-field title="Result"><display text="${resultText}${attemptCount > 1 ? ' (' + attemptCount + ' attempts)' : ''}"/></default-field>
+                            </field>
+                            <field name="qualificationText"><default-field title="Qualification"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="Approve_${personTrainingId}" button-text="Approve" icon="sym_o_check" width="480"
+                                            title="Approve ${personName}'s place" condition="canDecide">
+                                        <form-single name="ApprovePlace" transition="decide"
+                                                map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, peopleApprovalId:peopleApprovalId, sourceRevision:sourceRevision}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                            <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="Refuse_${personTrainingId}" button-text="Refuse" icon="sym_o_block" width="480"
+                                            title="Refuse ${personName}'s place" condition="canDecide">
+                                        <form-single name="RefusePlace" transition="decide"
+                                                map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, peopleApprovalId:peopleApprovalId, sourceRevision:sourceRevision}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                            <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                            <field name="reason"><default-field title="Why" tooltip="The person reads it"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="Attendance_${personTrainingId}" button-text="Attendance" icon="sym_o_fact_check" width="480"
+                                            title="${personName}'s attendance" condition="canMarkAttendance">
+                                        <form-single name="MarkAttendance" transition="markAttendance"
+                                                map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, expectedRevision:revision,
+                                                    attended:(attendedFlag || 'Y'), attendedHours:attendedHours}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="attended">
+                                                <default-field title="Attended"><radio><option key="Y" text="Attended"/><option key="N" text="Absent"/></radio></default-field>
+                                            </field>
+                                            <field name="attendedHours"><default-field title="Hours" tooltip="The whole session when empty"><text-line size="5"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save attendance"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="." text="Assess" icon="sym_o_grading" link-type="anchor" condition="canAssess"
+                                            parameter-map="{workEffortId:training.workEffortId, assessId:personTrainingId}"/>
+                                    <link url="${certificateUrl}" url-type="plain" text="Certificate" icon="sym_o_workspace_premium" target-window="_blank"
+                                            condition="hasCertificate" parameter-map="{personTrainingId:personTrainingId, renderMode:'html-print', lastStandalone:'true'}"/>
+                                    <link url="certificatePdf" text="PDF" icon="sym_o_picture_as_pdf" target-window="_blank" condition="hasCertificate"
+                                            parameter-map="{personTrainingId:personTrainingId, workEffortId:training.workEffortId}"/>
+                                    <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="canWithdraw"
+                                            parameter-map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, decision:'withdraw'}"
+                                            confirmation="Withdraw ${personName}'s place in ${training.title}?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="attendanceText"/><field-ref name="resultText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!enrollmentRows.length"
+                                text="${found.isDevelop || found.isTrainer ? 'No one holds a place yet.' : 'You hold no place in this session.'}"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- the result of the place chosen with Assess: the assessor's answers are not shared with AI -->
+                <section name="RecordResult" condition="assessing" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Record a result for ${assessing.personName}"/>
+                            <box-toolbar>
+                                <link url="." text="Close" icon="sym_o_close" link-type="anchor" parameter-map="{workEffortId:training.workEffortId, assessId:''}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" style="text-caption m-muted"
+                                        text="A failed result is kept and another attempt may follow. A pass completes the training${training.qualificationText ? ' and grants ' + training.qualificationText : ''}, once."/>
+                                <form-single name="AssessmentAnswer" transition="completeTraining" dynamic="true" extends="${assessFormName}"
+                                        map="{workEffortId:training.workEffortId, personTrainingId:assessing.personTrainingId, outcome:'pass'}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                    <field name="outcome">
+                                        <default-field title="Outcome"><radio><option key="pass" text="Passed"/><option key="fail" text="Failed"/></radio></default-field>
+                                    </field>
+                                    <field name="score"><default-field title="Score" tooltip="0 to 100; optional"><text-line size="5"/></default-field></field>
+                                    <field name="evidence" ai-opt-out="true">
+                                        <default-field title="Evidence" tooltip="Read by development and the trainer; not by the person"><text-area rows="2"/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Record result"><submit confirmation="Record this result? It is not changed after."/></default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the assessments the user reads: development and the trainer every one with the answers, the person their own outcome -->
+                <section name="Results" condition="resultRows.length" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Results"/>
+                            <box-body-nopad>
+                                <form-list name="ResultList" list="resultRows" skip-form="true" paginate="false">
+                                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="resultText"><default-field title="Outcome"><display/></default-field></field>
+                                    <field name="scoreText" align="right"><default-field title="Score"><display/></default-field></field>
+                                    <field name="assessedDateText"><default-field title="Assessed"><display/></default-field></field>
+                                    <field name="assessorName"><default-field title="By"><display/></default-field></field>
+                                    <field name="answersText" ai-opt-out="true" hide="!(found.isDevelop || found.isTrainer)">
+                                        <default-field title="Answers"><display/></default-field>
+                                    </field>
+                                    <field name="evidence" ai-opt-out="true" hide="!(found.isDevelop || found.isTrainer)">
+                                        <default-field title="Evidence"><display/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="assessedDateText"/></column>
+                                        <column><field-ref name="resultText"/><field-ref name="scoreText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="AssessmentNoneHolder" condition="false">
+            <widgets><form-single name="AssessmentNone"/></widgets>
+        </section>
+    </widgets>
+</screen>

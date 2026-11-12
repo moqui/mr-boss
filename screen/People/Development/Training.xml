@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Training (design-people §10 Training; style-guide §3.2 List; impl-people P19): the training sessions the user reads,
+    from mantle.humanres.DevelopmentServices.find#Training: a development reader's employers' sessions, a self-service employee's
+    employers' (to ask for a place), the ones the user trains and the ones they hold a place in; Upcoming (the default), Mine, I
+    train, Past and All, by course. Each session is a WepTraining event of Commons' calendar (its attendees the trainer and the
+    people enrolled, so it shows in their calendars), opening TrainingDetail; the row shows the course, when, where, the trainer,
+    the seats taken, what passing grants, the state and the user's own place, with Ask for a place for a self-service employee of
+    the employer while seats are left (enroll#Training: it waits for their manager's approval). A development editor
+    (PEOPLE_DEVELOP_EDIT) has Schedule session (the one primary: store#Training, a course of their employers, its trainer, seats
+    and assessment form, a published form of the training assessment purpose under People's Forms) and the Courses box (New course,
+    Change, End: store#TrainingClass, what passing grants and for how long). Every People user's and a self-service employee's (the
+    area's own grant, BOSS_PPL_DEVELOPMENT); what each reads is Mantle's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Training" default-menu-index="3" menu-image="sym_o_cast_for_education" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="trainingClassId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a session scheduled: Mantle checks the development editor, the course, the time, the trainer, the seats and the form -->
+    <transition name="storeTraining">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.store#Training" out-map="stored"
+                    in-map="{trainingClassId:(trainingClassId || null), startDate:(startDate || null), endDate:(endDate || null),
+                        location:(location ?? null), description:(description ?? null), trainerPartyId:(trainerPartyId || null),
+                        capacity:(capacity || null), assessmentFormId:(assessmentFormId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Session scheduled</message></if>
+        </actions>
+        <default-response url="../TrainingDetail"><parameter name="workEffortId" from="stored?.workEffortId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a course added, changed or ended by a development editor of its employer -->
+    <transition name="storeTrainingClass">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.store#TrainingClass" out-map="stored"
+                    in-map="{trainingClassId:(trainingClassId || null), organizationPartyId:(organizationPartyId || null), title:(title ?? null),
+                        trainingClassTypeEnumId:(trainingClassTypeEnumId ?? null), description:(description ?? null),
+                        qualificationTypeEnumId:(qualificationTypeEnumId ?? null), validityMonths:(validityMonths ?? null),
+                        assessmentRequired:(assessmentRequired == 'Y' ? 'Y' : 'N'), assessmentFormId:(assessmentFormId ?? null),
+                        end:(end || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${end ? 'Course ended' : 'Course saved'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the user's own place asked for: it waits for approval (Mantle checks the employment, the seats and a second place) -->
+    <transition name="requestPlace">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.enroll#Training" out-map="enrolled"
+                    in-map="{workEffortId:workEffortId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Place asked for: it waits for approval</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="showing" from="['upcoming', 'mine', 'training', 'past', 'all'].includes(show) ? show : 'upcoming'"/>
+        <service-call name="mantle.humanres.DevelopmentServices.find#Training" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{show:showing, trainingClassId:(trainingClassId || null), pageIndex:(pageIndex || 0)}"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            sessions = Array.from(found?.sessions || [])
+            sessionsCount = found?.sessionsCount || 0
+            sessionsPageIndex = found?.sessionsPageIndex || 0
+            sessionsPageSize = found?.sessionsPageSize || 20
+            sessionsPageMaxIndex = found?.sessionsPageMaxIndex || 0
+            sessionsPageRangeLow = found?.sessionsPageRangeLow || 0
+            sessionsPageRangeHigh = found?.sessionsPageRangeHigh || 0
+            canSchedule = !!found?.canSchedule
+            courses = Array.from(found?.classes || [])
+            courseOptions = courses.map(row => ({key: row.trainingClassId,
+                text: row.title + (people?.organizationPartyIds?.length > 1 ? ' · ' + row.organizationName : '')}))
+            courseFilterOptions = courseOptions.length ? courseOptions
+                : Array.from(new Map(sessions.map(row => [row.trainingClassId, {key: row.trainingClassId, text: row.title}])).values())
+            kindOptions = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'TrainingClassType')
+                .orderBy(['sequenceNum', 'description']).disableAuthz().list()).map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            stateColors = {scheduled: 'primary', running: 'warning', ended: 'grey-8', cancelled: 'negative'}
+            findValues = {show: showing, trainingClassId: trainingClassId || null}
+            newCourse = {organizationPartyId: people?.organizationPartyIds?.length == 1 ? people.organizationPartyIds[0] : null}
+            emptyText = showing == 'mine' ? 'You hold no training place yet. Upcoming lists the sessions you may ask for.'
+                : showing == 'training' ? 'You train no session.'
+                : showing == 'past' ? 'No past session.'
+                : canSchedule ? 'No session is scheduled. Schedule session plans one of a course; add the course first under Courses.'
+                : 'No session is scheduled for you yet.'
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Training" type="h5"/>
+                <label text="Sessions of the courses your employer offers; passing one can grant a qualification." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="ScheduleSessionDialog" button-text="Schedule session" icon="sym_o_event" type="primary" width="760"
+                        title="Schedule a training session" condition="canSchedule &amp;&amp; courseOptions.length">
+                    <label type="p" style="text-caption m-muted"
+                            text="The session is a private event in the calendars of its trainer and the people enrolled. Its results answer the assessment form."/>
+                    <form-single name="ScheduleSession" transition="storeTraining">
+                        <field name="trainingClassId">
+                            <default-field title="Course"><drop-down><list-options list="courseOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                        </field>
+                        <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
+                        <field name="endDate"><default-field title="Ends"><date-time/></default-field></field>
+                        <field name="location"><default-field title="Place"><text-line size="40"/></default-field></field>
+                        <field name="trainerPartyId">
+                            <default-field title="Trainer" tooltip="Someone who works for the course's employer">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'trainers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="capacity"><default-field title="Seats"><text-line size="5" input-type="number"/></default-field></field>
+                        <field name="assessmentFormId">
+                            <default-field title="Assessment" tooltip="A published training assessment form; the course's when empty">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'trainingForms'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description"><default-field title="What to bring"><text-area rows="2"/></default-field></field>
+                        <field name="submitButton"><default-field title="Schedule"><submit/></default-field></field>
+                        <field-layout>
+                            <field-ref name="trainingClassId"/>
+                            <field-row><field-ref name="startDate"/><field-ref name="endDate"/></field-row>
+                            <field-row><field-ref name="location"/><field-ref name="capacity"/></field-row>
+                            <field-row><field-ref name="trainerPartyId"/><field-ref name="assessmentFormId"/></field-row>
+                            <field-ref name="description"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+
+        <form-single name="FindTraining" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio>
+                        <option key="upcoming" text="Upcoming"/>
+                        <option key="mine" text="Mine"/>
+                        <option key="training" text="I train"/>
+                        <option key="past" text="Past"/>
+                        <option key="all" text="All"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="trainingClassId">
+                <default-field title="Course">
+                    <drop-down allow-empty="true"><list-options list="courseFilterOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="trainingClassId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SessionList" list="sessions" skip-form="true" paginate="true" condition="sessions.length">
+                    <field name="title">
+                        <default-field title="Course">
+                            <link url="../TrainingDetail" text="${title}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                    <field name="location"><default-field title="Place"><display/></default-field></field>
+                    <field name="trainerName"><default-field title="Trainer"><display/></default-field></field>
+                    <field name="seatsText"><default-field title="Seats"><display/></default-field></field>
+                    <field name="qualificationText"><default-field title="Grants"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>${myStatusText ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-' +
+                                    (myStatusEnumId == 'PtsEnrolled' || myStatusEnumId == 'PtsCompleted' ? 'positive' : 'grey-8') + '">' +
+                                    WebUtilities.encodeHtml('You: ' + myStatusText) + '</q-chip>' : ''}${isTrainer ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">You train</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (myStatusText ? " · You: " + myStatusText : "") + (isTrainer ? " · You train" : "")})}]]></text>
+                                <text type="html">${stateText}${myStatusText ? ' · You: ' + myStatusText : ''}${isTrainer ? ' · You train' : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="RequestPlace_${workEffortId}" button-text="Ask for a place" icon="sym_o_how_to_reg" type="default" width="520"
+                                    title="Ask for a place in ${title}, ${startText}" condition="canRequest">
+                                <label type="p" text="Your place waits for your manager's approval."/>
+                                <form-single name="RequestPlace" transition="requestPlace" map="{workEffortId:workEffortId}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why" tooltip="Your approver reads it"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Ask for a place"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="whenText"/><field-ref name="location"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!sessions.length" text="${emptyText}"/>
+            </box-body-nopad>
+        </container-box>
+
+        <!-- the courses of the employers a development editor administers -->
+        <section name="Courses" condition="canSchedule">
+            <widgets>
+                <container-box>
+                    <box-header title="Courses"/>
+                    <box-toolbar>
+                        <container-dialog id="NewCourseDialog" button-text="New course" icon="sym_o_add" width="760" title="Add a course">
+                            <form-single name="NewCourse" transition="storeTrainingClass" map="newCourse">
+                                <field name="organizationPartyId">
+                                    <default-field title="Employer">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'employers', selected:newCourse.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="title"><default-field title="Title"><text-line size="50"/></default-field></field>
+                                <field name="trainingClassTypeEnumId">
+                                    <default-field title="Kind"><drop-down allow-empty="true"><list-options list="kindOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                </field>
+                                <field name="qualificationTypeEnumId">
+                                    <default-field title="Passing grants" tooltip="A qualification the person holds once they pass; never an identity document or work permit">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'qualificationTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="validityMonths"><default-field title="Valid for (months)" tooltip="Empty: no expiry"><text-line size="5" input-type="number"/></default-field></field>
+                                <field name="assessmentRequired">
+                                    <default-field title="Needs an assessment"><check><option key="Y" text=" "/></check></default-field>
+                                </field>
+                                <field name="assessmentFormId">
+                                    <default-field title="Assessment form" tooltip="A published training assessment form of the employer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'trainingForms'}">
+                                                <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add course"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="organizationPartyId"/><field-ref name="title"/></field-row>
+                                    <field-row><field-ref name="trainingClassTypeEnumId"/><field-ref name="qualificationTypeEnumId"/></field-row>
+                                    <field-row><field-ref name="validityMonths"/><field-ref name="assessmentRequired"/></field-row>
+                                    <field-ref name="assessmentFormId"/>
+                                    <field-ref name="description"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="CourseList" list="courses" skip-form="true" paginate="false" condition="courses.length">
+                            <field name="title"><default-field title="Course"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="qualificationText"><default-field title="Passing grants"><display/></default-field></field>
+                            <field name="assessmentText"><default-field title="Assessment"><display text="${assessmentRequired ? 'Needed' : 'Optional'}"/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ChangeCourse_${trainingClassId}" button-text="Change" icon="sym_o_edit" width="720" title="Change ${title}">
+                                        <form-single name="ChangeCourse" transition="storeTrainingClass"
+                                                map="{trainingClassId:trainingClassId, expectedRevision:revision, title:title, trainingClassTypeEnumId:trainingClassTypeEnumId,
+                                                    qualificationTypeEnumId:qualificationTypeEnumId, validityMonths:validityMonths, assessmentRequired:(assessmentRequired ? 'Y' : 'N'),
+                                                    description:description}">
+                                            <field name="trainingClassId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="title"><default-field title="Title"><text-line size="50"/></default-field></field>
+                                            <field name="trainingClassTypeEnumId">
+                                                <default-field title="Kind"><drop-down allow-empty="true"><list-options list="kindOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                            </field>
+                                            <field name="qualificationTypeEnumId">
+                                                <default-field title="Passing grants">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'qualificationTypes'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="validityMonths"><default-field title="Valid for (months)"><text-line size="5" input-type="number"/></default-field></field>
+                                            <field name="assessmentRequired">
+                                                <default-field title="Needs an assessment"><check><option key="Y" text=" "/></check></default-field>
+                                            </field>
+                                            <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save course"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeTrainingClass" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger"
+                                            parameter-map="{trainingClassId:trainingClassId, end:'true', expectedRevision:revision}"
+                                            confirmation="End the course ${title}? It takes no new session; its sessions and places are kept."/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="qualificationText"/></column>
+                                <column><field-ref name="assessmentText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!courses.length"
+                                text="No course yet. New course adds one: what it teaches, and what passing it grants."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -37,7 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
     find#MyInterviews, which takes no party), shown when they have any, each opening MyInterview beside this screen, where they read
     the applicant's name, the opening and what the recruiter shared with the panel and answer their scorecard; the scorecards to
     submit counted in the summary. P18: My qualifications links People's Qualifications (their own, when the Skills and training
-    area opens to them), where they submit a certificate or document for verification. P17 review (the user's call of Nov 12, 2026):
+    area opens to them), where they submit a certificate or document for verification; P19 review: My training links People's
+    Training (their own places, the same area). P17 review (the user's call of Nov 12, 2026):
     My letters, the issued lifecycle letters addressed to the user (a hire's confirmation, a transfer, a separation and the like:
     mantle.humanres.PeopleServices find#MyLetters, which takes no party), shown when they have any, each opened as it was stored,
     whole, pay included (get#MyLetter refuses another person's letter as a missing one). Payslips (P26) join with their phase. -->
@@ -188,6 +189,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P18 -->
                             <link url="${links.qualificationsUrl}" url-type="plain" text="My qualifications" link-type="anchor-button"
                                     icon="sym_o_workspace_premium" condition="links?.qualificationsUrl"/>
+                            <!-- P19 review: their own training places (Training's Mine) -->
+                            <link url="${links.trainingUrl}" url-type="plain" text="My training" link-type="anchor-button"
+                                    icon="sym_o_school" condition="links?.trainingUrl"/>
                         </container>
                     </container>
                 </container>
