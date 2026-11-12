@@ -13,14 +13,21 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Settings area of IronStone Maintenance (design-maintenance §9 Settings, §1.2; impl-maintenance P1), the Maintenance
-    administrator's (BOSS_MNT_SETTINGS denies the root user group; BOSS_MAINTENANCE_ADMIN and ADMIN open it through the root), linked
+    administrator's (MAINTENANCE_SETTINGS_EDIT, F346; BOSS_MNT_SETTINGS denies the root user group too), linked
     from Admin's settings index (maintenance.settings): SettingsHome, the landing; the work policy (MaintenanceSettings, P3, dated
     from P18), Teams (P8: People's teams read only, their dispatch defaults), Lookups and the setup Readiness (P18, the provider
     maintenance.readiness that Admin's Health shows too). A planner or supervisor opens Teams alone, read only (P8 review). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="20" menu-image="sym_o_settings" menu-image-type="icon">
+        default-menu-title="Settings" default-menu-index="20"
+        default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')" menu-image="sym_o_settings" menu-image-type="icon">
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
+    <always-actions>
+        <script>if(!(maintenance.capabilities.settingsEdit || maintenance.capabilities.plan || maintenance.capabilities.supervise))throw new Error('PERMISSION_DENIED: Maintenance settings are the Maintenance administrator\'s')</script>
+    </always-actions>
     <subscreens default-item="SettingsHome" always-use-full-path="true">
-        <!-- P8 review: a planner or supervisor opens Settings for Teams alone (BOSS_MNT_TEAMS), so lands there -->
+        <!-- P8 review: a planner or supervisor opens Settings for Teams alone (its permission gate, F346; BOSS_MNT_TEAMS), so lands there -->
         <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')" item="Teams"/>
     </subscreens>
     <widgets>

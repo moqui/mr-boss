@@ -25,9 +25,10 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-index="2"/>
         <subscreens-item name="PreventiveComplianceReport" location="component://mr-boss/screen/Maintenance/Reports/PreventiveComplianceReport.xml"
                 menu-index="3"/>
-        <!-- P11: the cost reader's (BOSS_MNT_COSTS keeps it out of every other user's menu) -->
+        <!-- P11: the cost reader's (MAINTENANCE_COST_VIEW, the user's call of Nov 12 on F346; BOSS_MNT_COSTS denies the root user group
+            too) -->
         <subscreens-item name="MaintenanceCostReport" location="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml"
-                menu-index="4"/>
+                menu-index="4" menu-include="ec.user.hasPermission('MAINTENANCE_COST_VIEW')"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MaintenanceReportsPanel" type="tab"/>

@@ -29,9 +29,10 @@ const choiceLimit = 30
 const organizationOptionLimit = 100
 
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_MNT_<Area>): Settings the Maintenance
-// administrator's (P1). Home is every Maintenance user's.
+// administrator's (P1). Home is every Maintenance user's. Each also needs its Mantle capability (the user's call of Nov 12 on
+// F346): a custom group given Maintenance in Admin is no member of BOSS_MAINTENANCE, so the area's deny rows do not reach it.
 const areas = {
-    settings: "Settings"
+    settings: {area: "Settings", capability: "settingsEdit"}
 }
 
 // ===== scope =====
@@ -88,7 +89,8 @@ function scope() {
     const grants = rootGrants()
     const mantle = grants.read ? maintenanceAccess.scope() : null
     const capabilities = Object.assign({read: grants.read}, mantle?.capabilities || {})
-    for (const [name, area] of Object.entries(areas)) capabilities[name] = areaGrant(grants, area)
+    for (const [name, {area, capability}] of Object.entries(areas))
+        capabilities[name] = areaGrant(grants, area) && !!capabilities[capability]
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
 }
 function required(userScope = scope()) {

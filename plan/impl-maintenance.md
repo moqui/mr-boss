@@ -5593,6 +5593,29 @@ was run (the lead's run follows); nothing in MaintenanceSpecLib changed, so no r
     always-action on MAINTENANCE_SETTINGS_EDIT, MAINTENANCE_PLAN or _SUPERVISE, MAINTENANCE_COST_VIEW); Manufacturing's areas,
     which deny the same way, would want the same. Until then the FoundationWalk's last check fails.
 
+**Gating Nov 12 (F346, the user's call).** Settings, Requests and the cost screens are gated by permission, not by the
+BOSS_MAINTENANCE deny rows alone, so any group, built in or custom, gets exactly what its permissions give: each screen's
+`menu-include` (a directory-found tab's `default-menu-include`; Reports' `subscreens-item`, the root's for Requests) on
+`ec.user.hasPermission`, and an always-action that throws `PERMISSION_DENIED` from the app's capabilities (`maintenance.capabilities`),
+as the Shared catalog mounts refuse. SettingsHome, WorkPolicy, Lookups and Readiness need `settingsEdit` (MAINTENANCE_SETTINGS_EDIT);
+the Settings frame and Teams `settingsEdit`, `plan` or `supervise` (a non-administrator still lands on Teams, P8); Requests (and
+RequestDetail under it) `plan` or `supervise`; WorkOrderDetail's Costs tab and MaintenanceCostReport `costView`. Maintenance.js's
+`settings` capability (Home's Shortcuts) also needs `settingsEdit`, since the area's deny no longer decides it for a custom group.
+The deny rows (BOSS_MNT_SETTINGS, _REQUESTS, _COSTS) and the ALWAYS rows and bundle artifacts of P11 R2 and P8 (BOSS_MNT_REQUESTS,
+_COSTS, _TEAMS) are kept: the gates make them redundant for screens but they still decide each area's transitions and the services
+called under them for the built-in groups, so removing them is not a no-op; each still matches its bundle. Observed: a custom
+group given the planner bundle was already refused Settings' other tabs by the artifact check (BOSS_MNT_TEAMS' non-inheritable
+ALWAYS on the Settings frame), so F346's open screens were those of a bundle without Teams (the reader's, the cost reader's, the
+resource administrator's: Settings by the root's ALLOW) and every bundle's Requests and cost screens. On the Settings frame the
+gate now refuses the reader before the tab's deny is decided (`PERMISSION_DENIED`, no longer "not authorized"). MaintenanceAccess
+gains one feature: a spec-local custom group given the planner bundle and the launcher through Admin's capability matrix opens
+Teams and Requests, is refused SettingsHome, WorkPolicy, Lookups and Readiness and the Costs tab and cost report, and its Settings
+menu is Teams alone; one given the reader bundle is refused Settings and Requests. MaintenanceFoundationWalk's custom team check
+(`teamSettings == ["Teams"]`) now holds by the gates; its comments say so (not run). Manufacturing's areas deny the root user group
+the same way and are left as they are (§7). Tests: MaintenanceAccess 28 of 28 (11.0 s), MaintenanceSettings, MaintenanceRequests,
+MaintenanceCosts, MaintenanceReports, MaintenanceWorkOrders and AdminCapabilities 27 of 27 (6.8 s); `lint --screens` nothing new in
+the changed screens. Not run: `./moq test-apps`, the acceptance suite.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -6029,7 +6052,7 @@ paths under `mr-boss/`.
 | F343 | P12 review: A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent | P12's Review note |
 | F344 | P12 review: `check#WarrantyRepair` returns the first blocker of every claim linking the repair, open claims first | P12's Review note |
 | F345 | P12 review: WorkOrderDetail's repair header and Equipment condition and Overview's CustomerRepair box have no regression render with a repair (the one WorkOrderDetail render is Services' work) | P12's Review note |
-| F346 | P20: A custom group given Maintenance's root artifact group in Admin is no member of `BOSS_MAINTENANCE`, whose deny rows keep Settings, Requests and Costs from the ordinary groups | P20's Built note |
+| F346 | P20: A custom group given Maintenance's root artifact group in Admin is no member of `BOSS_MAINTENANCE`, whose deny rows keep Settings, Requests and Costs from the ordinary groups | Fixed: the screens gated by permission (P20's Gating Nov 12, the user's call) |
 | F347 | P20: ProcedureDetail/Steps.xml's comment says Waits are written through `store#ProcessDependency` | P20's Built note |
 | F348 | P20: Maintenance's record panels serve no AssetMaintenance host | P20's Built note |
 | F349 | P20: The mr-mantle README's line on Upgrading.md names key changes only | P20's Built note |
@@ -6070,6 +6093,9 @@ Designed, not in this build:
 - **Owners' later work found here:** a Measurement migration of AssetMeter history (design §14); the legacy due
   helper `get#AssetMaintenanceNeeded` under an opt-in corrected contract; Projects' cost reports on the costing
   rate. Manufacturing's rows and lookup move to the one costing purpose, `RaprCost`, in impl-people P10 (its §4; F33).
+- **Manufacturing's areas gated by permission** (F346): Manufacturing's areas are kept from its ordinary groups by deny rows on
+  its root user group, as Maintenance's were, so a custom group given Manufacturing in Admin opens them; Maintenance's gates
+  (P20's Gating Nov 12) are the pattern to follow there.
 
 ## 8. Verification
 

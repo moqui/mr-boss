@@ -19,9 +19,16 @@ along with this software (see the LICENSE.md file). If not, see
     Each finding names its owner's place, resolved here from its route key (fixRoute, the keys Admin.js mountRoutes gives Admin);
     a ready check needs none. The organization chosen, or each of the administrator's organizations that uses Maintenance. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Readiness" default-menu-index="6">
+        default-menu-title="Readiness" default-menu-index="6"
+        default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
+    <always-actions>
+        <script>if(!(maintenance.capabilities.settingsEdit))throw new Error('PERMISSION_DENIED: Maintenance settings are the Maintenance administrator\'s')</script>
+    </always-actions>
     <actions>
         <set field="can" from="maintenance.capabilities"/>
         <if condition="can.settingsEdit">

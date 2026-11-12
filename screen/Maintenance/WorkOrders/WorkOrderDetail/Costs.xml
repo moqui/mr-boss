@@ -13,16 +13,23 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- WorkOrderDetail's Costs tab (design-maintenance §3 WorkCosts, review Y2; impl-maintenance P11, F128: index 100): the cost reader's
-    only (the artifact group BOSS_MNT_COSTS keeps it out of every other user's menu, and mantle.work.MaintenanceReportServices
-    get#MaintenanceCosts answers MAINTENANCE_COST_VIEW alone). The work's cost by currency (parts issued less returned at cost, approved
+    only (MAINTENANCE_COST_VIEW gates its menu entry and render, F346; the artifact group BOSS_MNT_COSTS denies the root user group;
+    and mantle.work.MaintenanceReportServices get#MaintenanceCosts answers MAINTENANCE_COST_VIEW alone). The work's cost by currency (parts issued less returned at cost, approved
     labor at the costing rate of the technician's class and work type, outside service from its bill or acceptance, once), never added
     across currencies; the hours not approved and the hours with no costing rate apart; the outside service ordered and not yet
     accepted, pending; the estimate the Approve gate computes (planned parts at the approved standard cost, estimated hours at the
     costing rate; never stored), or why it cannot be priced; the project the cost is charged to; and each source once, with its posting
     state. No person's pay rate. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Costs" default-menu-index="100">
+        default-menu-title="Costs" default-menu-index="100"
+        default-menu-include="ec.user.hasPermission('MAINTENANCE_COST_VIEW')">
     <parameter name="workEffortId"/>
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
+    <always-actions>
+        <script>if(!(maintenance.capabilities.costView))throw new Error('PERMISSION_DENIED: Maintenance costs are the cost reader\'s')</script>
+    </always-actions>
     <actions>
         <set field="costs" from="null"/>
         <if condition="recordFound">

@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     Membership grants nothing in Maintenance. New teams are made in People. Read only for a planner or supervisor (design §2's "P
     read", P8 review: BOSS_MNT_TEAMS opens this tab alone of Settings to their groups): the lists and the defaults as text, no form. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Teams" default-menu-index="3">
+        default-menu-title="Teams" default-menu-index="3"
+        default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')">
     <parameter name="organizationPartyId"/>
     <parameter name="teamPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
@@ -43,6 +44,12 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="teamPartyId"/>
         </error-response>
     </transition>
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
+    <always-actions>
+        <script>if(!(maintenance.capabilities.settingsEdit || maintenance.capabilities.plan || maintenance.capabilities.supervise))throw new Error('PERMISSION_DENIED: Maintenance teams are read by planners and supervisors')</script>
+    </always-actions>
     <actions>
         <set field="can" from="maintenance.capabilities"/>
         <!-- the administrator edits the defaults; a planner or supervisor reads the teams (P8 review) -->
