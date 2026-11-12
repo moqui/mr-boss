@@ -482,7 +482,8 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_FIELD_OWEN" relationshipTypeEnumId="PrtMember"
             fromPartyId="BOSS_PPL_OWEN" fromRoleTypeId="Assignee" toPartyId="BOSS_MNT_TEAM_FIELD" toRoleTypeId="OrgTeam" fromDate="2026-02-01 00:00:00"/>
     <mantle.work.maintenance.MaintenanceTeamDefaults teamPartyId="BOSS_MNT_TEAM_FIELD" fromDate="2026-02-01 00:00:00" organizationPartyId="ORG_ZIZI_SERVICES"
-            facilityId="BOSS_MNT_ROOM_102" defaultAssigneePartyId="BOSS_PPL_KENJI" intakeTag="compressors" comments="The mechanical room's equipment"/>
+            facilityId="BOSS_MNT_ROOM_102" defaultAssigneePartyId="BOSS_PPL_KENJI" comments="The mechanical room's equipment"/>
+    <mantle.party.PartySetting partyId="BOSS_MNT_TEAM_FIELD" partySettingTypeId="MntIntakePlusTag" settingValue="compressors"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_MNT_SE_SOFIA_FIELD" partyId="BOSS_PPL_SOFIA"
             skillTypeEnumId="BOSS_PPL_SK_FIELD" sourceEnumId="SksManagerEvaluated" skillLevel="3" evaluationDate="2026-01-21 09:00:00"
             assessorPartyId="BOSS_PPL_AMARA"/>

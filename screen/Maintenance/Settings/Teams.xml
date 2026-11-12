@@ -17,8 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     OrgTeam Organization with dated PrtMember rows; mantle.work.MaintenanceSettingsServices.find#MaintenanceTeams). TeamList names
     each team with its organization, lead and members; a team's TeamMembers lists its dated membership (lead or member, from and
     to), changed only in People's organization structure, which it links (shown to a user whose groups open People). TeamDefaults
-    is what Maintenance owns: the dispatch and intake defaults (the resource scope, the default assignee among the members, the
-    intake address's plus-tag and the project), dated (store#MaintenanceTeamDefaults; MAINTENANCE_SETTINGS_EDIT, which Mantle checks).
+    is what Maintenance owns: the dispatch and intake defaults (the resource scope, the default assignee among the members and the
+    project, dated, and the intake address's plus-tag, the team's setting the mail intake reads; store#MaintenanceTeamDefaults,
+    MAINTENANCE_SETTINGS_EDIT, which Mantle checks).
     Membership grants nothing in Maintenance. New teams are made in People. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Teams" default-menu-index="3">
@@ -133,7 +134,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Dispatch defaults"/>
                             <box-body>
-                                <label text="${team.defaults ? 'In effect since ' + team.defaults.fromDateText : 'No defaults have been saved.'}" type="p"
+                                <label text="${team.defaults?.fromDateText ? 'In effect since ' + team.defaults.fromDateText : 'No defaults have been saved.'}" type="p"
                                         style="text-caption m-muted"/>
                                 <form-single name="TeamDefaults" transition="storeTeamDefaults" map="defaultsValues">
                                     <field name="teamPartyId"><default-field><hidden/></default-field></field>
