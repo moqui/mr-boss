@@ -12,10 +12,118 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Maintenance landing page (initial-design.md); design-maintenance.md designs it. -->
+<!-- Maintenance Home (design-maintenance §3 Home, §1.2; style-guide §3.1 Landing; impl-maintenance P1): HomeFilters (the organization,
+    from those of the user's maintenance scope, a facility of it and the as-of date, each checked by
+    ironstone.maintenance.AccessServices.check#Record and shown "not available" when refused), the Counters of design §3 (open,
+    unassigned, high priority, overdue PM, unknown meters, down resources) shown "Not configured" until the work orders, plans and
+    downtime that answer them exist (mantle.work.MaintenanceReportServices.get#MaintenanceHome, P3, P5, P13), never zero, and the
+    shortcuts to the areas built (Settings for the Maintenance administrator). A Maintenance user who reads nothing of Maintenance
+    (the root group alone) is told what Home holds. P3 adds My work and Team work, the team filter, the counts that open the
+    filtered lists and the New work order and Report a problem actions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="asOfDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <if condition="can.anyRead &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="organizationRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <if condition="can.anyRead &amp;&amp; facilityId">
+            <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="facilityRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
+        <set field="facilityRefused" from="!!facilityId &amp;&amp; (!facilityRecord?.recordId
+                || (!!organizationPartyId &amp;&amp; facilityRecord.organizationPartyId !== organizationPartyId))"/>
+        <set field="scope" from="{organizationPartyId: organizationPartyId || null, facilityId: facilityId || null, asOfDate: asOfDate || null}"/>
+        <set field="scopeText" from="[organizationRecord?.label || (maintenance.allOrganizations ? 'Every organization' : 'Your organizations'),
+                facilityRecord?.recordId &amp;&amp; !facilityRefused ? facilityRecord.label : null,
+                'as of ' + (asOfDate ? ec.l10n.format(asOfDate, 'yyyy-MM-dd') : 'today')].filter(Boolean).join(', ')"/>
+        <!-- design §3's counters, none answered until its records exist: each is not configured, never zero -->
+        <set field="counterRows" from="[
+                {counter: 'Open work orders', source: 'Work orders'},
+                {counter: 'Unassigned', source: 'Work orders'},
+                {counter: 'High priority', source: 'Work orders'},
+                {counter: 'Overdue preventive maintenance', source: 'Preventive plans'},
+                {counter: 'Unknown meter readings', source: 'Equipment meters'},
+                {counter: 'Unavailable resources', source: 'Downtime'}
+            ].map(row =&gt; Object.assign(row, {state: 'Not configured'}))"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Maintenance landing page for facilities and equipment managers." type="p"/>
+        <label text="Maintenance" type="h5"/>
+        <section name="NoRead" condition="!can.anyRead">
+            <widgets>
+                <label text="Home summarizes the maintenance work, equipment and facilities of your organizations. Nothing of it is open to you."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ReaderHome" condition="can.anyRead">
+            <widgets>
+                <form-single name="HomeFilters" transition="." map="scope">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:scope.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'facilities', selected:scope.facilityId}">
+                                    <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate">
+                        <default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="facilityId"/></field-row>
+                        <field-row><field-ref name="asOfDate"/><field-ref name="submitButton"/></field-row>
+                    </field-layout>
+                </form-single>
+                <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationRefused"/>
+                <label text="This facility is not available to you." type="p" style="text-negative" condition="facilityRefused"/>
+                <label text="${scopeText}" type="p" style="text-caption m-muted" condition="!organizationRefused &amp;&amp; !facilityRefused"/>
+                <container-box>
+                    <box-header title="Counters"/>
+                    <box-body>
+                        <label text="The counts open here as Maintenance's work orders, preventive plans and downtime are set up; until then none is configured, and none is shown as zero."
+                                type="p" style="text-caption m-muted"/>
+                        <form-list name="CounterRows" list="counterRows" skip-form="true" paginate="false">
+                            <field name="counter"><default-field title="Counter"><display/></default-field></field>
+                            <field name="state"><default-field title="State"><display/></default-field></field>
+                            <field name="source"><default-field title="Counted from"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="counter"/><field-ref name="source"/></column>
+                                <column><field-ref name="state"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Shortcuts" condition="can.settings">
+            <widgets>
+                <container-box>
+                    <box-header title="Shortcuts"/>
+                    <box-body>
+                        <label text="Set up Maintenance for your organizations: the work policy, teams and lookups." type="p"/>
+                        <link url="${sharedLinks['Settings']}" text="Settings" link-type="anchor-button" btn-type="primary" icon="sym_o_settings"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

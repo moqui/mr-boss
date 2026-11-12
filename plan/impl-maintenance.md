@@ -506,6 +506,167 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
   shows the Maintenance bundles and an access administrator grants the planner bundle to a custom group; SettingsHome
   lists Maintenance settings for `maint.admin` and not for `maint.reader`.
 
+**Built Nov 11 (P1).** mr-mantle f4266912, mr-boss f03ebeb3 (branch `mnt/p1`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F1 (the root grant live for `ADMIN` and `BOSS_MAINTENANCE_ADMIN`, ALWAYS; the root's
+  comment said otherwise), F35 (SettingsEntry and CapabilityBundle as built; Admin's registry comment listed Maintenance as left
+  out), F50 (the deny rows: thirteen with Admin P6's transfer row; with `maintenance` the add row reached 256 and the record row
+  252), FacilityScope.js and `get#PartyInternalOrgIds` (organizations), EntityLib.js `denied`, People P1's root, People.js,
+  PeopleSpecLib and PeopleAccess (the model), and the lead's two P0 notes: F62 (`PEOPLE_DIRECTORY_VIEW` for the planner,
+  supervisor and resource administrator) and F74 (the root as Insights' for a shared device).
+- Mantle:
+  - `data/MaintenanceSetupData.xml`: the eighteen permissions of design §1.1 (`MAINTENANCE_VIEW`, `_ASSIGNED_VIEW`, `_REQUEST`,
+    `_REQUEST_VIEW_OWN`, `_PLAN`, `_EXECUTE`, `_SUPERVISE`, `_COST_VIEW`, `_RESOURCE_VIEW`, `_RESOURCE_EDIT`, `_SETTINGS_EDIT`,
+    `_IMPORT`; `WORK_PROCESS_VIEW`, `_EDIT`, `_APPROVE`; `RESOURCE_BOOKING_VIEW_ASSIGNED`, `_APPROVE`; `RESOURCE_POLICY_VIEW`,
+    `_EDIT`), each granted to `ADMIN`; `FACILITY_EDIT` is MantleSetupData's.
+  - `mantle/work/MaintenanceAccess.js` (no service yet; tables `permissions` and `reads` for later phases): `capabilities()`
+    (each permission and `FACILITY_EDIT`; the reads `workRead` = view or assigned view, `resourceRead` = those or resource view,
+    `anyRead` = any view permission; an edit permission alone reads nothing), `scope()` (capabilities, the caller's party, the
+    organizations of FacilityScope.js, null for every organization (ADMIN, `FACILITY_ALL_ORGANIZATIONS`), none without a read),
+    `covers`, `requireCapability`, `requireOrganization` (`ORGANIZATION_DENIED`), `facilityOrganization` (the nearest owning
+    ancestor, twelve levels), `assetOrganization` (an internal owner, else the holding facility's: a customer's asset in
+    custody), `rootOf`, `rootOrganization` (the root's owner, else its facility's; P3 may read its MaintenanceWorkOrder instead),
+    `assignment` (a current WorkEffortParty of the caller's party on the root, or on the step or its root), `requireFacility`,
+    `requireAsset` and `requireWork` (missing and outside alike `RECORD_UNAVAILABLE`; `PERMISSION_DENIED` without the read; an
+    assigned-view caller `NOT_ASSIGNED` on work in scope that is not theirs).
+- BOSS:
+  - `data/BossSetupData.xml` (appended but for the deny rows and the registry comment): the groups `BOSS_MAINTENANCE` (root
+    user group) and `_READ`, `_REQUEST`, `_PLAN`, `_EXECUTE`, `_SUPERVISE`, `_PROCEDURE`, `_PROCEDURE_APPROVE`,
+    `_BOOKING_APPROVE`, `_RESOURCE_ADMIN`, `_COST`; on the `BOSS_MAINTENANCE` artifact group (a second element) the
+    `ironstone\.maintenance\..*` pattern and `BOSS_MAINTENANCE_ROOT` (ALLOW, `MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`);
+    `BOSS_MAINTENANCE_ADMIN` keeps its ALWAYS; `_REQUEST` has no root grant; `BOSS_MNT_SETTINGS` denies Settings to the root
+    user group; design §1.1's grants, `MAINTENANCE_IMPORT` to the resource administrator, `PEOPLE_DIRECTORY_VIEW` to the
+    planner, supervisor and resource administrator (F62), and to the administrator `MAINTENANCE_SETTINGS_EDIT` with the views
+    `MAINTENANCE_VIEW`, `WORK_PROCESS_VIEW`, `MAINTENANCE_RESOURCE_VIEW`, `RESOURCE_POLICY_VIEW`; `maintenance` in all thirteen
+    deny rows, the add row split at `book`/`bulk` and the record row at `release`/`remove` (fifteen rows; the longest 238, so
+    `sales` and `marketing` fit every row); twelve capability bundles (1300-1410; the launcher's artifact with the root's
+    filter sets; cost sensitive) and the settings entry `maintenance.settings` (Maintenance/Settings, view
+    `MAINTENANCE_SETTINGS_EDIT`, sequence 75; its provider key is P18's).
+  - `ironstone.maintenance.AccessServices` (`get#Capabilities`, `check#Record`) and `ContextServices` (`get#SharedContext`,
+    `get#Choices`, `search#Records`) over `service/ironstone/maintenance/Maintenance.js` (tables `areas`, `recordKinds`,
+    `choiceSources`, `searchFinds`, `linkPaths`): the root grant read from the user's own groups (as People.js); record kinds
+    organization, facility and asset (through MaintenanceAccess; their screens are P2's), choices organizations and facilities
+    (one organization's with `organizationPartyId`), no palette source yet. `template/MaintenanceParts.xml` holds `choices`.
+  - Screens: the root (`get#SharedContext` in always-actions, and for a shared device's request no context service and a
+    refusal of Chatter and RecordFiles, F74; `<shell-providers>` with the palette source and the `maintenance` keymap, `g m`;
+    the stale comment replaced, F1); Home (HomeFilters: organization, facility and as-of, each checked by `check#Record`;
+    Counters, the six of design §3 as Not configured; the administrator's Settings shortcut; a user who reads nothing told so);
+    Settings with SettingsHome (an organization find and the settings to come, Not yet available). WorkOrders, Equipment,
+    Facilities and Scheduling placeholders removed. Menus: Home for every group, Home and Settings for the administrator and
+    `ADMIN`.
+  - Demo: `data/BossMaintenanceDemoData.xml` (empty); BossUsersDemoData's `maint.reader`, `.requester`, `.planner`, `.tech`,
+    `.tech2`, `.supervisor`, `.author`, `.approver`, `.booking`, `.resources`, `.cost` (agents of Services), `maint.retail` (a
+    planner of Retail only) and `maint.admin` (Services and Retail, `BOSS_MAINTENANCE_ADMIN` alone), each in `BOSS_USERS`, none
+    in `ADMIN`; the requester in `BOSS_MAINTENANCE_REQUEST` alone.
+- Specs:
+  - Mantle `test/work/MaintenanceScope` (3 features, 1.2 s feature time, not in the plan's list: the module has no service to
+    test it through and Mantle's rules are tested in Mantle): capabilities and organizations (a plan permission alone reads
+    nothing, `FACILITY_ALL_ORGANIZATIONS` every organization); a facility's, an owner-less room's, an asset's and a customer
+    asset's organization, another organization's and a missing record refused alike; work read broadly by its root's
+    organization and by a technician only where assigned (step or root; an ended assignment not counted).
+  - `test/Maintenance/MaintenanceSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`, `screenRefusal`,
+    `hit`, `shell`); `MaintenanceAccess` (7 features, 2.4 s feature time, the slowest 0.7 s): the context and its refusals
+    (another root, the requester, another app's user, a client, a PASS account); the menu, key, palette and launcher per group;
+    each group's capabilities exactly (context and `get#Capabilities` alike; a spec-local user holding `MAINTENANCE_PLAN` alone
+    reading no organization, facility or choice; the requester refused); Retail's planner refused Services' organization and
+    plant and Services' planner Retail's organization, warehouse and forklift with the same parameters, a capability named
+    refused; the services refused without the root grant; Home's one qvt render as the planner and Settings' one html render as
+    the administrator (the reader's a refusal); every Maintenance bundle carrying exactly its group's grants, the import
+    permission the resource administrator's bundle alone, `maintenance.settings` the administrator's and not the reader's.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceFoundationWalk` (4 features: each group's menu with each
+    entry opened or refused; the requester, a client and a PASS account refused the root and every `ironstone.maintenance`
+    service, no launcher for the requester; Capabilities showing the bundles and `admin.access` granting the planner bundle to a
+    custom team whose member opens Maintenance as a planner; the settings index for `maint.admin` and not `maint.reader`).
+- Tests run (release binary, `--nobuild`, this worktree): MaintenanceScope 3 of 3 (1.2 s); in mr-boss MaintenanceAccess,
+  ProjectsAccess (the deny rows), AdminAccess, AdminRegistries, AdminCapabilities, AdminGroups, AdminOrganizations, AdminUsers,
+  AdminLifecycle, AppOrganizationFilters, InsightsAccess, PeopleAccess, CommerceAccess, ManufacturingAccess, Contacts, Resources,
+  Schedules (Commons' "Open in Maintenance") and QuickCreate: 170 of 170 features, 34.5 s feature time. `moqui lint --screens`
+  (release binary): 136 flagged sites against 135 in the main checkout; the one new is the root's
+  `UserSecurityChecks.currentDevice()` (static-class), the same call Insights' root has flagged, which F74 asks for; none else
+  in the Maintenance screens. Prettier clean on the new JavaScript. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: no ss-inventory or usl-inventory row is implemented by P1.
+- Design edits: design-maintenance §1.1 (as built: the permissions, the scope module, the root user group, the Settings area,
+  the administrator's views, `PEOPLE_DIRECTORY_VIEW`, the device's request), §1.2 (the menu, keymap and palette source), §3
+  Home (the filters and counters as built).
+- Findings (provisional):
+  - the administrator's grants are not in design §1.1 ("operational permissions granted explicitly in data"); P1 gives
+    `MAINTENANCE_SETTINGS_EDIT` and the four views and no plan, supervise or edit permission. Maintenance has no
+    all-organizations permission of its own: `FACILITY_ALL_ORGANIZATIONS` (FacilityScope.js) widens it, as it does facility and
+    stock work, and the demo administrator is an agent of Services and Retail (People got `PEOPLE_ALL_ORGANIZATIONS` by the
+    user's call);
+  - Commons' Schedules ResourceDetail links "Open in Maintenance" to `//Maintenance/Facilities` and `//Maintenance/Equipment`
+    (screen/Commons/Calendar/Schedules/ResourceDetail.xml:60); with the placeholders removed the link is hidden (its
+    `buildUrl` is in a try) until P2 builds those areas, which should keep the paths or change the link;
+  - a requester's `get#Capabilities` is refused by the service grant (the pattern is on the root's artifact group), so Commons'
+    intake (P4) cannot ask Maintenance's capabilities of a requester; P4 reads Mantle's MaintenanceAccess or adds its own grant;
+  - the technicians are agents, not People employees: P8's skills, capacity and qualifications need them employed (or other
+    demo technicians), and People's Services employees (Kenji's technician seat) are candidates;
+  - Maintenance's Chatter and RecordFiles under the root open no Maintenance host yet; the hosts and a panel restriction like
+    People's are P3's.
+- For the lead:
+  - budget share: mr-mantle MaintenanceScope 1.2 s; mr-boss MaintenanceAccess about 2.4 s server; no client spec;
+  - merge hot spots: mr-boss `data/BossSetupData.xml` (all fifteen deny rows, the registry comment near Admin P3's bundles,
+    the Maintenance block appended at the end), `data/BossUsersDemoData.xml` (appended), `screen/Maintenance.xml`,
+    `plan/design-maintenance.md` §1.1, §1.2, §3 Home; mr-mantle only new files;
+  - the user's calls: the administrator's grants and whether Maintenance gets its own all-organizations permission (the
+    first finding); built meanwhile: the settings permission and views, `FACILITY_ALL_ORGANIZATIONS` as the widening.
+
+**Review Nov 11 (P1).** mr-mantle aacf3103, mr-boss 82690cf9 (branch `mnt/p1`), over the worker's f4266912, f03ebeb3 and
+45b45561. Reviewed `git diff master...mnt/p1` in both repos against P1's text, §2, master's P0 notes F62 and F74, design §1.1,
+§1.2 and §3 Home, and AGENTS.md; lint re-run with the Debug binary; the device branch and the deny rows checked by measure.
+- Checked and found sound:
+  - the eighteen permissions seeded in Mantle, each granted to `ADMIN`; MaintenanceAccess.js checks permissions only, never a
+    group, a screen or `appRoot`; a write permission alone reads nothing and has no organization (the plan-only user, Mantle
+    and BOSS alike); a missing record and one outside the scope are refused alike; an ended assignment is not counted;
+  - Maintenance.js reads the root grant from the user's own groups (ALWAYS over DENY over ALLOW, as People.js), refuses a
+    Projects client and another root, and its choices and `check#Record` admit only the scope's organizations and facilities;
+  - the client deny rows: fifteen (fourteen with the add and record rows split, and Admin P6's transfer row), the longest 238
+    characters (every row at or under 255, and 254 with `sales|marketing|` added), the 107 verbs of master's thirteen rows all
+    kept and none added; `ironstone.maintenance`'s five services are reads; ProjectsAccess passes (9 of 9);
+  - F62: `PEOPLE_DIRECTORY_VIEW` granted to the planner, supervisor and resource administrator and in their bundles (kept, the
+    user's call (c)); F74: the root calls no context service for a device's request;
+  - the twelve bundles carry exactly their groups' grants; the settings entry is the administrator's; Settings is denied to the
+    root user group and opened by the administrator's and `ADMIN`'s ALWAYS; Home renders once in qvt, Settings once in html.
+- Fixes:
+  - R1 (access, missing test; F74). A device's request was never exercised: no Maintenance route group exists, so it is refused
+    before the root today. MaintenanceAccess now registers a spec-local route group inheriting the whole root and a display
+    account holding the root grant: Home opens with no capability, and Chatter's and RecordFiles' data are refused
+    (`RECORD_PANEL_UNAVAILABLE`), with a record and without; the case fails with the root's refusal removed (checked).
+  - R2 (access, medium). Under the root's inheritable grant the Chatter and RecordFiles mounts served the notes and files of any
+    record `get#RecordLinkInfo` admits to a user given Maintenance without Commons (People P2's and Insights P12's lesson). The
+    root now serves only Maintenance's own record hosts' panels, as People's root does, and a request naming no record; the
+    host list is empty in P1. MaintenanceAccess checks a facility's panel refused to the planner and a record-less one served.
+  - R3 (the user's call (a), Nov 11). `MAINTENANCE_ALL_ORGANIZATIONS`, seeded in MaintenanceSetupData and granted to `ADMIN`:
+    MaintenanceAccess.scope() now reads the caller's own organizations (get#PartyOrganizationInfo, as FacilityScope.js) and
+    makes them every organization only for a system administrator or a holder of it, which reads nothing by itself (capability
+    `allOrganizations`). Went the recommended way: `FACILITY_ALL_ORGANIZATIONS` no longer widens Maintenance, as People reads
+    only its own, so the Warehouse and Manufacturing administrators' grant does not reach maintenance work. Granted only to
+    `BOSS_MAINTENANCE_ADMIN` and in that bundle alone. MaintenanceScope: a holder reads another organization's site, a holder of
+    `FACILITY_ALL_ORGANIZATIONS` its own organizations only, the permission alone nothing.
+  - R4 (the user's call (b), Nov 11). `BOSS_MAINTENANCE_ADMIN` holds every `MAINTENANCE_*`, `WORK_PROCESS_*` and `RESOURCE_*`
+    permission (twenty, `MAINTENANCE_ALL_ORGANIZATIONS` among them; not `FACILITY_EDIT`), and its bundle follows (cost view
+    sensitive, the views view, the rest edit). MaintenanceAccess: the administrator's capabilities exactly, its context every
+    organization, `MAINTENANCE_IMPORT` in the resource administrator's and the administrator's bundles.
+  - Design §1.1 (the administrator's row and the as-built text: the scope, the grants, the panels) and the setup comments.
+- Findings:
+  - the Built note's lint was run with the release binary; the Debug binary gives the same 136 sites (the one new is the root's
+    `UserSecurityChecks.currentDevice()`, static-class, as Insights' root), before and after R2;
+  - P2 mounts the shared EquipmentDetail and FacilityDetail, whose `record-files` and `chatter` name `mantle.product.asset.Asset`
+    and `mantle.facility.Facility`: P2 adds them to the root's `panelHosts` with their checks, or those panels are refused
+    under Maintenance (R2); P3 adds the work order and step;
+  - with MAINTENANCE_ALL_ORGANIZATIONS the administrator's scope is every organization even with an active one chosen
+    (FacilityScope's rule), where People narrows its holder to the active organization; P3's lists may want People's rule;
+  - the root's ALWAYS gives the administrator and `ADMIN` every area; with R4 the administrator holds what each area reads.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceScope 3 of 3 (1.4 s feature time); mr-boss
+  MaintenanceAccess 8 of 8 (2.5 s, the new device and panel feature 0.19 s), with ProjectsAccess, AdminAccess,
+  AdminCapabilities, AdminRegistries, AdminGroups, AdminUsers, AdminDevices, PeopleAccess, InsightsAccess, InsightsWallDisplay,
+  ManufacturingAccess and AppOrganizationFilters: 80 of 80 features, 25.1 s feature time. `moqui lint --screens` with
+  `target/debug/moqui`: 136 sites, none new beyond the one above. Prettier clean on the changed JavaScript. Not run:
+  ./moq test-apps, the acceptance suite (MaintenanceFoundationWalk unchanged by the fixes: the administrator's menu is the same).
+- For the lead: budget share mr-mantle +0.2 s (MaintenanceScope 1.4 s), mr-boss +0.2 s (MaintenanceAccess 2.5 s); merge hot
+  spots as the Built note's, plus mr-mantle `data/MaintenanceSetupData.xml` and `MaintenanceAccess.js`, mr-boss
+  `screen/Maintenance.xml` (the panel hosts); the user's calls (a), (b) and (c) built as R3, R4 and kept, their §4 rows yours;
+  no call left open.
+
 ### P2 — Equipment and facilities
 
 Design §6 Equipment, Facilities and the shared master records' context table (EquipmentDetail, FacilityDetail,

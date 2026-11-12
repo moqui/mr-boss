@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Maintenance app's context (impl-maintenance §2, P1; design-maintenance §1.1, §1.2; Maintenance.js): the shared context every
+    Maintenance screen reads in the root's always-actions, the drop-downs and the palette. The access itself is AccessServices';
+    the scope is Mantle's (mantle/work/MaintenanceAccess.js). Costs are never part of the context. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="Parameters" type="interface">
+        <description>The in-parameters the Maintenance context services share; each service declares what it returns.</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="SharedContext" allow-remote="false">
+        <description>Check that the user may open Maintenance and resolve their scope and the app's routes: capabilities (the
+            maintenance permissions, the derived reads and the areas), the organizations of their maintenance scope (none for a
+            user who reads nothing of Maintenance; every internal organization for a system administrator or a holder of
+            MAINTENANCE_ALL_ORGANIZATIONS, allOrganizations) as options, the active one, the user's party and the links. Refuses a
+            user without Maintenance (MAINTENANCE_UNAVAILABLE), a requester, a Projects client contact and a PASS public account
+            among them, and another app root (MAINTENANCE_CONTEXT).</description>
+        <implements service="ironstone.maintenance.ContextServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="organizationPartyIds" type="List"/>
+            <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="allOrganizations" type="Boolean"/>
+            <parameter name="organizationOptions" type="List"><description>The organizations as {value, label}, by name, at most
+                100</description></parameter>
+            <parameter name="partyId" type="String"/>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="sharedLinks" type="Map"/>
+            <parameter name="linkBase" type="String"/>
+            <parameter name="webBase" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="shared" from="ec.resource.script(module).execute('sharedContext', context)"/>
+            <set field="capabilities" from="shared.capabilities"/>
+            <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
+            <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="allOrganizations" from="shared.allOrganizations"/>
+            <set field="organizationOptions" from="shared.organizationOptions"/>
+            <set field="partyId" from="shared.partyId"/>
+            <set field="appRoot" from="shared.appRoot"/>
+            <set field="sharedLinks" from="shared.sharedLinks"/>
+            <set field="linkBase" from="shared.linkBase"/>
+            <set field="webBase" from="shared.webBase"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Choices" allow-remote="false" read-only="true">
+        <description>The options of a Maintenance drop-down the user may choose, searched by term in the query ignoring case,
+            with the selected value's label (Maintenance.js choiceSources): organizations (those of the user's maintenance scope)
+            and facilities (those the organizations own, or organizationPartyId's, for an equipment or facility reader). Later
+            phases add theirs. Refuses a user without Maintenance and an unknown choice.</description>
+        <implements service="ironstone.maintenance.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="organizationPartyId"><description>facilities: the organization whose facilities are offered</description></parameter>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="search" noun="Records" allow-remote="false" read-only="true">
+        <description>The palette's Maintenance records, each opening its Maintenance screen, with recordEntity and recordId for
+            Assist's search (Maintenance.js searchFinds). None yet: equipment and facilities join with their screens (P2), work
+            orders (P3), procedures (P6). No rows for a user without Maintenance.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="limit" type="Integer"/>
+            <parameter name="docTypes" type="List"/>
+            <parameter name="idMatch" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="found" from="ec.resource.script(module).execute('search', context)"/>
+            <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+</services>
