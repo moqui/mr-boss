@@ -4,7 +4,7 @@
 // from her Approvals (the tray's approve service); Time import's one html render as HR with the problem rows; Admin's Imports listing
 // the run with People's owner place; and the Clock in quick create: the employee's shell offers it from Commons and a People user
 // who does not clock is not offered it (its condition-service), and its screen's one html render shows him his clock. SelfService's
-// clock is checked on PeopleSelfService's render; the rules are Mantle's Attendance; access is PeopleAccess's (the self-service
+// clock is checked on PeopleSelfService's render; the rules are Mantle's Attendance; access is PeopleAccessLater's (the self-service
 // clock, Time import HR's).
 // Run: ./moq test mr-boss --spec PeopleAttendance
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")

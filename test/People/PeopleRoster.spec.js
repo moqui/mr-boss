@@ -3,7 +3,7 @@
 // schedule transition answers the timeline's resource contract (her reports as lanes she rosters, the wording, the dialog's fields,
 // Publish), a shift dropped on Tomas is previewed and saved through moveShift (the dialog's commit) and shown as a draft bar, and
 // Publish publishes it, which Tomas then reads as his own; the terminal twin's one tui render (ShiftRosterTui, its own template) as
-// HR shows the person and day table with the shift and the commands. The rules are Mantle's ShiftRoster; access is PeopleAccess's.
+// HR shows the person and day table with the shift and the commands. The rules are Mantle's ShiftRoster; access is PeopleAccessLater's.
 // A week a year ahead, so no other spec's days are touched.
 // Run: ./moq test mr-boss --spec PeopleRoster
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")

@@ -1687,7 +1687,9 @@ built; a step with no form is a written summary (and, for the reviewer, the over
   text, note and acknowledgment is opted out of AI. A new reviewer (development's reassignment, or the separation's re-route when the
   reviewer leaves or the line changes while the assessment waits) reads the feedback already given on the review and withdraws what
   still waits (it belongs to the review; the user's call of Nov 12, 2026), never an earlier reviewer's note, and never decides the
-  review's approval; the reassignment is audit-logged with its reason.
+  review's approval; the reassignment is audit-logged with its reason. The re-route decides each review in the caller's transaction
+  (which holds the separation or the line change) and changes it in a transaction of its own, so one review's failure is logged and
+  the rest and the caller's work stand (People's follow-up 2).
 - **Today, MyTeam and Employee360** (P20's review): People's Today source answers the user's review steps due (their self
   assessment, the assessment of a person they review, feedback asked of them), each opening the review; MyTeam's Reviews due lists
   the open reviews the manager gives (the person, the cycle, what waits, the due day); Employee360's Reviews (SkillsAndReviews'
@@ -1698,7 +1700,10 @@ built; a step with no form is a written summary (and, for the reviewer, the over
   one), a row's Update progress, Change, Close (with its outcome: met, partly met, not met) and Cancel goal. A goal is a WorkEffort of
   the `WetGoal` type and `WepGoal` purpose with `PersonGoal`'s measure, target, actual value and unit; the type keeps it out of every
   task list (CalDAV Tasks, Today's and My tasks), project rollups and the search index, and `get#RecordLinkInfo` admits it only to its
-  person, their manager, its review's reviewer and development readers of its employer.
+  person, their manager, its review's reviewer and development readers of its employer. People's follow-up 2: it is no work either;
+  Mantle's REST `/workEfforts` lists and reads it nowhere and does not change or copy it, the work services refuse it
+  (`check#WorkEffortOpen`, `GOAL_NOT_WORK`), no task goes under it (a task's parent is a task, `PARENT_NOT_TASK`), and Chatter calls it
+  a goal.
 
 ## 12. Reports and settings
 

@@ -6,7 +6,7 @@
 // Commons' requests and request detail, the id lookup, the palette, universal search and an agent's screen render (Assist). Then
 // the handler asks IT (people.reader stands in for IT) for work on the case: the IT person reads the task, never the case, its
 // files or its notes, the task is out of their CalDAV Tasks, and nobody else lists it. The rules themselves are Mantle's
-// PeopleCases and mr-boss's PeopleAccess.
+// PeopleCases and mr-boss's PeopleAccessLater.
 // Run: ./moq accept mr-boss --spec PeopleCasesUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {users, asUser, system, invoke, page} = lib

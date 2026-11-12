@@ -7,7 +7,7 @@
 // the applicant, the opening and only the file the recruiter shared, never the stage or another file), and Customer Service's
 // response reader refuses the scorecard's response; the recruiter changes the interview from ApplicantDetail's row, and Commons'
 // EventDetail refuses its save, naming People (Commons calendar editors). The rules are Mantle's Recruiting and FormDefinitions;
-// access is PeopleAccess's; the scenario is the acceptance PeopleRecruitingUsable. Customer Service's survey screens are its own
+// access is PeopleAccessLater's; the scenario is the acceptance PeopleRecruitingUsable. Customer Service's survey screens are its own
 // specs' (CustomerServiceFeedback), unchanged.
 // Run: ./moq test mr-boss --spec PeopleRecruiting
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
@@ -166,7 +166,7 @@ feature(
             })
         },
         then({mine, rendered, downloaded, submitted, invitation, caseResponse}) {
-            // PeopleAccess, when it runs first, puts Tomas on another panel too
+            // PeopleAccessLater, when it runs first, puts Tomas on another panel too
             mine.interviews.filter(row => row.applicantName == "Spec Boardcandidate" && row.toAnswer).length == 1
             mine.toAnswerCount >= 1
             rendered.errors.length == 0

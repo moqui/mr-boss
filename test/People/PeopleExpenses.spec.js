@@ -6,7 +6,7 @@
 // advance to decide; Payroll's InvoiceDetail in People's context, its one html render as the payroll operator given
 // PEOPLE_EXPENSE_MANAGE by a spec-local group (PAYROLL_VIEW alone reads no claim); the claim's printed
 // page and its evidence bundle (a zip) for a reader of the claim; and the New claim quick create, offered from Commons to the
-// employee and not to a People user without self-service. The rules are Mantle's ExpenseClaims; access is PeopleAccess's.
+// employee and not to a People user without self-service. The rules are Mantle's ExpenseClaims; access is PeopleAccessLater's.
 // Run: ./moq test mr-boss --spec PeopleExpenses
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
