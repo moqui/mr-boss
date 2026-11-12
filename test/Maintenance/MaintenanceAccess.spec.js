@@ -22,7 +22,7 @@ const contextServices = "ironstone.maintenance.ContextServices."
 const context = contextServices + "get#SharedContext"
 const checkRecord = access + "check#Record"
 const choices = contextServices + "get#Choices"
-const registry = "ironstone.admin.RegistryServices."
+const registry = "org.moqui.admin.ReadinessServices."
 // a refusal of a user without Maintenance: the service is not authorized for them, or it refuses them
 const refused = message => /MAINTENANCE_UNAVAILABLE|is not authorized/.test(message)
 const unauthorized = message => /^40[13] |is not authorized/.test(message)
@@ -572,7 +572,26 @@ feature(
                 retailPanel: panel(users.retailPlanner),
                 // Report a problem: the requester's screen in Commons (BOSS_MNT_REPORT_PROBLEM), not another Commons user's
                 requesterReport: screenRefusalIn(users.requester, "ReportProblem"),
-                plannerReport: screenRefusalIn(users.planner, "ReportProblem")
+                plannerReport: screenRefusalIn(users.planner, "ReportProblem"),
+                // P4 review: the Requests area is the planner's and supervisor's (BOSS_MNT_REQUESTS); the planner's render is
+                // MaintenanceRequests'
+                techRequests: screenRefusal(users.tech, "Requests"),
+                readerRequests: screenRefusal(users.reader, "Requests"),
+                // P4 review: a reported problem by its id in Commons is its reporter's and Maintenance's, not every member's of its
+                // organization (Mantle's MaintenanceAccess.requestHidden in get#RecordLinkInfo): the technician, an agent of Services
+                // not on its work, does not see the requester's untriaged report
+                // (Commons' files panel of the request, which asks get#RecordLinkInfo)
+                seen: Object.fromEntries(
+                    [users.requester, users.planner, users.tech].map(user => {
+                        const files = asUser(user, () =>
+                            deviceRequest("apps/Commons/RecordFiles/filesData", null, {
+                                recordEntity: "mantle.request.Request",
+                                recordId: ids.openRequestId
+                            })
+                        )
+                        return [user, files.status === 200 && JSON.parse(files.output || "{}").visible === true]
+                    })
+                )
             }
         },
         then(out) {
@@ -584,6 +603,11 @@ feature(
             out.retailPanel.includes("RECORD_PANEL_UNAVAILABLE")
             out.requesterReport == ""
             out.plannerReport != ""
+            out.techRequests != ""
+            out.readerRequests != ""
+            out.seen[users.requester] == true
+            out.seen[users.planner] == true
+            out.seen[users.tech] == false
         }
     }
 )

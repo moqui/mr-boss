@@ -5545,4 +5545,21 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- the Requests area (design §3 Requests; impl-maintenance P4 review), the planners' and supervisors', who triage: denied to the
+        root user group, as Manufacturing's areas are, and always for the planner and supervisor groups; BOSS_MAINTENANCE_ADMIN and
+        ADMIN open it through their ALWAYS on the root. Mantle's find#MaintenanceRequests and triage#MaintenanceRequest check
+        MAINTENANCE_PLAN or MAINTENANCE_SUPERVISE again; a requester follows their own reports in Commons. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Requests.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
 </entity-facade-xml>
