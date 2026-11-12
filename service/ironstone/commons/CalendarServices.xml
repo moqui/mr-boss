@@ -259,7 +259,8 @@ along with this software (see the LICENSE.md file). If not, see
             {key, workEffortId, title, start and end (yyyy-MM-dd HH:mm, or yyyy-MM-dd days for an all-day event with end the day
             after its last), allDay, color (its calendar's), calendarId, statusId, partyStatusId (the user's answer: WeptOffered
             is an invitation to answer), recurring, recurringEventId, instanceStart, freeBusyOnly, location, canEdit (organizer
-            or an editor of its calendar), hasAttendees, isOrganizer, url}. With showTasks the user's tasks come too, by their
+            or an editor of a calendar that holds it for its editors, not one it was only put in to be seen, and never an event an
+            application keeps: check#EventAccess's rule, Commons calendar editors of Nov 12, 2026), hasAttendees, isOrganizer, url}. With showTasks the user's tasks come too, by their
             due date ({kind: task, ...}). A part that fails is logged and named in failedSources.
         </description>
         <in-parameters>
@@ -306,10 +307,15 @@ along with this software (see the LICENSE.md file). If not, see
                 const ids = Array.from(new Set(events.map((event) => event.workEffortId)))
                 // the calendars each event is in, for the permission and for the calendars the user turned off
                 const calendarsOf = new Map()
+                // the calendars that make their editors the event's: not one it was only put in to be seen (viewOnly)
+                const editCalendarsOf = new Map()
                 for (const link of ec.entity.find('mantle.work.calendar.CalendarWorkEffort').condition(cf.makeCondition('workEffortId', 'in', ids)).list()) {
-                    if (!calendarsOf.has(link.workEffortId)) calendarsOf.set(link.workEffortId, [])
+                    if (!calendarsOf.has(link.workEffortId)) { calendarsOf.set(link.workEffortId, []); editCalendarsOf.set(link.workEffortId, []) }
                     calendarsOf.get(link.workEffortId).push(link.calendarId)
+                    if (link.viewOnly !== 'Y') editCalendarsOf.get(link.workEffortId).push(link.calendarId)
                 }
+                // the events an application keeps are changed there, never on the grid
+                const managed = ec.service.sync().name('mantle.work.EventServices.get#ManagedEvents').parameters({workEffortIdList: ids}).call()?.managedMap || {}
                 const permissionIds = Array.from(new Set([].concat(...Array.from(calendarsOf.values()))))
                 const permissions = permissionIds.length ? (ec.service.sync().name('mantle.work.CalendarServices.check#CalendarAccess')
                         .parameters({calendarIdList: permissionIds}).call()?.permissionMap || {}) : {}
@@ -326,7 +332,8 @@ along with this software (see the LICENSE.md file). If not, see
                     if (calendars.length && !calendars.some((id) => shownIds.includes(id)) && calendars.some((id) => hiddenIds.has(id))
                             && !(event.partyStatusId && ['WeptOffered', 'WeptTentative'].includes(event.partyStatusId) && event.ownerPartyId !== partyId)) continue
                     const isOrganizer = !!partyId && event.ownerPartyId === partyId
-                    const canEdit = !event.freeBusyOnly && (isOrganizer || calendars.some((id) => ['CalpEdit', 'CalpManage'].includes(permissions[id]) && kinds.get(id) !== 'CalkSubscription'))
+                    const canEdit = !event.freeBusyOnly && !managed[event.workEffortId] && (isOrganizer || (editCalendarsOf.get(event.workEffortId) || [])
+                            .some((id) => ['CalpEdit', 'CalpManage'].includes(permissions[id]) && kinds.get(id) !== 'CalkSubscription'))
                     const instanceStart = event.instanceStart ? (event.allDay ? String(event.instanceStart).substring(0, 10) : wall(event.instanceStart)) : null
                     eventList.push({kind: 'event', key: event.workEffortId + '|' + (instanceStart || '') + '|' + event.startMillis, workEffortId: event.workEffortId,
                         title: event.title, start: event.allDay ? event.start : wall(event.start), end: event.allDay ? event.end : wall(event.end), allDay: !!event.allDay,
@@ -396,8 +403,10 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Whether the current user may see an event (WetEvent): check#EventAccess (organizer, attendee, a calendar it
             is in, visible to all users), else the record visibility rule of get#RecordLinkInfo with checkOnly (IronStone R5,
             R28: its parties and organizations; ADMIN sees all); and what the user may do with it (canEdit as organizer or editor
-            of its calendar). need view adds "not available" when the user may not see it, edit also when the user may not change
-            it; check answers without an error. A production run is not found (impl-manufacturing F39).</description>
+            of a calendar that holds it for its editors, never an event an application keeps: managedBy says where that one is
+            changed; Commons calendar editors, Nov 12, 2026). need view adds "not available" when the user may not see it, edit
+            also when the user may not change it; check answers without an error. A production run is not found
+            (impl-manufacturing F39).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="need" default-value="check"/>
@@ -408,10 +417,11 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="canEdit" type="Boolean"/>
             <parameter name="isOrganizer" type="Boolean"/>
             <parameter name="isAttendee" type="Boolean"/>
+            <parameter name="managedBy"><description>Where the event is changed, when an application keeps it (check#EventAccess)</description></parameter>
             <parameter name="workEffort" type="Map"/>
         </out-parameters>
         <actions><script><![CDATA[
-            found = false; visible = false; canEdit = false; isOrganizer = false; isAttendee = false; workEffort = null
+            found = false; visible = false; canEdit = false; isOrganizer = false; isAttendee = false; workEffort = null; managedBy = null
             const notAvailable = () => ec.resource.expand('Event ${workEffortId} is not available', '', {workEffortId: workEffortId})
             const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
             // a production run (WepProductionRun, a WetEvent) is no event: Manufacturing's services change and copy it, so
@@ -427,6 +437,7 @@ along with this software (see the LICENSE.md file). If not, see
             canEdit = !!access?.canEdit
             isOrganizer = !!access?.isOrganizer
             isAttendee = !!access?.isAttendee
+            managedBy = access?.managedBy || null
             visible = !!access?.canView
             if (!visible) {
                 const info = ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo').parameters({
@@ -437,7 +448,9 @@ along with this software (see the LICENSE.md file). If not, see
             }
             if (!visible) { if (need !== 'check') ec.message.addError(notAvailable()); return }
             workEffort = row.getMap()
-            if (need === 'edit' && !canEdit) ec.message.addError(ec.resource.expand('Only the organizer of ${name} or an editor of its calendar may change it', '',
+            if (need === 'edit' && !canEdit && managedBy) ec.message.addError(ec.resource.expand('${name} is changed on ${managedBy}', '',
+                    {name: row.workEffortName || workEffortId, managedBy: managedBy}))
+            else if (need === 'edit' && !canEdit) ec.message.addError(ec.resource.expand('Only the organizer of ${name} or an editor of its calendar may change it', '',
                     {name: row.workEffortName || workEffortId}))
         ]]></script></actions>
     </service>

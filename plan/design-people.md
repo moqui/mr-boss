@@ -652,6 +652,11 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 
 **As built (impl-people P16 review).** A panel member reads what their self-service MyInterview shows (§3 SelfService, the user's call of Nov 12, 2026): the applicant's name, the opening and employer, their own interviews and scorecard and the files shared with the panel; no stage chip, Application box or Files host (the application's notes and files are the recruiters': `check#ApplicationAccess` answers recordVisible for a recruiter alone). A new box, Shared with the panel, lists the shared files (opened through `get#ApplicationFile`) and gives a recruiter who changes the application "Choose what the panel reads" (`share#ApplicationContent` per file). The interview invitation's link is Commons' EventDetail, which every attendee opens. "Create application" is a chat message action (Commons' Chat create-from, `create#ApplicationFromChat`): a recruiter makes the sender's application to the room's opening (a JobOpening's room) or to the open opening whose plus tag the message names (+tag), else to the one open opening they own; once per message, never from the recruiter's own message, the message's files the application's files.
 
+**As built (Commons calendar editors, Nov 12, 2026).** An interview's event is People's (`EventManager` PeopleInterview): its
+recruiter changes its time, length, place or note (`change#Interview`) and cancels it (`cancel#Interview`) from its row in the
+Interviews box, the attendees told; Commons' EventDetail shows it read-only, saying it is changed here, and no attendee puts it in a
+calendar.
+
 
 
 **Source:** research §5

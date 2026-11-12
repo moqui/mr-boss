@@ -631,6 +631,8 @@ the screens that call it.
 | RecruitingServices | store#Application | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Edit application) (People P16) |
 | RecruitingServices | change#ApplicationStage | People/Staffing/ApplicantPipeline; People/Staffing/ApplicantDetail | People/Staffing/ApplicantPipeline (a card dragged, moveStage; Move to stage on the selected rows, moveSelected); People/Staffing/ApplicantDetail (Move to stage) (People P16) |
 | RecruitingServices | schedule#Interview | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Schedule interview: the private event, its call link, the iMIP invitation and the panel's scorecards) (People P16) |
+| RecruitingServices | change#Interview | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (an interview's row: Change, its time, length, place or note, the attendees told; the only place its event changes) (Commons calendar editors, Nov 12, 2026) |
+| RecruitingServices | cancel#Interview | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (an interview's row: Cancel, the attendees told) (Commons calendar editors, Nov 12, 2026) |
 | RecruitingServices | submit#Scorecard | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Your scorecard: the form of the interview scorecard purpose, Submit scorecard) (People P16) |
 | RecruitingServices | find#Interviews | People/Staffing/InterviewsCalendar | People/Staffing/InterviewsCalendar (Commons' Calendar.qvue in its resource mode; an attended interview opening Commons' EventDetail mounted there) and InterviewsCalendarTui (People P16) |
 | RecruitingServices | get#InterviewProjection | — (CalDAV, CX-SYNC) | the My interviews projected collection (CalendarProjection PeopleMyInterviews) (People P16) |
@@ -1502,6 +1504,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CalendarServices | find#OwnedCalendars | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.calendars participant) (Admin P6) |
 | CalendarServices | transfer#CalendarOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
 | EventServices | check#EventAccess | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | get#ManagedEvents |  | Commons/Calendar (the grid's canEdit: an event an application keeps is not dragged); through check#EventAccess, EventDetail, CalDAV and store#CalendarFeedEvents (Commons calendar editors, Nov 12, 2026) |
 | EventServices | get#EventIcsMaps | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Preventive/DueMaintenance | Commons/Calendar/EventDetail |
 | EventServices | store#EventRecurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | update#EventOccurrence | Marketing/Calendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |

@@ -16,7 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     M7), on mantle.work.EventServices, CalendarServices and WorkEffortServices. An event is seen by its organizer, its
     attendees, the people who see a calendar it is in and, under the record visibility rule, its parties and organizations
     (ironstone.commons.CalendarServices.get#EventAccessInfo: IronStone R5, R28); one the user may not see is "not available". It is
-    changed by its organizer or an editor of its calendar; an attendee answers it and sets their own reminders. -->
+    changed by its organizer or an editor of a calendar that holds it for its editors (not one an attendee put it in to see it), and
+    an event an application keeps (People's training session or interview) only in that application; an attendee answers it and
+    sets their own reminders. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
     <service verb="get" noun="EventDetail">
@@ -46,6 +48,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="linkedRecordList" type="List"/>
             <parameter name="pendingInvites" type="Integer"/>
             <parameter name="canEdit" type="Boolean"/>
+            <parameter name="managedBy"><description>Where the event is changed, when an application keeps it (People's training
+                session or interview): EventDetail shows it read-only with that note</description></parameter>
             <parameter name="isOrganizer" type="Boolean"/>
             <parameter name="isAttendee" type="Boolean"/>
             <parameter name="canRsvp" type="Boolean"/>
@@ -80,6 +84,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const pattern = 'yyyy-MM-dd HH:mm:ss.SSS'
                 event = facts.event
                 canEdit = !!access.canEdit
+                managedBy = access.managedBy || null
                 isOrganizer = !!access.isOrganizer
                 isAttendee = !!access.isAttendee
                 canRsvp = isAttendee && !isOrganizer && !event.cancelled
