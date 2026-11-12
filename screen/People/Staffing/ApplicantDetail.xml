@@ -31,7 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
     the application with its state, opening OfferDetail; find#Offers). An applicant's resume is shared with the panel when attached
     (the user's call of Nov 12, 2026), and the recruiter can stop sharing it. An interview's event is People's (Commons calendar
     editors, Nov 12, 2026): a recruiter changes its time, length, place or note (change#Interview) and cancels it (cancel#Interview)
-    on its row here, and Commons' EventDetail shows it read-only. -->
+    on its row here, and Commons' EventDetail shows it read-only. Its invitations go once the change commits (People follow-up 1,
+    F358); a failed send shows on its row to its recruiters, with Send again (send#InterviewInvitations; follow-up 1 review). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Applicant" default-menu-include="false">
     <parameter name="employmentApplicationId"/>
@@ -96,6 +97,19 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="!ec.message.hasError()">
                 <message type="success">Interview cancelled; the attendees are being told</message>
             </if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- People follow-up 1 review: an interview's invitations sent again after a failed send (Mantle checks the recruiter; who was
+        told already is not told again) -->
+    <transition name="sendInterviewInvitations">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.send#InterviewInvitations" out-map="sent"
+                    in-map="{workEffortId:workEffortId}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !sent.invitationsSent">
+                <then><message type="warning">The invitations were not sent: ${sent.invitationProblem}</message></then>
+                <else-if condition="!ec.message.hasError()"><message type="success">The invitations are sent</message></else-if></if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
         <error-response url="."><parameter name="employmentApplicationId"/></error-response>
@@ -169,9 +183,10 @@ along with this software (see the LICENSE.md file). If not, see
             factRows = app && recruiter ? [['Email', app.emailAddress], ['Source', app.sourceText], ['Referred by', app.referredByName],
                 ['May be contacted', app.contactAllowed ? 'Yes, about other openings' : 'Only about this opening'], ['Notes', app.comments],
                 ['Owner', app.ownerName]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
-            interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, whenText: interview.whenText,
+            interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, employmentApplicationId: app.employmentApplicationId, whenText: interview.whenText,
                 panelText: interview.panelText, location: interview.location, stateText: interview.cancelled ? 'Cancelled' : '',
                 canChange: canEdit && !interview.cancelled, hasCall: interview.hasCall ? 'Y' : 'N',
+                canResend: canEdit && !!interview.invitationsFailed, problemText: interview.invitationProblemText || '',
                 startText: interview.startMs != null ? ec.l10n.format(new Date(interview.startMs), 'yyyy-MM-dd HH:mm') : '',
                 durationMinutes: interview.startMs != null && interview.endMs != null ? String(Math.round((interview.endMs - interview.startMs) / 60000)) : '',
                 scorecardText: interview.scorecards.length ? interview.scorecards.filter(card => card.answered).length + ' of ' + interview.scorecards.length + ' submitted' : ''})) : []
@@ -482,15 +497,19 @@ along with this software (see the LICENSE.md file). If not, see
                                             <link url="${eventLink}" text="${whenText}" link-type="anchor"
                                                     parameter-map="{workEffortId:workEffortId}"/>
                                             <label text="${stateText}" type="div" style="text-caption text-negative" condition="stateText"/>
+                                            <label text="${problemText}" type="div" style="text-caption text-negative" condition="problemText"/>
                                         </default-field>
                                     </field>
                                     <field name="panelText"><default-field title="Panel"><display/></default-field></field>
                                     <field name="location"><default-field title="Where"><display/></default-field></field>
                                     <field name="scorecardText"><default-field title="Scorecards"><display/></default-field></field>
                                     <field name="actions" align="right">
-                                        <conditional-field condition="canChange" title="">
+                                        <conditional-field condition="canChange || canResend" title="">
+                                            <link url="sendInterviewInvitations" text="Send again" icon="sym_o_forward_to_inbox" link-type="hidden-form"
+                                                    parameter-map="{workEffortId:workEffortId, employmentApplicationId:employmentApplicationId}" condition="canResend"
+                                                    confirmation="Send the invitations of the interview of ${whenText} again? Who was told already is not told again."/>
                                             <container-dialog id="ChangeInterview_${workEffortId}" button-text="Change" icon="sym_o_edit_calendar" type="default"
-                                                    width="560" title="Change the interview of ${whenText}">
+                                                    width="560" title="Change the interview of ${whenText}" condition="canChange">
                                                 <form-single name="ChangeInterview" transition="changeInterview"
                                                         map="{workEffortId:workEffortId, startDate:startText, durationMinutes:durationMinutes, hasCall:hasCall,
                                                             location:(hasCall == 'Y' ? '' : location)}">
@@ -510,7 +529,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </form-single>
                                             </container-dialog>
                                             <container-dialog id="CancelInterview_${workEffortId}" button-text="Cancel" icon="sym_o_event_busy" type="danger"
-                                                    width="480" title="Cancel the interview of ${whenText}">
+                                                    width="480" title="Cancel the interview of ${whenText}" condition="canChange">
                                                 <form-single name="CancelInterview" transition="cancelInterview" map="{workEffortId:workEffortId}">
                                                     <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
                                                     <field name="workEffortId"><default-field><hidden/></default-field></field>

@@ -212,6 +212,11 @@ feature(
                     hasCall: "N",
                     location: "Store office, back room"
                 })
+                // People follow-up 1 review: the row's Send again (Mantle's send#InterviewInvitations, the recruiter checked)
+                const resent = post("People", "Staffing/ApplicantDetail/sendInterviewInvitations", {
+                    employmentApplicationId: state.applicationId,
+                    workEffortId: state.interviewId
+                })
                 const saved = post("Commons", "Calendar/EventDetail/saveOverview", {
                     workEffortId: state.interviewId,
                     scope: "all",
@@ -221,11 +226,12 @@ feature(
                 const access = system(() =>
                     invoke("ironstone.commons.CalendarServices.get#EventAccessInfo", {workEffortId: state.interviewId})
                 )
-                return {before, changed, saved, access, after: event()}
+                return {before, changed, resent, saved, access, after: event()}
             })
         },
-        then({before, changed, saved, access, after}) {
+        then({before, changed, resent, saved, access, after}) {
             changed.errors == ""
+            resent.errors == "" && resent.status == changed.status
             Number(String(after.estimatedCompletionDate)) == Number(String(before.estimatedStartDate)) + 30 * 60000
             after.location == "Store office, back room"
             saved.errors.includes("is changed on its application's interviews in People")
