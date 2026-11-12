@@ -370,7 +370,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
-| P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | — |
+| P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | — |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
@@ -2317,7 +2317,7 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
 - Design edits: design-maintenance's header, §3 PlannedParts, PartsUsed, "Charging a project", the InventoryAvailability and
   MaterialIssueReceipt mount rows, MT-08, MT-09 and §13.2's stock and ledger bullets as built; design-accounting's header,
   PostingDefaults' "Maintenance expense routing" and §18's AC-24 row; impl-accounting §7's note of other plans' builds.
-- Findings (provisional):
+- Findings, numbered by the lead F195 to F202 in order:
   - `receive#Asset` posts the receipt inside the call (AssetReceiptGlPost), before a caller can name its issuance, so Production's
     return posts to WIP by the work effort and a maintenance return could not be routed by its source at posting. Built: a receipt to
     managed work is routed by the policy at once and reposted the issuance's way only when they differ.
@@ -2421,7 +2421,7 @@ SharedContext.js' contexts and Inventory.js.
     row or an existing one, with `DATE_INVALID` (an end already stored is left as it is). Spec: MaintenanceExpenseRouting's Posting
     defaults feature (a backdated end and a new row ended in the past refused); MaintenanceExpenseRouting, AccountingSetup and
     AccountingControls 48 of 48 after it. design-accounting's Maintenance expense routing as built.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F203 to F207 in order:
   - A clone run twice copies the every-facility rows twice (the rows have a surrogate key, so no conflict is found); harmless for
     routing (the first in effect wins) but untidy.
   - An issue checks the work order's status, not the step's: a part may be issued to a completed step of started work.
@@ -3497,6 +3497,19 @@ paths under `mr-boss/`.
 | F192 | P13 review: caps of 500 plans in `find#MaintenanceDue` and 1000 assets in the model filter | P14 or later |
 | F193 | P13 review: P13's JS formatted by Prettier in the review | None |
 | F194 | P13 review: MaintenancePlansWalk feature 4 rewritten, not run | P20 / the final acceptance run |
+| F195 | P9: `receive#Asset` posts the receipt inside the call (AssetReceiptGlPost), before a caller can name its issuance, so Production's return posts to WIP by the work effort and a maintenance return could not be routed by its source at posting. | P9's Built note |
+| F196 | P9: Supplies are refused rather than routed | P9's Built note |
+| F197 | P9: A facility dimension must be owned by the posting organization (AccountingPolicy.js `dimensions`), so an ownerless room carries its nearest owned ancestor | P9's Built note |
+| F198 | P9: The policy's "maintenance purpose" is built as the work's MaintenanceKind (corrective, preventive), with any kind as the fallback | P9's Built note |
+| F199 | P9: Missing mappings are not yet listed in Posting defaults' MissingMappings nor in Maintenance's readiness (P18). | P9's Built note |
+| F200 | P9: The plan's planned line is per node and product (one open row) | P9's Built note |
+| F201 | P9: Demo issuances and returns are rows, not postings (data load runs no SECA), so the demo journal holds no maintenance expense until a part is issued in the app. | P9's Built note |
+| F202 | P9: maint.tech is now in BOSS_WAREHOUSE_ISSUE (a capability group with no Warehouse root) for the demo | P9's Built note |
+| F203 | P9 review: A clone run twice copies the every-facility rows twice (the rows have a surrogate key, so no conflict is found) | P9's Review note |
+| F204 | P9 review: An issue checks the work order's status, not the step's | P9's Review note |
+| F205 | P9 review: `maintenanceFacilities` reads the distinct facilities of the organizations' stock on every Maintenance catalog context | P9's Review note |
+| F206 | P9 review: The demo's cost policy (613200000 for ORG_ZIZI_SERVICES) is exercised only by the acceptance MaintenancePartsWalk (not run) | P9's Review note |
+| F207 | P9 review: P7's `check#ManagedWork` guard (on master after P7) | P9's Review note |
 
 
 ## 7. Later
