@@ -5,8 +5,8 @@
 // place to assess: the enrollment and the Record a result box over the assessment form's own field, then the result posted through
 // its transition with authorization on, completing the place and granting the fire warden certificate; TrainingCertificate's one
 // html-print render as Tomas: the stored certificate with his name and the course. Follow-up 3: the session in Room 103 through
-// the resource booking, the rooms choice, and Commons' room calendar offering no Cancel of it (F357). The rules are Mantle's
-// Training; access is PeopleAccessLater's.
+// the resource booking, the rooms choice, and Commons' room calendar showing it as its organizer's booking (Maintenance's F357:
+// the organizer may cancel it there). The rules are Mantle's Training; access is PeopleAccessLater's.
 // Run: ./moq test mr-boss --spec PeopleTraining
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -109,8 +109,8 @@ feature("Training as the learning administrator: the session, Schedule session a
 })
 
 // People follow-up 3 (impl-maintenance F356, F357): the session takes Room 103 through the resource booking; Commons' room calendar
-// shows it as the scheduler's booking with no Cancel, which the booking service would refuse (the session is People's)
-feature("the session in Room 103: booked for it, the rooms choice; Commons' room calendar offers no Cancel of it", {
+// shows it as the scheduler's booking, which as the session's organizer they may cancel there (check#EventAccess canBook)
+feature("the session in Room 103: booked for it, the rooms choice; Commons' room calendar shows it as its organizer's", {
     when() {
         const room = "BOSS_MNT_ROOM_103"
         const read = () =>
@@ -138,23 +138,13 @@ feature("the session in Room 103: booked for it, the rooms choice; Commons' room
                 })
             )
         ).bookingList
-        const cancel = asUser(users.develop, () =>
-            system(() =>
-                lib.refusal("ironstone.commons.ScheduleServices.cancel#MyBooking", {
-                    workEffortId: state.sessionId,
-                    resourceType: "room",
-                    resourceId: room
-                })
-            )
-        )
-        return {stored, session: read(), rooms, booking: calendar.find(row => row.workEffortId == state.sessionId) || {}, cancel}
+        return {stored, session: read(), rooms, booking: calendar.find(row => row.workEffortId == state.sessionId) || {}}
     },
-    then({stored, session, rooms, booking, cancel}) {
+    then({stored, session, rooms, booking}) {
         stored.workEffortId == state.sessionId
         session.roomName == "Room 103 Focus" && session.roomStatus == "booked" && session.location == "Room 103 Focus"
         rooms == ["BOSS_MNT_ROOM_103"]
-        booking.mine == true && booking.canCancel == false
-        cancel.includes("is changed on")
+        booking.mine == true && booking.canCancel == true
     }
 })
 

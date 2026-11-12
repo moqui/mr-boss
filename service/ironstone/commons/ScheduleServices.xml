@@ -96,9 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The bookings of resources (keys, type|id) from start to end (days, yyyy-MM-dd in the user's time zone):
             mantle.work.EventServices.get#FullCalendarData per resource (not cancelled; a denied booking left out), each
             {resourceKey, workEffortId, title (Busy for an event the user may not see), start and end (yyyy-MM-dd HH:mm), allDay,
-            bookingStatusId, statusLabel, statusColor, organizerName, mine, canCancel (the user's own, not recurring and not kept
-            by an application: a People training session's or interview's room is cancelled there; impl-maintenance F357), url}.
-            With includeUnavailable (Maintenance's
+            bookingStatusId, statusLabel, statusColor, organizerName, mine, canCancel, url}. With includeUnavailable (Maintenance's
             ResourceCalendar, impl-maintenance P16) each resource's outages and planned blocks too (get#FullCalendarData's
             unavailableList), as items with blocked true, kind (actual or planned), the safe label as the title and no event.
             canCancel is when cancel#MyBooking succeeds (check#EventAccess's canBook): the organizer, also of an event an application
@@ -145,9 +143,6 @@ along with this software (see the LICENSE.md file). If not, see
                         excludeCancelled: true, includeAllUsers: false, titleGString: '${workEffort.workEffortName || "(no title)"}'},
                         type === 'room' ? {facilityId: id} : {assetId: id})).call()
                     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-                    // an event an application keeps (a People training session or interview) is cancelled there, not here (F357)
-                    const managed = ec.service.sync().name('mantle.work.EventServices.get#ManagedEvents').parameters({workEffortIdList:
-                            Array.from(out?.eventList || []).map((event) => event.workEffortId)}).call()?.managedMap || {}
                     for (const event of Array.from(out?.eventList || [])) {
                         if (!rows.has(event.workEffortId)) rows.set(event.workEffortId, ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', event.workEffortId)
                                 .selectField('workEffortId,ownerPartyId,visibilityEnumId').one())
@@ -161,7 +156,7 @@ along with this software (see the LICENSE.md file). If not, see
                         bookingList.push({resourceKey: key, key: key + '|' + event.workEffortId + '|' + event.startMillis, workEffortId: event.workEffortId,
                             title: seen ? event.title : L('Busy'), start: event.allDay ? event.start : wall(event.start), end: event.allDay ? event.end : wall(event.end),
                             allDay: !!event.allDay, bookingStatusId: event.bookingStatusId || null, statusLabel: L(info[0]), statusColor: info[1],
-                            organizerName: seen ? nameOf(row?.ownerPartyId) : null, mine: mine, canCancel: mine && !event.recurring && !managed[event.workEffortId],
+                            organizerName: seen ? nameOf(row?.ownerPartyId) : null, mine: mine, canCancel: mine && !event.recurring,
                             recurring: !!event.recurring, url: seen ? '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(event.workEffortId) : null})
                     }
                     // Maintenance's resource calendar: the outages and blocks, apart from the bookings (a safe label, no event)

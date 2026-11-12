@@ -5891,6 +5891,101 @@ Not merged.
     this note). P22 (`ppl/p22`) touches none of these but this file and possibly `People.js`;
   - the user's call wanted: the timesheet expected hours above, and whether a team's contractor membership should end with the agency.
 
+**Review Nov 12 (follow-up 3).** A fresh review of follow-up 3 in mr-mantle and mr-boss against the user's calls of Nov 12 (§4),
+§2, impl-maintenance F356–F360 and design-maintenance §7.1 and §9, adversarially on the system booking path, the clash message, the
+owner rule for teams and capacity; the user's two calls of Nov 12 below built and recorded in §4; fixes committed apart per
+repository ("People follow-up 3 review: …"). Not merged.
+- Rebased and reconciled. Master moved during the review: Maintenance's follow-ups (mr-mantle `mnt/fu`, cdd4dcf2; mr-boss f90fc323)
+  built F356–F360 their own way, and People P22 merged. Both branches were rebased onto master (mr-mantle: conflicts in Training.js,
+  Recruiting.js, MaintenanceDispatch.js and ResourcePolicy.js, both sides kept in the rebased worker commit, now 0c611b8d; mr-boss:
+  conflicts in design-people, design-maintenance, impl-maintenance and this file, Maintenance's rows and design kept, now 4f5f4c3a),
+  then reconciled to one implementation each, Maintenance's where it covers the rule:
+  - kept events' bookings: Maintenance's `check#EventAccess` `canBook` (the organizer of a kept meeting books, cancels and rechecks
+    its rooms and equipment on Commons; review R4) and `ResourceBookingDecisions.js` `keptEventMoved` and `keptEventCancelled`
+    stay. Training.js and Recruiting.js now move and cancel through those alone (fix3's `EventRooms.cancelAll` removed);
+    `EventRooms.place` keeps People's Room (a room chosen on People's screens booked, one no longer chosen let go, as the system
+    after People's own check, so a development editor or recruiter who is not the organizer books it) and calls `keptEventMoved`
+    between letting go and booking, so a room being replaced never refuses a move. fix3's EventServices and ResourcePolicy
+    descriptions, which said every user is refused a kept event, are Maintenance's again, with one line on People's room booking;
+  - Busy with no user (F358): the same one-line change on both sides; Maintenance's kept;
+  - Commons' Cancel (F357): fix3's `!managed` on the organizer's own booking contradicted Maintenance's `canBook`; Maintenance's
+    `get#ResourceBookings` kept and fix3's change dropped. PeopleTraining's Room 103 feature now reads the organizer's Cancel;
+    Training's and Recruiting's direct-booking checks are now an attendee (the trainer, a panel member) refused;
+  - training off dispatch (F360): Maintenance's `find#MaintenanceCandidates` subtraction (`sessionHours`) kept; `sessionHours` now
+    reads fix3's `sessionTimesOf` (one reading of a person's sessions: as trainer, or a place enrolled or completed and not marked
+    absent), so the dispatch window counts what staffing counts. `get#PartyCapacity` takes training off only when asked (R1).
+- Checked and found sound:
+  - The system booking path adds no reach. `store#Training` (`developEdit` of the course's employer), `schedule#Interview` and
+    `change#Interview` (`PEOPLE_RECRUIT_EDIT` of the application's employer, another's interview `RECORD_UNAVAILABLE`) check their
+    caller before `EventRooms` runs, and only for their own event; the room is any bookable `FcTpRoom` not closed, the same rooms
+    Commons offers every user (`book#Resource` has no room scope); as the system no approver matches (a booking needing approval is
+    asked, never self-approved) and no override is asked (`allowConflicts` false), so a system booking is never more than the
+    caller's own would be. No user reaches `book#Resource`, `cancel#ResourceBooking` or `check#ResourceBookings` on a session or
+    interview but its organizer (`canBook`).
+  - The clash message: with no user `eventVisibility` sees no event, so `book#Resource` and `check#ResourceBookings` name another
+    booking Busy, and a block by its safe label; Training and Recruiting assert the schedule's and the move's refusals name Busy and
+    never the meeting (the move's check added here). An interview's room shows to its recruiters and panel only (`placeShown`).
+  - Maintenance's team readers (`requireTeam` twice, `teamsOf`, `intakeTeam`, a plan term's team, `teamOptions`) answer as before
+    for every team whose owner is its rollups' organization (all of People's and the demo's); Maintenance's specs pass unchanged
+    but MaintenanceSettings' Teams feature, whose fix3 addition asks People for Facilities maintenance.
+  - Capacity is counted once: leave and training intervals merged (`spreadOnce`), timed leave merged too (it was added), a holiday
+    the whole day; dispatch subtracts `sessionHours` from staffing's window hours, which no longer include training, so not twice.
+- Fixes:
+  - **R1 (the user's call; medium).** Timesheets' expected hours dropped by a person's training (fix3 took it off in
+    `get#PartyCapacity` for every caller). `get#PartyCapacity` takes training off only with `lessTraining`, which
+    `find#StaffingCandidates` passes outside a window (Projects' and People's staffing); Maintenance's window takes it off itself.
+    Timesheets' `get#WeekDays`, Projects' team plan and reports and People's capacity preview keep it, as worked time. Spec:
+    Training's feature reads the coach's day with and without `lessTraining` and `get#WeekDays`' expected hours (the whole day),
+    which fix3's code answered two hours short.
+  - **R2 (finding 2; high).** The owner rule made every `OrgTeam` with no rollup a People unit, Customer Service's service teams
+    among them (owned by their organization, members by `PrtServiceTeam`): People's HR could rename "Retail privacy team"
+    (`store#Unit`'s name update needs no parent) and add `PrtMember` members and a lead to it. A team with no rollup is now read only
+    in People: `store#Unit` and `store#Membership` refuse `NOT_A_UNIT` ("kept by the application that made it"), `get#Unit` answers
+    `canEdit` and `membersEditable` false. Maintenance's reading by the same rule is unchanged (it read such teams by owner before).
+    Spec: PeopleOrganization's follow-up 3 feature (the outside team's member, rename and edit flags), which fix3's code failed.
+  - **R3 (the user's call).** An agency's end ends the contractor's team memberships and leads: the `AgentEndsMemberships` EECA on
+    `PartyRelationship` (a `PrtAgent` row's `thruDate` set or changed, whoever writes it: Admin's `store#OrganizationMembership`,
+    Lifecycle's offboarding, an import) calls `OrganizationServices.end#AgentMemberships`: the person's `PrtMember` rows to the
+    employer's teams (its rollups) end on that date, one starting later on its own start, unless they still work there (an
+    employment or another agency); failure tolerant per membership and never refusing the agency's end. Spec: PeopleOrganization
+    "the user's call of Nov 12: an agency's end…" (0.17 s: a contractor's member and lead rows ended on the agency's date, a
+    contractor also employed kept on), which fails without the rule.
+  - `store#Membership`'s description now names agents; `get#PartyCapacity`'s and `get#WeekDays`' descriptions say where training
+    counts; design-people, design-maintenance and impl-maintenance's F356 row say what each app built (no screen changed here).
+- Provisional findings (for the lead to number):
+  - A team made outside People cannot be adopted into People's tree: `store#Unit`'s move needs a parent in effect (`DATE_STALE`),
+    so a Maintenance team someone makes outside People stays read only there until it is given a `PrtOrgRollup` in data.
+  - An agency ended and then restored (Lifecycle's reactivation clears the `thruDate`) does not restore the memberships it ended;
+    nor does a separation withdrawn restore an agent's (it restores an employee's).
+  - A separation ends an employee's memberships of the employer's units by rollup only (`unitsUnder`); with R2 People writes no
+    membership to a team without one, so none is missed today.
+  - Maintenance's F362 (dispatch subtracts session hours from the window's total, not day by day) can now close by passing
+    `lessTraining` in the window mode and dropping `sessionHours` there; left for Maintenance's lead.
+  - fix3's own findings stand: a training session at another employer takes the person's hours off at every employer (F392's
+    shape); as the system a booking needing approval is requested even when the scheduler approves the room; a booking made before
+    this is re-read on the next move or cancel only; no demo session or interview has a room.
+- Tests (release binary from the main checkout, `--nobuild`, this runtime): mr-mantle PeopleOrganization, Training, Recruiting,
+  MaintenanceDispatch, ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceIntake, MaintenanceWorkOrders,
+  MaintenanceGeneration, MaintenanceDue, MaintenanceScope, MaintenanceStack, MaintenanceReports, MaintenanceManagedWork,
+  MaintenanceCosts, MaintenanceProcesses, MaintenanceOutages, WorkResources, WorkTimesheets, WorkProjectReports, PeopleSchedules,
+  LeaveRequests, LeaveLedger, BusinessTime, CalendarChanges, CalendarServices, Dav, ShiftRoster, PeopleEmployment, PeopleScope and
+  PeopleDirectory 209 of 209 (31 specs, 72.6 s of features; follow-up 3's PeopleOrganization 0.59 s, agency's end 0.17 s, Training
+  0.85 s, Recruiting 0.37 s); mr-boss PeopleTraining, PeopleOrganization, PeopleRecruiting, PeopleLifecycle, PeopleSchedules,
+  PeopleTime, PeopleAccess, PeopleAccessLater, MaintenanceSettings, MaintenanceScheduling, MaintenanceWorkOrders, MaintenanceAccess,
+  MaintenancePlans, MaintenanceRequests, MaintenanceStack, EventDetail, Schedules, Calendar and CustomerServiceAssignment 156 of 156
+  (19 specs, 41.9 s; Room 103 0.23 s). Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite,
+  `moqui lint --screens` (no screen changed in the review).
+- For the lead:
+  - budget share: mr-mantle about +2.2 s for the follow-up and its review (the agency's end +0.17 s); mr-boss about +0.35 s;
+  - merge hot spots: the branch is rebased on master as of mr-mantle cdd4dcf2 and mr-boss f90fc323; mr-mantle `Training.js`,
+    `Recruiting.js` (both call `keptEventMoved` through `EventRooms.place` now), `ResourceServices.xml` (`get#PartyCapacity`,
+    `find#StaffingCandidates`), `Organization.js`, `OrganizationServices.xml`, the new `entity/PeopleMembership.eecas.xml`; mr-boss
+    design-people, design-maintenance, impl-maintenance's F356 row and this file;
+  - the worker's §4 row "People builds its side of F356, F357 and F360" says the booking services refuse every user on an
+    application's event and Commons offers no Cancel there: Maintenance's `canBook` (the organizer) superseded both; the row is the
+    user's call and is left as written;
+  - the user's calls: both recorded in §4 below and built (R1, R3).
+
 ### P21 — Grievances
 
 Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends stage 3.
@@ -6865,6 +6960,8 @@ the owner's design.
 | Nov 12, 2026 | Publishing a pay component or a pay structure needs an approver: publish asks a People approval of kind `PakPayrollConfig` on P5's pattern (an Approvals.js kind, the `PeoplePayrollConfigApproval` topic with approve and refuse services, a direct-only notice); with no rule the employer's payroll approvers (and HR editors who read payroll) decide, never one who drafted or asked (the kind's excluded deciders, as P17's); the published version takes effect on approval; a changed draft supersedes the waiting request | The user's call on P22's finding (built in P22's review, R6: Mantle PayConfiguration's approval feature; design-people §8, §12) |
 | Nov 12, 2026 | A team may include contractors: `store#Membership` admits a current agent of the employer (`PrtAgent`) as a team's member or lead; a department stays employees only (its members are assignments', its lead an employee). Teams sit under their unit by a `PrtOrgRollup`; Maintenance's demo team Facilities maintenance (`BOSS_MNT_TEAM`) gets its rollup under Services. People and Maintenance read a team's organization by one rule: the organization its rollups reach first, its internal owner (`Party.ownerPartyId`) for a team with no rollup at all | The user's call on the Maintenance merge review's F390 (built in follow-up 3: Mantle `UnitEmployers.js`, read by `Organization.js` and Maintenance's team readers as an owner contract; PeopleOrganization, MaintenanceSettings) |
 | Nov 12, 2026 | People builds its side of impl-maintenance F356, F357 and F360 now: a training session and an interview take a meeting room through Maintenance's resource booking (a bookable room, booked as the system by People's services after their own check; free text stays for a place off site), refused on a clash or a blackout, moved and cancelled with their event; the booking services refuse every user on an application's event (its own services book, move and cancel for it), Commons' room calendar offers no Cancel there, and a clash found as the system is named Busy. `get#PartyCapacity` takes a person's training sessions off (as the trainer, or holding a place enrolled or completed), counted once with leave, shifts and holidays | The user's call on F393 (built in follow-up 3: Mantle `EventRooms.js`, Training.js, Recruiting.js, ResourceServices, ResourcePolicy.js; BOSS Training, TrainingDetail, ApplicantDetail, Commons' ScheduleServices; Training, Recruiting, PeopleTraining) |
+| Nov 12, 2026 | Timesheets' expected hours still include training: a training session is worked time. Only availability for dispatch and staffing subtracts a person's training sessions; `TimesheetServices.get#WeekDays` (its capacity read) does not drop by them | The user's call on follow-up 3's finding (built in its review, R1: `get#PartyCapacity` `lessTraining`, passed by `find#StaffingCandidates` outside a window; Maintenance's dispatch window subtracts `sessionHours`; Mantle Training) |
+| Nov 12, 2026 | Ending a contractor's agency (`PrtAgent`) with the employer ends their team memberships and leads there on its date, as a separation does for an employee, unless they still work there; failure tolerant per membership | The user's call on follow-up 3's finding (built in its review, R3: the `AgentEndsMemberships` EECA and `OrganizationServices.end#AgentMemberships`; Mantle PeopleOrganization) |
 
 ## 5. Open questions
 
