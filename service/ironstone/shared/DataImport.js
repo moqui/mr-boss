@@ -6,7 +6,7 @@
 //
 // A mount is the app the wizard is opened under (the root sets appRoot, never the request). Under a catalog app (Products)
 // the target is the catalog and nothing else, with the app's own catalog context; under People it is the employees target
-// (impl-people P7); under Admin it is the target the request names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW
+// (impl-people P7); under Maintenance the equipment target (impl-maintenance P18); under Admin it is the target the request names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW
 // reads an import there). Any other root is refused.
 const T = "org.moqui.admin.DataTransferServices."
 const text = value => String(value ?? "").trim()
@@ -37,6 +37,7 @@ function mount(p) {
             appRoot,
             targetId: text(p.targetId),
             canRun: !!admin.capabilities.transferRun,
+            runRefusal: "ADMIN_TRANSFER_RUN is required",
             downloadBase: "/apps/Admin/Data/DataImport",
             selfLink: admin.sharedLinks["Data/DataImport"],
             listLink: admin.sharedLinks["Data/Imports"],
@@ -56,11 +57,31 @@ function mount(p) {
             appRoot,
             targetId: "employees",
             canRun: !!caps.import && !!caps.hrEdit,
+            runRefusal: "Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT",
             downloadBase: "/apps/People/Employees/EmployeeImport/Index",
             selfLink: people.sharedLinks["Employees/EmployeeImport"],
             listLink: null,
             detailLink: null,
             activeOrganizationPartyId: people.activeOrganizationPartyId || people.organizationPartyIds?.[0] || null
+        }
+    }
+    // Maintenance's mount (impl-maintenance P18, design-maintenance §6 EquipmentImport): the equipment target only, whatever the
+    // request names, for a reader of equipment; an import is run by a holder of MAINTENANCE_IMPORT with MAINTENANCE_RESOURCE_EDIT
+    // (the target asks both, its row services Maintenance's own permission and organization checks)
+    if (appRoot === "Maintenance") {
+        const maintenance = call("ironstone.maintenance.ContextServices.get#SharedContext", {appRoot})
+        const caps = maintenance.capabilities || {}
+        if (!caps.resourceRead) throw new Error("MAINTENANCE_RESOURCE_VIEW is required")
+        return {
+            appRoot,
+            targetId: "equipment",
+            canRun: !!caps.import && !!caps.resourceEdit,
+            runRefusal: "Importing equipment needs MAINTENANCE_IMPORT and MAINTENANCE_RESOURCE_EDIT",
+            downloadBase: "/apps/Maintenance/Equipment/EquipmentImport/Index",
+            selfLink: maintenance.sharedLinks["Equipment/EquipmentImport"],
+            listLink: null,
+            detailLink: null,
+            activeOrganizationPartyId: maintenance.activeOrganizationPartyId || maintenance.organizationPartyIds?.[0] || null
         }
     }
     // a catalog app's mount: the catalog target only, whatever the request names
@@ -70,6 +91,7 @@ function mount(p) {
         appRoot: catalog.appRoot,
         targetId: "catalog",
         canRun: true,
+        runRefusal: "Catalog import is not available",
         downloadBase: catalog.printBase + "/ProductImport/Index",
         selfLink: catalog.sharedLinks["ProductImport"],
         listLink: null,

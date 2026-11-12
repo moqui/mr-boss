@@ -1058,7 +1058,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | record#PhysicalInventoryChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (through adjust#Stock and scrap#Asset) |
 | AssetServices | create#ProductAssetAdHoc |  |  |
 | AssetServices | update#PhysicalInventoryDate | Warehouse/Counts/CountDetail | — Not used: post#Count sets the count's date before its lines post (P10) |
-| EquipmentServices | create#Equipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/Find (New equipment, through MaintenanceResourceServices.store#MaintenanceEquipment) |
+| EquipmentServices | create#Equipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/Find (New equipment, through MaintenanceResourceServices.store#MaintenanceEquipment); Maintenance/Equipment/EquipmentImport (each row, through MaintenanceImportServices.apply#EquipmentImportRow and store#MaintenanceEquipment; P18) |
 | EquipmentServices | get#AssetMaintenanceNeeded |  | — Not used: the baseline's helper (highest meter value, latest maintenance whatever its status) is left as it is; Maintenance's due projection is MaintenancePlanServices.get#MaintenanceDue (impl-maintenance P13, F11) |
 | EquipmentServices | create#AssetMaintenance | Manufacturing/WorkCenters/Downtime | Manufacturing/WorkCenters/Downtime and EquipmentDetail (Request maintenance: through mantle.work.ProductionServices.request#ProductionMaintenance, AsMntCreated and MntTpCorrective, Manufacturing P11) |
 | EquipmentServices | create#AssetMaintenanceContent | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
@@ -2218,7 +2218,7 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | work/MaintenanceServices | stop#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Stop timer; then TimesheetServices.stop#Timer) |
 | work/MaintenanceServices | record#MaintenanceTime | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Record time; then TimeServices.store#TimeEntry) |
 | work/MaintenanceSettingsServices | get#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings) |
-| work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from now) |
+| work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from the date chosen; P18: each field not given kept, PolicyDates) |
 | work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work) |
 
 Added in `work/MaintenanceServices.xml` (impl-maintenance P4; `MaintenanceIntake.js`): the requests and intake, called by Maintenance's
@@ -2329,3 +2329,16 @@ Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`, a
 | work/MaintenanceServices | accept#MaintenanceService | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (Accept outside service); transition#MaintenanceWorkOrder's complete (CompleteWork's outside-service line) |
 | work/MaintenanceServices | get#MaintenanceOrder | Maintenance/WorkOrders/OrderDetail | Maintenance/WorkOrders/OrderDetail (Shared/OrderDetail's Maintenance branch, read only) |
 | work/MaintenanceServices | get#PurchaseRequestWork | Purchasing/Requests/RequestDetail | Purchasing/Requests/RequestDetail (the originating work order under the header; its name only for a user Maintenance admits) |
+
+Added in `work/MaintenanceSettingsServices.xml` and `product/MaintenanceImportServices.xml` (impl-maintenance P18; `MaintenanceSettings.js`,
+`MaintenanceImport.js`, design-maintenance §9 and §6 EquipmentImport), called by built screens, by Admin's Health (the readiness
+provider `maintenance.readiness`) and by the framework's DataTransferServices (the `equipment` import target's row services):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenanceSettingsServices | find#MaintenanceLookups | Maintenance/Settings | Maintenance/Settings/Lookups (MaintenanceLookups, FailureModes); the failure mode choice of WorkOrderDetail's Overview (its equipment's, through MaintenanceSettings.js) |
+| work/MaintenanceSettingsServices | store#MaintenanceLookup | Maintenance/Settings | Maintenance/Settings/Lookups (Add value, Edit, End, Applies to) |
+| work/MaintenanceSettingsServices | check#MaintenanceReadiness | Maintenance/Settings | Maintenance/Settings/Readiness; Admin/Operations/Health and System's Health (the provider maintenance.readiness) |
+| product/MaintenanceImportServices | validate#EquipmentImportRow | Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/EquipmentImport (the shared wizard's validate, through DataTransferServices.validate#Import) |
+| product/MaintenanceImportServices | apply#EquipmentImportRow | Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/EquipmentImport (apply, through DataTransferServices.apply#Import); Admin/Data/ImportDetail (retry) |
+| product/MaintenanceImportServices | find#EquipmentImportScopes | Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/EquipmentImport (the organizations); Admin/Data/Imports (the runs a reader may see) |
