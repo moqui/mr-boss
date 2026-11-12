@@ -22,7 +22,9 @@ along with this software (see the LICENSE.md file). If not, see
     opening the filtered list, the others still not configured; My work, the user's open work orders; Team work, each team's open,
     active, unscheduled, blocked and overdue work, for a broad reader only (a technician sees no team totals); and New work order
     for a planner or supervisor (mantle.work.MaintenanceReportServices.get#MaintenanceHome). P5: Unavailable resources, the equipment
-    and facilities out of service now (their open outages), opening Downtime. -->
+    and facilities out of service now (their open outages), opening Downtime. P14: Overdue preventive maintenance and Unknown
+    meter readings (the active plans overdue, and the meter plans whose due is unknown), each opening Due maintenance filtered, for
+    a reader of work (MAINTENANCE_VIEW); still not configured for anyone else. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -62,8 +64,10 @@ along with this software (see the LICENSE.md file). If not, see
                 {counter: 'Unassigned', source: 'Work orders', count: counters.unassignedCount, saved: 'unassigned'},
                 {counter: 'High priority', source: 'Work orders', count: counters.highPriorityCount, saved: null, high: true},
                 {counter: 'Overdue work orders', source: 'Work orders', count: counters.overdueCount, saved: 'overdue'},
-                {counter: 'Overdue preventive maintenance', source: 'Preventive plans', count: null},
-                {counter: 'Unknown meter readings', source: 'Equipment meters', count: null},
+                {counter: 'Overdue preventive maintenance', source: 'Preventive plans', count: counters.overduePmCount ?? null,
+                    linkUrl: sharedLinks['Preventive/DueMaintenance'], linkParameters: Object.assign({state: 'overdue'}, scopeParameters)},
+                {counter: 'Unknown meter readings', source: 'Equipment meters', count: counters.unknownMeterCount ?? null,
+                    linkUrl: sharedLinks['Preventive/DueMaintenance'], linkParameters: Object.assign({state: 'unknown'}, scopeParameters)},
                 {counter: 'Unavailable resources', source: 'Downtime', count: counters.downResourceCount ?? null,
                     linkUrl: sharedLinks['Equipment/Downtime'], linkParameters: Object.assign({open: 'true'}, scopeParameters)}
             ].map(row =&gt; Object.assign(row, {state: row.count == null ? 'Not configured' : String(row.count)}))"/>

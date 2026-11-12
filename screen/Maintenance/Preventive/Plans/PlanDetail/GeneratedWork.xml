@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PlanDetail's Generated work tab (design-maintenance §5 PlanDetail "Generated work"; impl-maintenance P14): the work orders made
+    for the plan (Mantle's find#MaintenanceOccurrences' workList, a maintenance reader of its organization), latest first, each with
+    the due date it executes, its status, its planned day and completion, and whether it is a catch-up or a completion no longer
+    counted. Each opens WorkOrderDetail. Reads the plan itself, so it renders alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Generated work" default-menu-index="3">
+    <parameter name="maintenanceScheduleId"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenancePlanServices.find#MaintenanceOccurrences" out-map="history" transaction="force-new"
+                    ignore-error="true" in-map="{maintenanceScheduleId:maintenanceScheduleId, pageSize:1}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workList" from="history?.workList || []"/>
+    </actions>
+    <widgets>
+        <section name="GeneratedWorkFound" condition="history">
+            <widgets>
+                <container-box>
+                    <box-header title="Generated work"/>
+                    <box-body-nopad>
+                        <form-list name="GeneratedWorkList" list="workList" skip-form="true" paginate="false">
+                            <field name="workEffortId">
+                                <default-field title="Work order">
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="workEffortName"><default-field title="Name"><display/></default-field></field>
+                            <field name="dueText"><default-field title="For the due date"><display/></default-field></field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="plannedText"><default-field title="Planned"><display/></default-field></field>
+                            <field name="completedText"><default-field title="Completed"><display/></default-field></field>
+                            <field name="countedText"><default-field title=""><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="workEffortId"/><field-ref name="dueText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="completedText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No work has been made for this plan yet." type="p" style="m-muted q-pa-sm" condition="!workList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

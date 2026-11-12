@@ -14,8 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- MaintenanceCostReport (design-maintenance §8 MaintenanceCostReport, §12 operational reports; review Y2; impl-maintenance P11): the
     cost reader's only (the artifact group BOSS_MNT_COSTS; mantle.work.MaintenanceReportServices.get#MaintenanceCosts answers
-    MAINTENANCE_COST_VIEW alone). Under Work orders until P17 builds the Reports area (design §1.2 places it at
-    Maintenance/Reports/MaintenanceCostReport). CostOptions: the organization, facility, equipment, team, project, kind, component,
+    MAINTENANCE_COST_VIEW alone), in the Reports area beside PM compliance (design §1.2). CostOptions: the organization, facility, equipment, team, project, kind, component,
     currency and the period of the sources (from, before); CostTotals: parts, labor and outside service by currency, never added across
     currencies, the outside service ordered and not yet accepted pending, the hours not approved or with no costing rate apart, and the
     cost by project; CostSources: each source once (a part issued or returned, a time entry at the costing rate of its class and work
@@ -23,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     currency and posting state. Export CSV (the options and the same sources) and Print (renderMode=html-print, every value escaped)
     carry the same scope. No person's pay rate. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Cost report" default-menu-index="20" menu-image="sym_o_request_quote" menu-image-type="icon">
+        default-menu-title="Cost report" default-menu-index="3" menu-image="sym_o_request_quote" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>
     <parameter name="assetId"/>

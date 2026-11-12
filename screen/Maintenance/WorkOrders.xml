@@ -18,8 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     conversation and history, hidden from the menu; WorkItemDetail, Commons' work item with the Maintenance
     context, a work order's follow-up task (P7), hidden too; P9: MaterialIssueReceipt (Shared, the work order's parts issued and returned) and
     InventoryAvailability (Shared, a part's stock in the user's facilities), hidden too; OrderDetail (P10), the shared screen read only
-    for the purchase orders of the work, hidden too; MaintenanceCostReport (P11), the cost reader's tab beside Find (BOSS_MNT_COSTS keeps
-    it from every other user's menu), here until P17 builds the Reports area. Shown to a user who reads maintenance work (the root's menu condition); every
+    for the purchase orders of the work, hidden too. Shown to a user who reads maintenance work (the root's menu condition); every
     read and write is Mantle's mantle.work.MaintenanceServices after the root's check. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_handyman" menu-image-type="icon">

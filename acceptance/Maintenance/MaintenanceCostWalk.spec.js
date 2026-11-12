@@ -112,13 +112,13 @@ feature("maint.cost reads the repair's parts, labor and outside service with the
         const tab = asUser(users.cost, () =>
             page("WorkOrders/WorkOrderDetail/Costs", {workEffortId: state.work, lastStandalone: "true"})
         )
-        const report = asUser(users.cost, () => page("WorkOrders/MaintenanceCostReport", {assetId: ids.motorId}))
+        const report = asUser(users.cost, () => page("Reports/MaintenanceCostReport", {assetId: ids.motorId}))
         const csv = asUser(users.cost, () =>
             String(
                 ec.screen
                     .makeTest()
                     .rootScreen("component://mr-boss/screen/Maintenance.xml")
-                    .render("WorkOrders/MaintenanceCostReport/exportCsv", {assetId: ids.motorId}, null).output || ""
+                    .render("Reports/MaintenanceCostReport/exportCsv", {assetId: ids.motorId}, null).output || ""
             )
         )
         return {tab, report, csv}
@@ -151,7 +151,7 @@ feature("the planner's WorkOrderDetail has no Costs tab, and the tab and the rep
             plannerTabs: tabs(users.planner),
             costTabs: tabs(users.cost),
             plannerTab: screenRefusal(users.planner, "WorkOrders/WorkOrderDetail/Costs", {workEffortId: state.work}),
-            plannerReport: screenRefusal(users.planner, "WorkOrders/MaintenanceCostReport")
+            plannerReport: screenRefusal(users.planner, "Reports/MaintenanceCostReport")
         }
     },
     then({plannerTabs, costTabs, plannerTab, plannerReport}) {

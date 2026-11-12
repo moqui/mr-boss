@@ -227,12 +227,20 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
     <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
-        administrator's settings of each organization; its readiness provider (check#MaintenanceReadiness) is set in P18. -->
+        administrator's settings of each organization, with its readiness provider (P18, F117): the framework's
+        moqui.server.ReadinessProvider over Mantle's check#MaintenanceReadiness, called as the viewer organization by organization,
+        which checks MAINTENANCE_SETTINGS_EDIT and the organization itself and answers each check's place as a route key
+        (Admin.js mountRoutes). Its service is every user's to call (Mantle's MaintenanceSettingsData.xml), so Admin's Health, the
+        System app's and Maintenance's own Readiness reach it alike. -->
+    <moqui.server.ReadinessProvider providerKey="maintenance.readiness" version="1" ownerApp="Maintenance" title="Maintenance setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.work.MaintenanceSettingsServices.check#MaintenanceReadiness" scopeParameters="organizationPartyId"
+            requiredPermission="MAINTENANCE_SETTINGS_EDIT" fixRoute="maintenanceSettings" sequenceNum="160"/>
     <moqui.server.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"
-            description="Work policy, teams, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
+            description="Work policy, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
             scopeEnumId="AdmScOrganization" destinationRoute="maintenanceSettings"
             screenLocation="component://mr-boss/screen/Maintenance/Settings.xml" viewPermission="MAINTENANCE_SETTINGS_EDIT"
-            configuredBy="Maintenance administrator" sequenceNum="75"/>
+            configuredBy="Maintenance administrator" providerKey="maintenance.readiness" sequenceNum="75"/>
     <!-- impl-maintenance P3: the MaintenanceWork topic opens the work order (Mantle seeds the topic and its registration) -->
     <moqui.security.user.NotificationTopic topic="MaintenanceWork" linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
     <!-- impl-maintenance P3 (owner contract, design-admin §14; F56): Maintenance's lifecycle participant, a leaver's open work order
@@ -335,6 +343,10 @@ along with this software (see the LICENSE.md file). If not, see
         refuse#WorkProcess, as the user deciding) or from ProcedureDetail -->
     <moqui.security.user.NotificationTopic topic="WorkProcessApproval"
             linkTemplate="/qapps/Maintenance/Procedures/ProcedureDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P14: preventive work made from a plan (Mantle's MaintenanceDue topic and its registration, told to the
+        organization's planners) opens its work order under Maintenance -->
+    <moqui.security.user.NotificationTopic topic="MaintenanceDue"
+            linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
     <!-- impl-maintenance P16: a booking waiting for approval (Mantle's ResourceBooking topic and its registration) opens BookingRequests
         for its resource; it is approved or denied from Commons' approvals inbox (approve#ResourceBooking and refuse#ResourceBooking, as
         the user deciding) or from BookingRequests. What became of a booking (ResourceBookingNotice) opens its event in Commons. -->
@@ -348,7 +360,7 @@ along with this software (see the LICENSE.md file). If not, see
         MAINTENANCE_COST_VIEW again. The cost reader's bundle carries the grant, so a group given it in Admin opens them. -->
     <artifactGroups artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs">
         <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail/Costs.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
-        <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/MaintenanceCostReport.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_MNT_COSTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_MNT_COSTS_COST" userGroupId="BOSS_MAINTENANCE_COST" authzTypeEnumId="AUTHZT_ALWAYS"

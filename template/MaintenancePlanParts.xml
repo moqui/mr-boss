@@ -19,7 +19,12 @@ along with this software (see the LICENSE.md file). If not, see
     scope again.
     - storePlan: a new plan (a draft, for the equipment or the facility targetKind names; it opens its PlanDetail) or a change of
       its name and terms (a draft's in place, an active plan's from the effective time with a reason);
-    - planAction: activate a draft (the findings first) or end a plan (with a reason). -->
+    - planAction: activate a draft (the findings first) or end a plan (with a reason);
+    - generateDue (P14): the work of the plans named (maintenanceScheduleIds, a list or comma text), each on its own with its outcome
+      (generate#MaintenanceWorkOrders, which checks the planner's permission and each plan's scope);
+    - resolveDue (P14): a decision on a plan's obligations, after the record check (decision coalesce, skip or correct:
+      reconcile#MaintenanceSchedule, with its reason), or a meter's reading (decision reading: MaintenanceResourceServices
+      record#MaintenanceMeter, the resource administrator's). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="storePlan">
@@ -66,5 +71,53 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
             <parameter name="maintenanceScheduleId"/>
         </error-response>
+    </transition>
+    <transition name="generateDue">
+        <actions>
+            <set field="scheduleIds" from="(Array.isArray(maintenanceScheduleIds) ? maintenanceScheduleIds
+                    : String(maintenanceScheduleIds || '').split(',')).map(id =&gt; String(id).trim()).filter(Boolean)"/>
+            <if condition="!scheduleIds.length"><then>
+                <message type="warning">Choose the plans to generate</message>
+            </then><else>
+                <service-call name="mantle.work.MaintenancePlanServices.generate#MaintenanceWorkOrders" out-map="generated"
+                        in-map="{maintenanceScheduleIds:scheduleIds, operationKey:operationKey}"/>
+                <script><![CDATA[
+                    if (!ec.message.hasError()) {
+                        const made = generated.results.filter(row => row.outcome === 'generated')
+                        if (made.length) ec.message.addMessage('Work orders made: ' + made.map(row => row.workEffortId + ' (' + row.scheduleName + ')').join(', '), 'success')
+                        for (const row of generated.results.filter(row => row.outcome !== 'generated'))
+                            ec.message.addMessage((row.scheduleName || row.maintenanceScheduleId) + ': ' + row.message, row.outcome === 'failed' ? 'danger' : 'warning')
+                    }
+                ]]></script>
+            </else></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="resolveDue">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <if condition="decision == 'reading'"><then>
+                <service-call name="mantle.product.MaintenanceResourceServices.record#MaintenanceMeter"
+                        in-map="{assetId:assetId, productMeterId:productMeterId, meterValue:meterValue}"/>
+                <if condition="!ec.message.hasError()"><message type="success">Reading recorded</message></if>
+            </then><else>
+                <service-call name="mantle.work.MaintenancePlanServices.reconcile#MaintenanceSchedule" out-map="decided"
+                        in-map="{maintenanceScheduleId:maintenanceScheduleId, action:decision, changeReason:changeReason,
+                            maintenanceOccurrenceId:maintenanceOccurrenceId}"/>
+                <script><![CDATA[
+                    if (!ec.message.hasError()) {
+                        const done = {coalesce: 'Missed due dates coalesced into one catch-up' + (decided.workEffortId ? ', work order ' + decided.workEffortId : ''),
+                            skip: 'Due date skipped', correct: 'Completion corrected: the due date is open again'}
+                        ec.message.addMessage(done[decision] || 'Decided', 'success')
+                        if ((decided.reviewWorkEffortIds || []).length)
+                            ec.message.addMessage('Review work order ' + decided.reviewWorkEffortIds.join(', ') + ': it was made from the earlier projection', 'warning')
+                    }
+                ]]></script>
+            </else></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
     </transition>
 </screen>

@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Cost by currency"/>
                     <box-toolbar>
-                        <link url="${sharedLinks['WorkOrders/MaintenanceCostReport']}" text="Cost report" icon="sym_o_request_quote"
+                        <link url="${sharedLinks['Reports/MaintenanceCostReport']}" text="Cost report" icon="sym_o_request_quote"
                                 link-type="anchor-button" parameter-map="{assetId:workOrder?.assetId || null, facilityId:workOrder?.assetId ? null : workOrder?.facilityId}"/>
                     </box-toolbar>
                     <box-body-nopad>

@@ -43,7 +43,7 @@ feature(
     {
         when() {
             const options = {organizationPartyId: ids.organizationId}
-            const report = asUser(users.cost, () => page("WorkOrders/MaintenanceCostReport", options))
+            const report = asUser(users.cost, () => page("Reports/MaintenanceCostReport", options))
             // P11 review (R1): a name a spreadsheet would take for a formula, a leading minus too, is exported as text
             const WORK = "mantle.work.effort.WorkEffort"
             const originalName = String(
@@ -57,14 +57,14 @@ feature(
                         ec.screen
                             .makeTest()
                             .rootScreen("component://mr-boss/screen/Maintenance.xml")
-                            .render("WorkOrders/MaintenanceCostReport/exportCsv", options, null).output || ""
+                            .render("Reports/MaintenanceCostReport/exportCsv", options, null).output || ""
                     )
                 }))
             } finally {
                 system(() => invoke("update#" + WORK, {workEffortId: ids.beltOrderId, workEffortName: originalName}))
             }
             const printed = asUser(users.cost, () =>
-                page("WorkOrders/MaintenanceCostReport", Object.assign({lastStandalone: "true"}, options), "html-print")
+                page("Reports/MaintenanceCostReport", Object.assign({lastStandalone: "true"}, options), "html-print")
             )
             return {report, csv, printed}
         },

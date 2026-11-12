@@ -220,7 +220,9 @@ feature(
             policy.output.includes("A procedure's last author may approve it")
             // P7 review (the user's call of Nov 12): voice note transcription, off by default
             policy.output.includes("Transcribe technicians' voice notes")
-            // P11: the threshold's cost half, its own field group
+            // P18: a change starts from a date chosen
+            policy.output.includes("Starts")
+            // P11: the threshold's cost half, a policy field
             policy.output.includes("Approve planned work estimated up to")
         }
     }
