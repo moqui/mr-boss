@@ -2348,7 +2348,7 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
   - The user's calls: none blocking. For a decision: whether the maintenance purpose key of MaintenanceCostPolicy should be the kind
     (built) or the MaintenanceType; and whether a supplies part should get a route of its own (refused meanwhile).
 
-**Review Nov 12 (P9).** mr-mantle 4ea88788, mr-boss c4aed074 and this note's commit (branch `mnt/p9`), over the worker's ae1ad9ce
+**Review Nov 12 (P9).** mr-mantle 4ea88788 and 51d5426f (R3), mr-boss c4aed074 and this note's commit (branch `mnt/p9`), over the worker's ae1ad9ce
 and c47ce459, after merging master (Maintenance P15) in both repos: mr-mantle 2bb8c441 (clean), mr-boss f701867e
 (BossZMaintenanceDemoData's appended rows, design-maintenance's header and MaintenanceAccess' header and appended feature, each keeping
 both sides; mr-moqui's `mnt/p9` already at master 4994093f). Reviewed `git diff master...mnt/p9` in both repos against P9's text, §2,
@@ -2415,10 +2415,13 @@ SharedContext.js' contexts and Inventory.js.
     cost centre and project), never WIP; post#AssetReceipt names `MAINTENANCE_COST_UNMAPPED` as post#AssetIssuance does. Spec:
     MaintenanceExpenseRouting's receipt feature (receive#Asset to the work order credits the site's expense with its dimensions, not
     WIP); it fails on the code as built.
+  - **R3 (low, accounting; the lead's call on the review's recommendation, under §2's dated rows).** A policy row's end could be set
+    before issues already posted under it (`maintenanceMapping` checked only that it followed its start), so a later
+    `repost#AssetIssuance` would take another row. Posting defaults' maintenance kind now refuses an end earlier than now, on a new
+    row or an existing one, with `DATE_INVALID` (an end already stored is left as it is). Spec: MaintenanceExpenseRouting's Posting
+    defaults feature (a backdated end and a new row ended in the past refused); MaintenanceExpenseRouting, AccountingSetup and
+    AccountingControls 48 of 48 after it. design-accounting's Maintenance expense routing as built.
 - Findings (provisional, unnumbered):
-  - A policy row's end may be set before issues already posted under it (`maintenanceMapping` checks only that it follows its
-    start), so a later `repost#AssetIssuance` of such an issue would take another row; a return reads the posted debit and is not
-    moved. Requiring an end no earlier than now (or no earlier than the last posting under the row) would close it.
   - A clone run twice copies the every-facility rows twice (the rows have a surrogate key, so no conflict is found); harmless for
     routing (the first in effect wins) but untidy.
   - An issue checks the work order's status, not the step's: a part may be issued to a completed step of started work.
@@ -2451,9 +2454,8 @@ SharedContext.js' contexts and Inventory.js.
   - Merge hot spots added by the review: mr-mantle `AssetAutoPostServices.xml` (post#AssetReceipt's result block), mr-boss
     `Maintenance.js` (`productOptions`), design-accounting's "Maintenance expense routing", design-maintenance's header. When P7 lands,
     merge master again and run MaintenanceMaterials, MaintenanceExpenseRouting and WorkProcess.
-  - The user's calls: none open; both of Nov 12 are built (the kind with the any-kind fallback as built, supplies routed by R1). For
-    a decision, with a recommendation: whether a policy row's end may be backdated before postings under it (recommended: no, an end
-    no earlier than now).
+  - The user's calls: none open; both of Nov 12 are built (the kind with the any-kind fallback as built, supplies routed by R1), and
+    the backdated end is R3.
 
 ### P10 — Purchasing and outside service
 
