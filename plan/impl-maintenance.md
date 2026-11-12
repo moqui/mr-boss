@@ -1234,6 +1234,108 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
   - the user's calls: the client budget (above); whether the identity operator should move maintenance assignments (a permission for
     the participant's transfer); built meanwhile: listing only for the operator, moving for a Maintenance planner or administrator.
 
+**Review Nov 12 (P3).** mr-mantle 3028a6f9, mr-boss b8b22800 and this note's commit (branch `mnt/p3`), over the worker's 0fcc36bd,
+e1e085a3 and 3df7b504. Reviewed `git diff master...mnt/p3` in both repos against P3's text, §2, §4, F6–F13, F27–F29, F46–F49, F56,
+F59, F63, F65, F66, F69, F82, F83 and F96, design §3 (the lifecycle table and record shape), §1.1 and §13.2–13.3, AGENTS.md and
+Practices-App-Dev; read the generic paths the guard must cover (TaskServices, WorkEffortServices, CalendarDavServices, Commons'
+task and Today services, PaletteServices, Projects' time entry, RecordFiles, Admin's Lifecycle.js, `search#Universal`) and the
+framework's `check_status` (call.rs). The phase table row is back to "—" (the lead's). The worker's partial `target/debug` was
+removed and `target/debug/moqui` linked to the main checkout's Debug binary for lint.
+- Checked and found sound:
+  - The managed-work refusal: People's `check#ManagedWork` in `update#Task`, `set#TaskStatus`, `set#TaskDates`, `move#Task`,
+    `set#TaskRecurrence`, `create#Task` (a step under a work order), `delete#WorkEffort` and the WorkEffortParty writers turns on
+    with the entity, by data. Commons: `get#TaskAccess` answers not found with `MANAGED_WORK`, so TaskDetail, clock in, Projects'
+    `check#TimeItem` (timer, weekly time) and the bulk actions (each through `update#Task`/`set#TaskStatus`) refuse; Tasks' rows and
+    `check#TaskUpdate` take no change; Today leaves managed work to Maintenance's source; the palette opens WorkOrderDetail only
+    for a user Maintenance admits (`recordLink`). CalDAV leaves templates and steps out and answers 403 for a PUT or DELETE of a
+    root before any change. Admin's Projects participant leaves managed work out (F56). Projects' work item import writes only into a
+    project the user may update; its time import refuses a work order (no project root).
+  - `create#WorkEffortContent` needs no guard: its only BOSS caller is RecordFiles, whose host check is `get#RecordLinkInfo`
+    (now admitting a work order only as Maintenance does), and a file is retained evidence, not a status or assignment; guarding
+    it would refuse the work order's own Files tab. The project-model writers (`set#TaskPlanItem`, `add#TaskDependency`, labels,
+    ranks, `move#TaskSubtreeProject`) have no guard either; they are reached from Projects' screens over tasks `get#TaskAccess`
+    admits, which a managed one is not (a finding below).
+  - The lifecycle against design §3's table: approve (a supervisor; a planner for corrective work or within the hours threshold;
+    no estimate is over it), start only from Approved and only by an assigned technician or a supervisor, hold with a reason
+    and no running timer, resume to where it was, complete from In progress with no running timer, the outcome, the disposition
+    for equipment and the entered finish written in the same `update#WorkEffort` (never later than now or before the start),
+    close a supervisor's or the `MclOnComplete` policy's, cancel with a reason, started work a supervisor's, time and files kept.
+    The AssetMaintenance follows (created/scheduled by the approved window, in process, completed through in process, cancelled,
+    held keeps it). Every write names the revision it read; create's operation key answers the first root and refuses changed
+    input (`OPERATION_KEY_CONFLICT`); `act#MaintenanceWorkOrders` runs each in its own transaction (`probe`).
+  - The status flow: Manufacturing's `WorkEffortProduction` rows are unchanged. With the framework's any-flow rule (F65), the
+    maintenance rows that repeat a Default row (approve, start, complete, cancel, close, the in-progress hold and resume) widen
+    nothing; WeApproved ↔ WeOnHold need MAINTENANCE_SUPERVISE as the worker built; WeInPlanning ↔ WeOnHold, which no other flow
+    had, were open to everyone (R2). Generic `set#TaskStatus` and CalDAV move along the record's own flow before the update.
+  - Time (F66): `start#`/`stop#MaintenanceTimer` and `record#MaintenanceTime` admit only the caller's own time, assigned to the
+    root or the step, on work in progress, never a template, then call the time services unchanged (one timer a person, the
+    timesheet lock); the generic paths to a work order's time (Commons' clock in, Projects' timer and weekly time) refuse through
+    `get#TaskAccess`. A technician's Time tab shows their own entries and hours, no team total (`totalHours` null without
+    MAINTENANCE_VIEW); Home's TeamWork is for a broad reader only; a write permission alone opens no list (`workRead` first).
+  - "In maintenance" (F13, F49): Mantle's `store#ProductionEquipment` guard, Manufacturing's `WorkCenters.js` and Warehouse's
+    availability read an AssetMaintenance in process; Warehouse's open-job count is unchanged. Manufacturing's and Warehouse's
+    own records otherwise behave as before (ProductionOrders, WarehouseFacilities, ManufacturingWorkCenters pass).
+  - `get#RecordLinkInfo`'s rule (F69) is ahead of the staff rule, so an organization role or an entity grant alone opens no work
+    order or step in Commons, Chatter or files; a party of the work, a maintenance reader of its organization or its technician do.
+- Fixes:
+  - **R1 (high, confidentiality; F69).** `search#Universal` limits MantleTask by owner organization and parties only, and a work
+    order is owned by its service organization: anyone of the organization with a task view found a work order and opened its
+    title and status from search. `MaintenanceAccess.js` gains `workHidden` (the F69 rule, now shared by `get#RecordLinkInfo`), and
+    search drops a hidden hit. MaintenanceManagedWork's new feature: the organization's member finds neither the work order nor its
+    step, the planner the work order, the technician both; it fails without the change.
+  - **R2 (medium, access; F65).** The maintenance flow's WeInPlanning → WeOnHold and WeOnHold → WeInPlanning had no permission and
+    no other flow has them, so any user could hold any work effort in planning (a production run, a project task) through a raw
+    `update#WorkEffort` (the `/mantle` REST path among them). They need MAINTENANCE_PLAN, and a second flow
+    `WorkEffortMaintenanceSupervise` carries the same moves for MAINTENANCE_SUPERVISE (one permission a row; no record names it).
+    MaintenanceManagedWork: a member's raw hold of an ordinary task is refused (fails without); MaintenanceWorkOrders: a planner
+    and a supervisor each hold and resume planned work.
+  - **R3 (low, correctness).** History read the audit log of WorkEffort's priority and estimate, which WorkEffort does not audit,
+    so a priority or estimate change never showed, nor a facility work order's change of room. `store#MaintenanceWorkOrder`
+    writes the audit rows for priority, estimated hours and facility with the user (as `set#TaskSprint` writes its own), and
+    History names the facility. MaintenanceWorkOrders: the planner's priority change shows with its author; fails without.
+  - **R4 (low, correctness).** The Unassigned filter read the first 5000 current Assignee rows of every work effort in the system
+    (Projects' tasks among them) as a `not-in` list, so past that many any work order could list as unassigned. It now reads the
+    assignee rows (not declined or unassigned) of the filter's own work orders, up to Home's limit. No spec (the cap needs 5000
+    rows); the saved find's case passes.
+  - **R5 (the user's call, Nov 12; owner contract with Admin).** Offboarding stays with Maintenance's staff, no new permission:
+    `find#Assignments` marks a kind transferable only for a caller who may move it (MAINTENANCE_PLAN or _SUPERVISE for work
+    orders, MAINTENANCE_RESOURCE_EDIT for custody) and otherwise names who moves it ("Open work orders (2), moved in Maintenance by
+    a Maintenance planner or supervisor"), so an identity operator sees the items, gets no transfer step and nothing fails for
+    them. MaintenanceWorkOrders: the identity operator's listing (fails without). design-maintenance §13's leavers row.
+  - **R6 (the user's call, Nov 12; tests).** The client estimate is 9 s. The walk opens the Time tab in the page instead of a
+    reload: 8.45 s → 8.16 s, the golden path whole (create, assign, start, log time, complete, close).
+  - Design: §1.1 (search), §3's as-built flow rows, §13's leavers row.
+- Findings (for the lead to number):
+  - Commons' `get#TaskAccess` answers not found for managed work, so a technician's own work order in Commons' or Projects' task
+    lists opens only a "open it in Maintenance" message; the palette and Today open WorkOrderDetail (as the worker noted).
+  - The project-model task writers (plan items, dependencies, labels, ranks, `move#TaskSubtreeProject`, `clone#WorkEffort`, the
+    task comments and time of `add#TaskTime`) have no managed-work guard; their screens reach only tasks `get#TaskAccess` admits.
+    `clone#WorkEffort` is also on the `/mantle` REST path; P6 (steps) should decide whether the guard belongs there.
+  - Projects' time import (`import#TimeEntryCsv`) admits an item whose root is a visible project or, for an every-project reader,
+    any root: a work order's step (P6) would then take imported time outside F66's check. P6 should refuse a managed item there.
+  - The operation key's index is not unique: two concurrent creates under one key can both make a root (the retry is safe).
+  - Admin's Maintenance participant counts root assignments only; a step's assignee (P6/P7) is in neither participant until then.
+  - With R2, holders of MAINTENANCE_PLAN (planned ↔ held) and MAINTENANCE_SUPERVISE (also approved ↔ held) can still make those
+    moves on other work through a raw update, where they have that path; no BOSS group of theirs has it (§2).
+  - `assignedTo` (MaintenanceAccess) counts any current WorkEffortParty row, declined or unassigned ones too; the lists' and
+    schedule's read leaves those out. Harmless while only schedule writes the rows.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceWorkOrders and MaintenanceManagedWork 11 of 11 (3.0 s
+  feature time, +0.5 s), then with RecordVisibility, UniversalSearch, ProductionOrders, WorkProcess, PeopleChecklists, Dav,
+  MaintenanceScope and MaintenanceResources 64 of 64 (17.1 s); mr-boss MaintenanceWorkOrders, MaintenanceAccess, AdminLifecycle,
+  MaintenanceEquipment, Tasks and TodayPanel 49 of 49, MaintenanceWorkOrders 6 of 6 (about 1.3 s) after R5; client
+  MaintenanceWorkOrdersWalk 1 of 1 (8.16 s feature time; 8.45 s before R6). Each new case was run against the code without its
+  fix and failed (R1, R2, R3, R5). `./moq run --debug --nobuild lint --screens` (the Debug binary): 136 flagged sites, as before P3; the review changed no screen. Prettier clean on the changed JavaScript. Not run: ./moq test-apps, the acceptance
+  suite.
+- For the lead: `./moq run lint --screens --nobuild` (moq's options after the subcommand) ignores `--nobuild` and builds the release
+  binary: it is what left the worker's partial build, and here it finished one and replaced WT's `target/release/moqui` symlink,
+  which is restored to the main checkout's (mr-moqui is unchanged on `mnt/p3`; every spec above ran before it). moq's options go
+  first: `./moq run --debug --nobuild lint --screens`.
+- Budget share mr-mantle +0.5 s (3.0 s for the two specs), mr-boss server unchanged in effect, mr-boss client
+  8.2 s under the user's 9 s; merge hot spots as the Built note's plus mr-mantle `MaintenanceAccess.js` (workHidden),
+  `UniversalSearchServices.xml`, `CommunicationServices.xml` (the rule now a call), `MaintenanceWorkData.xml` (the second flow),
+  mr-boss `WorkOrders.js` (findAssignments) and design-maintenance §1.1, §3, §13; both user's calls of P3 decided (Nov 12) and
+  built as R5 and R6; no user's call left open.
+
 ### P4 — Requests and intake
 
 Design §3 Requests and the RequestDetail mount row, §1.2 (quick create, `create-from`), §1.4 Mail intake; MT-02
