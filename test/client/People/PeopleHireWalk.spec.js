@@ -16,7 +16,8 @@ function waitForText(text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
 // a drop-down: cleared when it holds a value (the terms now), opened, typed into; once the search has answered, the first match is
-// highlighted (a choice made earlier would be undone by the search reopening the menu), and Enter takes it
+// highlighted (a choice made earlier would be undone by the search reopening the menu), and Enter takes it. The menu closing is not
+// waited for: the next action waits until its element is not covered
 function choose(label, typed) {
     page.evaluate(label => {
         const field = Array.from(document.querySelectorAll(".q-page .q-field")).find(
@@ -38,7 +39,6 @@ function choose(label, typed) {
         {arg: typed}
     )
     page.keyboard.press("Enter")
-    page.waitFor(() => !document.querySelector(".q-menu"))
 }
 // a header menu's item: open the menu (its button in the record's actions), then click the item's own link, not the row around it
 function menuItem(menu, label) {
@@ -80,14 +80,15 @@ feature("an HR officer finds no one, hires the person, opens their record and as
         page.getByRole("link", {name: "Hire employee", exact: true}).click()
         page.waitForURL(/\/People\/Employees\/HireEmployee/)
         waitForText("Who is hired")
-        choose("Employer", "Retail")
+        // the employer: the officer's first with people employed, Retail (not Warehouse's returns center)
+        waitForText("Ziziwork Retail")
         page.getByLabel("First name", {exact: true}).fill("Wren")
         page.getByLabel("Last name", {exact: true}).fill(lastName)
         page.getByLabel("Work email", {exact: true}).fill(lastName.toLowerCase() + "@ziziwork.example")
         next()
         waitForText("Pay is set by payroll")
-        choose("Department", "Store")
-        choose("Manager", "Hannah")
+        choose("Department", "Sto")
+        choose("Manager", "Han")
         next()
         waitForText("Hire Wren " + lastName)
         waitForText("A new employment")
@@ -101,7 +102,7 @@ feature("an HR officer finds no one, hires the person, opens their record and as
         menuItem("Change employment", "Transfer") == true
         page.waitForURL(/\/People\/Employees\/EmploymentChange/)
         waitForText("Now: Store Operations")
-        choose("Department", "Merch")
+        choose("Department", "Mer")
         page.getByLabel("Why", {exact: true}).fill("Walk: moves to merchandising")
         next()
         waitForText("Moves from Store Operations to Merchandising")

@@ -19,7 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     decides it when it waits for approval, the findings; the one primary applies it or asks for it through
     mantle.humanres.PeopleServices.apply#EmploymentChange at the employment's revision read, and opens Employee360). A transfer and
     a separation wait for approval (the person's manager by default), the others are applied at once. Each step's transition checks
-    its part with preview#EmploymentChange and keeps the draft in the session, with the change's operation key. HR's
+    its part with preview#EmploymentChange and keeps the draft in a draft record (Mantle's EmploymentDraft of this employment and
+    kind, the HR user's own; style-guide §3.10, the user's call), resumed when the wizard is opened again, with the change's
+    operation key; it is discarded when the change is applied or asked for. HR's
     (BOSS_PPL_EMPLOYMENT); an employment outside the user's scope shows "Not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employment change" default-menu-include="false">
@@ -28,18 +30,33 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="changeKind"/>
     <subscreens default-item="Change"/>
 
-    <!-- the draft of this employment's change of this kind (the session's), read by each step in always-actions since the client
-        loads a step on its own -->
+    <!-- the draft of this employment's change of this kind (the user's own EmploymentDraft: get#EmploymentDraft), read by each step
+        in always-actions since the client loads a step on its own -->
     <always-actions>
+        <if condition="partyRelationshipId &amp;&amp; changeKind">
+            <service-call name="mantle.humanres.PeopleServices.get#EmploymentDraft" out-map="changeDraftFound" transaction="force-new"
+                    ignore-error="true" in-map="{draftKind:'change', partyRelationshipId:partyRelationshipId, changeKind:changeKind}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <script><![CDATA[
-            const sessionDraft = ec.web ? ec.web.sessionAttributes.get('peopleChangeDraft') : null
-            const kept = sessionDraft ? JSON.parse(sessionDraft) : {}
-            const draftKey = String(partyRelationshipId || '') + '/' + String(changeKind || '')
-            changeDraft = kept.draftKey === draftKey ? kept : {draftKey}
+            changeDraft = Object.assign({}, changeDraftFound?.draft || {})
+            changeDraftId = changeDraftFound?.employmentDraftId || null
+            changeOperationKey = changeDraftFound?.operationKey || null
+            changeDraftSince = changeDraftFound?.fromDateText || ''
             changeKinds = {transfer: 'Transfer', manager: 'Manager change', leave: 'Leave of absence', return: 'Return from leave',
                 separation: 'Separation'}
         ]]></script>
     </always-actions>
+
+    <!-- the draft given up: discarded, and the wizard starts again -->
+    <transition name="discardDraft">
+        <actions>
+            <if condition="changeDraftId">
+                <service-call name="mantle.humanres.PeopleServices.delete#EmploymentDraft" in-map="{employmentDraftId:changeDraftId}"/>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="partyRelationshipId"/><parameter name="changeKind"/></default-response>
+    </transition>
 
     <actions>
         <service-call name="mantle.humanres.PeopleServices.preview#EmploymentChange" out-map="employment" transaction="force-new"
@@ -68,6 +85,11 @@ along with this software (see the LICENSE.md file). If not, see
             <fail-widgets>
                 <label type="p" style="text-caption m-muted"
                         text="${employment.organizationName} · employed since ${employment.employmentFromDateText} · ${employment.current.stateText}"/>
+                <container style="row items-center q-gutter-sm text-caption m-muted" condition="changeDraftId">
+                    <label text="A change you started ${changeDraftSince}, resumed"/>
+                    <link url="discardDraft" link-type="hidden-form-link" text="Discard it" confirmation="Discard the change you started and start again?"
+                            parameter-map="{partyRelationshipId:partyRelationshipId, changeKind:changeKind}"/>
+                </container>
                 <subscreens-panel id="EmploymentChangeWizard" type="wizard"
                         finish-text="${changeKind == 'transfer' || changeKind == 'separation' ? 'Ask for approval' : 'Apply'}"/>
             </fail-widgets>

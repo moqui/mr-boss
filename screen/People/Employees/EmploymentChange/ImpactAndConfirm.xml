@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     manager, the units left with no lead, another employment that continues and the approvals routed again; later phases add
     equipment, checklists and access), who decides it when it waits for approval, and the findings. The one primary asks for the
     approval or applies the change (apply#EmploymentChange at the employment's revision read here and the draft's operation key) and
-    opens Employee360; the draft is cleared. -->
+    opens Employee360; the draft record is discarded. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Impact and confirm" default-menu-index="2" menu-image="sym_o_fact_check" menu-image-type="icon">
 
@@ -28,9 +28,11 @@ along with this software (see the LICENSE.md file). If not, see
                 const parameters = ec.resource.script('component://mr-boss/service/ironstone/people/People.js').changeParameters(
                     partyRelationshipId, changeKind, changeDraft)
                 changed = ec.service.sync().name('mantle.humanres.PeopleServices.apply#EmploymentChange').parameters(Object.assign(
-                    parameters, {expectedRevision: expectedRevision || null, operationKey: changeDraft.operationKey || null})).call()
+                    parameters, {expectedRevision: expectedRevision || null, operationKey: changeOperationKey})).call()
                 if (ec.message.hasError()) return
-                if (ec.web) ec.web.sessionAttributes.remove('peopleChangeDraft')
+                // the draft is done with
+                if (changeDraftId) ec.service.sync().name('mantle.humanres.PeopleServices.delete#EmploymentDraft').parameters({
+                    employmentDraftId: changeDraftId}).call()
                 const what = changeKinds[changeKind] || 'Change'
                 ec.message.addMessage(changed.applied ? what + ' applied' : what + ' asked for' + (changed.waitingText ? ': ' +
                     changed.waitingText.charAt(0).toLowerCase() + changed.waitingText.slice(1) : ''), 'success')

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     assignment: the department, the position (the employer's seats in effect, vacant ones first, narrowed to the department; a
     position's department is the assignment's), the manager (one of the employer's employees) and the work location (a facility
     of the employer). Next checks the whole hire (mantle.humanres.PeopleServices.preview#Hire: an overlapping employment, a seat
-    held then, a department or manager not of the employer) and keeps the draft. -->
+    held then, a department or manager not of the employer) and keeps the draft (the user's draft record). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employment terms" default-menu-index="2" menu-image="sym_o_work" menu-image-type="icon">
 
@@ -33,8 +33,10 @@ along with this software (see the LICENSE.md file). If not, see
                     managerPartyId: text(managerPartyId) || null,
                     facilityId: text(facilityId) || null
                 })
-                if (ec.web) ec.web.sessionAttributes.peopleHireDraft = JSON.stringify(draft)
                 if (!draft.organizationPartyId) { ec.message.addError('Start with the person'); return }
+                ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
+                    employmentDraftId: hireDraftId, draft}).call()
+                if (ec.message.hasError()) return
                 const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#Hire').parameters({
                     organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
                     lastName: draft.lastName, workEmail: draft.workEmail, confirmNewPerson: draft.confirmNewPerson === 'Y',

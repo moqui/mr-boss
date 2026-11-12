@@ -12,10 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Hire employee, step 1, Identity (design-people §4 HireEmployee): the employer and the person. An existing person is found by
-    name among everyone People knows (the hirePeople choice over mantle.humanres.PeopleServices.preview#Hire: public identity only,
-    with their relationships with the employer), a contractor or a person employed elsewhere among them; a new person is named with
-    their work email and phone. Next checks the person (preview#Hire: someone who matches a new person's names or email is refused
+<!-- Hire employee, step 1, Identity (design-people §4 HireEmployee): the employer and the person. An existing person is found (the
+    hirePeople choice over mantle.humanres.PeopleServices.preview#Hire: public identity only, with their relationships with the
+    employer) by name among the people related to the user's employers (an employee, a contractor, a contact, an applicant), and
+    anyone else, a person another employer employs among them, by their exact email (the user's call); a new person is named with
+    their work email and phone. A new hire's employer is the active one, else the first of the user's with someone employed. Next checks the person (preview#Hire: someone who matches a new person's names or email is refused
     until chosen, or the new person confirmed) and keeps the draft. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Identity" default-menu-index="1" menu-image="sym_o_person_search" menu-image-type="icon">
@@ -35,9 +36,11 @@ along with this software (see the LICENSE.md file). If not, see
                     workPhone: text(workPhone),
                     confirmNewPerson: confirmNewPerson === 'Y' ? 'Y' : ''
                 })
-                // a Hire sent twice answers the first: the draft's operation key, made once
-                if (!draft.operationKey) draft.operationKey = 'HIRE-' + ec.user.userId + '-' + ec.user.timestampMillis(ec.user.nowTimestamp)
-                if (ec.web) ec.web.sessionAttributes.peopleHireDraft = JSON.stringify(draft)
+                // kept in the user's draft record (Back loses nothing; the draft's operation key, made once, makes a Hire sent
+                // twice answer the first)
+                ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
+                    employmentDraftId: hireDraftId, draft}).call()
+                if (ec.message.hasError()) return
                 if (!draft.organizationPartyId) ec.message.addValidationError(null, 'organizationPartyId', null, 'Choose the employer', null)
                 if (!draft.partyId && !(draft.firstName && draft.lastName))
                     ec.message.addValidationError(null, 'partyId', null, 'Choose the person, or give a new person\'s first and last names', null)
@@ -57,7 +60,23 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <set field="identity" from="Object.assign({}, hireDraft)"/>
+        <script><![CDATA[
+            identity = Object.assign({}, hireDraft)
+            // a new hire's employer: the active one, else the first of the user's employers with someone employed now
+            if (!identity.organizationPartyId && hireOrganizations.length) {
+                identity.organizationPartyId = people.activeOrganizationPartyId || hireOrganizations.find(organizationPartyId =>
+                    ec.entity.find('mantle.party.PartyRelationship').condition({relationshipTypeEnumId: 'PrtEmployee',
+                        toPartyId: organizationPartyId}).conditionDate('fromDate', 'thruDate', null).disableAuthz().count() > 0)
+                    || hireOrganizations[0]
+            }
+        ]]></script>
+        <!-- the chosen person's name, as Mantle admits them (a person found by their email named with it) -->
+        <if condition="identity.partyId &amp;&amp; identity.organizationPartyId">
+            <service-call name="mantle.humanres.PeopleServices.preview#Hire" out-map="chosen" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:identity.organizationPartyId, partyId:identity.partyId, workEmail:(identity.workEmail || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="chosenName" from="chosen?.person?.personName || ''"/>
     </actions>
     <widgets>
         <container-box>
@@ -75,8 +94,9 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="partyId">
-                        <default-field title="Existing person" tooltip="Type a name: everyone People knows, with their relationships with the employer">
-                            <drop-down allow-empty="true">
+                        <default-field title="Existing person"
+                                tooltip="Type a name (the people related to your employers: employees, contractors, contacts, applicants) or a person's exact email">
+                            <drop-down allow-empty="true" current-description="${chosenName}">
                                 <dynamic-options transition="choices" server-search="true" min-length="2" depends-optional="true"
                                         parameter-map="{choice:'hirePeople', selected:identity.partyId}">
                                     <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>

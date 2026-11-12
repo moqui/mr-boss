@@ -388,28 +388,36 @@ const choiceSources = {
             id => one("mantle.facility.Facility", {facilityId: id})?.facilityName || id
         )
     },
-    // P6: the people a hire may be (Mantle's preview#Hire matches: everyone People knows by name, public identity only, with their
-    // relationships with the employer), for an HR editor; two characters at least
+    // P6: the people a hire may be (Mantle's preview#Hire matches, public identity only, with their relationships with the
+    // employer: by name the people related to the user's employers, anyone else by an exact email typed; the user's call), for an
+    // HR editor; two characters at least. The selected one is labelled only when Mantle admits them by id (a related person), so a
+    // supplied id names no one
     hirePeople: (userScope, term, selected, p) => {
         if (!userScope.capabilities.hrView || !userScope.capabilities.hrEdit) return []
         const organizationPartyId = p?.organizationPartyId || employerIds(userScope)[0] || null
         if (!organizationPartyId || !employerIds(userScope).includes(organizationPartyId)) return []
-        let options = []
-        if (term.length >= 2)
+        const preview = parameters => {
             try {
-                const found = lib.probe("mantle.humanres.PeopleServices.preview#Hire", {organizationPartyId, term})
-                options = Array.from(found.matches || []).map(row => ({
-                    value: row.partyId,
-                    label:
-                        (row.preferredName ? row.personName + " (" + row.preferredName + ")" : row.personName) +
-                        (row.relationshipText ? " · " + row.relationshipText : "")
-                }))
+                return lib.probe("mantle.humanres.PeopleServices.preview#Hire", Object.assign({organizationPartyId}, parameters))
             } catch (error) {
-                // a People user who may not hire finds no one
-                if (codeOf(error) !== "PERMISSION_DENIED") throw error
+                // a People user who may not hire finds no one; a person not admitted by id is not named
+                if (!["PERMISSION_DENIED", "RECORD_UNAVAILABLE"].includes(codeOf(error))) throw error
+                return null
             }
-        if (selected && !options.some(option => option.value === selected) && one("mantle.party.Person", {partyId: selected}))
-            options.push({value: selected, label: personName(selected)})
+        }
+        const options =
+            term.length >= 2
+                ? Array.from(preview({term})?.matches || []).map(row => ({
+                      value: row.partyId,
+                      label:
+                          (row.preferredName ? row.personName + " (" + row.preferredName + ")" : row.personName) +
+                          (row.relationshipText ? " · " + row.relationshipText : "")
+                  }))
+                : []
+        if (selected && !options.some(option => option.value === selected)) {
+            const person = preview({partyId: selected})?.person
+            if (person?.partyId === selected) options.push({value: selected, label: person.personName})
+        }
         return options
     },
     // P6: the termination reasons and types (People's lookups, Enumeration.thruDate: an ended value left out)

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     it: the person and employer, the plan (a new employment, the employee relationship of the employer completed, or a rehire beside
     the earlier employment, which stays as it was), the first assignment's terms by name, the person's other relationships with the
     employer (a contractor's stays) and the warnings and notes. Hire, the one primary, makes it in one transaction (hire#Employee,
-    with the draft's operation key, so a second press answers the first) and opens the person's Employee360; the draft is cleared. -->
+    with the draft's operation key, so a second press answers the first) and opens the person's Employee360; the draft record is discarded. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Confirm" default-menu-index="3" menu-image="sym_o_task_alt" menu-image-type="icon">
 
@@ -34,9 +34,11 @@ along with this software (see the LICENSE.md file). If not, see
                     confirmNewPerson: draft.confirmNewPerson === 'Y', fromDate: draft.fromDate, thruDate: draft.thruDate,
                     departmentPartyId: draft.departmentPartyId, emplPositionId: draft.emplPositionId,
                     managerPartyId: draft.managerPartyId, facilityId: draft.facilityId, reason: String(reason ?? '').trim() || null,
-                    operationKey: draft.operationKey}).call()
+                    operationKey: hireOperationKey}).call()
                 if (ec.message.hasError()) return
-                if (ec.web) ec.web.sessionAttributes.remove('peopleHireDraft')
+                // the draft is done with
+                if (hireDraftId) ec.service.sync().name('mantle.humanres.PeopleServices.delete#EmploymentDraft').parameters({
+                    employmentDraftId: hireDraftId}).call()
                 hiredPartyId = hired.partyId
                 hiredEmploymentId = hired.partyRelationshipId
                 const person = ec.entity.find('mantle.party.Person').condition('partyId', hired.partyId).disableAuthz().one()

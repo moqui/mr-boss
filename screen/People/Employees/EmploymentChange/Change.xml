@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     assignment's), a manager change's manager, a leave's return date, a separation's type and reason (People's lookups, ended values
     left out); and why (required for a change that waits for approval). Next checks it (mantle.humanres.PeopleServices
     .preview#EmploymentChange: a date outside the employment or before a change set later, a seat held then, a manager not of the
-    employer or below the person, nothing changing) and keeps the draft. -->
+    employer or below the person, nothing changing) and keeps the draft (the user's draft record). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Change" default-menu-index="1" menu-image="sym_o_edit_calendar" menu-image-type="icon">
 
@@ -37,8 +37,10 @@ along with this software (see the LICENSE.md file). If not, see
                     terminationTypeEnumId: text(terminationTypeEnumId) || null,
                     reason: text(reason)
                 })
-                if (!draft.operationKey) draft.operationKey = 'CHANGE-' + ec.user.userId + '-' + ec.user.timestampMillis(ec.user.nowTimestamp)
-                if (ec.web) ec.web.sessionAttributes.peopleChangeDraft = JSON.stringify(draft)
+                // kept in the user's draft record of this employment and kind (Back loses nothing; its operation key, made once)
+                ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'change',
+                    employmentDraftId: changeDraftId, partyRelationshipId, changeKind, draft}).call()
+                if (ec.message.hasError()) return
                 const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#EmploymentChange').parameters(
                     ec.resource.script('component://mr-boss/service/ironstone/people/People.js').changeParameters(partyRelationshipId,
                         changeKind, draft)).call()

@@ -547,6 +547,8 @@ the screens that call it.
 | PeopleServices | approve#EmploymentChange | People/Approvals | People/Approvals and Commons' Notifications and tray (the PeopleEmploymentChangeApproval topic's approve service) (People P6) |
 | PeopleServices | refuse#EmploymentChange | People/Approvals | People/Approvals and Commons' Notifications and tray (the topic's refuse service) (People P6) |
 | PeopleServices | find#EmploymentChanges | People/Employees/Employee360 | People/Employees/Employee360 (Employment changes) (People P6) |
+| PeopleServices | get#EmploymentDraft, store#EmploymentDraft, delete#EmploymentDraft | People/Employees/HireEmployee, People/Employees/EmploymentChange | People/Employees/HireEmployee and EmploymentChange (the wizards' draft records, resumed and discarded) (People P6 review) |
+| PeopleServices | apply#DueAssignments | (the daily job apply_EmploymentDueAssignments) | none: a ServiceJob setting Employment.emplPositionId to the seat in effect (People P6 review) |
 
 ## Ledger (81 services)
 

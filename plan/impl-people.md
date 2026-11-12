@@ -1695,6 +1695,102 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
     newest seat (built) or only one in effect; whether the wizards keep a draft record rather than the session's; how wide the hire's
     person search may look (built: everyone People knows, by name, public identity only).
 
+**Review Nov 11 (P6).** A fresh review of `git diff master...ppl/p6` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 (HireEmployee, EmploymentChange, OrgStructure), §12's topic and F3, F5, F59, F81, F86 and F91, with access, scope,
+self-approval, revisions and the callers of `create#Employment` first; the user's four calls of Nov 11 (§4) built here; fixes
+committed apart per repository ("People P6 review: …"; mr-mantle 20797e1b).
+- Checked and found sound:
+  - The hire: one service transaction for the person, the Employee role, exactly one employment (`create#Employment`, or an orphan
+    `PrtEmployee` relationship completed with its Employment row, never a second relationship; a rehire beside the ended one, which
+    is not touched), the first assignment and its three projections and the change row; a retry with the operation key answers the
+    first hire, scoped to the requester and an employer still in their scope; the Party owner is left as it is; no
+    `create#PersonEmployee`.
+  - F3: `create#Employment` and `update#Employment` narrowed to `PrtEmployee` only. Their callers are Mantle's specs and People's
+    hire (no screen or other component calls them, mr-boss or otherwise); HumanResServices, PayrollServices, PayrollAdjustments,
+    PeoplePositions, PeopleDirectory, PeopleApprovals, PeopleOrganization and PeopleScope pass unchanged with them, and an
+    overlapping employment is still refused.
+  - Approvals: a transfer and a separation are requests on `PakEmploymentChange` bound to the change row and the employment's
+    revision (relationship, Employment row and assignments), so any change of the employment meanwhile supersedes them;
+    `record#Decision` refuses the requester and the person (`SELF_APPROVAL`), anyone not the step's approver and a superseded
+    request; the notice path passes the message's revision and Employee360's Approve pins the request it read; the last approval
+    applies the change after checking its terms again; a refusal needs a reason; a decision retried applies nothing again.
+  - Separation: ends the employment (thruDate audited with the reason, its termination reason and type), the assignment, the
+    department membership, the seat holding and the line; another employer's employment and a line another employment uses are
+    left alone; the leaver's lead and team memberships at the employer end; each report's assignment continues with no manager (a
+    change row of its own); `reroute` sends the employer's waiting decisions to the alternate, the HR fallback or waits.
+  - The assignment as the per-employment manager: `linesOf` keeps a line at an employer only when that employment's assignment
+    names it, and an employment with no assignment keeps P3's reading; the P1–P5 specs (PeopleScope, PeopleDirectory,
+    PeopleOrganization, PeoplePositions, PeopleApprovals, BOSS PeopleAccess, PeopleEmployees, PeopleOrganization) pass.
+  - Stale stamps: `apply#EmploymentChange` names the employment's revision (`REVISION_CHANGED`), `change#Manager` the employment's for
+    an assigned line, `store#Unit`'s close the unit's. Screens: the two wizards are `BOSS_PPL_EMPLOYMENT`'s, denied to the People root
+    group and ALWAYS for HR (the People administrator through the root's ALWAYS), and Mantle checks `PEOPLE_HR_VIEW` and
+    `PEOPLE_HR_EDIT` and the employer again; PeopleAccess covers HR and the reader. No pay is read or written.
+- Fixes:
+  - **R1 (medium, confidentiality; the user's call 4).** The hire's person search read every Person by name (customers and contacts
+    of any organization) for an HR editor of any employer; `preview#Hire` and `hire#Employee` took any supplied `partyId` and answered
+    the person's name; and the `hirePeople` choice labelled any selected id with the person's name. A name now finds only people with
+    a relationship to one of the caller's employers (either way, any type and dates, or an application to one of their positions);
+    anyone else is found only by an exact email (the work email given, or a searched term that is an email); a person chosen by id
+    is admitted only when related or matched by the email given, else `RECORD_UNAVAILABLE`; the choice labels a selected id only when
+    Mantle admits it, and Identity names the chosen person through `preview#Hire` with the draft's email. Specs: Mantle
+    PeopleEmployment's second feature (B's employee not found by name, found by email, refused by id alone; A's contractor found by
+    name; the spec's people have work emails, which the hire helper gives); BOSS PeopleHire (Kenji none by name, found by his email,
+    his id unnamed).
+  - **R2 (medium, legacy readers; the user's call 2).** `Employment.emplPositionId` followed a change dated later at once, so
+    TimeServices' rate lookup read the new class before the date. It is set at once only by a change in effect now; the daily
+    ServiceJob `apply_EmploymentDueAssignments` (`PeopleServices.apply#DueAssignments`, seed data with the topic) sets each employment
+    whose assignment in effect names another seat, each in its own transaction, a failure logged by its employment, a rerun changing
+    nothing. A seat named only by `Employment.emplPositionId` (written before People) gets its dated occupancy row to the change's
+    date, so the seat is free from then while the Employment still names it. Spec: the transfer feature (the yard seat until the
+    date, the job changing nothing; at the date, by effective time, the job sets the office; a rerun nothing); it fails on the code as
+    built.
+  - **R3 (medium, the user's call 3).** The wizards kept their drafts in the session, lost with it. New Mantle
+    `mantle.humanres.employment.EmploymentDraft` (dated, owned by its user) with `get#`, `store#` and `delete#EmploymentDraft`: the
+    caller's own only (another's is `RECORD_UNAVAILABLE`, a change's draft of an employment in scope), the kind's preview fields only,
+    an operation key `DRAFT-<id>` made once; HireEmployee and EmploymentChange read it in `always-actions`, keep it at each step,
+    show "A hire (change) you started …, resumed" with Discard it, and discard it when the hire or change is made. Specs: Mantle
+    PeopleEmployment's draft feature; BOSS PeopleHire's Identity render resumes a draft left.
+  - **R4 (low, data; the user's request).** `TerminationReason` had no value, so a separation's reason list was empty: Mantle's seed
+    adds Resignation, End of contract, Dismissal, Retirement and Redundancy. Spec: PeopleHire's choice lists them.
+  - **R5 (low, usability; the worker's finding).** The hire wizard defaulted the employer to the officer's first organization
+    (Warehouse's returns center for `people.hr`): now the active one, else the first with someone employed.
+  - **R6 (low, dated rows).** A separation ended only the lead and team memberships started before its date: one starting on or
+    after it stayed open past the employment. It is now ended on its own start. No spec.
+  - The client walk: 8.8 to 9.1 s as built, now 7.26 s (two runs, 7.26 and 7.26 s) with its golden path whole (the directory search,
+    the hire's three steps, Employee360, the transfer's two steps): the employer is the default (R5), a drop-down's choice no longer
+    waits for its menu to close (the next action waits for its element), shorter search terms.
+- Provisional findings (for the lead to number):
+  - a change applied with a later date (an approved transfer, a leave's return date) refuses every change dated before it,
+    a separation included (`ASSIGNMENT_SCHEDULED`), and an applied future assignment cannot be withdrawn: a person who resigns before
+    an approved transfer's date cannot be separated until after it, and a return from leave cannot come early;
+  - `hire#Employee`'s overlap check reads without a lock: two hires of one person at once with different operation keys could both
+    make an employment (P5's `record#Decision` locks its request; `create#Employment` does not);
+  - a draft write names no revision: two tabs of one HR user overwrite each other's draft (the owner's alone, no one else's);
+  - a separation dated later calls `reroute` when applied (the worker's finding stands); the new daily job could route on the date;
+  - the `positions` choice marks a seat held only through `Employment.emplPositionId` (no occupancy row) vacant;
+  - the email match reads the `EmailWork` and `EmailPrimary` purposes only;
+  - the worker's other findings stand (a closure asks no approval; a seat moved to another department leaves its holder's assignment;
+    the demo heads have no assignment; a department's lead listed twice in OrgStructure).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleEmployment, PeopleOrganization, PeopleApprovals,
+  PeoplePositions, PeopleScope, PeopleDirectory, HumanResServices, PayrollServices, PayrollAdjustments, WorkResources, BusinessTime,
+  ProductionShopFloor, WorkTimeEntries, InternalOrganizations and UserLifecycle 96 of 96 (mr-mantle 23.4 s), then after the last
+  fix PeopleEmployment, PeopleOrganization, PeopleApprovals and PeopleScope 24 of 24 (10.9 s; PeopleEmployment 7 features, 3.1 s; its
+  seat check failing on the code as built); BOSS PeopleHire, PeopleAccess, PeopleEmployees, PeopleOrganization, PeoplePositions,
+  PeopleApprovals, AdminLifecycle, Resources, Contacts, InsightsRecords, ManufacturingShopFloor, AppOrganizationFilters,
+  ProjectsAccess and TimeEntries 119 of 119 (mr-boss 23.8 s), PeopleHire again 3 of 3 (0.8 s); the client walk PeopleHireWalk
+  (`./moq test-client mr-boss --serve --spec PeopleHireWalk`) 1 of 1, 7.26 s twice. `moqui lint --screens`: 135 flagged sites as
+  before, none in the People screens. Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite
+  (PeopleHireUsable hires only related people, so R1 leaves it as written).
+- For the lead:
+  - budget share: Mantle PeopleEmployment 3.1 s (about 0.7 s more than built: the draft feature and the job's check); BOSS
+    PeopleHire 0.8 s; the client walk 7.3 s, under §4's 8 s estimate;
+  - merge hot spots beside the Built note's: mr-mantle `Employment.js` (`project`, `moveSeat`, `applyDueAssignments`, `separate`,
+    `matchesOf` and its helpers, `planHire`, the draft functions, the operations), `PeopleServices.xml` (four services appended),
+    `HumanResourcesEntities.xml` (`EmploymentDraft`, the TerminationReason values), `PeopleApprovalSetupData.xml` (the job);
+    mr-boss `People.js` (`hirePeople`), the wizards' screens, `PeopleHire.spec.js`, `PeopleHireWalk.spec.js`, design-people §4,
+    HireEmployee and EmploymentChange, usl-inventory's People rows, §4's four new rows;
+  - the user's calls are in §4 (four rows), all built here (1 as built).
+
 ### P7 — Checklists, equipment return, provisioning and employee import
 
 Design §4 (checklists, equipment, provisioning), §12 ChecklistTemplates and EmployeeImport, §13 WorkItemDetail and
@@ -2380,6 +2476,10 @@ the owner's design.
 | Nov 11, 2026 | An HR vocabulary value is ended through Mantle's extension of the framework's `Enumeration` (`thruDate`), as built in P5, not a People record of its own; People's choices that offer an HR vocabulary leave ended values out and its services refuse one for a new record (JobClassDetail's skill types and `store#JobRequirement` in P5's review; each later phase's vocabulary choice the same) | The user's call on P5's question. Other apps' choices of the same families (Projects' and Products' skill drop-downs, Manufacturing's routing skills) are theirs and still list every value |
 | Nov 11, 2026 | When an approver leaves, P6's separation routes each People decision waiting on them again (the step's alternate, then the HR fallback, else it waits) and notifies the new approver; Admin's lifecycle transfer stays for an explicit hand-over of a rule | The user's call on P5's question. P5's review made routing skip one who no longer works for the employer and exported `Approvals.js`'s `reroute(organizationPartyId[, approvalKindEnumId])` for P6 (P6's text gains it) |
 | Nov 11, 2026 | Deciding a People approval step needs `PEOPLE_REQUEST_APPROVE` for everyone, HR-routed steps included (`PEOPLE_HR_EDIT` decides nothing); BossSetupData grants `PEOPLE_REQUEST_APPROVE` to `BOSS_PEOPLE_HR` (and its capability bundle), so the demo HR still decides HR steps | The user's call on P5's question (built in P5's review, R1; design §1.1 and §12 changed) |
+| Nov 11, 2026 | Of the employment changes only a transfer and a separation wait for approval, as built in P6; a manager change, a leave of absence and a return are HR's at once. The pay change joins the `PeopleEmploymentChangeApproval` topic in P23 | The user's call on P6's question (design §12's topic names transfer, pay change and separation; design-people §4 EmploymentChange) |
+| Nov 11, 2026 | `Employment.emplPositionId` holds the seat in effect: a change in effect now sets it at once, and one dated later only on its date, through a daily ServiceJob (`apply_EmploymentDueAssignments`, `PeopleServices.apply#DueAssignments`: each employment in its own transaction, a failure logged and the rest going on, a rerun changing nothing). The occupancy rows stay the dated truth | The user's call on P6's question (built in P6's review, R2; design-people §4). TimeServices' rate lookup and the contact card no longer read a seat before its date |
+| Nov 11, 2026 | The hire and change wizards keep their unfinished drafts in a draft record (style-guide §3.10), not the session: `mantle.humanres.employment.EmploymentDraft`, a dated row owned by its HR user, resumed when the wizard is opened again, discarded when the hire or change is made or given up, and read only by its owner | The user's call on P6's question (built in P6's review, R3; design-people HireEmployee and EmploymentChange) |
+| Nov 11, 2026 | The hire's person search finds by name only the people with a relationship to the HR officer's employers (employees, contractors, contacts, applicants and the like); anyone else is found only by an exact email, to avoid making a duplicate. Answers stay names and public identity, and a person chosen by id is refused as missing unless related or matched by the email given | The user's call on P6's question (built in P6's review, R1; design-people HireEmployee). Narrows F59's search: a person another employer employs is found by their email |
 
 ## 5. Open questions
 
