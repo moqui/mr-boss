@@ -374,7 +374,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | — |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
-| P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | — |
+| P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built Nov 12, for review |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | — |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
@@ -2328,6 +2328,121 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
 - **Usable when** (`acceptance/Maintenance/MaintenancePlansWalk`; design §11.2 "PM chronology"): the planner
   activates the three plans; DueExplanation names the last accepted reading, the increment and the next threshold
   for the compressor, and "reading older than 30 days" for the stale one.
+
+**Built Nov 12 (P13).** mr-mantle b074f1d8, mr-boss 88aaf9a2 and this note's commit (branch `mnt/p13`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P2's `Facility.timeZone` and `facilityTimeZone` (MaintenanceResources.js, inherited), `record#MaintenanceMeter`
+  and its reasons (AmrReading, AmrWork, AmrReset, AmrCorrection), `ProductMeter.isCumulative`, AssetMeter's key and `workEffortId`; P3's work order
+  record, the AssetMaintenance synchronization (no `productMaintenanceId`, no interval on a work order's maintenance record) and `requestHash`;
+  P6's `procedureOf`, `effectiveAt` and `applicabilityRefusal` (MaintenanceProcedures.js); F11 (`create#AssetMaintenance` writes an AssetMeter
+  reading of a nonzero `intervalQuantity` with the record's id and no reason; `get#AssetMaintenanceNeeded` left alone and not called); F64 with
+  People P9 merged (`EventServices.get#NextBusinessDay` reads WepHoliday events owned by the organization or in the categories named; People's
+  holiday calendars are WcatHoliday categories whose holidays have no owner, written by `ScheduleServices.store#Holiday`; `get#Holidays` needs a
+  People staff read, so Maintenance does not call it); F16 and §5 Q9; F118 (no setup row needed: the screens inherit the root's grant and the
+  Mantle services check themselves); F119 (no availability row is read). People P9's `get#PartyCapacity` is P8's.
+- Mantle:
+  - Records (`entity/MaintenancePlanEntities.xml`, a file of its own): `MaintenanceSchedule` (one asset or one facility, an optional
+    ProductMaintenance of the asset's model, the target's organization, the `MaintenanceSchedule` status Draft, Active, Ended with its flow, from
+    and thru, the end's reason, a revision, the operation key and hash) and `MaintenanceScheduleTerm` (dated by fromDate; trigger
+    `MaintenanceScheduleTrigger` MstCalendar or MstMeter, cadence `MaintenanceScheduleCadence` MscFixed or MscCompletion, interval and unit
+    TF_day/wk/mon/yr, `firstDueLocal` (the first obligation's local date and time in the target's zone, text, see the findings), meter, baseline
+    value and date, `maxReadingAgeDays`, `businessDaysOnly`, `holidayCategoryId` (a People holiday calendar), `leadDays`, procedure, maintenance
+    type, team, the change's reason and who; the trigger fields audit-logged); `MaintenanceWorkOrder.maintenanceScheduleId` by `extend-entity`
+    in the same file (the plan a work order executes; P14's generation sets it).
+  - `mantle.work.MaintenancePlanServices` (`MaintenancePlans.js`): `find#MaintenanceSchedules` (scoped in the query before paging: text,
+    organization, equipment, facility with those inside it, model, state, trigger, procedure, team; each row's next due and data age, F83's
+    active organization for an all-organizations holder), `get#MaintenanceSchedule` (the terms resolved with each value's origin, plan or model
+    default, the stored terms, the history, the due, the findings, canEdit/canActivate/canEnd), `store#MaintenanceSchedule` (MAINTENANCE_PLAN or
+    _SUPERVISE in the target's organization: create under an operation key, OPERATION_KEY_CONFLICT; TARGET_REQUIRED, TARGET_INVALID; terms in
+    place for a draft, for an active plan from an effective time with a reason (REASON_REQUIRED, DATE_INVALID), the earlier term ended and
+    kept; RECORD_CHANGED, PLAN_ENDED; activate with the findings ZONE_REQUIRED, PROCEDURE_REQUIRED, PROCEDURE_NOT_QUALIFIED, INTERVAL_REQUIRED,
+    FIRST_DUE_REQUIRED, METER_REQUIRED, METER_NOT_COUNTING, BASELINE_REQUIRED; end with a reason), `get#MaintenanceDue` and `find#MaintenanceDue`
+    (the active plans' due, a failing plan named in `failures` and the rest listed, at most 500 plans, paged in memory). MAINTENANCE_VIEW reads.
+  - The projection: a fixed cadence's obligations from `firstDueLocal`, months and years from the first date's day clamped to a short month and
+    back; each instant read in the zone (`ec.l10n.parseTimestamp`), so 09:00 stays 09:00 across daylight saving; a completion covers the earliest
+    obligation not yet covered that falls before the next obligation after it (an early completion covers its due date), and the obligations
+    passed and not covered are overdue; a completion cadence one interval after the last completion. The planned day is the next business day
+    through `get#NextBusinessDay` (the organization's holidays and the term's People holiday calendar) when the term asks for business days, the
+    due date kept; lead days give the day work is made from. A meter: a counting meter of the model; the baseline the reading taken in the last
+    counted completion (in its work tree or on its maintenance record), else the plan's; the usage since then summed across a reset; the next
+    threshold; a reading older than the maximum age (30 days unless set) answers unknown (READING_STALE), as does no baseline. A counted
+    completion is a work order of the plan complete or closed, or a completed AssetMaintenance of the plan's model default; a planned or
+    cancelled one counts nothing, and a reading `create#AssetMaintenance` made for a record not completed is no observation.
+- BOSS:
+  - Services: Maintenance.js' `plan` record kind (check#Record through Mantle's `requireSchedule`), the link paths `Preventive/Plans/Find` and
+    `Preventive/Plans/PlanDetail`, the choices `planDefaults` (the model's maintenance defaults), `planMeters` (its counting meters) and
+    `holidayCalendars` (People's calendars of the scope's organizations and the shared ones), answered to a reader of work or a planner or
+    supervisor.
+  - Screens: the root (Preventive at index 5 for MAINTENANCE_VIEW, _PLAN or _SUPERVISE, `g l`); `Maintenance/Preventive.xml` (a tab area, Plans;
+    P14 adds DueMaintenance), `Preventive/Plans.xml` (Find, PlanDetail hidden), `Preventive/Plans/Find.xml` (FindPlans in the list's header,
+    PlanRows, NewPlan), `Preventive/Plans/PlanDetail.xml` (header with Activate and More › End plan, the activation findings, tabs) and its
+    `Schedule` tab (DueExplanation, ScheduleTerms with origins and Edit terms, the earlier terms); `template/MaintenancePlanParts.xml` (storePlan,
+    planAction); EquipmentDetail's Maintenance tab gains Preventive plans (no new tab). No change to BossSetupData or BossSetupMaintenanceData.
+  - Demo (BossZMaintenanceDemoData.xml, appended): Room 201's monthly inspection from November 30 at 09:00 (business days, 7 days ahead), the
+    compressor's oil service every 250 hours over the AC-200 model's 500-hour default (baseline 1200 on September 1: last reading 1420, next
+    threshold 1450), and the compressor's contactor check every 500 starts on a second counting meter of the model, `Starts`, last read on
+    August 15 (stale), all drafts for the walk to activate.
+- Specs:
+  - Mantle `test/work/MaintenanceDue` (5 features, about 1.5 s): activation refused with no zone (ZONE_REQUIRED), no procedure and a draft one,
+    a reader refused, another organization refused, the operation key's retry and conflict; the 31st on January 31, February 28 and March 31 with
+    an early completion covering its due date and the overdue count; 09:00 Central before and after March 14, 2027 (15:00 and 14:00 UTC); Memorial
+    Day in a People calendar moving May 31 to June 1, the due date kept, another organization's calendar refused; a planned AssetMaintenance with
+    a synthetic 1600 reading and a cancelled work order advancing nothing, a completed one's reading the new baseline, a reset counted across, a
+    stale reading unknown; an active plan's change refused without a reason or at a stale revision, the next term with its reason, the earlier
+    one kept with 250, the completed work and its baseline unchanged, an end refused without a reason. Run with the synthetic-reading and the
+    completion-status checks taken out, the meter feature fails.
+  - BOSS `test/Maintenance/MaintenancePlans` (2 features, about 0.5 s): Plans/Find's qvt render (the three plans, the model default, 1450 hr,
+    "Unknown: stale reading", New plan), PlanDetail's own level (`lastStandalone -3`: the name, "Follows ...", Activate) and its Schedule tab
+    (the last accepted reading, the increment over the default, the next threshold, Model default, Edit terms), a reader's read with no write, the
+    stale plan's due; the choices (the model's default, its two counting meters, Retail's calendar to Retail's planner with a selected value not
+    found by the term and not to Services' planner, none to a technician). `MaintenanceAccess` gains the plan rule (reader and planner read; the
+    resource administrator, a technician and Retail refused; the planner makes a draft for the van, the reader is PERMISSION_DENIED and Retail's
+    planner RECORD_UNAVAILABLE with the same parameters) and the P13 menus and key; `MaintenanceWorkOrders`' equipment Maintenance tab render
+    checks the plans pane.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePlansWalk` (4 features: the planner activates the three plans from
+    PlanDetail and a reader may not; DueExplanation's reading, increment and threshold for the compressor and "Reading older than 30 days" for the
+    contactor check until the resource administrator records a reading; the room's due date; a term change needing its reason with the earlier
+    term kept; a new van plan refused activation until it names a procedure).
+- Tests run (release binary 03:39, `--nobuild`, this worktree): mr-mantle MaintenanceDue, MaintenanceWorkOrders, MaintenanceScope,
+  MaintenanceProcesses, MaintenanceResources, MaintenanceOutages, MaintenanceManagedWork, MaintenanceIntake: 44 of 44 (8 specs, 16.8 s feature
+  time). mr-boss MaintenancePlans, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceProcedures, MaintenanceDowntime,
+  MaintenanceRequests: 36 of 36 (7 specs, 11.6 s feature time). Client MaintenanceWorkOrdersWalk 1 of 1 (8.0 s). `./moq run --debug --nobuild lint
+  --screens`: 136 flagged sites, as before; the new screens appear only in the information list of unnamed containers; the release symlink
+  intact. Prettier (`npx prettier`, the repository's config) on MaintenancePlans.js, both new specs, the walk and MaintenanceSpecLib.js;
+  Maintenance.js and MaintenanceAccess.spec.js were not prettier-clean before P13 (F161), so only P13's hunks are in its style. Not run:
+  ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's `get#AssetMaintenanceNeeded` (not used, F11) and `get#NextBusinessDay` rows and an Added table for
+  MaintenancePlanServices; ss-inventory's ProductMaintenanceList and a P13 line (AddPlannedMaintenance stays P14's).
+- Design edits: design-maintenance's header, §1.2, §5.1, Plans and PlanDetail and §13.2 as built.
+- Findings (provisional, for the lead to number):
+  - Design §5.1 has generation make an ad hoc root when no procedure is configured; this phase's text and the lead's brief have activation need a
+    qualifying procedure, which is built (PROCEDURE_REQUIRED, PROCEDURE_NOT_QUALIFIED). A plan without a procedure stays a draft.
+  - The first due date is kept as the local date and time in the target's zone (`firstDueLocal`, text), not a timestamp: a timestamp read in the
+    planner's zone would move the obligation for a target in another zone, and a draft may have no zone yet. `baselineDate` is an instant.
+  - A completion counts for a plan only through `MaintenanceWorkOrder.maintenanceScheduleId` (added here by `extend-entity`; P14's generation
+    must set it, and P14's occurrence may then cover the coverage rule) or a completed AssetMaintenance of the plan's model default (the
+    baseline's records). Until P14 nothing in the screens links a work order to a plan.
+  - A draft's terms change in place (no dated row before activation); from activation they are dated rows, ended, never overwritten.
+  - `get#NextBusinessDay` finds People's holidays only through the calendar the term names (they have no owner) and skips Saturday and Sunday
+    only; design §5.1's weekday set and a default calendar from People's working schedule of the organization are not built.
+  - The meter units are the Uom abbreviations (`hr`, so "1450 hr"); a count meter with no unit reads in its name ("500 starts").
+  - A qvt render of a record of a three-level area (`Preventive/Plans/PlanDetail`) needs `lastStandalone: "-3"` to start at the record's own
+    level (`-2` starts at Plans, whose `m-subscreens-active` is empty); P14's specs of DueMaintenance and PlanDetail's tabs meet the same.
+  - The demo's stale plan needed a second counting meter of the AC-200 model (`Starts`, PdMtrUseCount, no unit): P2's demo has no other
+    counting meter with an old reading. The compressor's 250-hour plan reads stale too from December 1, 2026 (its last reading is November 1);
+    its explanation still names the reading, increment and threshold.
+  - Equipment's EquipmentRows "next PM" column (design §6) is not built; EquipmentDetail's Maintenance tab lists the plans.
+- For the lead:
+  - Budget share: mr-mantle MaintenanceDue about 1.5 s; mr-boss server MaintenancePlans about 0.5 s and MaintenanceAccess +0.3 s; client
+    unchanged (MaintenanceWorkOrdersWalk 8.0 s); budgets not changed.
+  - Merge hot spots: mr-mantle none beyond new files (the extend-entity is in MaintenancePlanEntities.xml, not MaintenanceEntities.xml); mr-boss
+    `Maintenance.js` (the `plans` module line, linkPaths' end, the `plan` record kind before `asset`, `planChoices` before `workChoices`, three
+    choice sources before `procedureSteps`, one gate line in `choices`), `screen/Maintenance.xml` (the Preventive item before the Equipment
+    comment, `g l` after `g p`, the providers comment), `screen/Shared/EquipmentDetail/Maintenance.xml` (actions and a section before
+    EquipmentRecords), `data/BossZMaintenanceDemoData.xml` (appended at the end), `MaintenanceSpecLib.js` (ids after retiredProcedureId; menus and
+    keys), `MaintenanceAccess.spec.js` (header line, appended feature), `MaintenanceWorkOrders.spec.js` (three lines), the inventories,
+    design-maintenance and this plan.
+  - The user's calls: (1) whether a plan with no procedure may be activated and generate an ad hoc root (design §5.1) or needs a qualifying
+    procedure (built, as the phase says); (2) whether a draft's terms should also be dated rows (built: in place until activation).
 
 ### P14 — Generation, occurrences and compliance
 
