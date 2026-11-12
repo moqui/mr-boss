@@ -74,6 +74,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="rootWorkEffortId"><description>P6, procedureSteps: the procedure whose steps are offered</description></parameter>
             <parameter name="workEffortId"><description>procedureSteps: the step not offered</description></parameter>
             <parameter name="measurementTypeId"><description>measurementUoms: the measurement whose units are offered</description></parameter>
+            <parameter name="teamPartyId"><description>P8, technicians: the team the work order's assignment names</description></parameter>
+            <parameter name="windowFrom"><description>P8, technicians: the planned start being chosen</description></parameter>
+            <parameter name="windowThru"><description>P8, technicians: the due being chosen</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

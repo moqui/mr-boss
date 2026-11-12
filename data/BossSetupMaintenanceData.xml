@@ -53,6 +53,26 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_MNT_SETTINGS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- impl-maintenance P8 review (design §2's Teams "administrator; P read"): Teams read only for the planner and the supervisor. Their
+        groups get a non-inheritable ALWAYS on the Settings frame (past the root user group's deny), on Teams and on its choices
+        transition by name (as Insights' dataset screens), so no other Settings tab and no transition not named (storeTeamDefaults) opens
+        for them, and each service under them is checked by its own grant; Mantle's find#MaintenanceTeams answers a planner or
+        supervisor and store#MaintenanceTeamDefaults stays MAINTENANCE_SETTINGS_EDIT's. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_TEAMS" description="Maintenance teams, read by planners and supervisors">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/(Settings|Settings/Teams)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Settings/Teams.xml/choices" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle.work.MaintenanceSettingsServices.find#MaintenanceTeams" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_MNT_TEAMS_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_TEAMS_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- design §1.1's table (Mantle seeds the permissions, each granted to ADMIN, data/MaintenanceSetupData.xml): the reader
         MAINTENANCE_VIEW and WORK_PROCESS_VIEW; the requester MAINTENANCE_REQUEST and _REQUEST_VIEW_OWN; the planner MAINTENANCE_PLAN
         with the views; the technician MAINTENANCE_ASSIGNED_VIEW and _EXECUTE; the supervisor MAINTENANCE_SUPERVISE with the views;
@@ -369,6 +389,9 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs (the Costs tab and the cost report)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <!-- impl-maintenance P8 review: the planner's and the supervisor's bundles carry Teams' read (BOSS_MNT_TEAMS above) -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_TEAMS" description="Maintenance teams (read only)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_TEAMS" description="Maintenance teams (read only)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <!-- impl-maintenance P17 (design §1.4, §8; impl-insights §7; F37, F117): Maintenance's shipped datasets (BossMaintenanceReportData.xml
         and report/boss-maintenance-*.json, no cost, rate or amount) read by the Insights groups, as Customer Service's are (the
         steward updates and refreshes them), and by Maintenance's supervisors and administrators, each viewer their own

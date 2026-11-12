@@ -2423,6 +2423,219 @@ built (impl-people P3, P9, P12, P14, P18; P0).
   its qualification half): the planner assigns the compressor service, sees the technician on leave ranked last and
   a warning on the expired qualification, and under the block policy cannot assign them. **Gate 2.**
 
+**Built Nov 12 (P8).** mr-mantle f0cd2a24 and 1feb587e, mr-boss 4aa5694e and 0af6397d (branch `mnt/p8`, master merged first).
+- Checked first (the code over the plan): People P3's teams (`store#Membership`: dated `PrtMember` rows from the person, from role
+  `Assignee` or `Manager`, to the `OrgTeam` unit, F60), P9's `get#PartyCapacity` (schedules first, holidays of the policy's organization
+  and the schedule's calendar, `WetTimeOff` leave), P14's shifts in the same read, P18's `WorkEffortSkillStandard.minimumSkillLevel`
+  and `check#Qualifications` (its Built and Review notes: the staffing projection; a self-declared level and an unverified, expired or
+  revoked certificate meet nothing; a caller with no People reach refused `PERMISSION_DENIED`, so a dispatcher could not call it, P18's
+  finding), Projects' `find#StaffingCandidates` (one skill, weekly hours or a percent, its pool time keepers, skill holders and role
+  holders, `partyIdList` People's bound), P3's `schedule#MaintenanceWorkOrder` (the added people, P14 review's `remindAssignees` after
+  it, P6/P7's `replacePartyId` leaving a done step's assignee), `act#MaintenanceWorkOrders` (transitions only), P18's `policyFields`,
+  P6's `store#ProcessRequirements` (a skill with no level, F75) and `copyRequirements` (F58), P4's mail intake (a team's plus-tag is
+  its `PartySetting` `MntIntakePlusTag`), F34, F64, F75, F79 (the demo's technicians are agents; People's Services employees Kenji,
+  Sofia and Owen are employed), F113 and F160, and MaintenanceAccess (one team row read as a work row by nothing: a team's
+  `WorkEffortParty` makes no member assigned).
+- Mantle:
+  - `entity`: `MaintenanceTeamDefaults` (MaintenanceSettingsEntities.xml; dated by team: the organization, the resource scope facility,
+    the default assignee, the project, who changed it and why; `thruDate` audited), `MaintenancePolicy.qualificationBlocks` (Y: refuse;
+    empty or N: warn) and `WorkEffortSkillStandard.qualificationTypeEnumId` (the qualification that proves the skill, a step's required
+    qualification as a job class requirement's is);
+  - `MaintenanceDispatch.js` (new): `find#MaintenanceCandidates` (MaintenanceServices; a planner's or supervisor's, a root in scope:
+    the organization's employees and agents through `find#StaffingCandidates` over the open nodes' skills at their highest least level
+    and the window, People's staffing answer for each, ranked the team's members first, then those with the hours, those not missing
+    or expired, the team's default assignee, then the staffing order; each with free and needed hours, skills with level and met,
+    qualification state and text, a one-line label), `find#MaintenanceTeams` and `store#MaintenanceTeamDefaults`
+    (MaintenanceSettingsServices; teams read by a reader, planner, supervisor or settings editor; defaults the settings editor's, a
+    facility of the team's organization, a current member, a project, and the intake tag written to the team's `MntIntakePlusTag`
+    setting, unique among the teams), and the qualification check `checkQualified`/`checkStart` (the work's requirements at its planned
+    start, or now for Start; missing or expired a warning, `QUALIFICATION_BLOCKED` under the policy);
+  - `MaintenanceWork.js`: `policyFields.qualificationBlocks`; `schedule#MaintenanceWorkOrder` checks the people it adds and answers
+    `qualificationWarnings`; Start's refusal under the block and its warnings in `transition#`'s answer; `act#MaintenanceWorkOrders`
+    takes `assign` (team and technicians) and `schedule` (window) through `schedule#` per order (`VALUE_REQUIRED` with neither), and a
+    refusal's code and message are read past the error text's `Error: ` (the bulk results had `reasonCode` null before);
+  - owner contracts: `ResourceServices.find#StaffingCandidates` takes `skillList` (each with a least level: `skills`, `skillsMet`,
+    `hasSkill` when all are met by a level not self-declared, `skillRating` the mean held) and a window (`windowFrom`, `windowThru`,
+    `windowHours`: each covered day's capacity less its share of the week's allocations; every person of `partyIdList` a candidate),
+    Projects' and People's callers passing none; People's `Development.js`: `check#Qualifications` reads a skill standard's
+    qualification type, and its core is `answerFor`, exported as `staffingAnswer` for Mantle's own checked callers (never a service's
+    parameters); `check#Qualifications` answers as before;
+  - `ProcessServices.store#ProcessRequirements` takes `minimumSkillLevel` (a current skill level, `VALUE_INVALID`) and
+    `qualificationTypeEnumId`, and the instantiation copies both; the requirement list shows them.
+- BOSS:
+  - Screens: `Settings/Teams` (new, tab 3; TeamList, a team's TeamMembers read only with their dates, the link to People's
+    OrganizationStructure for a user whose groups open People, TeamDefaults; the administrator's under Settings' grant), WorkPolicy's
+    qualification check (Warn, Block), WorkOrderDetail's Overview: Assign and schedule's Technicians the choice `technicians`, reloaded
+    as the team and window change (`depends-on`, `depends-optional`), the warnings on save and on Start (MaintenanceWorkOrderParts);
+    WorkOrders' Find: the selection's Assign and Schedule (BulkWork), its result counting those done of those chosen and naming each
+    warning and refusal; ProcedureDetail's Resources: At least and Proved by for a skill; SettingsHome's Teams row;
+  - `Maintenance.js`: the choices `technicians` (over `find#MaintenanceCandidates` for a planner or supervisor, the organization's
+    people otherwise; a date-time field's empty mask is no window) and `qualificationTypes`; ContextServices' `get#Choices` and the
+    choices transition pass the team and window;
+  - demo (`BossZMaintenanceDemoData.xml`, appended): Services' "Compressor and field service" team (Kenji its lead, Sofia, Owen), its
+    defaults (the mechanical room, Kenji) and intake tag `compressors`; Sofia's field service at 3 and her electrical safety certificate
+    expired Oct 31, Owen's at 4 with a valid one and a time off all of Nov 16 to 20 (the projection of approved leave), and the AC-200
+    procedure's oil change asking field service at 3 proved by the certificate.
+- Specs: Mantle `test/work/MaintenanceDispatch` (4 features, stepwise, 1.2 s: 0.22, 0.39, 0.47, 0.13: the picker ranking the one on
+  leave below the free ones, the expired certificate named and no number, another organization and a technician refused; assigning the
+  expired technician warns, the block refuses Start and the added person, the assignees unchanged, Start with the qualified one; team
+  membership grants no permission (a member with no permission `PERMISSION_DENIED`, a member technician `NOT_ASSIGNED` on the team's
+  work), the team with three members and its lead, defaults refused to the planner, a non-member, another organization's facility and
+  team, the default assignee ranked; a bulk assignment's refused order of another organization naming itself, the others assigned, a
+  warning in one's message, schedule with no window refused). MaintenanceProcesses: a skill at level 3 stored and copied, level 9
+  refused. BOSS: MaintenanceWorkOrders gains the ranked choice (0.25 s: the field team, Kenji first, Owen third with 0 h free; a
+  technician offered the people unranked) and checks on its existing renders (WorkOrders' Assign and Schedule, Work policy's check);
+  MaintenanceSettings gains Teams' one qvt render (0.08 s); MaintenanceProcedures' Resources render checks the level; MaintenanceAccess
+  one feature (0.15 s: the administrator stores defaults, the planner `PERMISSION_DENIED`, Retail's planner `RECORD_UNAVAILABLE`, Teams
+  refused to the planner); MaintenanceSpecLib the P8 ids and Settings' menu with Teams; the client MaintenanceWorkOrdersWalk's option
+  match (a label now names hours and team). Acceptance, written and not run: `acceptance/Maintenance/MaintenanceDispatchWalk` (3
+  features: the compressor service made of the procedure for the team in the demo's week, Kenji first, Sofia expired, Owen last with 0
+  h free, the requirement's level and certificate, no number or issuer; Sofia assigned with a warning, the administrator's Block, Sofia
+  refused beside Kenji; Teams read only).
+- Tests run (release binary from the main checkout, `--nobuild`, this worktree): Mantle MaintenanceDispatch, MaintenanceProcesses,
+  MaintenanceWorkOrders, Qualifications, WorkResources 28 of 28 (12.1 s of features); Qualifications, WorkResources,
+  MaintenanceGeneration, MaintenanceManagedWork, ProcessChecks, MaintenanceScope, WorkProcess, MaintenanceDue, MaintenanceIntake,
+  MaintenanceOutages, MaintenanceCosts, MaintenanceStack 67 of 67 (23.3 s); after the tag change MaintenanceDispatch and
+  MaintenanceIntake 12 of 12. BOSS MaintenanceAccess, MaintenanceWorkOrders, MaintenanceSettings, MaintenanceProcedures 41 of 41
+  (13.4 s); PeopleSkills, PeopleAccess, PeopleEmployees, PeopleLeave, PeopleTime, Resources, ProjectsAccess, MaintenanceChecklists,
+  MaintenancePlans, MaintenanceStack, MaintenanceScheduling, MaintenanceEquipment, MaintenanceParts, AdminSettings 77 of 77 (24.7 s);
+  after the tag change MaintenanceSettings, MaintenanceAccess, MaintenanceRequests 34 of 34. Client MaintenanceWorkOrdersWalk 1 of 1
+  (8.6 s). `./moq run --debug --nobuild lint --screens`: 137 flagged sites, none in the screens P8 touched, no TUI worklist entry for
+  them; the release symlink intact. Prettier: the new files and Development.js whole; the hunks of MaintenanceWork.js,
+  MaintenanceProcedures.js, Maintenance.js, MaintenanceAccess and MaintenanceWorkOrders (not clean before) as Prettier writes them. No
+  Rust built. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's `check#Qualifications`, `find#StaffingCandidates`, `schedule#`, `act#MaintenanceWorkOrders` and
+  `store#ProcessRequirements` rows, and the new `find#MaintenanceCandidates`, `find#MaintenanceTeams` and `store#MaintenanceTeamDefaults`
+  rows; ss-inventory's P8 note (no baseline form maps to the dispatch).
+- Design edits: design-maintenance (header; §3 AssignSchedule and BulkWork; §4.1 the step's qualification; §9 Teams; §13.4 the
+  owner services), design-people (the technician qualification decision's as-built), design-projects (§15 StaffAllocation's owner
+  contract).
+- Findings (provisional):
+  - `check#Qualifications` refuses a caller with no People reach, and a dispatcher has none: Maintenance reads the same staffing answer
+    through Development.js `staffingAnswer` after its own check, adding no People permission (P18's finding answered in code);
+  - a step's required qualification is the skill standard's own field (proved by, as a job class requirement), so a qualification
+    is always asked with a skill; a qualification with no skill needs a skill row to carry it;
+  - `find#StaffingCandidates`' pool leaves out an employee who keeps no time and lacks the skill; with a window (Maintenance's alone)
+    every person given is a candidate;
+  - free hours are capacity (schedules, shifts, holidays, approved leave) less Projects' allocations; a technician's other maintenance
+    work in the window is not counted (no booking of technician time);
+  - only the people a schedule adds are checked; a technician assigned under the warning stays when the policy turns to Block, and
+    Start then refuses the work until they are replaced;
+  - the ranking groups the team's members first (the design's "ranked by skills and free hours" within the team), so with no team and
+    more than 30 people a person on leave may fall off the 30 shown (200 read);
+  - the row selection has no count to put in a confirmation: BulkWork confirms generically and its result counts those done;
+  - the intake tag is the team's `MntIntakePlusTag` setting P4's mail intake reads, not dated; the resource scope and project of the
+    defaults are stored and read by nothing yet (routing a request to a team, a work order's default project);
+  - Teams is under Settings, the administrator's (design §2's "P read" not built: a planner sees a team's members through Assign and
+    schedule); its link to People shows only to a user whose groups open People (`isPermittedOwn` on People's root);
+  - the demo's leave is the projection (a `WetTimeOff` Owen is on), with no People LeaveRequest: Services has no leave policy in the
+    demo;
+  - the bulk results' `reasonCode` was null for every refusal (the error text starts `Error: `); fixed in `actWorkOrders` for the
+    transitions too.
+- For the lead:
+  - budget share: mr-mantle about +1.3 s (MaintenanceDispatch 1.2 s, MaintenanceProcesses' two checks); mr-boss about +0.5 s
+    (0.25, 0.08, 0.15 and the added checks); client about +0.5 s (MaintenanceWorkOrdersWalk 8.6 s); budgets not changed;
+  - merge hot spots (P12 and P17 beside): mr-mantle `MaintenanceWork.js` (`policyFields`, `scheduleWorkOrder`'s end, `refusalOf`'s
+    start, `transitionWorkOrder`'s start and answer, `actWorkOrders`), `MaintenanceServices.xml` (schedule#, transition#, act#, the new
+    find#MaintenanceCandidates after act#), `MaintenanceSettingsServices.xml` (store#MaintenancePolicy's parameter, the team services
+    before P18's lookups), `MaintenanceEntities.xml` (the policy's field), `MaintenanceSettingsEntities.xml`, `WorkEffortEntities.xml`
+    (the skill standard), `ResourceServices.xml`, `Development.js`, `MaintenanceProcedures.js` (requirements), `ProcessServices.xml`;
+    mr-boss `Maintenance.js` (choice lists and sources), `ContextServices.xml` and `MaintenanceParts.xml` (the choices' team and window),
+    `MaintenanceWorkOrderParts.xml`, Overview, Find, WorkPolicy, Settings, SettingsHome, Resources, `BossZMaintenanceDemoData.xml`
+    (appended at its end), MaintenanceSpecLib (ids, settingsMenu), MaintenanceAccess (header, appended feature), MaintenanceWorkOrders,
+    MaintenanceSettings, MaintenanceProcedures, the client walk, the inventories, design-maintenance (header, §3, §4.1, §9, §13.4),
+    design-people, design-projects;
+  - for the user's calls: none blocks; the open ones above (Teams for planners, counting a technician's other maintenance work in free
+    hours, routing by a team's resource scope) are for later phases or the user.
+
+**Review Nov 12 (P8).** mr-mantle 213bd0ad (merge of master: P17, P19) and 973567c3, mr-boss 00a40b82 (merge of master: P17, P19),
+360f7dfa and this note's commit (branch `mnt/p8`), over the worker's f0cd2a24 and 1feb587e (mr-mantle) and 4aa5694e, 0af6397d and
+5933f1f3 (mr-boss); mr-moqui unchanged, no Rust built. The phase table's P8 row is back to "—" (the lead's).
+- Merge: mr-mantle merged cleanly; mr-boss conflicted only in MaintenanceAccess (the header names P17's and P8's rules, P17's report
+  feature before P8's team feature); BossSetupMaintenanceData's P17 registrations and P19's rows came in untouched by P8.
+- Checked and found sound:
+  - People's owner contract: `check#Qualifications` answers as before (its core moved into `answerFor`, its scope check and
+    `asOfDate`/`asOfText` kept; Qualifications and PeopleSkills pass unchanged). `staffingAnswer` is a module export, not a service:
+    its only caller is MaintenanceDispatch.js, after Maintenance's own permission and scope check, and nothing passes it a service's
+    parameters. With requirements given it never falls back to a person's own job class; it reads the people given, who are the
+    organization's current employees and agents (`find#MaintenanceCandidates` bounds `find#StaffingCandidates` by them), the people
+    `schedule#` adds (refused ASSIGNEE_UNAVAILABLE unless employees or agents) or Start's current assignees. What reaches the planner
+    is the staffing projection: per requirement the state, the level asked and held ("Level 2 of 3"), "Expired <date>", "Expires
+    <date>", "Waiting for verification" or "No verified qualification"; no reference, issuer, title, document, evaluation, skill note
+    or decision reason (spec: no `referenceNumber`). A restricted kind was the gap (R1).
+  - The ranking: free hours are People's capacity (schedules, shifts, holidays, approved leave as WetTimeOff) less Projects'
+    allocations, and Maintenance keeps only `freeHours`, `needHours` and `fits` of each candidate (not `currentProjects`, rates or
+    capacity days); the label is name, hours, skill levels, the qualification state and "team". A leave shows as 0 h free, never its
+    type or reason (the projection has neither). Within a group the one on leave ranks below the free ones (spec).
+  - The qualification check: `schedule#` checks the people it adds at the planned start, inside its transaction (a block leaves the
+    assignees as they were, spec); Start rechecks the current assignees, a refusal under the block (LifecycleActionRow shows why) and
+    warnings otherwise; `act#MaintenanceWorkOrders` assigns and schedules each order through `schedule#` in its own transaction, a
+    refusal named with its code. Membership grants nothing: a member with no permission is PERMISSION_DENIED, a member technician
+    NOT_ASSIGNED on the team's work (spec); a team's WorkEffortParty row makes no member assigned.
+  - `find#StaffingCandidates`: the new parameters change nothing when absent (the windowed branch and `skillList` only when given;
+    the score adds `20 * skillsMet`, 0 for Projects' and People's callers); WorkResources, PeopleSkills, Resources and ProjectsAccess
+    pass unchanged.
+  - `MaintenanceTeamDefaults`: a store ends the rows in effect at now and creates the next (never an update of values, never a
+    delete), `thruDate` audited, who and why on each row; the facility, assignee (a current member), tag and project validated; the
+    team in the caller's scope (RECORD_UNAVAILABLE across organizations).
+- Fixes:
+  - R1 (medium, confidentiality): a procedure editor could name People's restricted kinds (an identity document or a work permit) as
+    the qualification proving a step's skill, and the dispatch's staffing answer, read without People's scope, would then show a
+    planner every employee's work permit state and its expiry. `store#ProcessRequirements` refuses a restricted kind (VALUE_INVALID),
+    the `qualificationTypes` choice leaves them out, and `staffingAnswer` drops a restricted kind's qualification part from what it is
+    asked. Mantle MaintenanceProcesses (a work permit refused) and MaintenanceDispatch (the staffing answer asks no work permit); both
+    fail without the code. Design §4.1 as built.
+  - R2 (medium, design): Teams was the administrator's alone; design §2 has "P read". `BOSS_MNT_TEAMS` gives the planner and
+    supervisor groups a non-inheritable ALWAYS on Settings' frame (past the root user group's deny), on Teams, its `choices`
+    transition and `find#MaintenanceTeams` (Insights' dataset screens' pattern), carried in both bundles (Admin's registries check
+    passes); SettingsHome, WorkPolicy, Lookups, Readiness and `storeTeamDefaults` stay the administrator's (Mantle still refuses the
+    store). Settings lands a user without MAINTENANCE_SETTINGS_EDIT on Teams (`conditional-default`), and Teams shows them the lists
+    and the defaults as text with no form. The `settings` area capability counts only a grant that opens all of Settings (an
+    inheritable one), so Home's Settings shortcut stays the administrator's. The planner's, supervisor's and Retail planner's menu
+    gains Settings (staffMenu). MaintenanceAccess' P8 feature: Teams rendered as the planner (Owen listed, no Default technician) and
+    the supervisor, refused to the technician and the reader, WorkPolicy refused to the planner, Settings' tabs for the planner Teams
+    alone. Design §2's Teams row ("P and S read") and §9 as built.
+  - R3 (low, test): no case had a qualification refusal inside a bulk assignment. MaintenanceDispatch's bulk feature, under the block
+    policy, assigns the expired technician to the pump and the compressor: the compressor is refused QUALIFICATION_BLOCKED by name
+    with the reason, the pump assigned.
+- Findings:
+  - `staffingAnswer` is reachable by any server script that loads Development.js (as `isRestricted` is), not by a service or a
+    screen's parameters; its one caller checks first. A People-side guard (asking the caller to hold a maintenance dispatch
+    permission) would tie People to Maintenance; left as built.
+  - The staffing answer gives the planner a little more than met, missing or expired: the expiry date of an expired or expiring
+    certificate, a held level against the one asked, and "Waiting for verification". That is People P18's staffing projection for
+    every caller; recommended as is (the date says when the technician is usable again), the user's call if not.
+  - The intake tag is the team's `PartySetting`, undated and overwritten. Judged acceptable: the tag is an address the mail intake
+    reads now and nothing reads a past one, and each change writes a dated defaults row with who and why (not the old tag). If the
+    tag's history must show, the store could copy it onto the defaults row.
+  - The demo's leave stays the projection (a WetTimeOff "Out of office", the fields Leave.js `project` writes): People's demo has no
+    LeaveRequest at all and Services no leave policy, so a real request would need a policy, its allocation and ledger, an employment
+    and an approval; not easy.
+  - The acceptance MaintenanceDispatchWalk renders Teams as the administrator; with R2 its "usable when" could show it to the
+    planner. Left for the lead (not run, as the brief has it). The acceptance MaintenanceFoundationWalk reads `ids.staffMenu`, which
+    now has Settings for the planner, supervisor and Retail's planner, as they now get it.
+  - Two stores of a team's defaults in the same millisecond would meet on the key (`teamPartyId`, `fromDate`); not reachable by hand.
+- Tests (release binary, `--nobuild`, this worktree after the merge and the fixes): mr-mantle MaintenanceDispatch (4 features, 1.3 s),
+  MaintenanceProcesses, MaintenanceWorkOrders, Qualifications, WorkResources, MaintenanceIntake, MaintenanceGeneration,
+  MaintenanceManagedWork, ProcessChecks, MaintenanceScope, WorkProcess: 66 of 66 (11 specs, 24.4 s of features); mr-boss
+  MaintenanceAccess (26 features, 8.4 s; its P8 feature 0.37 s, from 0.15 s: two Teams renders and four refusals), MaintenanceWorkOrders,
+  MaintenanceSettings, MaintenanceProcedures, PeopleSkills, PeopleAccess, PeopleEmployees, PeopleLeave, Resources, ProjectsAccess,
+  MaintenanceRequests, AdminSettings: 93 of 93 (12 specs, 32.7 s). Client MaintenanceWorkOrdersWalk 1 of 1, 8.04 s and 8.65 s (two
+  runs; under the 9 s estimate). `./moq run --debug --nobuild lint --screens`: 137 flagged sites (master's count, none in Settings
+  or Teams), the release symlink intact. Prettier clean on Development.js, MaintenanceDispatch, MaintenanceProcesses and
+  MaintenanceSpecLib; the hunks of MaintenanceProcedures.js, Maintenance.js and MaintenanceAccess (files not clean before) as
+  Prettier writes them. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle about +1.4 s (MaintenanceDispatch 1.3 s, MaintenanceProcesses' checks); mr-boss about +0.7 s
+    (MaintenanceAccess' P8 feature 0.37 s, the Teams render 0.08 s, the added checks); client about +0.5 s on the walk (8.0 to 8.7
+    s, the ranked choice computed on each search); budgets not changed.
+  - Merge hot spots: as the Built note, plus BossSetupMaintenanceData.xml (BOSS_MNT_TEAMS after BOSS_MNT_SETTINGS, the two bundle
+    rows after BOSS_MNT_COSTS'), Settings.xml's subscreens, Maintenance.js `areaGrant`, MaintenanceSpecLib's `staffMenu`, and
+    design §2's Teams row, §4.1 and §9. P12 may merge first: its hot spots overlap in MaintenanceWork.js and MaintenanceAccess.
+  - The user's calls: none blocks. Open, with recommendations: the staffing answer's dates and pending state (keep); counting a
+    technician's other maintenance work in free hours (later, with technician bookings); routing by a team's resource scope and the
+    default project (later); the intake tag's history (keep undated).
+
 ### P9 — Parts and stock
 
 Design §3 PlannedParts and PartsUsed, the InventoryAvailability and MaterialIssueReceipt mount rows, "Charging a

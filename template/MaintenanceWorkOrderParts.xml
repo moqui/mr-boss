@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
       completion's outcome, disposition and finish (and a meter plan's reading, P14), and (P10) the outside-service line Complete
       accepts with its evidence;
     - storeWorkOrder: WorkHeader's edit (store#MaintenanceWorkOrder);
-    - scheduleWorkOrder: AssignSchedule (schedule#MaintenanceWorkOrder), the team, the technicians and the planned window;
+    - scheduleWorkOrder: AssignSchedule (schedule#MaintenanceWorkOrder), the team, the technicians and the planned window, with
+      each qualification warning (P8);
     - startTimer, stopTimer, recordTime: the technician's own time (start#, stop#MaintenanceTimer, record#MaintenanceTime);
     - LifecycleActionRow: one action (actionRow; formPrefix names its form): why it is refused, or its form. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -84,6 +85,9 @@ along with this software (see the LICENSE.md file). If not, see
                     // P5: the downtime the action recorded or linked, and a completion's follow-up
                     // P10: the outside service accepted with the completion
                     if (moved.serviceAcceptanceId) ec.message.addMessage('Outside service accepted', 'success')
+                    // P8: Start's assignees missing or expired on the work's qualifications
+                    for (const warning of Array.from(moved.qualificationWarnings || []))
+                        ec.message.addMessage('Qualification warning: ' + warning.personName + ': ' + warning.explanation, 'warning')
                     if (moved.followUpWorkEffortId) ec.message.addMessage('Follow-up work order ' + moved.followUpWorkEffortId + ' created', 'success')
                     if (moved.resourceUnavailabilityId) ec.message.addMessage('The ' + (moved.resultCode === 'STARTED' ? 'target is out of service' : 'target stays out of service') + ' (outage ' + moved.resourceUnavailabilityId + ')', 'info')
                 }
@@ -124,7 +128,13 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{workEffortId:workEffortId, expectedRevision:expectedRevision, teamPartyId:(teamPartyId ?? ''),
                         assigneePartyIds:(assigneeIds || []), estimatedStartDate:estimatedStartDate,
                         estimatedCompletionDate:estimatedCompletionDate}"/>
-            <if condition="!ec.message.hasError()"><message type="success">Work order ${workEffortId} assigned and scheduled</message></if>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Work order ${workEffortId} assigned and scheduled</message>
+                <!-- P8: each technician missing or expired on the work's qualifications (the work policy warns) -->
+                <iterate list="scheduled.qualificationWarnings || []" entry="warning">
+                    <message type="warning">Qualification warning: ${warning.personName}: ${warning.explanation}</message>
+                </iterate>
+            </if>
         </actions>
         <default-response url=".">
             <parameter name="workEffortId"/>
