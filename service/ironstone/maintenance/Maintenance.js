@@ -173,6 +173,8 @@ const linkPaths = [
     "Settings/Lookups",
     "Settings/Readiness",
     "Equipment/EquipmentImport",
+    // P11: the cost report (the cost reader's, BOSS_MNT_COSTS)
+    "Reports/MaintenanceCostReport",
     // P17: the Reports landing and the work status report (design §8)
     "Reports/Overview",
     "Reports/WorkStatusReport"

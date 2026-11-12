@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Costs tab (design-maintenance §3 WorkCosts, review Y2; impl-maintenance P11, F128: index 100): the cost reader's
+    only (the artifact group BOSS_MNT_COSTS keeps it out of every other user's menu, and mantle.work.MaintenanceReportServices
+    get#MaintenanceCosts answers MAINTENANCE_COST_VIEW alone). The work's cost by currency (parts issued less returned at cost, approved
+    labor at the costing rate of the technician's class and work type, outside service from its bill or acceptance, once), never added
+    across currencies; the hours not approved and the hours with no costing rate apart; the outside service ordered and not yet
+    accepted, pending; the estimate the Approve gate computes (planned parts at the approved standard cost, estimated hours at the
+    costing rate; never stored), or why it cannot be priced; the project the cost is charged to; and each source once, with its posting
+    state. No person's pay rate. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Costs" default-menu-index="100">
+    <parameter name="workEffortId"/>
+    <actions>
+        <set field="costs" from="null"/>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCosts" out-map="costsOut"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="costs" from="costsOut?.costs || null"/>
+        <set field="totalRows" from="costs?.totalList || []"/>
+        <set field="sourceRows" from="costs?.sourceList || []"/>
+        <set field="projectRows" from="costs?.projectList || []"/>
+        <set field="estimate" from="costs?.estimate || null"/>
+        <set field="apartText" from="[costs &amp;&amp; costs.unapprovedHoursText != '0' ? costs.unapprovedHoursText + ' h not approved yet' : null,
+                costs &amp;&amp; costs.unpricedHoursText != '0' ? costs.unpricedHoursText + ' h approved with no costing rate' : null,
+                costs?.unpricedParts ? costs.unpricedParts + ' part movements with no cost' : null].filter(Boolean).join(' · ')"/>
+        <set field="estimateText" from="!estimate ? '' : estimate.known ? estimate.amountText + ' (parts ' + estimate.partsText + ', labor '
+                + estimate.laborText + (estimate.hoursText ? ' for ' + estimate.hoursText + ' h' : '') + ')'
+                : 'Not priced: ' + estimate.unknownList.join('; ')"/>
+    </actions>
+    <widgets>
+        <section name="CostsFound" condition="costs">
+            <widgets>
+                <container-box>
+                    <box-header title="Cost by currency"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Reports/MaintenanceCostReport']}" text="Cost report" icon="sym_o_request_quote"
+                                link-type="anchor-button" parameter-map="{assetId:workOrder?.assetId || null, facilityId:workOrder?.assetId ? null : workOrder?.facilityId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="CostTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="partsText" align="right"><default-field title="Parts"><display/></default-field></field>
+                            <field name="laborText" align="right"><default-field title="Labor"><display/></default-field></field>
+                            <field name="outsideText" align="right"><default-field title="Outside service"><display/></default-field></field>
+                            <field name="totalText" align="right"><default-field title="Total"><display style="text-weight-medium"/></default-field></field>
+                            <field name="pendingText" align="right"><default-field title="Ordered, not accepted"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="currencyUomId"/><field-ref name="totalText"/></column>
+                                <column><field-ref name="partsText"/><field-ref name="laborText"/><field-ref name="outsideText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No cost is recorded for this work yet." type="p" style="m-muted q-pa-sm q-mb-none" condition="!totalRows.length"/>
+                        <label text="Apart: ${apartText}" type="p" style="text-caption text-warning q-pa-sm q-mb-none" condition="apartText"/>
+                        <label text="Each currency is totalled apart; none is converted." type="p" style="text-caption m-muted q-pa-sm q-mb-none"
+                                condition="totalRows.length &gt; 1"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Estimate"/>
+                    <box-body>
+                        <label text="${estimateText}" type="p" style="q-mb-xs"/>
+                        <label text="The planned parts at their approved standard cost and the estimated hours at the costing rate of the assigned technician. It is worked out when asked and not kept; planned work above the organization's cost threshold, or that cannot be priced, waits for a supervisor."
+                                type="p" style="text-caption m-muted q-mb-none"/>
+                    </box-body>
+                </container-box>
+                <section name="CostProjectsFound" condition="projectRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Charged to"/>
+                            <box-body-nopad>
+                                <form-list name="CostProjects" list="projectRows" skip-form="true" paginate="false">
+                                    <field name="projectName"><default-field title="Project"><display text="${projectName} (${projectWorkEffortId})"/></default-field></field>
+                                    <field name="totalText" align="right"><default-field title="Cost"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Sources · ${sourceRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="CostSources" list="sourceRows" skip-form="true" paginate="false">
+                            <field name="sourceTypeText"><default-field title="Source"><display text="${sourceTypeText} ${sourceId}"/></default-field></field>
+                            <field name="stepName"><default-field title="Step"><display/></default-field></field>
+                            <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                            <field name="description"><default-field title="What"><display/></default-field></field>
+                            <field name="quantityText" align="right"><default-field title="Quantity or hours"><display/></default-field></field>
+                            <field name="rateText"><default-field title="Costing rate"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Not counted"><display style="text-warning"/></default-field></field>
+                            <field name="postingText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="sourceTypeText"/><field-ref name="description"/></column>
+                                <column><field-ref name="amountText"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="Nothing is recorded yet." type="p" style="m-muted q-pa-sm q-mb-none" condition="!sourceRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="The work's costs are not available to you." type="p" style="m-muted" condition="!costs"/>
+    </widgets>
+</screen>

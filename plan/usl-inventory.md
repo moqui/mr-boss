@@ -575,7 +575,7 @@ the screens that call it.
 | ScheduleServices | get#Holidays | People/Time/HolidayCalendars (designed under People/Settings) | People/Time/HolidayCalendars (Calendars, Holidays) (People P9) |
 | ScheduleServices | store#HolidayCalendar, store#Holiday | People/Time/HolidayCalendars (designed under People/Settings) | People/Time/HolidayCalendars (New calendar, Rename; Add holiday, Change, Remove) (People P9) |
 | ScheduleServices | get#CapacityPreview | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Capacity preview) (People P9) |
-| RateServices | get#CostingRate | Rates (read only); Maintenance's labor cost (its P11); Projects' cost reports (their owner's later work) | mantle/work/ProductionShopFloor.js (a production labor event's rate, in place of its own RaprProductionCost lookup; the person's employer's row before a shared one, P10's review) (People P10) |
+| RateServices | get#CostingRate | Rates (read only); Maintenance's labor cost (its P11); Projects' cost reports (their owner's later work) | mantle/work/ProductionShopFloor.js (a production labor event's rate, in place of its own RaprProductionCost lookup; the person's employer's row before a shared one, P10's review) (People P10); mantle/work/MaintenanceCosts.js (a maintenance entry's approved hours and the Approve gate's estimate, the work's organization's row first: Maintenance/WorkOrders/WorkOrderDetail/Costs, Maintenance/Reports/MaintenanceCostReport, impl-maintenance P11) |
 | RateServices | find#CostingRates, store#CostingRate, end#CostingRate | Accounting/Settings/CostingPolicies (LaborCostingRates) | Accounting/Settings/CostingPolicies (Labor costing rates, by organization since P10's review); find#CostingRates also in ironstone.projects.BillingServices.find#RateRows (Rates' Labor costing rows the user reads) (People P10) |
 | RateServices | migrate#ProductionCostRates | (a data update) | data/ProductionShopFloorData.xml: Manufacturing's RaprProductionCost rows moved to RaprCost on a load (People P10) |
 | TimesheetServices | find#WeeksToSubmit | Today's "my week not submitted"; SelfService's missing-week card | mantle.work.ProjectServices.get#ProjectTodayItems (Projects' Today); ironstone.people.ContextServices.get#TodayItems (People's Today, People and Commons roots); PeopleServices.get#SelfService's weeksToSubmit (Shared/PeopleSelfService) (People P10) |
@@ -1504,7 +1504,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ProjectServices | get#ProjectActivity |  | Projects/Home; Projects/Projects/ProjectDetail/Overview; Projects/Projects/StatusReport |
 | ProjectServices | get#ProjectEstimate |  | Projects/Projects/EstimatePrint |
 | ProjectServices | get#ProjectHomeCounts |  | Projects/Home |
-| ProjectServices | get#ProjectMoneySummary |  | Projects/Projects/ProjectDetail/Money |
+| ProjectServices | get#ProjectMoneySummary |  | Projects/Projects/ProjectDetail/Money (P11 of impl-maintenance: its Maintenance box, the repairs charged to the project with their cost by currency, an owner contract) |
 | ProjectServices | get#ProjectSettings |  | Projects: 27 screens (through the ironstone.* access and find services) |
 | ProjectServices | get#ProjectTemplates |  | Projects/Projects/NewProject/Start; Projects/Settings/Templates |
 | ProjectServices | get#ProjectTodayItems |  | Projects |
@@ -2362,3 +2362,12 @@ provider `maintenance.readiness`) and by the framework's DataTransferServices (t
 | product/MaintenanceImportServices | validate#EquipmentImportRow | Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/EquipmentImport (the shared wizard's validate, through DataTransferServices.validate#Import) |
 | product/MaintenanceImportServices | apply#EquipmentImportRow | Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/EquipmentImport (apply, through DataTransferServices.apply#Import); Admin/Data/ImportDetail (retry) |
 | product/MaintenanceImportServices | find#EquipmentImportScopes | Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/EquipmentImport (the organizations); Admin/Data/Imports (the runs a reader may see) |
+
+Added in `work/MaintenanceReportServices.xml` and extended in `work/MaintenanceSettingsServices.xml` (impl-maintenance P11; `MaintenanceCosts.js`),
+called by built screens through the Maintenance screens after `ironstone.maintenance.AccessServices.check#Record` (the cost screens
+are the cost reader's, BOSS_MNT_COSTS; the service checks MAINTENANCE_COST_VIEW itself):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenanceReportServices | get#MaintenanceCosts | Maintenance/WorkOrders/WorkOrderDetail (WorkCosts); Maintenance/Reports/MaintenanceCostReport | Maintenance/WorkOrders/WorkOrderDetail/Costs (cost by currency, estimate, sources); Maintenance/Reports/MaintenanceCostReport (CostOptions, CostTotals, CostSources, Export CSV, Print) |
+| work/MaintenanceSettingsServices | store#MaintenancePolicy (its cost threshold) | Maintenance/Settings | Maintenance/Settings/WorkPolicy (Approve planned work estimated up to, Cost threshold currency) |

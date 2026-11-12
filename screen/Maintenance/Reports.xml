@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Reports area of IronStone Maintenance (design-maintenance §8, §1.2; impl-maintenance P14, P17), shown to a reader of
     maintenance work (the root's menu condition, MAINTENANCE_VIEW); Mantle's MaintenanceReportServices check again: Overview (P17,
     ReportOptions and ReportLinks: the reports the user reads as linked cards, and Downtime, which opens the Equipment area's list),
-    Work status (P17), PM compliance (P14). The cost report joins with impl-maintenance P11. Listed in Admin's Exports by one wizard
+    Work status (P17), PM compliance (P14), the cost report (P11, the cost reader's alone: BOSS_MNT_COSTS). Listed in Admin's Exports by one wizard
     export target (maintenanceReports, F72); each report's CSV is its own form-list's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_analytics" menu-image-type="icon">
@@ -25,6 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-index="2"/>
         <subscreens-item name="PreventiveComplianceReport" location="component://mr-boss/screen/Maintenance/Reports/PreventiveComplianceReport.xml"
                 menu-index="3"/>
+        <!-- P11: the cost reader's (BOSS_MNT_COSTS keeps it out of every other user's menu) -->
+        <subscreens-item name="MaintenanceCostReport" location="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml"
+                menu-index="4"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MaintenanceReportsPanel" type="tab"/>

@@ -20,8 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     technician's voice note on a checklist step is transcribed (P7 review, the user's call of Nov 12; off). A change starts a
     dated policy from now and ends the one in effect. P14: the days ahead preventive work is made for a plan that names none
     (pmLeadDays, a policy field), and the preventive generation job's state (paused or its schedule, its last run: mantle.work.MaintenancePlanServices.get#MaintenanceDueJob),
-    whose schedule, pause and batch size are changed in Admin's Jobs. The cost half of the threshold and the qualification check
-    join with their phases (P11, P8). P18: a change starts from a date chosen (now or later; the one in effect ends then, a
+    whose schedule, pause and batch size are changed in Admin's Jobs. P11: the threshold's cost half (approvalThresholdCost and its
+    currency, policy fields): planned work estimated above the amount, or that cannot be priced, waits for a supervisor; empty, the
+    cost is not compared. The qualification check joins with its phase (P8). P18: a change starts from a date chosen (now or later; the one in effect ends then, a
     later plan is withdrawn), and the policies planned and the last ended are listed (PolicyDates); a field a form does not post
     is kept from the policy in effect, so each phase's section stores its own fields. P18 review R4: a start before a planned policy is
     refused (PLAN_PENDING) unless Withdraw, which the form offers while a policy is planned. -->
@@ -38,7 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
                         fromDate:(fromDate || null), withdrawPlanned:(withdrawPlanned == 'Y'), closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
                         defaultTeamPartyId:defaultTeamPartyId, productionRequestsManaged:productionRequestsManaged,
                         warrantyRepairsManaged:warrantyRepairsManaged, procedureSelfApproval:procedureSelfApproval,
-                        voiceNoteTranscription:voiceNoteTranscription, pmLeadDays:pmLeadDays, comments:comments}"/>
+                        voiceNoteTranscription:voiceNoteTranscription, pmLeadDays:pmLeadDays, approvalThresholdCost:approvalThresholdCost,
+                        approvalThresholdCurrencyUomId:approvalThresholdCurrencyUomId, comments:comments}"/>
             <if condition="!ec.message.hasError()"><message type="success">Work policy saved</message></if>
         </actions>
         <default-response url=".">
@@ -66,7 +68,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P18: the policies planned to start later and the last that ended -->
         <set field="datedPolicies" from="(policyOut?.planned || []).map(row =&gt; Object.assign({stateText: 'Planned'}, row)).concat(
                 (policyOut?.ended || []).map(row =&gt; Object.assign({stateText: 'Ended'}, row))).map(row =&gt; Object.assign(row, {
-                    thresholdText: String(row.approvalThresholdHours ?? 0) + ' h', periodText: row.fromDateText + (row.thruDateText ? ' to ' + row.thruDateText : '')}))"/>
+                    thresholdText: String(row.approvalThresholdHours ?? 0) + ' h' + (row.approvalThresholdCost == null ? '' : ', ' + row.approvalThresholdCost
+                        + ' ' + (row.approvalThresholdCurrencyUomId || '')), periodText: row.fromDateText + (row.thruDateText ? ' to ' + row.thruDateText : '')}))"/>
         <set field="policyValues" from="policy ? {organizationPartyId: organizationPartyId,
                 approvalThresholdHours: String(policy.approvalThresholdHours ?? 0), closurePolicyEnumId: policy.closurePolicyEnumId,
                 defaultMaintenanceTypeEnumId: policy.defaultMaintenanceTypeEnumId, defaultTeamPartyId: policy.defaultTeamPartyId,
@@ -74,6 +77,8 @@ along with this software (see the LICENSE.md file). If not, see
                 warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', procedureSelfApproval: policy.procedureSelfApproval ? 'Y' : 'N',
                 voiceNoteTranscription: policy.voiceNoteTranscription ? 'Y' : 'N',
                 pmLeadDays: policy.pmLeadDays,
+                approvalThresholdCost: policy.approvalThresholdCost == null ? '' : String(policy.approvalThresholdCost),
+                approvalThresholdCurrencyUomId: policy.approvalThresholdCurrencyUomId || '',
                 comments: policy.comments} : {organizationPartyId: organizationPartyId}"/>
         <!-- P18 review R4 (the user's call of Nov 12): a start before a planned policy withdraws it only when asked -->
         <set field="plannedText" from="(policyOut?.planned || []).map(row =&gt; row.fromDateText).join(', ')"/>
@@ -106,6 +111,25 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="Approve planned work up to (hours)"
                                         tooltip="Planned work estimated above this, or with no estimate, waits for a supervisor; zero sends all of it">
                                     <text-line size="6" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <!-- P11: the threshold's cost half -->
+                            <field name="approvalThresholdCost">
+                                <default-field title="Approve planned work estimated up to"
+                                        tooltip="The planned parts at their approved standard cost and the estimated hours at the costing rate; above this, or when it cannot be priced, a supervisor approves. Empty: the cost is not compared. A planner is told only that the work needs a supervisor">
+                                    <text-line size="10" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="approvalThresholdCurrencyUomId">
+                                <default-field title="Cost threshold currency" tooltip="Empty: the organization's own currency">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${uomId}" text="${description} (${uomId})">
+                                            <entity-find entity-name="moqui.basic.Uom">
+                                                <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
                                 </default-field>
                             </field>
                             <field name="closurePolicyEnumId">

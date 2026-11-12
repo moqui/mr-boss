@@ -83,6 +83,11 @@ const ids = {
     // the work's (BossZMaintenanceDemoData.xml)
     rewindRequestId: "BOSS_MNT_PREQ_MOTOR",
     rewindOrderId: "BOSS_MNT_PO_REWIND",
+    // P11: Services' costing rate of its service technicians (48 USD an hour), maint.tech's approved timesheet of the belt's week
+    // (the compressor's belt, its two hours priced), and the belt's work order
+    costingRateId: "BOSS_MNT_RATE_TECH",
+    beltTimesheetId: "BOSS_MNT_TS_BELT",
+    beltOrderId: "BOSS_MNT_WO_COMP_BELT",
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor), preventive plans (P13, a reader of work or a planner or supervisor) and
     // equipment, and with Settings the Maintenance administrator's; a procedure author reads procedures alone; P14: Reports for a
