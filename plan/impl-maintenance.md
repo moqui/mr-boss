@@ -363,7 +363,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F75); items waiting on People P9/P10/P12/P18 left open |
 | P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | built and reviewed Nov 11, merged |
 | P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | built and reviewed Nov 11, merged |
-| P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | — |
+| P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | built Nov 12 (branch `mnt/p3`), review to come |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | — |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | — |
@@ -1097,6 +1097,142 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
   completes it with an explicit finish; the supervisor closes it; Commons' Today cannot mark it done; Manufacturing's
   equipment page shows the compressor available while the order is only planned; offboarding the technician in
   Admin lists their open work orders for reassignment.
+
+**Built Nov 12 (P3).** mr-mantle 0fcc36bd, mr-boss e1e085a3 (branch `mnt/p3`); mr-moqui unchanged, no Rust built (an aborted
+`./moq run lint` began a debug build and was stopped: WT holds a partial `target/debug`, untracked, which the lead may delete).
+- Checked first (the code over the plan): F59 (`check#ManagedWork` reads `mantle.work.maintenance.MaintenanceWorkOrder` by name, its
+  callers in TaskServices and WorkEffortServices; not `create#WorkEffortContent`), F63 (`get#TaskObjectTags`' `protectedIds`; a PUT
+  answers 409 through `update#Task`, DELETE ends the assignment directly), F65 (call.rs `check_status`: a move is admitted where any
+  flow's row admits the user), F66 (`start#Timer`, `stop#Timer`, `store#TimeEntry` check no work), F69 (`get#RecordLinkInfo`'s work
+  effort branch and `protectedHidden`), F82 (the root's `panelHosts`), F83 (People's and P2's `listScope`), F96, F6–F10, F13
+  (WorkCenters.js, Facilities.js), F27 (`complete#RequestFromWork` moves nothing for a root with no project), F28 (Work.eecas.xml),
+  F29, F46–F49 (`openMaintenance` in ProductionOrders.js), F56 (Admin's Lifecycle.js `openAssignments`), Manufacturing's
+  `WorkEffortProduction` flow, Commons' `get#TaskAccess`, `find#TaskRows`, `check#TaskUpdate`, Mantle's `get#UserTodayItems` and
+  `notify#TaskAssigned`, PaletteServices' `get#RecordLink`, and Admin's participant contract (`define#OwnedResourceLookup`).
+- Mantle:
+  - Records (`entity/MaintenanceEntities.xml`): `MaintenanceWorkOrder` keyed by the root's `workEffortId` (target asset, primary
+    AssetMaintenance, kind, type, source, severity, failure mode, hold and cancel reasons and the status a hold came from, outcome,
+    disposition, cost centre and project audited, revision, operation key and hash); the view `MaintenanceWorkOrderDetail` (the row
+    with its root); `MaintenancePolicy`, dated by organization (threshold in hours, closure policy, default type and team, whether
+    production requests and warranty repairs become managed work). Offline intent and procedure effective time are P5's and P6's.
+  - Seed (`data/MaintenanceWorkData.xml`): the enumerations MaintenanceKind (corrective, preventive; MntTpPreventive and
+    MntTpInspection added to MaintenanceType), MaintenanceSource, Severity, HoldReason, CancelReason, FailureMode, Outcome,
+    Disposition, ClosurePolicy; the `WorkEffortMaintenance` flow, its WeApproved ↔ WeOnHold rows needing `MAINTENANCE_SUPERVISE`
+    (see the findings); the AssetMaintenance transitions in process → cancelled, completed → in process, scheduled → created (F10);
+    the `MaintenanceWork` topic and its `TopicRegistration` (F52, audience MAINTENANCE_EXECUTE).
+  - `mantle.work.MaintenanceServices` over `MaintenanceWork.js`: `find#MaintenanceWorkOrders` (scoped in the query before paging, an
+    every-organization holder narrowed to the active organization, F83; assigned view only the caller's; saved-find filters; names,
+    assignees and teams read once per page, F96), `get#MaintenanceWorkOrder` (header, assignments, time with a technician's own only
+    and no team total, the caller's timer, the actions with why not, blockers, history from the audit log), `create#MaintenanceWorkOrder`
+    (one target, the root a `WetTask` of `WepMaintenance` owned by its service organization with no project, the AssetMaintenance through
+    `create#AssetMaintenance` with the planned start and no interval, F11; approved on create for corrective work, a supervisor's, or
+    within the hours threshold; operation key retry and `OPERATION_KEY_CONFLICT`), `adopt#MaintenanceRecord` (once; `RECORD_CLOSED`,
+    `OWNER_PATH` for a warranty repair, `LINKED_WORK`), `store#MaintenanceWorkOrder`, `schedule#MaintenanceWorkOrder` (team, technicians
+    as employees or agents of the organization, `ASSIGNEE_UNAVAILABLE`, window; MaintenanceWork to new technicians),
+    `transition#MaintenanceWorkOrder` (the gates of design §3; status and the entered dates in its own update, F7; the AssetMaintenance
+    synchronized), `act#MaintenanceWorkOrders` (one transaction per work order), and the time entry points `start#` and
+    `stop#MaintenanceTimer` and `record#MaintenanceTime` (assigned, in progress, no template; then the time services unchanged, F66).
+    `MaintenanceSettingsServices` get# and store#MaintenancePolicy; `MaintenanceReportServices.get#MaintenanceHome`.
+  - The generic paths: no change to the refusals People built (F59); `WorkProcesses.js` gains `managedIds` (the same rule over a list).
+    `get#TaskObjectTags` leaves templates and managed steps out and marks a work order `readOnly`; `put#` and `delete#DavObject` answer
+    403 for it before any change (F63). `get#RecordLinkInfo` gains `maintenanceHidden` beside `protectedHidden` (F69). `get#UserTodayItems`
+    and `notify#TaskAssigned` leave managed work to Maintenance. `store#ProductionEquipment`'s guard reads an AssetMaintenance in
+    process (F13, F49).
+- BOSS:
+  - Services: `ironstone.maintenance.WorkOrderServices.find#WorkOrderRows`, `HomeServices.get#TodayItems`, `LifecycleServices` find# and
+    transfer#Assignments (WorkOrders.js); Maintenance.js's `workOrder` record kind (a step read as its work order), the work choices
+    (kinds, types, sources, severities, failure modes, reasons, outcomes, dispositions, closure policies, `teams`, `workPeople`,
+    `workFacilities`), the palette's work orders and `recordLink`; Resources.js's equipment `maintenanceRecords`.
+  - Screens: the root (Work orders, `g w`, the work order panel host, F82; quick create, the MaintenanceWork topic, the Today source);
+    WorkOrders (Find; NewWorkOrder; WorkOrderDetail with its tabs Overview, Time, Files, Conversation, History) and
+    `template/MaintenanceWorkOrderParts.xml`; Home's counters, My work and Team work; Settings' Work policy; EquipmentDetail's
+    Maintenance tab and FacilityDetail's Work orders tab (Maintenance only).
+  - Owner contracts: Commons (`get#TaskAccess` answers not found with `MANAGED_WORK` and the work order's link; Tasks' rows and
+    `check#TaskUpdate` refuse a change; `get#RecordLink` opens a work order under Maintenance), Admin (`maintenance.assignments`;
+    Projects' participant leaves managed work out, F56), Manufacturing (WorkCenters.js) and Warehouse (Facilities.js availability; the
+    summary's open-job count unchanged): "in maintenance" is in process (F13). Written into design-drawers-commons, design-admin and the
+    logs of impl-manufacturing, impl-warehouse and impl-admin; design-manufacturing had it.
+  - Demo (BossZMaintenanceDemoData.xml, as it names the demo users): the team Facilities maintenance (maint.tech and maint.tech2 as
+    members) and eight work orders: the air handler's leak in progress with time, the compressor's oil service approved for next week,
+    the van's service waiting for a supervisor, Room 201's bracket (facility work, unassigned), the overdue multimeter check, the
+    compressor's belt complete and Room 102's light closed with time, and the motor's request adopted and held for parts.
+- Specs:
+  - Mantle `test/work/MaintenanceWorkOrders` (7 features, 1.9 s): a planner's corrective order approved on create, planned work held
+    for a supervisor, the threshold and the policy; a retried create answering the first root, changed input, a stale write and
+    another organization's work refused; Start refused to an unassigned technician, assignment and time in progress only; Complete
+    refused with a running timer and writing the entered finish, Close a supervisor's; Cancel keeping time and files; hold and resume
+    of approved work; adoption once, closed history, another work order's primary record and linked work.
+  - Mantle `test/work/MaintenanceManagedWork` (3 features, 0.6 s): set#TaskStatus, update#Task, delete#WorkEffort and
+    add#WorkEffortParty refused on a work order and its step, an ordinary task unchanged; CalDAV without the step and template, the
+    work order read only, a PUT and a DELETE refused (403); get#RecordLinkInfo and Today. Adoption once is in MaintenanceWorkOrders.
+  - BOSS `test/Maintenance/MaintenanceWorkOrders` (6 features, about 1.2 s): WorkOrderDetail's header and Time tab as the technician
+    (their time, no team total), WorkOrders/Find as the planner and the saved finds; Commons' task check, check#TaskUpdate and
+    complete#TodayItem `MANAGED_WORK`, Maintenance's Today item and the palette; Admin's offboarding under Maintenance and not
+    Projects; Manufacturing's equipment read; the equipment's Maintenance tab, the facility's Work orders, History and Work policy
+    (each rendered once). `MaintenanceAccess` gains the work order rule (planner and technician read, resource administrator, another
+    technician and Retail refused) and the WorkEffort panel host, the P3 menu, key and Settings tab, and Home's new content (10
+    features, 4.4 s).
+  - Client `test/client/Maintenance/MaintenanceWorkOrdersWalk` (1 feature, 8.5 s), registered in `test/client/suite.js`.
+  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceCorrectiveWalk` (5 features, registered in
+    `acceptance/client/suite.js`).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceWorkOrders and MaintenanceManagedWork 10 of 10; with
+  WorkProcess, PeopleChecklists, Dav, CommonsToday, ProductionOrders, WorkTimeEntries, WorkTimesheets, MaintenanceScope,
+  MaintenanceResources, SupportWarranty, ProductionDowntime, WorkMyTasks and CalendarServices 97 features (one ProductionOrders failure,
+  the flow permission, fixed and rerun with ProductionOrders 21 of 21), and last MaintenanceWorkOrders, MaintenanceManagedWork,
+  MaintenanceScope, MaintenanceResources, WorkProcess and PeopleChecklists 26 of 26 (8.8 s). mr-boss Tasks, TodayPanel, QuickCreate,
+  Schedules, TimeEntries, PeopleTime, WorkItems, WorkItemDetail, ProjectsAccess, ManufacturingWorkCenters, ManufacturingDowntime,
+  ManufacturingWorkOrders, WarehouseFacilities, AdminLifecycle, AdminRegistries, AdminAccess, PeopleLifecycle, MaintenanceAccess,
+  MaintenanceEquipment and MaintenanceWorkOrders: 174 features, one failure (WarehouseFacilities' "1 maintenance jobs open": the open
+  count was the availability's, now apart), then WarehouseFacilities 26 of 26 and the three Maintenance specs 20 of 20. Client
+  MaintenanceWorkOrdersWalk 1 of 1 (8.5 s feature time). `moqui lint --screens` (release binary): 136 flagged sites, as before P3,
+  none in the new or changed screens. Prettier clean on the new and changed JavaScript (it also reformatted P2's Maintenance.js and
+  Resources.js lines over 130; MaintenanceScope.spec.js, P1's, is still unformatted). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: ss-inventory's UpdateMaintenanceForm, the AssetMaintenance content forms, AddOtherMaintenance, MaintenanceListForm and
+  EditRun's assignment forms name their Maintenance screens; usl-inventory's start#Timer, stop#Timer and store#TimeEntry rows, and an
+  Added table for MaintenanceServices, MaintenanceSettingsServices and MaintenanceReportServices.
+- Design edits: design-maintenance's header, §1.1 (the work order panel and record check), §1.2, §3 Home, WorkOrders, WorkOrderDetail and
+  the record shape as built, §9 Settings, §13.2's time row, §13.3's CalDAV and notice rows; design-drawers-commons and design-admin's
+  header lines.
+- Findings (provisional, for the lead to number):
+  - Manufacturing's WeApproved ↔ WeOnHold rows need `PRODUCTION_SUPERVISE`, and the framework admits a move only where some flow's
+    row admits the user (F65), so a maintenance flow row with no permission let anyone hold an approved production run through raw
+    `update#WorkEffort` (ProductionOrders' "seeded transitions carry their permission" failed). The maintenance rows need
+    `MAINTENANCE_SUPERVISE`, so holding and resuming approved maintenance work is a supervisor's (a planner holds planned work and
+    anyone assigned work in progress). The plan's "WeApproved ↔ WeOnHold as Manufacturing seeded them" could not be reused.
+  - "A second primary AssetMaintenance refused": no path attaches a second record to a work order; the spec checks that adopting
+    another work order's primary record answers that work order, and that a record linked to other work is `LINKED_WORK`.
+  - "A direct edit of a managed AssetMaintenance is refused": there is no guarded AssetMaintenance writer to refuse in (entity-auto
+    `update#AssetMaintenance` and Customer Service's `update#WarrantyWork`, whose records adoption refuses); the Maintenance groups
+    have no grant on the raw path (§2). A guard on the entity would be a self-guarding EECA; left as is.
+  - `WorkEffortPartyDocsUsers` is not conditioned: `sync#ProjectDocsSpaceUsers` does nothing for a work effort without a
+    `WstDocsWikiSpace` setting, which no maintenance root has.
+  - Manufacturing's demo downtime is Retail's, a planned changeover with no AssetMaintenance; the demo's adopted work order (the
+    motor's) is data with the source "Production request".
+  - The quick create's New work order shows for every Maintenance user (a quick-create item follows the screen's grant, and a DENY to
+    the root group cannot be lifted by an ALLOW to the planner); NewWorkOrder tells a user who may not create work so, and Mantle
+    refuses them.
+  - Admin's identity operator lists a leaver's work orders (ADMIN_IDENTITY_VIEW) but moving them needs `MAINTENANCE_PLAN` or
+    `_SUPERVISE` in the organization (schedule#MaintenanceWorkOrder) and custody `MAINTENANCE_RESOURCE_EDIT`; the operator holds
+    neither, so the step fails with its reason for them (ADMIN and BOSS_MAINTENANCE_ADMIN move them).
+  - Commons' `get#TaskAccess` now answers not found for managed work in Commons too (a production operation is read only there): a
+    technician's link to a work order from Commons opens nothing; the palette and Today open WorkOrderDetail.
+  - `create#WorkEffortContent` still checks only `check#WorkEffortOpen` (F59); files on a work order are RecordFiles' under the root's
+    panel check, and accepted evidence is P7's.
+  - Maintenance's Today lists due work orders only (a planned finish or start), as Manufacturing's source does; an in-progress work
+    order with no dates is not in Today.
+  - The approval threshold reads the root's estimate only; P6 adds the steps'.
+- For the lead:
+  - budget share: mr-mantle MaintenanceWorkOrders 1.9 s and MaintenanceManagedWork 0.6 s (2.5 s); mr-boss server MaintenanceWorkOrders
+    about 1.2 s and MaintenanceAccess +0.3 s; mr-boss client MaintenanceWorkOrdersWalk 8.5 s, over the plan's 8 s client estimate for
+    the whole build by 0.5 s (the user's agreement, or a cut: the walk's Record time is its slowest step); budgets not changed;
+  - merge hot spots: mr-mantle `CommunicationServices.xml` (get#RecordLinkInfo), `CalendarDavServices.xml`, `WorkEffortServices.xml`
+    (Today), `TaskServices.xml` (notify), `WorkProcesses.js`, `ProductionOrders.js`; mr-boss `screen/Maintenance.xml`, `Maintenance.js`
+    (formatted whole), `Resources.js` (formatted whole), `data/BossSetupData.xml` (appended), `data/BossZMaintenanceDemoData.xml`,
+    `screen/Shared/EquipmentDetail.xml` (tab indexes), `FacilityDetail.xml` (tabs), Commons' `TaskServices.xml`, `CommonsServices.xml`,
+    `PaletteServices.xml`, Admin's `Lifecycle.js`, `test/Maintenance/MaintenanceSpecLib.js` (menus, keys, ids), `MaintenanceAccess.spec.js`,
+    `test/client/suite.js`, `acceptance/client/suite.js`, the inventories and design-maintenance;
+  - the user's calls: the client budget (above); whether the identity operator should move maintenance assignments (a permission for
+    the participant's transfer); built meanwhile: listing only for the operator, moving for a Maintenance planner or administrator.
 
 ### P4 — Requests and intake
 
