@@ -5707,6 +5707,88 @@ F389 fixed. mr-mantle f8622c58 and mr-boss (this commit), branch `ppl/fix2`.
   - the worker brief (`.claude/worktrees/people-worker-brief.md`, outside the worktrees) still asks for "a PeopleAccess case"; P11's
     on go to PeopleAccessLater.
 
+**Maintenance merge review Nov 12.** A People-side review of Maintenance's first pass as merged into master (mr-mantle
+9185556b..e36585b4, mr-boss e5fd4148..75d389ca; impl-maintenance P0 to P20), against §1, §2, §4, §7's links to Maintenance and the
+Built and Review notes of P7, P9, P10, P12, P14, P18, P19 and follow-ups 1 and 2. Branch `ppl/mnt`: mr-mantle 5cafb83e, mr-boss
+(this commit). Not merged.
+- Checked and found sound:
+  - MT-03 on P7's records: `WorkProcesses.js` keeps People's path as built (`WppPeopleChecklist` under `PEOPLE_HR_EDIT`, its
+    `guardsExecution` N); Maintenance's policy has its own checked path (`checkedPathOf`), its step fields are empty for People's
+    steps and change nothing of their dating; `MANAGED_WORK`'s two refusals are worded as §4 has them; the new guards (task
+    dependencies, `add#TaskTime`, `store#TimeEntry`, `clockIn`, `clone#WorkEffort`, the work-effort products and content, the
+    evidence EECA on `WorkEffortContent`) refuse a work order's tree or a guarding policy's work alone, so People's checklist and
+    return tasks stay ordinary tasks, and Today, `notify#TaskAssigned`, Admin's `openAssignments`, CalDAV, Commons' tasks, the
+    palette, search and `get#RecordLinkInfo` leave them as they were (P7's `hiddenTaskIds` and P21's `protectedTaskIds` run
+    beside Maintenance's `workHidden`). Mantle's WorkProcess passes unchanged.
+  - Teams: Maintenance reads People's `OrgTeam` parties and dated `PrtMember` rows (lead from Manager, member from Assignee) and
+    writes only `MaintenanceTeamDefaults` and the team's intake tag; no Maintenance path writes a membership. Technician assignment:
+    `schedule#MaintenanceWorkOrder` admits only the work organization's current employees and agents (`requireMember`) before
+    `checkQualified`; the candidates are that organization's people, ranked by Projects' `find#StaffingCandidates`, whose new window
+    mode counts each day's `get#PartyCapacity` capacity (schedule, published shifts, holidays and approved leave once, as P9, P12
+    and P14 left it) less the day's share of allocations, and shows hours only, never a leave type, reason or request.
+  - `Development.js staffingAnswer` is check#Qualifications' projection (no reference, issuer, title or file), for Mantle callers
+    that checked their own caller first; it drops a restricted kind (identity document, work permit) from what it is asked;
+    `check#Qualifications` itself is unchanged for People's readers but for reading a skill standard's new
+    `qualificationTypeEnumId` (design-people's Technician qualification row says so).
+  - Employee360: Maintenance's row is the Overview, read only, through `get#Employee360` (P2's scope; the planner, supervisor and
+    resource administrator hold `PEOPLE_DIRECTORY_VIEW` by impl-maintenance's §4); AssignedEquipment is Maintenance's own read,
+    and People's equipment, Skills and HR actions stay People's mount's (`showsEquipment`, `developmentApps`).
+  - Custody: `replace#AssetPartyAssignment` takes an optional `effectiveDate`, refuses a later one itself (`DATE_FUTURE`) and
+    ends the holding at it, so P7's `AssetPartyAssignmentReturnTask` rule fires as before; `return#Equipment` is unchanged.
+  - Labor cost: `MaintenanceCosts.js` reads `get#CostingRate` only (class, work type, the work's organization), never a vendor rate
+    or `vendorHourRate`; the demo's Services `RaprCost` row is an employer's row as P10's review built them.
+  - Calendars: Maintenance's two collections are `CalendarProjection` rows on P12's kind with owner services; Maintenance keeps no
+    event of its own (its bookings are the generic ones), so it needs no `EventManager` row; free/busy now answers Busy for a managed
+    resource's booking the caller may not open, which narrows what an interview's or session's room shows.
+  - AC-24, Approvals.js, People's lifecycle participant, `ConfidentialRecordType`, the direct-only notices, PeopleSpecLib and
+    BossSetupData's People groups and grants: not changed. The deny pattern (F26): Maintenance's P1 split the rows as planned, every
+    verb kept (fifteen rows and the transfer row, the longest 238).
+- Fixes:
+  - **R1 (F353).** PeopleAccess's Settings render asserted that no employer lacks a department, but the administrator reads every
+    employer, so a spec-local one of the shared test database (Mantle's Recruiting's) failed it by order. The render keeps its
+    checks but that one; the registry feature reads the department check of both demo employers by scope (Retail's with its
+    managers, Services' department ready). PeopleAccess passes after Recruiting (`--spec Recruiting,PeopleAccess`), and failed so before.
+  - **R2 (Teams, a People rule).** Maintenance's demo team Compressor and field service had an owner and no `PrtOrgRollup`, so People's
+    `employerOf` reached no employer: OrgStructure never showed it and `store#Membership` could not change its members, though teams
+    are People's to keep (design-people §4, Y4). It now sits under Service Delivery (`BossZMaintenanceDemoData.xml`). Spec:
+    MaintenanceSettings' Teams feature asks People's `store#Membership` for its lead again and is refused `ALREADY_MEMBER` (the team
+    reached), where the old data answered otherwise.
+  - **R3 (order, F353's kind).** PeoplePositions' choices asserted Services' grades were exactly the shared Lead; Mantle's
+    PeoplePositions adds a shared grade of its own, so the BOSS spec failed after it in one run. It now compares the demo's grades
+    only (Retail's Associate and Manager not offered, Lead offered).
+- Provisional findings (for the lead to number):
+  - Maintenance's other demo team, Facilities maintenance (`BOSS_MNT_TEAM`), has no rollup either and its members, maint.tech and
+    maint.tech2, are agents (`PrtAgent`), whom `store#Membership` refuses (`NOT_EMPLOYED`): People cannot keep that team. More
+    generally Maintenance reads a team's organization from `Party.ownerPartyId` (`requireTeam`, `teamsOf`) and People from its
+    rollups; they agree for teams People makes (`store#Unit` sets both), not for one made elsewhere. Whether a team may hold
+    contractors is the user's call (People's rule says employees only; Maintenance's technicians may be agents).
+  - Owen's demo leave (`BOSS_MNT_LEAVE_OWEN`) is a bare `WetTimeOff` with no `LeaveRequest`, so People's LeaveRequests,
+    TeamCalendar, MyTeam's who is out and his balance know nothing of the week that dispatch reads as leave.
+  - Dispatch's free hours count a two-employer technician's approved leave at the other employer (`get#PartyCapacity` reads every
+    `WetTimeOff` of the person), so a planner learns that they are away there on those days, never why: F249's shape, as Projects'
+    staffing already has it.
+  - impl-maintenance F356, F357 and F360 are People's code to change if the user wants it: Training.js and Recruiting.js keep a
+    free-text location and move and cancel their kept events with `update#WorkEffort`, so a session's or interview's room is never a
+    booking Maintenance's resource policy checks; and capacity does not take a person's training sessions off (P19).
+  - Employee360's Maintenance row has no qualification validity for technicians, which design-people §4's row gives it; People.js
+    `employee360Apps` and design-people still say it "waits for P18", which is built.
+- Tests (release binary from the main checkout, `--nobuild`, this runtime): Mantle's People specs (Attendance, ExpenseClaims,
+  HumanResServices, LaborCostingRate, LeaveLedger, LeaveRequests, Offers, PayrollAdjustments, PayrollServices, PeopleApprovals,
+  PeopleChecklists, PeopleDirectory, PeopleEmployment, PeopleOrganization, PeoplePositions, PeopleScheduledChanges, PeopleSchedules,
+  PeopleScope, Qualifications, Recruiting, Reviews, ShiftRoster, Training, UserProvisioning, WorkProcess) and Maintenance's that call
+  People (MaintenanceDispatch, MaintenanceCosts, Dav, MaintenanceResources, MaintenanceProcesses, MaintenanceManagedWork,
+  ProcessChecks), with BOSS's twenty People specs and MaintenanceAccess, MaintenanceScheduling, MaintenanceEquipment,
+  MaintenanceSettings and MaintenanceWorkOrders in one run: 326 of 326 (59 specs; mr-mantle 79.2 s and mr-boss 41.4 s of
+  features); after R2 and R3 the affected 18 specs 125 of 125. Before the fixes `--spec Recruiting,PeopleAccess` failed PeopleAccess
+  (F353), a run with Mantle's PeoplePositions failed BOSS PeoplePositions, and MaintenanceSettings' Teams check failed on the old
+  demo data. PeopleChecklists gains "a dated custody change" (0.1 s): a later date `DATE_FUTURE` with the holding and return task
+  unchanged, an earlier one ending the holding and starting the receiver's at that instant and completing the task. Prettier clean on
+  the changed JavaScript. No screen changed. Not run: `./moq test-apps`, the acceptance suite.
+- For the Maintenance lead: R2's data and spec are in Maintenance's files (`BossZMaintenanceDemoData.xml`,
+  MaintenanceSettings' Teams feature); the agent team, Owen's leave and Employee360's qualification validity above; F356, F357 and
+  F360 wait on the user's call with People's lead.
+- Budget share: mr-mantle +0.1 s (PeopleChecklists), mr-boss about +0.05 s (the registry and Teams checks).
+
 ### P21 — Grievances
 
 Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends stage 3.

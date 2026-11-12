@@ -474,6 +474,12 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_TEAM_FIELD" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
     <mantle.party.Organization partyId="BOSS_MNT_TEAM_FIELD" organizationName="Compressor and field service"/>
     <mantle.party.PartyRole partyId="BOSS_MNT_TEAM_FIELD" roleTypeId="OrgTeam"/>
+    <!-- under Service Delivery, as People's units are (a unit's employer is the one its rollups reach), so People's OrgStructure
+        shows the team and its membership changes through OrganizationServices.store#Membership (impl-people's Maintenance merge
+        review, R2) -->
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TEAM_FIELD_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_MNT_TEAM_FIELD" fromRoleTypeId="OrgTeam" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2026-02-01 00:00:00"/>
     <mantle.party.PartyRole partyId="BOSS_PPL_KENJI" roleTypeId="Manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_FIELD_KENJI" relationshipTypeEnumId="PrtMember"
             fromPartyId="BOSS_PPL_KENJI" fromRoleTypeId="Manager" toPartyId="BOSS_MNT_TEAM_FIELD" toRoleTypeId="OrgTeam" fromDate="2026-02-01 00:00:00"/>

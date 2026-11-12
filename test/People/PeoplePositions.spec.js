@@ -59,8 +59,11 @@ feature("the choices give an employer's departments, the current job classes and
             noEmployer: labels(users.hr, {choice: "departments"}),
             jobClasses: labels(users.hr, {choice: "jobClasses", term: "sales", selected: "BOSS_PPL_JC_TECH"}),
             payGrades: labels(users.hr, {choice: "payGrades", term: "assoc", selected: "BOSS_PPL_PG_MGR"}),
-            // a Services seat's grades: Retail's own are not offered, the shared Lead is
-            otherPayGrades: labels(users.hr, {choice: "payGrades", organizationPartyId: ids.otherOrganizationId})
+            // a Services seat's grades: Retail's own are not offered, the shared Lead is (of the demo's grades: a spec of the shared
+            // test database may add a shared grade of its own, impl-maintenance F353's kind)
+            otherPayGrades: labels(users.hr, {choice: "payGrades", organizationPartyId: ids.otherOrganizationId}).filter(name =>
+                ["Associate", "Manager", "Lead"].includes(name)
+            )
         }
     },
     then({departments, otherDepartments, noEmployer, jobClasses, payGrades, otherPayGrades}) {
