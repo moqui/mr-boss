@@ -41,8 +41,8 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 const cell = (value) => {
                     let text = value == null ? '' : String(value)
-                    // a spreadsheet does not take a text cell for a formula
-                    if (/^[=+@]/.test(text)) text = "'" + text
+                    // a spreadsheet does not take a text cell for a formula (a plain number, a return's negative amount, stays a number)
+                    if (!/^-?\d+(\.\d+)?$/.test(text) && /^[=+\-@\t\r]/.test(text)) text = "'" + text
                     return '"' + text.replace(/"/g, '""') + '"'
                 }
                 const line = (cells) => cells.map(cell).join(',')

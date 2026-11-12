@@ -789,6 +789,22 @@ feature(
                     .list()
                 if (launcher.size() !== 1 || launcher.get(0).artifactGroupId !== "BOSS_MAINTENANCE")
                     problems.push("the launcher's artifact")
+                // P11 review (R2): every area a Maintenance bundle's group opens by an ALWAYS grant, its bundle carries, so a group given
+                // the bundle in Admin opens it too (the planner's and supervisor's Requests were carried by none)
+                for (const authz of Array.from(
+                    ec.entity
+                        .find("moqui.security.ArtifactAuthz")
+                        .condition("userGroupId", "in", bundles)
+                        .condition("authzTypeEnumId", "AUTHZT_ALWAYS")
+                        .list()
+                )) {
+                    if (authz.userGroupId === "BOSS_MAINTENANCE_ADMIN") continue
+                    const carried = ec.entity
+                        .find("moqui.security.CapabilityBundleArtifact")
+                        .condition({userGroupId: authz.userGroupId, artifactGroupId: authz.artifactGroupId})
+                        .count()
+                    if (!carried) problems.push(`${authz.userGroupId}'s bundle does not carry ${authz.artifactGroupId}`)
+                }
                 const holders = userPermissionId =>
                     Array.from(ec.entity.find("moqui.security.CapabilityBundlePermission").condition({userPermissionId}).list())
                         .map(row => row.userGroupId)

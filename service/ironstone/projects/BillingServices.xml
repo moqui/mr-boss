@@ -1378,8 +1378,8 @@ along with this software (see the LICENSE.md file). If not, see
                 sharedText: line.shareCount ? ec.resource.expand('${percent} in ${count} milestones', '', {percent: pct(toDecimal(line.sharedAmount).isZero() || toDecimal(line.total).isZero() ? 0
                     : toDecimal(line.sharedAmount).multiply(toDecimal(100)).divide(toDecimal(line.total)).setScale(1, 'HALF_UP')), count: line.shareCount}) : L('No milestone shares'),
                 billedText: cash(line.billedAmount, line.currencyUomId)}))
-            // impl-maintenance P11: the repairs charged to the project, each currency apart
-            const costText = (totals) => Array.from(totals || []).map((row) => row.totalText).join(' + ')
+            // impl-maintenance P11: the repairs charged to the project, each currency apart (listed, never joined by a plus)
+            const costText = (totals) => Array.from(totals || []).map((row) => row.totalText).join(', ')
             const maintenanceRows = Array.from(sm.maintenanceList || []).map((work) => ({workEffortId: work.workEffortId, workEffortName: work.workEffortName,
                 statusText: work.statusText, costText: costText(work.totalList) || cash(0),
                 unpricedText: toDecimal(work.unpricedHours ?? 0).isZero() ? '' : hoursText(work.unpricedHours) + ' h ' + L('not priced yet')}))

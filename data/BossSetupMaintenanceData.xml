@@ -315,6 +315,9 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- P11 review (R2): the planner's and the supervisor's bundles carry the Requests area, so a group given either in Admin opens it -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests (triage)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests (triage)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <!-- Report a problem in every Maintenance bundle (the user's call, Nov 12, P4 review), so a group given a bundle in Admin has it -->
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_READ" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_REQUEST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>

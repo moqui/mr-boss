@@ -44,14 +44,25 @@ feature(
         when() {
             const options = {organizationPartyId: ids.organizationId}
             const report = asUser(users.cost, () => page("WorkOrders/MaintenanceCostReport", options))
-            const csv = asUser(users.cost, () => ({
-                output: String(
-                    ec.screen
-                        .makeTest()
-                        .rootScreen("component://mr-boss/screen/Maintenance.xml")
-                        .render("WorkOrders/MaintenanceCostReport/exportCsv", options, null).output || ""
-                )
-            }))
+            // P11 review (R1): a name a spreadsheet would take for a formula, a leading minus too, is exported as text
+            const WORK = "mantle.work.effort.WorkEffort"
+            const originalName = String(
+                system(() => ec.entity.find(WORK).condition("workEffortId", ids.beltOrderId).one().workEffortName)
+            )
+            system(() => invoke("update#" + WORK, {workEffortId: ids.beltOrderId, workEffortName: "-2+3 belt"}))
+            let csv
+            try {
+                csv = asUser(users.cost, () => ({
+                    output: String(
+                        ec.screen
+                            .makeTest()
+                            .rootScreen("component://mr-boss/screen/Maintenance.xml")
+                            .render("WorkOrders/MaintenanceCostReport/exportCsv", options, null).output || ""
+                    )
+                }))
+            } finally {
+                system(() => invoke("update#" + WORK, {workEffortId: ids.beltOrderId, workEffortName: originalName}))
+            }
             const printed = asUser(users.cost, () =>
                 page("WorkOrders/MaintenanceCostReport", Object.assign({lastStandalone: "true"}, options), "html-print")
             )
@@ -70,6 +81,8 @@ feature(
             csv.output.includes('"organizationPartyId=' + ids.organizationId + '"')
             csv.output.includes('"BOSS_MNT_TE_BELT1"')
             csv.output.includes('"Motor rewind (outside service)"')
+            csv.output.includes('"\'-2+3 belt"')
+            !csv.output.includes('"-2+3 belt"')
             printed.errors.length == 0
             printed.output.includes("Maintenance costs")
             printed.output.includes("BOSS_MNT_TE_BELT1")
@@ -95,6 +108,10 @@ feature("a repair charged to a project shows in the project's money as a cost (P
         summary.maintenanceList.length == 1
         summary.maintenanceList[0].workEffortId == ids.beltOrderId
         summary.maintenanceList[0].totalList[0].total.compare(96) == 0
+        // P11 review (R3): a work order's total alone, never its labor or parts apart
+        summary.maintenanceList[0].totalList[0].labor == null
+        summary.maintenanceList[0].totalList[0].parts == null
+        summary.maintenanceTotalList[0].labor == null
         money.errors.length == 0
         money.output.includes("Maintenance · 1")
         money.output.includes("Compressor drive belt squeal")
