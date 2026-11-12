@@ -373,7 +373,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
-| P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | built Nov 12, in review |
+| P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | built and reviewed Nov 12, merged |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built and reviewed Nov 12, merged |
@@ -3041,7 +3041,7 @@ built.
 - Design edits: design-maintenance's header, "Charging a project" (labor read, not posted), a Costs (WorkCosts) as-built paragraph, §8
   MaintenanceCostReport (its path under Work orders until P17), §9 Settings' cost threshold and MT-08 as built; design-projects'
   header and ProjectMoney's as-built (the Maintenance box); impl-projects' log.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F278 to F286 in order:
   - `get#ApprovedStandardCost` runs CostPolicy.scope before reading, so it refuses a planner (no product-cost access); the estimate reads
     `Costs.js` `effective`, the same rule, and shows no cost to the planner.
   - "Approved hours" is the entry's timesheet in `TmshApproved` (Mantle has no per-entry approval); `store#TimeEntry` puts every entry on
@@ -3137,7 +3137,7 @@ ProjectMoney, design-accounting's labor costing rates and AC-24, AGENTS.md and P
     tested. Mantle MaintenanceCosts' third feature: the second technician given a 60 USD class, both on 2 h and two bearings, estimated
     160 (labor 120) and approved by the planner under 500 USD; against 500 EUR the estimate is unknown ("is in USD") and the planner is
     refused.
-- Findings (unnumbered):
+- Findings, numbered by the lead F287 to F290 in order:
   - The cost reader sees the estimate's parts at the products' approved standard cost without PRODUCT_COST_VIEW (design §3 WorkCosts
     shows the estimated cost; with one planned part it is the part's standard cost). If standard costs should stay Products' readers',
     the estimate could show parts only to a holder of a product-cost read.
@@ -4882,6 +4882,19 @@ paths under `mr-boss/`.
 | F275 | P14 review: The reminder's offset is fixed at a day (1440 minutes) | P14's Review note |
 | F276 | P14 review: Tools' raw JobDetail Run now runs a job as the clicking user (framework behaviour) | P14's Review note |
 | F277 | P14 merge: MaintenanceAccess (one spec of every phase's access case) took 8.5 s alone and 20.7 s at load average 20 | The full suites' measure decides; split it or move cases to acceptance if it nears 15 s |
+| F278 | P11: `get#ApprovedStandardCost` runs CostPolicy.scope before reading, so it refuses a planner (no product-cost access) | P11's Built note |
+| F279 | P11: "Approved hours" is the entry's timesheet in `TmshApproved` (Mantle has no per-entry approval) | P11's Built note |
+| F280 | P11: Maintenance labor is read at the costing rate, never posted | P11's Built note |
+| F281 | P11: With a cost threshold set, ad hoc planned work with hours is held on create (no one is assigned yet, so its labor cannot be priced) | P11's Built note |
+| F282 | P11: Several technicians on one node | P11's Built note |
+| F283 | P11: Projects' money readers (TIME_ENTRY_RATE) see a repair's totals charged to their project without MAINTENANCE_COST_VIEW, as "Charging a project" has it (totals by currency only | P11's Built note |
+| F284 | P11: Outside service bills are read from OrderItemBilling (quantity times amount, the invoice's currency) | P11's Built note |
+| F285 | P11: The cost reader's bundle carries `BOSS_MNT_COSTS` | P11's Built note |
+| F286 | P11: The report reads each order line's acceptances and bills in a query each | P11's Built note |
+| F287 | P11 review: The cost reader sees the estimate's parts at the products' approved standard cost without PRODUCT_COST_VIEW (design §3 WorkCosts shows the estimated cost | P11's Review note |
+| F288 | P11 review: The report reads each order line's bills and acceptances, and `projectCosts` each issuance's node, a query apiece (the worker's finding) | P11's Review note |
+| F289 | P11 review: The pending outside service is dated by the order's entry date, so a period filter can drop an open line ordered before it. | P11's Review note |
+| F290 | P11 review: Settings' cost threshold currency is a text line (Mantle checks it is a currency) | P11's Review note |
 
 
 ## 7. Later
