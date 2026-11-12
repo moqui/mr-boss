@@ -16,9 +16,22 @@ along with this software (see the LICENSE.md file). If not, see
     or equipment return task's context, pplContext from mantle.humanres.PeopleServices.get#ChecklistTask: the person, employer and
     checklist, what the task links to (the equipment's EquipmentDetail; the Admin lifecycle outcome of the IT access request, as its
     state and its steps' states, never a secret) and the checklist's other tasks. On the Overview tab for its people; alone, read only,
-    for an HR reader who is none of them. -->
+    for an HR reader who is none of them. P16 review: a step that links an exit interview shows it, a form of the exit interview purpose
+    (the employer's published one, built under People's Forms): one of the task's people records the leaver's answers once
+    (submitExitInterview, mantle.humanres.PeopleServices.submit#ExitInterview), and they and the employer's HR read them back (opted out
+    of AI). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- P16 review: the exit interview, once (Mantle checks the task's people, the form and the values) -->
+    <transition name="submitExitInterview">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.submit#ExitInterview"
+                    in-map="{workEffortId:workEffortId, values:Object.assign({}, ec.web.parameters)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Exit interview recorded</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
     <widgets>
         <section name="PeopleWorkItemContext" condition="pplTask &amp;&amp; pplContext &amp;&amp; (pplReadOnly || tab == 'overview')">
             <widgets>
@@ -56,6 +69,38 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                                 <label type="p" style="text-caption m-muted"
                                         text="Ending the holding on the equipment's page, or a custody change elsewhere, completes this task."/>
+                            </widgets>
+                        </section>
+                        <!-- P16 review: the exit interview the step links (its answers not shared with AI) -->
+                        <section name="PeopleTaskExitInterview" condition="pplContext.exitInterview" ai-opt-out="true">
+                            <widgets>
+                                <label type="p" text="Exit interview: ${pplContext.exitInterview.stateText}"/>
+                                <section name="PeopleExitInterviewForm" condition="pplContext.exitInterview.canAnswer">
+                                    <widgets>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="Record the leaver's answers once: HR of the employer reads them, the leaver does not."/>
+                                        <form-single name="ExitInterviewAnswer" transition="submitExitInterview" dynamic="true"
+                                                extends="${pplContext.exitInterview.canAnswer ? 'DbForm#' + pplContext.exitInterview.formId : 'ExitInterviewNone'}"
+                                                map="{workEffortId:pplContext.workEffortId}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Record exit interview"><submit confirmation="Record the exit interview? It is not changed after."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                                <section name="ExitInterviewNoneHolder" condition="false">
+                                    <widgets><form-single name="ExitInterviewNone"/></widgets>
+                                </section>
+                                <form-list name="ExitInterviewAnswers" list="pplContext.exitInterview.answers" skip-form="true" paginate="false"
+                                        condition="pplContext.exitInterview.answers?.length">
+                                    <field name="title"><default-field title="Question"><display/></default-field></field>
+                                    <field name="displayText" ai-opt-out="true"><default-field title="Answer"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/></column>
+                                        <column><field-ref name="displayText"/></column>
+                                    </columns>
+                                </form-list>
                             </widgets>
                         </section>
                         <section name="PeopleTaskAccess" condition="pplContext.access">

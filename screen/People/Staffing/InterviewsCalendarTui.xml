@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The terminal twin of the interviews calendar (InterviewsCalendar.xml's tui text is a dynamic container of this screen): the
+    next two weeks from date (today by default) of mantle.humanres.RecruitingServices.find#Interviews, each interview's time and
+    "{applicant} · {opening}", opening its application. Read only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Interviews" default-menu-include="false">
+    <parameter name="date"/>
+    <actions>
+        <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date)
+                : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="lastDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') + 14 * 86400000).toISOString().substring(0, 10)"/>
+        <service-call name="mantle.humanres.RecruitingServices.find#Interviews" in-map="{start:firstDay, end:lastDay}" out-map="agenda"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="agendaRows" from="Array.from(agenda?.eventList || []).sort((a, b) =&gt; String(a.start).localeCompare(String(b.start)))
+                .map((event) =&gt; ({when: String(event.start) + '–' + String(event.end).substring(11, 16), title: event.title,
+                    employmentApplicationId: event.employmentApplicationId}))"/>
+    </actions>
+    <widgets>
+        <label text="Interviews: ${firstDay} to ${lastDay}" type="h6"/>
+        <form-list name="InterviewAgenda" list="agendaRows" skip-form="true" paginate="false">
+            <field name="when"><default-field title="When"><display/></default-field></field>
+            <field name="title">
+                <default-field title="Interview">
+                    <link url="../ApplicantDetail" text="${title}" link-type="anchor" parameter-map="{employmentApplicationId:employmentApplicationId}"/>
+                </default-field>
+            </field>
+            <columns type="mobile"><column><field-ref name="title"/></column><column><field-ref name="when"/></column></columns>
+        </form-list>
+        <label text="No interview of yours in the next two weeks." type="p" style="m-muted" condition="!agendaRows.length"/>
+    </widgets>
+</screen>

@@ -76,18 +76,23 @@ const ids = {
         "Attendance",
         "ShiftRoster"
     ],
-    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
+    // P16: Forms, the survey builder with People's registration
+    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings
     hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "ChecklistTemplates", "EmployeeImport"],
-    staffingMenu: ["Positions", "JobClasses", "PayGrades"],
+    // P16: Openings, Applicants and Interviews, every People user's (Mantle decides what each reads)
+    staffingMenu: ["Positions", "JobClasses", "PayGrades", "Openings", "ApplicantPipeline", "InterviewsCalendar"],
     // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers;
     // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll; P11's g b, Leave balances, to HR and managers; P12's
     // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user; P14's g h, Shift roster, to HR and
-    // managers; P15's g x, Expense claims, to every People user)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h", "g x"],
+    // managers; P15's g x, Expense claims, and P16's g n, Openings, and g v, Interviews, to every People user)
+    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h", "g x", "g n", "g v"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
+    // P16: an approved active seat of Retail (vacant) and one of Services, the seats the recruiting specs open openings on
+    openingSeatId: "BOSS_PPL_P_ASSOC3",
+    otherOpeningSeatId: "BOSS_PPL_P_TECH2",
     // P7: Retail's onboarding and offboarding checklists, and the laptop Ines holds
     onboardingId: "BOSS_PPL_CHK_START",
     offboardingId: "BOSS_PPL_CHK_LEAVE",

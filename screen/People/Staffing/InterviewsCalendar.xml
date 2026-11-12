@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Interviews (design-people §13 InterviewsCalendar, Context passed; design-drawers-commons §7 Calendar and EventDetail;
+    impl-people P16): the Commons Calendar component (screen/Commons/Calendar.qvue) in its read-only resource mode, its transitions
+    answered by mantle.humanres.RecruitingServices.find#Interviews: the interviews the user is on the panel of and, for a recruiter,
+    those of the employers they recruit for, each "{applicant} · {opening}", never another opening's candidates; an interview the
+    user attends (or scheduled) opens Commons' EventDetail, mounted here (the attendees and their answers, the call link in its
+    location, Send invitations, RSVP and Export .ics), any other its application (ApplicantDetail). Scheduling is the
+    application's (ApplicantDetail's Schedule interview). The same interviews of a panel member are the My interviews CalDAV
+    collection (read only, CX-SYNC). The terminal: an agenda of the next two weeks (InterviewsCalendarTui). Every People user's:
+    what each sees is what Mantle's service admits. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Interviews" default-menu-index="6" menu-image="sym_o_record_voice_over" menu-image-type="icon"
+        render-modes="vue,qvue,tui" server-static="vue,qvue">
+
+    <parameter name="view"/>
+    <parameter name="date"/>
+
+    <transition name="calendarSetup" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarSetup').call() || {}
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse({calendarList: [], defaultCalendarId: null, defaults: out.defaults || {}, timeZone: out.timeZone,
+                todayText: out.todayText, nowText: out.nowText, me: out.me, roomOptions: [], failedSources: [],
+                resource: {title: ec.l10n.localize('Interviews'), readOnly: true}})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="calendarEvents" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('mantle.humanres.RecruitingServices.find#Interviews').parameters({start: start || '', end: end || ''}).call() || {}
+            const failed = ec.message.hasError()
+            ec.message.clearErrors()
+            const eventDetail = '/qapps/People/Staffing/InterviewsCalendar/EventDetail?workEffortId='
+            const applicant = '/qapps/People/Staffing/ApplicantDetail?employmentApplicationId='
+            const eventList = failed ? [] : Array.from(out.eventList || []).map(event => Object.assign({}, event, {url: event.attends
+                ? eventDetail + encodeURIComponent(event.workEffortId) : applicant + encodeURIComponent(event.employmentApplicationId)}))
+            ec.web.sendJsonResponse({eventList, failedSources: failed ? ['interviews'] : [], skippedCalendarIdList: []})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- no item here is an event with a popover; an answer keeps the component from failing on a stray click -->
+    <transition name="eventSummary" method="get" read-only="true">
+        <actions><script>ec.web.sendJsonResponse({visible: false})</script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <subscreens>
+        <!-- Commons' event screen for an interview the user attends: its own access check (an attendee or the organizer) decides -->
+        <subscreens-item name="EventDetail" location="component://mr-boss/screen/Commons/Calendar/EventDetail.xml" menu-include="false"/>
+    </subscreens>
+
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commons/Calendar.qvue" template="false"/>
+            <!-- the terminal: InterviewsCalendarTui, the plain screen beside this one, an agenda of the next two weeks -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "InterviewsCalendarTui",
+                url: sri.buildUrl("../InterviewsCalendarTui").addParameters({date: date || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">The interviews calendar is a .qvue screen: open it under /qapps.</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

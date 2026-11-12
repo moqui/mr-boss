@@ -48,6 +48,11 @@ are new records (`AttendancePunch`, design-people §14.2 "Attendance punch captu
 Projects' work-time clock (a time entry on a work item), which stays blank as before (impl-projects §7); their Implemented in is in
 usl-inventory's People rows.
 
+**People P16 (Nov 12, 2026):** no baseline form is mapped to Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar or
+People's Forms: the baseline HumanRes screens have no recruiting forms (EmploymentApplication had only its fields, F9), and a job
+opening, its interviews and scorecards are People's own records (design-people §5, §14.2); their Implemented in is in
+usl-inventory's People rows (RecruitingServices, FormDefinitionServices).
+
 **People P14 (Nov 12, 2026):** no baseline form is mapped to ShiftRoster, its terminal twin or its print, or to SelfService's My
 shifts: shifts are new records (`ShiftAssignment`, design-people §6 ShiftRoster); their Implemented in is in usl-inventory's People
 rows.

@@ -44,7 +44,11 @@ along with this software (see the LICENSE.md file). If not, see
     invoice for payroll), the expense and advance topics, the key g x and the quick create New claim (declared on Commons' root).
     The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
-    grant opens no other record's panel. -->
+    grant opens no other record's panel. P16: Openings, Applicants and Interviews under Positions &amp; recruiting (every People
+    user's: a recruiter reads the openings and applications, an interviewer the applications of their panels), Forms under Settings
+    (the People administrator's), the application's files (its RecordFiles host), the palette's openings and applications and the
+    EmploymentApplication record-lookup (the people.records provider), the keys g n and g v, and the prompt "Draft a job
+    description" (the people-job-description skill) on a job class and on Openings. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -63,7 +67,7 @@ along with this software (see the LICENSE.md file). If not, see
             if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
                 let entityName = String(wanted)
                 try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
-                if (!['mantle.humanres.employment.Employment'].includes(entityName))
+                if (!['mantle.humanres.employment.Employment', 'mantle.humanres.employment.EmploymentApplication'].includes(entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
             }
         ]]></script>
@@ -77,9 +81,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P8: the user's own self-service (design §3 SelfService), the same definition as Commons/People/SelfService, out of the
             menu and linked from Home; a self-service employee without People opens it by its own grant (BOSS_PPL_SELF) -->
         <subscreens-item name="SelfService" location="component://mr-boss/screen/Shared/PeopleSelfService.xml" menu-include="false"/>
+        <!-- P16 review (the user's call of Nov 12, 2026): an interview panel member's own interview and scorecard, beside SelfService
+            and opened from its My interviews, the same definition as Commons/People/MyInterview -->
+        <subscreens-item name="MyInterview" location="component://mr-boss/screen/Shared/PeopleMyInterview.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b; P14: g h). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
+    <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b; P14: g h; P16: g n and g v). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
         record-lookup over the directory projection (design §1.4). Quick create and Today (design §1.4) come with their records. -->
     <shell-providers>
         <palette-source group="Employees" label="Employee directory" icon="sym_o_badge"
@@ -106,6 +113,9 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g h" label="Shift roster" screen="People/Time/ShiftRoster"/>
             <!-- P15: expense claims -->
             <key keys="g x" label="Expense claims" screen="People/Expenses/ExpenseClaims"/>
+            <!-- P16: the openings and the interviews -->
+            <key keys="g n" label="Openings" screen="People/Staffing/Openings"/>
+            <key keys="g v" label="Interviews" screen="People/Staffing/InterviewsCalendar"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
@@ -144,6 +154,12 @@ along with this software (see the LICENSE.md file). If not, see
             New claim is declared on Commons' root, which a self-service employee opens too -->
         <notification-topic topic="PeopleExpenseApproval"/>
         <notification-topic topic="PeopleAdvanceApproval"/>
+        <!-- P16 (design §5 JobClassDetail, Openings; PE-14): "Draft a job description" (the people-job-description skill) on a job
+            class and on the openings, the user's own draft to read and paste: nothing is saved by it -->
+        <assist-prompt label="Draft a job description" text="Draft a job description for this role from its job class: the purpose, the main responsibilities, the skills it requires and what it offers, in plain words"
+                screen="People/Staffing/JobClassDetail" sequence="42"/>
+        <assist-prompt label="Draft a job description" text="Draft the description of a job opening: the role, what it asks and what it offers, in plain words, without pay figures or anything about age, gender or family"
+                screen="People/Staffing/Openings" sequence="43"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>
