@@ -362,8 +362,9 @@ function withSelected(options, selected, admits, label) {
     return options
 }
 // enumeration options of a type, searched by description, with the selected one; a value ended in Maintenance's lookups (P18,
-// Enumeration.thruDate) is offered for no new choice, only as the selected one
-function enumOptions(enumTypeId, term, selected, filter = null) {
+// Enumeration.thruDate) is offered for no new choice, only as the selected one; onlyIds narrows the query itself (a filter
+// runs after its limit)
+function enumOptions(enumTypeId, term, selected, filter = null, onlyIds = null) {
     const factory = ec.entity.conditionFactory
     let query = find("moqui.basic.Enumeration")
         .condition("enumTypeId", enumTypeId)
@@ -378,6 +379,10 @@ function enumOptions(enumTypeId, term, selected, filter = null) {
         .orderBy("description")
         .limit(choiceLimit * 2)
     if (term) query = query.condition(factory.makeCondition("description", "like", likeText(term)).ignoreCase())
+    if (onlyIds) {
+        if (!onlyIds.length) return withSelected([], selected, enumId => !!one("moqui.basic.Enumeration", {enumId, enumTypeId}), enumId => one("moqui.basic.Enumeration", {enumId})?.description || enumId)
+        query = query.condition("enumId", "in", onlyIds)
+    }
     let rows = Array.from(query.list())
     if (filter) rows = rows.filter(filter)
     const options = rows.slice(0, choiceLimit).map(row => ({value: row.enumId, label: row.description || row.enumId}))
@@ -750,8 +755,9 @@ const choiceSources = {
     // P18: with the work's equipment (assetId, in the scope), the failure modes that apply to it (MaintenanceSettings.js)
     failureModes: (userScope, term, selected, p) => {
         const assetId = p?.assetId && lib.check(() => recordOf(userScope, "asset", p.assetId)).allowed ? p.assetId : null
-        const applies = assetId ? new Set(settings().applicableFailureModes(enumIds("MaintenanceFailureMode"), assetId)) : null
-        return enumOptions("MaintenanceFailureMode", term, selected, applies ? row => applies.has(row.enumId) : null)
+        // in the query, not after its limit: a failure mode that applies is offered however many there are (P18 review R3)
+        const applies = assetId ? Array.from(settings().applicableFailureModes(enumIds("MaintenanceFailureMode"), assetId)) : null
+        return enumOptions("MaintenanceFailureMode", term, selected, null, applies)
     },
     holdReasons: (userScope, term, selected) => enumOptions("MaintenanceHoldReason", term, selected),
     cancelReasons: (userScope, term, selected) => enumOptions("MaintenanceCancelReason", term, selected),
