@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     query before paging), found by id, name, serial or registration, facility, model, class, custodian and supplier warranty, each
     row with its model, owner, site, custodian, state and warranty and opening EquipmentDetail. A scanned asset tag (or a typed id
     or serial) opens the equipment (resolve#EquipmentScan, the scope checked again). New equipment for a holder of
-    MAINTENANCE_RESOURCE_EDIT (store#MaintenanceEquipment); Print tags of the chosen rows opens AssetTags. No cost or book value. -->
+    MAINTENANCE_RESOURCE_EDIT (store#MaintenanceEquipment); Print tags of the chosen rows opens AssetTags; Import opens EquipmentImport for a holder of MAINTENANCE_IMPORT (P18). No cost or
+    book value. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Equipment" default-menu-index="1">
     <parameter name="text"/>
@@ -182,6 +183,9 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                         </container-dialog>
                         <link url="${sharedLinks['Equipment/AssetTags']}" text="Print tags" icon="sym_o_qr_code_2" link-type="anchor-button"/>
+                        <!-- P18: Import opens EquipmentImport, for an importer -->
+                        <link url="${sharedLinks['Equipment/EquipmentImport']}" text="Import" icon="sym_o_upload_file" link-type="anchor-button"
+                                condition="can.import &amp;&amp; can.resourceEdit"/>
                     </container>
                 </container>
                 <form-single name="ScanTag" transition="openScanned">

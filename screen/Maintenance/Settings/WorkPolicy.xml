@@ -18,7 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
     work by a planner is approved on create), the closure policy, the default work type and team, and whether production requests
     and warranty repairs become managed work (off), and whether a procedure's last author may approve it (P6; off). A change starts a
     dated policy from now and ends the one in effect. The cost half of the threshold, the qualification check and the job defaults
-    join with their phases (P11, P8, P14). -->
+    join with their phases (P11, P8, P14). P18: a change starts from a date chosen (now or later; the one in effect ends then, a
+    later plan is withdrawn), and the policies planned and the last ended are listed (PolicyDates); a field a form does not post
+    is kept from the policy in effect, so each phase's section stores its own fields. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work policy" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -29,10 +31,10 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId, capability:'settingsEdit'}"/>
             <service-call name="mantle.work.MaintenanceSettingsServices.store#MaintenancePolicy"
                     in-map="{organizationPartyId:organizationPartyId, approvalThresholdHours:approvalThresholdHours,
-                        closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
+                        fromDate:(fromDate || null), closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
                         defaultTeamPartyId:defaultTeamPartyId, productionRequestsManaged:productionRequestsManaged,
                         warrantyRepairsManaged:warrantyRepairsManaged, procedureSelfApproval:procedureSelfApproval, comments:comments}"/>
-            <if condition="!ec.message.hasError()"><message type="success">Work policy saved from now</message></if>
+            <if condition="!ec.message.hasError()"><message type="success">Work policy saved</message></if>
         </actions>
         <default-response url=".">
             <parameter name="organizationPartyId"/>
@@ -50,6 +52,10 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="policy" from="policyOut?.policy || null"/>
+        <!-- P18: the policies planned to start later and the last that ended -->
+        <set field="datedPolicies" from="(policyOut?.planned || []).map(row =&gt; Object.assign({stateText: 'Planned'}, row)).concat(
+                (policyOut?.ended || []).map(row =&gt; Object.assign({stateText: 'Ended'}, row))).map(row =&gt; Object.assign(row, {
+                    thresholdText: String(row.approvalThresholdHours ?? 0) + ' h', periodText: row.fromDateText + (row.thruDateText ? ' to ' + row.thruDateText : '')}))"/>
         <set field="policyValues" from="policy ? {organizationPartyId: organizationPartyId,
                 approvalThresholdHours: String(policy.approvalThresholdHours ?? 0), closurePolicyEnumId: policy.closurePolicyEnumId,
                 defaultMaintenanceTypeEnumId: policy.defaultMaintenanceTypeEnumId, defaultTeamPartyId: policy.defaultTeamPartyId,
@@ -126,13 +132,39 @@ along with this software (see the LICENSE.md file). If not, see
                                     <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
                                 </default-field>
                             </field>
+                            <field name="fromDate">
+                                <default-field title="Starts" tooltip="Empty: now. The policy in effect ends when this one starts">
+                                    <date-time type="timestamp"/>
+                                </default-field>
+                            </field>
                             <field name="comments"><default-field title="Why it changes"><text-line size="60"/></default-field></field>
                             <field name="submitButton">
-                                <default-field title="Save from now">
-                                    <submit type="primary" confirmation="Save this work policy from now? The one in effect ends."/>
+                                <default-field title="Save">
+                                    <submit type="primary" confirmation="Save this work policy? The one in effect ends when it starts."/>
                                 </default-field>
                             </field>
                         </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- P18: the dated policies, planned and ended -->
+        <section name="PolicyDates" condition="can.settingsEdit &amp;&amp; policy &amp;&amp; datedPolicies">
+            <widgets>
+                <container-box>
+                    <box-header title="Planned and earlier policies"/>
+                    <box-body>
+                        <form-list name="DatedPolicies" list="datedPolicies" skip-form="true" paginate="false">
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="periodText"><default-field title="In effect"><display/></default-field></field>
+                            <field name="thresholdText"><default-field title="Approve up to"><display/></default-field></field>
+                            <field name="closurePolicyText"><default-field title="Closing"><display/></default-field></field>
+                            <field name="comments"><default-field title="Why"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="periodText"/><field-ref name="thresholdText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
                     </box-body>
                 </container-box>
             </widgets>

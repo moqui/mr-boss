@@ -218,6 +218,8 @@ feature(
             policy.output.includes("The defaults are in effect")
             // P6: procedure self-approval, off by default
             policy.output.includes("A procedure's last author may approve it")
+            // P18: a change starts from a date chosen
+            policy.output.includes("Starts")
         }
     }
 )
