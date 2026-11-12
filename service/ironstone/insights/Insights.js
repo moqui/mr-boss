@@ -277,7 +277,8 @@ const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Pr
 // authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or
 // save; a panel's New alert rule opens Insights' own AlertDetail (P8) for one who may set an alert (INSIGHTS_AUTHOR or
 // INSIGHTS_DISTRIBUTE), never Tools' AlertRule with its contact points; Insights mounts no log context or definition import
-// (P12), and shares from its Dashboard (ShareDashboard), so the editor keeps a definition's group as it is.
+// (P12), and shares from its Dashboard (ShareDashboard), so the editor keeps a definition's group as it is. The alert list is
+// Insights' own (alerts); Insights has no shared contact points, silences or mute timings (alertShared).
 function reportLinks(capabilities) {
     const authors = capabilities.author || capabilities.datasetEdit
     return {
@@ -288,11 +289,48 @@ function reportLinks(capabilities) {
         explore: "//Insights/ReportBuilder/Explore",
         split: "//Insights/ReportBuilder/Split",
         playlist: "//Insights/Playlists",
+        alerts: "//Insights/Alerts/Rules",
         alertRule: capabilities.author || capabilities.distribute ? "//Insights/Alerts/AlertDetail" : null,
+        alertShared: null,
         logContext: null,
         share: "//Insights/Dashboard",
         // P6: each panel's menu offers Drill, Insights' own screen over the engine's get#Drill
         drill: "//Insights/Drill"
+    }
+}
+// Insights' policy for the framework report screens it shows, the reportPolicy map they read beside reportLinks (mr-moqui
+// docs/tools/Monitoring.md, "Mounting the report screens"; tools/template/ReportMount.js). Data only: each is what an
+// ironstone.insights service does itself today, and the service that acts still decides.
+// - features: who may set an alert (an author or a distributor, Alerts.js) and who may share a dashboard of their own (an
+//   author, share#Dashboard);
+// - range: the default reporting range (get#Context's defaults);
+// - datasetIdPrefix and datasetScopeParameter: what a dataset created in Insights is named and the scope policy's parameter
+//   its form asks for (Datasets.js createdPrefix; rowFilterParameters.organizationField);
+// - recipientPermissionId: whom a distributor may propose (Delivery.js readerIds: Insights' readers);
+// - reportEmailTemplateId and alertAudience: the fixed parts of a schedule and of an alert rule (Delivery.js TEMPLATE;
+//   Alerts.js TOPIC, TEMPLATE and DETAIL_LINK);
+// - shareGroups: the wall displays, beside the sharer's own groups (get#ShareGroups);
+// - calendar: the display zone and week start of the organization in scope (calendarParameters), nothing where it set none.
+// The recipient cap (recipientCap below) is not read for every request: the screens that deliver set it where they are
+// mounted.
+function reportPolicy(capabilities, settings) {
+    const weekOffset = settings.weekStart
+        ? one("moqui.basic.Enumeration", {enumId: settings.weekStart, enumTypeId: "InsightsWeekStart"})?.enumCode || null
+        : null
+    return {
+        features: {alert: !!(capabilities.author || capabilities.distribute), share: !!capabilities.author},
+        range: {from: defaultRange.from, thru: defaultRange.thru},
+        datasetIdPrefix: "insights-",
+        datasetScopeParameter: "organizationField",
+        recipientPermissionId: capabilityPermissions.view,
+        reportEmailTemplateId: "BOSS_INSIGHTS_REPORT",
+        alertAudience: {
+            topic: "InsightsBusinessAlert",
+            emailTemplateId: "BOSS_INSIGHTS_ALERT",
+            detailLink: "/qapps/Insights/Alerts/AlertDetail"
+        },
+        shareGroups: [{value: wallDisplayGroupId, label: "Wall displays"}],
+        calendar: settings.displayTimeZone || weekOffset ? {timeZone: settings.displayTimeZone || null, weekOffset} : null
     }
 }
 // The variables a dashboard's panels are fixed to under Insights, as Insights › Dashboard fixes them (design §4 Dashboard):
@@ -345,7 +383,8 @@ function context(p) {
         sharedLinks: Object.fromEntries(
             linkPaths.map(path => [path, "//Insights/" + path + (tabbedRecords.includes(path) ? "/InsightsRecord" : "")])
         ),
-        reportLinks: reportLinks(userScope.capabilities)
+        reportLinks: reportLinks(userScope.capabilities),
+        reportPolicy: reportPolicy(userScope.capabilities, settings)
     }
 }
 

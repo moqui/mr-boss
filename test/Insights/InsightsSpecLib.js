@@ -118,5 +118,25 @@ function shell(user, menuOnly = false) {
         }
     })
 }
+// The framework's report screens Insights mounts by location (mr-moqui plans/Admin-Screens-Down.md, Track I: Library panels,
+// and Report builder's Explore and Compare), as [path under Insights, location], read from the subscreens items of the root
+// and of each area: the screen sweeps (acceptance InsightsTui and InsightsServerStatic) list Insights' screens from its own
+// files, which these have left.
+function mountedScreens() {
+    const base = "component://mr-boss/screen/"
+    const found = []
+    const read = (reference, prefix) => {
+        for (const match of String(reference.getText()).matchAll(
+            /<subscreens-item name="([A-Za-z0-9]+)" location="(component:\/\/tools\/screen\/Dashboards\/[A-Za-z0-9]+\.xml)"/g
+        ))
+            found.push([prefix + match[1], match[2]])
+    }
+    read(ec.resource.getLocationReference(base + "Insights.xml"), "")
+    for (const area of ec.resource.getLocationReference(base + "Insights").getDirectoryEntries()) {
+        if (!/\.xml$/.test(area.location)) continue
+        read(area, area.location.substring(area.location.lastIndexOf("/") + 1).replace(/\.xml$/, "") + "/")
+    }
+    return found
+}
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell})
+;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell, mountedScreens})

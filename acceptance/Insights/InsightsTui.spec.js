@@ -1,5 +1,6 @@
 // Insights' terminal sweep (impl-insights P12; style-guide §4.8, §8.1; AGENTS.md: one sweep per app per mode, in acceptance):
-// every Insights screen, its own files and the shared record screens its Records area mounts (read only, each as its Insights
+// every Insights screen, its own files, the framework's report screens it mounts by location (InsightsSpecLib.mountedScreens)
+// and the shared record screens its Records area mounts (read only, each as its Insights
 // context), renders in the tui render mode as a document of the TUI model (v 1) with no error node, on the demo's records, as
 // john.doe (ADMIN, who holds every INSIGHTS_* permission) with artifact authorization on. TuiRender no longer sweeps Insights.
 // WallDisplay is left to its own specs (the regression InsightsWallDisplay and the acceptance InsightsWallDisplayUsable): it is
@@ -7,6 +8,7 @@
 // regression specs.
 // Run: ./moq accept mr-boss --spec InsightsTui
 const root = "component://mr-boss/screen/Insights.xml"
+const insightsLib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 let screens
 // the sweep's renders of the twins the second feature reads, so no screen is rendered twice in tui
 const twins = ["Flows/FlowMap", "Alerts/AlertDetail", "Settings"]
@@ -45,7 +47,7 @@ const parameters = {
 }
 
 // the paths under the Insights root of its own screen files (not WallDisplay, not Records itself, whose record screens are
-// the mounts above), then the record mounts
+// the mounts above), then the framework's report screens mounted by location and the record mounts
 function sweepScreens() {
     const files = []
     ec.resource.getLocationReference(root).walkChildTree(files, null)
@@ -53,7 +55,9 @@ function sweepScreens() {
         .filter(file => file.path !== "Insights" && file.location.endsWith(".xml"))
         .map(file => file.path.substring("Insights/".length))
         .filter(path => path !== "WallDisplay" && path !== "Records")
-    return paths.concat(Object.keys(parameters).filter(path => path.startsWith("Records/")))
+    return paths
+        .concat(insightsLib.mountedScreens().map(([path]) => path))
+        .concat(Object.keys(parameters).filter(path => path.startsWith("Records/")))
 }
 // the error nodes of a TUI document and the texts it shows, walking its nodes (TuiRender's walk)
 function walk(nodes, errors, texts) {

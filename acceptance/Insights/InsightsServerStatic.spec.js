@@ -1,11 +1,13 @@
 // Insights' server-static sweep (impl-insights P12; README "Significant redesigns" 3, mr-moqui plans/archive/QvtServerStatic.md;
-// AGENTS.md: one sweep per app per mode, in acceptance): ServerStaticLib's full check of each plain XML Insights screen on the
+// AGENTS.md: one sweep per app per mode, in acceptance): ServerStaticLib's full check of each plain XML Insights screen, its
+// own files and the framework's report screens it mounts by location (InsightsSpecLib.mountedScreens), on the
 // demo's records, as john.doe. A screen marked server-static="qvt" must come back clean; the others and why are logged. No
 // Insights screen is marked yet (its pages load their panels on the client). WallDisplay is left to its own specs (the regression
 // InsightsWallDisplay and the acceptance InsightsWallDisplayUsable): it is a device's bare page, not a shell screen. The record
 // mounts are the shared screens' (screen/Shared), checked with them.
 // Run: ./moq accept mr-boss --spec InsightsServerStatic
 const lib = ec.resource.script("component://mr-boss/test/ServerStaticLib.js")
+const insightsLib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 let screens
 
 // the id parameters of the screens that open on one demo record (InsightsTui's)
@@ -31,7 +33,18 @@ const parameters = {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = lib.screens(["Insights"]).filter(([, path]) => path !== "WallDisplay" && path !== "Records")
+        screens = lib
+            .screens(["Insights"])
+            .filter(([, path]) => path !== "WallDisplay" && path !== "Records")
+            .concat(
+                insightsLib
+                    .mountedScreens()
+                    .map(([path, location]) => [
+                        "Insights",
+                        path,
+                        /server-static="[^"]*\bqvt\b/.test(String(ec.resource.getLocationReference(location).getText()))
+                    ])
+            )
     }
 })
 
