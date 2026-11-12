@@ -93,6 +93,27 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" fromDate="0"/>
+    <!-- every Maintenance group reports a problem (the user's call, Nov 12, impl-maintenance P4 review): MAINTENANCE_REQUEST, and
+        Commons' Report a problem below (BOSS_MNT_REPORT_PROBLEM), and MAINTENANCE_REQUEST_VIEW_OWN, so a reporter follows their own
+        report in Commons' Maintenance box -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
@@ -179,6 +200,26 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_COST" appName="Maintenance" description="Maintenance cost reader" scopeDependency="organization" sequenceNum="1410"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <!-- every group's bundle carries MAINTENANCE_REQUEST and _VIEW_OWN (the user's call, Nov 12, P4 review); Report a problem's screen is in each
+        bundle at the end, after its artifact group -->
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
         administrator's settings of each organization; its readiness provider (check#MaintenanceReadiness) is set in P18. -->
     <moqui.server.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"
@@ -197,4 +238,87 @@ along with this software (see the LICENSE.md file). If not, see
             resourceKind="assignment" lookupService="ironstone.maintenance.LifecycleServices.find#Assignments"
             transferService="ironstone.maintenance.LifecycleServices.transfer#Assignments" resourceParameter="assignmentKind"
             requiredPermission="ADMIN_IDENTITY_VIEW" sequenceNum="60"/>
+    <!-- Maintenance P4 (impl-maintenance P4, F78; design-maintenance §3 Requests): Report a problem, Commons' quick create of a
+        maintenance problem (Commons/ReportProblem), for every Maintenance group (the requesters, the administrator and, by the user's
+        call of Nov 12, every capability group): denied to BOSS_USERS, so the + menu offers it to no one else (as Manufacturing's ReportDowntime); Mantle's report#MaintenanceProblem checks
+        MAINTENANCE_REQUEST again. The requester follows their reports in Commons' RequestDetail (its Maintenance summary). The
+        maintenance planners' triage notice opens Maintenance's RequestDetail (the RequestTriage topic's link above). -->
+    <artifactGroups artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Maintenance: report a problem (Commons)">
+        <artifacts artifactName="component://mr-boss/screen/Commons/ReportProblem.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_DENY" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_REQUEST" userGroupId="BOSS_MAINTENANCE_REQUEST"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_ADMIN" userGroupId="BOSS_MAINTENANCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_READ" userGroupId="BOSS_MAINTENANCE_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_EXECUTE" userGroupId="BOSS_MAINTENANCE_EXECUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_PROCEDURE" userGroupId="BOSS_MAINTENANCE_PROCEDURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_PROCEDURE_APPROVE" userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_BOOKING_APPROVE" userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_RESOURCE_ADMIN" userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_COST" userGroupId="BOSS_MAINTENANCE_COST"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the Requests area (design §3 Requests; impl-maintenance P4 review), the planners' and supervisors', who triage: denied to the
+        root user group, as Manufacturing's areas are, and always for the planner and supervisor groups; BOSS_MAINTENANCE_ADMIN and
+        ADMIN open it through their ALWAYS on the root. Mantle's find#MaintenanceRequests and triage#MaintenanceRequest check
+        MAINTENANCE_PLAN or MAINTENANCE_SUPERVISE again; a requester follows their own reports in Commons. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Requests.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Report a problem in every Maintenance bundle (the user's call, Nov 12, P4 review), so a group given a bundle in Admin has it -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_READ" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_REQUEST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_EXECUTE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PROCEDURE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_ADMIN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_ACTIVE_ORG,MANTLE_PRIVATE_CONTACT"/>
 </entity-facade-xml>

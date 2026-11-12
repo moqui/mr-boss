@@ -521,7 +521,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="CommitStatusFailed" linkTemplate="/qapps/Projects/Code/CommitDetail?repositoryId=${repositoryId}&amp;commitId=${commitId}"/>
     <!-- and of the request topics (mantle.request.RequestServices notify#RequestTriage, complete#RequestFromWork): the request
         (impl-projects.md P5) -->
-    <moqui.security.user.NotificationTopic topic="RequestTriage" linkTemplate="/qapps/Projects/Requests/RequestDetail?requestId=${requestId}"/>
+    <moqui.security.user.NotificationTopic topic="RequestTriage" linkTemplate="/qapps/${typeLabel == 'Maintenance' ? 'Maintenance' : 'Projects'}/Requests/RequestDetail?requestId=${requestId}"/>
     <!-- a support case's work done goes to its CaseDetail (the message's isCase, impl-customer-service P2) -->
     <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/${isCase ? 'CustomerService/Cases/CaseDetail' : 'Projects/Requests/RequestDetail'}?requestId=${requestId}"/>
     <!-- and of the timesheet topics (mantle.work.TimesheetServices, impl-projects.md P6a): the approval opens the week's TimesheetDetail, the

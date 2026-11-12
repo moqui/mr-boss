@@ -1379,6 +1379,240 @@ Design §3 Requests and the RequestDetail mount row, §1.2 (quick create, `creat
   person's report of the same fault is linked to the same order at triage; an operator's equipment-fault stop in
   Manufacturing appears in Requests and is adopted into one work order; the requester never sees the order's time.
 
+**Built Nov 12 (P4).** mr-mantle c5d4fd0d, mr-boss 8cbed205 (branch `mnt/p4`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F25 (RequestDetail's app branches, Manufacturing's context, Commons' comment and task rules:
+  `comment#Request` admits whoever sees the request, and an organization's OrgInternal party makes it visible to its members), F27
+  (`complete#RequestFromWork` moves nothing for a root with no project; kept, with a spec), F39 (`create#RequestFromEmail`,
+  `findOrCreate#EmailSender`, `file#RequestEmail`, `find#EmailRequest` reused as they are), F78 (`MaintenanceAccess.scope()` gives a
+  requester no organization; `ironstone.maintenance` is the root group's only), F104/F109 (Commons answers not found for a work
+  order), `request#ProductionMaintenance` and `ProductionDowntime.js requestMaintenance` (the request's OrgInternal party and its
+  links to the stop, the equipment, the AssetMaintenance and the work), `notify#RequestTriage`, `link#RequestRecord`, Manufacturing's
+  ReportDowntime grant pattern, the shell's quick create (gathered from the roots a user opens, shown by the screen's grant),
+  `scan-input`, the Comms `create-from` hook and `ext-action`s, and P3's `adopt#MaintenanceRecord`.
+- Mantle:
+  - No record of its own: a maintenance request is a Request of type RqtMaintenance (Manufacturing's), its organization an
+    OrgInternal RequestParty (as Manufacturing's are), its reporter the filer and Reporter, its one target a RequestRecord, its team
+    an OrgTeam RequestParty (mail), its work order a RequestWorkEffort. The view `MaintenanceRequestDetail` (entity
+    `MaintenanceIntakeEntities.xml`: the request with its OrgInternal party) scopes the list in the query. Seed
+    (`MaintenanceIntakeData.xml`): `ErActCreateMaintenanceRequest` beside the two rule actions (F39) and the PartySettingType
+    `MntIntakePlusTag`, a team's intake plus tag.
+  - `MaintenanceServices` over `MaintenanceIntake.js` (new module, appended to the services file): `report#MaintenanceProblem`
+    (MAINTENANCE_REQUEST; one target of the reporter's own organizations, `ONE_TARGET`, `TARGET_REQUIRED`, `RECORD_UNAVAILABLE`; the
+    reporter the user; the observed time written into the description; a photo as RequestContent; an operation key through
+    PostingOperation), `find#MaintenanceReportTargets` and `resolve#MaintenanceReportScan` (Commons' drop-down and asset tag scan),
+    `find#MaintenanceRequests` (a planner's or supervisor's organizations, or with MAINTENANCE_REQUEST_VIEW_OWN alone the requests
+    the user filed: state with the rejection's reason, target, the work order's name and status, the reporter's name for a planner
+    only), `triage#MaintenanceRequest` (create: corrective, source Reported problem, the request's target or one given and
+    recorded, adopting the request's open AssetMaintenance when Manufacturing made one; link: an open work order of the same
+    organization; reject: a request resolution and a comment, cancelled; assign: the request's Assignee; once: create again answers
+    the work order, another decision `REQUEST_TRIAGED`, a closed request `REQUEST_CLOSED`), `find#UnmanagedMaintenance` (the
+    adoption queue: open AssetMaintenance with no work of the organizations, not a warranty repair, each with its request) and
+    `create#MaintenanceRequestFromEmail` (the team by the rule's value or a `+tag` address, only for a rule owner who works for its
+    organization; the sender the reporter; the message and its files on the request; a target only when the subject names one
+    equipment id of the organization; a reply joins its request; no team, an ordinary request).
+  - `MaintenanceAccess.requesterOrganizations` (F78): a request holder's own organizations, which a Maintenance read does not need.
+  - Owner contracts: `link#RequestRecord` refuses a second Asset or Facility on an RqtMaintenance request (`ONE_TARGET`);
+    `request#ProductionMaintenance` adopts its AssetMaintenance under the policy's `productionRequestsManaged` (MaintenanceWork.js
+    `adoptForOwner`: a planner's scope of that organization alone, after Manufacturing's own checks; a failure is logged, not the
+    stop's) and links its request; `notify#RequestTriage` sends an RqtMaintenance request to the organization's MAINTENANCE_PLAN
+    holders, titled "Problem reported on" its target, and never to Projects' triage.
+- BOSS:
+  - Services: `ironstone.maintenance.RequestServices` find#RequestRows and get#RequestContext (Requests.js); Maintenance.js's
+    `request` record kind (a planner's or supervisor's of its organization), the choices `openWorkOrders` and `rejectReasons`, the
+    links Requests/Find and Requests/RequestDetail.
+  - Screens: the root (Requests for a planner or supervisor, `g r`, the request panel host); Requests (Find with the adoption
+    queue's Make a work order; RequestDetail, the shared screen) and `template/MaintenanceRequestParts.xml` (triageRequest; the
+    Maintenance box with Create work order, Add to a work order, Assign and Reject; the reporter's summary).
+  - Owner contracts with Commons: `Commons/ReportProblem`, quick create `maintenanceReportProblem` in Commons' providers, behind
+    `BOSS_MNT_REPORT_PROBLEM` (denied to BOSS_USERS, always for the requesters and the Maintenance administrator), calling Mantle
+    only; Commons' RequestDetail shows a maintenance request's reporter its Maintenance box and lists a work order among its tasks
+    only for a user `workHidden` admits; the `RequestTriage` link opens Maintenance's RequestDetail for a maintenance request.
+    Written into design-drawers-commons; Manufacturing's in design-manufacturing and impl-manufacturing's log.
+  - Demo (BossZMaintenanceDemoData.xml): maint.requester's air handler report triaged into its work order with maint.reader's report
+    of the same fault, the compressor's oil leak untriaged, and the team's plus tag `facilities`.
+- Specs:
+  - Mantle `test/work/MaintenanceIntake` (7 features, 1.6 s): a requester reports with one target and reads only their own, a
+    safe summary; two targets refused in the report and in link#RequestRecord; triage creates one order, twice links one, a second
+    report joins it, another organization and a requester refused; a rejected report keeps its reason; a mail to the team's plus tag
+    makes one request with the sender as reporter and no target, a named equipment id its target; `request#ProductionMaintenance`
+    twice makes one root under the policy, its request linked and out of the queue; the triage notice to the planners only, and a
+    work order's completion moving no request (F27).
+  - BOSS `test/Maintenance/MaintenanceRequests` (4 features, 0.6 s): Requests/Find's one qvt render (the planner's requests, work
+    orders and reporters; Retail's none); RequestDetail's one qvt render under Maintenance (the Maintenance box and triage dialogs;
+    Retail refused); Commons' RequestDetail rendered once for the reporter (the summary; no time, technician or other report); Report
+    a problem in the requester's + menu and not the planner's, its one qvt render and a report through its transition.
+    `MaintenanceAccess` gains the request rule (planner reads, technician and Retail refused, the request panel, Report a problem the
+    requester's and not the planner's; +0.4 s) and the P4 menu and key (MaintenanceSpecLib).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceIntakeWalk` (4 features).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceIntake 7 of 7; with ProductionDowntime, RecordLinks,
+  WorkProjectRequests, SupportChannels, SupportRelations, MaintenanceWorkOrders, MaintenanceManagedWork and MaintenanceScope 75 of 75
+  (14.2 s); after Prettier MaintenanceIntake, ProductionDowntime and MaintenanceWorkOrders 21 of 21. mr-boss Requests, QuickCreate,
+  Notifications, ProjectRequests, PurchasingRequests, ManufacturingDowntime, CustomerServiceChannels, CustomerServiceWarranty,
+  MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceRequests, ProjectsAccess and TodayPanel 103 of 103 (16.1 s);
+  MaintenanceRequests and MaintenanceAccess 14 of 15: MaintenanceAccess's "Admin's registries" fails with or without P4 (it fails
+  with master's BossSetupData too; see For the lead). Client MaintenanceWorkOrdersWalk 1 of 1 (8.12 s). `./moq run --debug --nobuild
+  lint --screens`: 136 flagged sites, as before P4, none in the new or changed screens; the symlinked binaries unchanged. Prettier
+  clean on the new and changed JavaScript (MaintenanceWork.js only in P4's lines). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's create#Request and link#RequestRecord rows and an Added table for P4's MaintenanceServices; ss-inventory's
+  EditRequest and FindRequest forms that name Maintenance/Requests.
+- Design edits: design-maintenance's header, §1.1, §1.2, §3 Requests and the RequestDetail mount row, §13.2's production handoff,
+  §13.3's RequestTriageNotice and complete#RequestFromWork rows; design-drawers-commons' and design-manufacturing's header lines.
+- Findings (provisional, for the lead to number):
+  - Report a problem is Commons' screen (`Commons/ReportProblem`), not under Maintenance: a quick create needs a root the requester
+    opens, and a requester opens Commons only; Requests links to it.
+  - The `create-from` provider of design §1.4 (a chat message, a voicemail or a mail prefilling Report a problem) is not built: the
+    Comms hook creates a record and answers its url, and the prefill path is a Comms `ext-action` with a `screen` target, which would
+    read the message's text under the Comms read check; left as a seam (ReportProblem takes summary and description values).
+  - The asset tag's QR (P2) holds EquipmentDetail's link under Maintenance, which a requester cannot open; a requester scans the tag
+    into Report a problem's scan input instead. A tag link to Report a problem would need a print change in AssetTags.
+  - A maintenance request is visible in Commons to its organization's members by its id (the OrgInternal party, as Manufacturing's
+    requests already are), though Commons lists only one's own; Requests is the planners'.
+  - The request has no observed-time field; report#MaintenanceProblem writes "Observed <time>" into the description.
+  - Design §13.3's "completion notifies the responsible requester" is not built: a work order's completion moves no request and
+    tells no one; the reporter sees the work order's status in Commons.
+  - Triage's operation key and report's use PostingOperation (EntityLib.operation, 40 characters, the user's); the create of a
+    production handoff is retried by Manufacturing's own key.
+  - The Requests screen opens for any Maintenance user (its menu item is a planner's or supervisor's, as Work orders' is a work
+    reader's); Mantle lists nothing to another user.
+- For the lead:
+  - budget share: mr-mantle MaintenanceIntake 1.6 s; mr-boss server MaintenanceRequests 0.6 s and MaintenanceAccess +0.4 s; client
+    unchanged; budgets not changed.
+  - merge hot spots: mr-mantle `MaintenanceServices.xml` (appended), `MaintenanceWork.js` (adoptRecord split into `adoptWith`,
+    `adoptForOwner` before `operations`, the export), `MaintenanceAccess.js` (requesterOrganizations), `RequestServices.xml`
+    (link#RequestRecord, notify#RequestTriage), `ProductionServices.xml` (request#ProductionMaintenance); mr-boss
+    `screen/Maintenance.xml` (Requests item, `g r`, the panel host), `Maintenance.js` (request kind, choices, links),
+    `data/BossSetupData.xml` (the RequestTriage link at :524 and the appended BOSS_MNT_REPORT_PROBLEM group),
+    `BossZMaintenanceDemoData.xml` (appended), `screen/Shared/RequestDetail.xml`, `screen/Commons.xml`, Commons'
+    `RequestServices.xml`, `test/Maintenance/MaintenanceSpecLib.js` (ids, menus, keys), `MaintenanceAccess.spec.js`, the
+    inventories and design-maintenance.
+  - Pre-existing, not P4's: MaintenanceAccess's "Admin's registries" feature fails on this branch with master's BossSetupData as well
+    ("the administrator has no maintenance.settings": it asks `ironstone.admin.RegistryServices.find#Settings`, which Admin Screens
+    Down replaced by the framework's `moqui.server.SettingsEntry`, F116); the acceptance MaintenanceFoundationWalk expects
+    `staffMenu` for every Maintenance group, which now has Requests that only planners and supervisors see (not run, not changed).
+  - the user's calls: none needed; the create-from seam above is for the lead to schedule (P19's Comms work, or here).
+
+**Review Nov 12 (P4).** mr-mantle b60c08db, mr-boss caf6cc77 and this note's commit (branch `mnt/p4`), over the worker's c5d4fd0d,
+8cbed205 and 360e0432. Reviewed `git diff master...mnt/p4` in both repos against P4's text, §2, §4, F25, F27, F39, F69, F78, F104,
+F109, design §1.1, §1.2, §3 Requests and the RequestDetail mount row, §13.2–13.3, AGENTS.md and Practices-App-Dev; read the paths a
+request is reached by outside Maintenance (Commons' `get#RequestAccess`, `get#RequestDetail`, `link#`/`unlink#RequestRecord`,
+Mantle's `get#RecordLinkInfo` request rule, `search#Universal`'s MantleRequest filter, Chatter and RecordFiles), the mail path
+(`findOrCreate#EmailSender`, `find#EmailRequest`, `create#RequestFromEmail`), Manufacturing's request context (Downtime.js) and the
+Comms `create-from` hook (Chat's `createFrom`, `ChatServices.create#FromChat`). mr-moqui unchanged, no Rust built.
+- Checked and found sound:
+  - The requester's own reads: `find#MaintenanceRequests` with MAINTENANCE_REQUEST_VIEW_OWN alone lists the requests the user filed
+    (the condition in the query), each a safe row (state with the rejection's reason, target, the work order's name and status, no
+    reporter name, no cost or time); Commons' RequestDetail lists a maintenance work order among the tasks only for one `workHidden`
+    admits, so the reporter sees neither the order's time nor its technician; Commons' own Requests list is the user's slice
+    (raised, assigned, watching), never the organization's; the palette and search reach a request through `search#Universal` (now
+    with R1's rule); the triage notice goes to planners only.
+  - The one-target rule: `report#MaintenanceProblem` refuses both (`ONE_TARGET`) and none (`TARGET_REQUIRED`) before any write, and
+    a target outside the reporter's organizations as a missing one; `link#RequestRecord` (Mantle's, and Commons' which calls it)
+    refuses a second Asset or Facility on an RqtMaintenance request after its visibility check, relinking the same one is a no-op;
+    triage's create refuses a target other than the recorded one and records one for a request that has none.
+  - Triage: the operation key answers a retry with the first answer; without one, create on a linked request answers its order
+    (`repeated`), link to the same order is a no-op, another decision `REQUEST_TRIAGED`, a closed request `REQUEST_CLOSED`; a second
+    report links to the same open order of the same organization (`WORK_CLOSED`, `ORGANIZATION_MISMATCH` otherwise); a request with
+    Manufacturing's open AssetMaintenance adopts it (one root, `adopt#MaintenanceRecord`'s own once rule); the requester and another
+    organization's planner are refused.
+  - Mail intake: the sender becomes the filer and Reporter (`findOrCreate#EmailSender`: an existing party with the address, else a
+    new Customer person), the team only by the rule's value or a plus tag of a team whose organization the rule's owner works for, the
+    target only when the subject names exactly one equipment id of that organization, else none (left for triage); a reply joins its
+    thread's request as Projects' intake does. A spoofed sender gains nothing: no confirmation is sent, nothing is readable by the
+    sender address, and a spoofed internal address only files the request as that person (as `create#RequestFromEmail` already
+    does); a spoofed To/Cc plus tag selects among the rule owner's organizations' teams only.
+  - `request#ProductionMaintenance`: with no policy row, or `productionRequestsManaged` N, `productionHandoff` returns the result
+    untouched (ProductionDowntime passes unchanged); with it on, a retry under the operation key answers the first result with its
+    `workEffortId` (Manufacturing's `posting.previous`), and `adopt#MaintenanceRecord`'s once rule holds without one.
+  - `notify#RequestTriage`: an RqtMaintenance request goes to the users holding MAINTENANCE_PLAN through a current group membership
+    who are employees or agents of its organization, never the changer, titled by its target only, and never to Projects' triage;
+    its link opens Maintenance's RequestDetail.
+  - Report a problem (`BOSS_MNT_REPORT_PROBLEM`): denied to BOSS_USERS, ALWAYS for BOSS_MAINTENANCE_REQUEST and
+    BOSS_MAINTENANCE_ADMIN, and ADMIN through its ALWAYS on Commons' root; Mantle checks MAINTENANCE_REQUEST again, so a Commons
+    administrator who sees the + item is refused at the service. A planner, technician or supervisor holds no MAINTENANCE_REQUEST
+    (design §1.1's table), so they do not have it (a finding below).
+- Fixes:
+  - **R1 (high, confidentiality; design §3 "States", §1.1).** A maintenance report was visible by its id to every member of its
+    organization: `get#RecordLinkInfo` admits a request whose RequestParty is one of the user's organizations (the OrgInternal row) or
+    whose facility they own, and `search#Universal` matches MantleRequest by `parties.partyId` and the facility owner. So a colleague
+    (another requester, a technician, any BOSS user of the organization) opened a requester's report in Commons' RequestDetail with
+    its description, reporter, photo and comments, and found it in search. Mantle's `MaintenanceAccess.requestHidden` now decides a
+    reported problem (an RqtMaintenance request with no AssetMaintenance of Manufacturing's linked): its filer, a party of it in
+    person (Reporter, Assignee, Watcher), a maintenance planner, supervisor or reader of its organization, or one Maintenance admits to
+    its work order (`workHidden`); `get#RecordLinkInfo` (ahead of the staff rule, as F69's) and `search#Universal` apply it. Manufacturing's
+    production request keeps its owner's rule (its plant's users reach it as before). MaintenanceIntake: a colleague requester and an
+    operator of the organization are hidden from the report, its reporter, a reader and the planner are not, another organization's
+    planner is, and the production request stays the operator's; MaintenanceAccess: the requester and planner see the demo's untriaged
+    report through Commons' files panel, the technician of its organization does not (fails without the change).
+  - **R2 (medium, access; the lead's item).** Requests opened for any Maintenance user; only its menu item was the planner's and
+    supervisor's. It is now its own artifact group `BOSS_MNT_REQUESTS` (denied to BOSS_MAINTENANCE, ALWAYS for BOSS_MAINTENANCE_PLAN
+    and _SUPERVISE, as Manufacturing's areas), so RequestDetail under Maintenance is the planners' too; Mantle answered nothing to
+    another user already. MaintenanceAccess: the technician and the reader are refused the screen (the planner's render is
+    MaintenanceRequests').
+  - **R3 (low, tests; the lead's item).** MaintenanceAccess's "Admin's registries" asked the removed
+    `ironstone.admin.RegistryServices.find#Settings`; it asks `org.moqui.admin.ReadinessServices.find#Settings` and passes (P5 has
+    the same one-line change).
+  - **R4 (low, tests; the lead's item).** The acceptance MaintenanceFoundationWalk expected `staffMenu` for every group; it now expects
+    each group's own menu (Requests for the planner, supervisor and Retail's planner; Home alone for the procedure author, approver
+    and booking approver; Equipment and Facilities for the resource administrator). Not run.
+  - Design: design-maintenance §3's as-built (R1, R2); design-drawers-commons' P4 line (R1).
+- Findings (provisional, for the lead to number):
+  - The `create-from` seam stays unbuilt: design §1.4 says a chat message or voicemail *prefills* Report a problem, while the hook
+    (`create#From`) makes a record and answers its link; a prefill needs a Comms `ext-action` with a screen target that reads the
+    message under Chat's room check (and the voicemail slot), and making the request directly needs an organization and a target the
+    message does not carry. Not small: schedule it with P19's Comms work (see the call below).
+  - A reporter can take their report off its work order or its target through Commons' `unlink#RequestRecord` (Mantle's unlink checks
+    no visibility of the record; the reporter is the request's party): the request then looks untriaged. Nothing leaks; triage's
+    traceability does. A guard (a managed work order or the target of an RqtMaintenance request unlinked only by its triager) would
+    sit in Mantle's unlink.
+  - The capability bundles carry no area grants: a custom group given the planner bundle in Admin opens Requests (it is not in
+    BOSS_MAINTENANCE), but one given the requester bundle has no Report a problem; Manufacturing's areas are the same.
+  - `productionHandoff` catches the adoption's failure and logs it, relying on its refusals coming before any write; a failure after
+    a write (in `makeOrder`) would leave that write in the stop's transaction, and whether the framework marks it rollback-only on a
+    nested service error was not checked. No spec makes the adoption fail.
+  - The triage notice reaches ADMIN members who work for the organization (ADMIN holds MAINTENANCE_PLAN), and it is sent for a
+    production request the policy adopts at once (not checked whether the notice reads the request before or after the handoff).
+  - `find#MaintenanceRequests`' "untriaged" drops linked rows after paging, so its count can exceed the page; harmless while triage
+    moves a linked request to Reviewed.
+  - BossSetupMaintenanceData.xml (F118) is master's since this branch: P4's two artifact groups (`BOSS_MNT_REPORT_PROBLEM`,
+    `BOSS_MNT_REQUESTS`) are together at the end of BossSetupData.xml and move there at the merge.
+  - MaintenanceFoundationWalk's "the others are refused" holds for Requests and Settings by their artifact groups; for a Home-only
+    user's Work orders or Equipment it relies on the screens' services refusing (not run).
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceIntake 8 of 8 (about 2.1 s feature time, +0.3 s), with
+  ProductionDowntime, RecordLinks, MaintenanceManagedWork, MaintenanceScope, WorkProjectRequests and UniversalSearch 61 of 61 (14.6 s);
+  mr-boss MaintenanceRequests, MaintenanceAccess, ManufacturingDowntime, MaintenanceWorkOrders, MaintenanceEquipment, Requests,
+  ProjectRequests, Notifications and QuickCreate 87 of 87 (21.1 s; MaintenanceAccess 11 of 11, the registries feature passing).
+  R1's MaintenanceAccess case failed with the `get#RecordLinkInfo` call removed. `./moq run --debug --nobuild lint --screens`: 136
+  flagged sites, as before, none in P4's screens; the symlinked binaries unchanged. Prettier clean on the changed JavaScript. Not
+  run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle +0.3 s (MaintenanceIntake), mr-boss server +0.2 s (MaintenanceAccess); client unchanged.
+  - Merge hot spots, beyond the Built note's: mr-mantle `CommunicationServices.xml` (the request rule beside F69's work rule),
+    `UniversalSearchServices.xml` (beside the work filter), `MaintenanceAccess.js` (requestHidden at the end); mr-boss
+    `data/BossSetupData.xml`'s end (the two P4 groups, to move into BossSetupMaintenanceData.xml, F118),
+    `MaintenanceAccess.spec.js` (P5 changes the registries line too), the acceptance MaintenanceFoundationWalk.
+  - The user's calls, decided Nov 12 (the lead's message):
+    - `create-from`: a Comms screen-target action prefills Report a problem; P19 builds it. Nothing built here.
+    - The assignee: the reporter sees the assignee's name, as built; design §3 says so.
+    - Report a problem: every Maintenance group (reader, planner, technician, supervisor, procedure author and approver, booking
+      approver, resource administrator, cost reader) holds MAINTENANCE_REQUEST and `BOSS_MNT_REPORT_PROBLEM` (an ALWAYS each), and
+      every Maintenance bundle carries the permission and the screen (CapabilityBundleArtifact), the requester's and the
+      administrator's too, so a group given a bundle in Admin has it (closing the finding above for this screen).
+      MAINTENANCE_REQUEST_VIEW_OWN stays the requester's: another group's reporter opens their report in Commons as its filer but
+      sees the Maintenance box only as a planner or supervisor (extended below). MaintenanceAccess: each group's
+      capabilities include `request`, every group's user has Report a problem in the + menu, another app's user has neither the
+      item nor the screen; MaintenanceRequests no longer expects the planner without it. Design §3.
+    - Then (the lead, Nov 12): MAINTENANCE_REQUEST_VIEW_OWN to every group with MAINTENANCE_REQUEST and in their bundles, so a reporter follows their own report; MaintenanceAccess: the technician reports and finds their own report, not the requester's (MaintenanceAccess and MaintenanceRequests 16 of 16).
+- Merged master into `mnt/p4` (Nov 12, both repos; P5 and F118 among it). mr-mantle merged cleanly. mr-boss: P4's two artifact groups
+  (`BOSS_MNT_REPORT_PROBLEM`, `BOSS_MNT_REQUESTS`) moved from the end of BossSetupData.xml into BossSetupMaintenanceData.xml (the
+  bundle artifacts after them, so the group exists first); `Maintenance.js` linkPaths, MaintenanceSpecLib's ids, the demo data,
+  design-maintenance's header and §1.2, impl-manufacturing's log and usl-inventory kept both phases' lines; MaintenanceAccess's
+  registries line was the same fix on both sides.
+- Tests after the merge and the calls (the main checkout's release binary of Nov 12 03:11, `--nobuild`): mr-mantle MaintenanceIntake,
+  ProductionDowntime, RecordLinks, UniversalSearch, MaintenanceOutages, MaintenanceWorkOrders, MaintenanceManagedWork and
+  MaintenanceScope 60 of 60 (10.6 s); mr-boss MaintenanceRequests, MaintenanceAccess, MaintenanceDowntime, MaintenanceWorkOrders,
+  MaintenanceEquipment, ManufacturingDowntime and Requests 43 of 43 (10.0 s). Prettier clean on the changed specs. Not run:
+  ./moq test-apps, the acceptance suite.
+
 ### P5 — Downtime and restoration
 
 Design §6 Downtime, §3 WorkDowntime and the completion disposition, §7.1's unavailability paragraphs; MT-07 (the

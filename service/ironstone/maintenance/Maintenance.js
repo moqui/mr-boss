@@ -138,6 +138,9 @@ const linkPaths = [
     "WorkOrders/NewWorkOrder",
     "WorkOrders/WorkOrderDetail",
     "Settings/WorkPolicy",
+    // P4: Requests and the request record (design §3 Requests)
+    "Requests/Find",
+    "Requests/RequestDetail",
     // P5: Downtime, under Equipment (design §6)
     "Equipment/Downtime"
 ]
@@ -209,6 +212,32 @@ const recordKinds = {
                 label: root.workEffortName || root.workEffortId,
                 detail: organizationName(found.organizationPartyId),
                 rootWorkEffortId: root.workEffortId
+            }
+        }
+    },
+    // P4: a maintenance request (RqtMaintenance) of the scope's organizations, for a planner or supervisor (who triage them); a
+    // requester follows their own in Commons (impl-maintenance F78)
+    request: {
+        name: "Request",
+        icon: "sym_o_report_problem",
+        destination: "Requests/RequestDetail",
+        parameter: "requestId",
+        read: (userScope, requestId) => {
+            const capabilities = userScope.mantle.capabilities
+            if (!capabilities.plan && !capabilities.supervise) return null
+            const request = one("mantle.request.Request", {requestId})
+            if (request?.requestTypeEnumId !== "RqtMaintenance") return null
+            const organization = Array.from(
+                find("mantle.request.RequestParty", {requestId, roleTypeId: "OrgInternal"})
+                    .conditionDate("fromDate", "thruDate", null)
+                    .limit(1)
+                    .list()
+            )[0]
+            if (!organization || !covers(userScope, organization.partyId)) return null
+            return {
+                organizationPartyId: organization.partyId,
+                label: request.requestName || requestId,
+                detail: organizationName(organization.partyId)
             }
         }
     },
@@ -394,7 +423,9 @@ const workChoices = [
     "closurePolicies",
     "teams",
     "workPeople",
-    "workFacilities"
+    "workFacilities",
+    "openWorkOrders",
+    "rejectReasons"
 ]
 // The teams of the scope's organizations (one organization's with organizationPartyId): an OrgTeam an organization owns.
 function teamOptions(userScope, term, selected, p) {
@@ -653,6 +684,35 @@ const choiceSources = {
             facilityName
         )
     },
+    // P4: an open work order a request may join (one organization's with organizationPartyId), through Mantle's scoped list
+    openWorkOrders: (userScope, term, selected, p) => {
+        const found = lib.probe("mantle.work.MaintenanceServices.find#MaintenanceWorkOrders", {
+            text: term || null,
+            organizationPartyId: p?.organizationPartyId || null,
+            pageSize: choiceLimit
+        })
+        const options = Array.from(found.workOrderList || []).map(row => ({
+            value: row.workEffortId,
+            label: row.workEffortName + " (" + [row.workEffortId, row.targetName].filter(Boolean).join(", ") + ")"
+        }))
+        return withSelected(
+            options,
+            selected,
+            workEffortId => {
+                try {
+                    return !!recordOf(userScope, "workOrder", workEffortId)
+                } catch (error) {
+                    return false
+                }
+            },
+            workEffortId => one("mantle.work.effort.WorkEffort", {workEffortId})?.workEffortName || workEffortId
+        )
+    },
+    // the reasons a request is rejected (the request resolutions triage#MaintenanceRequest takes)
+    rejectReasons: (userScope, term, selected) =>
+        enumOptions("RequestResolution", term, selected, row =>
+            ["RrRejected", "RrDuplicate", "RrWontFix", "RrInsufficient", "RrCantReproduce"].includes(row.enumId)
+        ),
     // the facilities of the scope as a parent: every facility of the scope (a room inside a building), never the facility itself
     // (facilityId)
     parentFacilities: (userScope, term, selected, p) => {
