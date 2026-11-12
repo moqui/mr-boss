@@ -30,14 +30,10 @@ function invoke(name, parameters = {}) {
         return {error: String(e.message || e)}
     }
 }
-// Imports' list as its screen reads it: the screens' grant covers the services below it, each of which checks the user's own
-// permission and scope (the spec calls the screen's service with authorization off for the same reach)
-const listAs = (username, parameters = {}) =>
-    asUser(
-        username,
-        () => invoke("ironstone.shared.DataImportServices.find#ImportRuns", Object.assign({appRoot: "Admin"}, parameters)),
-        false
-    )
+// Imports' list as its screen reads it (the framework's find#ImportRuns; mr-moqui plans/Admin-Screens-Down.md A5): the
+// screens' grant covers the services below it, each of which checks the user's own permission and scope (the spec calls the
+// screen's service with authorization off for the same reach)
+const listAs = (username, parameters = {}) => asUser(username, () => invoke(T + "find#ImportRuns", parameters), false)
 const batches = (targetId, userId) => rows("moqui.server.TransferBatch", {targetId, userId})
 // a user of both the data operator's and the identity operator's groups, and one who is also a catalog editor
 const importer = {userId: "SPEC_ADM_IMPORTER", username: "spec.adm.importer"}
@@ -419,8 +415,11 @@ feature("Imports lists every target's runs with the owner's place and no row, as
         statement.detail == false
         statement.appliedCount == 3
         statement.errorCount == 1
-        statement.ownerUrl.startsWith("/qapps/Accounting/Banking/StatementImport?")
-        statement.ownerUrl.includes("statementImportId=SPEC_ADM_STATEMENT_" + run)
+        // its owner's place: the registration's key and the owner's parameters, linked by Admin's mount routes
+        statement.ownerRoute == "accountingStatementImport"
+        statement.ownerParameters.statementImportId == "SPEC_ADM_STATEMENT_" + run
+        out.system.output.includes("/qapps/Accounting/Banking/StatementImport?")
+        out.system.output.includes("statementImportId=SPEC_ADM_STATEMENT_" + run)
         out.system.output.includes("spec-admin-statement.csv")
         out.system.output.includes("Open in Accounting")
         !JSON.stringify(out.systemList).includes("SPEC PRIVATE BANK LINE")
@@ -440,7 +439,10 @@ feature("Imports lists every target's runs with the owner's place and no row, as
         targets.commonsContacts.runsKept == false
         targets.projectsWorkItems.runsKept == false
         targets.statementImports.wizardHere == false
-        targets.commonsContacts.ownerUrl == "/qapps/Commons/Contacts/Import"
+        targets.commonsContacts.ownerRoute == "commonsContactImport"
+        out.system.output.includes("/qapps/Commons/Contacts/Import")
+        // a target started here opens the shared wizard, by the mount's route
+        out.system.output.includes("Data/DataImport")
         out.system.output.includes("Keeps no runs yet")
         !JSON.stringify(out.systemList.targetList).includes("Services.")
         // the data operator: the same list, without what Accounting does not show them

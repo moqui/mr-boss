@@ -12,168 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Backups (design-admin §11 Backups, §15.3 "Backup scope"; style-guide §3.2 List; impl-admin P16): what of this instance's
-    data is backed up, the archives kept, and a backup asked for now, from the framework's org.moqui.admin.BackupServices.
-    BackupCoverage: the database and its provider, the state of the last backup as its run recorded it (a success only for
-    a run that wrote its archive without an error; skipped, failed, partly done, not ended, never and, for a database this
-    server does not run, unknown are each said as they are), the schedule or its pause, the last success, the archives
-    kept, the off-site mirror or none, and always the fixed warning of what an archive does not hold (the .env file, the
-    field-encryption key, resource files). BackupArchives: each archive's name, database, kind, tier, time and size:
-    metadata only, never a path, and no download (later, under the sealed ADMIN_BACKUP_DOWNLOAD). BackupNow: one run of the
-    instance's backup job with its stored parameters, for a holder of ADMIN_BACKUP_RUN, with a reason; nothing here names
-    where, what or how, and nobody marks a backup done: its outcome is what its run records. For the backup operator and the
-    administrator; the services check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN themselves. Restoring is not done here. -->
+<!-- Backups (design-admin §11 Backups, §15.3 "Backup scope"; impl-admin P16; mr-moqui plans/Admin-Screens-Down.md): the
+    framework's System › Data backups at this location, which BOSS_ADM_DATA_BACKUPS opens to the backup operator beside
+    the data operator and the administrator, with its one transition: runBackup, through
+    org.moqui.admin.BackupServices.run#Backup, which checks ADMIN_BACKUP_RUN, takes a reason and nothing that names
+    where, what or how, and starts one run of the instance's backup job with its stored parameters. Reading needs
+    ADMIN_BACKUP_VIEW, checked by the services: the data operator, who holds neither, opens the screen and is told it is
+    not available. Restoring is not done here, and there is no download. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Backups" menu-image="sym_o_backup" menu-image-type="icon">
     <parameter name="pageIndex"/>
 
-    <!-- A refusal a person can act on is the service's answer (applied false with its reason), shown as a message -->
-    <transition name="runBackup">
-        <actions>
-            <service-call name="org.moqui.admin.BackupServices.run#Backup" out-map="result"
-                    in-map="{reason:reason, operationKey:operationKey}"/>
-            <script><![CDATA[
-                if (!ec.message.hasError()) {
-                    if (result?.applied) ec.message.addMessage(result.stateText || 'A backup was started.')
-                    else ec.message.addMessage(result?.reason || 'No backup was started.', 'warning')
-                }
-            ]]></script>
-        </actions>
-        <default-response url="."/>
-        <error-response url="."/>
-    </transition>
+    <transition-include name="runBackup" location="component://tools/screen/System/Data/Backups.xml"/>
 
-    <actions>
-        <service-call name="org.moqui.admin.BackupServices.get#Coverage" out-map="found" transaction="force-new" ignore-error="true"/>
-        <!-- ignore-error clears a refusal's message: whether a backup may be asked for is answered in out-parameters -->
-        <set field="available" from="!!found?.coverage"/>
-        <if condition="available">
-            <service-call name="org.moqui.admin.BackupServices.find#Archives" out-map="listed" transaction="force-new" ignore-error="true"
-                    in-map="{pageIndex:(pageIndex || 0), pageSize:50}"/>
-        </if>
-        <script><![CDATA[
-            ec.message.clearErrors()
-            coverage = found?.coverage || {}
-            const colors = {success: 'positive', partial: 'deep-orange', failed: 'negative', skipped: 'deep-orange', unscheduled: 'deep-orange', notEnded: 'deep-orange', running: 'info'}
-            stateColor = colors[coverage.state] || 'grey-7'
-            const lastRun = coverage.lastRun
-            coverageValues = {
-                databaseText: (coverage.database?.text || '') + (coverage.provider ? ' · ' + coverage.provider : ''),
-                stateText: coverage.stateText || '',
-                runningText: coverage.runningText || '',
-                scheduleText: (coverage.schedule?.text || '') + (coverage.schedule?.nextRunText ? ' · next ' + coverage.schedule.nextRunText : ''),
-                lastRunText: lastRun ? [lastRun.stateText, lastRun.startedText ? 'started ' + lastRun.startedText : '', lastRun.startedBy ? 'by ' + lastRun.startedBy.toLowerCase() : ''].filter(Boolean).join(' · ') : 'No run yet',
-                lastSuccessText: coverage.lastSuccessText || (coverage.successesKept === false ? 'Not recorded: the job keeps only its failed runs' : 'None recorded'),
-                archivesText: coverage.archiveProblem ? coverage.archiveProblem
-                    : (coverage.archiveCount || 0) + (coverage.archiveCount === 1 ? ' archive' : ' archives') + (coverage.archiveBytesText ? ' · ' + coverage.archiveBytesText + ' of dumps' : '')
-                        + (coverage.newestArchiveText ? ' · newest ' + coverage.newestArchiveText : ''),
-                retentionText: coverage.retentionText || '',
-                mirrorText: coverage.mirror?.text || '',
-                verificationText: coverage.verificationText || ''}
-            notIncluded = Array.from(coverage.notIncluded || [])
-            archives = Array.from(listed?.archiveList || [])
-            archivesCount = Number(listed?.archiveCount || 0)
-            archivesPageIndex = Number(listed?.pageIndex || 0)
-            archivesPageSize = Number(listed?.pageSize || 50)
-            archivesPageMaxIndex = Math.max(Math.ceil(archivesCount / archivesPageSize) - 1, 0)
-            archivesPageRangeLow = archivesCount ? archivesPageIndex * archivesPageSize + 1 : 0
-            archivesPageRangeHigh = Math.min((archivesPageIndex + 1) * archivesPageSize, archivesCount)
-            archiveProblem = listed?.problem || ''
-            canRun = !!found?.canRun
-            mayRun = !!found?.mayRun
-            holdReason = found?.holdReason || ''
-            backupNowValues = {operationKey: 'b-' + ec.user.randomString(24)}
-        ]]></script>
-    </actions>
     <widgets>
-        <label text="Backups" type="h5"/>
-        <label text="What of this instance's data is backed up and how the last backup went, as its run recorded it. Times are in ${coverage.timeZone || 'the server time zone'}."
-                type="p" style="text-caption m-muted q-mb-none"/>
-        <label type="p" style="text-negative" condition="!available" text="Backups are not available to you: reading them needs ADMIN_BACKUP_VIEW."/>
-        <section name="BackupsSection" condition="available">
-            <widgets>
-                <!-- the fixed warning: shown with every state, a success too -->
-                <container style="q-pa-sm q-mb-sm m-tonal text-deep-orange rounded-borders">
-                    <label text="${coverage.warning}" type="p" style="q-mb-none"/>
-                </container>
-                <container-box>
-                    <box-header title="Coverage"/>
-                    <box-toolbar>
-                        <container-dialog id="BackupNowDialog" button-text="Back up now" title="Back up now" type="primary" icon="sym_o_backup" condition="canRun">
-                            <label type="p" text="This backs up the whole instance's database: every organization's data, in one archive, kept on this server with the others. It runs with the instance's own backup settings; nothing is chosen here. It does not include the .env file, the field-encryption key or resource files."/>
-                            <label type="p" style="m-muted" text="At most ${found.maxPerDay} a day, and ${found.minMinutes} minutes apart: each backup moves the kept daily archives along."/>
-                            <form-single name="BackupNow" transition="runBackup" map="backupNowValues">
-                                <field name="operationKey"><default-field title=""><hidden/></default-field></field>
-                                <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log"><text-line size="60" maxlength="255"/></default-field></field>
-                                <field name="submitButton">
-                                    <default-field title="Back up the whole instance now">
-                                        <submit confirmation="Start a backup of the whole instance's database now?"/>
-                                    </default-field>
-                                </field>
-                            </form-single>
-                        </container-dialog>
-                    </box-toolbar>
-                    <box-body>
-                        <label type="p" style="m-muted" condition="mayRun &amp;&amp; !canRun &amp;&amp; !!holdReason" text="A backup cannot be asked for now: ${holdReason}."/>
-                        <form-single name="BackupCoverage" map="coverageValues">
-                            <field name="databaseText"><default-field title="Database"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="Covered">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<span class="text-${stateColor} text-weight-medium">${stateText}</span>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="runningText">
-                                <conditional-field condition="!!coverageValues.runningText" title="Now"><display/></conditional-field>
-                                <default-field title=""><hidden/></default-field>
-                            </field>
-                            <field name="scheduleText"><default-field title="Schedule"><display/></default-field></field>
-                            <field name="lastRunText"><default-field title="Last run"><display/></default-field></field>
-                            <field name="lastSuccessText"><default-field title="Last success"><display/></default-field></field>
-                            <field name="archivesText"><default-field title="Archives kept"><display/></default-field></field>
-                            <field name="retentionText"><default-field title="Retention"><display/></default-field></field>
-                            <field name="mirrorText"><default-field title="Off-site mirror"><display/></default-field></field>
-                            <field name="verificationText"><default-field title="Restore verified"><display/></default-field></field>
-                            <field-layout>
-                                <field-row><field-ref name="databaseText"/><field-ref name="stateText"/></field-row>
-                                <field-ref name="runningText"/>
-                                <field-row><field-ref name="scheduleText"/><field-ref name="lastRunText"/></field-row>
-                                <field-row><field-ref name="lastSuccessText"/><field-ref name="archivesText"/></field-row>
-                                <field-row><field-ref name="mirrorText"/><field-ref name="retentionText"/></field-row>
-                                <field-ref name="verificationText"/>
-                            </field-layout>
-                        </form-single>
-                        <label text="Not included in an archive" type="h6"/>
-                        <form-list name="BackupNotIncluded" list="notIncluded" skip-form="true" paginate="false">
-                            <field name="title"><default-field title="Not included"><display/></default-field></field>
-                            <field name="text"><default-field title="What that means"><display/></default-field></field>
-                        </form-list>
-                    </box-body>
-                </container-box>
-                <container-box>
-                    <box-header title="Archives"/>
-                    <box-body>
-                        <label type="p" style="text-caption m-muted" text="The archives on this server, newest first. An archive is the whole instance's data: it is not downloaded here, and restoring one is done on the server, with the instance stopped."/>
-                        <label type="p" style="text-warning" condition="!!archiveProblem" text="${archiveProblem}."/>
-                        <label type="p" style="m-muted" condition="!archives.length &amp;&amp; !archiveProblem" text="${listed?.external ? 'This server keeps no archives: its database is backed up by its provider.' : 'No archive yet.'}"/>
-                        <form-list name="BackupArchives" list="archives" skip-form="true" paginate="true">
-                            <field name="archiveKey"><default-field title="Archive"><display/></default-field></field>
-                            <field name="databaseText"><default-field title="Database"><display/></default-field></field>
-                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="tierText"><default-field title="Kept as"><display/></default-field></field>
-                            <field name="createdText"><default-field title="Made"><display/></default-field></field>
-                            <field name="sizeText"><default-field title="Size"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="archiveKey"/><field-ref name="databaseText"/></column>
-                                <column><field-ref name="createdText"/><field-ref name="tierText"/><field-ref name="sizeText"/></column>
-                            </columns>
-                        </form-list>
-                    </box-body>
-                </container-box>
-            </widgets>
-        </section>
+        <include-screen location="component://tools/screen/System/Data/Backups.xml" share-scope="true"/>
     </widgets>
 </screen>

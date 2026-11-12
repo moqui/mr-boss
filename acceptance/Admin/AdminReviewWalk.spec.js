@@ -203,7 +203,7 @@ feature(
                 const organization = page(user, "Settings/OrganizationDetail", {organizationPartyId: ids.otherOrganizationId})
                 if (organization.output.includes("Ziziwork Services") && !organization.output.includes("is not available"))
                     problems.push(`${user}: OrganizationDetail shows Ziziwork Services`)
-                const exported = call(user, "ironstone.admin.DataServices.run#AdminExport", {
+                const exported = call(user, "org.moqui.admin.DataTransferServices.run#ExportRequest", {
                     targetId: "contactBookVCard",
                     scopeKey: bookId
                 })

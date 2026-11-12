@@ -14,24 +14,15 @@ function call(name, parameters = {}) {
     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
     return out
 }
-// The owners' own places for an import (a registration's ownerRoute is one of these keys, never a URL), under /qapps.
-const ownerRoutes = {
-    productsImport: "Products/ProductImport",
-    adminInvitations: "Admin/Users/Invitations",
-    adminLocalization: "Admin/Settings/Localization",
-    commerceChannelImport: "Commerce/Integrations/ChannelImport",
-    accountingStatementImport: "Accounting/Banking/StatementImport",
-    accountingOpenItems: "Accounting/Settings/Setup/OpenItems",
-    commonsContactImport: "Commons/Contacts/Import",
-    projectsWorkItemImport: "Projects/WorkItems/Import"
-}
-function ownerUrl(ownerRoute, parameters = {}) {
-    if (!Object.hasOwn(ownerRoutes, text(ownerRoute))) return ""
-    const query = Object.entries(parameters || {})
-        .filter(([name, value]) => /^[A-Za-z][A-Za-z0-9]*$/.test(name) && value != null && value !== "")
-        .map(([name, value]) => encodeURIComponent(name) + "=" + encodeURIComponent(String(value)))
-        .join("&")
-    return "/qapps/" + ownerRoutes[ownerRoute] + (query ? "?" + query : "")
+// An owner's own place for an import (a registration's ownerRoute is a key, never a URL), by the mount's routes: Admin's are
+// its one table (admin/Admin.js mountRoutes, which the framework's Imports screen links a run's owner by too); a catalog
+// app's mount has none, and its one target is never an owner's wizard. Another app's page is a plain URL (ownerUrl); a
+// screen of Admin's own is a path relative to a screen of an area, as the wizard is (ownerPath).
+function ownerPlace(mounted, ownerRoute) {
+    const routes = mounted.routes || {}
+    const route = Object.hasOwn(routes, text(ownerRoute)) ? routes[text(ownerRoute)] : null
+    if (!route?.url) return {ownerUrl: "", ownerPath: ""}
+    return route.plain === true ? {ownerUrl: String(route.url), ownerPath: ""} : {ownerUrl: "", ownerPath: String(route.url)}
 }
 
 // ===== the mount =====
@@ -49,6 +40,7 @@ function mount(p) {
             selfLink: admin.sharedLinks["Data/DataImport"],
             listLink: admin.sharedLinks["Data/Imports"],
             detailLink: admin.sharedLinks["Data/ImportDetail"],
+            routes: admin.mount?.routes || {},
             activeOrganizationPartyId: admin.activeOrganizationPartyId || null
         }
     }
@@ -109,7 +101,7 @@ function context(p) {
         organizationPartyId: text(p.organizationPartyId) || null
     }).target
     if (target.targetMode === "wizard")
-        return Object.assign(out, {importTarget: target, ownerUrl: ownerUrl(target.ownerRoute), wizardElsewhere: true})
+        return Object.assign(out, {importTarget: target, wizardElsewhere: true}, ownerPlace(mounted, target.ownerRoute))
     const ownerOptions = scopeOptions(target)
     Object.assign(out, {
         hasTarget: true,
@@ -258,45 +250,8 @@ function mapping(p) {
     return call(T + "configure#Import", parameters)
 }
 
-// ===== find#ImportRuns =====
-// Admin's Imports: the runs of every target the user may view and the targets an import may start from, each with its
-// owner's place as a link. Summaries from the framework's find#Transfers; nothing of a row.
-function runs(p) {
-    const mounted = mount(Object.assign({}, p, {appRoot: "Admin"}))
-    const targets = call(T + "find#ImportTargets")
-    const found = call(T + "find#Transfers", {
-        targetId: text(p.targetId) || null,
-        scopeKey: text(p.organizationPartyId) || null,
-        state: text(p.state) || null,
-        fromDate: p.fromDate || null,
-        thruDate: p.thruDate || null,
-        pageIndex: p.pageIndex || 0,
-        pageSize: 50
-    })
-    return Object.assign({}, found, {
-        canRun: mounted.canRun,
-        targetList: Array.from(targets.targetList || []).map(target =>
-            Object.assign({}, target, {ownerUrl: ownerUrl(target.ownerRoute)})
-        ),
-        transferList: Array.from(found.transferList || []).map(run =>
-            Object.assign({}, run, {
-                ownerUrl: run.detail ? "" : ownerUrl(run.ownerRoute, run.ownerParameters),
-                countText: [
-                    run.rowCount != null ? run.rowCount + " rows" : null,
-                    run.appliedCount != null ? run.appliedCount + " applied" : null,
-                    run.errorCount ? run.errorCount + " need attention" : null,
-                    run.skippedCount ? run.skippedCount + " skipped" : null
-                ]
-                    .filter(Boolean)
-                    .join(" · ")
-            })
-        )
-    })
-}
-
-const operations = {context, mapping, runs, mount: p => ({importMount: mount(p)})}
+const operations = {context, mapping, mount: p => ({importMount: mount(p)})}
 ;({
-    ownerUrl,
     execute: (op, parameters) => {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown import operation " + op)
         return operations[op](parameters)

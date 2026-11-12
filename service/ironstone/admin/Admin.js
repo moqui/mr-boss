@@ -354,18 +354,33 @@ const linkPaths = [
 // (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root. A
 // record whose page is the same relative path under both roots has the framework's route and none here (a group's
 // ../../Access/GroupDetail, and so a sign-in provider, the instance settings, localization, a message type, the
-// connections, the mail relays, a system message, a job and a topic). The keys are the registrations' (an audit
-// projection's linkKey, a recovery descriptor's or a transfer target's ownerRoute), so the changes list (Audit ›
-// AuditChanges), GroupDetail's members and the Sessions list link by this one table (mr-moqui plans/Admin-Screens-Down.md
-// A3, A4): a user's page is Users › UserDetail, and Admin's own records have their places here.
+// connections, the mail relays, a system message, a job, a topic, the exports, the imports and the backups). The keys are
+// the registrations' (an audit projection's linkKey, a recovery descriptor's or a transfer target's ownerRoute), so the
+// changes list (Audit › AuditChanges), GroupDetail's members, the Sessions list and the Data screens' owner links go by
+// this one table (mr-moqui plans/Admin-Screens-Down.md A3 to A5): a user's page is Users › UserDetail, and Admin's own
+// records have their places here.
 const mountRoutes = {
     adminUser: {url: "../../Users/UserDetail", idParameter: "userId"},
     adminInvitations: {url: "../../Users/Invitations"},
     adminLifecycle: {url: "../../Users/LifecycleDetail", idParameter: "operationId"},
     adminOrganization: {url: "../../Settings/OrganizationDetail", idParameter: "organizationPartyId"},
-    adminExports: {url: "../../Data/Exports"},
-    adminImport: {url: "../../Data/Imports"},
-    adminBackups: {url: "../../Data/Backups"},
+    // the shared import wizard, mounted in the Data area: an import target started from Imports, an open import continued
+    // from ImportDetail
+    dataImport: {url: "../../Data/DataImport", idParameter: "targetId"},
+    // the owners' own places of the registered transfer targets (a TransferTarget's ownerRoute; an import run opens there
+    // with the parameters its owner gave): another app's page is a plain URL. Imports first, then exports
+    productsImport: {url: "/qapps/Products/ProductImport", plain: true},
+    commerceChannelImport: {url: "/qapps/Commerce/Integrations/ChannelImport", plain: true},
+    accountingStatementImport: {url: "/qapps/Accounting/Banking/StatementImport", plain: true},
+    accountingOpenItems: {url: "/qapps/Accounting/Settings/Setup/OpenItems", plain: true},
+    commonsContactImport: {url: "/qapps/Commons/Contacts/Import", plain: true},
+    projectsWorkItemImport: {url: "/qapps/Projects/WorkItems/Import", plain: true},
+    commonsContacts: {url: "/qapps/Commons/Contacts/List", plain: true},
+    insightsDatasets: {url: "/qapps/Insights/ReportBuilder/Datasets", plain: true},
+    insightsReports: {url: "/qapps/Insights/Reports", plain: true},
+    accountingTaxStatements: {url: "/qapps/Accounting/Tax/TaxStatements", plain: true},
+    accountingInvoiceBatch: {url: "/qapps/Accounting/Receivables/InvoiceBatch", plain: true},
+    projectsWorkItems: {url: "/qapps/Projects/WorkItems/List", plain: true},
     // another app's page is a plain URL: Commerce's store integration (a system message's registered owner, by its remote)
     // and Comms' mail accounts (a mail account's message in the mail queue, the mail reception's owner)
     storeIntegration: {url: "/qapps/Commerce/Integrations/IntegrationDetail", idParameter: "systemMessageRemoteId", plain: true},

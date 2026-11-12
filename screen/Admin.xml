@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
-        <!-- design §13 System: the Tools System screens (Access, Security, Settings, Operations, Audit, Integrations, Print,
+        <!-- design §13 System: the Tools System screens (Access, Security, Settings, Operations, Data, Audit, Integrations, Print,
             Constitution, Llm and the rest), adding no grant: Tools' SYSTEM_APP authorization (ADMIN's) opens them -->
         <subscreens-item name="System" location="component://tools/screen/System.xml" menu-title="System" menu-index="12"/>
     </subscreens>

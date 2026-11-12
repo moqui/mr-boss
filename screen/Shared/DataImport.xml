@@ -125,7 +125,10 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="ImportElsewhere" condition="!!wizardElsewhere">
             <widgets>
                 <label text="${importTarget.title} is imported in ${importTarget.ownerApp || 'its owner'}'s own wizard." type="p"/>
+                <!-- its owner's place by the mount's route (DataImport.js ownerPlace): another app's page, or a screen of this app -->
                 <link url="${ownerUrl}" url-type="plain" text="Open it in ${importTarget.ownerApp || 'its app'}" link-type="anchor-button" icon="sym_o_open_in_new" condition="!!ownerUrl"/>
+                <link url="${ownerPath}" text="Open it in ${importTarget.ownerApp || 'its app'}" link-type="anchor-button" icon="sym_o_open_in_new" condition="!!ownerPath"
+                        parameter-map="{targetId:'', operationKey:'', pageIndex:''}"/>
             </widgets>
         </section>
         <label text="${importTarget?.description || ''}" type="p" style="m-muted" condition="hasTarget &amp;&amp; !!importTarget?.description"/>
