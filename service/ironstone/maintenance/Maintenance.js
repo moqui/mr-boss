@@ -554,34 +554,21 @@ const workChoices = [
     "stockParts",
     "partFacilities"
 ]
-// The teams of the scope's organizations (one organization's with organizationPartyId): an OrgTeam an organization owns.
+// The teams of the scope's organizations (one organization's with organizationPartyId): an OrgTeam of an organization by People's
+// rule (the one its rollups reach, else its internal owner: Mantle's UnitEmployers.js; impl-people follow-up 3).
 function teamOptions(userScope, term, selected, p) {
-    const owners = p?.organizationPartyId
+    const organizations = p?.organizationPartyId
         ? covers(userScope, p.organizationPartyId)
             ? [p.organizationPartyId]
             : []
         : organizationIds(userScope)
-    if (!owners.length) return []
-    const factory = ec.entity.conditionFactory
-    const teamIds = Array.from(find("mantle.party.PartyRole", {roleTypeId: "OrgTeam"}).selectField("partyId").list()).map(
-        row => row.partyId
-    )
-    if (!teamIds.length) return []
-    let query = find("mantle.party.PartyDetail")
-        .condition("partyId", "in", teamIds)
-        .condition("ownerPartyId", "in", owners)
-        .orderBy("^organizationName")
-        .limit(choiceLimit)
-    if (term)
-        query = query.condition(
-            factory.makeCondition(
-                ["partyId", "organizationName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
-                "or"
-            )
-        )
-    const options = Array.from(query.list()).map(row => ({value: row.partyId, label: row.organizationName || row.partyId}))
-    const admits = partyId =>
-        teamIds.includes(partyId) && owners.includes(one("mantle.party.Party", {partyId})?.ownerPartyId || "")
+    if (!organizations.length) return []
+    const units = ec.resource.script("component://mr-mantle/service/mantle/humanres/UnitEmployers.js")
+    const options = units
+        .teamsOf(organizations, term || null)
+        .slice(0, choiceLimit)
+        .map(row => ({value: row.partyId, label: row.organizationName || row.partyId}))
+    const admits = partyId => organizations.includes(units.teamOrganizations([partyId])[partyId] || "")
     return withSelected(options, selected, admits, partyLabel)
 }
 // The people a work order may be assigned to: the persons employed by or agents of the scope's organizations now (one

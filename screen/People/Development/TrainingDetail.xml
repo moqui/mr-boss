@@ -41,7 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.DevelopmentServices.store#Training"
                     in-map="{workEffortId:workEffortId, startDate:(startDate || null), endDate:(endDate || null), location:(location ?? null),
-                        description:(description ?? null), trainerPartyId:(trainerPartyId || null), capacity:(capacity || null),
+                        facilityId:(facilityId ?? null), description:(description ?? null), trainerPartyId:(trainerPartyId || null), capacity:(capacity || null),
                         assessmentFormId:(assessmentFormId ?? null), cancel:(cancel || null), reason:(reason || null),
                         expectedRevision:(expectedRevision || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${cancel ? 'Session cancelled' : 'Session saved'}</message></if>
@@ -118,9 +118,11 @@ along with this software (see the LICENSE.md file). If not, see
             placeColors = {PtsRequested: 'warning', PtsEnrolled: 'primary', PtsCompleted: 'positive', PtsRefused: 'negative',
                 PtsWithdrawn: 'grey-8', PtsCancelled: 'grey-8'}
             headerCaption = training ? [training.organizationName, training.whenText, training.location,
+                training.roomStatus && training.roomStatus != 'booked' ? training.roomStatusText : '',
                 training.trainerName ? 'Trainer ' + training.trainerName : ''].filter(Boolean).join(' · ') : ''
             sessionValues = training ? {workEffortId: training.workEffortId, expectedRevision: training.revision,
-                startDate: training.startText, endDate: training.endText, location: training.location, description: training.description,
+                startDate: training.startText, endDate: training.endText, facilityId: training.facilityId || '',
+                location: training.facilityId ? '' : training.location, description: training.description,
                 trainerPartyId: training.trainerPartyId, capacity: training.capacity, assessmentFormId: training.assessmentFormId} : {}
             assessing = assessId ? enrollmentRows.find(row => row.personTrainingId == assessId && row.canAssess) || null : null
             assessFormName = assessing && training?.assessmentFormId ? 'DbForm#' + training.assessmentFormId : 'AssessmentNone'
@@ -204,7 +206,15 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                         <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
                                         <field name="endDate"><default-field title="Ends"><date-time/></default-field></field>
-                                        <field name="location"><default-field title="Place"><text-line size="40"/></default-field></field>
+                                        <field name="facilityId">
+                                            <default-field title="Room" tooltip="A bookable meeting room, booked for the session; empty for a place off site">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'rooms', selected:training.facilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="location"><default-field title="Place" tooltip="Off site, without a room"><text-line size="40"/></default-field></field>
                                         <field name="trainerPartyId">
                                             <default-field title="Trainer">
                                                 <drop-down>
@@ -227,7 +237,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="submitButton"><default-field title="Save session"><submit/></default-field></field>
                                         <field-layout>
                                             <field-row><field-ref name="startDate"/><field-ref name="endDate"/></field-row>
-                                            <field-row><field-ref name="location"/><field-ref name="capacity"/></field-row>
+                                            <field-row><field-ref name="facilityId"/><field-ref name="location"/></field-row>
+                                            <field-ref name="capacity"/>
                                             <field-row><field-ref name="trainerPartyId"/><field-ref name="assessmentFormId"/></field-row>
                                             <field-ref name="description"/>
                                             <field-ref name="submitButton"/>

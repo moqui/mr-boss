@@ -255,8 +255,8 @@ along with this software (see the LICENSE.md file). If not, see
                                             <default-field title="Lead">
                                                 <drop-down allow-empty="true">
                                                     <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                            parameter-map="{choice:'employees', choiceOrganizationPartyId:unit.employerPartyId,
-                                                                selected:editUnit.headPartyId}"/>
+                                                            parameter-map="{choice:(unit.unitKind == 'team' ? 'staff' : 'employees'),
+                                                                choiceOrganizationPartyId:unit.employerPartyId, selected:editUnit.headPartyId}"/>
                                                 </drop-down>
                                             </default-field>
                                         </field>
@@ -336,14 +336,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-toolbar>
                                         <container-dialog id="AddMemberDialog" button-text="Add member" icon="sym_o_person_add" type="default" width="600"
                                                 title="Add a member to ${unit.organizationName}" condition="unit.membersEditable">
-                                            <label type="p" text="A member is an employee of ${unit.employerName}; membership changes no employment. A new lead's predecessor stays on as a member."/>
+                                            <label type="p" text="A member is an employee or agent (a contractor) of ${unit.employerName}; membership changes no employment. A new lead's predecessor stays on as a member."/>
                                             <form-single name="AddMember" transition="storeMembership" map="{unitPartyId:unit.partyId, memberRole:'member'}">
                                                 <field name="unitPartyId"><default-field><hidden/></default-field></field>
                                                 <field name="partyId">
                                                     <default-field title="Person">
                                                         <drop-down>
                                                             <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                                    parameter-map="{choice:'employees', choiceOrganizationPartyId:unit.employerPartyId}"/>
+                                                                    parameter-map="{choice:'staff', choiceOrganizationPartyId:unit.employerPartyId}"/>
                                                         </drop-down>
                                                     </default-field>
                                                 </field>

@@ -34,6 +34,11 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_TEAM" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
     <mantle.party.Organization partyId="BOSS_MNT_TEAM" organizationName="Facilities maintenance"/>
     <mantle.party.PartyRole partyId="BOSS_MNT_TEAM" roleTypeId="OrgTeam"/>
+    <!-- a team of Services directly, as People's units are (its rollup, impl-people follow-up 3), so People's OrgStructure shows it
+        and keeps its members; they are agents of Services (contractors), whom a team takes (the user's call of Nov 12, 2026) -->
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TEAM_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_MNT_TEAM" fromRoleTypeId="OrgTeam" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal"
+            fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH_TEAM" relationshipTypeEnumId="PrtMember"
             fromPartyId="BOSS_MNT_TECH" fromRoleTypeId="Assignee" toPartyId="BOSS_MNT_TEAM" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH2_TEAM" relationshipTypeEnumId="PrtMember"

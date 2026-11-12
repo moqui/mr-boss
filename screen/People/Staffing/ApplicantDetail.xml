@@ -67,7 +67,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{employmentApplicationId:employmentApplicationId, startDate:(startDate || null),
                         durationMinutes:(durationMinutes || null),
                         panelPartyIds:(Array.isArray(panelPartyIds) ? panelPartyIds.join(',') : (panelPartyIds || null)),
-                        formId:(formId || null), videoCall:(videoCall == 'Y'), location:(location || null),
+                        formId:(formId || null), videoCall:(videoCall == 'Y'), location:(location || null), facilityId:(facilityId || null),
                         inviteCandidate:(inviteCandidate == 'Y'), note:(note || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">Interview scheduled; the invitations are on their way</message>
@@ -82,7 +82,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.RecruitingServices.change#Interview"
                     in-map="{workEffortId:workEffortId, startDate:(startDate || null), durationMinutes:(durationMinutes || null),
-                        location:(hasCall == 'Y' ? null : (location ?? '')), note:(note || null)}"/>
+                        location:(hasCall == 'Y' ? null : (location ?? '')), facilityId:(facilityId ?? ''), note:(note || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">Interview changed; the attendees are being told</message>
             </if>
@@ -184,7 +184,8 @@ along with this software (see the LICENSE.md file). If not, see
                 ['May be contacted', app.contactAllowed ? 'Yes, about other openings' : 'Only about this opening'], ['Notes', app.comments],
                 ['Owner', app.ownerName]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, employmentApplicationId: app.employmentApplicationId, whenText: interview.whenText,
-                panelText: interview.panelText, location: interview.location, stateText: interview.cancelled ? 'Cancelled' : '',
+                panelText: interview.panelText, location: interview.location, facilityId: interview.facilityId || '',
+                stateText: interview.cancelled ? 'Cancelled' : (interview.roomStatus && interview.roomStatus != 'booked' ? interview.roomStatusText : ''),
                 canChange: canEdit && !interview.cancelled, hasCall: interview.hasCall ? 'Y' : 'N',
                 canResend: canEdit && !!interview.invitationsFailed, problemText: interview.invitationProblemText || '',
                 startText: interview.startMs != null ? ec.l10n.format(new Date(interview.startMs), 'yyyy-MM-dd HH:mm') : '',
@@ -313,7 +314,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="videoCall"><default-field title=" "><check><option key="Y" text="Add a video call"/></check></default-field></field>
-                                    <field name="location"><default-field title="Where" tooltip="Without a video call"><text-line size="40"/></default-field></field>
+                                    <field name="facilityId">
+                                        <default-field title="Room" tooltip="A bookable meeting room, booked for the interview">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'rooms'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="location"><default-field title="Where" tooltip="Without a video call or a room"><text-line size="40"/></default-field></field>
                                     <field name="inviteCandidate">
                                         <default-field title=" "><check><option key="Y" text="Invite the candidate by email (.ics)"/></check></default-field>
                                     </field>
@@ -322,7 +330,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-layout>
                                         <field-row><field-ref name="startDate"/><field-ref name="durationMinutes"/></field-row>
                                         <field-row><field-ref name="panelPartyIds"/><field-ref name="formId"/></field-row>
-                                        <field-row><field-ref name="videoCall"/><field-ref name="location"/></field-row>
+                                        <field-row><field-ref name="videoCall"/><field-ref name="facilityId"/></field-row>
+                                        <field-ref name="location"/>
                                         <field-ref name="inviteCandidate"/>
                                         <field-ref name="note"/>
                                         <field-ref name="submitButton"/>
@@ -512,7 +521,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                     width="560" title="Change the interview of ${whenText}" condition="canChange">
                                                 <form-single name="ChangeInterview" transition="changeInterview"
                                                         map="{workEffortId:workEffortId, startDate:startText, durationMinutes:durationMinutes, hasCall:hasCall,
-                                                            location:(hasCall == 'Y' ? '' : location)}">
+                                                            facilityId:facilityId, location:(hasCall == 'Y' || facilityId ? '' : location)}">
                                                     <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
                                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
                                                     <field name="hasCall"><default-field><hidden/></default-field></field>
@@ -520,8 +529,16 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <field name="durationMinutes">
                                                         <default-field title="Minutes"><text-line size="5" input-type="number"/></default-field>
                                                     </field>
+                                                    <field name="facilityId">
+                                                        <default-field title="Room" tooltip="A bookable meeting room; empty for none">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'rooms', selected:facilityId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
                                                     <field name="location">
-                                                        <conditional-field condition="hasCall != 'Y'" title="Where"><text-line size="40"/></conditional-field>
+                                                        <conditional-field condition="hasCall != 'Y'" title="Where" tooltip="Without a room"><text-line size="40"/></conditional-field>
                                                         <default-field><hidden/></default-field>
                                                     </field>
                                                     <field name="note"><default-field title="Note to the attendees"><text-area rows="2" cols="50"/></default-field></field>

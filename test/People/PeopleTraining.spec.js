@@ -4,8 +4,9 @@
 // employee's Today item for the session he is enrolled in; TrainingDetail's one qvt render as the trainer (Hannah) choosing Tomas's
 // place to assess: the enrollment and the Record a result box over the assessment form's own field, then the result posted through
 // its transition with authorization on, completing the place and granting the fire warden certificate; TrainingCertificate's one
-// html-print render as Tomas: the stored certificate with his name and the course. The rules are Mantle's Training; access is
-// PeopleAccessLater's.
+// html-print render as Tomas: the stored certificate with his name and the course. Follow-up 3: the session in Room 103 through
+// the resource booking, the rooms choice, and Commons' room calendar showing it as its organizer's booking (Maintenance's F357:
+// the organizer may cancel it there). The rules are Mantle's Training; access is PeopleAccessLater's.
 // Run: ./moq test mr-boss --spec PeopleTraining
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -104,6 +105,46 @@ feature("Training as the learning administrator: the session, Schedule session a
         trainers.includes(ids.managerPartyId)
         forms == [state.formId]
         today.some(item => item.kind == "training" && item.title.startsWith("Training: Fire warden training"))
+    }
+})
+
+// People follow-up 3 (impl-maintenance F356, F357): the session takes Room 103 through the resource booking; Commons' room calendar
+// shows it as the scheduler's booking, which as the session's organizer they may cancel there (check#EventAccess canBook)
+feature("the session in Room 103: booked for it, the rooms choice; Commons' room calendar shows it as its organizer's", {
+    when() {
+        const room = "BOSS_MNT_ROOM_103"
+        const read = () =>
+            asUser(users.develop, () => system(() => invoke(D + "get#Training", {workEffortId: state.sessionId}))).session
+        const stored = asUser(users.develop, () =>
+            system(() =>
+                invoke(D + "store#Training", {workEffortId: state.sessionId, facilityId: room, expectedRevision: read().revision})
+            )
+        )
+        const rooms = asUser(users.develop, () =>
+            invoke("ironstone.people.ContextServices.get#Choices", {
+                appRoot: "People",
+                choice: "rooms",
+                term: "zzz",
+                selected: room
+            })
+        ).options.map(option => option.value)
+        const day = offset => ec.l10n.format(new Date(Date.now() + offset * 24 * hour), "yyyy-MM-dd")
+        const calendar = asUser(users.develop, () =>
+            system(() =>
+                invoke("ironstone.commons.ScheduleServices.get#ResourceBookings", {
+                    start: day(0),
+                    end: day(3),
+                    keys: "room|" + room
+                })
+            )
+        ).bookingList
+        return {stored, session: read(), rooms, booking: calendar.find(row => row.workEffortId == state.sessionId) || {}}
+    },
+    then({stored, session, rooms, booking}) {
+        stored.workEffortId == state.sessionId
+        session.roomName == "Room 103 Focus" && session.roomStatus == "booked" && session.location == "Room 103 Focus"
+        rooms == ["BOSS_MNT_ROOM_103"]
+        booking.mine == true && booking.canCancel == true
     }
 })
 

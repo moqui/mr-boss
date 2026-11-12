@@ -1079,6 +1079,52 @@ choiceSources.trainingForms = (userScope, term, selected, p) => {
     return options.slice(0, choiceLimit)
 }
 
+// People follow-up 3: the meeting rooms a training session or an interview books (Mantle's EventRooms.js: through Maintenance's
+// resource booking, its policy, clashes and blackouts), as Commons' Schedules lists them: a room (FcTpRoom) bookable and not
+// closed, by name or its site's, for a development reader or a recruiter
+choiceSources.rooms = (userScope, term, selected) => {
+    if (!userScope.capabilities.developView && !userScope.capabilities.recruitView) return []
+    const factory = ec.entity.conditionFactory
+    const base = () =>
+        find("mantle.facility.Facility")
+            .condition("facilityTypeEnumId", "FcTpRoom")
+            .condition("bookable", "Y")
+            .condition(
+                factory.makeCondition(
+                    factory.makeCondition("closedDate", "is-null", null),
+                    "or",
+                    factory.makeCondition("closedDate", "greater", ec.user.nowTimestamp)
+                )
+            )
+    let query = base().orderBy("^facilityName").limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["facilityId", "facilityName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const rooms = Array.from(query.list())
+    const sites = new Map(
+        rooms.some(row => row.parentFacilityId)
+            ? Array.from(
+                  find("mantle.facility.Facility")
+                      .condition("facilityId", "in", Array.from(new Set(rooms.map(row => row.parentFacilityId).filter(Boolean))))
+                      .selectField("facilityId,facilityName")
+                      .list()
+              ).map(row => [row.facilityId, row.facilityName || row.facilityId])
+            : []
+    )
+    const label = row =>
+        (row.facilityName || row.facilityId) + (row.parentFacilityId ? " · " + (sites.get(row.parentFacilityId) || "") : "")
+    return withSelected(
+        rooms.map(row => ({value: row.facilityId, label: label(row)})),
+        selected,
+        facilityId => base().condition("facilityId", facilityId).count() > 0,
+        facilityId => one("mantle.facility.Facility", {facilityId})?.facilityName || facilityId
+    )
+}
+
 // P20: the published review forms of one employer (organizationPartyId), else of every employer the user reads, as trainingForms
 choiceSources.reviewForms = (userScope, term, selected, p) => {
     const employers = p?.organizationPartyId
