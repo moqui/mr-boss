@@ -29,7 +29,9 @@ const areas = {
     settings: "Settings",
     employment: "Employees/HireEmployee",
     // P8: My team, the managers' (BOSS_PPL_TEAM; the capability team is PEOPLE_TEAM_VIEW's)
-    myTeam: "MyTeam"
+    myTeam: "MyTeam",
+    // P9: Time & leave (working schedules), HR's and the managers' (BOSS_PPL_TIME; its Holidays HR's alone, BOSS_PPL_HOLIDAYS)
+    schedules: "Time"
 }
 // P8: the self-service screen (Shared/PeopleSelfService.xml, mounted at People/SelfService and Commons/People/SelfService), whose
 // own grant opens it to a self-service employee without People (BOSS_PPL_SELF)
@@ -166,7 +168,13 @@ const linkPaths = [
     "Employees/EquipmentDetail",
     // P8: the manager's team and the user's own self-service (design §3)
     "MyTeam",
-    "SelfService"
+    "SelfService",
+    // P9: working schedules and holiday calendars (design §6, §7; the calendars HR's under Time, as the user's call of Nov 11 put
+    // HR's own editors out of Settings)
+    "Time",
+    "Time/WorkingSchedules",
+    "Time/WorkingScheduleDetail",
+    "Time/HolidayCalendars"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -262,7 +270,9 @@ function checkRecord(p) {
 // classes and pay grades (names only: a grade's amounts are payroll's, PayrollSetupServices.find#PayGrades). P5: staff (one
 // employer's current employees and agents, who an approval rule names to decide). P6: positions (one employer's seats in effect
 // that are not inactive, the vacant ones first, by name; a department narrows them), workLocations (one employer's facilities)
-// and the termination reasons and types (People's lookups, ended values left out).
+// and the termination reasons and types (People's lookups, ended values left out). P9: workingSchedules (one employer's schedules
+// not ended), holidayCalendars (one employer's and the shared ones), timeZones (the zone names) and employments (one employer's
+// current employments, each by its person: the employment a schedule is assigned to).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -556,6 +566,126 @@ const choiceSources = {
         }))
         const gradeName = id => one("mantle.humanres.rate.PayGrade", {payGradeId: id})?.description || id
         return withSelected(options, selected, id => readable().condition("payGradeId", id).count() > 0, gradeName)
+    },
+    // P9: one employer's working schedules not ended (organizationPartyId; none without one), by name
+    workingSchedules: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.staff || !p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId))
+            return []
+        const factory = ec.entity.conditionFactory
+        const open = () =>
+            find("mantle.humanres.schedule.WorkingSchedule")
+                .condition("organizationPartyId", p.organizationPartyId)
+                .condition(
+                    factory.makeCondition(
+                        factory.makeCondition("thruDate", "is-null", null),
+                        "or",
+                        factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                    )
+                )
+        let query = open()
+            .selectField(["workingScheduleId", "scheduleName", "timeZone"])
+            .orderBy("^scheduleName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["workingScheduleId", "scheduleName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row => (row.scheduleName || row.workingScheduleId) + (row.timeZone ? " (" + row.timeZone + ")" : "")
+        const options = Array.from(query.list()).map(row => ({value: row.workingScheduleId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => open().condition("workingScheduleId", id).count() > 0,
+            id => label(one("mantle.humanres.schedule.WorkingSchedule", {workingScheduleId: id}) || {workingScheduleId: id})
+        )
+    },
+    // P9: the holiday calendars of one employer (organizationPartyId) and the shared ones, or of every employer a staff reader sees
+    holidayCalendars: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.staff) return []
+        const owners = p?.organizationPartyId
+            ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+            : employerIds(userScope)
+        const factory = ec.entity.conditionFactory
+        const readable = () =>
+            find("mantle.work.effort.WorkEffortCategory")
+                .condition("categoryTypeEnumId", "WcatHoliday")
+                .condition(
+                    factory.makeCondition(
+                        [factory.makeCondition("ownerPartyId", "is-null", null)].concat(
+                            owners.length ? [factory.makeCondition("ownerPartyId", "in", owners)] : []
+                        ),
+                        "or"
+                    )
+                )
+        let query = readable().selectField(["workEffortCategoryId", "description"]).orderBy("^description").limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["workEffortCategoryId", "description"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({
+            value: row.workEffortCategoryId,
+            label: row.description || row.workEffortCategoryId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => readable().condition("workEffortCategoryId", id).count() > 0,
+            id => one("mantle.work.effort.WorkEffortCategory", {workEffortCategoryId: id})?.description || id
+        )
+    },
+    // P9: the time zone names, searched by name (a closed list the server holds)
+    timeZones: (userScope, term, selected) => {
+        const all = Array.from(ec.l10n.getAvailableTimeZones() || [])
+            .map(String)
+            .sort()
+        const label = zone => zone.replace(/_/g, " ")
+        const wanted = term.toLowerCase()
+        const options = all
+            .filter(zone => !wanted || label(zone).toLowerCase().includes(wanted))
+            .slice(0, choiceLimit)
+            .map(zone => ({value: zone, label: label(zone)}))
+        return withSelected(options, selected, zone => all.includes(zone), label)
+    },
+    // P9: one employer's current employments (organizationPartyId, an HR reader's; none without one), each by its person
+    employments: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.hrView || !p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId))
+            return []
+        const factory = ec.entity.conditionFactory
+        const base = () =>
+            find("mantle.party.PartyFromAndRelationship")
+                .condition("relationshipTypeEnumId", "PrtEmployee")
+                .condition("toPartyId", p.organizationPartyId)
+                .conditionDate("fromDate", "thruDate", null)
+                .selectField(["partyRelationshipId", "fromPartyId", "firstName", "lastName"])
+                .orderBy(["^firstName", "^lastName"])
+        let query = base().limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["fromPartyId", "firstName", "lastName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row => [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+        const options = Array.from(query.list()).map(row => ({value: row.partyRelationshipId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => base().condition("partyRelationshipId", id).count() > 0,
+            id => label(Array.from(base().condition("partyRelationshipId", id).list())[0] || {fromPartyId: id})
+        )
     }
 }
 // The current values of one of People's HR vocabularies (an Enumeration family whose ended values, thruDate, are left out), in

@@ -24,7 +24,10 @@
 // directory reader refused with the same parameters, Services' template and holder refused to Retail's HR), the employee import's
 // mount HR's. P8: the self-service employee's context their own (no People capability but self-service) and their self-service
 // opened under People by its own grant while every other People screen is refused them; My team the managers' (the directory
-// reader refused it), and the managers' menu.
+// reader refused it), and the managers' menu. P9: Time & leave HR's and the managers' (the reader's menu without it), its Holidays HR's
+// (the manager refused it); a working schedule changed by an HR editor of the employer (the directory reader refused with the same
+// parameters, Services' schedule refused to Retail's HR), WorkingSchedules' one html render (the HR officer's), the capability
+// schedules.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -137,7 +140,7 @@ feature("the People menu and keys follow the groups; the launcher shows People t
     when() {
         const problems = []
         const hr = shell(users.hr)
-        if (hr.status != 200 || JSON.stringify(hr.names) !== JSON.stringify(ids.staffMenu))
+        if (hr.status != 200 || JSON.stringify(hr.names) !== JSON.stringify(ids.hrMenu))
             problems.push(`the HR officer's menu: ${hr.status} ${hr.names}`)
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
@@ -166,6 +169,15 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         // P8: My team is the manager's
         const manager = shell(users.manager, true).names
         if (JSON.stringify(manager) !== JSON.stringify(ids.managerMenu)) problems.push(`the manager's menu: ${manager}`)
+        // P9: Time & leave is HR's and the managers', its Holidays HR's alone; not the directory reader's
+        const readerMenu = shell(users.reader, true).names
+        if (JSON.stringify(readerMenu) !== JSON.stringify(ids.staffMenu)) problems.push(`the reader's menu: ${readerMenu}`)
+        const time = shell(users.hr, true, "Time/WorkingSchedules", "Time")
+        if (JSON.stringify(time.names) !== JSON.stringify(ids.hrTimeMenu))
+            problems.push(`the HR officer's Time group: ${time.status} ${time.names}`)
+        const managerTime = shell(users.manager, true, "Time/WorkingSchedules", "Time")
+        if (JSON.stringify(managerTime.names) !== JSON.stringify(ids.managerTimeMenu))
+            problems.push(`the manager's Time group: ${managerTime.status} ${managerTime.names}`)
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
@@ -203,15 +215,17 @@ const capabilityNames = [
     // the Settings area, the People administrator's
     "settings",
     // P6: the hire and employment change wizards, the HR officer's
-    "employment"
+    "employment",
+    // P9: Time & leave (working schedules), the HR officers' and the managers'
+    "schedules"
 ]
 // design §1.1's table
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     // the manager is an employee too: BOSS_PEOPLE_SELF beside BOSS_PEOPLE_MANAGER (groups are not nested; P8's review)
-    {user: users.manager, granted: ["self", "team", "requestApprove"]},
+    {user: users.manager, granted: ["self", "team", "requestApprove", "schedules"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
-    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment"]},
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment", "schedules"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
@@ -219,7 +233,7 @@ const capabilityUsers = [
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},
     {
         user: users.admin,
-        granted: ["configure", "payrollView", "payrollEdit", "allOrganizations", "staff", "settings", "employment"]
+        granted: ["configure", "payrollView", "payrollEdit", "allOrganizations", "staff", "settings", "employment", "schedules"]
     },
     {user: "people.spec.editonly", granted: ["hrEdit"]},
     {user: users.system, granted: capabilityNames}
@@ -728,6 +742,64 @@ feature(
             return {problems}
         },
         then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "working schedules are HR's of the employer: Retail's store week changed by Retail's HR officer, the directory reader refused with the same parameters and the screen, Services' schedule refused to Retail's HR; Holidays HR's, the manager refused it",
+    {
+        when() {
+            const as = (user, service, parameters) =>
+                asUser(user, () => system(() => refusal("mantle.humanres.ScheduleServices." + service, parameters)))
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const revision = workingScheduleId =>
+                system(() => invoke("mantle.humanres.ScheduleServices.get#Schedule", {workingScheduleId})).schedule.revision
+            // a Services schedule, for Retail's HR to be refused
+            const other = system(() =>
+                invoke("mantle.humanres.ScheduleServices.store#Schedule", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    scheduleName: "Services access spec week",
+                    timeZone: "America/Chicago"
+                })
+            ).workingScheduleId
+            const same = {
+                workingScheduleId: ids.scheduleId,
+                expectedRevision: revision(ids.scheduleId),
+                scheduleName: "Store week"
+            }
+            const codes = {
+                reader: code(as(users.reader, "store#Schedule", same)),
+                hr: code(as(users.hr, "store#Schedule", same)),
+                hrOther: code(
+                    as(users.hr, "store#Schedule", {
+                        workingScheduleId: other,
+                        expectedRevision: revision(other),
+                        scheduleName: "Not mine"
+                    })
+                )
+            }
+            // the HR officer's one html render of WorkingSchedules: Retail's week, not Services'
+            const list = asUser(users.hr, () => page("Time/WorkingSchedules", {}, "html"))
+            const problems = []
+            if (
+                list.status != 200 ||
+                list.errors.length ||
+                !list.output.includes("Store week") ||
+                !list.output.includes("New schedule")
+            )
+                problems.push(`the HR officer's WorkingSchedules: ${list.status} ${list.errors}`)
+            if (list.output.includes("Services access spec week"))
+                problems.push("the HR officer's WorkingSchedules lists Services' week")
+            const reader = screenRefusal(users.reader, "Time/WorkingSchedules")
+            if (!unauthorized(reader)) problems.push(`the reader opens WorkingSchedules: ${reader || "opened"}`)
+            const holidays = screenRefusal(users.manager, "Time/HolidayCalendars")
+            if (!unauthorized(holidays)) problems.push(`the manager opens Holidays: ${holidays || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes == {reader: "PERMISSION_DENIED", hr: "accepted", hrOther: "RECORD_UNAVAILABLE"}
             problems.join("\n") == ""
         }
     }

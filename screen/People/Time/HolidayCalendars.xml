@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Holidays (design-people §7 HolidayCalendars; style-guide §3.9 Settings; impl-people P9): the holiday calendars a
+    schedule names and their dated non-working days, from mantle.humanres.ScheduleServices.get#Holidays: the calendars HR reads (its
+    employers' own and the shared ones, such as Mantle's US examples, which no employer follows until a schedule names them, F31)
+    and the holidays of a year, of one calendar or of all. An HR editor of the calendar's employer adds a calendar (New calendar,
+    the one primary) and adds, renames, moves and removes a holiday still to come (store#HolidayCalendar, store#Holiday); a shared
+    calendar is changed only with PEOPLE_ALL_ORGANIZATIONS, and a holiday that has passed stays as it was. HR's own editor under
+    Time & leave (BOSS_PPL_HOLIDAYS), as the user's call of Nov 11 put HR's editors out of the People administrator's Settings. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Holidays" default-menu-index="9" menu-image="sym_o_event_available" menu-image-type="icon">
+    <parameter name="holidayCategoryId"/>
+    <parameter name="year"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="storeCalendar">
+        <actions>
+            <service-call name="mantle.humanres.ScheduleServices.store#HolidayCalendar" out-map="stored"
+                    in-map="{holidayCategoryId:(holidayCategoryId || null), expectedRevision:(expectedRevision || null),
+                        calendarName:(calendarName || null), organizationPartyId:(organizationPartyId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${holidayCategoryId ? 'Calendar renamed' : 'Calendar created'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="holidayCategoryId" from="stored?.holidayCategoryId || holidayCategoryId"/><parameter name="year"/></default-response>
+        <error-response url="."><parameter name="year"/></error-response>
+    </transition>
+    <transition name="storeHoliday">
+        <actions>
+            <service-call name="mantle.humanres.ScheduleServices.store#Holiday"
+                    in-map="{workEffortId:(workEffortId || null), expectedRevision:(expectedRevision || null), holidayCategoryId:(holidayCategoryId || null),
+                        workEffortName:(workEffortName ?? null), holidayDate:(holidayDate || null), remove:(remove == 'true')}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${remove == 'true' ? 'Holiday removed' : (workEffortId ? 'Holiday changed' : 'Holiday added')}</message></if>
+        </actions>
+        <default-response url="."><parameter name="holidayCategoryId"/><parameter name="year"/></default-response>
+        <error-response url="."><parameter name="holidayCategoryId"/><parameter name="year"/></error-response>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.hrView &amp;&amp; can.hrEdit)"/>
+        <set field="yearText" from="/^\d{4}$/.test(String(year || '')) ? String(year) : ec.l10n.format(ec.user.nowTimestamp, 'yyyy')"/>
+        <service-call name="mantle.humanres.ScheduleServices.get#Holidays" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{holidayCategoryId:(holidayCategoryId || null), fromDate:(yearText + '-01-01'), thruDate:(yearText + '-12-31')}"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            calendarsFound = !!found?.calendars
+            calendars = Array.from(found?.calendars || [])
+            holidays = Array.from(found?.holidays || [])
+            selectedCalendar = calendars.find(row => row.holidayCategoryId === holidayCategoryId) || null
+            editableCalendars = calendars.filter(row => row.canEdit)
+            yearValues = {holidayCategoryId: holidayCategoryId || null, year: yearText}
+            newCalendar = {organizationPartyId: people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null}
+            newHoliday = {holidayCategoryId: selectedCalendar?.canEdit ? selectedCalendar.holidayCategoryId : (editableCalendars[0]?.holidayCategoryId || null)}
+            calendarOptions = editableCalendars.map(row => ({key: row.holidayCategoryId, text: row.calendarName + ' (' + row.organizationName + ')'}))
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Holidays" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewHolidayDialog" button-text="Add holiday" icon="sym_o_event" type="default" width="560"
+                        title="Add a holiday" condition="canEdit &amp;&amp; calendarOptions.length">
+                    <form-single name="NewHoliday" transition="storeHoliday" map="newHoliday">
+                        <field name="holidayCategoryId">
+                            <default-field title="Calendar"><drop-down><list-options list="calendarOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                        </field>
+                        <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="holidayDate"><default-field title="Day"><date-time type="date"/></default-field></field>
+                        <field name="year"><default-field><hidden default-value="${yearText}"/></default-field></field>
+                        <field name="submitButton"><default-field title="Add holiday"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="NewCalendarDialog" button-text="New calendar" icon="sym_o_add" type="primary" width="560"
+                        title="New holiday calendar" condition="canEdit">
+                    <label type="p" text="A calendar's holidays take the day of every schedule that names it. An employer's calendar is changed by its HR; a shared one by a People administrator."/>
+                    <form-single name="NewCalendar" transition="storeCalendar" map="newCalendar">
+                        <field name="calendarName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer" tooltip="Empty: shared by every employer, which only a People administrator adds">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'employers', selected:newCalendar.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="year"><default-field><hidden default-value="${yearText}"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create calendar"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!calendarsFound">
+            <widgets>
+                <label text="Holiday calendars are open to People staff who read an employer. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="CalendarRows" condition="calendarsFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Calendars"/>
+                    <box-body-nopad>
+                        <form-list name="Calendars" list="calendars" skip-form="true" paginate="false" condition="calendars.length">
+                            <field name="calendarName">
+                                <default-field title="Calendar">
+                                    <link url="." text="${calendarName}" link-type="anchor" parameter-map="{holidayCategoryId:holidayCategoryId, year:yearText}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="holidayCount" align="right"><default-field title="Holidays in ${yearText}"><display format="#,##0"/></default-field></field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="canEdit" title="">
+                                    <container-dialog id="RenameCalendar_${holidayCategoryId}" button-text="Rename" icon="sym_o_edit" type="default"
+                                            width="520" title="Rename ${calendarName}">
+                                        <form-single name="RenameCalendar" transition="storeCalendar"
+                                                map="{holidayCategoryId:holidayCategoryId, expectedRevision:revision, calendarName:calendarName}">
+                                            <field name="holidayCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="calendarName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="year"><default-field><hidden default-value="${yearText}"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Rename"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="calendarName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="holidayCount"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!calendars.length"
+                                text="No holiday calendar yet.${canEdit ? ' Start one with New calendar.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="${selectedCalendar ? selectedCalendar.calendarName : 'Every calendar'}: holidays of ${yearText}"/>
+                    <box-toolbar>
+                        <link url="." text="Every calendar" icon="sym_o_close" link-type="anchor-button" btn-type="default"
+                                parameter-map="{holidayCategoryId:'', year:yearText}" condition="selectedCalendar"/>
+                    </box-toolbar>
+                    <box-body>
+                        <form-single name="FindYear" transition="." map="yearValues">
+                            <field name="holidayCategoryId"><default-field><hidden/></default-field></field>
+                            <field name="year"><default-field title="Year"><text-line size="4" input-type="number"/></default-field></field>
+                            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row-big><field-ref name="year"/><field-ref name="submitButton"/></field-row-big>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="Holidays" list="holidays" skip-form="true" paginate="false" condition="holidays.length">
+                            <field name="dayText"><default-field title="Day"><display/></default-field></field>
+                            <field name="weekdayText"><default-field title="Weekday"><display/></default-field></field>
+                            <field name="workEffortName"><default-field title="Holiday"><display/></default-field></field>
+                            <field name="calendarName"><default-field title="Calendar"><display/></default-field></field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="canEdit" title="">
+                                    <container-dialog id="ChangeHoliday_${workEffortId}" button-text="Change" icon="sym_o_edit" type="default"
+                                            width="520" title="Change ${workEffortName}">
+                                        <form-single name="ChangeHoliday" transition="storeHoliday"
+                                                map="{workEffortId:workEffortId, expectedRevision:revision, workEffortName:workEffortName, holidayDate:day,
+                                                    holidayCategoryId:holidayCategoryId}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="holidayCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="holidayDate"><default-field title="Day"><date-time type="date"/></default-field></field>
+                                            <field name="year"><default-field><hidden default-value="${yearText}"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Change"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeHoliday" link-type="hidden-form-link" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                            confirmation="Remove ${workEffortName} on ${dayText}?"
+                                            parameter-map="{workEffortId:workEffortId, expectedRevision:revision, remove:'true', year:yearText}"/>
+                                </conditional-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="dayText"/><field-ref name="workEffortName"/></column>
+                                <column><field-ref name="calendarName"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!holidays.length" text="No holiday in ${yearText}."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
