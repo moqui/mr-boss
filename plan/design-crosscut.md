@@ -550,7 +550,7 @@ Contracts:
   (`define#ProjectionOwner`: admitted, eventList), reading no record of the owner itself; put and
   delete refuse it (403), after the DAV server's own read-only refusal. People's Team absence
   (`LeaveServices.get#AbsenceProjection`) is the first; shifts, interviews, Maintenance's and
-  Marketing's register the same way.
+  Marketing's register the same way. As built (impl-people P14): My shifts (`projected-PeopleMyShifts`, `ScheduleServices.get#ShiftProjection`), a worker's own published shifts, registers on the same kind.
 - **CX-MAIL-INTAKE (L3).** Business mail intake is an `EmailRuleAction` enumeration whose
   `optionValue` names the owner's service, reached by a plus-tag intake address, as Projects'
   `createRequest` and `createWorkItem` already are. Proposed actions: `createApplication`,
@@ -695,7 +695,7 @@ calendar, Chatter, files and approvals references keep their existing design own
 | SendingProfiles | Shared/SendingProfiles | settings | xml | Bind business use to verified transport | proposed MessageSendingProfile | Comms owner; Marketing §12, §3.29 here | sending-config capability | new | organization/profile |
 | Suppressions | Shared/Suppressions | list | xml | Review channel blocks independently of membership | proposed MessageSuppression (Comms, `mantle.party.MessageServices`) | Comms owner; Marketing §4, §3.29 here | consent/suppression reviewers | new | organization/channel |
 | CampaignDelivery | Shared/CampaignDelivery | list | xml | Explain campaign recipient outcomes | proposed CampaignRecipient over the CX-DELIVERY ledger | Marketing §5 (mounted at Marketing/Sends/CampaignDelivery), §3.29 here | dispatch; separate PII grant | new | send/organization |
-| SurveyForms | Shared/SurveyForms | list | xml | Choose shared survey definitions | DbForm | Commons owner; Customer Service §9; Marketing §10; People §13 | scoped survey users | parity | purpose/organization |
+| SurveyForms | Shared/SurveyForms | list | xml | Choose shared survey definitions | DbForm | Commons owner; Customer Service §9; Marketing §10; People §13 | scoped survey users | parity | purpose/organization; the mounting app's registration (service/ironstone/shared/SurveyApps.js) and a purpose's (mantle.party.FormPurpose), impl-people P16 |
 | SurveyFormDetail | Shared/SurveyFormDetail | detail | xml | Edit dated shared questions/options | DbForm | Commons owner; Customer Service §9; Marketing §10 | form editors | parity | form/effective time |
 | SurveyResponses | Shared/SurveyResponses | report | xml | Inspect scoped response summaries | FormResponse | Commons owner; Customer Service §7; Marketing §10 | response readers | parity | publication/case/source scope |
 | SurveyResponseDetail | Shared/SurveyResponseDetail | detail | xml | Read a historical response | FormResponse | Commons owner; Customer Service §7; Marketing §10 | response readers | parity | response ID |

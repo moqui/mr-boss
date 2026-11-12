@@ -13,9 +13,10 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- SurveyResponses, the survey builder's answers and their counts (crosscut §2, §8; Commons' builder, built by
-    impl-customer-service P13 with the Customer Service context only): mounted by Customer Service as
-    Reports/SatisfactionResults (design SatisfactionResults: CsatFind, CsatResponseList, CsatStats), for service management;
-    any other app root sees "not available". One feedback form and one of its effective periods at a time (a period starts
+    impl-customer-service P13; impl-people P16, F51: the services and routes are the mounting app's registration's,
+    service/ironstone/shared/SurveyApps.js): mounted by Customer Service as Reports/SatisfactionResults (design
+    SatisfactionResults: CsatFind, CsatResponseList, CsatStats), for service management; an app whose registration names no
+    responses service (People: a People response is read through the record it belongs to) or none sees "not available". One feedback form and one of its effective periods at a time (a period starts
     when its questions or options change), so a changed scale or question is never compared with the earlier one; then the
     queue, team, customer, score and state (ironstone.customerservice.FeedbackServices.find#CaseResponses). The counts are on
     the form's raw scale. Each answer opens ResponseDetail; its case opens CaseDetail when the user may open it. -->
@@ -35,9 +36,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="statusEnumId"/></default-response>
     </transition>
     <actions>
-        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
-        <if condition="inCustomerService">
-            <service-call name="ironstone.customerservice.FeedbackServices.find#CaseResponses" out-map="found"
+        <set field="survey" from="ec.resource.script('component://mr-boss/service/ironstone/shared/SurveyApps.js').context(appRoot)"/>
+        <if condition="survey?.services?.responses">
+            <service-call name="${survey.services.responses}" out-map="found"
                     transaction="force-new" ignore-error="true"
                     in-map="{appRoot:appRoot, formId:formId, periodId:periodId, requestCategoryId:requestCategoryId,
                         teamPartyId:teamPartyId, customerPartyId:customerPartyId, score:score, statusEnumId:statusEnumId}"/>
@@ -53,7 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="periodChoices" from="found?.periodOptions || []"/>
         <set field="scoreChoices" from="found?.scale ? Array.from({length: found.scale.high - found.scale.low + 1}, (x, i) =&gt;
                 ({value: String(found.scale.high - i), label: String(found.scale.high - i)})) : []"/>
-        <set field="detailLink" from="sharedLinks?.['Reports/ResponseDetail']"/>
+        <set field="detailLink" from="survey?.links?.response ? sharedLinks?.[survey.links.response] : null"/>
         <set field="statLines" from="stats ? [
                 {label: 'Invited', value: String(stats.invited)},
                 {label: 'Delivered', value: String(stats.delivered)},

@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     supervisor: GenerateWork (the preview of every row of the page, then one confirmed generation, a result per plan, through
     generate#MaintenanceWorkOrders), Generate on one row, the selection generated, and ResolveDue on a row: coalesce a calendar
     plan's missed due dates into one catch-up or skip its next due date, with a reason (reconcile#MaintenanceSchedule), or, for a
-    resource administrator, record a meter's reading (record#MaintenanceMeter). The list says when it stops at its cap. No cost. -->
+    resource administrator, record a meter's reading (record#MaintenanceMeter). The list says when it stops at its cap. No cost. P19: the list exports CSV
+    (Admin's Exports lists it as maintenanceDueList, route maintenanceDue) and a dated row offers its next due as .ics (dueCalendarFile). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Due maintenance" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -36,6 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <transition-include name="generateDue" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
     <transition-include name="resolveDue" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
+    <!-- P19: a row's next calendar due as a calendar file -->
+    <transition-include name="dueCalendarFile" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
     <actions>
         <set field="can" from="maintenance.capabilities"/>
         <set field="canPlan" from="!!(can.plan || can.supervise)"/>
@@ -108,7 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
         <container-box>
             <box-body-nopad>
-                <form-list name="DueList" list="dueList" skip-form="true" paginate="true" header-dialog="true" select-columns="true"
+                <form-list name="DueList" list="dueList" skip-form="true" paginate="true" header-dialog="true" select-columns="true" show-csv-button="true"
                         views="list,calendar">
                     <row-selection id-field="maintenanceScheduleId" parameter="maintenanceScheduleIds" list-mode="true" condition="canPlan">
                         <action>
@@ -202,6 +205,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="generateDue" text="Generate" icon="sym_o_playlist_add" link-type="hidden-form-link"
                                     parameter-map="{maintenanceScheduleIds:maintenanceScheduleId, operationKey:'due-' + maintenanceScheduleId + '-' + ec.user.randomString(10)}"
                                     condition="canPlan &amp;&amp; readyToMake" confirmation="Make the work of ${scheduleName}?"/>
+                            <link url="dueCalendarFile" text=".ics" icon="sym_o_event" link-type="anchor" tooltip="Add the next due to a calendar"
+                                    parameter-map="{maintenanceScheduleId:maintenanceScheduleId}" condition="!meter &amp;&amp; plannedDate"/>
                             <container-dialog id="Resolve_${maintenanceScheduleId}" button-text="Resolve" icon="sym_o_rule" title="Resolve ${scheduleName}"
                                     width="560" condition="canPlan &amp;&amp; (meter || missedCount || dueState == 'due')">
                                 <section name="ResolveMeter" condition="meter">

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Shift roster (design-people §6 ShiftRoster, §1.2; crosscut M11; style-guide §3.7, §4.8; impl-people P14, F53, F68): the
+    shared resource-lane timeline (Projects' Timeline.qvue in its resource mode, the component Manufacturing's ProductionSchedule
+    serves too) with one lane per employment the user rosters or reads: a manager's live reports at their lines' employers, an HR
+    reader's employers' employees (an HR editor rosters them), each lane shaded with the person's working schedule, holidays and
+    approved leave (never its type or reason), and their shifts as bars, drafts dashed. A drag only previews: the drop opens the
+    Shift dialog at the person and time it was dropped on, previewed by mantle.humanres.ScheduleServices.store#Shift (an overlap,
+    approved leave, an ended employment or a past start refused; leave waiting and a holiday warned), and Save shift in the dialog
+    commits through the same service; a click on a free time, or Add shift, opens a new one. Publish (the primary while drafts
+    wait) publishes the drafts of these days (publish#Shifts): each worker is told once, and their shifts reach capacity, the
+    team calendar, SelfService and the My shifts calendar. The terminal: ShiftRosterTui, a person and day table with the same
+    commands; the print: ShiftRosterPrint. HR's and the managers' (BOSS_PPL_SCHEDULES), denied to the root user group and to
+    self-service; Mantle checks who rosters whom again: PEOPLE_ROSTER_EDIT beside the manager's line or HR's employer (the user's
+    call, impl-people §4, Nov 12, 2026), so without it every lane is read only and Add shift, the dialog's Save and Publish are not
+    offered (they follow the roster's canRoster). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Shift roster" default-menu-index="12" menu-image="sym_o_view_timeline" menu-image-type="icon"
+        render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
+
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDay"/>
+    <parameter name="days"/>
+
+    <!-- what is drawn (the timeline's resource contract, Timeline.qvue's header): the people as lanes, their shifts as bars -->
+    <transition name="schedule" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const t = (text) => ec.l10n.localize(text)
+            const out = ec.service.sync().name('mantle.humanres.ScheduleServices.get#Roster').requireNewTransaction(true)
+                .parameters({organizationPartyId: organizationPartyId || null, fromDay: fromDay || null, days: Number(days) || null}).call() || {}
+            if (ec.message.hasError()) {
+                const message = ec.message.getErrorsString()
+                ec.message.clearErrors()
+                ec.web.sendJsonResponse(/ORGANIZATION_DENIED|PERMISSION_DENIED/.test(message) ? {notAvailable: true} : {failed: message})
+                return
+            }
+            const roster = out.roster || {}
+            const lanes = Array.from(roster.lanes || [])
+            const shifts = Array.from(roster.shifts || [])
+            const employers = new Set(lanes.map((lane) => lane.organizationPartyId))
+            const time = (text) => String(text || '').slice(11, 16)
+            const laneList = lanes.map((lane) => ({laneId: lane.partyRelationshipId, laneName: lane.personName, selectable: !!lane.canRoster,
+                caption: [employers.size > 1 ? lane.organizationName : '', lane.scheduleName || t('No working schedule'),
+                    lane.hours ? lane.hours + ' ' + t('h rostered') : ''].filter(Boolean).join(' · '),
+                fieldDefaults: {facilityId: lane.facilityId || '', breakMinutes: '0'},
+                shadeList: Array.from(lane.plannedList || []).map((row) => ({kind: 'planned', fromText: row.fromText, thruText: row.thruText, name: t('Working schedule')}))
+                    .concat(Array.from(lane.holidayList || []).map((row) => ({kind: 'holiday', fromText: row.fromText, thruText: row.thruText, name: row.name})))
+                    .concat(Array.from(lane.leaveList || []).map((row) => ({kind: 'leave', fromText: row.fromText, thruText: row.thruText,
+                        name: t('On leave') + ' · ' + row.partText})))}))
+            const barList = shifts.map((row) => {
+                const conflicts = Array.from(row.conflicts || [])
+                const draft = row.statusEnumId === 'ShsDraft'
+                return {barId: row.shiftAssignmentId, laneId: row.partyRelationshipId, title: row.personName, startText: row.startText, endText: row.endText,
+                    label: time(row.startText) + '–' + time(row.endText) + (draft ? ' · ' + t('Draft') : ''),
+                    subtitle: row.statusText + (row.facilityName ? ' · ' + row.facilityName : ''),
+                    nowNote: row.hoursText + (row.localText ? ' · ' + row.localText : ''),
+                    tip: row.personName + ' · ' + row.whenText + ' · ' + row.hoursText + ' · ' + row.statusText + (row.facilityName ? ' · ' + row.facilityName : '')
+                        + (row.localText ? ' · ' + row.localText : '') + conflicts.map((item) => ' · ' + item.message).join(''),
+                    ariaLabel: row.personName + ', ' + row.whenText + ', ' + row.statusText,
+                    color: conflicts.some((item) => item.code === 'LEAVE_CONFLICT') ? 'negative' : (conflicts.length ? 'warning' : (draft ? 'blue-grey' : 'positive')),
+                    dashed: draft, canMove: !!row.canChange, conflicts,
+                    moveParameters: {shiftAssignmentId: row.shiftAssignmentId, expectedRevision: row.revision},
+                    fieldValues: {breakMinutes: String(row.breakMinutes || 0), facilityId: row.facilityId || ''}}
+            })
+            const conflictList = barList.flatMap((bar) => bar.conflicts.map((item) => ({barId: bar.barId, title: bar.title + ' ' + bar.label, code: item.code,
+                message: item.message})))
+            const drafts = Number(roster.draftCount || 0)
+            const resource = {title: t('Shift roster'), laneTitle: t('Person'), laneLabel: t('Person'),
+                emptyText: t('No one to roster in these days: a manager rosters their reports, HR the employees of their employers.'),
+                notAvailableTitle: t('This roster is not available'), notAvailableText: t('The employer is not one of yours.'),
+                truncatedText: t('The first 200 people are drawn; choose an employer to see the others.'),
+                moveTitle: t('Shift'), newTitle: t('Add shift'), applyLabel: t('Save shift'), removeLabel: t('Remove shift'),
+                removeConfirm: t('Remove this shift of {title}? A published shift\'s worker is told.'),
+                hint: t('Drag a shift to preview a move, or click a free time to add one; the dialog saves it. Publish tells the workers.'),
+                legendList: [{kind: 'planned', label: t('Working schedule')}, {kind: 'holiday', label: t('Holiday')}, {kind: 'leave', label: t('On leave')},
+                    {kind: 'draft', label: t('Draft')}, {kind: 'conflict', label: t('Conflict')}],
+                filter: Array.from(roster.organizationOptions || []).length > 1 ? {name: 'organizationPartyId', label: t('Employer'),
+                    value: roster.organizationPartyId || null, options: roster.organizationOptions, allowEmpty: true} : null,
+                days: roster.days, printLabel: t('Print'),
+                printUrl: (people?.webBase || '/qapps/People') + '/Time/ShiftRosterPrint?renderMode=html-print&lastStandalone=true&fromDay='
+                    + encodeURIComponent(roster.fromDay) + '&days=' + roster.days
+                    + (roster.organizationPartyId ? '&organizationPartyId=' + encodeURIComponent(roster.organizationPartyId) : ''),
+                canCreate: !!roster.canRoster, createLabel: t('Add shift'), newHours: 8, keepLength: true,
+                fieldList: [{name: 'breakMinutes', label: t('Break (minutes)'), type: 'number', value: '0'},
+                    {name: 'facilityId', label: t('Work location'), type: 'select', options: Array.from(roster.facilityOptions || [])}],
+                actionList: roster.canRoster ? [{name: 'publishShifts', label: t('Publish') + ' (' + drafts + ')', icon: 'sym_o_send', primary: drafts > 0,
+                    disabled: !drafts, confirm: t('Publish the draft shifts of these days? Each worker is told of theirs.'),
+                    parameters: {fromDay: roster.fromDay, days: String(roster.days)}}] : [],
+                moveTransition: 'moveShift'}
+            ec.web.sendJsonResponse({resource, schedule: {fromText: roster.fromText, thruText: roster.thruText, nowText: roster.nowText,
+                todayText: roster.todayText, canSchedule: !!roster.canRoster, canOverride: false, truncated: !!roster.truncated,
+                laneList, barList, conflictList, unscheduledList: [], noticeList: []}})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the Shift dialog: a preview (nothing written), then Save shift (a new draft or the change) or Remove shift -->
+    <transition name="moveShift">
+        <actions><script><![CDATA[
+            const value = (name) => { const found = ec.context.get(name); return found == null || found === '' ? null : String(found) }
+            const action = value('moveAction') === 'apply' ? 'apply' : (value('moveAction') === 'remove' ? 'remove' : 'preview')
+            const out = ec.service.sync().name('mantle.humanres.ScheduleServices.store#Shift').requireNewTransaction(true).parameters({action,
+                shiftAssignmentId: value('shiftAssignmentId'), partyRelationshipId: value('laneId'), startText: value('startText'), endText: value('endText'),
+                breakMinutes: value('breakMinutes'), facilityId: action === 'remove' ? null : (value('facilityId') || ''), reason: value('reason'),
+                expectedRevision: value('expectedRevision'), operationKey: action === 'preview' ? null : value('operationKey')}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: true, messageInfos: [{type: 'danger', message}]}); return }
+            if (action === 'preview') {
+                const preview = out.preview || {}
+                ec.web.sendJsonResponse({preview: {laneName: preview.personName, startText: preview.startText, endText: preview.endText,
+                    detailText: [preview.hours != null ? preview.hours + ' h' : '', preview.localText].filter(Boolean).join(' · '),
+                    refusals: preview.refusals || [], conflicts: preview.warnings || [], needsOverride: false, canApply: !!preview.canApply,
+                    moveParameters: preview.revision ? {expectedRevision: preview.revision} : {}}})
+                return
+            }
+            ec.web.sendJsonResponse({result: out, messageInfos: [{type: 'success', message: ec.l10n.localize(action === 'remove' ? 'Shift removed' : 'Shift saved')}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- Publish: the drafts of these days, each worker told of theirs; a shift now refused is named and left a draft -->
+    <transition name="publishShifts">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('mantle.humanres.ScheduleServices.publish#Shifts').requireNewTransaction(true).parameters({
+                fromDay: fromDay || null, days: Number(days) || 7, organizationPartyId: organizationPartyId || null}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: true, messageInfos: [{type: 'danger', message}]}); return }
+            const messages = [{type: 'success', message: out.publishedCount + ' ' + ec.l10n.localize(out.publishedCount === 1 ? 'shift published' : 'shifts published')}]
+            for (const row of Array.from(out.skipped || [])) messages.push({type: 'warning', message: row.personName + ' ' + row.whenText + ': ' + row.message})
+            ec.web.sendJsonResponse({result: out, messageInfos: messages})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode><text type="qvue" location="component://mr-boss/screen/Projects/WorkItems/Timeline.qvue" template="false"/>
+            <!-- the terminal: ShiftRosterTui, the person and day table beside this screen, on the same employer and days -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "ShiftRosterTui",
+                url: sri.buildUrl("../ShiftRosterTui").addParameters({organizationPartyId: organizationPartyId || null, fromDay: fromDay || null,
+                    days: days || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">${ec.l10n.localize('The shift roster opens in the browser app (the qvue render mode).')}</p>]]></text></render-mode>
+    </widgets>
+</screen>

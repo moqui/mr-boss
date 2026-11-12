@@ -121,6 +121,14 @@ along with this software (see the LICENSE.md file). If not, see
                 const employer = relationship ? ec.entity.find('mantle.party.Organization').condition('partyId', relationship.toPartyId).disableAuthz().one() : null
                 title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), employer?.organizationName].filter(Boolean).join(' at ')
                 typeLabel = L('Employment')
+            } else if (entityName === 'mantle.humanres.ability.PartyQualification') {
+                // People's qualification host (impl-people P18): the person and the kind, read after get#RecordLinkInfo admitted the
+                // user as the person or an HR reader of an employer of theirs; never its number
+                const person = ec.entity.find('mantle.party.Person').condition('partyId', record.partyId).disableAuthz().one()
+                const kind = record.qualificationTypeEnumId ? ec.entity.find('moqui.basic.Enumeration').condition('enumId', record.qualificationTypeEnumId)
+                    .disableAuthz().one() : null
+                title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), kind?.description].filter(Boolean).join(' · ')
+                typeLabel = L('Qualification')
             } else if (entityName === 'moqui.resource.GitMergeRequest') {
                 // a merge request by its number and title (get#RecordLinkInfo checked its repository's view right)
                 title = '!' + record.mergeRequestNum + ' ' + (record.title || '')

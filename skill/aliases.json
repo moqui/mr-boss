@@ -9,5 +9,8 @@
     "retry": ["resend", "reprocess", "try again"],
     "metric": ["kpi", "measure"],
     "dashboard": ["scorecard", "overview"],
-    "leave": ["time off", "vacation", "holiday", "pto", "day off"]
+    "leave": ["time off", "vacation", "holiday", "pto", "day off"],
+    "work order": ["maintenance job", "repair order", "job card"],
+    "equipment": ["machine", "asset", "device"],
+    "problem": ["fault", "breakdown", "defect", "malfunction"]
 }

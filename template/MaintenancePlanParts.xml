@@ -120,4 +120,18 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <!-- P19: a plan's next calendar due as a calendar file (PlanDetail's More, DueMaintenance's rows): its record check, then Mantle's
+        get#MaintenanceCalendarFile (a meter plan NO_DUE_DATE) -->
+    <transition name="dueCalendarFile" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceCalendarFile" out-map="calendar"
+                    in-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <script>ec.web.sendTextResponse(calendar.text, 'text/calendar', calendar.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
 </screen>

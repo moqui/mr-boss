@@ -13,13 +13,15 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- SurveyForms, the survey builder's form list (crosscut §2, §8; design-drawers-commons §19; Commons owns the builder,
-    impl-customer-service §4, P13 builds it with the Customer Service context only): mounted by Customer Service as
-    Settings/FeedbackForms (design FeedbackForms: FeedbackFormList and NewFeedbackForm) and later by Marketing and People with
-    their own purpose and context; any other app root sees "not available". In the Customer Service context the forms are
-    the feedback forms of one of the user's settings organizations (ironstone.customerservice.FeedbackServices.find#FeedbackForms),
-    and New feedback form makes one (mantle.request.CaseFeedbackServices.create#FeedbackForm: the default required rating of
-    1 to 5, or 1 to 3, with an optional reason, comment and consent, or a copy of a published form), its fields drafts until
-    published in FeedbackFormDetail. Saves check SUPPORT_POLICY_EDIT in Mantle; the dialog shows only to a user who may save. -->
+    impl-customer-service §4, P13 built it for Customer Service; impl-people P16, F51, made it any app's): the forms of the purposes
+    the mounting app's registration offers (service/ironstone/shared/SurveyApps.js: the services, the capability that shows the
+    edit actions, the routes and the words), of one of the user's organizations, from the registration's list service. Customer
+    Service mounts it as Settings/FeedbackForms (design FeedbackForms: its feedback forms, ironstone.customerservice.FeedbackServices
+    .find#FeedbackForms; New feedback form, mantle.request.CaseFeedbackServices.create#FeedbackForm: the default required rating of 1
+    to 5, or 1 to 3, with an optional reason, comment and consent, or a copy of a published form); People as Settings/Forms
+    (design-people §13 Forms: its private purposes, mantle.party.FormDefinitionServices find#Forms and create#Form, a new form of a
+    purpose, empty or a copy). An app with no registration sees "not available". Each form's fields are drafts until published in
+    the form detail. Saves are checked in Mantle by the purpose's permission; the dialog shows only to a user who may save. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Survey forms">
     <parameter name="organizationPartyId"/>
@@ -28,19 +30,23 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="createForm">
         <actions>
-            <service-call name="mantle.request.CaseFeedbackServices.create#FeedbackForm" out-map="created"
-                    in-map="{organizationPartyId:organizationPartyId, description:description, comments:(comments || null),
-                        scale:(sourceFormId ? null : (scale || 5)), sourceFormId:(sourceFormId || null)}"/>
+            <set field="survey" from="ec.resource.script('component://mr-boss/service/ironstone/shared/SurveyApps.js').context(appRoot)"/>
+            <if condition="!survey"><return error="true" message="The survey forms are not available here"/></if>
+            <service-call name="${survey.services.create}" out-map="created"
+                    in-map="{purposeEnumId:(purposeEnumId || survey.purposes[0]), organizationPartyId:organizationPartyId,
+                        description:description, comments:(comments || null),
+                        scale:(survey.rating &amp;&amp; !sourceFormId ? (scale || 5) : null), sourceFormId:(sourceFormId || null)}"/>
+            <set field="detailPath" from="sharedLinks?.[survey.links.formDetail] || '.'"/>
             <message type="success">Made the form ${description}: check its questions, then publish it</message>
         </actions>
-        <default-response url="../FeedbackFormDetail"><parameter name="formId" from="created.formId"/></default-response>
+        <default-response url="${detailPath}"><parameter name="formId" from="created.formId"/></default-response>
         <error-response url="."/>
     </transition>
     <actions>
-        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
-        <if condition="inCustomerService">
-            <service-call name="ironstone.customerservice.FeedbackServices.find#FeedbackForms" out-map="found"
-                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <set field="survey" from="ec.resource.script('component://mr-boss/service/ironstone/shared/SurveyApps.js').context(appRoot)"/>
+        <if condition="survey">
+            <service-call name="${survey.services.list}" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, purposeEnumIds:survey.purposes}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="formsFound" from="!!found?.forms"/>
@@ -48,8 +54,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="orgOptions" from="found?.organizations || []"/>
         <set field="orgId" from="found?.organizationPartyId"/>
         <set field="sourceOptions" from="found?.sourceOptions || []"/>
-        <set field="can" from="customerService?.capabilities || {}"/>
-        <set field="detailLink" from="sharedLinks?.['Settings/FeedbackFormDetail']"/>
+        <set field="purposeOptions" from="Array.from(found?.purposes || []).filter((purpose) =&gt; purpose.canEdit)
+                .map((purpose) =&gt; ({value: purpose.value, label: purpose.label}))"/>
+        <set field="canEdit" from="!!survey?.canEdit"/>
+        <set field="rating" from="!!survey?.rating"/>
+        <set field="words" from="survey?.words || {}"/>
+        <set field="detailLink" from="survey ? sharedLinks?.[survey.links.formDetail] : null"/>
+        <set field="newForm" from="{organizationPartyId: orgId, scale: '5', purposeEnumId: purposeOptions.length ? purposeOptions[0].value : null}"/>
     </actions>
     <widgets>
         <label text="The survey forms are not available to you here." type="p" condition="!formsFound"/>
@@ -57,23 +68,29 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <container style="row items-center q-col-gutter-sm q-mb-sm">
                     <container style="col">
-                        <label text="Feedback forms" type="h5"/>
-                        <label type="p" style="text-caption m-muted q-mb-none"
-                                text="The questions a customer answers once a case is resolved. A form changes by dated questions and options, so earlier answers keep the questions they answered."/>
+                        <label text="${words.listTitle}" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none" text="${words.listCaption}"/>
                     </container>
                     <container style="col-auto">
-                        <container-dialog id="NewFeedbackForm" button-text="New feedback form" icon="sym_o_add" type="primary" width="560"
-                                title="New feedback form" condition="can.policyEdit">
-                            <form-single name="NewFeedbackFormForm" transition="createForm" map="{organizationPartyId:orgId, scale:'5'}">
+                        <container-dialog id="NewFeedbackForm" button-text="${words.newButton}" icon="sym_o_add" type="primary" width="560"
+                                title="${words.newButton}" condition="canEdit">
+                            <form-single name="NewFeedbackFormForm" transition="createForm" map="newForm">
                                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="purposeEnumId">
+                                    <conditional-field title="For" condition="!rating">
+                                        <drop-down><list-options list="purposeOptions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
                                 <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
                                 <field name="comments">
                                     <default-field title="What it is for"><text-area rows="2" cols="40"/></default-field>
                                 </field>
                                 <field name="scale">
-                                    <default-field title="Rating" tooltip="The rating's value is its score">
+                                    <conditional-field title="Rating" tooltip="The rating's value is its score" condition="rating">
                                         <radio><option key="5" text="1 to 5"/><option key="3" text="1 to 3"/></radio>
-                                    </default-field>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
                                 </field>
                                 <field name="sourceFormId">
                                     <default-field title="Or copy" tooltip="The published questions of another form">
@@ -117,16 +134,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="versionText"><default-field title="Version"><display/></default-field></field>
-                            <field name="scaleText"><default-field title="Rating"><display/></default-field></field>
-                            <field name="policyText"><default-field title="Assigned"><display/></default-field></field>
+                            <field name="scaleText" hide="!rating"><default-field title="Rating"><display/></default-field></field>
+                            <field name="policyText" hide="!rating"><default-field title="Assigned"><display/></default-field></field>
                             <field name="answeredText"><default-field title="Answers"><display/></default-field></field>
                             <columns type="mobile">
                                 <column><field-ref name="description"/><field-ref name="versionText"/></column>
                                 <column><field-ref name="stateText"/><field-ref name="answeredText"/></column>
                             </columns>
                         </form-list>
-                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!forms.length"
-                                text="No feedback form yet: resolved cases ask nothing. Make one with New feedback form, publish it, then choose it in Service defaults."/>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!forms.length" text="${words.empty}"/>
                     </box-body-nopad>
                 </container-box>
             </widgets>

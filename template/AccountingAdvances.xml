@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Expense posting's Employee advances tab (design-accounting §5 "People integration", design-people §9 EmployeeAdvances; People
+    P15, owner contract), section-included by Accounting/Payables/ExpensePosting with view advances: the organization's approved
+    employee advances (mantle.humanres.ExpenseServices.find#Advances with finance, a finance reader of the organization), each with
+    what was asked, its bill, delivered, applied and is outstanding. An approved advance is paid as its bill (Expense posting's
+    queue, then a payment run), never from here; Apply applies a paid advance to one of the employee's claims approved for payment
+    (apply#Advance, through ExpensePosting's transition), which needs PAYMENT_EDIT in the organization, which Mantle checks. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="EmployeeAdvances" condition="view == 'advances'">
+            <widgets>
+                <container-box>
+                    <box-header title="Employee advances"/>
+                    <box-body-nopad>
+                        <form-list name="AdvanceQueue" list="advances" skip-form="true" paginate="false" condition="advances.length">
+                            <field name="employeeAdvanceId">
+                                <default-field title="Advance">
+                                    <display text="${employeeAdvanceId}${purpose ? ' · ' + purpose : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="personName">
+                                <default-field title="Employee">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="invoiceId">
+                                <default-field title="Bill">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amountText" align="right">
+                                <default-field title="Asked">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="deliveredText" align="right">
+                                <default-field title="Delivered">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="outstandingText" align="right">
+                                <default-field title="Outstanding">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="stageText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ApplyAdvance_${employeeAdvanceId}"
+                                            button-text="Apply"
+                                            title="Apply advance ${employeeAdvanceId} to a claim"
+                                            width="560"
+                                            condition="canPay &amp;&amp; stage == 'outstanding' &amp;&amp; applicableClaims?.length">
+                                        <form-single name="ApplyAdvance_${employeeAdvanceId}" transition="applyAdvance">
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="employeeAdvanceId" from="employeeAdvanceId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="invoiceId">
+                                                <default-field title="Claim">
+                                                    <drop-down>
+                                                        <list-options list="applicableClaims" key="${invoiceId}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Amount" tooltip="Empty: what is outstanding, up to the claim's unpaid">
+                                                    <text-line size="12" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Apply" confirmation="Apply advance ${employeeAdvanceId} to the claim?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="employeeAdvanceId"/>
+                                    <field-ref name="personName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="outstandingText"/>
+                                    <field-ref name="stageText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No approved employee advance: People approves them, and each is a bill to approve and pay like any other."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!advances.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

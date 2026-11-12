@@ -17,14 +17,19 @@ along with this software (see the LICENSE.md file). If not, see
     UserDetail, a person's own record). P2 mounts Employee360 with Commons' context (ironstone.people's employee360Apps): the
     public work card of a person the user's People scope admits, and for the user's own record their personal information with
     the corrections they may make themselves. P8 mounts SelfService (Shared/PeopleSelfService.xml: the user's own employment,
-    requests, People tasks and emergency contacts), linked from Commons Home's People card and Today. Nothing here needs the People
-    root grant: what shows is what mantle.humanres.PeopleServices admits. -->
+    requests, People tasks and emergency contacts), linked from Commons Home's People card and Today. P16 review: MyInterview
+    (Shared/PeopleMyInterview.xml), an interview panel member's own interview and scorecard, opened from SelfService's My
+    interviews. Nothing here needs the People root grant: what shows is what mantle.humanres.PeopleServices and RecruitingServices
+    admit. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" default-menu-include="false" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="Employee360">
         <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
         <!-- P8: the user's own self-service (design §3 SelfService), the definition People mounts at People/SelfService -->
         <subscreens-item name="SelfService" location="component://mr-boss/screen/Shared/PeopleSelfService.xml" menu-include="false"/>
+        <!-- P16 review (the user's call of Nov 12, 2026): an interview panel member's own interview and scorecard, opened from
+            SelfService's My interviews, the definition People mounts at People/MyInterview -->
+        <subscreens-item name="MyInterview" location="component://mr-boss/screen/Shared/PeopleMyInterview.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-active/>

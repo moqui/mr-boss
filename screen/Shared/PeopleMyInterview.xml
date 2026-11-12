@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- My interview (design-people §3 SelfService, §5 ApplicantDetail; impl-people P16 review, the user's call of Nov 12, 2026): an
+    interview panel member's own interview, opened from SelfService's My interviews, one definition mounted beside SelfService at
+    People/MyInterview and Commons/People/MyInterview (out of both menus), so an interviewer with self-service only answers their
+    scorecard without People. From mantle.humanres.RecruitingServices.get#MyInterview, which admits the caller's own panel alone:
+    when and where (a video interview's call link), the note to the attendees, the panel, the applicant's name, the opening and its
+    employer, the materials a recruiter shared with the panel (an application's file marked shared; the resume only when shared),
+    and their own scorecard, answered once (submit#Scorecard) and then read back; never the application's stage, source, contact,
+    notes or other files, nor another reviewer's scorecard. The scorecard is opted out of AI. A self-service employee opens it by its
+    own grant (BOSS_PPL_INTERVIEW_SELF, non-inheritable, data/BossSetupData.xml). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="My interview" default-menu-include="false" menu-image="sym_o_record_voice_over" menu-image-type="icon">
+    <parameter name="workEffortId"/>
+
+    <!-- the caller's own scorecard, once: the form's answers are the request's values, checked again in Mantle -->
+    <transition name="submitScorecard">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.submit#Scorecard"
+                    in-map="{invitationId:invitationId, values:Object.assign({}, ec.web.parameters)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Scorecard submitted</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- a file shared with the panel (get#ApplicationFile checks the panel and the sharing) -->
+    <transition name="sharedFile" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.get#ApplicationFile" out-map="sharedOut"
+                    in-map="{applicationContentId:applicationContentId}"/>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(sharedOut.location, !!sharedOut.inline, sharedOut.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.humanres.RecruitingServices.get#MyInterview" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{workEffortId:(workEffortId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="interview" from="found?.interview || null"/>
+        <set field="recordFound" from="!!interview"/>
+        <script><![CDATA[
+            card = interview?.scorecard || null
+            canAnswer = !!card && !card.answered && !interview.cancelled
+            scorecardFormName = canAnswer ? 'DbForm#' + card.formId : 'MyScorecardNone'
+            answerRows = card?.answered ? Array.from(card.answers || []) : []
+            fileRows = Array.from(interview?.sharedFiles || [])
+            const where = String(interview?.location || '')
+            callLink = interview?.hasCall && ['https://', 'http://', '/call/'].some(start => where.startsWith(start)) ? where : null
+            captionText = interview ? [interview.openingTitle, interview.organizationName].filter(Boolean).join(' · ') : ''
+            factRows = interview ? [['When', interview.whenText + (interview.cancelled ? ' (cancelled)' : '')],
+                ['Where', callLink ? '' : interview.location], ['Panel', interview.panelText], ['Note', interview.note]]
+                .filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+        ]]></script>
+    </actions>
+
+    <widgets>
+        <section name="MyInterviewMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This interview is not available to you: it shows only for the members of its panel."/>
+                        <link url="../SelfService" text="Back to self-service" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MyInterviewRecord" condition="recordFound">
+            <widgets>
+                <container style="q-mb-xs">
+                    <link url="../SelfService" text="Self-service" link-type="anchor" icon="arrow_back"/>
+                </container>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Interview" type="span" style="text-caption m-muted"/>
+                            <label text="${interview.applicantName}" type="h5"/>
+                            <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none" condition="captionText"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${callLink}" url-type="plain" text="Join the video call" link-type="anchor-button" btn-type="primary"
+                                    icon="sym_o_videocam" target-window="_blank" condition="callLink &amp;&amp; !interview.cancelled"/>
+                        </container>
+                    </container>
+                </container>
+                <container-row>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="The interview"/>
+                            <box-body-nopad>
+                                <form-list name="InterviewFacts" list="factRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="value"/></column></columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Shared with the panel"/>
+                            <box-body-nopad>
+                                <form-list name="SharedFiles" list="fileRows" skip-form="true" paginate="false" condition="fileRows.length">
+                                    <field name="description">
+                                        <default-field title="File">
+                                            <link url="sharedFile" text="${description}" link-type="anchor" target-window="_blank"
+                                                    parameter-map="{applicationContentId:applicationContentId, workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="contentDateText"><default-field title="Added"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="typeText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-md" condition="!fileRows.length"
+                                        text="The recruiter shared no material with the panel. You see the applicant's name and the opening only."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="6">
+                        <!-- the caller's scorecard to answer, once (not shared with AI) -->
+                        <section name="MyScorecardAnswer" condition="canAnswer" ai-opt-out="true">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Your scorecard"/>
+                                    <box-body>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="Only you and the opening's recruiters read your scorecard; the rest of the panel does not. You submit it once."/>
+                                        <form-single name="MyScorecard" transition="submitScorecard" dynamic="true"
+                                                extends="${scorecardFormName}" map="{invitationId:card.invitationId, workEffortId:interview.workEffortId}">
+                                            <field name="invitationId"><default-field><hidden/></default-field></field>
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Submit scorecard"><submit confirmation="Submit your scorecard? It is not changed after."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <!-- the caller's answered scorecard (not shared with AI) -->
+                        <section name="MyScorecardAnswered" condition="card?.answered" ai-opt-out="true">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Your scorecard"/>
+                                    <box-body-nopad>
+                                        <label type="p" style="text-caption m-muted q-px-md q-pt-sm" text="${card.stateText}"/>
+                                        <form-list name="MyAnswers" list="answerRows" skip-form="true" paginate="false">
+                                            <field name="title"><default-field title="Question"><display/></default-field></field>
+                                            <field name="displayText" ai-opt-out="true"><default-field title="Your answer"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="title"/></column>
+                                                <column><field-ref name="displayText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="MyScorecardClosed" condition="!card?.answered &amp;&amp; interview.cancelled">
+                            <widgets>
+                                <label type="p" style="m-muted" text="The interview was cancelled: there is no scorecard to submit."/>
+                            </widgets>
+                        </section>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+        <section name="MyScorecardNoneHolder" condition="false">
+            <widgets><form-single name="MyScorecardNone"/></widgets>
+        </section>
+    </widgets>
+</screen>

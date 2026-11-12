@@ -37,6 +37,10 @@ feature("WorkOrderDetail shows the technician their assigned work order and thei
         // the technician's lifecycle: Complete is open to them, Cancel names who may
         header.output.includes("Complete")
         header.output.includes("A supervisor cancels started work")
+        // P19: the print, the calendar file and, for its assigned technician, the video call
+        header.output.includes("Print work order")
+        header.output.includes("Add to calendar (.ics)")
+        header.output.includes("Add video call")
         time.errors.length == 0
         time.output.includes("Your time: 1.5 h")
         time.output.includes("Traced the leak to the coil header")
