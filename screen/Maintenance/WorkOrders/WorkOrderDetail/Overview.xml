@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     the revision read: name, description, priority, type, severity, failure mode, P9's cost centre and project; the estimate after
     approval a supervisor's), and
     its team and technicians with Assign and schedule (schedule#MaintenanceWorkOrder: the team, the technicians, the planned
-    window), the one writer of its assignments. -->
+    window), the one writer of its assignments; and its follow-up tasks (P7), each opening WorkItemDetail's Maintenance context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Overview" default-menu-index="10">
     <parameter name="workEffortId"/>
@@ -48,6 +48,14 @@ along with this software (see the LICENSE.md file). If not, see
                 ['Cost centre', workOrder.costCenterName], ['Project', workOrder.projectName]
             ].filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])})) : []"/>
         <set field="assignmentList" from="workOrderDetail?.assignmentList || []"/>
+        <!-- P7: the follow-up tasks -->
+        <set field="followUpTaskList" from="null"/>
+        <if condition="workOrder">
+            <service-call name="ironstone.maintenance.WorkItemServices.find#FollowUpTasks" out-map="followUps" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="followUpTaskList" from="followUps?.taskList?.length ? followUps.taskList : null"/>
+        </if>
         <set field="headerValues" from="workOrder ? {workEffortId: workEffortId, expectedRevision: workOrder.revision,
                 workEffortName: workOrder.workEffortName, description: workOrder.description, priority: workOrder.priority != null ? String(workOrder.priority) : '5',
                 estimatedWorkTime: workOrder.estimatedHours, maintenanceTypeEnumId: workOrder.maintenanceTypeEnumId,
@@ -192,6 +200,25 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body>
                 </container-box>
+                <!-- P7: the work order's follow-up tasks (ordinary tasks linked to it), each opening WorkItemDetail's Maintenance context -->
+                <section name="FollowUpTasks" condition="followUpTaskList?.length &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Follow-up tasks"/>
+                            <box-body>
+                                <section-iterate name="FollowUpRows" list="followUpTaskList" entry="followUp">
+                                    <widgets>
+                                        <container style="row items-center q-gutter-x-sm">
+                                            <link url="${sharedLinks['WorkOrders/WorkItemDetail']}" link-type="anchor" text="${followUp.workEffortName}"
+                                                    parameter-map="{workEffortId:followUp.workEffortId}"/>
+                                            <label text="${followUp.statusText}" type="span" style="text-caption m-muted"/>
+                                        </container>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

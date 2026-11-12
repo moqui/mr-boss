@@ -16,7 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     per bookable meeting room and piece of equipment over the hours of a day or the days of a week, with each booking in its
     status color (waiting for approval in warning, booked in primary). A click or a drag on a row books it (a new event in the
     user's calendar, booked at once or requested by the resource's policy: service/ironstone/commons/ScheduleServices.xml); a booking
-    of the user's can be cancelled; a resource's name opens ResourceDetail, its subscreen. The component is Schedules.qvue next
+    of the user's can be cancelled; a resource's name opens ResourceDetail, its subscreen. "Scheduling admin" opens Maintenance's
+    Scheduling for a user who has it (impl-maintenance P16; design-drawers-commons §7 Schedules). Maintenance mounts the component
+    as its ResourceCalendar, with transitions of its own. The component is Schedules.qvue next
     to this file; its state (view, date, type) is in the URL. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Rooms and equipment" default-menu-index="1" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_meeting_room" menu-image-type="icon">
@@ -31,9 +33,16 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('ironstone.commons.ScheduleServices.get#Resources').parameters({resourceType: type || 'all', text: text || null,
                 minCapacity: Number(minCapacity) > 0 ? Math.floor(Number(minCapacity)) : null}).call()
             const defaults = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarDefaults').call()?.defaults || {}
+            // "Scheduling admin": Maintenance's Scheduling for a user who opens it (impl-maintenance P16; its menu's permissions)
+            let adminUrl = null
+            try {
+                const caps = ec.resource.script('component://mr-boss/service/ironstone/maintenance/Maintenance.js').execute('capabilities', {}).capabilities || {}
+                if (caps.read && (caps.policyView || caps.policyEdit || caps.bookingViewAssigned || caps.supervise || caps.resourceView))
+                    adminUrl = '/qapps/Maintenance/Scheduling/Resources'
+            } catch (err) { ec.logger.warn(`Scheduling admin link for ${ec.user.username} not read: ${err && err.message ? err.message : err}`) }
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {resourceList: out.resourceList, timeZone: ec.user.timeZone,
                 todayText: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'), workStart: defaults.workStart, workEnd: defaults.workEnd,
-                weekStart: defaults.weekStart})
+                weekStart: defaults.weekStart, adminUrl: adminUrl})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>

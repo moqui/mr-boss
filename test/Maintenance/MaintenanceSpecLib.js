@@ -50,6 +50,8 @@ const ids = {
     unmanagedRoomId: "BOSS_MNT_ROOM_103",
     vendorEventId: "BOSS_MNT_EV_VENDOR",
     blackoutId: "BOSS_MNT_BLK_ROOM101",
+    // P16: the technician's shift handover waiting for maint.booking's approval of Room 101
+    requestedEventId: "BOSS_MNT_EV_HANDOVER",
     // P6: the procedures (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
     // steps, a dependency and a pressure reading), the room inspection (approved, for rooms), the van's pre-trip check (a draft) and
     // the old compressor checklist (retired)
@@ -60,6 +62,8 @@ const ids = {
     roomProcedureId: "BOSS_MNT_PROC_ROOM",
     draftProcedureId: "BOSS_MNT_PROC_VAN",
     retiredProcedureId: "BOSS_MNT_PROC_OLD",
+    // P7: the air handler's follow-up task (a Commons task, maint.tech's, linked to its work order)
+    followUpTaskId: "BOSS_MNT_TASK_AHU_GASKET",
     // P9: the parts (BossZMaintenanceDemoData.xml): the air handler's coil gasket in Services' stock warehouse (two issued to its
     // leak, one returned), the issuance, and Retail's stock in the same warehouse
     gasketId: "BOSS_MNT_PART_GASKET",
@@ -72,6 +76,10 @@ const ids = {
     roomPlanId: "BOSS_MNT_PLAN_ROOM201",
     compressorPlanId: "BOSS_MNT_PLAN_COMP",
     stalePlanId: "BOSS_MNT_PLAN_STARTS",
+    // P10: the held motor's rewind, a purchase request of Services sourced to Delta Motor Rewinds' purchase order, its service line
+    // the work's (BossZMaintenanceDemoData.xml)
+    rewindRequestId: "BOSS_MNT_PREQ_MOTOR",
+    rewindOrderId: "BOSS_MNT_PO_REWIND",
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor), preventive plans (P13, a reader of work or a planner or supervisor) and
     // equipment, and with Settings the Maintenance administrator's; a procedure author reads procedures alone

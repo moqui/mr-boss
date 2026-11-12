@@ -96,11 +96,14 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The bookings of resources (keys, type|id) from start to end (days, yyyy-MM-dd in the user's time zone):
             mantle.work.EventServices.get#FullCalendarData per resource (not cancelled; a denied booking left out), each
             {resourceKey, workEffortId, title (Busy for an event the user may not see), start and end (yyyy-MM-dd HH:mm), allDay,
-            bookingStatusId, statusLabel, statusColor, organizerName, mine, canCancel, url}.</description>
+            bookingStatusId, statusLabel, statusColor, organizerName, mine, canCancel, url}. With includeUnavailable (Maintenance's
+            ResourceCalendar, impl-maintenance P16) each resource's outages and planned blocks too (get#FullCalendarData's
+            unavailableList), as items with blocked true, kind (actual or planned), the safe label as the title and no event.</description>
         <in-parameters>
             <parameter name="start" required="true"/>
             <parameter name="end" required="true"/>
             <parameter name="keys" type="Object" required="true"/>
+            <parameter name="includeUnavailable" type="Boolean" default="false"/>
         </in-parameters>
         <out-parameters><parameter name="bookingList" type="List"/><parameter name="failedSources" type="List"/></out-parameters>
         <actions><script><![CDATA[
@@ -149,6 +152,14 @@ along with this software (see the LICENSE.md file). If not, see
                             organizerName: seen ? nameOf(row?.ownerPartyId) : null, mine: mine, canCancel: mine && !event.recurring,
                             recurring: !!event.recurring, url: seen ? '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(event.workEffortId) : null})
                     }
+                    // Maintenance's resource calendar: the outages and blocks, apart from the bookings (a safe label, no event)
+                    if (includeUnavailable) Array.from(out?.unavailableList || []).forEach((block, index) => {
+                        const actual = block.kind === 'actual'
+                        bookingList.push({resourceKey: key, key: key + '|block|' + index, workEffortId: null, title: block.label || L(actual ? 'Out of service' : 'Blocked'),
+                            start: ec.l10n.format(block.fromDate, 'yyyy-MM-dd HH:mm'), end: ec.l10n.format(block.thruDate, 'yyyy-MM-dd HH:mm'), allDay: false,
+                            bookingStatusId: null, statusLabel: L(actual ? 'Out of service' : 'Blocked'), statusColor: 'negative', blocked: true,
+                            kind: block.kind, organizerName: null, mine: false, canCancel: false, recurring: false, url: null})
+                    })
                 } catch (err) {
                     failedSources.push(key)
                     ec.logger.error(`Bookings of ${key} for ${ec.user.username} not read: ${err && err.message ? err.message : err}`)

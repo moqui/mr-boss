@@ -3,7 +3,10 @@
 // ResourcePolicyDetail's one (Room 101's policy, approver and availability), Blackouts' one (the carpet replacement over Room 101,
 // Plan blackout), EquipmentDetail's Schedule tab's and FacilityDetail's Schedules tab's under Maintenance; and Admin's lifecycle
 // participant listing the resources a leaver approves, handed over through store#ResourceApprover. The rules are Mantle's
-// ResourceBookingPolicy; the "usable when" is the acceptance MaintenanceResourcePolicyWalk. P16 adds BookingRequests' render here.
+// ResourceBookingPolicy; the "usable when" is the acceptance MaintenanceResourcePolicyWalk. P16: BookingRequests' one qvt render for
+// Room 101's approver (the shift handover waiting, its purpose not shared, Approve and the bulk decision) and ResourceCalendarTui's
+// (the terminal twin of ResourceCalendar, whose .qvue is Commons' Schedules component); the decisions are Mantle's
+// ResourceBookingDecisions and the booking walk the acceptance MaintenanceBookingWalk.
 // Run: ./moq test mr-boss --spec MaintenanceScheduling
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib
@@ -58,6 +61,74 @@ feature("EquipmentDetail's Schedule and FacilityDetail's Schedules show a resour
         equipment.output.includes("Not managed")
         facility.errors.length == 0
         facility.output.includes("Managed: approved by")
+    }
+})
+
+feature(
+    "BookingRequests renders for Room 101's approver with the shift handover waiting; the calendar's terminal twin lists its day",
+    {
+        when() {
+            return asUser(users.booking, () => ({
+                // from the demo's week, so the handover (Nov 18, 2026) is listed after its day has passed too
+                requests: page("Scheduling/BookingRequests", {fromDate: "2026-11-12"}),
+                calendar: page("Scheduling/ResourceCalendarTui", {date: "2026-11-17"})
+            }))
+        },
+        then({requests, calendar}) {
+            requests.errors.length == 0
+            requests.output.includes("Room 101 Huddle")
+            requests.output.includes("Maintenance Technician")
+            requests.output.includes("Six of us, and the screen for the dashboards")
+            requests.output.includes("Approve")
+            requests.output.includes("Decide selected")
+            // the approver may not open the meeting itself: its purpose is not shown
+            requests.output.includes("Not shared with you")
+            !requests.output.includes("Shift handover")
+            calendar.errors.length == 0
+            calendar.output.includes("Room 101 Huddle")
+            calendar.output.includes("Blocked")
+            calendar.output.includes("Not available: closed (blackout)")
+            // the vendor walkthrough the approver may not open is Busy
+            calendar.output.includes("Busy")
+            !calendar.output.includes("HVAC vendor walkthrough")
+        }
+    }
+)
+
+feature("a ResourceBooking card in Commons' inbox opens BookingRequests; a card that is no approval opens its record as before", {
+    when() {
+        // the user's call (P16 review R8): an approval topic's card opens the topic's own link before the record's
+        const link = "/qapps/Maintenance/Scheduling/BookingRequests?facilityId=" + ids.managedRoomId
+        const row = (id, fields) =>
+            Object.assign(
+                {
+                    notificationMessageId: id,
+                    topic: "ResourceBooking",
+                    recordEntityName: "mantle.work.effort.WorkEffort",
+                    recordId: ids.requestedEventId,
+                    linkText: link,
+                    message: {}
+                },
+                fields
+            )
+        const rows = asUser(users.booking, () => {
+            ec.artifactExecution.disableAuthz()
+            return invoke("ironstone.commons.CommonsServices.decorate#Notifications", {
+                notificationList: [
+                    row("A", {canApprove: true}),
+                    row("B", {canApprove: false, topic: "ResourceBookingNotice"}),
+                    row("C", {canApprove: true, linkText: null})
+                ],
+                appTitles: {}
+            }).rows
+        })
+        return {rows}
+    },
+    then({rows}) {
+        rows[0].openUrl == "/qapps/Maintenance/Scheduling/BookingRequests?facilityId=" + ids.managedRoomId
+        rows[0].openIsScreen == true
+        rows[1].openUrl == "/qapps/Commons/Calendar/EventDetail?workEffortId=" + ids.requestedEventId
+        rows[2].openUrl == "/qapps/Commons/Calendar/EventDetail?workEffortId=" + ids.requestedEventId
     }
 })
 

@@ -17,11 +17,14 @@ along with this software (see the LICENSE.md file). If not, see
     week (a click books that day); each booking in its status color, a waiting one in warning, a booked one in primary, the
     user's own with a person icon. A booking opens a dialog with the event and, for the user's own, Cancel booking. The Book
     button books any resource at any time. Days and times are wall-clock text in the user's time zone; the state (view, date,
-    type) is in the URL. While ResourceDetail is in the path only it shows. Brand color names only (style-guide §4.8, §5). -->
+    type) is in the URL. While ResourceDetail is in the path only it shows. Brand color names only (style-guide §4.8, §5).
+    "Scheduling admin" opens Maintenance for a user who has it. Maintenance mounts this component as Scheduling/ResourceCalendar
+    (impl-maintenance P16): its own transitions give the scope's resources and their outages and planned blocks (blocked items, in
+    negative, which open a dialog and are never moved), and there is no way back to the Calendar. -->
 <template><div class="boss-schedules">
     <m-screen-context :title="t('Rooms and equipment') + (rangeTitle ? ': ' + rangeTitle : '')"></m-screen-context>
     <template v-if="!subActive">
-        <div class="q-mb-xs"><q-btn flat dense no-caps color="primary" icon="arrow_back" :label="t('Calendar')" @click="go(calendarUrl)"></q-btn></div>
+        <div v-if="inCommons" class="q-mb-xs"><q-btn flat dense no-caps color="primary" icon="arrow_back" :label="t('Calendar')" @click="go(calendarUrl)"></q-btn></div>
         <div class="row items-center q-gutter-sm q-mb-sm">
             <div class="text-h6 q-mr-sm">{{t('Rooms and equipment')}}</div>
             <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" :label="t('Today')" @click="goToday"></q-btn>
@@ -33,6 +36,7 @@ along with this software (see the LICENSE.md file). If not, see
             <q-space></q-space>
             <q-btn-toggle :model-value="type" dense no-caps unelevated toggle-color="primary" :options="typeOptions" @update:model-value="setState({type: $event})"></q-btn-toggle>
             <q-btn-toggle v-if="!phone" :model-value="view" dense no-caps unelevated toggle-color="primary" :options="viewOptions" @update:model-value="setState({view: $event})"></q-btn-toggle>
+            <q-btn v-if="adminUrl" flat dense no-caps color="primary" icon="sym_o_admin_panel_settings" :label="t('Scheduling admin')" @click="go(adminUrl)"></q-btn>
             <q-btn unelevated dense no-caps color="primary" icon="sym_o_add" :label="t('Book')" @click="openBooking(null, null)"></q-btn>
         </div>
         <div class="row items-center q-mb-sm q-gutter-sm">
@@ -42,6 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
             <div class="text-caption m-muted">
                 <span class="rounded-borders bg-primary q-mr-xs" style="display:inline-block;width:10px;height:10px"></span>{{t('Booked')}}
                 <span class="rounded-borders m-tonal text-warning q-ml-md q-mr-xs" style="display:inline-block;width:10px;height:10px;border:1px solid currentColor"></span>{{t('Waiting for approval')}}
+                <template v-if="hasBlocks"><span class="rounded-borders bg-negative q-ml-md q-mr-xs" style="display:inline-block;width:10px;height:10px"></span>{{t('Out of service or blocked')}}</template>
                 <q-icon name="sym_o_lock" size="xs" class="q-ml-md q-mr-xs"></q-icon>{{t('Needs approval')}}
             </div>
         </div>
@@ -175,7 +180,7 @@ module.exports = {
     name: 'BossSchedules',
     data() {
         return {
-            resources: [], bookings: [], failed: [], loading: false, ready: false, timeZone: '', todayText: '', workStart: '09:00', workEnd: '17:00', weekStart: 0,
+            resources: [], bookings: [], failed: [], adminUrl: null, loading: false, ready: false, timeZone: '', todayText: '', workStart: '09:00', workEnd: '17:00', weekStart: 0,
             view: 'day', date: '', type: 'all', minCapacity: '', filter: '', requestSeq: 0, nowMinutes: null,
             drag: null, selection: null,
             booking: { open: false, key: 0, initial: {} },
@@ -187,7 +192,10 @@ module.exports = {
         dark() { return this.$q.dark.isActive; },
         locale() { return String((moqui.config && moqui.config.locale) || 'en-US').replace('_', '-'); },
         pathList() { return this.$root.currentPathList || []; },
-        schedIndex() { return this.pathList.indexOf('Schedules'); },
+        // Commons' Schedules, or Maintenance's ResourceCalendar, which mounts this component (impl-maintenance P16)
+        schedIndex() { const at = this.pathList.indexOf('Schedules'); return at >= 0 ? at : this.pathList.indexOf('ResourceCalendar'); },
+        inCommons() { return this.pathList.indexOf('ResourceCalendar') < 0; },
+        hasBlocks() { return this.bookings.some((booking) => booking.blocked); },
         subActive() { return this.schedIndex >= 0 && this.pathList.length > this.schedIndex + 1; },
         screenPath() { return this.$root.basePath + '/' + (this.schedIndex >= 0 ? this.pathList.slice(0, this.schedIndex + 1) : ['Commons', 'Calendar', 'Schedules']).join('/'); },
         linkPath() { return this.$root.linkBasePath + '/' + (this.schedIndex >= 0 ? this.pathList.slice(0, this.schedIndex + 1) : ['Commons', 'Calendar', 'Schedules']).join('/'); },
@@ -334,6 +342,7 @@ module.exports = {
             return moqui.request(this.url('resources')).then((result) => {
                 const json = result.json || {};
                 this.resources = json.resourceList || [];
+                this.adminUrl = json.adminUrl || null;
                 this.timeZone = json.timeZone || '';
                 this.todayText = json.todayText || '';
                 this.workStart = json.workStart || '09:00';
@@ -382,6 +391,8 @@ module.exports = {
             return this.items.filter((item) => item.resourceKey === resource.key && item.sAbs < dayStart + 1440 && item.eAbs > dayStart).sort((a, b) => a.sAbs - b.sAbs);
         },
         bookingClass(booking) {
+            // an outage or a planned block (Maintenance's resource calendar): not an event, never moved
+            if (booking.blocked) return booking.kind === 'actual' ? 'bg-negative text-white' : 'm-tonal text-negative';
             if (booking.bookingStatusId && String(booking.bookingStatusId).endsWith('Requested')) return 'm-tonal text-warning';
             if (!booking.url) return this.dark ? 'bg-grey-8 text-white' : 'bg-grey-5 text-white';
             return 'bg-primary text-white';

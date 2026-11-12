@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Purchasing tab (design-maintenance §3 PurchaseLinks and CompleteWork, MT-10; impl-maintenance P10, F45): the
+    work's purchase requests with their lines and state, and the purchase order lines that fulfil it (linked to its equipment record,
+    or sourced from its requests), each with its supplier, order state, quantity and, for a service line, what was accepted and is left;
+    an order line opens OrderDetail under Maintenance (read only). Request a purchase (a planner or supervisor, the work open:
+    link#MaintenancePurchase, a purchase request of the work's organization submitted to Purchasing's approvers; it places and approves
+    nothing), Link an order line (a buyer, equipment work), and Accept outside service (the assigned technician or a supervisor with
+    Purchasing's receiving permission: accept#MaintenanceService with a file of the work as evidence; CompleteWork offers the same line).
+    Prices only for a buyer or price reader. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Purchasing" default-menu-index="50">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="requestPurchase" location="component://mr-boss/template/MaintenancePurchaseParts.xml"/>
+    <transition-include name="linkPurchase" location="component://mr-boss/template/MaintenancePurchaseParts.xml"/>
+    <transition-include name="acceptService" location="component://mr-boss/template/MaintenancePurchaseParts.xml"/>
+    <actions>
+        <!-- WorkOrderDetail's actions read the work order when it renders with the tab; alone it reads it here -->
+        <if condition="workOrderDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workOrder" from="workOrderDetail?.workOrder || null"/>
+        <if condition="workOrder">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenancePurchases" out-map="purchases"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="purchases" from="purchases || {}"/>
+        <set field="requestList" from="purchases.requestList || []"/>
+        <set field="requestLines" from="requestList.flatMap(request =&gt; request.lines.map(line =&gt; Object.assign({requestId:request.requestId,
+                requestName:request.requestName, statusText:request.statusText}, line)))"/>
+        <set field="orderLines" from="purchases.orderLines || []"/>
+        <set field="acceptLines" from="orderLines.filter(line =&gt; line.canAccept).map(line =&gt; ({key:line.key, text:line.description + ' · '
+                + line.orderId + ':' + line.orderItemSeqId + ' · ' + line.remainingText + ' to accept'}))"/>
+        <set field="requestValues" from="{workEffortId:workEffortId, operationKey:'mnt-pur-' + ec.user.randomString(20), quantity:'1'}"/>
+        <set field="acceptValues" from="{workEffortId:workEffortId, operationKey:'mnt-acc-' + ec.user.randomString(20),
+                serviceLine:acceptLines[0]?.key || null}"/>
+    </actions>
+    <widgets>
+        <section name="PurchasingFound" condition="workOrder">
+            <widgets>
+                <container-box>
+                    <box-header title="Purchase requests · ${requestList.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="RequestPurchase" button-text="Request a purchase" icon="sym_o_add_shopping_cart"
+                                title="Request parts or outside service for ${workEffortId}" width="640" condition="purchases.canRequest">
+                            <form-single name="RequestPurchaseForm" transition="requestPurchase" map="requestValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="requestName"><default-field title="What is needed"><text-line size="50" required="true"/></default-field></field>
+                                <field name="productId">
+                                    <default-field title="Product or service" tooltip="Purchasing sources a line that names one">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'parts'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Details for the buyer"><text-area rows="2" cols="50"/></default-field></field>
+                                <field name="quantity"><default-field title="Quantity"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="requiredByDate"><default-field title="Needed by" tooltip="The work's due date when empty"><date-time type="date"/></default-field></field>
+                                <field name="submitButton"><default-field title="Send to Purchasing"><submit type="primary"/></default-field></field>
+                            </form-single>
+                            <label text="Purchasing approves, sources and places it; the work order shows its purchase order lines." type="p"
+                                    style="text-caption m-muted"/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="PurchaseRequestLines" list="requestLines" skip-form="true" paginate="false">
+                            <field name="requestId"><default-field title="Request"><display text="${requestId} · ${requestName}"/></default-field></field>
+                            <field name="description"><default-field title="Line"><display/></default-field></field>
+                            <field name="quantityText" align="right"><default-field title="Quantity"><display text="${quantityText} ${uomText}"/></default-field></field>
+                            <field name="requiredByText"><default-field title="Needed by"><display/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="quantityText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No purchase is requested for this work." type="p" style="m-muted q-pa-sm q-mb-none" condition="!requestLines.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Purchase order lines · ${orderLines.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AcceptService" button-text="Accept outside service" icon="sym_o_task_alt"
+                                title="Accept outside service on ${workEffortId}" width="640" condition="acceptLines.length">
+                            <form-single name="AcceptServiceForm" transition="acceptService" map="acceptValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="serviceLine"><default-field title="Service line">
+                                    <drop-down><list-options list="acceptLines" key="${key}" text="${text}"/></drop-down></default-field></field>
+                                <field name="acceptedQuantity"><default-field title="Quantity accepted"><text-line size="6" input-type="number" required="true"/></default-field></field>
+                                <field name="workEffortContentId"><default-field title="Evidence" tooltip="A file of the work, such as the technician's photo">
+                                    <drop-down allow-empty="true"><list-options list="purchases.evidenceFiles" key="${workEffortContentId}" text="${text}"/></drop-down></default-field></field>
+                                <field name="comments"><default-field title="Comments"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Accept"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="LinkOrderLine" button-text="Link an order line" icon="sym_o_link"
+                                title="Link a purchase order line to ${workEffortId}" width="560" condition="purchases.canLink">
+                            <form-single name="LinkOrderLineForm" transition="linkPurchase" map="{workEffortId:workEffortId}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="orderId"><default-field title="Purchase order"><text-line size="20" required="true"/></default-field></field>
+                                <field name="orderItemSeqId"><default-field title="Line"><text-line size="6" required="true"/></default-field></field>
+                                <field name="submitButton"><default-field title="Link"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="PurchaseOrderLines" list="orderLines" skip-form="true" paginate="false">
+                            <field name="orderId"><default-field title="Order line">
+                                <link url="${sharedLinks['WorkOrders/OrderDetail']}" text="${orderId}:${orderItemSeqId}" link-type="anchor"
+                                        parameter-map="{orderId:orderId}" style="text-mono"/></default-field></field>
+                            <field name="description"><default-field title="Item"><display/></default-field></field>
+                            <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                            <field name="orderStatusText"><default-field title="Order"><display/></default-field></field>
+                            <field name="quantityText" align="right"><default-field title="Quantity"><display text="${quantityText} ${uomText}"/></default-field></field>
+                            <field name="unitAmountText" align="right" hide="!purchases.priceRead"><default-field title="Price"><display/></default-field></field>
+                            <field name="acceptedText" align="right"><default-field title="Accepted"><display/></default-field></field>
+                            <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="orderId"/></column>
+                                <column><field-ref name="quantityText"/><field-ref name="acceptedText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No purchase order line fulfils this work yet." type="p" style="m-muted q-pa-sm q-mb-none" condition="!orderLines.length"/>
+                        <label text="${purchases.acceptMessage}" type="p" style="text-caption m-muted q-pa-sm q-mb-none"
+                                condition="orderLines.some(line =&gt; line.service) &amp;&amp; !purchases.canAccept &amp;&amp; purchases.acceptMessage"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -12,8 +12,13 @@
 // organization's procedures; an author's change), P9's part issue (the assigned technician with the stock grant; another
 // technician without it and another owner's stock refused), P13's preventive plan (a maintenance reader of its organization; a
 // planner's create), P15's booking policy and blackout (the resource administrator's, the planner refused, Retail's facility
-// refused; a booking approver reads the policy of the room they approve only), P18's equipment import (run by the resource
-// administrator, read by the planner, the importer's organizations only) and setup readiness (the administrator's),
+// refused; a booking approver reads the policy of the room they approve only), P7's checklist (its
+// technician reads it, not another or Retail; a waiver is a supervisor's), P10's purchases of a work order (its planner reads
+// them, a resource administrator and Retail's planner do not; a technician asks for nothing, a planner links no order line the
+// work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
+// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P18's equipment
+// import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
+// administrator's),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -969,6 +974,112 @@ feature(
             // a booking approver reads the policy of the room they approve, not another's
             approverReads == ""
             approverOther.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
+
+feature(
+    "booking requests are their approver's: a planner is refused the list and the decision, and a room the approver does not approve is refused",
+    {
+        when() {
+            const R = "mantle.work.ResourceBookingServices."
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const listed = asUser(users.booking, () => {
+                ec.artifactExecution.disableAuthz()
+                // from the demo's week, so the handover (Nov 18, 2026) is listed after its day has passed too
+                return invoke(R + "find#ResourceBookingRequests", {fromDate: "2026-11-12"}).requestList || []
+            })
+            // another organization's facility asked by name lists nothing
+            const otherListed = asUser(users.booking, () => {
+                ec.artifactExecution.disableAuthz()
+                return invoke(R + "find#ResourceBookingRequests", {facilityId: ids.otherFacilityId, fromDate: "2026-11-12"}).requestList || []
+            })
+            const deny = {workEffortId: ids.requestedEventId, facilityId: ids.managedRoomId, decision: "deny", reason: "Spec"}
+            return {
+                listed,
+                otherListed,
+                planner: as(users.planner, R + "find#ResourceBookingRequests", {}),
+                plannerDecides: as(users.planner, R + "decide#ResourceBooking", deny),
+                otherRoom: as(users.booking, R + "decide#ResourceBooking", Object.assign({}, deny, {facilityId: ids.otherFacilityId}))
+            }
+        },
+        then({listed, otherListed, planner, plannerDecides, otherRoom}) {
+            listed.some(row => row.workEffortId == ids.requestedEventId && row.canDecide)
+            otherListed.length == 0
+            planner.includes("PERMISSION_DENIED")
+            plannerDecides.includes("PERMISSION_DENIED")
+            otherRoom.includes("NOT_APPROVER")
+        }
+    }
+)
+
+// P7: a work order's checklist is read by its readers (Mantle's get#ProcessExecution: the technician it is assigned to, not another
+// technician, and not Retail's planner), and a waiver is a supervisor's (waive#ProcessStep: the technician refused before anything
+// else; the supervisor passes the permission and is refused only for naming the work order, not a step)
+feature("a work order's checklist is read by its technician, not another or Retail's planner; a waiver is a supervisor's", {
+    when() {
+        const call = (user, service, parameters) =>
+            asUser(user, () => {
+                ec.artifactExecution.disableAuthz()
+                return refusal(service, parameters)
+            })
+        const read = user => call(user, "mantle.work.ProcessServices.get#ProcessExecution", {workEffortId: ids.inProgressOrderId})
+        const waive = user =>
+            call(user, "mantle.work.ProcessServices.waive#ProcessStep", {workEffortId: ids.inProgressOrderId, reason: "Spec"})
+        const problems = []
+        if (read(users.tech) !== "") problems.push("the technician cannot read: " + read(users.tech))
+        if (!read(users.tech2).includes("NOT_ASSIGNED")) problems.push("another technician reads: " + read(users.tech2))
+        if (!read(users.retailPlanner).includes("RECORD_UNAVAILABLE")) problems.push("Retail reads: " + read(users.retailPlanner))
+        if (!waive(users.tech).includes("PERMISSION_DENIED")) problems.push("the technician waives: " + waive(users.tech))
+        if (!waive(users.supervisor).includes("STEP_REQUIRED")) problems.push("the supervisor: " + waive(users.supervisor))
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+feature(
+    "a work order's purchases are its planner's: a resource administrator and Retail are refused; a technician asks for nothing and a planner links no unrequested line; the receiving supervisor opens no Warehouse",
+    {
+        when() {
+            const S = "mantle.work.MaintenanceServices."
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const work = {workEffortId: ids.heldOrderId}
+            return {
+                holder: as(users.planner, S + "get#MaintenancePurchases", work),
+                resources: as(users.resources, S + "get#MaintenancePurchases", work),
+                otherOrganization: as(users.retailPlanner, S + "get#MaintenancePurchases", work),
+                techAsks: as(users.tech2, S + "link#MaintenancePurchase", Object.assign({requestName: "Bearings"}, work)),
+                plannerLinks: as(
+                    users.planner,
+                    S + "link#MaintenancePurchase",
+                    Object.assign({orderId: "BOSS_PUR_PO_SVC", orderItemSeqId: "01"}, work)
+                ),
+                otherAsks: as(users.retailPlanner, S + "link#MaintenancePurchase", Object.assign({requestName: "Bearings"}, work)),
+                // the supervisor holds STOCK_RECEIVE through Warehouse's receiving group (R1), which opens no Warehouse screen
+                supervisorApps: shell(users.supervisor).apps,
+                supervisorQuickCreates: quickCreates(users.supervisor)
+            }
+        },
+        then({holder, resources, otherOrganization, techAsks, plannerLinks, otherAsks, supervisorApps, supervisorQuickCreates}) {
+            holder == ""
+            resources.includes("PERMISSION_DENIED")
+            otherOrganization.includes("RECORD_UNAVAILABLE")
+            techAsks.includes("PERMISSION_DENIED")
+            plannerLinks.includes("PERMISSION_DENIED")
+            otherAsks.includes("RECORD_UNAVAILABLE")
+            supervisorApps.includes("Maintenance")
+            !supervisorApps.includes("Warehouse")
+            !supervisorQuickCreates.includes("warehouseNewReceipt")
         }
     }
 )

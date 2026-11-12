@@ -340,4 +340,11 @@ along with this software (see the LICENSE.md file). If not, see
         refuse#WorkProcess, as the user deciding) or from ProcedureDetail -->
     <moqui.security.user.NotificationTopic topic="WorkProcessApproval"
             linkTemplate="/qapps/Maintenance/Procedures/ProcedureDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P16: a booking waiting for approval (Mantle's ResourceBooking topic and its registration) opens BookingRequests
+        for its resource; it is approved or denied from Commons' approvals inbox (approve#ResourceBooking and refuse#ResourceBooking, as
+        the user deciding) or from BookingRequests. What became of a booking (ResourceBookingNotice) opens its event in Commons. -->
+    <moqui.security.user.NotificationTopic topic="ResourceBooking"
+            linkTemplate="/qapps/Maintenance/Scheduling/BookingRequests?${facilityId ? 'facilityId=' + facilityId : 'assetId=' + assetId}"/>
+    <moqui.security.user.NotificationTopic topic="ResourceBookingNotice"
+            linkTemplate="/qapps/Commons/Calendar/EventDetail?workEffortId=${workEffortId}"/>
 </entity-facade-xml>
