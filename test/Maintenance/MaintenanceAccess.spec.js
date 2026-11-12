@@ -13,7 +13,10 @@
 // technician without it and another owner's stock refused), P13's preventive plan (a maintenance reader of its organization; a
 // planner's create), P15's booking policy and blackout (the resource administrator's, the planner refused, Retail's facility
 // refused; a booking approver reads the policy of the room they approve only), P7's checklist (its
-// technician reads it, not another or Retail; a waiver is a supervisor's),
+// technician reads it, not another or Retail; a waiver is a supervisor's), P10's purchases of a work order (its planner reads
+// them, a resource administrator and Retail's planner do not; a technician asks for nothing, a planner links no order line the
+// work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
+// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1037,3 +1040,44 @@ feature("a work order's checklist is read by its technician, not another or Reta
         problems.join("\n") == ""
     }
 })
+
+feature(
+    "a work order's purchases are its planner's: a resource administrator and Retail are refused; a technician asks for nothing and a planner links no unrequested line; the receiving supervisor opens no Warehouse",
+    {
+        when() {
+            const S = "mantle.work.MaintenanceServices."
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const work = {workEffortId: ids.heldOrderId}
+            return {
+                holder: as(users.planner, S + "get#MaintenancePurchases", work),
+                resources: as(users.resources, S + "get#MaintenancePurchases", work),
+                otherOrganization: as(users.retailPlanner, S + "get#MaintenancePurchases", work),
+                techAsks: as(users.tech2, S + "link#MaintenancePurchase", Object.assign({requestName: "Bearings"}, work)),
+                plannerLinks: as(
+                    users.planner,
+                    S + "link#MaintenancePurchase",
+                    Object.assign({orderId: "BOSS_PUR_PO_SVC", orderItemSeqId: "01"}, work)
+                ),
+                otherAsks: as(users.retailPlanner, S + "link#MaintenancePurchase", Object.assign({requestName: "Bearings"}, work)),
+                // the supervisor holds STOCK_RECEIVE through Warehouse's receiving group (R1), which opens no Warehouse screen
+                supervisorApps: shell(users.supervisor).apps,
+                supervisorQuickCreates: quickCreates(users.supervisor)
+            }
+        },
+        then({holder, resources, otherOrganization, techAsks, plannerLinks, otherAsks, supervisorApps, supervisorQuickCreates}) {
+            holder == ""
+            resources.includes("PERMISSION_DENIED")
+            otherOrganization.includes("RECORD_UNAVAILABLE")
+            techAsks.includes("PERMISSION_DENIED")
+            plannerLinks.includes("PERMISSION_DENIED")
+            otherAsks.includes("RECORD_UNAVAILABLE")
+            supervisorApps.includes("Maintenance")
+            !supervisorApps.includes("Warehouse")
+            !supervisorQuickCreates.includes("warehouseNewReceipt")
+        }
+    }
+)

@@ -367,4 +367,47 @@ along with this software (see the LICENSE.md file). If not, see
             triggerEnumId="MstMeter" productMeterId="BOSS_MNT_COMP_STARTS" intervalQuantity="500" baselineValue="4200"
             baselineDate="2026-08-01 08:00:00" maxReadingAgeDays="30" templateWorkEffortId="BOSS_MNT_PROC_COMP"
             maintenanceTypeEnumId="MntTpPreventive" teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
+
+    <!-- P10 (impl-maintenance; design §3 PurchaseLinks): the motor held for parts needs a rewind, an outside service. maint.planner
+        asked for it from the work order (a purchase request of Services linked to the work), Purchasing approved and sourced it to
+        Delta Motor Rewinds' purchase order, placed, whose service line is the work's (AssetMaintenanceOrderItem, written before the
+        RequestItemOrder so the sourcing rule finds it); nothing is accepted yet. maint.supervisor accepts outside service under
+        Purchasing's own check (accept#ServiceItem: PURCHASE_ORDER_EDIT or STOCK_RECEIVE), so is in Warehouse's receiving capability
+        group, which grants STOCK_RECEIVE alone and opens no Warehouse screen (the lead's decision, Nov 12; as P9's maint.tech in
+        BOSS_WAREHOUSE_ISSUE) -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_SUP_REWIND" pseudoId="DELTAREWIND" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_MNT_SUP_REWIND" organizationName="Delta Motor Rewinds"/>
+    <mantle.party.PartyRole partyId="BOSS_MNT_SUP_REWIND" roleTypeId="Supplier"/>
+    <mantle.product.Product productId="BOSS_MNT_PRD_REWIND" productName="Motor rewind (outside service)" productTypeEnumId="PtService"
+            amountUomId="OTH_ea" ownerPartyId="ORG_ZIZI_SERVICES" statusId="PrdActive"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_MNT_PRC_REWIND" productId="BOSS_MNT_PRD_REWIND" vendorPartyId="BOSS_MNT_SUP_REWIND"
+            pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="1" price="480"
+            priceUomId="USD"/>
+    <mantle.request.Request requestId="BOSS_MNT_PREQ_MOTOR" requestTypeEnumId="RqtPurchase" statusId="ReqInProgress"
+            requestName="Rewind the compressor motor" description="For maintenance work order BOSS_MNT_WO_MOTOR"
+            requestDate="2026-11-10 09:00:00" responseRequiredDate="2026-11-20 00:00:00" currencyUomId="USD" filedByPartyId="BOSS_MNT_PLANNER"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_PREQ_MOTOR" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal" fromDate="2026-11-10 09:00:00"/>
+    <mantle.request.RequestItem requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01" statusId="ReqInProgress" productId="BOSS_MNT_PRD_REWIND"
+            description="Motor rewind (outside service)" quantity="1" quantityUomId="OTH_ea" requiredByDate="2026-11-20 00:00:00"
+            supplierPartyId="BOSS_MNT_SUP_REWIND"/>
+    <mantle.request.RequestWorkEffort requestId="BOSS_MNT_PREQ_MOTOR" workEffortId="BOSS_MNT_WO_MOTOR"/>
+    <mantle.request.requirement.Requirement requirementId="BOSS_MNT_RQMT_REWIND" requirementTypeEnumId="RqTpProduct" statusId="RqmtStOrdered"
+            productId="BOSS_MNT_PRD_REWIND" description="Motor rewind (outside service)" quantity="1" requiredByDate="2026-11-20 00:00:00"/>
+    <mantle.request.requirement.RequirementRequestItem requirementId="BOSS_MNT_RQMT_REWIND" requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01"/>
+    <mantle.request.requirement.RequirementParty requirementId="BOSS_MNT_RQMT_REWIND" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal"
+            fromDate="2026-11-10 09:00:00"/>
+    <mantle.order.OrderHeader orderId="BOSS_MNT_PO_REWIND" orderName="Compressor motor rewind" statusId="OrderPlaced"
+            entryDate="2026-11-11 10:00:00" placedDate="2026-11-11 10:00:00" currencyUomId="USD" grandTotal="480"/>
+    <mantle.order.OrderPart orderId="BOSS_MNT_PO_REWIND" orderPartSeqId="01" statusId="OrderPlaced" vendorPartyId="BOSS_MNT_SUP_REWIND"
+            customerPartyId="ORG_ZIZI_SERVICES" partTotal="480"/>
+    <mantle.order.OrderItem orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_MNT_PRD_REWIND" itemDescription="Motor rewind (outside service)" quantity="1" quantityUomId="OTH_ea"
+            unitAmount="480" requiredByDate="2026-11-20 00:00:00"/>
+    <mantle.product.maintenance.AssetMaintenanceOrderItem assetMaintenanceId="BOSS_MNT_AM_MOTOR" orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01"/>
+    <mantle.request.RequestItemOrder requestItemOrderId="BOSS_MNT_RIO_REWIND" requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01"
+            orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" quantity="1"/>
+    <mantle.request.requirement.RequirementSupply requirementSupplyId="BOSS_MNT_RS_REWIND" requirementId="BOSS_MNT_RQMT_REWIND"
+            supplyTypeEnumId="RstPurchaseOrder" orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" requestId="BOSS_MNT_PREQ_MOTOR"
+            requestItemSeqId="01" quantity="1" quantityUomId="OTH_ea" fromDate="2026-11-11 10:00:00"/>
 </entity-facade-xml>
