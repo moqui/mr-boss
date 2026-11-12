@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     estimate, organization and target and of its row's key fields, newest first, with who changed each (get#MaintenanceWorkOrder's
     historyList). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="History" default-menu-index="5">
+        default-menu-title="History" default-menu-index="6">
     <parameter name="workEffortId"/>
     <actions>
         <!-- WorkOrderDetail's actions read the work order when it renders with the tab; alone (a reloaded tab, the terminal) it

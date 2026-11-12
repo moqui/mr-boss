@@ -2196,3 +2196,14 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from now) |
 | work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work) |
 
+
+Added in `work/ResourceBookingServices.xml` (impl-maintenance P5; `ResourceOutages.js`; `record#ResourceUnavailability` was
+Manufacturing P11's internal service and gains Maintenance's entry point), called by built screens through the Maintenance screens
+after `ironstone.maintenance.AccessServices.check#Record`:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/ResourceBookingServices | record#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime (RecordDowntime); Maintenance/WorkOrders/WorkOrderDetail/Downtime (Record outage); WorkOrderDetail's Start with offline intent and Complete leaving equipment down (through transition#MaintenanceWorkOrder); Manufacturing/WorkCenters/Downtime (an equipment-fault stop, through store#ProductionDowntime, Manufacturing P11) |
+| work/ResourceBookingServices | find#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime (DowntimeRows, the correction history); Maintenance/WorkOrders/WorkOrderDetail/Downtime |
+| work/ResourceBookingServices | correct#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (Correct) |
+| work/ResourceBookingServices | end#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (RestoreResource) |

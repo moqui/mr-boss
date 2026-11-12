@@ -34,7 +34,8 @@ along with this software (see the LICENSE.md file). If not, see
                         workEffortName:workEffortName, description:description, maintenanceKindEnumId:maintenanceKindEnumId,
                         maintenanceTypeEnumId:maintenanceTypeEnumId, severityEnumId:severityEnumId, priority:priority,
                         estimatedWorkTime:estimatedWorkTime, estimatedStartDate:estimatedStartDate,
-                        estimatedCompletionDate:estimatedCompletionDate, teamPartyId:teamPartyId, operationKey:operationKey}"/>
+                        estimatedCompletionDate:estimatedCompletionDate, teamPartyId:teamPartyId, operationKey:operationKey,
+                        offlineIntent:offlineIntent}"/>
             <if condition="!ec.message.hasError()">
                 <set field="workEffortId" from="created.workEffortId"/>
                 <message type="success">${created.repeated ? 'Work order ' + created.workEffortId + ' was created already' : (created.approved ? 'Work order ' + created.workEffortId + ' created and approved' : 'Work order ' + created.workEffortId + ' created; it waits for a supervisor\'s approval')}</message>
@@ -67,12 +68,15 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{workEffortId:workEffortId, action:lifecycleAction, expectedRevision:expectedRevision,
                         holdReasonEnumId:holdReasonEnumId, cancelReasonEnumId:cancelReasonEnumId, outcomeEnumId:outcomeEnumId,
                         dispositionEnumId:dispositionEnumId, failureModeEnumId:failureModeEnumId,
-                        actualCompletionDate:actualCompletionDate}"/>
+                        actualCompletionDate:actualCompletionDate, offlineIntent:offlineIntent, followUpName:followUpName}"/>
             <script><![CDATA[
                 if (!ec.message.hasError()) {
                     const done = {APPROVED: 'approved', STARTED: 'started', HELD: 'held', RESUMED: 'resumed', COMPLETED: 'completed',
                         CLOSED: 'closed', CANCELLED: 'cancelled'}
                     ec.message.addMessage('Work order ' + workEffortId + ' ' + (done[moved.resultCode] || moved.resultCode), 'success')
+                    // P5: the downtime the action recorded or linked, and a completion's follow-up
+                    if (moved.followUpWorkEffortId) ec.message.addMessage('Follow-up work order ' + moved.followUpWorkEffortId + ' created', 'success')
+                    if (moved.resourceUnavailabilityId) ec.message.addMessage('The ' + (moved.resultCode === 'STARTED' ? 'target is out of service' : 'target stays out of service') + ' (outage ' + moved.resourceUnavailabilityId + ')', 'info')
                 }
             ]]></script>
         </actions>
@@ -179,7 +183,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <section name="ActionForm" condition="actionRow.allowed">
                         <widgets>
                             <form-single name="LifecycleForm_${formPrefix}_${actionRow.action}" transition="lifecycleAction"
-                                    map="{workEffortId:workEffortId, lifecycleAction:actionRow.action, expectedRevision:workOrder.revision}">
+                                    map="{workEffortId:workEffortId, lifecycleAction:actionRow.action, expectedRevision:workOrder.revision,
+                                        offlineIntent:(actionRow.offlineIntent ? 'Y' : 'N')}">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="lifecycleAction"><default-field><hidden/></default-field></field>
                                 <field name="expectedRevision"><default-field><hidden/></default-field></field>
@@ -216,6 +221,20 @@ along with this software (see the LICENSE.md file). If not, see
                                         <drop-down allow-empty="true">
                                             <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'failureModes'}"/>
                                         </drop-down>
+                                    </default-field>
+                                </field>
+                                <!-- P5: Start's offline intent; Complete's follow-up for what is left -->
+                                <field name="offlineIntent" hide="!actionRow.needsOffline">
+                                    <default-field title="While the work is done">
+                                        <drop-down>
+                                            <option key="N" text="Leave it in service"/>
+                                            <option key="Y" text="Take it out of service"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="followUpName" hide="!actionRow.needsFollowUp">
+                                    <default-field title="Follow-up work" tooltip="A new work order on the same target for what is left; an outage waits for it">
+                                        <text-line size="50"/>
                                     </default-field>
                                 </field>
                                 <field name="actualCompletionDate" hide="!actionRow.needsCompletion">

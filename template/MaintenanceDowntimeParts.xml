@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Maintenance downtime screens (impl-maintenance P5; design-maintenance §6 Downtime, §3 WorkDowntime): Equipment's
+    Downtime and WorkOrderDetail's Downtime tab. A screen includes each transition it uses by name (transition-include), so a form
+    here posts to the screen it is on. Each checks the record through check#Record first (the root's Maintenance check: the work
+    order, else the equipment or facility), then calls Mantle's mantle.work.ResourceBookingServices, which checks the permission,
+    the scope and the assignment again:
+    - recordDowntime: RecordDowntime (record#ResourceUnavailability), an outage of equipment or a facility, or the open one linked;
+      the bookings it affects are kept and counted;
+    - restoreResource: RestoreResource (end#ResourceUnavailability), with the disposition and the readiness evidence, refused while a
+      linked work order is open;
+    - correctDowntime: a correction (correct#ResourceUnavailability), a new row in force over the one kept;
+    - RecordDowntimeForm: the dialog's form (recordValues; recordFixed hides the resource, as the work order's tab gives it);
+    - DowntimeRows: the outages (outageList) with their production and work context and each row's Restore and Correct. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="recordDowntime">
+        <actions>
+            <if condition="workEffortId"><then>
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            </then><else-if condition="assetId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+            </else-if><else-if condition="facilityId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId}"/>
+            </else-if></if>
+            <service-call name="mantle.work.ResourceBookingServices.record#ResourceUnavailability" out-map="recorded"
+                    in-map="{assetId:(assetId || null), facilityId:(assetId ? null : (facilityId || null)),
+                        unavailabilityReasonEnumId:unavailabilityReasonEnumId, fromDate:fromDate, thruDate:thruDate,
+                        description:description, workEffortId:(workEffortId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="resourceUnavailabilityId" from="recorded.resourceUnavailabilityId"/>
+                <message type="success">${recorded.linked ? 'Linked to outage ' + recorded.resourceUnavailabilityId + ', already open' : 'Outage ' + recorded.resourceUnavailabilityId + ' recorded'}${recorded.affectedBookingCount ? '; ' + recorded.affectedBookingCount + ' booking(s) of it are kept for their owners to resolve' : ''}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="restoreResource">
+        <actions>
+            <service-call name="mantle.work.ResourceBookingServices.end#ResourceUnavailability" out-map="restored"
+                    in-map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:expectedRevision,
+                        thruDate:thruDate, dispositionEnumId:dispositionEnumId, endComments:endComments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Restored: outage ${resourceUnavailabilityId} ended</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="correctDowntime">
+        <actions>
+            <service-call name="mantle.work.ResourceBookingServices.correct#ResourceUnavailability" out-map="corrected"
+                    in-map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:expectedRevision,
+                        fromDate:fromDate, thruDate:thruDate, unavailabilityReasonEnumId:unavailabilityReasonEnumId,
+                        description:description, changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Outage corrected: ${corrected.resourceUnavailabilityId} is in force, ${corrected.correctedUnavailabilityId} kept</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <widgets>
+        <section name="RecordDowntimeForm">
+            <widgets>
+                <label text="A real fault is recorded even when the resource is booked: the bookings are kept for their owners. A resource already out of service gets no second outage; this is linked to the open one."
+                        type="p" style="text-caption m-muted"/>
+                <form-single name="RecordDowntime" transition="recordDowntime" map="recordValues">
+                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                    <field name="assetId">
+                        <conditional-field condition="recordFixed" title=""><hidden/></conditional-field>
+                        <default-field title="Equipment">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'equipment'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <conditional-field condition="recordFixed" title=""><hidden/></conditional-field>
+                        <default-field title="Or a facility" tooltip="A room or building out of service">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="unavailabilityReasonEnumId">
+                        <default-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'downtimeReasons'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="Out of service since" tooltip="Now when empty"><date-time/></default-field></field>
+                    <field name="thruDate" hide="!canRestoreAny">
+                        <default-field title="Back in service at" tooltip="Only for an outage already over; leave empty while it is down"><date-time/></default-field>
+                    </field>
+                    <field name="description"><default-field title="What happened and its impact"><text-area rows="3"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Record outage" type="primary"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="DowntimeRows">
+            <widgets>
+                <form-list name="OutageRows" list="outageList" skip-form="true" paginate="${!outageTab}">
+                    <field name="resourceName">
+                        <default-field title="Resource">
+                            <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="${resourceName}" link-type="anchor"
+                                    condition="assetId" parameter-map="{assetId:assetId}"/>
+                            <link url="${sharedLinks['Facilities/FacilityDetail']}" text="${resourceName}" link-type="anchor"
+                                    condition="!assetId" parameter-map="{facilityId:facilityId}"/>
+                            <label text="${locationName}" type="div" style="text-caption m-muted" condition="locationName"/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>${restoredText ? '<div class="text-caption m-muted">' +
+                                    WebUtilities.encodeHtml(restoredText + (dispositionText ? ', ' + dispositionText.toLowerCase() : '')) + '</div>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText +
+                                    (restoredText ? " · " + restoredText : "")})}]]></text>
+                                <text type="html">${stateText}${restoredText ? ' · ' + restoredText : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                    <field name="elapsedText" align="right"><default-field title="Elapsed"><display/></default-field></field>
+                    <field name="reasonText">
+                        <default-field title="Reason">
+                            <label text="${reasonText}" type="div"/>
+                            <label text="${plannedText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="Source">
+                            <label text="${sourceText}" type="div"/>
+                            <label text="${productionText}" type="div" style="text-caption m-muted" condition="productionText"/>
+                        </default-field>
+                    </field>
+                    <field name="workText">
+                        <default-field title="Work orders">
+                            <section-iterate name="OutageWork" list="workList" entry="work">
+                                <widgets>
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${work.workEffortId} ${work.workEffortName} (${work.statusText})"
+                                            link-type="anchor" parameter-map="{workEffortId:work.workEffortId}"/>
+                                </widgets>
+                            </section-iterate>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="What happened">
+                            <label text="${description}" type="div"/>
+                            <label text="Recorded by ${createdByName} ${createdText}" type="div" style="text-caption m-muted" condition="createdByName"/>
+                            <label text="Corrected by ${correctedByName}: ${changeReason}" type="div" style="text-caption m-muted" condition="changeReason"/>
+                            <label text="${affectedBookingCount} booking(s) over it are kept for their owners" type="div" style="text-caption text-warning"
+                                    condition="affectedBookingCount"/>
+                            <label text="Restoration waits for: ${restoreBlockerText}" type="div" style="text-caption text-warning" condition="restoreBlockerText"/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="Restore_${resourceUnavailabilityId}" condition="canRestore" button-text="Restore" type="primary"
+                                    icon="sym_o_check_circle" title="Restore ${resourceName}" width="560">
+                                <label text="Out of service since ${fromText} (${reasonText}). Restoring it makes it available to production, booking and work again."
+                                        type="p" style="text-caption"/>
+                                <form-single name="RestoreResource" transition="restoreResource"
+                                        map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:revision, workEffortId:workEffortId}">
+                                    <field name="resourceUnavailabilityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="dispositionEnumId">
+                                        <default-field title="Its state now">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'restoreDispositions'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate"><default-field title="Available since" tooltip="Now when empty"><date-time/></default-field></field>
+                                    <field name="endComments"><default-field title="Readiness checked"><text-area rows="2"/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="Restore" type="primary"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="Correct_${resourceUnavailabilityId}" condition="canCorrect" button-text="Correct"
+                                    icon="sym_o_edit_note" title="Correct outage ${resourceUnavailabilityId}" width="640">
+                                <label text="The outage as recorded is kept, with who recorded it; the correction becomes the outage in force."
+                                        type="p" style="text-caption"/>
+                                <form-single name="CorrectDowntime" transition="correctDowntime"
+                                        map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:revision, fromDate:fromDate,
+                                            thruDate:thruDate, unavailabilityReasonEnumId:unavailabilityReasonEnumId, description:description,
+                                            workEffortId:workEffortId}">
+                                    <field name="resourceUnavailabilityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="unavailabilityReasonEnumId">
+                                        <default-field title="Reason">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'downtimeReasons', selected:unavailabilityReasonEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="Out of service since"><date-time/></default-field></field>
+                                    <field name="thruDate" hide="open">
+                                        <default-field title="Back in service at"><date-time/></default-field>
+                                    </field>
+                                    <field name="description"><default-field title="What happened"><text-area rows="2"/></default-field></field>
+                                    <field name="changeReason"><default-field title="Why it is corrected"><text-line/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="Save correction"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${sharedLinks['Equipment/Downtime']}" text="History" link-type="anchor" condition="correctionOfUnavailabilityId"
+                                    parameter-map="{resourceUnavailabilityId:resourceUnavailabilityId}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="resourceName"/><field-ref name="reasonText"/><field-ref name="fromText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="elapsedText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

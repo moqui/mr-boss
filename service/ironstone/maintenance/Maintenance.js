@@ -137,7 +137,9 @@ const linkPaths = [
     "WorkOrders/Find",
     "WorkOrders/NewWorkOrder",
     "WorkOrders/WorkOrderDetail",
-    "Settings/WorkPolicy"
+    "Settings/WorkPolicy",
+    // P5: Downtime, under Equipment (design §6)
+    "Equipment/Downtime"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -373,7 +375,10 @@ const resourceChoices = [
     "equipment",
     "meters",
     "timeZones",
-    "parentFacilities"
+    "parentFacilities",
+    // P5: downtime
+    "downtimeReasons",
+    "restoreDispositions"
 ]
 // the choices of work orders, answered to a user who reads work (workRead) or keeps the work policy (settingsEdit)
 const workChoices = [
@@ -618,6 +623,10 @@ const choiceSources = {
     outcomes: (userScope, term, selected) => enumOptions("MaintenanceOutcome", term, selected),
     dispositions: (userScope, term, selected) => enumOptions("MaintenanceDisposition", term, selected),
     closurePolicies: (userScope, term, selected) => enumOptions("MaintenanceClosurePolicy", term, selected),
+    // P5: an outage's reason, and the dispositions a restoration may give (not still unavailable)
+    downtimeReasons: (userScope, term, selected) => enumOptions("ResourceUnavailabilityReason", term, selected),
+    restoreDispositions: (userScope, term, selected) =>
+        enumOptions("MaintenanceDisposition", term, selected, row => row.enumId !== "MdispUnavailable"),
     // the teams and people work may be given to
     teams: (userScope, term, selected, p) => teamOptions(userScope, term, selected, p),
     workPeople: (userScope, term, selected, p) => workPeopleOptions(userScope, term, selected, p),

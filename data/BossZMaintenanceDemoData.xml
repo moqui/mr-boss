@@ -130,4 +130,22 @@ along with this software (see the LICENSE.md file). If not, see
             holdReasonEnumId="MhrParts" holdFromStatusId="WeApproved" revision="3"/>
     <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_MOTOR" partyId="BOSS_MNT_TECH2" roleTypeId="Assignee"
             fromDate="2026-11-09 08:00:00" statusId="WeptAssigned"/>
+
+    <!-- P5 (impl-maintenance; design §6 Downtime): Room 201 out of service since the bracket came loose (a safety stop the supervisor
+        recorded, linked to its unassigned work order), and the compressor's belt failure of October, restored by the supervisor
+        after the belt work order with the compressor available -->
+    <mantle.work.effort.ResourceUnavailability resourceUnavailabilityId="BOSS_MNT_OUT_ROOM201" unavailabilityKindEnumId="RukActual"
+            facilityId="BOSS_MNT_ROOM_201" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2026-11-10 09:15:00"
+            unavailabilityReasonEnumId="RurSafety" plannedOutage="N" workEffortId="BOSS_MNT_WO_ROOM201" revision="1"
+            description="Projector bracket hanging loose over the table; room closed until it is fixed"
+            createdByUserId="BOSS_MNT_SUPERVISOR" createdDate="2026-11-10 09:20:00"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_ROOM201" offlineIntent="Y"
+            resourceUnavailabilityId="BOSS_MNT_OUT_ROOM201"/>
+    <mantle.work.effort.ResourceUnavailability resourceUnavailabilityId="BOSS_MNT_OUT_COMP_BELT" unavailabilityKindEnumId="RukActual"
+            assetId="BOSS_MNT_COMPRESSOR" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2026-10-20 07:30:00"
+            thruDate="2026-10-20 11:00:00" unavailabilityReasonEnumId="RurEquipmentFault" plannedOutage="N"
+            workEffortId="BOSS_MNT_WO_COMP_BELT" revision="2" description="Drive belt squealing, then slipping under load"
+            createdByUserId="BOSS_MNT_TECH" createdDate="2026-10-20 07:35:00" endedByUserId="BOSS_MNT_SUPERVISOR"
+            endedDate="2026-10-20 11:05:00" dispositionEnumId="MdispAvailable" endComments="New belt tensioned; ran 30 minutes under load"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_COMP_BELT" resourceUnavailabilityId="BOSS_MNT_OUT_COMP_BELT"/>
 </entity-facade-xml>
