@@ -2244,6 +2244,117 @@ Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetai
   work order, Purchasing sources it to a PO, the work order shows the PO line, and at completion the supervisor
   accepts the service with the technician's photo.
 
+**Built Nov 12 (P10).** mr-mantle a37e1f3e, mr-boss 4b130d8f (branch `mnt/p10`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F45 (`accept#ServiceItem`, OrderServices.xml:3233, over ServiceAcceptance.js: PURCHASE_ORDER_EDIT or
+  STOCK_RECEIVE through StockPosting.begin, the buying organization, at most as ordered, an operation key; AssetMaintenanceOrderItem with no
+  writer); Purchasing P10's purchase request (`create#PurchaseRequest`, `store#PurchaseRequestItem`, `submit#PurchaseRequest`: a requester
+  files and submits their own request with no Purchasing permission; `decide#`, `convert#PurchaseSourcing` and RequestItemOrder's
+  `linkLine`), `OrderItemWorkEffortCheckComplete`, Shared/OrderDetail's app branches (Manufacturing's read-only subcontract branch the
+  model), Shared/RequestDetail's Purchasing section (template/PurchasingRequestDetail.xml), P3's lifecycle and CompleteWork
+  (`MaintenanceWork.js` actionsFor and transitionWorkOrder), P4's request links (RequestWorkEffort), F118 and F128.
+- Mantle (`service/mantle/work/MaintenancePurchases.js`, appended to `MaintenanceServices.xml`):
+  - `link#MaintenancePurchase`: without an order line, a purchase request of the work's organization through Purchasing's
+    `create#PurchaseRequest` (the code's path, not `create#Request` as the plan has it: it adds the OrgInternal party, the currency
+    and the line checks), one line through `store#PurchaseRequestItem` (the product, quantity, needed-by date, the work's due date by
+    default), `RequestWorkEffort` to the work order and `submit#PurchaseRequest` (unless submit is false); a planner's or supervisor's,
+    the work open, once under its operation key (PostingOperation). With an order line, an `AssetMaintenanceOrderItem` for the work's
+    primary AssetMaintenance: a purchase line of the work's organization, not cancelled; one sourced from the work's request is the
+    work's, another only a buyer's (PURCHASE_ORDER_EDIT); facility work has no AssetMaintenance (LINK_UNAVAILABLE). Never an
+    OrderItemWorkEffort. It places and approves nothing.
+  - `link#SourcedMaintenancePurchase` and the entity ECA `MaintenancePurchaseSourced` (`entity/MaintenancePurchase.eecas.xml`) on
+    RequestItemOrder's create: when Purchasing sources a line of a request linked to managed equipment work, the work's primary
+    AssetMaintenance is linked to the order line, so the lines that fulfil the work are its own with no step and Purchasing's
+    sourcing code is unchanged.
+  - `get#MaintenancePurchases` (the work's requests and lines; the order lines linked or sourced from its requests, with supplier,
+    order state, quantity and a service line's accepted and remaining; prices only for PURCHASE_ORDER_EDIT, SUPPLIER_PRICE_VIEW/EDIT,
+    ACCOUNTING_VIEW or MAINTENANCE_COST_VIEW; what the caller may do; the work's files as evidence), `accept#MaintenanceService` (a
+    line of the work, LINE_UNLINKED otherwise; the assigned technician or a supervisor, NOT_ASSIGNED; the work in progress, held or
+    complete; Purchasing's permission checked before anything is written, then `accept#ServiceItem` with the work order, the comments
+    and the evidence: a file of the work attached once to the order line as OrderContent `OctServiceEvidence`, seeded in
+    `data/MaintenancePurchaseData.xml`; the line linked to the equipment record), `get#MaintenanceOrder` (OrderDetail under Maintenance:
+    the lines of work orders the user reads; RECORD_UNAVAILABLE for an order of none) and `get#PurchaseRequestWork` (Purchasing's
+    RequestDetail: the work orders of a request the user reads under Purchasing's rule, id, name, target, status and need date, and
+    whether Maintenance opens it).
+  - `MaintenanceWork.js` (CompleteWork's outside-service line, three small edits): `transition#MaintenanceWorkOrder`'s complete takes
+    serviceOrderId, serviceOrderItemSeqId, serviceAcceptedQuantity, serviceEvidenceContentId and serviceOperationKey and accepts the
+    line in the completion's transaction (before the MclOnComplete close), answering serviceAcceptanceId; the complete action carries
+    `serviceLines` and `evidenceFiles` for a caller who may accept.
+- BOSS:
+  - Screens: WorkOrderDetail's Purchasing tab (`WorkOrderDetail/Purchasing.xml`, index 50, F128: Purchase requests with Request a
+    purchase; Purchase order lines, each opening OrderDetail, with Accept outside service and a buyer's Link an order line; why the
+    user cannot accept) over `template/MaintenancePurchaseParts.xml` (requestPurchase, linkPurchase, acceptService and the section
+    MaintenanceOrder); the Complete row of the Lifecycle (`MaintenanceWorkOrderParts.xml`) with Accept outside service, quantity and
+    evidence, hidden unless the caller may accept a line; `Maintenance/WorkOrders/OrderDetail` mounting Shared/OrderDetail with a
+    read-only Maintenance branch (`OrderDetail.xml`: one else-if, the section-include, Maintenance among the apps with their own
+    not-found); Maintenance.js's linkPath `WorkOrders/OrderDetail`. The product drop-down reuses the `parts` choice (P6's).
+  - Owner contract with Purchasing: `template/PurchasingRequestDetail.xml` reads `get#PurchaseRequestWork` in its section's actions and
+    shows "From work order" under the header, linked into Maintenance only for a user Maintenance admits; its services and specs
+    unchanged. Written into design-purchasing and impl-purchasing's log.
+  - Demo (BossZMaintenanceDemoData.xml, appended): the held motor's rewind, maint.planner's purchase request of Services (in progress)
+    sourced to Delta Motor Rewinds' placed purchase order BOSS_MNT_PO_REWIND, its service line linked to the motor's record (the
+    AssetMaintenanceOrderItem before the RequestItemOrder, so the ECA finds it), nothing accepted.
+- Specs:
+  - Mantle `test/work/MaintenancePurchases` (3 features, 1.0 s): a planner without Purchasing's grant requests a rewind (submitted
+    RqtPurchase of the organization, filed by the planner, linked to the work, once under its key), a technician refused, the
+    planner's approval and sourcing refused; Purchasing's approval and sourcing link the order line to the work's AssetMaintenance
+    (the ECA) and write no OrderItemWorkEffort, the planner's read shows it without a price and no accept, a line the work did not
+    request linked by a buyer and refused to the planner; the technician without Purchasing's grant refused, the supervisor (a
+    receiver) completes with the line and the technician's photo, the same key again `alreadyApplied` with one ServiceAcceptance
+    (the work order, the OctServiceEvidence file), the order line not completed, OrderDetail's read showing the work.
+  - BOSS `test/Maintenance/MaintenancePurchasing` (2 features, 0.46 s): the Purchasing tab's one qvt render (the supervisor: the
+    request, the line, the supplier, Request a purchase, no Accept and why, no price), OrderDetail under Maintenance rendered once
+    (the line with its work order; Services' office order not available), Purchasing's RequestDetail rendered once for
+    purchasing.services (the work order's name, no link into Maintenance). `MaintenanceAccess` gains the purchases rule (the planner
+    reads, the resource administrator and Retail's planner refused, a technician asks for nothing, a planner links no unrequested
+    line; 0.20 s) and MaintenanceSpecLib the P10 ids.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePurchaseWalk` (3 features: the planner requests the rewind from
+    the tab; a walk-local approver and buyer of Services approve and source it, the tab, OrderDetail and Purchasing's RequestDetail show
+    it; the supervisor, made a receiver for the walk, completes with the technician's photo, once).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenancePurchases, PurchaseRequests, Sourcing, SourcingAwards,
+  ReplenishmentRoutes, WarehouseProduction, ProductionSubcontract, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake and
+  MaintenanceOutages 69 of 69 (20.0 s feature time); mr-boss MaintenancePurchasing, MaintenanceAccess, MaintenanceWorkOrders,
+  MaintenanceDowntime, MaintenanceRequests, PurchasingOrders, PurchasingRequests, PurchasingSourcing, PurchasingAccess, CommerceOrders,
+  CustomerServiceOrders, ManufacturingSubcontracting, AccountingPayables, InsightsRecords, WarehousePicking and Requests 113 of 113
+  (27.3 s); client MaintenanceWorkOrdersWalk 1 of 1 (7.96 s). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as
+  before, none in the new or changed screens; both symlinked binaries unchanged. Prettier (`npx prettier` with the repo's
+  `.prettierrc.json`, from each component) on the new files; the changed lines of MaintenanceWork.js, Maintenance.js and
+  MaintenanceAccess.spec.js are clean (those files are not clean on master and were not reformatted whole). Not run: ./moq test-apps,
+  the acceptance suite.
+- Inventories: usl-inventory's accept#ServiceItem and create#PurchaseRequest rows and an Added table for P10's MaintenanceServices;
+  ss-inventory has no row naming these screens.
+- Design edits: design-maintenance's header, §3 (PurchaseLinks, CompleteWork, the OrderDetail mount row) and §13.3's
+  OrderItemWorkEffortCheckComplete row as built; design-purchasing's header and "Maintenance purchases"; impl-purchasing's log.
+- Findings (provisional):
+  - The request is filed through Purchasing's `create#PurchaseRequest`, not `RequestServices.create#Request` as the plan says: Purchasing
+    P10 built the purchase request's path (its organization party, currency and line checks), and the plain create would skip them.
+  - The order lines that fulfil a request are linked by an entity ECA on RequestItemOrder rather than inside Purchasing's sourcing: the
+    plan's "AssetMaintenanceOrderItem rows for the order lines that fulfil it" with Purchasing's code unchanged. The reviewer may prefer a
+    call in PurchaseRequests.js `linkLine` (an owner change §2 names for P10).
+  - Facility work has no AssetMaintenance, so AssetMaintenanceOrderItem cannot hold its lines: they are read through its requests, and a
+    buyer's direct purchase order line cannot be linked to it (LINK_UNAVAILABLE).
+  - Accepting outside service needs Purchasing's PURCHASE_ORDER_EDIT or STOCK_RECEIVE (accept#ServiceItem's own check, "buying stays
+    Purchasing's"); no Maintenance group holds either, so the demo's supervisor cannot accept (the tab and Complete say why), and the
+    walk makes the supervisor a receiver. See the user's call below.
+  - accept#ServiceItem accepts a line of a draft (OrderOpen) order; Purchasing's rule, unchanged.
+  - The planner files the request but has no Purchasing root, so follows it on the work order's Purchasing tab, not in Purchasing.
+  - Request a purchase names a product (any, through the `parts` choice; Purchasing's check#ProductUsable decides) and no supplier; the
+    buyer chooses the supplier before sourcing (a line with no product cannot be sourced, PRODUCT_REQUIRED).
+  - The evidence's OrderContent points at the work's file (the same contentLocation), not a copy.
+  - The request's description carries the work order's id and name, which a buyer reads; the work's notes are not copied.
+- For the lead:
+  - Budget share: mr-mantle MaintenancePurchases 1.0 s; mr-boss server MaintenancePurchasing 0.46 s and MaintenanceAccess +0.20 s;
+    client unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceServices.xml` (appended; transition#MaintenanceWorkOrder's parameters), `MaintenanceWork.js`
+    (the purchases loader, actionsFor's complete row, transitionWorkOrder after downtimeOf and its answer: P7's Complete gate is nearby);
+    mr-boss `screen/Maintenance/WorkOrders.xml` (the OrderDetail item beside P9's MaterialIssueReceipt and InventoryAvailability),
+    `WorkOrderDetail.xml`'s comment, `template/MaintenanceWorkOrderParts.xml` (the Complete row's fields and lifecycleAction's in-map),
+    `Maintenance.js` linkPaths, `BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (ids after P6's),
+    `MaintenanceAccess.spec.js` (header and an appended feature), `screen/Shared/OrderDetail.xml`, `template/PurchasingRequestDetail.xml`,
+    usl-inventory (appended), design-maintenance §3 and header.
+  - The user's call: may Maintenance's supervisor accept outside service without a Purchasing permission? Recommended: keep
+    Purchasing's check (as built) and grant STOCK_RECEIVE to whoever receives at the site; the alternative is a grant of STOCK_RECEIVE
+    to BOSS_MAINTENANCE_SUPERVISE in BossSetupMaintenanceData.xml (it would also let them receive stock in Warehouse).
+
 ### P11 — Costs
 
 Design §3 WorkCosts, §8 MaintenanceCostReport, review Y2, "Charging a project"; MT-08 (labor price), MT-09, MT-11.
