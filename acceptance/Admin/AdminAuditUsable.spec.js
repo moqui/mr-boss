@@ -180,10 +180,11 @@ feature("the audit reader follows both with the actor and the reason, and no sec
             "the audit reader reads Services' change"
         )
         assert(opened(out.otherAdmin) && out.otherAdmin.output.includes(otherReason), "the administrator does not")
-        // a record's place (the mount's route for its registration, Admin.js mountRoutes) is a link for the administrator,
-        // whom Users › UserDetail opens to, and only the record's name for the audit reader
-        assert(out.otherAdmin.output.includes("UserDetail?userId=" + ids.otherUserId), "the administrator has no link to the user")
-        assert(!out.grant.output.includes("UserDetail?") && !out.relay.output.includes("MailRelays"), "the audit reader is given a link")
+        // a record's place (the route of its registration's linkKey: a membership's is its group, the framework's
+        // adminGroup route) is a link for the administrator, whom Access › GroupDetail opens to, and only the record's
+        // name for the audit reader
+        assert(out.otherAdmin.output.includes("GroupDetail?userGroupId="), "the administrator has no link to the group")
+        assert(!out.grant.output.includes("GroupDetail?") && !out.relay.output.includes("MailRelays"), "the audit reader is given a link")
         for (const [path, rendered] of out.closed) assert(!opened(rendered), "the audit reader opened " + path)
     }
 })

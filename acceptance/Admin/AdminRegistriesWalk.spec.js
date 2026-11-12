@@ -35,7 +35,8 @@ feature("Home names the mail and backup warnings with their fix links for an ins
         // the mail server's fix place is the mail relays, Admin's own (the framework's adminMailRelay route)
         home.output.includes("/qapps/Admin/Protocols/MailRelays")
         home.output.includes("/qapps/Admin/Operations/JobDetail?jobName=backup_EmbeddedDatabase_daily")
-        home.output.includes("/qapps/Admin/Integrations/ConnectionDetail?adapterKey=remote&connectionKey=EmbeddedDbBackup")
+        // an anchor's address in html, its ampersand escaped
+        home.output.includes("/qapps/Admin/Integrations/ConnectionDetail?adapterKey=remote&amp;connectionKey=EmbeddedDbBackup")
     }
 })
 
