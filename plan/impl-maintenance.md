@@ -365,7 +365,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | built and reviewed Nov 11, merged |
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | built and reviewed Nov 12, merged |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
-| P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | — |
+| P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | — |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
@@ -1477,7 +1477,7 @@ outage part), MT-10.
   form for downtime (no row).
 - Design edits: design-maintenance's header, §1.2, §3 (Home, WorkOrderDetail as built, the record shape) and §6 Downtime as built;
   design-manufacturing §6 Downtime (the restoration and the guard).
-- Findings (provisional):
+- Findings, numbered by the lead F119 to F128 in order:
   - A correction is a new row (ProductionDowntime's pattern), so a superseded row with no end would read as an open outage: every read
     of current availability now takes the row in force (`supersededByUnavailabilityId` empty), Manufacturing's three Mantle readers and
     WorkCenters.js among them. A later reader of ResourceUnavailability (P15's blackouts, P16's booking checks, P17's reports) must too.
@@ -1585,7 +1585,7 @@ seed files by name, BossManufacturingDemoData, BossZMaintenanceDemoData).
     each and renumber nothing. Written into WorkOrderDetail.xml's comment and design §3.
   - Texts: the template's header (only recordDowntime calls check#Record; restore and correct rely on Mantle's outage scope), the
     follow-up's tooltip, WorkOrderDetail's Downtime tab, Equipment/Downtime's comment, impl-manufacturing's log line.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F129 to F133 in order:
   - An existing database needs `MaintenanceWorkOutageData.xml` loaded before an equipment-fault stop works: without
     `RurEquipmentFault` every such stop fails (`REASON_INVALID`) and is rolled back with its outage. A fresh database is fine.
   - `record#` reads no work status: a technician may record an outage from a work order assigned to them that is completed,
@@ -2124,6 +2124,7 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | A leaver's work orders and custody are moved by Maintenance staff (a planner, supervisor, resource or Maintenance administrator); Admin's identity operator sees them in offboarding with who moves them, and holds no transfer permission | The user's call (P3); built as the review's R5 |
 | Nov 12, 2026 | Admin's settings registry is the framework's `moqui.server.SettingsEntry` (mr-moqui Admin-Screens-Down); Maintenance's row has the route `maintenanceSettings` in Admin.js, and P18's readiness provider goes where the framework's registry has it | Found at the P3 merge (F116) |
 | Nov 12, 2026 | People P8–P12 are merged (`RaprCost` and `get#CostingRate`, capacity from schedules, holidays, the projected collection kind), so P11, P12, P17's cost entry and P19 are built in their order; only P8 waits, for People P18 (`minimumSkillLevel`, `check#Qualifications`) | Updates the deferral row above (the pulls of Nov 12) |
+| Nov 12, 2026 | A resource is restored while linked work orders are still open: `end#ResourceUnavailability` lists them, leaves them open and needs a reason while any is (`openWorkReason`) | The user's call (P5); built as the review's R1, replacing the worker's `OPEN_WORK` refusal |
 
 ## 5. Open questions
 
@@ -2267,6 +2268,21 @@ paths under `mr-boss/`.
 | F116 | P3 merge: master moved Admin's settings registry to the framework (`moqui.server.SettingsEntry`, `destinationRoute`, `screenLocation`) | P1's row moved at the merge; P18 follows the framework's readiness registry |
 | F117 | Pull of Nov 12: mr-moqui's Admin Screens Down (plans/Admin-Screens-Down.md A0–A6, I0–I4) moved Admin's generic screens to the framework's System and Tools apps and three registries to the framework: `moqui.server.SettingsEntry` (`destinationRoute` + `screenLocation`), `moqui.server.ReadinessProvider` (`fixRoute` + `fixId` + `scopeParameters`, was `fixPath`; services `org.moqui.admin.ReadinessServices`) and `moqui.server.RefreshOperation`. Owner routes are keys in mr-boss `service/ironstone/admin/Admin.js` `settingsRoutes` and `mountRoutes` (Data.js's and DataImport.js's tables are gone) or the framework's in tools `template/AdminMount.js`; `ownerRoute`, `fixRoute` and `linkKey` name one. Unchanged: `ironstone.admin.LifecycleParticipant`, the framework's CapabilityBundle, TopicRegistration, JobRegistration, RecoveryDescriptor, TransferTarget and AuditProjection, `Shared/DataImport` with `get#ImportMount`, and Insights' ironstone.insights registries (still `routePath`). Dataset readiness and refresh rows are `moqui.server.*` with `fixRoute="insightsDataset"`. System screens renamed with no aliases (SystemMessageDetail under Integrations, Jobs and JobDetail under Operations, Groups under Access, AuditChanges under Audit; Admin mounts the same names under its own areas) | P1's settings row moved (F116); P14 registers the job's `ownerRoute` and recovery as route keys; P17's dataset readiness and refresh are `moqui.server` rows; P18's readiness provider is a `moqui.server.ReadinessProvider` with `fixRoute`, and the equipment import's owner route a `mountRoutes` key; P19's export targets name route keys |
 | F118 | Pull of Nov 12: Maintenance's appends at the end of BossSetupData.xml met People's at each pull | Moved to `data/BossSetupMaintenanceData.xml` (seed-initial, loading after BossSetupData); later phases append there; the client deny rows stay in BossSetupData |
+| F119 | P5: a correction is a new row; every reader of current availability takes the row in force (`supersededByUnavailabilityId` empty) | P15, P16, P17 must too |
+| F120 | P5: `record#ResourceUnavailability` checks its caller by data: Manufacturing's equipment-fault stop, or Maintenance's permission, scope and assignment | Built; review R2 narrowed Manufacturing's entry |
+| F121 | P5: no work order ends an outage | Built; §4 (restore with open work) |
+| F122 | P5: Complete "Still unavailable" records an outage when none is open | Built |
+| F123 | P5: production downtime needs the seed reason `RurEquipmentFault`, hence `MaintenanceWorkOutageData.xml`'s name | F129 |
+| F124 | P5: MaintenanceAccess called the removed `RegistryServices.find#Settings` | Fixed (F116) |
+| F125 | P5: a technician reads the organization's outages in Downtime | None |
+| F126 | P5: Home counts a facility and equipment inside it as two resources down | None |
+| F127 | P5: Services' demo has no equipment-fault production reason | The acceptance walk adds one |
+| F128 | P5: WorkOrderDetail's tabs had no gaps | Review R6 respaced by ten (Procedure 20, Parts 40, Purchasing 50, Costs 100 free) |
+| F129 | P5 review: an existing database needs `MaintenanceWorkOutageData.xml` loaded, or every equipment-fault stop fails (`REASON_INVALID`) | Load it on upgrade |
+| F130 | P5 review: `record#` reads no work status; a technician may record from closed work assigned to them | Later; must admit Complete's own recording |
+| F131 | P5 review: a correction may move an outage over another of the same resource | P17's union counts it once |
+| F132 | P5 review: `record#` locks the resource row before checking the caller | None |
+| F133 | P5 review: production context shows to every Downtime reader | None |
 
 
 ## 7. Later
