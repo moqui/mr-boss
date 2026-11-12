@@ -30,7 +30,7 @@ establish this pass's coverage. The planning-only records below remain historica
 - [Projects design](design-projects.md), [implementation](impl-projects.md) and [research](research-projects.md):
   intended workflows, delivered phases, findings and historical deferrals.
 - [Prior UI review](ui-review-drawers-commons.md), [framework UI review guide](../../../../docs/dev/UI-Review.md)
-  and [framework review](../../../../plans/UI-Refinement.md): activity/evidence method and established refinements.
+  and [framework review](../../../../plans/archive/UI-Refinement.md): activity/evidence method and established refinements.
 - [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md) and [Commons design](design-drawers-commons.md): archetypes, shared records,
   calendar, knowledge, Chatter, approvals, files and shell contracts.
