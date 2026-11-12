@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Check that the user may open Maintenance and resolve their scope and the app's routes: capabilities (the
             maintenance permissions, the derived reads and the areas), the organizations of their maintenance scope (none for a
             user who reads nothing of Maintenance; every internal organization for a system administrator or a holder of
-            FACILITY_ALL_ORGANIZATIONS, allOrganizations) as options, the active one, the user's party and the links. Refuses a
+            MAINTENANCE_ALL_ORGANIZATIONS, allOrganizations) as options, the active one, the user's party and the links. Refuses a
             user without Maintenance (MAINTENANCE_UNAVAILABLE), a requester, a Projects client contact and a PASS public account
             among them, and another app root (MAINTENANCE_CONTEXT).</description>
         <implements service="ironstone.maintenance.ContextServices.define#Parameters"/>

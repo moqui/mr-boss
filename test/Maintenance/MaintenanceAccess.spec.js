@@ -2,7 +2,8 @@
 // (a requester, another app's user, a client and a PASS account refused, and another root), the menu, keys, palette and launcher
 // per group, each group's capabilities from its permissions (an edit permission alone reading nothing), a planner of Retail
 // refused Services' organization and facility and Services' planner refused Retail's with the same parameters, the
-// ironstone.maintenance services refused without the root grant, Home's one qvt render (its counters not configured) and
+// ironstone.maintenance services refused without the root grant, a shared device's request given no context and refused the
+// Chatter and RecordFiles panels (F74) and a user served only Maintenance's record hosts' panels, Home's one qvt render (its counters not configured) and
 // Settings' one html render (the administrator's; the reader's a refusal), and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -63,6 +64,16 @@ spec({
                 .condition("userId", editOnly)
                 .updateAll({thruDate: ec.user.nowTimestamp})
         )
+        // the kiosk's device goes and its display account's memberships end
+        system(() => {
+            ec.entity.find("moqui.security.DeviceCredential").condition("deviceName", "Spec maintenance kiosk").deleteAll()
+            const display = ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.maintenance.kiosk").one()
+            if (display)
+                ec.entity
+                    .find("moqui.security.UserGroupMember")
+                    .condition("userId", display.userId)
+                    .updateAll({thruDate: ec.user.nowTimestamp})
+        })
         ec.artifactExecution.enableAuthz()
     }
 })
@@ -84,6 +95,10 @@ feature(
                 planner.allOrganizations
             )
                 problems.push(`the planner's context: ${JSON.stringify(planner)}`)
+            // the administrator works every organization (MAINTENANCE_ALL_ORGANIZATIONS, the user's call)
+            const admin = asUser(users.admin, () => invoke(context, {}))
+            if (!admin.allOrganizations || !admin.organizationPartyIds.includes(ids.otherOrganizationId))
+                problems.push(`the administrator's organizations: ${admin.allOrganizations} ${admin.organizationPartyIds}`)
             const otherRoot = asUser(users.planner, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("MAINTENANCE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             for (const user of [users.requester, users.otherApp, users.client, users.pass]) {
@@ -154,6 +169,7 @@ const capabilityNames = [
     "policyView",
     "policyEdit",
     "facilityEdit",
+    "allOrganizations",
     // the reads, from view permissions only
     "workRead",
     "resourceRead",
@@ -176,10 +192,8 @@ const capabilityUsers = [
         granted: ["resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
     },
     {user: users.cost, granted: ["view", "costView", ...reads]},
-    {
-        user: users.admin,
-        granted: ["view", "settingsEdit", "resourceView", "processView", "policyView", "settings", ...reads]
-    },
+    // the user's call (P1 review): every Maintenance permission, every organization among them, and not FACILITY_EDIT
+    {user: users.admin, granted: capabilityNames.filter(name => name !== "facilityEdit")},
     {user: "maint.spec.planonly", granted: ["plan"]},
     {user: users.system, granted: capabilityNames}
 ]
@@ -313,6 +327,91 @@ feature("the ironstone.maintenance services are refused without the root grant",
     }
 })
 
+// F74: a shared device's request (a later TechnicianKiosk's route group) runs as its display account and calls no context service;
+// a route group wider than its page (here one inheriting the whole root) and a display account holding the root grant are still
+// refused the Chatter and RecordFiles panels by the root, any record or none, and Home opens with no capability. A Maintenance user
+// is served the panels of Maintenance's own record hosts only (none yet; P2 and P3 add theirs) and a panel request naming no record
+const kioskGroup = "MNT_SPEC_KIOSK"
+function deviceRequest(path, cookie, parameters = {}) {
+    let test = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml")
+    if (cookie) test = test.header("cookie", "moqui.device=" + cookie)
+    const out = test.render(path, parameters, "get")
+    ec.message.clearErrors()
+    return {status: out.status, output: String(out.output || ""), errors: Array.from(out.errorMessages || []).join("\n")}
+}
+feature("a shared device gets no Maintenance context and no record panel; a user the panels of Maintenance's hosts only", {
+    when() {
+        const cookie = system(() => {
+            if (!ec.entity.find("moqui.security.DeviceRouteGroup").condition("routeGroupId", kioskGroup).one()) {
+                call("create#moqui.security.ArtifactGroup", {artifactGroupId: kioskGroup, description: "Maintenance spec kiosk"})
+                call("create#moqui.security.ArtifactGroupMember", {
+                    artifactGroupId: kioskGroup,
+                    artifactName: "component://mr-boss/screen/Maintenance.xml",
+                    artifactTypeEnumId: "AT_XML_SCREEN",
+                    nameIsPattern: "N",
+                    inheritAuthz: "Y"
+                })
+                call("create#moqui.security.DeviceRouteGroup", {
+                    routeGroupId: kioskGroup,
+                    description: "Maintenance spec kiosk",
+                    ownerName: "Maintenance",
+                    artifactGroupId: kioskGroup,
+                    homePath: "/apps/Maintenance/Home",
+                    parameterRequired: "N",
+                    defaultIdleMinutes: 60,
+                    defaultLifetimeDays: 1
+                })
+            }
+            const username = "display.spec.maintenance.kiosk"
+            let display = ec.entity.find("moqui.security.UserAccount").condition("username", username).one()
+            if (!display) {
+                invoke("mantle.party.IdentityServices.create#DisplayAccount", {
+                    displayName: "Spec maintenance kiosk",
+                    organizationPartyId: ids.organizationId,
+                    bundleGroupIdList: ["BOSS_MAINTENANCE", "BOSS_MAINTENANCE_READ"]
+                })
+                display = ec.entity.find("moqui.security.UserAccount").condition("username", username).one()
+            }
+            const registered = invoke("mantle.party.IdentityServices.register#SharedDevice", {
+                deviceName: "Spec maintenance kiosk",
+                routeGroupId: kioskGroup,
+                displayUserId: display.userId,
+                issueCode: false
+            })
+            const code = invoke("mantle.party.IdentityServices.reveal#SharedDeviceCode", {deviceId: registered.deviceId})
+                .registrationCode
+            const redeemed = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .render("Device/redeem", {code}, "post")
+            return String(redeemed.header("Set-Cookie") || "").split(";")[0].replace("moqui.device=", "")
+        })
+        login("john.doe")
+        // the panels' data, as the chatter and record-files elements ask for it: of a facility the planner reads (no Maintenance
+        // host yet), and naming no record (as a person search does)
+        const record = {recordEntity: "mantle.facility.Facility", recordId: ids.facilityId}
+        return {
+            cookie,
+            home: deviceRequest("apps/Maintenance/Home", cookie),
+            chatter: deviceRequest("apps/Maintenance/Chatter/chatterData", cookie),
+            files: deviceRequest("apps/Maintenance/RecordFiles/filesData", cookie, record),
+            ...asUser(users.planner, () => ({
+                plannerFiles: deviceRequest("apps/Maintenance/RecordFiles/filesData", null, record),
+                plannerChatter: deviceRequest("apps/Maintenance/Chatter/chatterData", null)
+            }))
+        }
+    },
+    then({cookie, home, chatter, files, plannerFiles, plannerChatter}) {
+        cookie.includes(".")
+        home.status == 200 && home.errors == ""
+        home.output.includes("Nothing of it is open to you.")
+        chatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
+        files.errors.includes("RECORD_PANEL_UNAVAILABLE")
+        plannerFiles.errors.includes("RECORD_PANEL_UNAVAILABLE")
+        !plannerChatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
+    }
+})
+
 feature("Home shows the planner their organization and the counters not configured; Settings is the administrator's", {
     when() {
         const plannerHome = asUser(users.planner, () =>
@@ -385,12 +484,16 @@ feature(
                     .list()
                 if (launcher.size() !== 1 || launcher.get(0).artifactGroupId !== "BOSS_MAINTENANCE")
                     problems.push("the launcher's artifact")
-                const imports = ec.entity
-                    .find("moqui.security.CapabilityBundlePermission")
-                    .condition({userPermissionId: "MAINTENANCE_IMPORT"})
-                    .list()
-                if (imports.size() !== 1 || imports.get(0).userGroupId !== "BOSS_MAINTENANCE_RESOURCE_ADMIN")
-                    problems.push("MAINTENANCE_IMPORT is not the resource administrator's bundle alone")
+                const holders = userPermissionId =>
+                    Array.from(
+                        ec.entity.find("moqui.security.CapabilityBundlePermission").condition({userPermissionId}).list()
+                    )
+                        .map(row => row.userGroupId)
+                        .sort()
+                if (JSON.stringify(holders("MAINTENANCE_IMPORT")) !== '["BOSS_MAINTENANCE_ADMIN","BOSS_MAINTENANCE_RESOURCE_ADMIN"]')
+                    problems.push(`MAINTENANCE_IMPORT's bundles: ${holders("MAINTENANCE_IMPORT")}`)
+                if (JSON.stringify(holders("MAINTENANCE_ALL_ORGANIZATIONS")) !== '["BOSS_MAINTENANCE_ADMIN"]')
+                    problems.push(`MAINTENANCE_ALL_ORGANIZATIONS's bundles: ${holders("MAINTENANCE_ALL_ORGANIZATIONS")}`)
             })
             const settingsKeys = user =>
                 Array.from(asUser(user, () => invoke(registry + "find#Settings", {})).entries || []).map(

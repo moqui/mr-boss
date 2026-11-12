@@ -42,6 +42,23 @@ along with this software (see the LICENSE.md file). If not, see
             ]]></script>
         </then><else>
             <service-call name="ironstone.maintenance.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="maintenance"/>
+            <!-- the record panels serve Maintenance's own record hosts only (the People P2 and Insights P12 mount lesson): this root's
+                inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to a user given
+                Maintenance without Commons. None yet; the phases that put a panel on a Maintenance screen add its entity here (P2 the
+                equipment and facility, P3 the work order and step, with their checks). A panel request with no record (a person
+                search, an avatar) names none. -->
+            <script><![CDATA[
+                const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+                const panelName = pathNames[pathNames.indexOf('Maintenance') + 1]
+                const wanted = ec.context.recordEntity
+                if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
+                    let entityName = String(wanted)
+                    try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
+                    const panelHosts = []
+                    if (!panelHosts.includes(entityName))
+                        throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+                }
+            ]]></script>
         </else></if>
         <set field="sharedLinks" from="maintenance.sharedLinks"/>
     </always-actions>
