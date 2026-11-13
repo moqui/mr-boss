@@ -326,7 +326,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Sales root and menu, Home's frame, Reports' two ported screens | built and reviewed Nov 13, merged |
 | P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | built and reviewed Nov 13, merged |
 | P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | built and reviewed Nov 13, merged |
-| P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | — |
+| P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | built and reviewed Nov 13, merged |
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | — |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | — |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | — |
@@ -1229,7 +1229,7 @@ Today); SAL-CRM, SAL-COLLAB. The opportunity import is P6; the Comms intake P5.
   screens, and an "Added in the Sales build: leads and opportunities" table the fourteen OpportunityServices verbs.
 - Design edits: design-sales §3 "As built (impl-sales P4)", §4's as-built (F98, F99), §9 TypesAndReasons (the shared reasons);
   design-drawers-commons §6 (canEditIdentity, owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F103 to F108 in order:
   - the framework's view-board labels a column by its value unless the group field is a status or an enumeration, so a board by an
     id (a stage) shows ids for its empty columns; the board groups by the stage's name instead, unique in a pipeline. A column-label
     attribute (or a display field) on view-board is the framework's fix;
@@ -1304,7 +1304,7 @@ design-drawers-commons §6.
     stage names; a pipeline asked now gives its stages only when shared or of an organization of the scope.
   - The totals' scope had no check: Mantle SalesOpportunities now gives two deals amounts and checks the rep's USD total counts their
     own (100, one deal) and the manager's the organization's (1100, two).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F109 to F112 in order:
   - apply#OpportunityBatch items carry the revision but no operation key (§2 names a batch item among the keyed operations): a
     retried batch answers REVISION_CHANGED for the items the first try did, not their first result; no data is changed twice;
   - Marketing's mountRoots row maps Leads and LeadSources only; impl-sales §4 (Nov 11) has Marketing mount Accounts too, so
@@ -2058,6 +2058,16 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F100 | P3 (Review Nov 13): SalesAccess `accountOf` treats a party with no `ownerPartyId` as shared, but find#Accounts and the Party filter (MANTLE_USER_ORG_9) leave such a party out; Party's default is `_NA_`, so only a row written without it differs | P3: as its Review note says |
 | F101 | P3 (Review Nov 13): find#Accounts lists Customer and Prospect roles, while `accountOf` also admits a party with the Account role alone | P3: as its Review note says |
 | F102 | P3 (Review Nov 13): mark#NotDuplicate asks the guard one way (partyId into otherPartyId), so a pair whose merge is refused that way for a dependency is refused "not a duplicate" to a Sales manager though the other way may be admitted | P3: as its Review note says |
+| F103 | P4 (Built Nov 13): the framework's view-board labels a column by its value unless the group field is a status or an enumeration, so a board by an id (a stage) shows ids for its empty columns; the board groups by the stage's name instead, unique in a pipeline. A column-label attribute (or a display field) on view-board is the framework's fix | P4: as its Built note says |
+| F104 | P4 (Built Nov 13): the recurring plans have no writer, so the user's call on shared reasons and plans changes only store#LostReason; a plan service, when one is built, takes the same every-organization rule | P4: as its Built note says |
+| F105 | P4 (Built Nov 13): `store#Competitor` changes no revision (its rows are not in the deal's revision), so a stale competitor edit is the last writer's; the deal's own revision is checked first | P4: as its Built note says |
+| F106 | P4 (Built Nov 13): returning a qualified opportunity to a lead (design §3: a manager, a reason and no placed linked order) and the duplicate candidates in QualifyLead (the account and contact choosers find them) are not built; RelatedSales lists linked orders for a SALES_TEAM_VIEW holder only until P7's and P11's scopes | P4: as its Built note says |
+| F107 | P4 (Built Nov 13): the owners choice offers everyone who works for the organization; `create#Opportunity` and `store#OpportunityParty` refuse a representative's choice outside their teams (PERMISSION_DENIED) only on submit | P4: as its Built note says |
+| F108 | P4 (Built Nov 13): New lead and New opportunity under Sales leave the organization empty for sales.rep (one organization) in the client, so the walk chooses it; the forms' `newDefaults` map is set as Accounts' is, and why the client shows it empty was not traced | P4: as its Built note says |
+| F109 | P4 (Review Nov 13): apply#OpportunityBatch items carry the revision but no operation key (§2 names a batch item among the keyed operations): a retried batch answers REVISION_CHANGED for the items the first try did, not their first result; no data is changed twice | P4: as its Review note says |
+| F110 | P4 (Review Nov 13): Marketing's mountRoots row maps Leads and LeadSources only; impl-sales §4 (Nov 11) has Marketing mount Accounts too, so impl-marketing P3 adds `Accounts/Accounts` (and Customer360 if it mounts it) to the row's paths | P4: as its Review note says |
+| F111 | P4 (Review Nov 13): other apps default a new record's organization by "the scope's only one" too (Maintenance's Procedures, Equipment and Facilities, Warehouse's PoolList and facility parts, People's Training and ReviewCycles, Shared InspectionTemplates), and Sales' settings screens take the scope's first; a user whose organization has a rollup child meets the same empty field | P4: as its Review note says |
+| F112 | P4 (Review Nov 13): create#OpportunityContent has no `allow-remote="false"` (it checks the caller itself, as the other content services do) | P4: as its Review note says |
 
 ## 7. Later
 
