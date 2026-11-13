@@ -80,6 +80,7 @@
 // permission to the group's own refusal: the demonstration group is not live), Services' run missing to Retail's payroll; its
 // settlement read by the payroll approver and refused to the HR officer; a pay obligation's invoice in Payroll's InvoiceDetail
 // (get#Obligation) a payroll reader's of its employer, refused to the HR officer and missing to Retail's payroll for Services'.
+// P27 review: Overpayment recovery (PayRecovery) payroll's, its settings refused to the HR officer (the user's call of Nov 13, 2026).
 // P29: the payroll register run by the payroll operator and refused to the HR officer with the same parameters, Services' headcount
 // refused to Retail's HR; Reports opened to HR and payroll and refused to the directory reader and the manager; the confidential case
 // intake set by the People administrator and refused to the HR officer with the same parameters; the clocking default set by the HR
@@ -1757,11 +1758,17 @@ feature(
                     approverSettlement: as(users.payApprover, R + "get#Settlement", finalize),
                     hrSettlement: as(users.hr, R + "get#Settlement", finalize),
                     hrObligation: as(users.hr, R + "get#Obligation", {invoiceId: "PPL_SPEC_PAL_INV_SVC"}),
-                    payrollObligationServices: as(users.payroll, R + "get#Obligation", {invoiceId: "PPL_SPEC_PAL_INV_SVC"})
-                }
+                    payrollObligationServices: as(users.payroll, R + "get#Obligation", {invoiceId: "PPL_SPEC_PAL_INV_SVC"}),
+                    hrRecovery: as(users.hr, "mantle.humanres.PayrollSetupServices.get#RecoverySettings", {})
+                },
+                // P27 review: the recovery settings' screen beside Pay groups, payroll's (people.payroll configures)
+                payrollRecoveryScreen: screenRefusal(users.payroll, "Payroll/PayRecovery", {}),
+                hrRecoveryScreen: screenRefusal(users.hr, "Payroll/PayRecovery", {})
             }
         },
-        then({codes}) {
+        then({codes, payrollRecoveryScreen, hrRecoveryScreen}) {
+            payrollRecoveryScreen == ""
+            unauthorized(hrRecoveryScreen)
             codes ==
                 {
                     hrFinalizes: "PERMISSION_DENIED",
@@ -1771,7 +1778,8 @@ feature(
                     approverSettlement: "accepted",
                     hrSettlement: "PERMISSION_DENIED",
                     hrObligation: "PERMISSION_DENIED",
-                    payrollObligationServices: "RECORD_UNAVAILABLE"
+                    payrollObligationServices: "RECORD_UNAVAILABLE",
+                    hrRecovery: "PERMISSION_DENIED"
                 }
         }
     }

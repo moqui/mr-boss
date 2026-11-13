@@ -737,6 +737,7 @@ the screens that call it.
 | PayrollRunServices | finalize#Run | People/Payroll/PayRunDetail (Finalize) | People/Payroll/PayRunDetail (5 Finalize: why the group is not live, Finalize and Finalize again; the run's pay obligations made and released to Accounting) (People P27) |
 | PayrollRunServices | get#Settlement | People/Payroll/PayRunDetail (Settlement) | People/Payroll/PayRunDetail (6 Settlement: payment instructions, obligations with their invoices' state, posting and payments, overpayments to recover) (People P27) |
 | PayrollRunServices | get#Obligation | People/Payroll/InvoiceDetail (payroll) | People/Payroll/InvoiceDetail (Shared/InvoiceDetail's People branch, template/PeopleInvoiceDetail.xml: a pay obligation's invoice, its lines, accounts and payments, for a payroll reader) (People P27) |
+| PayrollSetupServices | get#RecoverySettings, store#RecoverySettings | People/Payroll/PayRecovery | People/Payroll/PayRecovery (Overpayment recovery: each employer's recovery deduction and cap, an amount or a percentage of net pay, changed by PAYROLL_CONFIGURE at the revision read) (People P27 review) |
 
 ## Ledger (81 services)
 

@@ -28,7 +28,8 @@ along with this software (see the LICENSE.md file). If not, see
     posting, unpaid and payments, linked to Payroll's InvoiceDetail; each person's wage net, reimbursement due and payment
     instruction; the overpayments to recover). Cancel run (P25 review): a run not approved cancelled with its reason, cancel#Run, its inputs released and the
     period free to run again. Amounts are opted out of AI, the approval's confirmation naming no net in an agent's render. Nothing here
-    makes a payment; only Finalize makes the draft obligations, which Accounting approves, posts and pays. P26: an approved run's payslips linked from its header (preview slips in this build), a correction
+    makes a payment; only Finalize makes the draft obligations, which Accounting approves, posts and pays, and then issues each final
+    slip's statement (the P27 review, the user's call of Nov 13, 2026). P26: an approved run's payslips linked from its header (preview slips in this build), a correction
     run's original slip and reason, and an off-cycle run's adjustments. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay run" default-menu-include="false">
@@ -97,7 +98,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.PayrollRunServices.finalize#Run" out-map="finalized" in-map="{payrollRunId:payrollRunId}"/>
             <if condition="!ec.message.hasError()">
-                <if condition="finalized.complete"><message type="success">Pay run finalized: ${finalized.obligationCount} obligations released to Accounting</message>
+                <if condition="finalized.complete"><message type="success">Pay run finalized: ${finalized.obligationCount} obligations released to Accounting, ${finalized.issuedCount} statement${finalized.issuedCount == 1 ? '' : 's'} issued${finalized.issueFailedCount ? '; ' + finalized.issueFailedCount + ' not issued: issue them from the payslip' : ''}</message>
                     <else><message type="warning">Finalization pending: ${finalized.message}</message></else></if>
             </if>
         </actions>

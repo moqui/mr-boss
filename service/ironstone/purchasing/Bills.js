@@ -107,7 +107,9 @@ function buyersFor(userScope, organizationPartyId) {
 // bill, private suppliers of other users left out.
 function billFind(buyers) {
     const factory = ec.entity.conditionFactory
-    return find(FINANCE)
+    // People P27 review (AC-23): a payroll-origin bill (a person's net pay, its payrollOrigin mark) is a reader of payroll's
+    const payrollHidden = ec.resource.script("component://mr-mantle/service/mantle/account/PayrollOrigin.js").invoiceCondition()
+    return (payrollHidden ? find(FINANCE).condition(payrollHidden) : find(FINANCE))
         .condition("toPartyId", "in", buyers.length ? buyers : ["_NA_"])
         .condition("fromPartyId", "not-in", internalIds())
         .condition("creditForInvoiceId", "is-null", null)
@@ -530,7 +532,12 @@ function billDetail(p) {
         : []
     const exceptionNames = enumNames(matchLines.map(line => line.exceptionEnumId))
     const matchResult = match ? enumNames([match.resultEnumId])[match.resultEnumId] || match.resultEnumId : "Not matched"
-    const payments = showPayments ? rows("mantle.account.payment.PaymentApplication", {invoiceId}) : []
+    // People P27 review (AC-23): a payroll payment applied to the bill (one paying a claim with net pay) is a reader of payroll's
+    const payments = showPayments
+        ? ec.resource
+              .script("component://mr-mantle/service/mantle/account/PayrollOrigin.js")
+              .visibleRows(rows("mantle.account.payment.PaymentApplication", {invoiceId}), {payment: ["paymentId"]})
+        : []
     const paymentRows = payments.map(row => ({
         paymentId: row.paymentId,
         appliedText: lib.dateText(row.appliedDate),

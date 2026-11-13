@@ -74,6 +74,11 @@ function exceptions(parameters) {
         let query = policy
             .find("mantle.account.invoice.InvoiceHoldDetail", {toPartyId: organizationPartyId})
             .condition("releasedDate", "is-null", null)
+        // People P27 review (AC-23): a hold on a payroll-origin bill is a reader of payroll's (the bill's payrollOrigin mark)
+        const payrollHidden = ec.resource
+            .script("component://mr-mantle/service/mantle/account/PayrollOrigin.js")
+            .invoiceCondition("invoicePayrollOrigin")
+        if (payrollHidden) query = query.condition(payrollHidden)
         if (!scope.capabilities.systemAdmin)
             query = query.condition(
                 cf.makeCondition(

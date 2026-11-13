@@ -127,7 +127,8 @@ reference, not a form; their Implemented in is in usl-inventory's People rows.
 **People P27 (Nov 12, 2026):** no baseline form is mapped to PayRunDetail's Finalize and Settlement or Payroll's InvoiceDetail
 branch: Marble's HumanRes payroll approved period invoices and made period payments through the legacy services, which People
 neither calls nor reads (design-people §8.4); obligations and recoveries are new records (`PayrollObligation`, `PayrollRecovery`);
-their Implemented in is in usl-inventory's People rows.
+their Implemented in is in usl-inventory's People rows. The P27 review's Overpayment recovery (PayRecovery) maps none either: its
+settings are new PartySettings of People's recovery.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

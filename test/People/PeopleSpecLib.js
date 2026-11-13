@@ -115,7 +115,8 @@ const ids = {
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms", "Preferences"],
     // P10: Rates; P22 (its review's call of Nov 12, 2026): payroll configuration's components, structures and groups, payroll's;
     // P23: pay assignments, before Rates; P24: pay adjustments, after them
-    // P25: pay runs first; P26: payslips after them
+    // P25: pay runs first; P26: payslips after them; the P27 review (the user's call of Nov 13, 2026): overpayment recovery after
+    // pay groups
     payrollGroupMenu: [
         "PayRuns",
         "Payslips",
@@ -124,7 +125,8 @@ const ids = {
         "Rates",
         "PayComponents",
         "PayStructures",
-        "PayGroups"
+        "PayGroups",
+        "PayRecovery"
     ],
     // P21: Grievances, every People user's
     employeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances"],

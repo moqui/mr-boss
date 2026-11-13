@@ -423,6 +423,12 @@ function readFacility(facilityId) {
 function readBill(invoiceId) {
     const bill = one("mantle.account.invoice.Invoice", {invoiceId})
     if (!bill || bill.creditForInvoiceId || !isInternal(bill.toPartyId) || isInternal(bill.fromPartyId)) return null
+    // People P27 review (AC-23): a payroll-origin bill (a person's net pay) is a reader of payroll's, missing to anyone else
+    if (
+        bill.payrollOrigin === "Y" &&
+        !ec.resource.script("component://mr-mantle/service/mantle/account/PayrollOrigin.js").canRead()
+    )
+        return null
     return {
         owners: [bill.toPartyId],
         suppliers: [bill.fromPartyId],

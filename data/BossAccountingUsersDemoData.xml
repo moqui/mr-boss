@@ -39,6 +39,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserAccount userId="BOSS_ACCT_AP" username="finance.ap" userFullName="Finance Ap" partyId="BOSS_ACCT_AP" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING" userId="BOSS_ACCT_AP" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_AP" userId="BOSS_ACCT_AP" fromDate="0"/>
+    <!-- payroll finance (People P27 review): approves and pays payroll invoices, which finance.ap does not see -->
+    <mantle.party.Party partyId="BOSS_ACCT_PAYROLL" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ACCT_PAYROLL" firstName="Finance" lastName="Payroll"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ACCT_PAYROLL_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_ACCT_PAYROLL" toPartyId="BOSS_ACCT_ORG" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ACCT_PAYROLL" username="finance.payroll" userFullName="Finance Payroll" partyId="BOSS_ACCT_PAYROLL" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING" userId="BOSS_ACCT_PAYROLL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_PAYROLL" userId="BOSS_ACCT_PAYROLL" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_ACCT_MATCH" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ACCT_MATCH" firstName="Finance" lastName="Match"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ACCT_MATCH_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_ACCT_MATCH" toPartyId="BOSS_ACCT_ORG" toRoleTypeId="OrgInternal" fromDate="0"/>

@@ -56,7 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
                         roundingPlaces:(roundingPlaces ?? ''), roundingEnumId:(roundingEnumId ?? ''), payslipVisible:(payslipVisible || 'N'),
                         prorated:(basisEnumId == 'PcbAmount' ? (prorated || 'N') : ''),
                         expenseGlAccountId:(expenseGlAccountId ?? ''), liabilityGlAccountId:(liabilityGlAccountId ?? ''),
-                        fromDate:(fromDate || null), thruDate:(thruDate ?? null)}"/>
+                        payeePartyId:(payeePartyId ?? ''), fromDate:(fromDate || null), thruDate:(thruDate ?? null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Draft saved</message></if>
         </actions>
         <default-response url=".">
@@ -138,6 +138,8 @@ along with this software (see the LICENSE.md file). If not, see
                     value: openTerm.prorated ? 'Prorated by the period fraction' : 'Paid whole'}] : []),
                 {term: 'Expense account', value: statistical ? 'None: posts nothing' : (openTerm.expenseAccountText || 'Not mapped')},
                 {term: 'Liability account', value: statistical ? 'None: posts nothing' : (openTerm.liabilityAccountText || 'Not mapped')},
+                {term: 'Payee', value: statistical || component.componentKindEnumId == 'PckEarning' ? 'The person' :
+                    (openTerm.payeeName || (component.componentKindEnumId == 'PckContribution' ? 'None: a live run is not finalized without one' : 'None: kept on its liability account'))},
                 {term: 'Dates', value: 'From ' + openTerm.fromDateText + (openTerm.thruDateText ? ' through ' + openTerm.thruDateText : '')},
                 {term: 'Published', value: openTerm.publishedDateText ? openTerm.publishedDateText + ' by ' + openTerm.publishedByName : 'Not yet'}
             ] : []
@@ -150,7 +152,8 @@ along with this software (see the LICENSE.md file). If not, see
                 payslipVisible: source.payslipVisible === false ? 'N' : 'Y',
                 prorated: source.prorated === false || (source.prorated == null && statistical) ? 'N' : 'Y',
                 expenseGlAccountId: source.expenseGlAccountId,
-                liabilityGlAccountId: source.liabilityGlAccountId, fromDate: isDraft ? source.fromDate : null} : {}
+                liabilityGlAccountId: source.liabilityGlAccountId, payeePartyId: source.payeePartyId,
+                fromDate: isDraft ? source.fromDate : null} : {}
             exampleValues = component && isDraft ? {payrollComponentId: component.payrollComponentId, expectedRevision: component.revision,
                 payrollComponentTermId: openTerm.payrollComponentTermId} : {}
             publishValues = component && isDraft ? {payrollComponentId: component.payrollComponentId, expectedRevision: component.revision,
@@ -273,6 +276,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="prorated"><default-field><hidden/></default-field></field>
                                         <field name="expenseGlAccountId"><default-field><hidden/></default-field></field>
                                         <field name="liabilityGlAccountId"><default-field><hidden/></default-field></field>
+                                        <field name="payeePartyId"><default-field><hidden/></default-field></field>
                                         <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
                                         <field name="submitButton"><default-field title="Start draft"><submit/></default-field></field>
                                     </form-single>
@@ -419,6 +423,15 @@ along with this software (see the LICENSE.md file). If not, see
                                     </conditional-field>
                                     <default-field><hidden/></default-field>
                                 </field>
+                                <field name="payeePartyId">
+                                    <conditional-field condition="!statistical &amp;&amp; component.componentKindEnumId != 'PckEarning'" title="Payee"
+                                            tooltip="Who the withheld or owed amounts are paid to (a pension fund, a union): finalizing a pay run makes them one invoice from it for each liability account. A deduction with none stays on its liability account">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payrollPayees'}"/>
+                                        </drop-down>
+                                    </conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
                                 <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
                                 <field name="submitButton"><default-field title="Save draft"><submit/></default-field></field>
                                 <field-layout>
@@ -428,6 +441,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-row><field-ref name="currencyUomId"/><field-ref name="quantityUomId"/></field-row>
                                     <field-row><field-ref name="roundingPlaces"/><field-ref name="roundingEnumId"/></field-row>
                                     <field-row><field-ref name="expenseGlAccountId"/><field-ref name="liabilityGlAccountId"/></field-row>
+                                    <field-ref name="payeePartyId"/>
                                     <field-row><field-ref name="payslipVisible"/><field-ref name="prorated"/></field-row>
                                     <field-ref name="fromDate"/>
                                     <field-ref name="submitButton"/>
