@@ -21,7 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
             are the current ones; a holder with none left gains the field noCurrentEmployment, which the document's post-query
             condition leaves out, so the feed deletes the document. The document carries every employment's end, so ending one is a
             write of a document field the feed takes (an end in a SQL condition of the document stopped the write from being fed, and
-            the document stayed). Reads nothing.</description>
+            the document stayed). An identity document or a work permit (QualIdentityDocument, QualWorkPermit) gains restrictedType,
+            which a second post-query condition leaves out, so the dataset never holds one (impl-people P28, the user's call of Nov 13,
+            2026). Reads nothing.</description>
         <in-parameters>
             <parameter name="dataDocumentId"/>
             <parameter name="document" type="Map"/>
@@ -31,8 +33,9 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 const found = context.document || {}
                 const current = Array.from(found.fromRelationships || []).filter(row => row && row.employmentThruDate == null)
+                const restricted = ["QualIdentityDocument", "QualWorkPermit"].includes(found.qualificationTypeEnumId)
                 context.document = Object.assign({}, found, {fromRelationships: current},
-                    current.length ? {} : {noCurrentEmployment: "Y"})
+                    current.length ? {} : {noCurrentEmployment: "Y"}, restricted ? {restrictedType: "Y"} : {})
             ]]></script>
         </actions>
     </service>

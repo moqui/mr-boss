@@ -419,6 +419,8 @@ const mountRoutes = {
     projectsWorkItemImport: {url: "/qapps/Projects/WorkItems/Import", plain: true},
     peopleEmployeeImport: {url: "/qapps/People/Employees/EmployeeImport", plain: true},
     peopleTimeImport: {url: "/qapps/People/Time/TimeImport", plain: true},
+    // People's payroll exchange: its history and results imports and its pay inputs export (impl-people P28)
+    peoplePayrollExchange: {url: "/qapps/People/Payroll/PayrollExchange", plain: true},
     maintenanceEquipmentImport: {url: "/qapps/Maintenance/Equipment/EquipmentImport", plain: true},
     // Maintenance's due list: the preventive generation job's and its recovery's owner place (impl-maintenance P14, F117)
     maintenanceDue: {url: "/qapps/Maintenance/Preventive/DueMaintenance", plain: true},

@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     the one primary: nothing is assumed, neither currency nor divisor nor pay date nor proration), changes its policy with a reason
     (audited; its currency, frequency and first period stay once periods exist), ends it, and prepares its next periods (once:
     preparing again continues after the last). No group can be live: the readiness says so. Under Payroll beside Rates, payroll's
-    area (the P22 review's call of Nov 12, 2026). -->
+    area (the P22 review's call of Nov 12, 2026). P28: Calculated, here or by an external processor (externalProcessing): such a group
+    is never calculated here, its inputs exported and its results imported in Payroll exchange, and it may be live with no
+    localization once Accounting's payroll-origin projection is in place; changed only while none of its runs is open. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay groups" default-menu-index="8">
     <parameter name="payrollGroupId"/>
@@ -40,6 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
                         localizationPayeePartyId:(localizationPayeePartyId ?? null),
                         localizationLiabilityGlAccountId:(localizationLiabilityGlAccountId ?? null),
                         localizationExpenseGlAccountId:(localizationExpenseGlAccountId ?? null), liveEnabled:(liveEnabled ?? null),
+                        externalProcessing:(externalProcessing ?? null),
                         thruDate:(thruDate || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">${end == 'true' ? 'Pay group ended' : (payrollGroupId ? 'Pay group saved' : 'Pay group created')}</message></if>
@@ -93,7 +96,8 @@ along with this software (see the LICENSE.md file). If not, see
                 timeBasisEnumId: group.timeBasisEnumId, workweekTimeZone: group.workweekTimeZone,
                 payrollLocalizationId: group.payrollLocalizationId, description: group.description,
                 localizationPayeePartyId: group.localizationPayeePartyId, localizationLiabilityGlAccountId: group.localizationLiabilityGlAccountId,
-                localizationExpenseGlAccountId: group.localizationExpenseGlAccountId, liveEnabled: group.liveEnabled ? 'Y' : 'N'} : {}
+                localizationExpenseGlAccountId: group.localizationExpenseGlAccountId, liveEnabled: group.liveEnabled ? 'Y' : 'N',
+                externalProcessing: group.externalProcessing ? 'Y' : 'N'} : {}
             groupFacts = group ? [
                 {term: 'Employer', value: group.organizationName},
                 {term: 'Currency', value: group.currencyUomId},
@@ -105,6 +109,7 @@ along with this software (see the LICENSE.md file). If not, see
                 {term: 'Workweek time zone', value: group.workweekTimeZone || 'Not set'},
                 {term: 'Localization', value: group.localizationName || 'None'},
                 {term: 'Localization payee', value: group.localizationPayeeName || 'Not set'},
+                {term: 'Calculated', value: group.externalProcessing ? 'By an external processor: its results are imported in Payroll exchange' : 'Here'},
                 {term: 'Live pay', value: group.liveEnabled ? 'Yes: finalizing a run makes its pay obligations' : 'No: its runs are previews'},
                 {term: 'Readiness', value: group.readiness.message}
             ] : []
@@ -185,6 +190,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 </drop-down>
                             </default-field>
                         </field>
+                        <!-- P28: a group whose pay an external processor calculates (Payroll exchange) -->
+                        <field name="externalProcessing">
+                            <default-field title="Calculated" tooltip="An external processor's group is never calculated here: its inputs are exported and its results imported in Payroll exchange">
+                                <drop-down><option key="N" text="Here"/><option key="Y" text="By an external processor"/></drop-down>
+                            </default-field>
+                        </field>
                         <field name="submitButton"><default-field title="Create pay group"><submit/></default-field></field>
                         <field-layout>
                             <field-row><field-ref name="groupName"/><field-ref name="organizationPartyId"/></field-row>
@@ -192,7 +203,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-row><field-ref name="firstPeriodFromDate"/><field-ref name="periodsPerYear"/></field-row>
                             <field-row><field-ref name="payDateOffsetDays"/><field-ref name="prorationEnumId"/></field-row>
                             <field-row><field-ref name="timeBasisEnumId"/><field-ref name="workweekTimeZone"/></field-row>
-                            <field-ref name="payrollLocalizationId"/>
+                            <field-row><field-ref name="payrollLocalizationId"/><field-ref name="externalProcessing"/></field-row>
                             <field-ref name="submitButton"/>
                         </field-layout>
                     </form-single>
@@ -307,8 +318,13 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </drop-down>
                                             </default-field>
                                         </field>
+                                        <field name="externalProcessing">
+                                            <default-field title="Calculated" tooltip="An external processor's group is never calculated here: its inputs are exported and its results imported in Payroll exchange; it needs no localization to be live">
+                                                <drop-down><option key="N" text="Here"/><option key="Y" text="By an external processor"/></drop-down>
+                                            </default-field>
+                                        </field>
                                         <field name="liveEnabled">
-                                            <default-field title="Live pay" tooltip="Finalizing a run makes its pay obligations; only with a real localization that covers today">
+                                            <default-field title="Live pay" tooltip="Finalizing a run makes its pay obligations; only with a real localization that covers today, or for a group an external processor calculates">
                                                 <drop-down><option key="N" text="No: preview only"/><option key="Y" text="Yes"/></drop-down>
                                             </default-field>
                                         </field>
@@ -320,7 +336,8 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field-row><field-ref name="timeBasisEnumId"/><field-ref name="workweekTimeZone"/></field-row>
                                             <field-row><field-ref name="payrollLocalizationId"/><field-ref name="localizationPayeePartyId"/></field-row>
                                             <field-row><field-ref name="localizationLiabilityGlAccountId"/><field-ref name="localizationExpenseGlAccountId"/></field-row>
-                                            <field-row><field-ref name="liveEnabled"/><field-ref name="reason"/></field-row>
+                                            <field-row><field-ref name="externalProcessing"/><field-ref name="liveEnabled"/></field-row>
+                                            <field-ref name="reason"/>
                                             <field-ref name="submitButton"/>
                                         </field-layout>
                                     </form-single>

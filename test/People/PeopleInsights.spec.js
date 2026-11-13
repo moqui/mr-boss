@@ -4,8 +4,8 @@
 // service and screen; every shipped definition loads; no shipped document carries pay, tax, private contact or an identity
 // number); Insights' catalog opens a People report on its route with the report chosen, and Mantle's catalogue offers the payroll
 // register to payroll alone; a People dataset is read through Insights by a holder of People's Insights bundle, their own
-// organization's rows, and by no other Insights reader; ending an employment updates or removes its holder's qualification
-// documents (the P29 review); the Insights data steward stewards the People datasets and reads none of their rows; an Assist or MCP
+// organization's rows (never an identity document or a work permit, P28), and by no other Insights reader; ending an employment
+// updates or removes its holder's qualification documents (the P29 review); the Insights data steward stewards the People datasets and reads none of their rows; an Assist or MCP
 // question or saved panel on a People dataset is refused and none is listed as a source; Reports' one render (headcount as HR, with its denominator and export) and its CSV, and Preferences' one
 // render (the People administrator's clocking default and case intake handlers by name). The report rules are Mantle's
 // PeopleReports; the access cases are PeopleAccessLater's; the "usable when" is the acceptance PeopleReportsUsable.
@@ -188,6 +188,8 @@ feature("a People dataset is read through Insights by People's bundle alone, eac
     then({qualifications, retail, forged, reader}) {
         qualifications.includes(ids.firstAidId)
         !qualifications.includes(ids.otherQualificationId)
+        // P28 (the user's call of Nov 13, 2026): Rafael's verified work permit is no qualification the dataset holds
+        !qualifications.includes(ids.workPermitId)
         retail.length > 5
         retail.every(id => id === ids.organizationId)
         forged == []
@@ -197,11 +199,13 @@ feature("a People dataset is read through Insights by People's bundle alone, eac
 
 // The qualification documents follow their holder's employments (the P29 review, the user's call of Nov 12, 2026): a spec person
 // employed by Retail and Services, with a verified qualification; ending the Services employment drops Services from the document,
-// revoking the qualification changes its verification there, and ending the Retail one deletes the document. All taken out after.
+// revoking the qualification changes its verification there, and ending the Retail one deletes the document; the holder's work permit
+// has no document at all (P28, the user's call of Nov 13, 2026: identity documents and work permits are left out). All taken out after.
 feature("ending an employment updates or removes its holder's qualification documents", {
     when() {
         const person = "PPL_INS_SPEC_HOLDER"
         const qualificationId = "PPL_INS_SPEC_QL"
+        const permitId = "PPL_INS_SPEC_PERMIT"
         const write = (service, parameters) =>
             ec.service.sync().name(service).parameters(parameters).requireNewTransaction(true).call()
         const employments = [ids.organizationId, ids.otherOrganizationId].map(toPartyId => ({
@@ -237,7 +241,19 @@ feature("ending an employment updates or removes its holder's qualification docu
                     thruDate: "2027-06-01 00:00:00",
                     verificationStatusId: "QlVerVerified"
                 })
+                // P28: the holder's work permit, while employed by both, has no document
+                write("create#mantle.humanres.ability.PartyQualification", {
+                    partyQualificationId: permitId,
+                    partyId: person,
+                    qualificationTypeEnumId: "QualWorkPermit",
+                    title: "Spec work permit",
+                    fromDate: "2025-06-01 00:00:00",
+                    thruDate: "2027-06-01 00:00:00",
+                    verificationStatusId: "QlVerVerified"
+                })
                 const both = documentNow()
+                ec.search.processFeedPending(null, 10)
+                const permit = ec.search.getDocument("BossPeopleQualification", permitId)
                 write("update#mantle.party.PartyRelationship", {
                     partyRelationshipId: employments[1].partyRelationshipId,
                     thruDate: ec.user.nowTimestamp
@@ -253,8 +269,9 @@ feature("ending an employment updates or removes its holder's qualification docu
                     thruDate: ec.user.nowTimestamp
                 })
                 const left = documentNow()
-                return {both, retailOnly, revoked, left}
+                return {both, permit, retailOnly, revoked, left}
             } finally {
+                write("delete#mantle.humanres.ability.PartyQualification", {partyQualificationId: permitId})
                 write("delete#mantle.humanres.ability.PartyQualification", {partyQualificationId: qualificationId})
                 for (const employment of employments)
                     write("delete#mantle.party.PartyRelationship", {partyRelationshipId: employment.partyRelationshipId})
@@ -264,8 +281,9 @@ feature("ending an employment updates or removes its holder's qualification docu
             }
         })
     },
-    then({both, retailOnly, revoked, left}) {
+    then({both, permit, retailOnly, revoked, left}) {
         both.employers == [ids.organizationId, ids.otherOrganizationId].sort()
+        permit == null
         retailOnly.employers == [ids.organizationId]
         revoked.verification == "QlVerRevoked"
         revoked.employers == [ids.organizationId]

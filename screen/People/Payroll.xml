@@ -33,7 +33,10 @@ along with this software (see the LICENSE.md file). If not, see
     payment is made. P26: Payslips (menu 2) and PayslipDetail out of the menu, screens of this directory: an approved run's slips
     (preview slips in this build, payroll's alone and never issued), each explained line by line, issued once final, and corrected by a
     linked correction run, read with PAYROLL_VIEW, issued and corrected with PAYROLL_EDIT (Mantle's PayrollResultServices and
-    PayrollRunServices check them); the person's own issued slips are SelfService's (MyPayslip). The payroll exchange joins with P28. -->
+    PayrollRunServices check them); the person's own issued slips are SelfService's (MyPayslip). P28: Payroll exchange (menu 10),
+    screen of this directory: an export of a period's approved inputs for an external processor, and imports of payroll history and of
+    a processor's results, each previewed, reconciled and done (Mantle's PayrollExchangeServices check PAYROLL_VIEW, PAYROLL_EDIT and,
+    to import, PEOPLE_IMPORT). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="PayRuns">

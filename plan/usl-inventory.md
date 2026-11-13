@@ -738,6 +738,11 @@ the screens that call it.
 | PayrollRunServices | get#Settlement | People/Payroll/PayRunDetail (Settlement) | People/Payroll/PayRunDetail (6 Settlement: payment instructions, obligations with their invoices' state, posting and payments, overpayments to recover) (People P27) |
 | PayrollRunServices | get#Obligation | People/Payroll/InvoiceDetail (payroll) | People/Payroll/InvoiceDetail (Shared/InvoiceDetail's People branch, template/PeopleInvoiceDetail.xml: a pay obligation's invoice, its lines, accounts and payments, for a payroll reader) (People P27) |
 | PayrollSetupServices | get#RecoverySettings, store#RecoverySettings | People/Payroll/PayRecovery | People/Payroll/PayRecovery (Overpayment recovery: each employer's recovery deduction and cap, an amount or a percentage of net pay, changed by PAYROLL_CONFIGURE at the revision read) (People P27 review) |
+| PayrollExchangeServices | preview#Batch | People/Payroll/PayrollExchange (Exchange) | People/Payroll/PayrollExchange (Exchange: an export of a group's period's approved inputs, an import of history before a cutover, an import of a processor's results, each row resolved and named; a file replayed opens its exchange) (People P28) |
+| PayrollExchangeServices | reconcile#Batch | People/Payroll/PayrollExchange (Reconcile) | People/Payroll/PayrollExchange (Reconcile: the rows checked again, the totals and each employee's, the differences from what was signed off, a results group's live reasons) (People P28) |
+| PayrollExchangeServices | execute#Batch | People/Payroll/PayrollExchange (CommitExchange) | People/Payroll/PayrollExchange (Export: written through the export target payrollExchangeInputs and stored with its manifest; history: historical pay records; results: the period's pay run, then PayRunDetail) (People P28) |
+| PayrollExchangeServices | get#Batch, find#Batches | People/Payroll/PayrollExchange | People/Payroll/PayrollExchange (an exchange with its rows, reconciliation and stored files; the recent exchanges) (People P28) |
+| PayrollExchangeServices | find#ExchangeRuns, find#ExportScopes, export#InputsTransfer | Admin/Data (Imports, Exports, DataExport) | the transfer targets payrollExchange (Admin's Imports, owner route peoplePayrollExchange) and payrollExchangeInputs (Admin's Exports and DataExport) (People P28) |
 
 ## Ledger (81 services)
 

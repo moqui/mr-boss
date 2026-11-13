@@ -288,7 +288,8 @@ const capabilityUsers = [
         ]
     },
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
-    {user: users.payroll, granted: ["payrollView", "payrollEdit", "payrollConfigure", "staff", "payroll"]},
+    // P28: PEOPLE_IMPORT for the payroll exchange's imports
+    {user: users.payroll, granted: ["import", "payrollView", "payrollEdit", "payrollConfigure", "staff", "payroll"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff", "payroll"]},
     {user: users.develop, granted: ["developView", "developEdit", "staff"]},
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},

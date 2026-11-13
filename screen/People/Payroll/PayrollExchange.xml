@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Payroll exchange (design-people §8.4, PayrollExchange; style-guide §3.10 Wizard; impl-people P28): payroll's
+    exchanges with an external processor and a former system, in three steps over mantle.humanres.PayrollExchangeServices.
+    Exchange (preview#Batch): the kind and its scope: an export of a pay group's period's approved inputs; an import of an employer's
+    payroll history before a cutover day; an import of a group in external processing's period's results with what the processor
+    signed off; each row resolved and named, nothing made. Reconcile (reconcile#Batch): the rows checked again, the totals and each
+    employee's, the differences from what was signed off and, for results, the group's live reasons; kept at a revision. Commit
+    (execute#Batch, confirming the count): an export written through Admin's export target (listed in Admin's Exports) and stored with
+    its manifest; history recorded as historical pay records; results made a pay run, then approved and finalized in PayRunDetail. A
+    batch done shows its outcome and what it made. The rows, all or the problems, with their CSV. Amounts are opted out of AI. Admin's
+    Imports lists the imports (the target payrollExchange, owner route peoplePayrollExchange, payrollExchangeBatchId). Payroll's area;
+    Mantle checks PAYROLL_VIEW, PAYROLL_EDIT and, to import, PEOPLE_IMPORT, with the employer. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payroll exchange" default-menu-index="10" menu-image="sym_o_sync_alt" menu-image-type="icon">
+    <parameter name="payrollExchangeBatchId"/>
+    <parameter name="exchangeKind"/>
+    <parameter name="outcome"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="previewBatch">
+        <actions>
+            <service-call name="mantle.humanres.PayrollExchangeServices.preview#Batch" out-map="previewed"
+                    in-map="{exchangeKind:exchangeKind, organizationPartyId:(organizationPartyId || null), payrollGroupId:(payrollGroupId || null),
+                        timePeriodId:(timePeriodId || null), cutoverDate:(cutoverDate || null), currencyUomId:(currencyUomId || null),
+                        sourceSystem:(sourceSystem || null), workerIdKind:(workerIdKind || null), importFile:importFile,
+                        importText:(importText || null), delimiter:(delimiter || null), expectedCount:(expectedCount || null),
+                        expectedGross:(expectedGross || null), expectedNet:(expectedNet || null)}"/>
+            <if condition="previewed?.repeated"><message type="info">This file was read before: its exchange is opened</message></if>
+            <set field="payrollExchangeBatchId" from="previewed?.payrollExchangeBatchId"/>
+        </actions>
+        <default-response url="."><parameter name="payrollExchangeBatchId"/></default-response>
+        <error-response url="."><parameter name="exchangeKind"/></error-response>
+    </transition>
+    <transition name="reconcileBatch">
+        <actions>
+            <service-call name="mantle.humanres.PayrollExchangeServices.reconcile#Batch"
+                    in-map="{payrollExchangeBatchId:payrollExchangeBatchId, expectedCount:(expectedCount || null),
+                        expectedGross:(expectedGross || null), expectedNet:(expectedNet || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Reconciled</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollExchangeBatchId"/></default-response>
+        <error-response url="."><parameter name="payrollExchangeBatchId"/></error-response>
+    </transition>
+    <transition name="executeBatch">
+        <actions>
+            <service-call name="mantle.humanres.PayrollExchangeServices.execute#Batch" out-map="executed"
+                    in-map="{payrollExchangeBatchId:payrollExchangeBatchId}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(executed.appliedCount + ' done, ' + executed.skippedCount + ' recorded already or repeated, ' +
+                    executed.errorCount + ' not done', executed.errorCount ? 'warning' : 'success')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="payrollExchangeBatchId"/></default-response>
+        <error-response url="."><parameter name="payrollExchangeBatchId"/></error-response>
+    </transition>
+    <!-- an export's stored file or manifest, never made again -->
+    <transition name="exchangeFile" read-only="true">
+        <parameter name="part"/>
+        <actions>
+            <service-call name="mantle.humanres.PayrollExchangeServices.get#Batch" out-map="fileFound"
+                    in-map="{payrollExchangeBatchId:payrollExchangeBatchId, outcome:'none'}"/>
+            <script>if (!ec.message.hasError()) {
+                const files = fileFound.batch?.files
+                const wanted = files ? (part == 'manifest' ? files.manifest : files.file) : null
+                if (!wanted) ec.message.addError('RECORD_UNAVAILABLE: This exchange has no stored file')
+                else {
+                    const was = ec.artifactExecution.disableAuthz()
+                    try { ec.web.sendResourceResponse(wanted.location, true, wanted.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
+                }
+            }</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="payrollExchangeBatchId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="payrollExchangeBatchId">
+            <service-call name="mantle.humanres.PayrollExchangeServices.get#Batch" out-map="opened" transaction="force-new" ignore-error="true"
+                    in-map="{payrollExchangeBatchId:payrollExchangeBatchId, outcome:(outcome || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <if condition="!payrollExchangeBatchId">
+            <service-call name="mantle.humanres.PayrollExchangeServices.find#Batches" out-map="recent" transaction="force-new" ignore-error="true"
+                    in-map="{}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            batch = opened?.batch || null
+            reconciliation = opened?.reconciliation || null
+            resultRows = Array.from(opened?.rows || [])
+            recentRows = Array.from(recent?.batches || [])
+            kind = ['export', 'history', 'results'].includes(exchangeKind) ? exchangeKind : 'export'
+            kindList = [
+                {key: 'export', text: 'Export inputs', icon: 'sym_o_upload'},
+                {key: 'history', text: 'Import history', icon: 'sym_o_history'},
+                {key: 'results', text: 'Import results', icon: 'sym_o_download'}
+            ]
+            totalRows = Array.from(reconciliation?.totals || [])
+            differenceRows = Array.from(reconciliation?.differences || [])
+            employeeRows = Array.from(reconciliation?.employees || [])
+            liveRows = Array.from(reconciliation?.liveReasons || [])
+            done = batch?.statusId == 'PxbExecuted'
+            stepList = batch ? [
+                {key: 'exchange', text: '1 Exchange ✓'},
+                {key: 'reconcile', text: '2 Reconcile' + (batch.statusId != 'PxbPreviewed' ? ' ✓' : '')},
+                {key: 'commit', text: '3 ' + (batch.exchangeKindEnumId == 'PxkExport' ? 'Export' : 'Import') + (done ? ' ✓' : '')}
+            ] : []
+            commitText = batch?.exchangeKindEnumId == 'PxkExport' ? 'Export ' + batch.readyCount + ' inputs'
+                : batch?.exchangeKindEnumId == 'PxkHistory' ? 'Record ' + batch.readyCount + ' pay records'
+                : 'Import the results of ' + (reconciliation?.employeeCount || 0) + ' employees'
+            outcomeColors = {ready: 'primary', known: 'grey-8', duplicate: 'grey-8', refused: 'negative', exported: 'positive', applied: 'positive',
+                failed: 'negative'}
+            payRunUrl = sharedLinks?.['Payroll/PayRunDetail'] || '../PayRunDetail'
+            exchangeValues = {exchangeKind: kind, workerIdKind: 'partyId', delimiter: ','}
+            reconcileValues = batch ? {payrollExchangeBatchId: batch.payrollExchangeBatchId, expectedCount: batch.expectedCount} : {}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Payroll exchange" type="h5"/>
+                <label text="Send a period's approved inputs to an external payroll processor, bring in its signed-off results, or bring in a former system's pay history: each file checked, reconciled, then done."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="." text="New exchange" icon="sym_o_add" link-type="anchor-button" condition="batch"
+                        parameter-map="{payrollExchangeBatchId:null, outcome:null}"/>
+            </container>
+        </container>
+
+        <section name="ExchangeMissing" condition="payrollExchangeBatchId &amp;&amp; !batch">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This exchange is not available to you."/>
+                        <link url="." text="Start an exchange" link-type="anchor" parameter-map="{payrollExchangeBatchId:null}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- Exchange: the kind and its scope -->
+        <section name="Exchange" condition="!payrollExchangeBatchId">
+            <widgets>
+                <container style="row q-gutter-sm q-my-sm">
+                    <section-iterate name="KindLinks" list="kindList" entry="kindItem">
+                        <widgets>
+                            <link url="." text="${kindItem.text}${kindItem.key == kind ? ' (here)' : ''}" icon="${kindItem.icon}" link-type="anchor-button"
+                                    btn-type="default" parameter-map="{exchangeKind:kindItem.key}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <container-box>
+                    <box-header title="${kind == 'export' ? 'Export a period\'s approved inputs' : kind == 'history' ? 'Import payroll history' : 'Import a processor\'s results'}"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" condition="kind == 'export'"
+                                text="The pay group's approved hours, leave, pieces, reimbursements and adjustments of the period, each with its source key, for the processor that calculates the group's pay. Nothing is sent: you download the file and its manifest."/>
+                        <label type="p" style="text-caption m-muted" condition="kind == 'history'"
+                                text="Pay records of a former system before the day People's pay starts: each becomes a historical pay record, shown as recorded and never recalculated. No invoice is made; a day People paid is refused. Columns: worker, payDate (yyyy-MM-dd), gross, net and an optional currency."/>
+                        <label type="p" style="text-caption m-muted" condition="kind == 'results'"
+                                text="A processor's signed-off results of a pay group in external processing: one line per employee and pay component (columns worker, component, amount). They become the period's pay run, which is approved and finalized as any run. An employee with a line that cannot be read is left out whole."/>
+                        <form-single name="ExchangeScope" transition="previewBatch" map="exchangeValues">
+                            <field name="exchangeKind"><default-field><hidden/></default-field></field>
+                            <field name="organizationPartyId">
+                                <conditional-field condition="kind == 'history'" title="Employer">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="payrollGroupId">
+                                <conditional-field condition="kind != 'history'" title="Pay group">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'hoursGroups'}"/>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="timePeriodId">
+                                <conditional-field condition="kind != 'history'" title="Period">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payPeriods'}">
+                                            <depends-on field="payrollGroupId" parameter="choicePayrollGroupId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="cutoverDate">
+                                <conditional-field condition="kind == 'history'" title="Cutover day" tooltip="The day People's own pay starts: history is the pay before it">
+                                    <date-time type="date"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="currencyUomId">
+                                <conditional-field condition="kind == 'history'" title="Currency" tooltip="Of the rows that name none">
+                                    <text-line size="5"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="sourceSystem">
+                                <default-field title="${kind == 'export' ? 'Processor' : 'Source system'}" tooltip="Such as the processor's or the former system's name">
+                                    <text-line size="30"/></default-field>
+                            </field>
+                            <field name="importFile">
+                                <conditional-field condition="kind != 'export'" title="File" tooltip="CSV with a header line"><file/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="importText">
+                                <conditional-field condition="kind != 'export'" title="Or paste the rows" tooltip="With the header line"><text-area rows="3"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="workerIdKind">
+                                <conditional-field condition="kind != 'export'" title="Workers are named by">
+                                    <radio>
+                                        <option key="partyId" text="People id"/>
+                                        <option key="workEmail" text="Work email"/>
+                                    </radio>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="delimiter">
+                                <conditional-field condition="kind != 'export'" title="Separator">
+                                    <drop-down>
+                                        <option key="," text="Comma"/>
+                                        <option key=";" text="Semicolon"/>
+                                        <option key="tab" text="Tab"/>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="expectedCount">
+                                <conditional-field condition="kind != 'export'" title="${kind == 'results' ? 'Employees signed off' : 'Records signed off'}"
+                                        tooltip="${kind == 'results' ? 'Required' : 'Optional'}: compared when reconciling"><text-line size="6" input-type="number"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="expectedGross" ai-opt-out="true">
+                                <conditional-field condition="kind != 'export'" title="Gross signed off"><text-line size="12" input-type="number"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="expectedNet" ai-opt-out="true">
+                                <conditional-field condition="kind != 'export'" title="Net signed off"><text-line size="12" input-type="number"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="organizationPartyId"/><field-ref name="cutoverDate"/></field-row>
+                                <field-row><field-ref name="payrollGroupId"/><field-ref name="timePeriodId"/></field-row>
+                                <field-row><field-ref name="sourceSystem"/><field-ref name="currencyUomId"/></field-row>
+                                <field-ref name="importFile"/>
+                                <field-ref name="importText"/>
+                                <field-row><field-ref name="workerIdKind"/><field-ref name="delimiter"/></field-row>
+                                <field-row><field-ref name="expectedCount"/><field-ref name="expectedGross"/><field-ref name="expectedNet"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Recent exchanges"/>
+                    <box-body-nopad>
+                        <section name="RecentExchangesSection" condition="recentRows.length">
+                            <widgets>
+                                <form-list name="RecentExchanges" list="recentRows" skip-form="true" paginate="false">
+                                    <field name="kindText">
+                                        <default-field title="Exchange">
+                                            <link url="." text="${kindText}" link-type="anchor" parameter-map="{payrollExchangeBatchId:payrollExchangeBatchId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="scopeText"><default-field title="For"><display text="${groupName || organizationName} · ${periodText}"/></default-field></field>
+                                    <field name="fileName"><default-field title="File"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="createdDateText"><default-field title="Read"><display text="${createdDateText} by ${createdByName}"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="kindText"/><field-ref name="scopeText"/></column>
+                                        <column><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <label type="p" style="q-pa-md m-muted" condition="!recentRows.length" text="No payroll exchange yet: start one above."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- Reconcile and commit: one exchange -->
+        <section name="ExchangeBatch" condition="batch">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${batch.kindText}" type="h5"/>
+                            <label text="${[batch.groupName || batch.organizationName, batch.periodText, batch.sourceSystem, batch.fileName].filter(Boolean).join(' · ')}"
+                                    type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${done ? 'positive' : 'orange-9'}">${
+                                    WebUtilities.encodeHtml(batch.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: batch.statusText})}]]></text>
+                                <text type="html">${batch.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <label text="Read by ${batch.createdByName} on ${batch.createdDateText}" type="span" style="text-caption"/>
+                            <label text="Done by ${batch.executedByName} on ${batch.executedDateText}" type="span" style="text-caption" condition="done"/>
+                            <link url="exchangeFile" text="Download file" icon="sym_o_download" link-type="anchor" target-window="_blank"
+                                    parameter-map="{payrollExchangeBatchId:batch.payrollExchangeBatchId, part:'file'}" condition="batch.files"/>
+                            <link url="exchangeFile" text="Download manifest" icon="sym_o_description" link-type="anchor" target-window="_blank"
+                                    parameter-map="{payrollExchangeBatchId:batch.payrollExchangeBatchId, part:'manifest'}" condition="batch.files?.manifest"/>
+                            <link url="${payRunUrl}" url-type="plain" text="Pay run ${batch.payrollRunId}" icon="sym_o_payments" link-type="anchor"
+                                    parameter-map="{payrollRunId:batch.payrollRunId}" condition="batch.payrollRunId"/>
+                        </container>
+                    </container>
+                </container>
+                <container style="row q-gutter-sm q-my-sm">
+                    <section-iterate name="StepLabels" list="stepList" entry="stepItem">
+                        <widgets><label text="${stepItem.text}" type="span" style="q-mr-md text-weight-medium"/></widgets>
+                    </section-iterate>
+                </container>
+                <dashboard min-width="140" style="q-mb-sm">
+                    <number-card title="Rows" value="${batch.rowCount}" icon="sym_o_table_rows" size="sm"/>
+                    <number-card title="${done ? 'Done' : 'Ready'}" value="${done ? batch.appliedCount : batch.readyCount}" icon="sym_o_check_circle" size="sm"/>
+                    <number-card title="Recorded already" value="${batch.skippedCount}" icon="sym_o_content_copy" size="sm"/>
+                    <number-card title="Not done" value="${batch.errorCount}" icon="sym_o_error" size="sm"/>
+                </dashboard>
+
+                <!-- Reconcile -->
+                <container-box>
+                    <box-header title="Reconcile"/>
+                    <box-toolbar>
+                        <container-dialog id="ReconcileDialog" button-text="${batch.statusId == 'PxbPreviewed' ? 'Reconcile' : 'Reconcile again'}" icon="sym_o_rule"
+                                width="520" title="Reconcile this exchange" condition="batch.canReconcile"
+                                type="${batch.statusId == 'PxbPreviewed' ? 'primary' : 'default'}">
+                            <label type="p" text="Each row is checked again, and the totals compared with what the sender signed off. Nothing is made."/>
+                            <form-single name="Reconcile" transition="reconcileBatch" map="reconcileValues">
+                                <field name="payrollExchangeBatchId"><default-field><hidden/></default-field></field>
+                                <field name="expectedCount">
+                                    <conditional-field condition="batch.exchangeKindEnumId != 'PxkExport'" title="Count signed off">
+                                        <text-line size="6" input-type="number"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="expectedGross" ai-opt-out="true">
+                                    <conditional-field condition="batch.exchangeKindEnumId != 'PxkExport'" title="Gross signed off" tooltip="${batch.expectedGrossText}">
+                                        <text-line size="12" input-type="number"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="expectedNet" ai-opt-out="true">
+                                    <conditional-field condition="batch.exchangeKindEnumId != 'PxkExport'" title="Net signed off" tooltip="${batch.expectedNetText}">
+                                        <text-line size="12" input-type="number"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Reconcile"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!reconciliation" text="Not reconciled yet: reconcile to compare the totals with what was signed off."/>
+                        <section name="Reconciliation" condition="reconciliation">
+                            <widgets>
+                                <label type="p" style="text-caption" condition="!differenceRows.length"
+                                        text="${batch.exchangeKindEnumId == 'PxkExport' ? 'The inputs are as previewed.' : 'No difference from what was signed off.'}"/>
+                                <section name="DifferencesSection" condition="differenceRows.length">
+                                    <widgets>
+                                        <form-list name="Differences" list="differenceRows" skip-form="true" paginate="false">
+                                            <field name="what"><default-field title="Difference"><display/></default-field></field>
+                                            <field name="foundText" ai-opt-out="true"><default-field title="In the file"><display/></default-field></field>
+                                            <field name="expectedText" ai-opt-out="true"><default-field title="Signed off"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="what"/></column>
+                                                <column><field-ref name="foundText"/><field-ref name="expectedText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="LiveReasonsSection" condition="liveRows.length">
+                                    <widgets>
+                                        <form-list name="LiveReasons" list="liveRows" skip-form="true" paginate="false">
+                                            <field name="message"><default-field title="Why the results wait"><display/></default-field></field>
+                                            <field name="reasonCode"><default-field title="Code"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="message"/></column>
+                                                <column><field-ref name="reasonCode"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="TotalsSection" condition="totalRows.length">
+                                    <widgets>
+                                        <form-list name="Totals" list="totalRows" skip-form="true" paginate="false">
+                                            <field name="what"><default-field title="Total"><display/></default-field></field>
+                                            <field name="valueText" ai-opt-out="true" align="right"><default-field title="Of the ready rows"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="what"/></column>
+                                                <column><field-ref name="valueText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="EmployeesSection" condition="employeeRows.length">
+                                    <widgets>
+                                        <form-list name="Employees" list="employeeRows" skip-form="true" paginate="false">
+                                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                            <field name="periodText"><default-field title="Year"><display/></default-field></field>
+                                            <field name="countText" align="right"><default-field title="Lines"><display/></default-field></field>
+                                            <field name="grossText" ai-opt-out="true" align="right"><default-field title="Gross"><display/></default-field></field>
+                                            <field name="netText" ai-opt-out="true" align="right"><default-field title="Net"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="personName"/><field-ref name="periodText"/></column>
+                                                <column><field-ref name="netText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+
+                <!-- Commit -->
+                <container-box>
+                    <box-header title="${batch.exchangeKindEnumId == 'PxkExport' ? 'Export' : 'Import'}"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!done &amp;&amp; !batch.canExecute"
+                                text="Reconciled with no difference and a ready row, the exchange is done here."/>
+                        <form-single name="Commit" transition="executeBatch" map="{payrollExchangeBatchId:batch.payrollExchangeBatchId}"
+                                condition="!done &amp;&amp; batch.canExecute">
+                            <field name="payrollExchangeBatchId"><default-field><hidden/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="${commitText}">
+                                    <submit type="primary" icon="sym_o_done_all" confirmation="${commitText}?"/></default-field>
+                            </field>
+                        </form-single>
+                        <label type="p" condition="done &amp;&amp; batch.exchangeKindEnumId == 'PxkExport'"
+                                text="Exported: the file and its manifest are stored here, and Admin's Exports lists the export."/>
+                        <label type="p" condition="done &amp;&amp; batch.exchangeKindEnumId == 'PxkHistory'"
+                                text="Recorded as historical pay records: Payslips shows them under Historical pay records."/>
+                        <label type="p" condition="done &amp;&amp; batch.exchangeKindEnumId == 'PxkResults'"
+                                text="Imported as pay run ${batch.payrollRunId}: ask for its approval there, then finalize it."/>
+                    </box-body>
+                </container-box>
+
+                <!-- the rows -->
+                <container-box>
+                    <box-header title="Rows"/>
+                    <box-toolbar>
+                        <link url="." text="All rows" link-type="anchor" parameter-map="{payrollExchangeBatchId:batch.payrollExchangeBatchId, outcome:null}"/>
+                        <link url="." text="Problems only" link-type="anchor" parameter-map="{payrollExchangeBatchId:batch.payrollExchangeBatchId, outcome:'problems'}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <section name="ExchangeRowsSection" condition="resultRows.length">
+                            <widgets>
+                                <form-list name="ExchangeRows" list="resultRows" skip-form="true" paginate="false" show-csv-button="true">
+                                    <field name="lineNumber" align="right"><default-field title="Line"><display/></default-field></field>
+                                    <field name="workerText"><default-field title="Worker"><display text="${personName || workerText}"/></default-field></field>
+                                    <field name="componentText"><default-field title="${batch.exchangeKindEnumId == 'PxkHistory' ? 'Record' : 'Input or component'}"><display/></default-field></field>
+                                    <field name="payDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="amountText" ai-opt-out="true" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="outcomeText">
+                                        <default-field title="Outcome">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
+                                                <text type="html">${outcomeText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="message"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workerText"/><field-ref name="componentText"/></column>
+                                        <column><field-ref name="outcomeText"/><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <label type="p" style="q-pa-md m-muted" condition="!resultRows.length" text="No row of this kind."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
