@@ -7403,6 +7403,118 @@ Design §8.2 (steps 1–5), PayRuns, PayRunDetail (Population, Inputs, Calculate
   - for the user's call: fixed amounts in a part period (the first finding), the salary values kept in staged import rows, and whether
     Profitability's worker cost is opted out of AI.
 
+**Review Nov 12 (P25).** A fresh review of `git diff master...ppl/p25` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §8 PayRuns, PayRunDetail, §8.1 and §8.2, calculation correctness first (splits, proration, the named inputs, rounding, the
+localization), then the units, the approval's revision, pay's lane and the revision's cost; the user's three calls of Nov 12 built
+and recorded in §4; fixes committed apart per repository ("People P25 review: …"). Both branches were first rebased onto master after
+P30's merge: mr-boss conflicted in `BossSetupData.xml` (P30's kiosk block kept, P25's topic link after it), design-people's header
+(P25's paragraph first), §4 (P30's rows, then P25's) and `PeopleAccessLater.spec.js` (the header's P30 and P25 lines; P30's feature
+kept whole, P25's after it); mr-mantle replayed cleanly. On the rebase, before any change: Mantle PayRuns, PayInputs, PayConfiguration,
+PayAssignments, WorkManualTimeBilling and AccountingReceivables 47 of 47, BOSS PeoplePayRuns and PeopleAccessLater 18 of 18. Master
+moved again (follow-ups 2 and 4) and both branches were rebased once more before this note: mr-boss conflicted in the same three
+places (follow-up 4's badge notice link, header paragraph and §4 rows kept, P25's after them), mr-mantle replayed cleanly. The
+restricted import columns are a framework change: mr-moqui gains branch `ppl/p25` (worktree `.claude/worktrees/ppl-p25/mr-moqui`), and
+this phase's runtime's `base-component` now links to it. Tested on the shared release binary (`--release --nobuild`, this phase's
+runtime).
+- Checked and found sound:
+  - Units: each employment in its own transaction under its row lock, a failure recorded in a transaction of its own with its code,
+    the others going on; at most 100 (500) a call and a minute; pending, failed and stale units alone recalculated, a calculated one
+    whose fingerprint holds never again, results replaced, never added.
+  - Approval: `PakPayrollRun`'s revision is the run's pay date and each unit's state, exclusion, totals, stored fingerprint and
+    fingerprint now; record#Decision refuses a decision at another revision (`REVISION_CHANGED`, `SOURCE_CHANGED`); any change
+    (population, pay date, calculation) supersedes a waiting request and clears an approval; who selected, calculated or asked is
+    refused (`SELF_APPROVAL`, PayRuns' preparer with PAYROLL_APPROVE), a decider needs PAYROLL_APPROVE with PAYROLL_VIEW.
+  - A second regular run: `activeRunKey` is unique; inputs a live run took refuse another (`INPUTS_CONSUMED`) and are not taken again
+    in calculation (`takenInputs`' elsewhere).
+  - No money: nothing in PayrollRuns.js writes an invoice, payment or ledger row or reads a legacy payroll service or
+    `PayrollAdjustment`.
+  - Pay's lane: every read is a payroll reader's of an employer in scope (another's run `RECORD_UNAVAILABLE`); the notice names the
+    group and the period; Today's payroll exceptions are a PAYROLL_VIEW and PAYROLL_EDIT holder's alone and name no person or amount;
+    the run's amount fields and PayRuns' and PayRunDetail's amounts are `ai-opt-out`.
+  - Rounding: a term's own stage per part, each money line rounded to the currency once after its parts and adjustments, the
+    totals sums of rounded lines, the localization once over the period's lines with its items rounded, net and employer cost
+    from them; a statistical value unrounded and in no total.
+- Fixed:
+  - R1 (high): a run's population was cut at 500 employees in silence. P24's `groupMembers` read the group's primary assignments with
+    `limit(2000)` before filtering them by date and kept the first 500 members in no order, so a run of a larger group left the rest
+    out (and `select#Employments` removed their units). It now finds the period's assignments by date in the database, in employment
+    order, takes a cap and marks a cut answer `truncated`; a run asks 10,000 and refuses more (`POPULATION_TOO_LARGE`). Not covered by a
+    spec (the population needed is over the 15 s bound); preparation keeps its 500 (a finding below).
+  - R2 (high): the fingerprint an approval binds missed the employment's dates and the schedule. An employment ended after its
+    calculation (a separation) changed the employee's days in the group but not the fingerprint, so the results were not stale and the
+    approval held. The fingerprint covers the employee's days in the group, the employment's dates and, for a part period prorated by
+    the schedule, each day's scheduled hours. Spec PayRuns (STEP's employment ended March 21 after calculation: stale; it failed on the
+    unfixed code).
+  - R3 (medium): an input on a day outside the employee's segments was taken by the run and paid nothing: a reimbursement reserved
+    before a hire's first day (or a leaver's claim dated the period's last day) and an hour or a piece on a day the group no longer
+    pays. A time input there blocks (`INPUT_OUTSIDE_DAYS`, prepare the inputs again); a reimbursement is paid with the last segment.
+    Spec PayRuns (the hire's claim of March 5 paid 50.00; it paid 0.00 before).
+  - R4 (medium, finding 7): the revision's cost. Measured with a temporary spec (500 salaried employees, one structure, deleted): a
+    run's revision 210 ms, get#Run 192 ms (an approved run's twice that: the stale check and the revision each read every employee
+    again), a calculate#Run with nothing to do 160 ms, the calculation of the 500 2.5 s. The rows are now read for the whole run in a
+    few queries (`factsOf`, a thousand ids a query) and get#Run reuses its stale check's fingerprints for the revision: 105 ms, 120 ms
+    (approved too), 99 ms and 1.7 s. Not stored: its sources are written by other modules' services. A unit is checked again under its
+    lock, so a second calculation at once leaves one just calculated as it is.
+  - R5 (finding 3): a component term or a structure line changing inside the period was read at each part's first day and not split
+    at its own date. A segment's key includes the structure's state, its lines in effect and each line's term. Spec PayRuns (STEP's
+    allowance 200 through March 15 and 400 from the 16th: two parts, 303.23; 200.00 before).
+  - R6 (finding 5): no cancel for a run not approved. `cancel#Run` (PAYROLL_VIEW and PAYROLL_EDIT, a reason): a draft, calculating
+    or in-review run is cancelled, its inputs released, `activeRunKey` freed and a waiting request superseded; its population and
+    draft results stay; an approved, finalizing or finalized run is refused (`RUN_NOT_CANCELLABLE`); `PayrollRun.cancelReason`, the
+    `PrnCalculating` to `PrnCancelled` transition; PayRunDetail's Cancel run. Spec PayRuns (no reason, HR, another employer refused;
+    the claim released; calculating it again `RUN_CLOSED`; out of the list; a new run of the period made) and PeoplePayRuns.
+  - R7 (low): PayRunDetail's Approve confirmation named the net outside an `ai-opt-out` section: an agent's render names the count
+    alone.
+  - R8 (the user's call of Nov 12, 2026): a fixed amount's proration is `PayrollComponentTerm.prorated` (set when stored: yes by
+    default for an earning, a deduction and an employer contribution, no for a statistical value; empty for a formula); a pay run
+    multiplies a prorated fixed amount by the part's share (`computeTerm`'s proration, explained "Fixed amount 310 prorated by 16/31
+    calendar days"), summing it over parts; one paid whole is taken once. PayComponentDetail's Prorated in a part period. Spec PayRuns
+    (a hire of March 16: the allowance 160.00, the one-off 100.00 whole, salary 1,548.39).
+  - R9 (the user's call of Nov 12, 2026): staged import rows' salary. The framework's rows import (mr-moqui `DataTransferBatch.js`,
+    `DataTransferLib.js`): a registered column may name a permission; its values are masked ("Restricted") for a reader without it in
+    get#Transfer (so ImportDetail), the report and the mapping's defaults and value mappings, and cleared from the staged row's file
+    cells and preview once the row is applied. Mantle's four salary columns name PAYROLL_VIEW. Specs framework AdminDataTransfer (a
+    restricted translation masked for the viewer, cleared once applied; it failed on the unfixed code) and Mantle PayAssignments (the
+    HR importer stages a salary and reads "Restricted").
+  - R10 (the user's call of Nov 12, 2026): Profitability's worker cost: the Cost card and columns, margin and margin % (which give it
+    back from the billable value) and the chart are `ai-opt-out`. Spec Reports (an agent's terminal render shows "Not shared with AI").
+    PeoplePayAssignments' `aiOptOut` check now covers the run's amount fields.
+- Provisional findings (for the lead to number):
+  - P24's `prepare#Inputs` still reads at most 500 employees of a group (now always the same ones, in employment order) and says
+    nothing of the rest: a larger group's other employees get no inputs, so their hours go unpaid while salaries are paid.
+  - A payroll approver employed in the group approves a run holding their own pay: `selfPartyIds` names the preparers and the asker,
+    not the population.
+  - A fixed amount paid whole and read by another component (a pension on salary plus allowance) enters that component in each part
+    of a split period, so the dependent counts it once a part (the Built note's per-part finding, extended).
+  - calculate#Run on an approved run with nothing changed takes the approval back (it reopens to review); the screen offers
+    Calculate only with work to do.
+  - The fingerprint's scheduled hours (R2) are not covered by a spec; the spec groups prorate by calendar days.
+  - Restricted import columns: a row never applied (invalid, failed, skipped) keeps its salary until the batch's retention, masked; a
+    default a holder typed for a restricted field stays in the batch's request, masked. The legacy `create#WorkerInvoiceItems` finding and
+    the Built note's others stand.
+  - A cancelled run keeps its units and draft results (amounts, `ai-opt-out`) as a record; nothing purges them.
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime, after the second rebase): mr-mantle PayRuns (7
+  features, 1.48 s), PayInputs (2.00 s), PayConfiguration (7.79 s), PayAssignments (3.73 s), WorkManualTimeBilling (0.21 s),
+  AccountingReceivables (2.15 s) and PeopleApprovals (4.03 s), 57 of 57; mr-boss PeoplePayRuns (0.22 s), PeopleAccessLater (16
+  features, 8.94 s), PeoplePayConfiguration (0.50 s), PeoplePayAssignments (0.61 s), PeoplePayInputs (0.44 s), PeopleLifecycle (1.21 s)
+  and Reports (1.32 s), 37 of 37; framework AdminDataTransfer 4 of 4 (0.25 s). PayRuns with R2, R3, R5, R6 and R8 taken out failed its
+  two new features; AdminDataTransfer's new feature failed without R9. The temporary 500-employee spec ran twice (before and after
+  R4) and is deleted. `moqui lint --screens` (release): none of PayRuns, PayRunDetail, PayComponentDetail or Profitability flagged.
+  Prettier clean on the changed JavaScript. Not run: test-apps, test-framework, the acceptance suite (PeoplePayRunsUsable is
+  unchanged).
+- For the lead:
+  - budget share: mr-mantle PayRuns about +0.4 s (1.48 s), PayAssignments about +0.05 s; mr-boss Reports about +0.05 s (one agent
+    render); framework AdminDataTransfer +0.01 s;
+  - merge hot spots: mr-moqui (branch `ppl/p25`, merge it with the phase; framework work, so `./moq test-framework` before its
+    merge, not run here) `DataTransferBatch.js`, `DataTransferLib.js`, `ServerEntities.xml` (TransferTarget's description),
+    `AdminDataTransfer.spec.js`; mr-mantle `PayInputs.js` (`groupMembers`), `PayrollConfiguration.js` (`termFields`, `checkTerm`,
+    `termRow`, `computeTerm`, `proratesFixed`), `PeoplePayrollEntities.xml` (`PayrollComponentTerm.prorated`,
+    `PayrollRun.cancelReason`), `PayrollSetupServices.xml`, `PeopleLifecycleSetupData.xml` (the salary columns); mr-boss
+    `PayComponentDetail.xml`, `Projects/Reports/Profitability.xml`, `test/Projects/Reports.spec.js`, design-people (header, §1.1, §8,
+    §12), design-projects (§11's note before Insights registration), design-admin §11.1, usl-inventory, §4 and this note;
+  - the user's calls: the three of Nov 12 are in §4 and built (R8, R9, R10); R8's default for employer contributions (yes, as recurring
+    money lines) is this review's reading of "recurring earnings and deductions".
+
 ### P26 — Payslips and corrections
 
 Design §8.2 (corrections), Payslips, PayslipDetail, §15 (the payslip); PE-10, PE-17.
