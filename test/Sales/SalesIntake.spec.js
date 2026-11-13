@@ -77,6 +77,19 @@ feature(
     {
         when() {
             const offered = asUser(users.rep, () => extActions("Comms/Inbox/Mail"))
+            // a Sales user who cannot read the intake mailbox (sales.rep3, Ziziwork Sales) files nothing, refused as for a message
+            // that is not there (P5 review)
+            const unread = asUser(users.otherRep, () => post("Inbox/Mail/createRecord", {kind: "lead", emailMessageId: MESSAGE}))
+            const missing = asUser(users.otherRep, () =>
+                post("Inbox/Mail/createRecord", {kind: "lead", emailMessageId: "BOSS_SAL_SPEC_NONE"})
+            )
+            const unreadIntakes = system(() =>
+                ec.entity
+                    .find("mantle.sales.opportunity.SalesLeadIntake")
+                    .condition("organizationPartyId", ids.otherOrganizationId)
+                    .condition("receivedByUserId", "in", ["BOSS_SAL_REP3"])
+                    .count()
+            )
             const made = asUser(users.rep, () => post("Inbox/Mail/createRecord", {kind: "lead", emailMessageId: MESSAGE}))
             const again = asUser(users.rep, () => post("Inbox/Mail/createRecord", {kind: "lead", emailMessageId: MESSAGE}))
             const refused = asUser(users.otherApp, () => post("Inbox/Mail/createRecord", {kind: "lead", emailMessageId: MESSAGE}))
@@ -124,6 +137,9 @@ feature(
             const otherVoicemail = asUser(users.otherApp, () => extActions("Comms/Calls/Voicemail")).map(action => action.name)
             return {
                 offered,
+                unread,
+                missing,
+                unreadIntakes,
                 made,
                 again,
                 refused,
@@ -141,6 +157,10 @@ feature(
         },
         then(r) {
             r.offered.some(action => action.name === "sales.createLead" && action.slot === "message-actions")
+            r.unread.errors != ""
+            r.unread.json.recordId == null
+            r.unread.errors.replace(MESSAGE, "-") == r.missing.errors.replace("BOSS_SAL_SPEC_NONE", "-")
+            r.unreadIntakes == 0
             r.made.errors == ""
             r.leadId != null
             r.made.json.url.includes("OpportunityDetail?salesOpportunityId=" + r.leadId)
@@ -179,17 +199,33 @@ feature("LeadSources renders once in qvt with the UTM map and the teams' intake 
     }
 })
 
-feature("Create lead on a chat message makes the rep's lead from it, the message filed on it", {
-    when() {
-        return asUser(users.rep, () => {
-            const room = post("Chat/createRoom", {roomTypeEnumId: "private", roomName: "Sales intake spec"})
-            const chatRoomId = room.json.chatRoomId
-            const sent = post("Chat/send", {
-                chatRoomId,
-                body: "<p>Walk-in asked about racking for two stores</p>",
-                clientRef: "sal-intake-1"
+feature(
+    "Create lead on a chat message makes the rep's lead from it, the message filed on it; one not in the room files nothing",
+    {
+        when() {
+            const {room, sent} = asUser(users.rep, () => {
+                const room = post("Chat/createRoom", {roomTypeEnumId: "private", roomName: "Sales intake spec"})
+                const sent = post("Chat/send", {
+                    chatRoomId: room.json.chatRoomId,
+                    body: "<p>Walk-in asked about racking for two stores</p>",
+                    clientRef: "sal-intake-1"
+                })
+                return {room, sent}
             })
-            const made = post("Chat/createFrom", {chatRoomId, eventSeq: sent.json.eventSeq, kind: "lead"})
+            const chatRoomId = room.json.chatRoomId
+            // sales.rep2, a Sales user not in the room (P5 review)
+            const outsider = asUser(users.rep2, () =>
+                post("Chat/createFrom", {chatRoomId, eventSeq: sent.json.eventSeq, kind: "lead"})
+            )
+            const outsiderIntakes = system(() =>
+                ec.entity
+                    .find("mantle.sales.opportunity.SalesLeadIntake")
+                    .condition({sourceKindEnumId: "SlisChatMessage", sourceId: chatRoomId + ":" + sent.json.eventSeq})
+                    .count()
+            )
+            const made = asUser(users.rep, () =>
+                post("Chat/createFrom", {chatRoomId, eventSeq: sent.json.eventSeq, kind: "lead"})
+            )
             const leadId = made.json.recordId
             const lead = system(() =>
                 ec.entity
@@ -203,14 +239,17 @@ feature("Create lead on a chat message makes the rep's lead from it, the message
                     .condition({recordEntityName: OPPORTUNITY, recordId: leadId || "-"})
                     .count()
             )
-            return {room, made, leadId, lead, filed}
-        })
-    },
-    then(r) {
-        r.room.errors == ""
-        r.made.errors == ""
-        r.leadId != null
-        r.lead.opportunityName == "Walk-in asked about racking for two stores"
-        r.filed == 1
+            return {room, outsider, outsiderIntakes, made, leadId, lead, filed}
+        },
+        then(r) {
+            r.room.errors == ""
+            r.outsider.errors != ""
+            r.outsider.json.recordId == null
+            r.outsiderIntakes == 0
+            r.made.errors == ""
+            r.leadId != null
+            r.lead.opportunityName == "Walk-in asked about racking for two stores"
+            r.filed == 1
+        }
     }
-})
+)
