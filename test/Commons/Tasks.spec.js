@@ -170,7 +170,10 @@ feature("the find narrows a list: text, status, purpose, project, due period and
 })
 
 feature("the list renders in qvt with the chips and counts, the views, the find, the quick-add row, the done checks and the in-place edits", {
-    // a task without a due date sorts after the dated ones, past the first page once the demo's project items have dates (P4c): found by its text
+    // a task without a due date sorts after the dated ones, past the first page once the demo's project items have dates (P4c): found by its text.
+    // All open's first page is john.doe's earliest due: the demo's fixed-date project items and the open tasks the specs before this one
+    // leave him (Mantle's WorkProjectHub and WorkProjectPlan, QuickCreate's, AccountingCollections' call) can fill it before the demo's
+    // tasks, so a demo task is read on Next 7 days, which holds only this week's
     when() { return { shown: render("apps/Commons/Tasks", {}), found: render("apps/Commons/Tasks", { text: "backup restore" }),
         week: render("apps/Commons/Tasks", { list: "week" }), done: render("apps/Commons/Tasks", { list: "done", pageNoLimit: "true" }) } },
     then({ shown, found, week, done }) {
@@ -190,7 +193,6 @@ feature("the list renders in qvt with the chips and counts, the views, the find,
         shown.output.includes("v-slot:card_0")
         shown.output.includes("Add a task")
         shown.output.includes('id="Tasks_table"')
-        shown.output.includes("Plan the office move")
         found.output.includes("Check the backup restore")
         // Board/calendar row URLs and table links carry the same list find into the detail.
         found.output.includes("taskListFind=")
@@ -205,6 +207,7 @@ feature("the list renders in qvt with the chips and counts, the views, the find,
         week.status == 200
         !week.broken
         week.output.includes("Renew the domain name")
+        week.output.includes("Plan the office move")
         !week.output.includes("Check the backup restore")
         done.output.includes("Order packing boxes")
         done.output.includes("sym_o_check_circle")

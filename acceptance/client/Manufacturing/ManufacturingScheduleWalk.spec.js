@@ -76,7 +76,10 @@ feature("the scheduler drags an operation to line B, sees the conflict in the pr
         const preview = page.locator(".boss-schedule-preview").text()
         preview.includes("Assembly line B")
         preview.includes("would run 2 operations at once")
-        // a scheduler commits no conflict: no Apply, Request override instead
+        // a scheduler commits no conflict: no Apply, Request override instead. The dialog scales in from nothing, and a warm
+        // server's preview can come back in its first frames, while its buttons have no box yet and a count finds none: the
+        // button is waited for before the counts
+        dialog.getByRole("button", {name: "Request override", exact: true}).waitFor()
         dialog.getByRole("button", {name: "Apply", exact: true}).count() == 0
         dialog.getByRole("button", {name: "Request override", exact: true}).count() == 1
         // the Move form: an hour later, previewed again, then applied

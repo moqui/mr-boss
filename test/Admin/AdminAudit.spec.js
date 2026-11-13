@@ -54,6 +54,8 @@ const engine = (username, parameters) =>
     )
 const bodies = out => Array.from(out.hits || []).map(hit => String(hit.body?.body))
 let seq = 0
+// the hour the spec's audit rows are dated in (set in setupSpec), which AuditChanges' render is narrowed to
+let auditWindow = {}
 
 spec({
     setupSpec() {
@@ -108,7 +110,10 @@ spec({
             })
             const now = Number(ec.user.nowTimestamp)
             // what the audit log holds, as the services and the entity audit log write it; dated ahead of the demo load's own
-            // rows, so they are the newest of a find
+            // rows, so they are the newest of a find. Specs that set the effective time ahead write rows dated later (Mantle's
+            // AccountingBookDates on 2026-11-15, CalendarChanges in June 2027), more than AuditChanges' page of 50 when they run
+            // before this one on its worker, so its render is narrowed to the hour of this spec's rows
+            auditWindow = {fromDate: String(now + 3600000), thruDate: String(now + 2 * 3600000)}
             const audit = (changedEntityName, changedFieldName, fields) =>
                 make(LOG, Object.assign({changedEntityName, changedFieldName, changedDate: now + 3600000 + ++seq * 1000}, fields))
             audit("moqui.security.UserGroupPermission", "thruDate", {
@@ -213,9 +218,9 @@ feature("the audit reader follows a grant change and a credential's replacement 
         out.exported = as(users.audit, CHANGES, {recordKey: RELAY, forExport: true})
         // a user of another Admin group, who opens Admin and may call the service, reads none of it
         out.dataOperator = as(users.data, CHANGES, {recordKey: RELAY})
-        // AuditChanges' one render, in html, where the list's rows are: the newest changes the audit reader may read
-        out.page = asUser(users.audit, () => page("Audit/AuditChanges", {}, "html"))
-        out.dataPage = asUser(users.data, () => page("Audit/AuditChanges", {}, "html"))
+        // AuditChanges' one render, in html, where the list's rows are: what the audit reader may read of the spec's hour
+        out.page = asUser(users.audit, () => page("Audit/AuditChanges", auditWindow, "html"))
+        out.dataPage = asUser(users.data, () => page("Audit/AuditChanges", auditWindow, "html"))
         out.grantRow = Array.from(out.grant.changeList || [])[0] || {}
         out.replaced = Array.from(out.relay.changeList || []).find(row => row.after === "(replaced)") || {}
         out.encrypted = Array.from(out.relay.changeList || []).find(row => row.after !== "(replaced)") || {}
