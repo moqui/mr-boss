@@ -54,6 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
                         amount:(basisEnumId == 'PcbAmount' ? (amount ?? '') : ''), formula:(basisEnumId == 'PcbFormula' ? (formula ?? '') : ''),
                         inputNames:(inputNames ?? ''), currencyUomId:(currencyUomId ?? ''), quantityUomId:(quantityUomId ?? ''),
                         roundingPlaces:(roundingPlaces ?? ''), roundingEnumId:(roundingEnumId ?? ''), payslipVisible:(payslipVisible || 'N'),
+                        prorated:(basisEnumId == 'PcbAmount' ? (prorated || 'N') : ''),
                         expenseGlAccountId:(expenseGlAccountId ?? ''), liabilityGlAccountId:(liabilityGlAccountId ?? ''),
                         fromDate:(fromDate || null), thruDate:(thruDate ?? null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Draft saved</message></if>
@@ -132,6 +133,9 @@ along with this software (see the LICENSE.md file). If not, see
                 {term: statistical ? 'Currency or unit' : 'Currency', value: openTerm.unitText},
                 {term: 'Rounding', value: openTerm.roundingText},
                 {term: 'On the payslip', value: openTerm.payslipVisible ? 'Shown' : 'Not shown'},
+                // P25 review (the user's call of Nov 12, 2026): a fixed amount's proration in a part period
+                ...(openTerm.basisEnumId === 'PcbAmount' ? [{term: 'In a part period',
+                    value: openTerm.prorated ? 'Prorated by the period fraction' : 'Paid whole'}] : []),
                 {term: 'Expense account', value: statistical ? 'None: posts nothing' : (openTerm.expenseAccountText || 'Not mapped')},
                 {term: 'Liability account', value: statistical ? 'None: posts nothing' : (openTerm.liabilityAccountText || 'Not mapped')},
                 {term: 'Dates', value: 'From ' + openTerm.fromDateText + (openTerm.thruDateText ? ' through ' + openTerm.thruDateText : '')},
@@ -143,7 +147,9 @@ along with this software (see the LICENSE.md file). If not, see
                 payrollComponentTermId: isDraft ? openTerm.payrollComponentTermId : '', basisEnumId: source.basisEnumId || 'PcbFormula',
                 amount: source.amount, formula: source.formula, inputNames: source.inputNamesText, currencyUomId: source.currencyUomId,
                 quantityUomId: source.quantityUomId, roundingPlaces: source.roundingPlaces, roundingEnumId: source.roundingEnumId,
-                payslipVisible: source.payslipVisible === false ? 'N' : 'Y', expenseGlAccountId: source.expenseGlAccountId,
+                payslipVisible: source.payslipVisible === false ? 'N' : 'Y',
+                prorated: source.prorated === false || (source.prorated == null && statistical) ? 'N' : 'Y',
+                expenseGlAccountId: source.expenseGlAccountId,
                 liabilityGlAccountId: source.liabilityGlAccountId, fromDate: isDraft ? source.fromDate : null} : {}
             exampleValues = component && isDraft ? {payrollComponentId: component.payrollComponentId, expectedRevision: component.revision,
                 payrollComponentTermId: openTerm.payrollComponentTermId} : {}
@@ -264,6 +270,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="roundingPlaces"><default-field><hidden/></default-field></field>
                                         <field name="roundingEnumId"><default-field><hidden/></default-field></field>
                                         <field name="payslipVisible"><default-field><hidden/></default-field></field>
+                                        <field name="prorated"><default-field><hidden/></default-field></field>
                                         <field name="expenseGlAccountId"><default-field><hidden/></default-field></field>
                                         <field name="liabilityGlAccountId"><default-field><hidden/></default-field></field>
                                         <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
@@ -389,6 +396,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="payslipVisible">
                                     <default-field title="Shown on the payslip"><check><option key="Y" text=" "/></check></default-field>
                                 </field>
+                                <field name="prorated">
+                                    <default-field title="Prorated in a part period"
+                                            tooltip="A fixed amount only: a pay run multiplies it by the share of the period worked (a hire or leaver in mid-period, a period split by a change). Leave it off for an amount paid whole. A formula prorates by reading periodFraction.">
+                                        <check><option key="Y" text=" "/></check></default-field>
+                                </field>
                                 <field name="expenseGlAccountId">
                                     <conditional-field condition="!statistical &amp;&amp; component.componentKindEnumId != 'PckDeduction'" title="Expense account">
                                         <drop-down allow-empty="true">
@@ -416,7 +428,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-row><field-ref name="currencyUomId"/><field-ref name="quantityUomId"/></field-row>
                                     <field-row><field-ref name="roundingPlaces"/><field-ref name="roundingEnumId"/></field-row>
                                     <field-row><field-ref name="expenseGlAccountId"/><field-ref name="liabilityGlAccountId"/></field-row>
-                                    <field-row><field-ref name="payslipVisible"/><field-ref name="fromDate"/></field-row>
+                                    <field-row><field-ref name="payslipVisible"/><field-ref name="prorated"/></field-row>
+                                    <field-ref name="fromDate"/>
                                     <field-ref name="submitButton"/>
                                 </field-layout>
                             </form-single>

@@ -4,7 +4,8 @@
 // data/BossProjectsDemoDataTimeReports.xml), in html-print and the terminal too; the measures as §11 defines them are mr-mantle's
 // WorkProjectReports. Home's charts are checked in the terminal here (its qvt render is Billing.spec.js's). joe.developer (the team,
 // no money) sees five reports, may not open Profitability or Utilization, and sees no money in any report. The timesheet and the team
-// timesheet print. Nothing is changed.
+// timesheet print. Nothing is changed. Profitability's worker cost (its cost, margin and chart) is opted out of AI (the user's call
+// of Nov 12, 2026, impl-people P25 review): an agent's terminal render shows the placeholder.
 // Run: ./moq test mr-boss --spec Reports
 const webroot = "component://webroot/screen/webroot.xml"
 
@@ -118,13 +119,20 @@ feature("profitability and utilization for john.doe: ACME and Brightwater with m
         return {
             profitPage: render("apps/Projects/Reports/Profitability", {}),
             profitPrint: render("apps/Projects/Reports/Profitability", {}, "html-print"),
+            profitAgent: (() => {
+                const str = ec.screen.makeTest().rootScreen(webroot).renderMode("tui").agent().withStaticData()
+                    .render("apps/Projects/Reports/Profitability", { lastStandalone: "true" }, null)
+                ec.message.clearErrors()
+                return { status: str.status, output: String(str.output || "") }
+            })(),
             utilPage: render("apps/Projects/Reports/Utilization", {}),
             utilTui: render("apps/Projects/Reports/Utilization", {}, "tui"),
         }
     },
-    then({ profitPage, profitPrint, utilPage, utilTui }) {
+    then({ profitPage, profitPrint, profitAgent, utilPage, utilTui }) {
         ok(profitPage) && profitPage.output.includes("Brightwater Dental Group") && profitPage.output.includes("Acme customer portal") && money.test(profitPage.output)
         ok(profitPrint) && profitPrint.output.includes("Brightwater Dental Group")
+        profitAgent.status == 200 && profitAgent.output.includes("Brightwater Dental Group") && profitAgent.output.includes("Not shared with AI")
         ok(utilPage) && utilPage.output.includes("Joe Developer") && ok(utilTui)
     },
 })

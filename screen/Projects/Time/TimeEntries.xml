@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     Last week, This month, Unbilled (billable and on no client invoice), Not on a work item, All; the find in the list's dialog
     (person, work item, work type, billable, client and worker invoiced, the week's status, text in the comment, the date
     period). Each row: the day, from and to, the person, the work item and project, hours, break, work type, billable, the client
-    and worker rates and amounts (for those who manage money: the Projects managers and ADMIN), the invoices, the week's status
+    and worker rates and amounts (for those who manage money: the Projects managers and ADMIN; the worker rate and amount, and the
+    totals' worker cost, opted out of AI: an employee's pay, PE-21), the invoices, the week's status
     chip (Open, Returned, Submitted, Approved, Invoiced, Running) and the comment; Edit opens EditEntry (TimeEntries/EditEntry.xml,
     a dialog: the entry in full while its week is open, its rates for those who manage money). Log time opens the same dialog for
     a new entry (a manager may log for the people they approve), Import the time import wizard (Time/Import). The bulk changes on
@@ -222,7 +223,11 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-sm-6 col-md-3">
                             <label text="Client amount" type="div" style="text-caption m-muted"/>
                             <label text="${projectTime.clientAmountText || '—'}" type="div" style="text-h6"/>
-                            <label text="Worker cost ${projectTime.vendorAmountText || '—'}" type="div" style="text-caption m-muted"/>
+                            <!-- the worker amounts come from the worker rates, an employee's pay: opted out of AI (PE-21, the user's call of
+                                Nov 12, 2026) -->
+                            <section name="ProjectWorkerCost" ai-opt-out="true"><widgets>
+                                <label text="Worker cost ${projectTime.vendorAmountText || '—'}" type="div" style="text-caption m-muted"/>
+                            </widgets></section>
                         </container>
                     </widgets></section>
                     <container style="col-12 col-sm-6 col-md-3">
@@ -382,8 +387,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <default-field title="Billable"><label text="${billableText}" type="span" style="text-caption ${billable ? '' : 'm-muted'}"/></default-field></field>
                 <field name="clientRateText" align="right" hide="!ratesShown"><default-field title="Client rate"><display/></default-field></field>
                 <field name="clientAmountText" align="right" hide="!ratesShown"><default-field title="Client amount"><display/></default-field></field>
-                <field name="vendorRateText" align="right" hide="!ratesShown"><default-field title="Worker rate"><display/></default-field></field>
-                <field name="vendorAmountText" align="right" hide="!ratesShown"><default-field title="Worker amount"><display/></default-field></field>
+                <field name="vendorRateText" align="right" hide="!ratesShown" ai-opt-out="true"><default-field title="Worker rate"><display/></default-field></field>
+                <field name="vendorAmountText" align="right" hide="!ratesShown" ai-opt-out="true"><default-field title="Worker amount"><display/></default-field></field>
                 <field name="invoiceText"><default-field title="Invoices"><label text="${invoiceText}" type="span" style="text-caption"/></default-field></field>
                 <field name="statusLabel"><default-field title="Week">
                     <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}" data-status="${sheetStatusId ?? ''}">${WebUtilities.encodeHtml(statusLabel ?? '')}</q-chip>]]></text>
