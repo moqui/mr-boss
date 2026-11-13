@@ -23,7 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
       qualification's type, title, issuer, validity and verification with its holder's current employers (fromRelationships, a list:
       a person employed by two is each one's; ironstone.people.InsightsServices.get#QualificationDocumentData keeps the employments
       not ended and leaves out the document of a holder with none, so ending an employment updates or removes it), never its
-      document number);
+      document number, and never an identity document or a work permit (P28, the user's call of Nov 13, 2026: those are left out
+      by the manual data service, so the feed deletes the document of one and a type changed to one; an index built before holds
+      them until it is rebuilt: Insights › Data readiness, Rebuild the qualifications index, after this change is deployed));
     - the People datasets group BOSS_PEOPLE_INSIGHTS ("People data in Insights", People's Insights bundle): the datasets' artifacts
       and the documents are granted to it alone (and to ADMIN, the steward through REPORT_DATASETS_ADMIN), so an Insights reader
       reads them only with it, each their own organizations' rows; it opens no screen, so its member also reads Insights
@@ -88,6 +90,9 @@ along with this software (see the LICENSE.md file). If not, see
             feed deletes the document -->
         <conditions conditionSeqId="01" fieldNameAlias="relationshipTypeEnumId" fieldValue="PrtEmployee"/>
         <conditions conditionSeqId="90" fieldNameAlias="noCurrentEmployment" postQuery="Y"/>
+        <!-- P28 (the user's call of Nov 13, 2026): an identity document or a work permit is no qualification the dataset holds; the
+            manual data service marks it restrictedType, which this post-query condition leaves out, so the feed deletes its document -->
+        <conditions conditionSeqId="91" fieldNameAlias="restrictedType" postQuery="Y"/>
     </dataDocuments>
     <moqui.entity.feed.DataFeed dataFeedId="BossPeopleReports" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
             feedName="People reports" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"

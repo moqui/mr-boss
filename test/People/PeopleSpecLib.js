@@ -116,7 +116,7 @@ const ids = {
     // P10: Rates; P22 (its review's call of Nov 12, 2026): payroll configuration's components, structures and groups, payroll's;
     // P23: pay assignments, before Rates; P24: pay adjustments, after them
     // P25: pay runs first; P26: payslips after them; the P27 review (the user's call of Nov 13, 2026): overpayment recovery after
-    // pay groups
+    // pay groups; P28: the payroll exchange after it
     payrollGroupMenu: [
         "PayRuns",
         "Payslips",
@@ -126,7 +126,8 @@ const ids = {
         "PayComponents",
         "PayStructures",
         "PayGroups",
-        "PayRecovery"
+        "PayRecovery",
+        "PayrollExchange"
     ],
     // P21: Grievances, every People user's
     employeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances"],

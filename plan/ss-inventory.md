@@ -129,6 +129,10 @@ branch: Marble's HumanRes payroll approved period invoices and made period payme
 neither calls nor reads (design-people §8.4); obligations and recoveries are new records (`PayrollObligation`, `PayrollRecovery`);
 their Implemented in is in usl-inventory's People rows. The P27 review's Overpayment recovery (PayRecovery) maps none either: its
 settings are new PartySettings of People's recovery.
+**People P28 (Nov 13, 2026):** no baseline form is mapped to PayrollExchange: Marble's HumanRes had no payroll exchange; history it
+imports becomes `EmploymentPayHistory` rows (internal payroll N), which People reads only by their own key, labelled historical, as
+P26 does; exchanges are new records (`PayrollExchangeBatch`, `PayrollExchangeRow`); their Implemented in is in usl-inventory's People
+rows.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

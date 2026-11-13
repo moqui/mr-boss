@@ -5099,6 +5099,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_CONFIGURE" fromDate="0"/>
+    <!-- P28: the payroll operator imports payroll history and a processor's results (the payroll exchange), People's import permission -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PEOPLE_IMPORT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_VIEW" fromDate="0"/>
@@ -5140,6 +5142,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_CONFIGURE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PEOPLE_IMPORT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" appName="People" description="Payroll approver" scopeDependency="organization, employment" sequenceNum="1180"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" capabilityKindEnumId="CpkEdit"/>

@@ -81,6 +81,10 @@
 // settlement read by the payroll approver and refused to the HR officer; a pay obligation's invoice in Payroll's InvoiceDetail
 // (get#Obligation) a payroll reader's of its employer, refused to the HR officer and missing to Retail's payroll for Services'.
 // P27 review: Overpayment recovery (PayRecovery) payroll's, its settings refused to the HR officer (the user's call of Nov 13, 2026).
+// P28: a payroll history import previewed by the payroll operator (PEOPLE_IMPORT with PAYROLL_VIEW and PAYROLL_EDIT) and refused to
+// the HR officer (PEOPLE_IMPORT without payroll) with the same parameters; the exchange read by the payroll approver and refused to
+// the HR officer, Services' missing to Retail's payroll; PayrollExchange payroll's (one html render, the HR officer refused the
+// screen) and the import listed in Admin's Imports with People's place.
 // P29: the payroll register run by the payroll operator and refused to the HR officer with the same parameters, Services' headcount
 // refused to Retail's HR; Reports opened to HR and payroll and refused to the directory reader and the manager; the confidential case
 // intake set by the People administrator and refused to the HR officer with the same parameters; the clocking default set by the HR
@@ -1781,6 +1785,83 @@ feature(
                     payrollObligationServices: "RECORD_UNAVAILABLE",
                     hrRecovery: "PERMISSION_DENIED"
                 }
+        }
+    }
+)
+
+feature(
+    "P28: a payroll import is payroll's with People's import permission: the HR officer refused with the parameters the payroll operator is answered with; Services' exchange missing to Retail's payroll; PayrollExchange payroll's and listed in Admin's Imports",
+    {
+        when() {
+            const X = "mantle.humanres.PayrollExchangeServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            // a history file of Retail's with one worker no one is: the import permission is the rule, the row its own refusal
+            const history = {
+                exchangeKind: "history",
+                organizationPartyId: ids.organizationId,
+                cutoverDate: "2026-01-01",
+                currencyUomId: "USD",
+                sourceSystem: "Former payroll",
+                fileName: "history-2025.csv",
+                importText: "worker,payDate,gross,net\nPPL_SPEC_NO_SUCH_WORKER,2025-12-31,1000,800"
+            }
+            const codes = {
+                hrImports: as(users.hr, X + "preview#Batch", history),
+                payrollImports: as(users.payroll, X + "preview#Batch", history)
+            }
+            const batch = system(() =>
+                ec.entity
+                    .find("mantle.humanres.payroll.PayrollExchangeBatch")
+                    .condition({organizationPartyId: ids.organizationId, exchangeKindEnumId: "PxkHistory"})
+                    .one()
+            )
+            // Services' exchange, as data: only its employer matters here
+            system(() =>
+                call("create#mantle.humanres.payroll.PayrollExchangeBatch", {
+                    payrollExchangeBatchId: "PPL_SPEC_PAL_XCHG_SVC",
+                    exchangeKindEnumId: "PxkHistory",
+                    organizationPartyId: ids.otherOrganizationId,
+                    batchKey: "PPL_SPEC_PAL_XCHG_SVC",
+                    statusId: "PxbPreviewed"
+                })
+            )
+            Object.assign(codes, {
+                approverReads: as(users.payApprover, X + "get#Batch", {payrollExchangeBatchId: batch?.payrollExchangeBatchId}),
+                hrReads: as(users.hr, X + "get#Batch", {payrollExchangeBatchId: batch?.payrollExchangeBatchId}),
+                payrollServices: as(users.payroll, X + "get#Batch", {payrollExchangeBatchId: "PPL_SPEC_PAL_XCHG_SVC"})
+            })
+            // the one render of PayrollExchange (html), the batch opened with its problem rows
+            const rendered = asUser(users.payroll, () =>
+                page(
+                    "Payroll/PayrollExchange",
+                    {payrollExchangeBatchId: batch?.payrollExchangeBatchId, outcome: "problems"},
+                    "html"
+                )
+            )
+            const listed = system(() => invoke("org.moqui.admin.DataTransferServices.find#ImportRuns", {}))
+            return {
+                codes,
+                rendered,
+                hrScreen: screenRefusal(users.hr, "Payroll/PayrollExchange", {}),
+                run: Array.from(listed.transferList || []).find(found => found.runId === batch?.payrollExchangeBatchId) || null
+            }
+        },
+        then({codes, rendered, hrScreen, run}) {
+            codes ==
+                {
+                    hrImports: "PERMISSION_DENIED",
+                    payrollImports: "accepted",
+                    approverReads: "accepted",
+                    hrReads: "PERMISSION_DENIED",
+                    payrollServices: "RECORD_UNAVAILABLE"
+                }
+            rendered.status == 200 && rendered.errors.length == 0
+            rendered.output.includes("Import of payroll history") && rendered.output.includes("history-2025.csv")
+            rendered.output.includes("No person is PPL_SPEC_NO_SUCH_WORKER")
+            unauthorized(hrScreen)
+            run.targetId == "payrollExchange" && run.ownerApp == "People" && run.ownerRoute == "peoplePayrollExchange"
+            run.errorCount == 1 && run.ownerParameters.payrollExchangeBatchId == run.runId
         }
     }
 )

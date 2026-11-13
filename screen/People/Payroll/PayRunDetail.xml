@@ -197,6 +197,7 @@ along with this software (see the LICENSE.md file). If not, see
             // P26: the run's payslips (made when it is approved) and a correction run's original slip
             payslipsUrl = sharedLinks?.['Payroll/Payslips'] || '../Payslips'
             payslipDetailUrl = sharedLinks?.['Payroll/PayslipDetail'] || '../PayslipDetail'
+            exchangeUrl = sharedLinks?.['Payroll/PayrollExchange'] || '../PayrollExchange'
             // the net is opted out of AI (P25 review): an agent's render of the confirmation names the count alone
             netConfirm = 'Approve ' + (counts.calculated || 0) + ' employees' + (sri.isAgentRender() ? '' : ', net ' + (totalsText.net || '')) +
                 (counts.excluded ? ', ' + counts.excluded + ' excluded' : '') + '?'
@@ -255,6 +256,17 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                 </container>
 
+                <!-- P28: a run of an external processor's results, imported in the payroll exchange: never calculated here -->
+                <section name="ExternalResults" condition="runInfo.exchangeBatchId">
+                    <widgets>
+                        <container style="row items-center q-gutter-sm">
+                            <label type="span" style="text-caption"
+                                    text="The results of the group's external processor, imported in payroll exchange ${runInfo.exchangeBatchId}: they are not calculated here. Ask for approval, then finalize, as for any run."/>
+                            <link url="${exchangeUrl}" url-type="plain" text="Payroll exchange" link-type="anchor" icon="sym_o_sync_alt"
+                                    parameter-map="{payrollExchangeBatchId:runInfo.exchangeBatchId}"/>
+                        </container>
+                    </widgets>
+                </section>
                 <label type="p" style="text-caption" condition="runInfo.correctsPayslipId"
                         text="A correction of payslip ${runInfo.correctsPayslipId}: ${runInfo.correctionReason}. Its slip pays the change from what was paid; the original stays."/>
                 <!-- the steps and their progress; the step is in the URL -->
