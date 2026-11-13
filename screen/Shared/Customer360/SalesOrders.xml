@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales Orders tab (crosscut §3.2 Sales row; design-sales §4 Customer360; impl-sales P3): the account's orders with
+    the organizations of the user's sales scope, newest first (get#CustomerSales, Customer360's always-actions; no quote template
+    or recurring base), for a holder of SALES_TEAM_VIEW until Sales' own order scope (P11) shows a representative their assigned
+    and team orders; read only, the order's number shown without a link until Sales' OrderDetail (P7, P11). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Orders" default-menu-index="3">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'Sales' &amp;&amp; !!sales?.capabilities?.teamRead</expression></condition>
+    <actions>
+        <set field="orderRows" from="customerDetail?.orders || []"/>
+    </actions>
+    <widgets>
+        <section name="SalesOrdersTab" condition="customerFound &amp;&amp; customerDetail.ordersRead">
+            <widgets>
+                <form-list name="SalesAccountOrders" list="orderRows" skip-form="true" paginate="false">
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="orderName">
+                        <default-field title="Name">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="entryText">
+                        <default-field title="Entered">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="organizationName">
+                        <default-field title="Organization">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'OrderHold' ? 'warning' : statusId == 'OrderCancelled' ? 'grey-7' : 'primary'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="totalText" align="right">
+                        <default-field title="Total">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="orderId"/><field-ref name="entryText"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No orders with your organizations" condition="!orderRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

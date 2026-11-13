@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The account and contact transitions of the IronStone Sales screens (impl-sales P3; design-sales §4): each calls Mantle's guarded
+    service (mantle.sales.AccountServices, which checks SALES_ACCOUNT_EDIT, the organization and every party it is given), so a
+    screen that includes one adds no authority, and a second root that mounts Sales' Accounts (Marketing's, impl-marketing P3)
+    includes the same ones. A screen includes each transition it uses by name (transition-include); the links go through the
+    mounting root's sharedLinks. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new account (NewAccount, NewPerson): Customer360 of the new account -->
+    <transition name="createAccount">
+        <actions>
+            <service-call name="mantle.sales.AccountServices.create#Account" in-map="context" out-map="created"/>
+        </actions>
+        <default-response url="${sharedLinks['Accounts/Customer360']}">
+            <parameter name="customerPartyId" from="created.partyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a new person as a contact of an account -->
+    <transition name="createContact">
+        <actions>
+            <service-call name="mantle.sales.AccountServices.create#Contact" in-map="context" out-map="created"/>
+            <if condition="!ec.message.hasError()"><message type="success">Contact added</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- an existing person as a contact of an account -->
+    <transition name="addContact">
+        <actions>
+            <service-call name="mantle.sales.AccountServices.add#Contact" in-map="context"/>
+            <if condition="!ec.message.hasError()"><message type="success">Contact added to the account</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a contact's relationship with an account ended; the person is kept -->
+    <transition name="endContact">
+        <actions>
+            <service-call name="mantle.sales.AccountServices.delete#Contact" in-map="{partyRelationshipId:partyRelationshipId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">The contact no longer belongs to the account</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the account's manager from now -->
+    <transition name="setAccountManager">
+        <actions>
+            <service-call name="mantle.sales.AccountServices.set#AccountManager"
+                    in-map="{accountPartyId:accountPartyId, managerPartyId:managerPartyId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Account manager changed</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets/>
+</screen>

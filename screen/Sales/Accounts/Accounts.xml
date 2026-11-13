@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Accounts › Accounts (design-sales §4 Accounts: AccountFind, AccountList, NewAccount, NewPerson; style-guide §3.2 List;
+    impl-sales P3): the accounts of the user's sales scope, organizations and individual customers alike (Mantle's
+    find#Accounts, scoped and paged in the query): those of their organizations and the shared ones, found by name or id,
+    organization, role, kind, account manager (mine) and parent account, each row opening Customer360 with its role, owner, account
+    manager, first contact and, for an organization reader, open orders. New account and New person for a holder of
+    SALES_ACCOUNT_EDIT (create#Account, which checks the organization, parent and manager); Duplicates opens MergeAccounts for a
+    manager or administrator.
+    Built for a second mount (impl-sales §2, F47): the context is get#SharedContext's for the mounting root's appRoot (the `sales`
+    map the root sets), every link goes through sharedLinks and a row whose Customer360 the root does not mount shows its name
+    without a link. Marketing's root adds AccountList's row selection and its bulk action "Add to list (evidenced)"
+    (impl-marketing P3) around the form named AccountList. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Accounts" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="roleTypeId"/>
+    <parameter name="partyTypeEnumId"/>
+    <parameter name="managerPartyId"/>
+    <parameter name="mine"/>
+    <parameter name="parentAccountPartyId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createAccount" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.sales.SalesWorkspaceServices.find#Accounts" out-map="context"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, roleTypeId:roleTypeId, partyTypeEnumId:partyTypeEnumId,
+                        managerPartyId:managerPartyId, mine:mine, parentAccountPartyId:parentAccountPartyId, pageIndex:pageIndex,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+        </if>
+        <set field="accountList" from="accountList || []"/>
+        <set field="customer360Path" from="sharedLinks['Accounts/Customer360'] || null"/>
+        <set field="filtered" from="!!(text || organizationPartyId || roleTypeId || partyTypeEnumId || managerPartyId || mine || parentAccountPartyId)"/>
+        <set field="newAccountDefaults" from="{organizationPartyId: sales.activeOrganizationPartyId ||
+                (sales.organizationPartyIds?.length == 1 ? sales.organizationPartyIds[0] : null), roleTypeId: 'Customer'}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read accounts in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="AccountsRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Accounts" type="h5"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewAccountDialog" button-text="New account" title="New account" icon="sym_o_add"
+                                width="760" type="primary" condition="can.accountEdit">
+                            <form-single name="NewAccount" transition="createAccount" map="newAccountDefaults">
+                                <field name="partyTypeEnumId" from="'PtyOrganization'"><default-field><hidden/></default-field></field>
+                                <field name="organizationName">
+                                    <default-field title="Name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="organizationPartyId">
+                                    <default-field title="Organization" tooltip="The organization the account belongs to">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="roleTypeId">
+                                    <default-field title="Role">
+                                        <drop-down allow-empty="false">
+                                            <option key="Customer" text="Customer"/>
+                                            <option key="Prospect" text="Prospect"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="parentAccountPartyId">
+                                    <default-field title="Parent account">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'accounts', selected:parentAccountPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="managerPartyId">
+                                    <default-field title="Account manager" tooltip="You, when left empty and you work for the organization">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'managers', selected:managerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="emailAddress">
+                                    <default-field title="Email">
+                                        <text-line input-type="email"/>
+                                    </default-field>
+                                </field>
+                                <field name="contactNumber">
+                                    <default-field title="Phone">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Create account"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="organizationName"/>
+                                        <field-ref name="organizationPartyId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="roleTypeId"/>
+                                        <field-ref name="parentAccountPartyId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="emailAddress"/>
+                                        <field-ref name="contactNumber"/>
+                                    </field-row>
+                                    <field-ref name="managerPartyId"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="NewPersonDialog" button-text="New person" title="New individual customer"
+                                icon="sym_o_person_add" width="760" condition="can.accountEdit">
+                            <form-single name="NewPerson" transition="createAccount" map="newAccountDefaults">
+                                <field name="partyTypeEnumId" from="'PtyPerson'"><default-field><hidden/></default-field></field>
+                                <field name="firstName">
+                                    <default-field title="First name">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="lastName">
+                                    <default-field title="Last name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="organizationPartyId">
+                                    <default-field title="Organization" tooltip="The organization the customer belongs to">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="roleTypeId">
+                                    <default-field title="Role">
+                                        <drop-down allow-empty="false">
+                                            <option key="Customer" text="Customer"/>
+                                            <option key="Prospect" text="Prospect"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="emailAddress">
+                                    <default-field title="Email">
+                                        <text-line input-type="email"/>
+                                    </default-field>
+                                </field>
+                                <field name="contactNumber">
+                                    <default-field title="Phone">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Create customer"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="firstName"/>
+                                        <field-ref name="lastName"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="organizationPartyId"/>
+                                        <field-ref name="roleTypeId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="emailAddress"/>
+                                        <field-ref name="contactNumber"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <link url="${sharedLinks['Accounts/MergeAccounts']}" text="Duplicates" icon="sym_o_content_copy"
+                                link-type="anchor-button" condition="can.mergeAccounts &amp;&amp; sharedLinks['Accounts/MergeAccounts']"/>
+                    </container>
+                </container>
+                <form-list name="AccountList" list="accountList" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Name or id">
+                            <text-line size="20"/>
+                        </header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="roleTypeId">
+                        <header-field title="Role">
+                            <drop-down allow-empty="true">
+                                <option key="Customer" text="Customer"/>
+                                <option key="Prospect" text="Prospect"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Role">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${roleTypeId == 'Customer' ? 'primary' : 'secondary'}">${roleText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(roleText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="partyTypeEnumId">
+                        <header-field title="Kind">
+                            <drop-down allow-empty="true">
+                                <option key="PtyOrganization" text="Organization"/>
+                                <option key="PtyPerson" text="Person"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="managerPartyId">
+                        <header-field title="Account manager">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'managers', selected:managerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="mine">
+                        <header-field title="Mine">
+                            <check>
+                                <option key="Y" text="My accounts"/>
+                            </check>
+                        </header-field>
+                    </field>
+                    <field name="parentAccountPartyId">
+                        <header-field title="Parent account">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:parentAccountPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="name">
+                        <conditional-field title="Account" condition="customer360Path">
+                            <link url="${customer360Path}" text="${name}" link-type="anchor" parameter-map="{customerPartyId:partyId}"/>
+                        </conditional-field>
+                        <default-field title="Account">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="pseudoId">
+                        <default-field title="Id">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="kindText">
+                        <default-field title="Kind">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="ownerText">
+                        <default-field title="Organization">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="managerText">
+                        <default-field title="Account manager">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="contactText">
+                        <default-field title="Contact">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="openOrderCount" align="right">
+                        <conditional-field title="Open orders" condition="openOrderCount != null">
+                            <display/>
+                        </conditional-field>
+                        <default-field title="Open orders">
+                            <display text=""/>
+                        </default-field>
+                    </field>
+                    <columns>
+                        <column><field-ref name="name"/><field-ref name="pseudoId"/></column>
+                        <column><field-ref name="roleTypeId"/></column>
+                        <column><field-ref name="kindText"/></column>
+                        <column><field-ref name="ownerText"/></column>
+                        <column><field-ref name="managerText"/></column>
+                        <column><field-ref name="contactText"/></column>
+                        <column><field-ref name="openOrderCount"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/><field-ref name="ownerText"/></column>
+                        <column><field-ref name="roleTypeId"/><field-ref name="managerText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoAccounts" condition="!accountList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No accounts match' : 'No accounts yet' + (can.accountEdit ? ' · Create one with New account' : '')}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

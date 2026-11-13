@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales' demo accounts and contacts (impl-sales P3; design-sales §4): customers and prospects of both demo organizations, owned by
+    each (Party.ownerPartyId) and managed by their representatives (PrtAccountManager, data/SalesAccountData.xml in Mantle), a
+    parent account, a contact of two accounts and a duplicate pair for MergeAccounts. Named to load after BossUsersDemoData.xml,
+    whose Sales users manage them; kept apart from BossSalesDemoData.xml, the pipeline setup's (P2).
+    - Ziziwork Retail (sales.rep, sales.rep2): Wingtip Group, the parent of Wingtip Traders (a customer, sales.rep's);
+      Contoso Labs (a prospect, sales.rep2's); Dana Morales, a contact of Wingtip Traders and of Contoso Labs; Adatum Corporation
+      and Adatum Corp, a duplicate pair with one email (the duplicate scan's flags set); Kim Park, an individual customer.
+    - Ziziwork Sales (sales.rep3): Fabrikam Industrial (a customer, with its contact Lee Chen) and Tailspin Outfitters (a
+      prospect). -->
+<entity-facade-xml type="demo">
+    <!-- Ziziwork Retail -->
+    <mantle.party.Party partyId="BOSS_SAL_ACC_WTGROUP" pseudoId="WTGROUP" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_WTGROUP" organizationName="Wingtip Group"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_WTGROUP" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_WTGROUP" roleTypeId="Customer"/>
+    <mantle.party.Party partyId="BOSS_SAL_ACC_WINGTIP" pseudoId="WINGTIP" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"
+            disabled="N" comments="Buys for twelve stores; prefers quarterly orders."/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_WINGTIP" organizationName="Wingtip Traders"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_WINGTIP" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_WINGTIP" roleTypeId="Customer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_WINGTIP_PARENT" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_SAL_ACC_WINGTIP" fromRoleTypeId="Account" toPartyId="BOSS_SAL_ACC_WTGROUP" toRoleTypeId="Account"
+            fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_WINGTIP_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="buying@wingtip.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_ACC_WINGTIP" contactMechId="BOSS_SAL_WINGTIP_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_SAL_ACC_CONTOSO" pseudoId="CONTOSO" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_CONTOSO" organizationName="Contoso Labs"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_CONTOSO" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_CONTOSO" roleTypeId="Prospect"/>
+    <mantle.party.Party partyId="BOSS_SAL_ACC_KIMPARK" pseudoId="KIMPARK" partyTypeEnumId="PtyPerson" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"/>
+    <mantle.party.Person partyId="BOSS_SAL_ACC_KIMPARK" firstName="Kim" lastName="Park"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_KIMPARK" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_KIMPARK" roleTypeId="Customer"/>
+    <!-- the account managers -->
+    <mantle.party.PartyRole partyId="BOSS_SAL_REP" roleTypeId="SalesRepresentative"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_REP2" roleTypeId="SalesRepresentative"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_REP3" roleTypeId="SalesRepresentative"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_WINGTIP_MGR" relationshipTypeEnumId="PrtAccountManager"
+            fromPartyId="BOSS_SAL_REP" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_ACC_WINGTIP" toRoleTypeId="Account"
+            fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_WTGROUP_MGR" relationshipTypeEnumId="PrtAccountManager"
+            fromPartyId="BOSS_SAL_REP" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_ACC_WTGROUP" toRoleTypeId="Account"
+            fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_CONTOSO_MGR" relationshipTypeEnumId="PrtAccountManager"
+            fromPartyId="BOSS_SAL_REP2" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_ACC_CONTOSO" toRoleTypeId="Account"
+            fromDate="2026-10-01 09:00:00"/>
+    <!-- Dana Morales, a contact of two accounts -->
+    <mantle.party.Party partyId="BOSS_SAL_CON_DANA" pseudoId="DMORALES" partyTypeEnumId="PtyPerson" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"/>
+    <mantle.party.Person partyId="BOSS_SAL_CON_DANA" firstName="Dana" lastName="Morales"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_CON_DANA" roleTypeId="Contact"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_DANA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="dana.morales@wingtip.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_CON_DANA" contactMechId="BOSS_SAL_DANA_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_DANA_WINGTIP" relationshipTypeEnumId="PrtContact"
+            fromPartyId="BOSS_SAL_CON_DANA" fromRoleTypeId="Contact" toPartyId="BOSS_SAL_ACC_WINGTIP" toRoleTypeId="Account"
+            relationshipName="Purchasing manager" fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_DANA_CONTOSO" relationshipTypeEnumId="PrtContact"
+            fromPartyId="BOSS_SAL_CON_DANA" fromRoleTypeId="Contact" toPartyId="BOSS_SAL_ACC_CONTOSO" toRoleTypeId="Account"
+            relationshipName="Advisor" fromDate="2026-10-01 09:00:00"/>
+    <!-- Adatum: a duplicate pair (one email), flagged as the duplicate scan flags it -->
+    <mantle.party.Party partyId="BOSS_SAL_ACC_ADATUM" pseudoId="ADATUM" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"
+            hasDuplicates="Y" lastDupCheckDate="2026-11-01 02:00:00"/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_ADATUM" organizationName="Adatum Corporation"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_ADATUM" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_ADATUM" roleTypeId="Customer"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_ADATUM_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="orders@adatum.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_ACC_ADATUM" contactMechId="BOSS_SAL_ADATUM_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2026-09-15 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_SAL_ACC_ADATUM2" pseudoId="ADATUM2" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"
+            hasDuplicates="Y" lastDupCheckDate="2026-11-01 02:00:00"/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_ADATUM2" organizationName="Adatum Corp"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_ADATUM2" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_ADATUM2" roleTypeId="Prospect"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_ADATUM2_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="orders@adatum.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_ACC_ADATUM2" contactMechId="BOSS_SAL_ADATUM2_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2026-10-20 09:00:00"/>
+
+    <!-- Ziziwork Sales -->
+    <mantle.party.Party partyId="BOSS_SAL_ACC_FABRIKAM" pseudoId="FABRIKAM" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SALES" disabled="N"/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_FABRIKAM" organizationName="Fabrikam Industrial"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_FABRIKAM" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_FABRIKAM" roleTypeId="Customer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_FABRIKAM_MGR" relationshipTypeEnumId="PrtAccountManager"
+            fromPartyId="BOSS_SAL_REP3" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_ACC_FABRIKAM" toRoleTypeId="Account"
+            fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_SAL_CON_LEE" pseudoId="LCHEN" partyTypeEnumId="PtyPerson" ownerPartyId="ORG_ZIZI_SALES" disabled="N"/>
+    <mantle.party.Person partyId="BOSS_SAL_CON_LEE" firstName="Lee" lastName="Chen"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_CON_LEE" roleTypeId="Contact"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_LEE_FABRIKAM" relationshipTypeEnumId="PrtContact"
+            fromPartyId="BOSS_SAL_CON_LEE" fromRoleTypeId="Contact" toPartyId="BOSS_SAL_ACC_FABRIKAM" toRoleTypeId="Account"
+            relationshipName="Plant manager" fromDate="2026-09-01 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_SAL_ACC_TAILSPIN" pseudoId="TAILSPIN" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SALES" disabled="N"/>
+    <mantle.party.Organization partyId="BOSS_SAL_ACC_TAILSPIN" organizationName="Tailspin Outfitters"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_TAILSPIN" roleTypeId="Account"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_ACC_TAILSPIN" roleTypeId="Prospect"/>
+</entity-facade-xml>

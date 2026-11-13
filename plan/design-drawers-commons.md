@@ -900,6 +900,29 @@ stamp to `merge#Parties`. Sales MergeAccounts mounts this wizard with the accoun
 ([design-sales §4](design-sales.md#4-accounts-and-contacts)); Marketing and Shop call the same
 service.
 
+As built (impl-sales P3, Nov 13, 2026): the guards are in `merge#Parties` (mr-mantle
+`service/mantle/party/PartyMerge.js`), with a read-only twin `check#PartyMerge` that Commons' Compare asks before it offers a
+merge. Who: a caller that disabled authorization or runs as the system (a job, Shop's verified guest claim), a contact
+administrator (`CONTACT_ADMIN`), the owner of a personal contact merging it, or, for an account of their organization, a Sales
+manager or administrator (`SALES_ACCOUNT_EDIT` with `SALES_TEAM_MANAGE` or `SALES_CONFIGURE`; impl-sales §4). What: one kind
+(`PARTY_KIND_MISMATCH`), one owner organization when both have one (`ORGANIZATION_MISMATCH`; `_NA_` is no organization), the
+merged party's opportunities and agreements of that organization only (`DEPENDENCY_OTHER_ORGANIZATION`) and, for a Sales merger,
+its orders, invoices and payments with their organizations only (`DEPENDENCY_UNAVAILABLE`); the guards read and the merge
+moves without the caller's entity filters (impl-sales P3 review), so a row of an organization the caller's root filters out is
+neither missed nor left behind on the merged party. A caller that disabled authorization stays admitted (the user's call, Nov 13,
+2026). It now moves `ExternalAccessContact`, agreements and their parties, and an
+opportunity's account and parties. Commons' `get#ComparePair`, `merge#Contacts` and `mark#NotDuplicate` admit the merger the
+guards admit as Sales; the field choices of such a merger are written by `update#PartyDetail` directly. The preview step and
+its stamp are not built. Sales' MergeAccounts is a Sales screen over Commons' services (its pairs, Compare, merge and not a
+duplicate), not a mount of Commons' Duplicates, whose screens ask for a contact administrator.
+
+Owner contract (Sales, impl-sales P3 review; the user's call, Nov 13, 2026): `check#ContactAccess` also gives `canEdit` (never
+`canDelete`) to a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (owned
+by an organization of it, or a shared `_NA_` account; mr-mantle `SalesAccess.js contactAccounts`) and has no user account
+(`isSalesEditor`), so Sales' ContactDetail edits identity and channels with Commons' own forms. Since the forms share one
+`canEdit`, the Organizations, Relationships, Notes and photo edits open to them too; a login's person stays the contact
+administrator's.
+
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Commons | the four steps | directory or a book | merge, not a duplicate | contact info |

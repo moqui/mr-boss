@@ -1023,12 +1023,12 @@ Added in Accounting P15 (budgets), called by built screens:
 | ContactServices | delete#PartyContactMech | Commons/Contacts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ContactServices | undelete#PartyContactMech |  |  |
 | DuplicateServices | find#PartyHasDuplicates | Commons/Contacts/Duplicates |  |
-| DuplicateServices | find#PartyDuplicates | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Duplicates |
+| DuplicateServices | find#PartyDuplicates | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts (through Commons get#DuplicatePairs; Sales P3) |
 | DuplicateServices | find#TelecomNumbers |  |  |
 | DuplicateServices | find#PostalAddresses |  |  |
 | DuplicateServices | check#AllPartyDuplicates | Commons/Contacts/Duplicates | Commons/Contacts/Duplicates |
 | DuplicateServices | merge#AllDuplicateParties |  |  |
-| DuplicateServices | merge#Parties | Commons/Contacts; Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Compare |
+| DuplicateServices | merge#Parties | Commons/Contacts; Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Compare; Sales/Accounts/MergeCompare (through Commons merge#Contacts; the merge guards inside, mantle/party/PartyMerge.js; Sales P3) |
 | GooglePartyServices | get#MapsGeoCodeResults |  |  |
 | GooglePartyServices | get#MapsPlaceSearchText |  |  |
 | GooglePartyServices | get#MapsPlaceDetails |  |  |
@@ -1139,7 +1139,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview |
 | ContactImportServices | import#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Result |
 | ContactImportServices | export#Contacts | Admin/Data/DataExport | Commons/Contacts/ContactDetail; Commons/Contacts/List; Admin/Data/DataExport |
-| DuplicateServices | mark#PartyNotDuplicate |  | Commons/Contacts/Compare; Commons/Contacts/Duplicates |
+| DuplicateServices | mark#PartyNotDuplicate |  | Commons/Contacts/Compare; Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts; Sales/Accounts/MergeCompare (through Commons mark#NotDuplicate; Sales P3) |
 | PartyServices | get#ShellCounts |  | shell header (theme value STRT_SHELL_COUNTS_SERVICE) |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
@@ -1381,10 +1381,10 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AccountServices | create#Account | Sales/Accounts/Accounts; Sales/Pipeline/Leads |  |
-| AccountServices | create#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
-| AccountServices | add#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
-| AccountServices | delete#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
+| AccountServices | create#Account | Sales/Accounts/Accounts; Sales/Pipeline/Leads | Sales/Accounts/Accounts (NewAccount, NewPerson; guarded: SALES_ACCOUNT_EDIT, the owner organization, parent and manager checked; Sales P3) |
+| AccountServices | create#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Sales/Accounts/Contacts (NewContact); Sales/Accounts/Customer360/SalesContacts (NewAccountContact) (Sales P3) |
+| AccountServices | add#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Sales/Accounts/Customer360/SalesContacts (AddAccountPerson); Sales/Accounts/ContactDetail (AddToAccount) (Sales P3) |
+| AccountServices | delete#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Sales/Accounts/Contacts; Sales/Accounts/Customer360/SalesContacts; Sales/Accounts/ContactDetail (End: the relationship ends, the person kept) (Sales P3) |
 | SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis); Commerce/Home (PeriodStrip) and Commerce/Reports/OnlineSales through ironstone.commerce.ReportingServices (P11: productStoreIds of the user's store scope, by currency); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
 | SalesReportServices | get#SalesInvoiceSummary | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | Commerce/Home (PeriodStrip's net sales) and Commerce/Reports/OnlineSales (net invoiced) through ironstone.commerce.ReportingServices (P11); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
 | SalesReportServices | get#SalesTopProduct | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis); Commerce/Home and Commerce/Reports/OnlineSales (P11: productStoreIds and currencyUomIds); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
@@ -2151,6 +2151,17 @@ remain historical; these rows add no implementation claim.
 | party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail |  |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
 | sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
+
+### Added in the Sales build: accounts and contacts (P3, Nov 13, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| sales/AccountServices | set#AccountManager | Sales/Accounts/Customer360 | Sales/Accounts/Customer360/SalesOverview (Change, Take this account) |
+| sales/SalesWorkspaceServices | find#Accounts | Sales/Accounts/Accounts | Sales/Accounts/Accounts (AccountList); the Sales palette and the accounts choice (ironstone.sales.ContextServices) |
+| sales/SalesWorkspaceServices | find#AccountContacts | Sales/Accounts/Contacts | Sales/Accounts/Contacts (ContactList); Sales/Accounts/ContactDetail (SalesContactAccounts) |
+| sales/SalesWorkspaceServices | get#CustomerSales | Sales/Accounts/Customer360 | Sales/Accounts/Customer360 (template/SalesCustomer360.xml and the Sales tabs) |
+| sales/SalesWorkspaceServices | get#AccountDocumentCounts | Sales/Accounts/MergeAccounts | Sales/Accounts/MergeCompare |
+| party/DuplicateServices | check#PartyMerge | Sales/Accounts/MergeAccounts | Sales/Accounts/MergeAccounts; Commons/Contacts/Compare and Sales/Accounts/MergeCompare (through Commons get#ComparePair); Commons mark#NotDuplicate |
 
 ## Marketing design — source-verified service additions
 

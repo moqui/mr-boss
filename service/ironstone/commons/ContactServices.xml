@@ -35,7 +35,10 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="check" noun="ContactAccess" allow-remote="false">
         <description>A party as the current user may see it (the entity filters, and a personal contact only its owner's) and
             what the user may do with it. With need (view, edit or delete) an error when the user may not; a party the user may
-            not see is "not found".</description>
+            not see is "not found". Who may change a directory party: a contact admin, and (Sales owner contract, impl-sales P3
+            review; the user's call of Nov 13, 2026) a holder of SALES_ACCOUNT_EDIT for a person who is a current contact of an
+            account of their sales scope (mantle/sales/SalesAccess.js contactAccounts: owned by an organization of the scope, or
+            shared) and has no user account; never delete.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="need"><description>view, edit or delete; empty only reports</description></parameter>
@@ -46,6 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="isPersonal" type="Boolean"/>
             <parameter name="isMine" type="Boolean"/>
             <parameter name="isContactAdmin" type="Boolean"/>
+            <parameter name="isSalesEditor" type="Boolean"/>
             <parameter name="isSelf" type="Boolean"/>
             <parameter name="isDisabled" type="Boolean"/>
             <parameter name="canEdit" type="Boolean"/>
@@ -54,6 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const userId = ec.user.userId || null
             visible = false; isPersonal = false; isMine = false; isSelf = false; isDisabled = false; canEdit = false; canDelete = false
+            isSalesEditor = false
             isContactAdmin = !!userId && (ec.user.hasPermission('CONTACT_ADMIN') || ec.user.isInGroup('BOSS_CONTACT_ADMIN') || ec.user.isInGroup('ADMIN'))
             const found = ec.entity.find('mantle.party.PartyDetail').condition('partyId', partyId).one()
             if (found != null && (!found.privateOwnerUserId || found.privateOwnerUserId === userId)) {
@@ -64,6 +69,16 @@ along with this software (see the LICENSE.md file). If not, see
                 isSelf = !!userId && ec.user.userAccount?.partyId === partyId
                 isDisabled = found.disabled === 'Y'
                 canEdit = !isDisabled && (isMine || (!isPersonal && isContactAdmin))
+                // Sales (owner contract): an account editor changes the identity and channels of a contact of an account of their
+                // scope with Commons' own forms; a person with a user account (a login's email and name) stays the contact admin's
+                if (!canEdit && !isDisabled && !isPersonal && !!userId && found.partyTypeEnumId === 'PtyPerson'
+                        && ec.user.hasPermission('SALES_ACCOUNT_EDIT')
+                        && ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().count() === 0) {
+                    const sales = ec.resource.script('component://mr-mantle/service/mantle/sales/SalesAccess.js')
+                    const salesScope = sales.scope()
+                    isSalesEditor = !!salesScope.capabilities.accountEdit && sales.contactAccounts(salesScope, partyId).length > 0
+                    canEdit = isSalesEditor
+                }
                 if (!isDisabled && isMine) canDelete = true
                 else if (!isDisabled && !isPersonal && isContactAdmin && !isSelf) {
                     const hasUser = ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().count() > 0
@@ -1012,7 +1027,10 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Two contacts side by side for a merge (both must be ones the user may see and change): the fields each has,
             the rows of the compare (label, the two values, and which differ), and whether they may be merged and which way: a
             directory party is never merged into a personal contact (link the personal contact to the directory instead), and an
-            internal organization is never merged away.</description>
+            internal organization is never merged away. A pair the user may not change both of may still be merged when Mantle's
+            merge guards admit the user for it (mantle.party.DuplicateServices.check#PartyMerge: a Sales manager or administrator
+            for an account of their organization, impl-sales P3, F45); the guards' refusal (another organization, another kind) is
+            the reason shown.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="otherPartyId" required="true"/>
@@ -1066,11 +1084,18 @@ along with this software (see the LICENSE.md file). If not, see
                 fieldList.push({fieldName: name, label: L(label), left: left[name] || '', right: right[name] || '', differs: left[name] !== right[name], choosable: false, combined: true})
             }
             if (reason) return
-            const canKeep = (keep, gone) => keep.access.canEdit && gone.access.canEdit && !gone.internal && !(keep.access.isPersonal && !gone.access.isPersonal)
+            // Mantle's merge guards (impl-sales P3): who may merge this way and whether the pair may be merged at all
+            const guards = {}
+            const guarded = (keep, gone) => guards[keep.partyId] || (guards[keep.partyId] = ec.service.sync()
+                    .name('mantle.party.DuplicateServices.check#PartyMerge').parameters({toPartyId: keep.partyId, fromPartyId: gone.partyId}).call() || {})
+            const canKeep = (keep, gone) => !gone.internal && !(keep.access.isPersonal && !gone.access.isPersonal) && guarded(keep, gone).allowed
+                    && ((keep.access.canEdit && gone.access.canEdit) || guarded(keep, gone).admittedBy === 'sales')
             if (canKeep(left, right)) keepOptions.push({key: left.partyId, text: ec.resource.expand('Keep ${name} (${id})', '', {name: left.name, id: left.pseudoId})})
             if (canKeep(right, left)) keepOptions.push({key: right.partyId, text: ec.resource.expand('Keep ${name} (${id})', '', {name: right.name, id: right.pseudoId})})
             canMerge = keepOptions.length > 0
-            if (!canMerge) reason = !left.access.canEdit || !right.access.canEdit ? L('You may not change both contacts')
+            const refused = [guarded(left, right), guarded(right, left)].find((found) => found.reasonCode && found.reasonCode !== 'PERMISSION_DENIED')
+            if (!canMerge && refused) reason = refused.message
+            else if (!canMerge) reason = !left.access.canEdit || !right.access.canEdit ? L('You may not change both contacts')
                 : L('A directory contact is not merged into a personal contact: link the personal contact to the directory instead')
         ]]></script></actions>
     </service>
@@ -1096,7 +1121,10 @@ along with this software (see the LICENSE.md file). If not, see
             const updates = {}
             for (const name of take) if (allowed.has(name) && pair.right[name]) updates[name] = pair.right[name]
             if (Object.keys(updates).length) {
-                ec.service.sync().name('ironstone.commons.ContactServices.update#Contact').parameters(Object.assign({partyId: keepPartyId}, updates)).call()
+                // a merger Mantle's guards admit without the contact edit (a Sales manager, impl-sales P3) takes the chosen names
+                // as the merge's own change, through the same Mantle service update#Contact calls
+                if (pair.left.access.canEdit) ec.service.sync().name('ironstone.commons.ContactServices.update#Contact').parameters(Object.assign({partyId: keepPartyId}, updates)).call()
+                else ec.service.sync().name('mantle.party.PartyServices.update#PartyDetail').parameters(Object.assign({partyId: keepPartyId}, updates)).call()
                 if (ec.message.hasError()) return
             }
             if (pair.right.access.isPersonal && !pair.left.access.isPersonal) {
@@ -1213,7 +1241,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="mark" noun="NotDuplicate">
-        <description>Records that two directory parties the user may see are not duplicates (contact admins only):
+        <description>Records that two directory parties the user may see are not duplicates (contact admins, and a merger Mantle's
+            merge guards admit for the pair, a Sales manager or administrator for accounts of their organization, impl-sales P3):
             mantle.party.DuplicateServices.mark#PartyNotDuplicate, after which the duplicate services and the scan leave the
             pair out and the parties' duplicate flags are checked again.</description>
         <in-parameters>
@@ -1222,13 +1251,18 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
+            let admin = true
             for (const id of [partyId, otherPartyId]) {
                 const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: id, need: 'view'}).call()
                 if (ec.message.hasError()) return
-                if (!access.isContactAdmin) { ec.message.addError(L('Only contact admins review duplicates')); return }
                 if (access.isPersonal) { ec.message.addError(ec.resource.expand('Contact ${partyId} not found', '', {partyId: id})); return }
+                if (!access.isContactAdmin) admin = false
             }
             if (partyId === otherPartyId) { ec.message.addError(L('Choose two different contacts')); return }
+            // a contact admin, or a merger Mantle's guards admit for the pair (a Sales manager or administrator, impl-sales P3)
+            if (!admin && ec.service.sync().name('mantle.party.DuplicateServices.check#PartyMerge')
+                    .parameters({toPartyId: partyId, fromPartyId: otherPartyId}).call()?.admittedBy !== 'sales') {
+                ec.message.addError(L('Only contact admins review duplicates')); return }
             ec.service.sync().name('mantle.party.DuplicateServices.mark#PartyNotDuplicate').parameters({partyId: partyId, otherPartyId: otherPartyId}).call()
         ]]></script></actions>
     </service>

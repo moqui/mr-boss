@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales Overview tab (crosscut §3.2 Sales row; design-sales §4 Customer360 Overview; impl-sales P3): the account's
+    managers (Change for a sales manager or administrator, Take for a representative of an account with none:
+    mantle.sales.AccountServices.set#AccountManager), its email and phone, its parent and child accounts of the user's scope and
+    its notes, from get#CustomerSales (Customer360's always-actions). Negotiated prices and the defaults of new documents join with
+    their phases (P15, P9). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview" default-menu-index="1">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'Sales'</expression></condition>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="setAccountManager" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <actions>
+        <set field="managerRows" from="customerDetail?.managers || []"/>
+        <set field="childRows" from="customerDetail?.children || []"/>
+        <set field="canTake" from="!!customerDetail?.canEdit &amp;&amp; !customerDetail?.canManage &amp;&amp; !managerRows.length
+                &amp;&amp; !!customerDetail?.organizationPartyId &amp;&amp; !!sales.partyId"/>
+    </actions>
+    <widgets>
+        <section name="SalesOverviewTab" condition="customerFound">
+            <widgets>
+                <container style="row q-col-gutter-md">
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Account managers"/>
+                            <box-toolbar>
+                                <container-dialog id="ChangeManagerDialog" button-text="Change" icon="sym_o_manage_accounts"
+                                        title="Change the account manager" condition="customerDetail.canManage">
+                                    <form-single name="ChangeManager" transition="setAccountManager">
+                                        <field name="accountPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="managerPartyId">
+                                            <default-field title="Account manager">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'managers', selected:managerPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="">
+                                                <submit text="Change the manager"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="setAccountManager" link-type="hidden-form-link" text="Take this account" icon="sym_o_person_check"
+                                        condition="canTake" parameter-map="{accountPartyId:customerPartyId, managerPartyId:sales.partyId}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <section-iterate name="ManagerRows" list="managerRows" entry="manager">
+                                    <widgets>
+                                        <label type="p" text="${manager.name} · since ${manager.fromText}" style="q-mb-xs"/>
+                                    </widgets>
+                                </section-iterate>
+                                <label type="p" style="m-muted" text="No account manager" condition="!managerRows.length"/>
+                            </box-body>
+                        </container-box>
+                    </container>
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Contact details"/>
+                            <box-body>
+                                <label type="p" text="${customerDetail.email}" condition="customerDetail.email"/>
+                                <label type="p" text="${customerDetail.phone}" condition="customerDetail.phone"/>
+                                <label type="p" style="m-muted" text="No email or phone · Add them on the contact record"
+                                        condition="!customerDetail.email &amp;&amp; !customerDetail.phone"/>
+                                <link url="${sharedLinks['Accounts/ContactDetail']}" link-type="anchor" text="Contact record"
+                                        parameter-map="{partyId:customerPartyId}"/>
+                            </box-body>
+                        </container-box>
+                    </container>
+                </container>
+                <section name="SalesAccountHierarchy" condition="customerDetail.parent || childRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Account hierarchy"/>
+                            <box-body>
+                                <section name="SalesAccountParent" condition="customerDetail.parent">
+                                    <widgets>
+                                        <container style="row items-center q-gutter-x-sm">
+                                            <label type="span" text="Part of" style="m-muted"/>
+                                            <link url="." link-type="anchor" text="${customerDetail.parent.name}"
+                                                    parameter-map="{customerPartyId:customerDetail.parent.partyId}"/>
+                                        </container>
+                                    </widgets>
+                                </section>
+                                <section-iterate name="SalesAccountChildren" list="childRows" entry="child">
+                                    <widgets>
+                                        <container style="row items-center q-gutter-x-sm">
+                                            <label type="span" text="Includes" style="m-muted"/>
+                                            <link url="." link-type="anchor" text="${child.name}" parameter-map="{customerPartyId:child.partyId}"/>
+                                        </container>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="SalesAccountNotes" condition="customerDetail.comments">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Notes"/>
+                            <box-body>
+                                <label type="p" text="${customerDetail.comments}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

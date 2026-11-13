@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales Contacts tab (crosscut §3.2 Sales row; design-sales §4 Customer360 and Contacts; impl-sales P3): the
+    account's current contacts the user may see (get#CustomerSales, Customer360's always-actions), each opening ContactDetail; New
+    contact (create#Contact), Add a person (add#Contact) and End (delete#Contact: the relationship ends, the person is kept) for a
+    holder of SALES_ACCOUNT_EDIT, through Mantle's guarded services. A contact of two accounts shows here under each; nothing of the
+    other account shows. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Contacts" default-menu-index="2">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'Sales'</expression></condition>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <transition-include name="addContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <transition-include name="endContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <actions>
+        <set field="contactRows" from="customerDetail?.contacts || []"/>
+        <set field="canEdit" from="!!customerDetail?.canEdit"/>
+    </actions>
+    <widgets>
+        <section name="SalesContactsTab" condition="customerFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Contacts"/>
+                    <box-toolbar>
+                        <container-dialog id="NewAccountContactDialog" button-text="New contact" icon="sym_o_person_add"
+                                title="New contact of ${customerDetail.customerName}" width="760" condition="canEdit">
+                            <form-single name="NewAccountContact" transition="createContact">
+                                <field name="accountPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
+                                <field name="firstName">
+                                    <default-field title="First name">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="lastName">
+                                    <default-field title="Last name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="relationshipName">
+                                    <default-field title="Title" tooltip="The contact's title at the account">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="emailAddress">
+                                    <default-field title="Email">
+                                        <text-line input-type="email"/>
+                                    </default-field>
+                                </field>
+                                <field name="contactNumber">
+                                    <default-field title="Phone">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Add contact"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="firstName"/>
+                                        <field-ref name="lastName"/>
+                                    </field-row>
+                                    <field-ref name="relationshipName"/>
+                                    <field-row>
+                                        <field-ref name="emailAddress"/>
+                                        <field-ref name="contactNumber"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="AddAccountPersonDialog" button-text="Add a person" icon="sym_o_add_link"
+                                title="Add a person to ${customerDetail.customerName}" condition="canEdit">
+                            <form-single name="AddAccountPerson" transition="addContact">
+                                <field name="accountPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
+                                <field name="partyId">
+                                    <default-field title="Person">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="1"
+                                                    parameter-map="{choice:'people', selected:partyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="relationshipName">
+                                    <default-field title="Title">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Add to the account"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SalesAccountContacts" list="contactRows" skip-form="true" paginate="false">
+                            <field name="name">
+                                <default-field title="Contact">
+                                    <link url="${sharedLinks['Accounts/ContactDetail']}" text="${name}" link-type="anchor"
+                                            parameter-map="{partyId:partyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="titleText">
+                                <default-field title="Title">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="email">
+                                <default-field title="Email">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="phone">
+                                <default-field title="Phone">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="Since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <link url="endContact" link-type="hidden-form-link" text="End" icon="sym_o_link_off" btn-type="danger"
+                                            condition="canEdit" confirmation="End ${name}'s contact with the account? The person is kept."
+                                            parameter-map="{partyRelationshipId:partyRelationshipId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="name"/><field-ref name="titleText"/></column>
+                                <column><field-ref name="email"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-md" text="No contacts yet" condition="!contactRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

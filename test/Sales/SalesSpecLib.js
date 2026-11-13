@@ -6,13 +6,29 @@ const ids = {
     // sales.rep3 works alone
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SALES",
-    // the menu of design §1.2 built so far: every Sales user's, and with Reports a report reader's
-    staffMenu: ["Home"],
-    reportMenu: ["Home", "Reports"],
+    // the menu of design §1.2 built so far: every Sales user's (Accounts since P3), and with Reports a report reader's
+    staffMenu: ["Home", "Accounts"],
+    reportMenu: ["Home", "Accounts", "Reports"],
     reportsMenu: ["SalesSummary", "SalesAnalysis"],
-    keys: ["g s"],
-    // P2: Settings, the administrator's and, for Teams, the manager's (with Reports a manager's menu); its tabs
-    managerMenu: ["Home", "Reports", "Settings"],
+    accountsMenu: ["Accounts", "Contacts"],
+    keys: ["g s", "g a", "g c"],
+    // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
+    // Wingtip Group), Contoso Labs (a prospect, sales.rep2's), Kim Park (an individual customer) and the duplicate pair Adatum
+    // Corporation and Adatum Corp; Dana Morales, a contact of Wingtip Traders and Contoso Labs; Ziziwork Sales' Fabrikam
+    // Industrial (sales.rep3's, with its contact Lee Chen) and Tailspin Outfitters
+    accounts: {
+        wingtip: "BOSS_SAL_ACC_WINGTIP",
+        group: "BOSS_SAL_ACC_WTGROUP",
+        contoso: "BOSS_SAL_ACC_CONTOSO",
+        kim: "BOSS_SAL_ACC_KIMPARK",
+        adatum: "BOSS_SAL_ACC_ADATUM",
+        adatum2: "BOSS_SAL_ACC_ADATUM2",
+        fabrikam: "BOSS_SAL_ACC_FABRIKAM",
+        tailspin: "BOSS_SAL_ACC_TAILSPIN"
+    },
+    contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"},
+    // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
+    managerMenu: ["Home", "Accounts", "Reports", "Settings"],
     settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons"]
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork

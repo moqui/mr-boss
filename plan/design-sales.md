@@ -568,6 +568,29 @@ email or name similarity. Crosscut §3.1 row:
 **Source:** research §4; Party/EditParty/FindDuplicates DupPartyList; Twenty side-by-side duplicate review.
 **Needs:** SAL-ACCOUNTS, SAL-ACCESS.
 
+### As built (impl-sales P3, Nov 13, 2026)
+
+- **An account** is a party with the Account role and a Customer or Prospect role, not an internal organization, owned by
+  the organization it was created for (`Party.ownerPartyId`, which the organization filters read); a party owned by none
+  (`_NA_`) is a shared account every organization sees, as Customer Service's shared customers are. A contact is a person with a
+  current `PrtContact` relationship to an account, owned by the account's organization, with the Contact role (no longer
+  Customer, so a contact is not listed as an account). The account manager is a dated `PrtAccountManager` relationship from the
+  representative (Mantle `data/SalesAccountData.xml`); `mantle.sales.AccountServices.set#AccountManager` changes it. Mantle's
+  `SalesAccess.js` holds the account scope (`accountOf`, `contactAccounts`, `accountOrganization`, `mergesFor`).
+- **NewPerson** calls `create#Account` with a person (`partyTypeEnumId` PtyPerson), not `create#Person`, so one guarded entry
+  creates every account. `create#Account` takes the owner organization, parent, manager, email and phone.
+- **Customer360** in Sales has Overview (managers, contact details, hierarchy, notes), Contacts, Orders (a `SALES_TEAM_VIEW`
+  holder's, until P11's order scope), Invoices (a finance reader's) and Files; Opportunities, RFQs, Quotes, Agreements and
+  Activities join with P4, P8, P7 and P15. AccountList's next activity and active quotes join with P4 and P7.
+- **Contacts** is Sales' own list (`find#AccountContacts`); **ContactDetail** includes the Commons contact record behind
+  Sales' record check, with a Sales box of the person's accounts (Add to an account, End). Identity and channels are edited
+  under the record's own party checks, so a representative who is no contact administrator reads them only (impl-sales P3
+  findings).
+- **MergeAccounts** is a Sales screen over Commons' services (`get#DuplicatePairs` narrowed to the pairs `check#PartyMerge`
+  admits, `get#ComparePair`, `merge#Contacts`, `mark#NotDuplicate`) with a Compare of its own (MergeCompare) carrying the
+  opportunity, order and agreement counts (`get#AccountDocumentCounts`); Commons' Duplicates asks for a contact administrator,
+  so it is not mounted. The guards are design-drawers-commons §6's as built.
+
 ## 5. Quotes and requests for quote
 
 ### Quotes

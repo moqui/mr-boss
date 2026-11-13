@@ -31,6 +31,8 @@ const mountRoots = {
 // (P1). Home is every Sales user's; later phases add theirs (Settings P2, Approvals P9, Changes P14, Agreements P15).
 const areas = {
     reports: "Reports",
+    // P3: MergeAccounts, the manager's and the administrator's (BOSS_SAL_MERGE), who also hold the merge capability below
+    mergeAccounts: "Accounts/MergeAccounts",
     // P2: Settings (BOSS_SAL_SETTINGS), the administrator's and, for Teams, the manager's
     settings: "Settings"
 }
@@ -97,6 +99,12 @@ function scope() {
     // without PRODUCT_COST_VIEW, kept for report read), so a report leaves out what the services withhold rather than show it as
     // zero; borrowed authority, never a Sales permission (impl-sales §2)
     capabilities.reportCosts = grants.read && (access.has("ACCOUNTING_VIEW") || access.has("PRODUCT_COST_VIEW"))
+    // P3: the merge of accounts is a Sales manager's or administrator's (Mantle's merge guards, PartyMerge.js: SALES_ACCOUNT_EDIT with
+    // SALES_TEAM_MANAGE or SALES_CONFIGURE, for an account of their organization), and an invoice of an account a finance reader's
+    // (borrowed authority, ACCOUNTING_VIEW or RECEIVABLE_VIEW)
+    capabilities.mergeAccounts =
+        !!capabilities.mergeAccounts && !!capabilities.accountEdit && !!(capabilities.teamManage || capabilities.configure)
+    capabilities.financeRead = grants.read && (access.has("ACCOUNTING_VIEW") || access.has("RECEIVABLE_VIEW"))
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
 }
 function required(userScope = scope()) {
@@ -141,6 +149,14 @@ const linkPaths = [
     "Reports",
     "Reports/SalesSummary",
     "Reports/SalesAnalysis",
+    // P3: accounts and contacts (design §4)
+    "Accounts",
+    "Accounts/Accounts",
+    "Accounts/Contacts",
+    "Accounts/Customer360",
+    "Accounts/ContactDetail",
+    "Accounts/MergeAccounts",
+    "Accounts/MergeCompare",
     // P2: Settings (design §9), LeadSources built for a second mount (impl-sales §2)
     "Settings",
     "Settings/Readiness",
@@ -183,8 +199,58 @@ const recordKinds = {
             if (!userScope.capabilities.anyRead || !covers(userScope, partyId)) return null
             return {organizationPartyId: partyId, label: organizationName(partyId), detail: "Organization"}
         }
+    },
+    // P3: an account of the scope (SalesAccess.js accountOf: its organization's or shared) and a person seen through one (an
+    // account itself, or a current contact of an account of the scope), Customer360 and ContactDetail
+    account: {
+        name: "Account",
+        icon: "sym_o_storefront",
+        destination: "Accounts/Customer360",
+        read: (userScope, partyId) => {
+            const account = salesAccess.accountOf(userScope.mantle, partyId)
+            if (!account) return null
+            return {organizationPartyId: account.organizationPartyId, label: partyLabel(account.party), detail: "Account"}
+        }
+    },
+    contact: {
+        name: "Contact",
+        icon: "sym_o_contact_page",
+        destination: "Accounts/ContactDetail",
+        read: (userScope, partyId) => {
+            const account = salesAccess.accountOf(userScope.mantle, partyId)
+            if (account)
+                return {organizationPartyId: account.organizationPartyId, label: partyLabel(account.party), detail: "Account"}
+            const accounts = salesAccess.contactAccounts(userScope.mantle, partyId)
+            if (!accounts.length) return null
+            return {
+                organizationPartyId: accounts[0].organizationPartyId,
+                label: partyLabel(one("mantle.party.Party", {partyId})),
+                detail: "Contact of " + accounts.map(found => partyLabel(found.party)).join(", "),
+                accountPartyId: accounts[0].party.partyId
+            }
+        }
     }
 }
+// A party's name for a label: the organization's name or the person's.
+function partyLabel(party) {
+    if (!party) return ""
+    const detail = one("mantle.party.PartyDetail", {partyId: party.partyId})
+    return (
+        detail?.organizationName ||
+        [detail?.firstName, detail?.lastName].filter(Boolean).join(" ") ||
+        party.pseudoId ||
+        party.partyId
+    )
+}
+const recordUrl = (kind, recordId, linkBase = mountRoots.Sales) =>
+    "/qapps" +
+    linkBase.slice(1) +
+    "/" +
+    recordKinds[kind].destination +
+    "?" +
+    (kind === "account" ? "customerPartyId" : "partyId") +
+    "=" +
+    encodeURIComponent(recordId)
 function recordOf(userScope, kind, recordId) {
     const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
     const unavailable = () => denied("RECORD_UNAVAILABLE", (definition?.name || "Record") + " " + recordId + " is not available")
@@ -203,6 +269,7 @@ function recordOf(userScope, kind, recordId) {
         recordId,
         kindName: definition.name,
         organizationPartyId: found.organizationPartyId,
+        accountPartyId: found.accountPartyId || null,
         label: found.label,
         detail: found.detail
     }
@@ -234,6 +301,31 @@ const choiceSources = {
             selected,
             partyId => userScope.capabilities.anyRead && covers(userScope, partyId),
             organizationName
+        ),
+    // P3: the accounts of the scope (Mantle's find#Accounts, searched in the query)
+    accounts: (userScope, term, selected) =>
+        withSelected(
+            accountOptions(term),
+            selected,
+            partyId => !!salesAccess.accountOf(userScope.mantle, partyId),
+            partyId => partyLabel(one("mantle.party.Party", {partyId}))
+        ),
+    // P3: the people who may manage an account: those who work for an organization of the scope now (an employee, agent or member)
+    managers: (userScope, term, selected) =>
+        withSelected(
+            peopleOptions(memberIds(organizationIds(userScope)), term),
+            selected,
+            partyId => memberIds(organizationIds(userScope)).includes(partyId),
+            partyId => partyLabel(one("mantle.party.Party", {partyId}))
+        ),
+    // P3: a person to add to an account as its contact: a person of the scope or shared, not an internal party, never someone
+    // else's personal contact (add#Contact checks again)
+    people: (userScope, term, selected) =>
+        withSelected(
+            peopleOptions(null, term, userScope),
+            selected,
+            partyId => !!salesAccess.visibleParty(userScope.mantle, partyId),
+            partyId => partyLabel(one("mantle.party.Party", {partyId}))
         ),
     // ===== P2: the pipeline setup's choices (impl-sales P2) =====
     // the current sales teams of an organization of the scope (a pipeline's team)
@@ -304,6 +396,63 @@ const choiceSources = {
         })
     }
 }
+function accountOptions(term) {
+    const found = lib.probe("mantle.sales.SalesWorkspaceServices.find#Accounts", {text: term || null, pageSize: choiceLimit})
+    return Array.from(found.accountList || []).map(row => ({value: row.partyId, label: row.name + " · " + row.ownerText}))
+}
+function memberIds(organizationPartyIds) {
+    if (!organizationPartyIds.length) return []
+    return Array.from(
+        find("mantle.party.PartyRelationship")
+            .condition("toPartyId", "in", organizationPartyIds)
+            .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent", "PrtMember"])
+            .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
+            .selectField("fromPartyId")
+            .distinct(true)
+            .limit(2000)
+            .list()
+    ).map(row => row.fromPartyId)
+}
+// People by name, among the ids given, else among those the scope may see (owned by an organization of it or shared).
+function peopleOptions(partyIds, term, userScope) {
+    if (partyIds && !partyIds.length) return []
+    const factory = ec.entity.conditionFactory
+    let query = find("mantle.party.PartyDetail")
+        .condition("partyTypeEnumId", "PtyPerson")
+        .condition(
+            factory.makeCondition(
+                [factory.makeCondition("disabled", "is-null", null), factory.makeCondition("disabled", "equals", "N")],
+                "or"
+            )
+        )
+        .condition(
+            factory.makeCondition(
+                [
+                    factory.makeCondition("privateOwnerUserId", "is-null", null),
+                    factory.makeCondition("privateOwnerUserId", "equals", ec.user.userId || "_NA_")
+                ],
+                "or"
+            )
+        )
+        .orderBy(["^firstName", "^lastName"])
+        .limit(choiceLimit)
+    if (partyIds) query = query.condition("partyId", "in", partyIds)
+    else if (userScope.mantle.organizationPartyIds != null)
+        query = query.condition("ownerPartyId", "in", ["_NA_"].concat(userScope.mantle.organizationPartyIds))
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["partyId", "pseudoId", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
+                "or"
+            )
+        )
+    return Array.from(query.list()).map(row => ({
+        value: row.partyId,
+        label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.pseudoId || row.partyId
+    }))
+}
 // P2: whether People's directory scope reaches an organization for the caller (People.js scopeOf: a staff reader's employers)
 function peopleCovers(organizationPartyId) {
     const peopleScope = ec.resource.script("component://mr-mantle/service/mantle/humanres/People.js").scopeOf()
@@ -323,7 +472,24 @@ function choices(p) {
 // ===== palette =====
 // The palette's Sales records, each opening its Sales screen, with recordEntity and recordId for Assist's search. None yet:
 // accounts join with their screens (P3), opportunities and leads (P4), quotes and orders (P7, P11), agreements (P15).
-const searchFinds = []
+const searchFinds = [
+    // P3: accounts, through Mantle's scoped find (a Sales reader)
+    {
+        kind: "account",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.anyRead) return []
+            const found = lib.probe("mantle.sales.SalesWorkspaceServices.find#Accounts", {text, pageSize: limit})
+            return Array.from(found.accountList || []).map(row => ({
+                title: row.name,
+                subtitle: ["Account " + row.pseudoId, row.roleText, row.ownerText].filter(Boolean).join(" · "),
+                icon: recordKinds.account.icon,
+                recordEntity: "mantle.party.Party",
+                recordId: row.partyId,
+                url: recordUrl("account", row.partyId)
+            }))
+        }
+    }
+]
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}

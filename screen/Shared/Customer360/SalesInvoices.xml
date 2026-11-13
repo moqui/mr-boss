@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales Invoices tab (crosscut §3.2 Sales row; design-sales §4 Customer360 "permitted Invoices/payments"; impl-sales
+    P3): the account's invoices from the organizations of the user's sales scope, newest first, with their totals and what is
+    unpaid (get#CustomerSales, Customer360's always-actions), for a finance reader only (ACCOUNTING_VIEW or RECEIVABLE_VIEW, borrowed
+    authority); read only, the invoice's number shown without a link until Sales' InvoiceDetail (P14). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Invoices" default-menu-index="4">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'Sales' &amp;&amp; !!sales?.capabilities?.financeRead</expression></condition>
+    <actions>
+        <set field="invoiceRows" from="customerDetail?.invoices || []"/>
+    </actions>
+    <widgets>
+        <section name="SalesInvoicesTab" condition="customerFound &amp;&amp; customerDetail.financeRead">
+            <widgets>
+                <form-list name="SalesAccountInvoices" list="invoiceRows" skip-form="true" paginate="false">
+                    <field name="invoiceId">
+                        <default-field title="Invoice">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dateText">
+                        <default-field title="Date">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dueText">
+                        <default-field title="Due">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${paid ? 'positive' : 'primary'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="totalText" align="right">
+                        <default-field title="Total">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="unpaidText" align="right">
+                        <default-field title="Unpaid">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="invoiceId"/><field-ref name="dateText"/></column>
+                        <column><field-ref name="unpaidText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No invoices from your organizations" condition="!invoiceRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
