@@ -26,7 +26,10 @@ const ids = {
         fabrikam: "BOSS_SAL_ACC_FABRIKAM",
         tailspin: "BOSS_SAL_ACC_TAILSPIN"
     },
-    contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"}
+    contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"},
+    // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
+    managerMenu: ["Home", "Accounts", "Reports", "Settings"],
+    settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons"]
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork
 // Sales only) and sales.manager2 and sales.admin (both), none in ADMIN; a Projects client contact, a PASS public account and another

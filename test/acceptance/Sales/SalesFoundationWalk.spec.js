@@ -1,6 +1,6 @@
 // Sales P1's "usable when" (impl-sales P1), as an acceptance walk with artifact authorization on: the menu renders for each group
-// with only its areas (Home for every Sales user, Reports for a holder of SALES_REPORT_VIEW), each entry opening and Reports refused
-// the others; sales.reader opens SalesSummary for Ziziwork Retail and is refused Ziziwork Sales'; an access administrator assigns the
+// with only its areas (Home for every Sales user, Reports for a holder of SALES_REPORT_VIEW, and since P2 Settings for the
+// administrator and the managers), each entry opening and the others refused; sales.reader opens SalesSummary for Ziziwork Retail and is refused Ziziwork Sales'; an access administrator assigns the
 // Sales representative bundle with the launcher's from Admin to a custom group, whose member then opens Sales with a
 // representative's capabilities and menu; a Projects client and a PASS public account are refused the root and every
 // ironstone.sales service, which a representative calls with the same parameters. The rules themselves are SalesAccess's and
@@ -20,11 +20,12 @@ const menus = {
     [users.approver]: ids.staffMenu,
     [users.change]: ids.staffMenu,
     [users.agreement]: ids.staffMenu,
-    [users.manager]: ids.reportMenu,
-    [users.bothManager]: ids.reportMenu,
+    // P2: Settings for the administrator and, for Teams, the managers
+    [users.manager]: ids.managerMenu,
+    [users.bothManager]: ids.managerMenu,
     [users.reader]: ids.reportMenu,
-    [users.admin]: ids.reportMenu,
-    [users.system]: ids.reportMenu
+    [users.admin]: ids.managerMenu,
+    [users.system]: ids.managerMenu
 }
 // every ironstone.sales service a screen calls, with parameters it accepts from a Sales user of Retail
 const salesServices = [
@@ -88,7 +89,7 @@ feature("the menu renders for each group with only its areas; each entry opens a
             const found = shell(user, user === users.system)
             if (found.status != 200 || JSON.stringify(found.names) !== JSON.stringify(expected))
                 problems.push(`${user}'s menu: ${found.status} ${found.names}`)
-            for (const entry of ids.reportMenu) {
+            for (const entry of ids.managerMenu) {
                 const rendered = asUser(user, () => page(entry, {}, "html"))
                 if (expected.includes(entry) !== opened(rendered))
                     problems.push(`${user} ${opened(rendered) ? "opens" : "is refused"} ${entry}: ${rendered.errors.join(" | ")}`)

@@ -32,7 +32,9 @@ const mountRoots = {
 const areas = {
     reports: "Reports",
     // P3: MergeAccounts, the manager's and the administrator's (BOSS_SAL_MERGE), who also hold the merge capability below
-    mergeAccounts: "Accounts/MergeAccounts"
+    mergeAccounts: "Accounts/MergeAccounts",
+    // P2: Settings (BOSS_SAL_SETTINGS), the administrator's and, for Teams, the manager's
+    settings: "Settings"
 }
 
 // ===== scope =====
@@ -82,13 +84,17 @@ function areaGrant(grants, area) {
 // scope is read. An area needs its grant and, for Reports, the permission its screens' services check (SALES_REPORT_VIEW), so a
 // custom group given Sales in Admin, which is no member of BOSS_SALES and not reached by the area's deny, is shown no area its
 // services refuse (impl-maintenance F346's lesson).
-const areaReads = {reports: "reportRead"}
+// P2: Settings needs SALES_CONFIGURE or, for Teams alone, SALES_TEAM_MANAGE (the Mantle setup services' checks)
+const areaReads = {reports: "reportRead", settings: caps => !!(caps.configure || caps.teamManage)}
 function scope() {
     const grants = rootGrants()
     const mantle = grants.read ? salesAccess.scope() : null
     const capabilities = Object.assign({read: grants.read}, mantle?.capabilities || {})
     for (const [name, area] of Object.entries(areas))
-        capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
+        capabilities[name] =
+            areaGrant(grants, area) &&
+            (!areaReads[name] ||
+                (typeof areaReads[name] === "function" ? areaReads[name](capabilities) : !!capabilities[areaReads[name]]))
     // whether the sales reports answer the user with costs (SalesAnalysis.js organizations: withheld from a Sales report reader
     // without PRODUCT_COST_VIEW, kept for report read), so a report leaves out what the services withhold rather than show it as
     // zero; borrowed authority, never a Sales permission (impl-sales §2)
@@ -150,7 +156,14 @@ const linkPaths = [
     "Accounts/Customer360",
     "Accounts/ContactDetail",
     "Accounts/MergeAccounts",
-    "Accounts/MergeCompare"
+    "Accounts/MergeCompare",
+    // P2: Settings (design §9), LeadSources built for a second mount (impl-sales §2)
+    "Settings",
+    "Settings/Readiness",
+    "Settings/Stages",
+    "Settings/Teams",
+    "Settings/LeadSources",
+    "Settings/TypesAndReasons"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -313,7 +326,75 @@ const choiceSources = {
             selected,
             partyId => !!salesAccess.visibleParty(userScope.mantle, partyId),
             partyId => partyLabel(one("mantle.party.Party", {partyId}))
-        )
+        ),
+    // ===== P2: the pipeline setup's choices (impl-sales P2) =====
+    // the current sales teams of an organization of the scope (a pipeline's team)
+    teams: (userScope, term, selected, p) => {
+        const organizationPartyId = p.organizationPartyId || null
+        if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
+        const lower = term.toLowerCase()
+        return Array.from(salesSettings().teamsOf(organizationPartyId))
+            .filter(
+                team => !term || team.teamName.toLowerCase().includes(lower) || team.teamPartyId.toLowerCase().includes(lower)
+            )
+            .slice(0, choiceLimit)
+            .map(team => ({value: team.teamPartyId, label: team.teamName}))
+    },
+    // TeamMembers' lookup: the people who work for the team's organization (an agent or employee in effect, the rule
+    // store#SalesTeamMember checks), by name; for a reader of People's directory (PEOPLE_DIRECTORY_VIEW, F53) each employee's work
+    // identity from mantle.humanres.PeopleServices.find#Employees labels them with their job title. A caller without it picks
+    // by party; no People record is read for them.
+    teamMembers: (userScope, term, selected, p) => {
+        const organizationPartyId = p.organizationPartyId || null
+        if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
+        if (!userScope.capabilities.configure && !userScope.capabilities.teamManage) return []
+        const workerIds = Array.from(
+            find("mantle.party.PartyRelationship")
+                .condition("toPartyId", organizationPartyId)
+                .condition("relationshipTypeEnumId", "in", ["PrtAgent", "PrtEmployee"])
+                .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                .selectField("fromPartyId")
+                .list()
+        ).map(row => row.fromPartyId)
+        if (!workerIds.length) return []
+        let query = find("mantle.party.PartyDetail")
+            .condition("partyId", "in", Array.from(new Set(workerIds)))
+            .condition("partyTypeEnumId", "PtyPerson")
+            .orderBy(["firstName", "lastName"])
+            .limit(choiceLimit)
+        if (term) {
+            const factory = ec.entity.conditionFactory
+            query = query.condition(
+                factory.makeCondition(
+                    ["partyId", "firstName", "lastName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        }
+        const people = Array.from(query.list())
+        const titles = {}
+        // People's own scope first (impl-sales P2 review): an organization People does not cover for the caller is not asked, as
+        // find#Employees would refuse it and the refused call is logged as an error
+        if (access.has("PEOPLE_DIRECTORY_VIEW") && peopleCovers(organizationPartyId)) {
+            try {
+                const found = lib.probe("mantle.humanres.PeopleServices.find#Employees", {
+                    organizationPartyId,
+                    term: term || null,
+                    pageSize: choiceLimit * 2
+                })
+                for (const row of Array.from(found.employees || [])) if (row.jobTitle) titles[row.partyId] = row.jobTitle
+            } catch (error) {
+                // People's directory is optional here: without it the people are picked by party
+                ec.logger.info("Sales team lookup without People's directory: " + error.message)
+            }
+        }
+        return people.map(row => {
+            const name = [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId
+            return {value: row.partyId, label: titles[row.partyId] ? name + ", " + titles[row.partyId] : name}
+        })
+    }
 }
 function accountOptions(term) {
     const found = lib.probe("mantle.sales.SalesWorkspaceServices.find#Accounts", {text: term || null, pageSize: choiceLimit})
@@ -372,6 +453,15 @@ function peopleOptions(partyIds, term, userScope) {
         label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.pseudoId || row.partyId
     }))
 }
+// P2: whether People's directory scope reaches an organization for the caller (People.js scopeOf: a staff reader's employers)
+function peopleCovers(organizationPartyId) {
+    const peopleScope = ec.resource.script("component://mr-mantle/service/mantle/humanres/People.js").scopeOf()
+    return !!peopleScope.capabilities?.staff && Array.from(peopleScope.organizationPartyIds || []).includes(organizationPartyId)
+}
+// P2: Mantle's setup module (the teams of an organization), read once per call
+let settingsModule = null
+const salesSettings = () =>
+    settingsModule || (settingsModule = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesSettings.js"))
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Sales choice " + p.choice)

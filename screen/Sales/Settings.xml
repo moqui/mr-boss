@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Settings area of IronStone Sales (design-sales §9, §1.2; impl-sales P2), linked from Admin's settings index (sales.settings):
+    Readiness (the landing, SalesReadiness: the provider sales.readiness that Admin's Health shows too), Stages (pipelines and their
+    stages), Teams (sales teams and their dated members), LeadSources (the shared sources and their organization offers; built for a
+    second mount, impl-sales §2) and TypesAndReasons (the opportunity types and the lost reasons). The Sales administrator's
+    (SALES_CONFIGURE); a sales manager (SALES_TEAM_MANAGE) opens Teams alone and lands there. BOSS_SAL_SETTINGS denies the root user
+    group; each tab is gated by permission too, as the menu is, so a custom group given Sales in Admin opens only what its permissions
+    give (impl-maintenance F346's lesson). Mantle's OpportunityServices check the permission and the organization again. Targets,
+    SalesDefaults and ApprovalPolicies join with their phases (P18, P9). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="8" menu-image="sym_o_settings" menu-image-type="icon"
+        default-menu-include="ec.user.hasPermission('SALES_CONFIGURE') || ec.user.hasPermission('SALES_TEAM_MANAGE')">
+    <always-actions>
+        <script>if(!(sales.capabilities.configure || sales.capabilities.teamManage))throw new Error('PERMISSION_DENIED: Sales settings are the Sales administrator\'s')</script>
+    </always-actions>
+    <subscreens default-item="Readiness" always-use-full-path="true">
+        <!-- a manager keeps teams alone, so lands there -->
+        <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('SALES_CONFIGURE')" item="Teams"/>
+    </subscreens>
+    <widgets>
+        <subscreens-menu id="SalesSettingsTabs" type="tab"/>
+        <subscreens-active/>
+    </widgets>
+</screen>

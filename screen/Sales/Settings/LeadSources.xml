@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Settings › LeadSources (design-sales §9 LeadSources: Sources; style-guide §3.9 Settings; impl-sales P2): the lead sources,
+    moqui.basic.DataSource rows of a LEAD_SOURCE type shared by the instance, each offered to an organization by a dated binding
+    (mantle.sales.OpportunityServices.store#LeadSource): a new source, a source offered to the organization or no longer, and its
+    name or type, changed only by an administrator of every organization it is offered to (another organization is named only
+    when it is in the user's scope). Ending an offer leaves the leads that name the source. The UTM map is P5's.
+    Built for a second mount (impl-sales §2; impl-marketing P13 mounts it under Marketing/Settings/LeadSources): its context is
+    the mounting root's `sales` (get#SharedContext by that root's appRoot), it links only to itself and names no app root.
+    SALES_CONFIGURE, which Mantle checks with the organization. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sources" default-menu-index="4"
+        default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition name="storeSource">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#LeadSource"
+                    in-map="{dataSourceId:(dataSourceId || null), description:(description ?? null), dataSourceTypeEnumId:(dataSourceTypeEnumId || null),
+                        organizationPartyId:(organizationPartyId || null), bind:(offer == 'Y'), unbind:(offer == 'N'),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${offer == 'Y' ? 'Source offered' : offer == 'N' ? 'Source no longer offered' : 'Source saved'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <always-actions>
+        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales lead sources are the Sales administrator\'s')</script>
+    </always-actions>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="organizationPartyId" from="organizationPartyId || sales.activeOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <if condition="can.configure &amp;&amp; organizationPartyId">
+            <service-call name="mantle.sales.OpportunityServices.get#SalesSetup" out-map="setup" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="setupFound" from="!!setup?.organizationPartyId"/>
+        <set field="sourceList" from="setup?.sources || []"/>
+        <set field="sourceTypes" from="setup?.sourceTypes || []"/>
+        <set field="offeredCount" from="sourceList.filter(row =&gt; row.offered).length"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId}"/>
+        <set field="newSource" from="{organizationPartyId: organizationPartyId, dataSourceTypeEnumId: 'LEAD_SOURCE'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Lead sources" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="Where leads come from. A source is shared; each organization chooses the ones it offers."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="NewSourceDialog" button-text="New source" icon="sym_o_add" type="primary" width="520"
+                        title="New lead source" condition="setupFound">
+                    <form-single name="NewSource" transition="storeSource" map="newSource">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="dataSourceTypeEnumId">
+                            <default-field title="Kind"><drop-down><list-options list="sourceTypes" key="${enumId}" text="${description}"/></drop-down></default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create and offer"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="SourcesFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="!setupFound"
+                text="This organization is not available to you, or its sources cannot be read just now."/>
+        <label type="p" style="text-caption m-muted" condition="setupFound" text="${offeredCount} offered to ${setup?.organizationName}"/>
+        <container-box condition="setupFound">
+            <box-body-nopad>
+                <form-list name="Sources" list="sourceList" skip-form="true" paginate="false">
+                    <field name="description"><default-field title="Source"><display/></default-field></field>
+                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="offeredText"><default-field title="Here"><display/></default-field></field>
+                    <field name="elsewhereText"><default-field title="Also offered to"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="storeSource" text="Offer" icon="sym_o_add_circle" link-type="hidden-form" btn-type="default"
+                                    condition="!offered &amp;&amp; offeredText == 'Not offered'"
+                                    parameter-map="{organizationPartyId:organizationPartyId, dataSourceId:dataSourceId, offer:'Y'}"/>
+                            <link url="storeSource" text="Stop offering" icon="sym_o_remove_circle" link-type="hidden-form" btn-type="default"
+                                    condition="offeredText != 'Not offered'" confirmation="Stop offering ${description} here? Leads that name it keep it."
+                                    parameter-map="{organizationPartyId:organizationPartyId, dataSourceId:dataSourceId, offer:'N'}"/>
+                            <container-dialog id="EditSource_${dataSourceId}" button-text="Rename" icon="sym_o_edit" type="default" width="520"
+                                    title="Rename ${description}" condition="canRename">
+                                <form-single name="EditSource" transition="storeSource"
+                                        map="{organizationPartyId:organizationPartyId, dataSourceId:dataSourceId, expectedRevision:revision,
+                                            description:description, dataSourceTypeEnumId:dataSourceTypeEnumId}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="dataSourceId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="dataSourceTypeEnumId">
+                                        <default-field title="Kind"><drop-down><list-options list="sourceTypes" key="${enumId}" text="${description}"/></drop-down></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="typeText"/></column>
+                        <column><field-ref name="offeredText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No lead source yet: create one." type="p" style="m-muted q-pa-sm" condition="!sourceList.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

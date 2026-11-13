@@ -130,9 +130,14 @@ feature("the Sales menu and keys follow the groups; the launcher shows Sales to 
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.staffMenu)) problems.push(`${user}'s menu: ${names}`)
         }
-        for (const user of [users.manager, users.reader, users.admin, users.system]) {
+        for (const user of [users.reader]) {
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.reportMenu)) problems.push(`${user}'s menu: ${names}`)
+        }
+        // P2: Settings for the administrator and, for Teams, the manager
+        for (const user of [users.manager, users.admin, users.system]) {
+            const names = shell(user, true).names
+            if (JSON.stringify(names) !== JSON.stringify(ids.managerMenu)) problems.push(`${user}'s menu: ${names}`)
         }
         const reports = shell(users.reader, true, "Reports/SalesSummary", "Reports")
         if (JSON.stringify(reports.names) !== JSON.stringify(ids.reportsMenu))
@@ -173,6 +178,8 @@ const capabilityNames = [
     "reportRead",
     // the Reports area, a report reader's
     "reports",
+    // P2: the Settings area, the administrator's and (Teams) the manager's
+    "settings",
     // the sales reports answer costs (report read or PRODUCT_COST_VIEW, borrowed; no Sales group holds either)
     "reportCosts",
     // P3: the merge of accounts (MergeAccounts' grant with SALES_ACCOUNT_EDIT and SALES_TEAM_MANAGE or SALES_CONFIGURE), and an
@@ -191,7 +198,8 @@ const capabilityUsers = [
             "teamRead",
             "reportRead",
             "reports",
-            "mergeAccounts"
+            "mergeAccounts",
+            "settings"
         ])
     },
     {user: users.approver, granted: ["view", "orderApprove", "anyRead"]},
