@@ -28,6 +28,12 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Skills &amp; training" default-menu-index="12" menu-image="sym_o_school" menu-image-type="icon">
     <subscreens default-item="SkillsMatrix">
+        <!-- the matrix is development's, HR's and the managers' (BOSS_PPL_SKILLS) and, through the root's ALWAYS, ADMIN's and the
+            People administrator's (which the default's check, made before the screens are entered, does not inherit): the area opens
+            on Qualifications for every other People user and a self-service employee, so its menu entry opens for each user it is
+            shown to -->
+        <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.isInGroup('ADMIN') &amp;&amp; !ec.user.isInGroup('BOSS_PEOPLE_ADMIN') &amp;&amp; !ec.artifactExecution.isPermitted('component://mr-boss/screen/People/Development/SkillsMatrix.xml', 'AT_XML_SCREEN', 'view')"
+                item="Qualifications"/>
         <!-- SkillsMatrix (menu index 1), Qualifications (2) and Training (3) are files under Development/, with SkillsMatrixTui,
             TrainingDetail and TrainingCertificate out of the menu -->
         <!-- P19 review: AssessmentForms (4), the training assessment forms, is a file under Development/ -->

@@ -1,6 +1,6 @@
 // People P12's "usable when" (impl-people P12; design-people §7 LeaveRequests and LeaveRequestDetail, §13 TeamCalendar, §14.3
 // "Partial-day leave and simultaneous requests"), as an acceptance walk with artifact authorization on: Tomas (people.employee),
-// under Retail's annual leave with five days granted, requests the morning and then the afternoon of one day from his phone
+// under Retail's annual leave with five days more, requests the morning and then the afternoon of one day from his phone
 // (Leave requests at phone width: the preview, then Request leave), two requests of one day; Hannah (people.manager) approves both
 // from Approvals (the notification tray's approve service, as the Approvals list calls it); the team calendar shows Tomas out that
 // day, morning and afternoon, without the reason or the leave type, and Projects' capacity takes the day off his hours; Tomas
@@ -26,6 +26,9 @@ function request(user, path, parameters, method) {
     })
 }
 const read = (user, service, parameters) => asUser(user, () => system(() => invoke(service, parameters)))
+// Tomas's annual leave balance, as he reads it on the day of his leave (an approved request is charged on its day)
+const annualBalance = () =>
+    (read(users.employee, L + "get#MyBalances", {leaveTypeEnumId: "PltAnnual", asOfDate: state.day}).balances || [])[0] || {}
 const dayText = millis => ec.l10n.format(new Date(millis), "yyyy-MM-dd")
 const state = {}
 
@@ -40,25 +43,35 @@ spec({
             .toISOString()
             .substring(0, 10)
         state.year = today.substring(0, 4)
-        // Tomas under Retail's annual leave with five days for this year (HR's, through the services the screens call)
+        // Tomas under an annual leave policy of Retail on the day, with five days more for this year (HR's, through the services
+        // the screens call): Retail's annual leave, or in a whole run the policy PeopleLeavePoliciesUsable put him under; five days
+        // added as an adjustment, since a whole run may have granted him this year already
         state.setup = asUser(users.hr, () =>
             system(() => {
-                invoke(L + "assign#Policy", {
-                    leavePolicyId: ids.leavePolicyId,
-                    partyRelationshipIds: [ids.employmentId],
-                    fromDate: state.year + "-01-02",
-                    reason: "Acceptance"
-                })
+                let policyId = lib.annualPolicyOn(ids.employmentId, state.day)
+                if (!policyId) {
+                    invoke(L + "assign#Policy", {
+                        leavePolicyId: ids.leavePolicyId,
+                        partyRelationshipIds: [ids.employmentId],
+                        fromDate: state.year + "-01-02",
+                        reason: "Acceptance"
+                    })
+                    policyId = ids.leavePolicyId
+                }
                 return invoke(L + "allocate#Leave", {
-                    leavePolicyId: ids.leavePolicyId,
+                    leavePolicyId: policyId,
                     partyRelationshipIds: [ids.employmentId],
                     amount: "5",
+                    adjustment: true,
+                    reason: "Acceptance: five days for the walk",
                     periodFromDate: state.year + "-01-01",
                     periodThruDate: state.year + "-12-31",
                     operationKey: "PPL_ACCEPT_LEAVE"
                 }).allocatedCount
             })
         )
+        // his balance before the walk's requests (five days in a run of this spec alone)
+        state.before = annualBalance()
     },
     cleanupSpec() {
         ec.message.clearErrors()
@@ -94,7 +107,7 @@ feature("Tomas requests the morning and the afternoon of one day from his phone:
         const mine = read(users.employee, L + "find#Requests", {mine: true}).requests || []
         state.morning = mine.find(row => row.fromDay === state.day && row.partText === "Morning")?.leaveRequestId
         state.afternoon = mine.find(row => row.fromDay === state.day && row.partText === "Afternoon")?.leaveRequestId
-        out.balance = (read(users.employee, L + "get#MyBalances", {}).balances || [])[0] || {}
+        out.balance = annualBalance()
         return out
     },
     then({preview, morning, afternoon, balance}) {
@@ -102,7 +115,10 @@ feature("Tomas requests the morning and the afternoon of one day from his phone:
         preview.status == 200 && preview.errors == "" && preview.output.includes("Left after")
         morning.errors == "" && afternoon.errors == ""
         state.morning && state.afternoon && state.morning != state.afternoon
-        balance.balance == 5 && balance.pending == 1 && balance.available == 4
+        // two halves reserved: one day pending, one day less available
+        balance.balance == state.before.balance &&
+            balance.pending == state.before.pending + 1 &&
+            balance.available == state.before.available - 1
     }
 })
 
@@ -173,7 +189,7 @@ feature("Tomas cancels the afternoon; once Hannah approves, his balance gets the
             {leaveRequestId: state.afternoon, decision: "approve"},
             "post"
         ).errors
-        out.balance = (read(users.employee, L + "get#MyBalances", {}).balances || [])[0] || {}
+        out.balance = annualBalance()
         out.reversals = system(() =>
             Array.from(
                 ec.entity
@@ -186,7 +202,8 @@ feature("Tomas cancels the afternoon; once Hannah approves, his balance gets the
     },
     then({asked, approved, again, balance, reversals}) {
         asked == "" && approved == "" && again == ""
-        balance.balance == 4.5 && balance.pending == 0
+        // the morning taken, the afternoon given back
+        balance.balance == state.before.balance - 0.5 && balance.pending == state.before.pending
         reversals == 1
     }
 })

@@ -64,6 +64,9 @@ spec({
         login("john.doe")
         // the tablet first, by the identity and access services (as PeopleKiosk's setup)
         tablet = lib.kioskTablet("People sweep clock")
+        // redeeming the code at /Device signs the browser's person out (a registered device is no one's session), so the sweep
+        // signs in again
+        login("john.doe")
         ec.artifactExecution.enableAuthz()
         screens = lib.sweepScreens()
     },

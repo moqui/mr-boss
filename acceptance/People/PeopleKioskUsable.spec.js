@@ -245,6 +245,8 @@ feature("revoking the tablet in Admin refuses its next request", {
         return {next: request(kiosk, {}, state.cookie)}
     },
     then({next}) {
-        next.status == 403 && !next.output.includes("IdentifyAndClock")
+        // the screen test answers a refused device's request with its error and no status; over HTTP it is a 403
+        // (the framework's DeviceCredential and SecurityDevice specs)
+        next.errors.includes("registration was revoked") && !next.output.includes("IdentifyAndClock")
     }
 })

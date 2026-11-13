@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The terminal twin of the interviews calendar (InterviewsCalendar.xml's tui text is a dynamic container of this screen): the
     next two weeks from date (today by default) of mantle.humanres.RecruitingServices.find#Interviews, each interview's time and
-    "{applicant} · {opening}", opening its application. Read only. -->
+    "{applicant} · {opening}", opening its application; Earlier, Today and Later open the calendar two weeks before, today and two
+    weeks after. Read only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Interviews" default-menu-include="false">
     <parameter name="date"/>
@@ -22,6 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date)
                 : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
         <set field="lastDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') + 14 * 86400000).toISOString().substring(0, 10)"/>
+        <!-- the two weeks before and after, which the calendar opens on (its date): the terminal's way through the calendar -->
+        <set field="earlierDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') - 14 * 86400000).toISOString().substring(0, 10)"/>
+        <set field="laterDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') + 14 * 86400000).toISOString().substring(0, 10)"/>
         <service-call name="mantle.humanres.RecruitingServices.find#Interviews" in-map="{start:firstDay, end:lastDay}" out-map="agenda"
                 transaction="force-new" ignore-error="true"/>
         <script>ec.message.clearErrors()</script>
@@ -30,7 +34,12 @@ along with this software (see the LICENSE.md file). If not, see
                     employmentApplicationId: event.employmentApplicationId}))"/>
     </actions>
     <widgets>
-        <label text="Interviews: ${firstDay} to ${lastDay}" type="h6"/>
+        <container style="row items-center q-gutter-sm">
+            <label text="Interviews: ${firstDay} to ${lastDay}" type="h6" style="q-my-none"/>
+            <link url="../InterviewsCalendar" link-type="anchor" text="Earlier" parameter-map="{date:earlierDay}"/>
+            <link url="../InterviewsCalendar" link-type="anchor" text="Today"/>
+            <link url="../InterviewsCalendar" link-type="anchor" text="Later" parameter-map="{date:laterDay}"/>
+        </container>
         <form-list name="InterviewAgenda" list="agendaRows" skip-form="true" paginate="false">
             <field name="when"><default-field title="When"><display/></default-field></field>
             <field name="title">

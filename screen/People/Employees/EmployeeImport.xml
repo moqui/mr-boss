@@ -16,9 +16,12 @@ along with this software (see the LICENSE.md file). If not, see
     of Nov 11): the shared import wizard (Shared/DataImport.xml) mounted for the `employees` target, as Products' ProductImport mounts
     it, so this screen carries HR's grant (BOSS_PPL_HR_AREA) and the shared wizard none of its own. The mount (DataImport.js,
     appRoot People) asks PEOPLE_HR_VIEW to read and PEOPLE_IMPORT with PEOPLE_HR_EDIT to run; each row is preview#Hire's and
-    hire#Employee's, with their own permission and employer checks. -->
+    hire#Employee's, with their own permission and employer checks. The menu shows it to an HR reader alone (and ADMIN, who holds every
+    permission): the People administrator opens the area through the root's ALWAYS but reads no HR record, so the mount would refuse
+    them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Employee import" default-menu-index="6">
+        default-menu-title="Employee import" default-menu-index="6"
+        default-menu-include="ec.user.isInGroup('ADMIN') || ec.user.hasPermission('PEOPLE_HR_VIEW')">
     <subscreens default-item="Index">
         <subscreens-item name="Index" location="component://mr-boss/screen/Shared/DataImport.xml" menu-include="false"/>
     </subscreens>

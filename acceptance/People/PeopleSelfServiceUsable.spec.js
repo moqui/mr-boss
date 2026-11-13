@@ -72,7 +72,9 @@ feature(
                 problems.push("SelfService does not show the contact added")
             // no one else finds the contact: HR's palette and Commons' contacts, and the universal search
             const palette = as(users.hr, "ironstone.commons.PaletteServices.search#People", {text: "Usableton"})
-            if (JSON.stringify(palette).includes("Usableton")) problems.push("HR's palette finds the emergency contact")
+            // its rows (the answer's "more" link carries the text searched for)
+            if (JSON.stringify(palette.rows || []).includes("Usableton"))
+                problems.push("HR's palette finds the emergency contact")
             const contacts = request(users.hr, "apps/Commons/Contacts/List", {text: "Usableton", find: "Y"})
             if (contacts.output.includes("Elsa Usableton")) problems.push("HR's Commons contacts list the emergency contact")
             const found = as(users.hr, "mantle.party.PartyServices.find#Party", {lastName: "Usableton"})
@@ -124,7 +126,9 @@ feature("people.manager sees their reports and the decision waiting on them in M
         if (!Array.from(today.items || []).some(item => String(item.title).includes("Ines Varga")))
             problems.push("Hannah's Today does not list the transfer")
         const employeeToday = as(users.employee, "ironstone.people.ContextServices.get#TodayItems")
-        if (Array.from(employeeToday.items || []).length) problems.push("the employee's Today lists a People decision")
+        // the employee's own items (their training, review steps, leave) may be there in a whole run; Ines's transfer is not theirs
+        if (Array.from(employeeToday.items || []).some(item => String(item.title).includes("Ines Varga")))
+            problems.push("the employee's Today lists the transfer")
         // HR reads the request among their own, waiting for Hannah
         const mine = as(users.hr, P + "find#MyRequests", {openOnly: true})
         if (!Array.from(mine.requests || []).some(row => row.nextApproverText.includes("Hannah Okafor")))

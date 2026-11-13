@@ -169,6 +169,10 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         const readerGroup = shell(users.reader, true, "Employees/OrgChart", "Employees")
         if (JSON.stringify(readerGroup.names) !== JSON.stringify(ids.employeesMenu))
             problems.push(`the reader's Employees group: ${readerGroup.status} ${readerGroup.names}`)
+        // the People administrator opens Checklists through the root, but reads no HR record: Employee import is not in their menu
+        const adminGroup = shell(users.admin, true, "Employees/OrgChart", "Employees")
+        if (!adminGroup.names.includes("ChecklistTemplates") || adminGroup.names.includes("EmployeeImport"))
+            problems.push(`the administrator's Employees group: ${adminGroup.status} ${adminGroup.names}`)
         // P4: Positions & recruiting is a menu group of the positions, job classes and pay grades
         const staffing = shell(users.hr, true, "Staffing/Positions", "Staffing")
         if (JSON.stringify(staffing.names) !== JSON.stringify(ids.staffingMenu))
@@ -205,6 +209,9 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             if (JSON.stringify(development.names) !== JSON.stringify(menu))
                 problems.push(`${label} Development group: ${development.status} ${development.names}`)
         }
+        // the area's menu entry opens for the reader, on Qualifications (its default, the matrix, is denied to them)
+        const readerDevelopment = screenRefusal(users.reader, "Development")
+        if (readerDevelopment) problems.push(`the reader's Development: ${readerDevelopment}`)
         // P20: Reviews & goals' reviews and goals every People user's; its review cycles and forms the review administrator's
         for (const [user, menu, label] of [
             [users.develop, ids.developPerformanceMenu, "the review administrator's"],

@@ -1,7 +1,7 @@
 // People P9's "usable when" (impl-people P9; design-people §6 WorkingSchedules and WorkingScheduleDetail, §7 HolidayCalendars), as
 // an acceptance walk with artifact authorization on: people.hr defines a four-day week in another zone (Berlin, Monday to Thursday,
 // ten hours a day) through WorkingSchedules and WorkingScheduleDetail, makes a holiday calendar of Retail and adds a holiday on the
-// Wednesday of the second week through Holidays, names it the schedule's calendar, and assigns the schedule to Rafael from next
+// Wednesday of the second week through Holidays, names it the schedule's calendar, and assigns the schedule to Greta from next
 // Monday; the capacity preview on WorkingScheduleDetail and Projects' PersonDetail show the same hours for his weeks (40, then 30
 // with the holiday) and both say they come from the working schedule. The rules themselves are Mantle's PeopleSchedules and
 // mr-boss's PeopleSchedules and PeopleAccess.
@@ -12,9 +12,10 @@ const S = "mantle.humanres.ScheduleServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 const day = 24 * 60 * 60 * 1000
-// Rafael, a Retail employee no spec changes
-const rafaelPartyId = "BOSS_PPL_RAFAEL"
-const rafaelEmploymentId = "BOSS_PPL_RAFAEL_EMP"
+// Greta, who leads Retail, an employee whose employment no other spec changes (PeopleOrganizationUsable changes Rafael's
+// manager from next month, which a schedule from next Monday may not come before)
+const workerPartyId = "BOSS_PPL_GRETA"
+const workerEmploymentId = "BOSS_PPL_GRETA_EMP"
 // a request under the web root as the user (a transition's post), with its errors
 function request(user, path, parameters, method) {
     return asUser(user, () => {
@@ -50,7 +51,7 @@ spec({
 })
 
 feature(
-    "people.hr defines a four-day week in Berlin with a holiday calendar and a holiday, and assigns it to Rafael from next Monday",
+    "people.hr defines a four-day week in Berlin with a holiday calendar and a holiday, and assigns it to Greta from next Monday",
     {
         when() {
             const problems = []
@@ -110,7 +111,7 @@ feature(
                 "apps/People/Time/WorkingScheduleDetail/assignSchedule",
                 {
                     workingScheduleId: state.scheduleId,
-                    partyRelationshipId: rafaelEmploymentId,
+                    partyRelationshipId: workerEmploymentId,
                     fromDate: state.monday,
                     reason: "Moves to Berlin"
                 },
@@ -120,8 +121,8 @@ feature(
             const schedule = read(users.hr, S + "get#Schedule", {workingScheduleId: state.scheduleId})
             if (schedule.schedule.weeklyHours !== 40 || schedule.schedule.holidayCalendarName !== "Berlin office holidays")
                 problems.push(`the schedule: ${JSON.stringify(schedule.schedule)}`)
-            if (!schedule.assignments.some(row => row.partyId === rafaelPartyId))
-                problems.push("Rafael does not follow the schedule")
+            if (!schedule.assignments.some(row => row.partyId === workerPartyId))
+                problems.push("Greta does not follow the schedule")
             const list = asUser(users.hr, () => page("Time/WorkingSchedules", {term: "Berlin"}, "html"))
             if (!opened(list) || !list.output.includes("Berlin four-day week") || !list.output.includes("Europe/Berlin"))
                 problems.push(`WorkingSchedules: ${list.status} ${list.errors}`)
@@ -133,11 +134,11 @@ feature(
     }
 )
 
-feature("the capacity preview and Projects' PersonDetail show Rafael the same hours from the working schedule", {
+feature("the capacity preview and Projects' PersonDetail show Greta the same hours from the working schedule", {
     when() {
         const problems = []
         const preview = read(users.hr, S + "get#CapacityPreview", {
-            partyId: rafaelPartyId,
+            partyId: workerPartyId,
             fromDate: state.monday,
             thruDate: state.lastDay
         })
@@ -152,7 +153,7 @@ feature("the capacity preview and Projects' PersonDetail show Rafael the same ho
                 "Time/WorkingScheduleDetail",
                 {
                     workingScheduleId: state.scheduleId,
-                    previewPartyId: rafaelPartyId,
+                    previewPartyId: workerPartyId,
                     previewFromDate: state.monday,
                     previewThruDate: state.lastDay
                 },
@@ -163,7 +164,7 @@ feature("the capacity preview and Projects' PersonDetail show Rafael the same ho
             problems.push(`WorkingScheduleDetail's preview: ${detail.status} ${detail.errors}`)
         // Projects' PersonDetail, as a Projects manager sees it
         const overview = asUser(users.system, () =>
-            system(() => invoke("ironstone.projects.ResourceServices.get#PersonOverview", {partyId: rafaelPartyId, weeks: 4}))
+            system(() => invoke("ironstone.projects.ResourceServices.get#PersonOverview", {partyId: workerPartyId, weeks: 4}))
         ).overview
         const projectsWeeks = Object.fromEntries(
             Array.from(overview?.weekList || []).map(week => [week.weekStart, Number(week.capacity)])
@@ -176,7 +177,7 @@ feature("the capacity preview and Projects' PersonDetail show Rafael the same ho
         if (overview?.sourceText !== "Their working schedule (People)")
             problems.push(`PersonDetail's source: ${overview?.sourceText}`)
         const personDetail = asUser(users.system, () =>
-            page("Resources/PersonDetail", {partyId: rafaelPartyId}, "html", "Projects")
+            page("Resources/PersonDetail", {partyId: workerPartyId}, "html", "Projects")
         )
         if (!opened(personDetail) || !personDetail.output.includes("Their working schedule (People)"))
             problems.push(`Projects' PersonDetail: ${personDetail.status} ${personDetail.errors}`)

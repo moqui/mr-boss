@@ -114,12 +114,21 @@ feature("people.reader walks the chart one level at a time in the browser and th
     when() {
         const problems = []
         // the levels: the top, Greta's reports, Hannah's reports, each by the link a person's reports count opens
+        // Priya reports to Greta while she is employed by Retail (PeopleHireUsable separates her from Retail in a whole run)
+        const priyaRetail = system(() =>
+            ec.entity
+                .find("mantle.party.PartyRelationship")
+                .condition({fromPartyId: ids.dualPartyId, toPartyId: ids.organizationId, relationshipTypeEnumId: "PrtEmployee"})
+                .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                .count()
+        )
+        const priya = priyaRetail > 0 ? {shows: ["Priya Natarajan"], hides: []} : {shows: [], hides: ["Priya Natarajan"]}
         const levels = [
             {parameters: {}, shows: ["Greta Haugen", "Leon Ferreira"], hides: ["Hannah Okafor"]},
             {
                 parameters: {managerPartyId: "BOSS_PPL_GRETA", organizationPartyId: ids.organizationId},
-                shows: ["Hannah Okafor", "Priya Natarajan"],
-                hides: ["Tomas Lindqvist"]
+                shows: ["Hannah Okafor"].concat(priya.shows),
+                hides: ["Tomas Lindqvist"].concat(priya.hides)
             },
             {
                 parameters: {managerPartyId: ids.managerPartyId, organizationPartyId: ids.organizationId},

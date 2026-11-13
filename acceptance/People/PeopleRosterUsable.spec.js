@@ -31,6 +31,7 @@ function request(user, path, parameters, method) {
 }
 const read = (user, service, parameters) => asUser(user, () => system(() => invoke(service, parameters)))
 const addDay = (day, count) => new Date(Date.parse(day + "T12:00:00Z") + count * 86400000).toISOString().substring(0, 10)
+// the shift notices of the walk's week: the publication names its first day, a changed shift its own day
 const notices = () =>
     system(() =>
         Array.from(
@@ -39,7 +40,7 @@ const notices = () =>
                 .condition("topic", "PeopleShiftChange")
                 .orderBy("-sentDate")
                 .list()
-        ).filter(row => String(row.messageJson || "").includes(state.monday))
+        ).filter(row => state.days.some(day => String(row.messageJson || "").includes(day)))
     )
 const state = {}
 
@@ -53,26 +54,28 @@ spec({
         state.monday = addDay(today, 8 - weekday)
         state.days = [0, 1, 2, 3, 4].map(i => addDay(state.monday, i))
         state.wednesday = state.days[2]
-        // Tomas under Retail's annual leave with two more days (HR's, through the services the screens call; he may already
-        // follow the policy), then his Wednesday asked and approved by Hannah
+        // Tomas under an annual leave policy of Retail on his Wednesday with two more days (HR's, through the services the screens
+        // call): the policy he follows then (Retail's annual leave from another spec, or in a whole run the one
+        // PeopleLeavePoliciesUsable put him under), else Retail's annual leave from now; the days added as an adjustment, since
+        // another spec may have granted him this year already; then his Wednesday asked and approved by Hannah
         state.setup = asUser(users.hr, () =>
             system(() => {
-                ec.message.pushErrors()
-                try {
+                let policyId = lib.annualPolicyOn(ids.employmentId, state.wednesday)
+                if (!policyId) {
                     invoke(L + "assign#Policy", {
                         leavePolicyId: ids.leavePolicyId,
                         partyRelationshipIds: [ids.employmentId],
                         fromDate: today.substring(0, 4) + "-01-02",
                         reason: "Acceptance"
                     })
-                } finally {
-                    ec.message.clearErrors()
-                    ec.message.popErrors()
+                    policyId = ids.leavePolicyId
                 }
                 return invoke(L + "allocate#Leave", {
-                    leavePolicyId: ids.leavePolicyId,
+                    leavePolicyId: policyId,
                     partyRelationshipIds: [ids.employmentId],
                     amount: "2",
+                    adjustment: true,
+                    reason: "Acceptance: two days for the walk",
                     periodFromDate: today.substring(0, 4) + "-01-01",
                     periodThruDate: state.wednesday.substring(0, 4) + "-12-31",
                     operationKey: "PPL_ACCEPT_ROSTER_LEAVE"

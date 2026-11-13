@@ -1,8 +1,8 @@
 // People's leave requests screens (impl-people P12; design-people §7 LeaveRequests and LeaveRequestDetail, §13 TeamCalendar, PE-21):
 // LeaveRequestDetail's one qvt render as the manager deciding it (the balance statement, the days, Approve, the reason the approver
 // reads in its section opted out of AI) and an agent's render of it (what Assist's screen and data tools read), which shows "Not
-// shared with AI" in place of the reason; the team calendar's events and Leave requests' list show the absence and never the reason
-// or the leave type; the employee opens their own request and is told another's is not available. The rules are Mantle's
+// shared with AI" in place of the reason; the team calendar's events, its terminal twin (with Earlier and Later) and Leave requests'
+// list show the absence and never the reason or the leave type; the employee opens their own request and is told another's is not available. The rules are Mantle's
 // LeaveRequests; access is the time area's grant (PeopleAccess's menus).
 // Run: ./moq test mr-boss --spec PeopleLeave
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
@@ -110,19 +110,23 @@ feature(
                 ec.message.clearErrors()
                 return JSON.parse(String(out.output || "{}"))
             })
+            // the terminal twin of the calendar from the request's fortnight, with the way to the fortnights before and after
+            const twin = asUser(users.manager, () => page("Time/TeamCalendarTui", {date: "2027-04-01"}, "tui"))
             const list = asUser(users.employee, () => page("Time/LeaveRequests", {show: "mine"}, "html"))
             const other = asUser(users.employee, () =>
                 page("Time/LeaveRequestDetail", {leaveRequestId: state.inesRequest}, "html")
             )
-            return {calendar, list, other}
+            return {calendar, twin, list, other}
         },
-        then({calendar, list, other}) {
+        then({calendar, twin, list, other}) {
             const events = Array.from(calendar.eventList || [])
             const tomas = events.find(event => event.leaveRequestId === state.request)
             tomas.title == "Tomas Lindqvist · Out (morning)" && !tomas.allDay && tomas.url.includes(state.request)
             !JSON.stringify(events).includes(REASON) && !JSON.stringify(events).includes("Annual")
             // Ines's day waits for approval: not on the calendar
             !events.some(event => event.leaveRequestId === state.inesRequest)
+            twin.status == 200 && twin.errors.length == 0 && twin.output.includes("Tomas Lindqvist · Out (morning)")
+            twin.output.includes("date=2027-03-18") && twin.output.includes("date=2027-04-15") && !twin.output.includes(REASON)
             list.status == 200 && list.errors.length == 0 && list.output.includes("2027-04-06") && !list.output.includes(REASON)
             other.status == 200 && other.output.includes("not available to you") && !other.output.includes("Ines's own")
         }
