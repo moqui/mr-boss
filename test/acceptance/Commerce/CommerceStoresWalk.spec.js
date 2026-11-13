@@ -28,22 +28,32 @@ const walk = {}
 spec({
     stepwise: true,
     setupSpec() {
-        // a customer's bill-to row on the demo store, which a clone must leave behind
+        // a customer's bill-to row on the demo store, which a clone must leave behind; removed in cleanupSpec, since every
+        // order of the store bills it while it is there (the Shop's guest orders after this walk among them)
         system(() => {
             if (
                 !ec.entity
                     .find(S + "ProductStoreParty")
                     .condition({productStoreId: ids.storeId, partyId: ids.customerId})
                     .list().length
-            )
+            ) {
                 ec.service
                     .sync()
                     .name("create#" + S + "ProductStoreParty")
                     .parameters({productStoreId: ids.storeId, partyId: ids.customerId, roleTypeId: "CustomerBillTo", fromDate: 0})
                     .call()
+                walk.billToMade = true
+            }
         })
     },
     cleanupSpec() {
+        if (walk.billToMade)
+            system(() =>
+                ec.entity
+                    .find(S + "ProductStoreParty")
+                    .condition({productStoreId: ids.storeId, partyId: ids.customerId, roleTypeId: "CustomerBillTo"})
+                    .deleteAll()
+            )
         ec.message.clearErrors()
         login("john.doe")
         ec.artifactExecution.enableAuthz()
