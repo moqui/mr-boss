@@ -7,7 +7,7 @@
 // are Mantle's SalesAccounts; the access rules of the record kinds and of MergeAccounts are SalesAccess'.
 // Run: ./moq test mr-boss --spec SalesAccounts
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
-const {ids, users, asUser, page} = lib
+const {ids, users, asUser, system, refusal, page} = lib
 const {accounts, contacts} = ids
 
 spec({
@@ -58,19 +58,45 @@ feature(
     }
 )
 
-feature("ContactDetail shows a contact of two accounts with both", {
-    when() {
-        return {detail: asUser(users.rep, () => page("Accounts/ContactDetail", {partyId: contacts.dana}, "html"))}
-    },
-    then({detail}) {
-        detail.errors.length == 0
-        detail.output.includes("Dana Morales")
-        detail.output.includes("Wingtip Traders")
-        detail.output.includes("Contoso Labs")
-        detail.output.includes("Purchasing manager")
-        detail.output.includes("Add to an account")
+feature(
+    "ContactDetail shows a contact of two accounts with both; the representative edits it, not another organization's contact",
+    {
+        when() {
+            const detail = asUser(users.rep, () => page("Accounts/ContactDetail", {partyId: contacts.dana}, "html"))
+            // Commons' check#ContactAccess admits an account editor for a contact of an account of their scope (owner contract, the
+            // user's call of Nov 13, 2026); the rule, not the artifact grant, is what is tested, so the calls run without it
+            const edit = partyId =>
+                asUser(users.rep, () =>
+                    system(() =>
+                        refusal("ironstone.commons.ContactServices.update#Contact", {partyId, nickname: "Spec nickname"})
+                    )
+                )
+            const own = edit(contacts.dana)
+            const other = edit(contacts.lee)
+            const nicknames = system(() => {
+                const read = partyId =>
+                    ec.entity.find("mantle.party.Person").condition("partyId", partyId).one()?.nickname || null
+                const found = {dana: read(contacts.dana), lee: read(contacts.lee)}
+                ec.service.sync().name("update#mantle.party.Person").parameters({partyId: contacts.dana, nickname: null}).call()
+                return found
+            })
+            return {detail, own, other, nicknames}
+        },
+        then({detail, own, other, nicknames}) {
+            own == ""
+            nicknames.dana == "Spec nickname"
+            other.includes("You may not change contact")
+            nicknames.lee != "Spec nickname"
+            detail.output.includes("ContactEditDialog")
+            detail.errors.length == 0
+            detail.output.includes("Dana Morales")
+            detail.output.includes("Wingtip Traders")
+            detail.output.includes("Contoso Labs")
+            detail.output.includes("Purchasing manager")
+            detail.output.includes("Add to an account")
+        }
     }
-})
+)
 
 feature(
     "Commons' Compare admits the Sales manager for two accounts of their organization; MergeAccounts and Compare show the pair",

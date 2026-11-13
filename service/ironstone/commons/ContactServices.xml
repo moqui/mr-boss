@@ -35,7 +35,10 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="check" noun="ContactAccess" allow-remote="false">
         <description>A party as the current user may see it (the entity filters, and a personal contact only its owner's) and
             what the user may do with it. With need (view, edit or delete) an error when the user may not; a party the user may
-            not see is "not found".</description>
+            not see is "not found". Who may change a directory party: a contact admin, and (Sales owner contract, impl-sales P3
+            review; the user's call of Nov 13, 2026) a holder of SALES_ACCOUNT_EDIT for a person who is a current contact of an
+            account of their sales scope (mantle/sales/SalesAccess.js contactAccounts: owned by an organization of the scope, or
+            shared) and has no user account; never delete.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="need"><description>view, edit or delete; empty only reports</description></parameter>
@@ -46,6 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="isPersonal" type="Boolean"/>
             <parameter name="isMine" type="Boolean"/>
             <parameter name="isContactAdmin" type="Boolean"/>
+            <parameter name="isSalesEditor" type="Boolean"/>
             <parameter name="isSelf" type="Boolean"/>
             <parameter name="isDisabled" type="Boolean"/>
             <parameter name="canEdit" type="Boolean"/>
@@ -54,6 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const userId = ec.user.userId || null
             visible = false; isPersonal = false; isMine = false; isSelf = false; isDisabled = false; canEdit = false; canDelete = false
+            isSalesEditor = false
             isContactAdmin = !!userId && (ec.user.hasPermission('CONTACT_ADMIN') || ec.user.isInGroup('BOSS_CONTACT_ADMIN') || ec.user.isInGroup('ADMIN'))
             const found = ec.entity.find('mantle.party.PartyDetail').condition('partyId', partyId).one()
             if (found != null && (!found.privateOwnerUserId || found.privateOwnerUserId === userId)) {
@@ -64,6 +69,16 @@ along with this software (see the LICENSE.md file). If not, see
                 isSelf = !!userId && ec.user.userAccount?.partyId === partyId
                 isDisabled = found.disabled === 'Y'
                 canEdit = !isDisabled && (isMine || (!isPersonal && isContactAdmin))
+                // Sales (owner contract): an account editor changes the identity and channels of a contact of an account of their
+                // scope with Commons' own forms; a person with a user account (a login's email and name) stays the contact admin's
+                if (!canEdit && !isDisabled && !isPersonal && !!userId && found.partyTypeEnumId === 'PtyPerson'
+                        && ec.user.hasPermission('SALES_ACCOUNT_EDIT')
+                        && ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().count() === 0) {
+                    const sales = ec.resource.script('component://mr-mantle/service/mantle/sales/SalesAccess.js')
+                    const salesScope = sales.scope()
+                    isSalesEditor = !!salesScope.capabilities.accountEdit && sales.contactAccounts(salesScope, partyId).length > 0
+                    canEdit = isSalesEditor
+                }
                 if (!isDisabled && isMine) canDelete = true
                 else if (!isDisabled && !isPersonal && isContactAdmin && !isSelf) {
                     const hasUser = ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().count() > 0

@@ -1008,6 +1008,67 @@ P2 was built beside it on `sal/p2` (§1), so P3 reads no pipeline, team or sourc
   - the user's calls: the contact edit for Sales (the second finding); whether the merge guard's admission of a caller with
     authorization disabled stays (Shop's claim needs it).
 
+**Review Nov 13 (P3).** A fresh review of `sal/p3` (mr-mantle 46246c69, mr-boss 138e34d5) against P3, §2, §4, design §4 and
+design-drawers-commons §6, after merging master (P2) into the branch in both repositories (`SalesWorkspaceServices.xml` joined:
+P2's get#SalesReadiness, then P3's four services, under one header; the P2 and P3 blocks kept side by side in SalesAccess.js,
+Sales.js `areas`, `linkPaths` and `choiceSources`, Sales.xml, BossSetupSalesData.xml, SalesSpecLib.js, where the manager's menu is
+now Home, Accounts, Reports, Settings, and SalesAccess.spec.js). P2's and P3's specs passed on the merge unchanged.
+- Checked and sound: every account and contact write authenticated and checking SALES_ACCOUNT_EDIT and the organization (named
+  and in the scope, else the active or only one; an internal organization), the parent an account of the scope of the same
+  organization or shared, the manager a person working for the organization, a contact's end only of an account of the scope
+  (RECORD_UNAVAILABLE as missing), the person kept; another organization's account refused as missing on every path: find#Accounts
+  and find#AccountContacts (owner in the scope's organizations or `_NA_`, the contact's owner too, in the query), the `accounts`
+  and `people` choices and their selected value, the palette (find#Accounts), check#Record's `account` and `contact` kinds, the
+  root's Chatter and RecordFiles hosts (a Party only through check#Record `contact`), Customer360 (get#CustomerSales'
+  customerFound false; Accounting's tabs and actions kept off under Sales, Sales' tabs only under Sales), ContactDetail and
+  get#AccountDocumentCounts; orders only for SALES_TEAM_VIEW and invoices only for a finance reader, both of the scope's
+  organizations; MergeAccounts and MergeCompare denied to the root group and open to the manager (BOSS_SAL_MERGE) and the
+  capability; Commons' get#ComparePair, merge#Contacts and mark#NotDuplicate admitting a Sales merger only through the Mantle guard
+  (`admittedBy` sales), contact administrators' behaviour otherwise as before. The merge callers' specs pass unchanged (Commons'
+  Contacts and ContactsDuplicates, Mantle's Contacts, ContactBooks, Consent, ContactAddresses, CrmMiscServices and the four Shop
+  specs, the verified guest claim among them). The specs test what they claim.
+- Fixed:
+  - R1 (data integrity, medium; the Built note's sixth finding). merge#Parties read the rows it moves, and its guards read the
+    dependencies they check, under the caller's entity filters: under a Sales or Commons root (MANTLE_USER_ORG) another
+    organization's opportunity or agreement on the merged party was invisible to the guard, so the merge went through and left it
+    (with any filtered order, invoice, payment or shipment of an organization outside the caller's) on the disabled party. The
+    guards now read without the filters (PartyMerge.js `unfiltered`), and the moves run with authorization off after the guards
+    pass (try/finally, restored); a Sales merger is refused (DEPENDENCY_UNAVAILABLE) when the merged party has orders, invoices
+    or payments with an internal organization outside their scope, not orders alone. Mantle SalesAccounts' new feature: a manager
+    under the MANTLE_USER_ORG filter is refused a merge whose merged account has another organization's opportunity, and a merge
+    moves an invoice with an outside party the filters hide (failed on the unfixed code).
+  - R2 (the user's call of Nov 13, §4; the Built note's second finding). Commons' check#ContactAccess (owner contract) gives
+    canEdit (never canDelete) to a SALES_ACCOUNT_EDIT holder for a person who is a current contact of an account of their sales
+    scope and has no user account (`isSalesEditor`), so ContactDetail's identity and channel edits work for Sales with Commons'
+    forms; design-drawers-commons §6 records it. BOSS SalesAccounts' ContactDetail feature: sales.rep changes Dana Morales (a
+    Retail contact) and is refused Lee Chen (Ziziwork Sales'), and the one render shows the edit dialog (failed on the unfixed
+    code).
+- Provisional findings (for the lead to number):
+  - R2's admission follows Commons' single `canEdit`, so a Sales account editor also gets the contact record's Organizations,
+    Relationships, Notes and photo edits, and the contact of a shared (`_NA_`) account includes shared people such as Shop guest
+    customers (a person with a user account is left out); add#Contact lets a rep make any person of the scope or shared a contact,
+    and so editable. Narrowing to identity and channels needs a second flag in Commons' forms;
+  - set#AccountManager and delete#Contact change existing rows without the revision read (§2 "Revisions and operations"); both are
+    a single relationship's end and start, so a stale change is the last writer's;
+  - SalesAccess `accountOf` treats a party with no `ownerPartyId` as shared, but find#Accounts and the Party filter
+    (MANTLE_USER_ORG_9) leave such a party out; Party's default is `_NA_`, so only a row written without it differs;
+  - find#Accounts lists Customer and Prospect roles, while `accountOf` also admits a party with the Account role alone;
+  - mark#NotDuplicate asks the guard one way (partyId into otherPartyId), so a pair whose merge is refused that way for a
+    dependency is refused "not a duplicate" to a Sales manager though the other way may be admitted.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): after the merge, mr-mantle SalesPipelineSetup 5 of 5 and
+  SalesAccounts 6 of 6, mr-boss SalesSettings 3 of 3, SalesAccounts 4 of 4, SalesAccess 8 of 8. After the fixes: mr-mantle
+  SalesAccounts 7 of 7 (the new feature 0.22 s), with Contacts, ContactBooks, Consent, CrmMiscServices, ShopCustomer, ShopCart,
+  ShopOperations, ShopSubscriptions, ContactAddresses, SalesOrganizationScope and SalesPipelineSetup, 106 of 106 (44.9 s run);
+  mr-boss SalesAccounts 4 of 4 (ContactDetail's feature 0.43 s, from 0.27 s), Contacts, ContactsDuplicates, SalesAccess,
+  SalesSettings, CustomerServiceAccess, AccountingReceivables and CommerceAccess, 112 of 112 (49.3 s run), and QuickCreate,
+  ContactImport, CommsHome, Inbox, Consent and Chatter (check#ContactAccess' other callers), 94 of 94. No screen changed, so no
+  lint. Prettier clean on the changed JavaScript. Not run: ./moq test-apps, the acceptance suite.
+- For the lead: budget share about +0.25 s mr-mantle (SalesAccounts' filtered-merge feature) and +0.2 s mr-boss (ContactDetail's
+  edit checks); merge hot spots as the Built note, with mr-mantle `service/mantle/party/DuplicateServices.xml` (merge#Parties' move
+  script wrapped in an authorization-off try/finally, its body not re-indented) and `PartyMerge.js`, and mr-boss
+  `service/ironstone/commons/ContactServices.xml` check#ContactAccess; both user's calls are recorded in §4 and built (R2) or kept
+  (the authorization-disabled admission).
+
 ### P4 — Leads and opportunities
 
 Design §3 Opportunities, Leads, OpportunityDetail and WorkItemDetail, §12.2 (Chatter and RecordFiles, Calendar and
@@ -1655,6 +1716,8 @@ the owner's design.
 | Nov 13, 2026 | Changing the instance's shared lost reasons and recurring plans needs every-organization scope (`SALES_ALL_ORGANIZATIONS` or `ADMIN`), as the shared default pipeline does; a configurer of one organization reads them only. Built in P4 | The user's call (P2's review); design §9 "the reasons are the instance's" holds |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
+| Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
+| Nov 13, 2026 | `merge#Parties`' guards keep admitting a caller that disabled authorization or runs as the system (jobs, Shop's verified guest claim) (P3) | The user's call (the P3 Built note's last question) |
 
 ## 5. Open questions
 
