@@ -76,6 +76,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="${sheet.personName} · ${sheet.weekText}" type="h5"/>
                         </container>
                         <label text="${stateText}" type="div" style="text-caption ${stateStyle}" condition="stateText"/>
+                        <!-- impl-people P24 (owner contract): a week a finalized pay input paid is not reopened -->
+                        <label text="Paid by payroll: this week stays approved, and a correction pays any difference." type="div"
+                                style="text-caption m-muted" condition="access.payrollPaid"/>
                     </container>
                     <container style="col-12 col-md-auto m-record-status">
                         <status-bar id="TimesheetStatusBar" status-id="${sheet.statusId}" status-flow-id="Default" stages="${stageStatusIds}" read-only="true"/>

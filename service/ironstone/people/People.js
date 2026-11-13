@@ -273,7 +273,10 @@ const linkPaths = [
     "Payroll/PayStructureDetail",
     "Payroll/PayGroups",
     // P23: pay assignments (design §8 PayAssignments), payroll's under Payroll
-    "Payroll/PayAssignments"
+    "Payroll/PayAssignments",
+    // P24: hours for pay (design §6, payroll's and the managers' under Time & leave) and pay adjustments (design §8, payroll's)
+    "Time/HoursForPay",
+    "Payroll/PayAdjustments"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1363,6 +1366,95 @@ choiceSources.benefitTypes = (userScope, term, selected) => {
         id => one(B, {benefitTypeId: id})?.description || id
     )
 }
+// P24: hours for pay's pay groups (a payroll reader's every group of the employers in scope, a manager's the groups their reports
+// are paid in now), a group's prepared periods (newest first; for a reader of the group), and an employment's employee advances
+// (a payroll reader's, by their purpose and dates; never an amount). Mantle checks each again where it is used.
+const hoursGroupIds = userScope => {
+    const G = "mantle.humanres.payroll.PayrollGroup"
+    if (userScope.capabilities.payrollView)
+        return employerIds(userScope).length
+            ? Array.from(
+                  inUse(find(G).condition("organizationPartyId", "in", employerIds(userScope)))
+                      .selectField("payrollGroupId")
+                      .list()
+              ).map(row => row.payrollGroupId)
+            : []
+    const reportIds = Array.from(userScope.people.reportPartyIds || [])
+    if (!userScope.capabilities.team || !reportIds.length) return []
+    return Array.from(
+        new Set(
+            Array.from(
+                find("mantle.humanres.payroll.PayrollAssignment")
+                    .condition("partyId", "in", reportIds)
+                    .condition("isPrimary", "Y")
+                    .conditionDate("fromDate", "thruDate", null)
+                    .selectField("payrollGroupId")
+                    .list()
+            ).map(row => row.payrollGroupId)
+        )
+    )
+}
+choiceSources.hoursGroups = (userScope, term, selected) => {
+    const ids = hoursGroupIds(userScope)
+    if (!ids.length) return []
+    const G = "mantle.humanres.payroll.PayrollGroup"
+    const label = row => (row.groupName || row.payrollGroupId) + " · " + organizationName(row.organizationPartyId)
+    const rows = Array.from(
+        searched(find(G).condition("payrollGroupId", "in", ids), term, ["groupName"])
+            .orderBy("^groupName")
+            .limit(choiceLimit)
+            .list()
+    )
+    return withSelected(
+        rows.map(row => ({value: row.payrollGroupId, label: label(row)})),
+        selected,
+        id => ids.includes(id),
+        id => label(one(G, {payrollGroupId: id}) || {payrollGroupId: id})
+    )
+}
+choiceSources.payPeriods = (userScope, term, selected, p) => {
+    const payrollGroupId = p?.payrollGroupId || null
+    if (!payrollGroupId || !hoursGroupIds(userScope).includes(payrollGroupId)) return []
+    const links = Array.from(
+        find("mantle.humanres.payroll.PayrollGroupPeriod").condition("payrollGroupId", payrollGroupId).list()
+    )
+    const periodIds = links.map(row => row.timePeriodId)
+    if (!periodIds.length) return []
+    const label = row => lib.calendarDateText(row.fromDate) + " to " + lib.calendarDateText(row.thruDate)
+    const periods = Array.from(
+        find("mantle.party.time.TimePeriod").condition("timePeriodId", "in", periodIds).orderBy("-fromDate").list()
+    )
+    const options = periods
+        .map(row => ({value: row.timePeriodId, label: label(row)}))
+        .filter(option => !term || option.label.includes(term))
+        .slice(0, choiceLimit)
+    return withSelected(
+        options,
+        selected,
+        id => periodIds.includes(id),
+        id => label(one("mantle.party.time.TimePeriod", {timePeriodId: id}) || {})
+    )
+}
+choiceSources.payAdvances = (userScope, term, selected, p) => {
+    if (!userScope.capabilities.payrollView || !p?.partyRelationshipId) return []
+    const employment = one("mantle.party.PartyRelationship", {partyRelationshipId: p.partyRelationshipId})
+    if (!employment || !employerIds(userScope).includes(employment.toPartyId)) return []
+    const A = "mantle.humanres.expense.EmployeeAdvance"
+    const base = () => find(A).condition({partyRelationshipId: p.partyRelationshipId, statusEnumId: "EasApproved"})
+    const label = row =>
+        [row.employeeAdvanceId, row.purpose, row.requiredDate ? "needed " + lib.calendarDateText(row.requiredDate) : ""]
+            .filter(Boolean)
+            .join(" · ")
+    const rows = Array.from(
+        searched(base(), term, ["employeeAdvanceId", "purpose"]).orderBy("-requestedDate").limit(choiceLimit).list()
+    )
+    return withSelected(
+        rows.map(row => ({value: row.employeeAdvanceId, label: label(row)})),
+        selected,
+        id => base().condition("employeeAdvanceId", id).count() > 0,
+        id => label(one(A, {employeeAdvanceId: id}) || {employeeAdvanceId: id})
+    )
+}
 choiceSources.payrollLocalizations = (userScope, term, selected) => {
     if (!userScope.capabilities.payrollView) return []
     const L = "mantle.humanres.payroll.PayrollLocalization"
@@ -1871,6 +1963,8 @@ function decisionUrl(row) {
         return row.sourceEntityName === "mantle.humanres.payroll.PayrollStructure"
             ? "/qapps/People/Payroll/PayStructureDetail?payrollStructureId=" + encodeURIComponent(row.sourceId)
             : "/qapps/People/Payroll/PayComponentDetail?payrollComponentId=" + encodeURIComponent(row.payrollComponentId || "")
+    // P24: a pay adjustment, among those waiting for the user's decision on PayAdjustments
+    if (row.approvalKindEnumId === "PakPayAdjustment") return "/qapps/People/Payroll/PayAdjustments?show=decide"
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no

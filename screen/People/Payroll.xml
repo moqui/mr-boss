@@ -25,7 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
     PAYROLL_VIEW and changed with PAYROLL_EDIT and PAYROLL_CONFIGURE (Mantle's PayrollSetupServices check them), published on a
     payroll approver's approval. P23: Pay assignments (menu 3, before Rates), screen of this directory: employments put on a
     structure and a pay group, their tax profiles and benefits, read with PAYROLL_VIEW and changed with PAYROLL_EDIT (Mantle's
-    PayrollSetupServices check them). Pay runs, payslips, pay adjustments and the payroll exchange join with P24 to P28. -->
+    PayrollSetupServices check them). P24: Pay adjustments (menu 4), screen of this directory: payroll's reasoned inputs (an earning or
+    a deduction, an advance's recovery, a day's hours resolved, a correction), made with PAYROLL_EDIT and decided by a payroll approver
+    (Mantle's PayrollInputServices check them). Pay runs, payslips and the payroll exchange join with P25 to P28. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="Rates">

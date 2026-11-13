@@ -28,13 +28,15 @@ along with this software (see the LICENSE.md file). If not, see
     session (PeopleTrainingApproval; DevelopmentServices approve#Enrollment and refuse#Enrollment), opening TrainingDetail. P20: a
     review's finalizing (PeopleReviewStep; ReviewServices approve#ReviewStep and refuse#ReviewStep), opening ReviewDetail. P22
     review: publishing a pay component or a pay structure (PeoplePayrollConfigApproval; PayrollSetupServices approve#Publication and
-    refuse#Publication), opening PayComponentDetail or PayStructureDetail under Payroll. Later phases add their topics (pay runs). -->
+    refuse#Publication), opening PayComponentDetail or PayStructureDetail under Payroll. P24: a pay adjustment
+    (PeoplePayAdjustmentApproval; PayrollInputServices approve#Adjustment and refuse#Adjustment), opening Pay adjustments' To decide.
+    Later phases add their topics (pay runs). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="3" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
         <set field="notificationTopics" from="['PeoplePositionApproval', 'PeopleEmploymentChangeApproval', 'PeopleLeaveApproval',
             'PeopleAttendanceApproval', 'PeopleExpenseApproval', 'PeopleAdvanceApproval', 'PeopleOfferApproval',
-            'PeopleTrainingApproval', 'PeopleReviewStep', 'PeoplePayrollConfigApproval']"/>
+            'PeopleTrainingApproval', 'PeopleReviewStep', 'PeoplePayrollConfigApproval', 'PeoplePayAdjustmentApproval']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">

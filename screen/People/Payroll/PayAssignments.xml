@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     tax profile of its group's localization, whose fields are only those the installed localization declares (Edit tax profile,
     store#PayrollProfile), its benefits (Add benefit, End), and its bank accounts as masked references, changed through Accounting's
     payment-method services and never here. Assigning a structure changes no salary: the salary is changed on Employee360's
-    Compensation as a pay change. Under Payroll, payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and change. -->
+    Compensation as a pay change. Under Payroll, payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and change. Salaries,
+    pay rates, an assignment's inputs and a benefit's cost are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay assignments" default-menu-index="3">
     <parameter name="organizationPartyId"/>
@@ -200,7 +201,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </drop-down>
                             </default-field>
                         </field>
-                        <field name="inputValues">
+                        <field name="inputValues" ai-opt-out="true">
                             <default-field title="Their own inputs" tooltip="Values of the structure's declared inputs, such as pensionRate = 0.05">
                                 <text-line size="40"/></default-field>
                         </field>
@@ -275,8 +276,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="structureName"><default-field title="Pay structure"><display/></default-field></field>
                             <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
                             <field name="assignmentText"><default-field title="Assignment"><display/></default-field></field>
-                            <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
-                            <field name="rateText"><default-field title="Pay rate"><display/></default-field></field>
+                            <field name="salaryText" ai-opt-out="true"><default-field title="Salary"><display/></default-field></field>
+                            <field name="rateText" ai-opt-out="true"><default-field title="Pay rate"><display/></default-field></field>
                             <field name="readinessText">
                                 <default-field title="Readiness">
                                     <render-mode>
@@ -316,7 +317,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="fromDateText"><default-field title="From"><display/></default-field></field>
                                     <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
                                     <field name="electedText"><default-field title="Elected"><display/></default-field></field>
-                                    <field name="inputValuesText"><default-field title="Inputs"><display/></default-field></field>
+                                    <field name="inputValuesText" ai-opt-out="true"><default-field title="Inputs"><display/></default-field></field>
                                     <field name="stateText"><default-field title="State"><display/></default-field></field>
                                     <field name="actions">
                                         <default-field title="">
@@ -420,7 +421,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </field>
                                         <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
                                         <field name="thruDate"><default-field title="Through" tooltip="Open when empty"><date-time type="date"/></default-field></field>
-                                        <field name="cost"><default-field title="Cost"><text-line size="10" input-type="number"/></default-field></field>
+                                        <field name="cost" ai-opt-out="true"><default-field title="Cost"><text-line size="10" input-type="number"/></default-field></field>
                                         <field name="employerPaidPercent">
                                             <default-field title="Employer pays (%)"><text-line size="6" input-type="number"/></default-field></field>
                                         <field name="submitButton"><default-field title="Add benefit"><submit/></default-field></field>
@@ -451,7 +452,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="benefitText"><default-field title="Benefit"><display/></default-field></field>
                                     <field name="fromDateText"><default-field title="From"><display/></default-field></field>
                                     <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                                    <field name="costText"><default-field title="Cost"><display/></default-field></field>
+                                    <field name="costText" ai-opt-out="true"><default-field title="Cost"><display/></default-field></field>
                                     <field name="employerPaidText"><default-field title="Employer pays"><display/></default-field></field>
                                     <field name="actions">
                                         <default-field title="">

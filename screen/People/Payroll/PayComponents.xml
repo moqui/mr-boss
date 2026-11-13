@@ -47,7 +47,10 @@ along with this software (see the LICENSE.md file). If not, see
             ec.message.clearErrors()
             componentsFound = !!found?.components
             canEdit = !!found?.canEdit
-            componentRows = Array.from(found?.components || [])
+            // a fixed amount is opted out of AI (the user's call of Nov 12, 2026, PE-21): an agent's render names none
+            const agent = sri.isAgentRender()
+            componentRows = Array.from(found?.components || []).map(row => agent && String(row.calculationText || '').startsWith('Fixed ')
+                ? Object.assign({}, row, {calculationText: 'Not shared with AI'}) : row)
             componentsCount = found?.componentsCount || 0
             componentsPageIndex = found?.componentsPageIndex || 0
             componentsPageSize = found?.componentsPageSize || 20

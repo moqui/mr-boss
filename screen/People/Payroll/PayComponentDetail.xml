@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     calculation: the framework's decimal expression, checked by the server, with no script), adds and changes its examples, and
     publishes it (Publish, the one primary while there is a draft: a date and a reason; refused unless every example gives its
     amount, its dependencies are published and its mapping is set). A published term is never changed: Start a draft copies it
-    from a later date. A statistical component enters no total and maps no account. Each write names the revision read. -->
+    from a later date. A statistical component enters no total and maps no account. Each write names the revision read.
+    The amounts are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
 <!-- P22 review (the user's calls of Nov 12, 2026): under Payroll beside Rates, payroll's; Publish asks for a People approval of kind
     PakPayrollConfig (Mantle's publish#Component), which takes effect when approved: the Approval box shows the request (who asked, why,
     who decides it and the decisions), and its approver (a payroll approver who did not draft it, decide#Publication) approves or
@@ -111,7 +112,10 @@ along with this software (see the LICENSE.md file). If not, see
             <script>sampleError = ec.message.errorsString; ec.message.clearErrors()</script>
         </if>
         <script><![CDATA[
-            terms = Array.from(found?.terms || [])
+            // a fixed amount is opted out of AI (the user's call of Nov 12, 2026, PE-21): an agent's render names none
+            const agent = sri.isAgentRender()
+            const calculationOf = (term) => agent && term?.basisEnumId === 'PcbAmount' ? 'Not shared with AI' : term?.calculationText
+            terms = Array.from(found?.terms || []).map(row => Object.assign({}, row, {calculationText: calculationOf(row)}))
             exampleRows = Array.from(preview?.examples || [])
             isDraft = openTerm?.statusId === 'PtsDraft'
             canEdit = !!component?.canEdit
@@ -122,7 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the term's facts, one row each, for the Terms box (html, qvt and tui alike)
             termRows = openTerm ? [
                 {term: 'Basis', value: openTerm.basisText},
-                {term: openTerm.basisEnumId === 'PcbAmount' ? 'Amount' : 'Formula', value: openTerm.calculationText},
+                {term: openTerm.basisEnumId === 'PcbAmount' ? 'Amount' : 'Formula', value: calculationOf(openTerm)},
                 {term: 'Declared inputs', value: openTerm.inputNamesText || 'None'},
                 {term: 'Components it reads', value: openTerm.dependencyText || 'None'},
                 {term: statistical ? 'Currency or unit' : 'Currency', value: openTerm.unitText},
@@ -252,7 +256,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="payrollComponentId"><default-field><hidden/></default-field></field>
                                         <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                         <field name="basisEnumId"><default-field><hidden/></default-field></field>
-                                        <field name="amount"><default-field><hidden/></default-field></field>
+                                        <field name="amount" ai-opt-out="true"><default-field><hidden/></default-field></field>
                                         <field name="formula"><default-field><hidden/></default-field></field>
                                         <field name="inputNames"><default-field><hidden/></default-field></field>
                                         <field name="currencyUomId"><default-field><hidden/></default-field></field>
@@ -339,7 +343,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <default-field title="Formula" tooltip="For example round(annualSalary / periodsPerYear, 2)">
                                         <text-area rows="3" cols="80"/></default-field>
                                 </field>
-                                <field name="amount"><default-field title="Amount"><text-line size="14" input-type="number"/></default-field></field>
+                                <field name="amount" ai-opt-out="true"><default-field title="Amount"><text-line size="14" input-type="number"/></default-field></field>
                                 <field name="inputNames">
                                     <default-field title="Declared inputs" tooltip="The names given a value for each employee or by the structure, comma separated; every other name is another component's code">
                                         <text-line size="50"/></default-field>
@@ -432,7 +436,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-body-nopad>
                 </container-box>
 
-                <section name="ExamplesSection" condition="openTerm">
+                <!-- the examples' values and amounts, and Try values' answer, are opted out of AI (the user's call of Nov 12, 2026) -->
+                <section name="ExamplesSection" condition="openTerm" ai-opt-out="true">
                     <widgets>
                         <container-box>
                             <box-header title="Examples"/>

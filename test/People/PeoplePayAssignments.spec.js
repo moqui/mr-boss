@@ -5,7 +5,9 @@
 // whatever the user may read), and the choices P23 adds (an employer's employments, structures and a structure's elective lines,
 // and the benefit types), each with a selected value that is not on the page. Mantle's rules (one primary per employment and date,
 // salary dates, the pay change, the profile's fields, readiness) are Mantle's PayAssignments; the access case (Compensation absent
-// for HR with the same parameters) is PeopleAccessLater's. The usable-when walk is the acceptance PeoplePayAssignmentsUsable.
+// for HR with the same parameters) is PeopleAccessLater's. Pay opted out of AI (the user's call of Nov 12, 2026): an agent's render of
+// Employee360 shows Compensation's placeholder, and the pay fields' definitions answer aiOptOut, which the data tool reads by.
+// The usable-when walk is the acceptance PeoplePayAssignmentsUsable.
 // Run: ./moq test mr-boss --spec PeoplePayAssignments
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -81,14 +83,19 @@ spec({
                 fromDate: 0
             })
         })
-        // the payroll operator sets Rafael's first salary, assigns him and adds a benefit
+        // Rafael's first salary set at once by ADMIN (PAYROLL_REPAIR: a payroll editor's would wait for approval as a pay change,
+        // the user's call of Nov 12, 2026); the payroll operator assigns him and adds a benefit
         const asPayroll = (service, parameters) => asUser(users.payroll, () => system(() => invoke(service, parameters)))
-        state.salary = asPayroll("mantle.humanres.EmploymentServices.create#EmploymentSalary", {
-            partyRelationshipId: employmentId,
-            amount: "3600",
-            currencyUomId: "USD",
-            timePeriodTypeId: "PayrollMonth"
-        })
+        state.salary = asUser("john.doe", () =>
+            system(() =>
+                invoke("mantle.humanres.EmploymentServices.create#EmploymentSalary", {
+                    partyRelationshipId: employmentId,
+                    amount: "3600",
+                    currencyUomId: "USD",
+                    timePeriodTypeId: "PayrollMonth"
+                })
+            )
+        )
         state.assigned = asPayroll(P + "assign#PayStructure", {
             partyRelationshipIds: employmentId,
             payrollStructureId: state.structure,
@@ -180,6 +187,57 @@ feature("the Compensation of Employee360's context is People's alone: the payrol
         !Object.hasOwn(commons.record || {}, "compensation")
     }
 })
+
+// the user's call of Nov 12, 2026 (PE-21): pay is opted out of AI. An agent's render (what Assist's screen and data tools read) of
+// Employee360 shows Compensation's placeholder and none of the salary the payroll operator's context answers; and the data tool's
+// entity reads, which leave out every field the definition answers aiOptOut for (moqui-llm tools::data read_entity), read no pay
+feature(
+    "Employee360's Compensation and the pay fields are opted out of AI: an agent's render shows the placeholder, the data tool reads no amount",
+    {
+        when() {
+            const agent = asUser(users.payroll, () => {
+                const out = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/People.xml")
+                    .renderMode("tui")
+                    .agent()
+                    .render(
+                        "Employees/Employee360",
+                        {partyId: ids.associatePartyId, partyRelationshipId: employmentId, lastStandalone: "-2"},
+                        null
+                    )
+                ec.message.clearErrors()
+                return {status: out.status, output: String(out.output || "")}
+            })
+            const optedOut = (entityName, fieldName) =>
+                !!ec.entity.getEntityDefinition(entityName)?.getFieldInfo(fieldName)?.aiOptOut
+            const fields = {
+                "mantle.humanres.employment.EmploymentSalary": ["amount"],
+                "mantle.humanres.rate.RateAmount": ["rateAmount"],
+                "mantle.humanres.rate.PayGradeSalary": ["amount", "minAmount", "maxAmount"],
+                "mantle.humanres.employment.EmploymentBenefit": ["cost"],
+                "mantle.humanres.employment.EmploymentChange": ["salaryAmount"],
+                "mantle.humanres.recruitment.EmploymentOffer": ["payAmount"],
+                "mantle.humanres.payroll.PayrollAssignment": ["inputValues"],
+                "mantle.humanres.payroll.PayrollComponentTerm": ["amount"],
+                "mantle.humanres.payroll.PayrollComponentExample": ["inputValues", "expectedAmount"],
+                "mantle.humanres.payroll.PayrollInput": ["amount", "rateAmount"]
+            }
+            const shared = Object.entries(fields).flatMap(([entityName, names]) =>
+                names.filter(name => !optedOut(entityName, name)).map(name => entityName + "." + name)
+            )
+            return {agent, shared, currency: optedOut("mantle.humanres.employment.EmploymentSalary", "currencyUomId")}
+        },
+        then({agent, shared, currency}) {
+            agent.status == 200
+            // the salary set in setup ($3,600.00 a month, which the context answers the payroll operator) is not in the agent's render
+            !agent.output.includes("3,600") && agent.output.includes("Not shared with AI")
+            shared == []
+            // a field of the same rows that is not an amount stays readable
+            !currency
+        }
+    }
+)
 
 feature(
     "P23's choices: an employer's employments and structures, a structure's elective lines and the benefit types, a selected value off the page",
