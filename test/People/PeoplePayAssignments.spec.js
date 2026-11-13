@@ -98,6 +98,8 @@ spec({
         })
         asPayroll(P + "store#PayrollProfile", {
             partyRelationshipId: employmentId,
+            expectedRevision: asPayroll(P + "get#Compensation", {partyId: "BOSS_PPL_RAFAEL", partyRelationshipId: employmentId})
+                .benefitRevision,
             benefitTypeId: "Health",
             cost: "90",
             employerPaidPercent: "80"

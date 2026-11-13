@@ -3,7 +3,7 @@
 // applicant from ApplicantDetail, payroll sets its pay on OfferDetail, the recruiter submits it and cannot approve it, the HR officer
 // approves it, the recruiter issues it (its letter stored, the one with pay payroll's to read) and records the candidate's
 // acceptance, and the HR officer hires from it through the hire wizard (Start from the offer, then Hire); a second hire from the
-// same offer is refused, and the hire made no account and no pay record. The offer is on a spec-local approved seat of Retail's
+// same offer is refused, and the hire made no account; the offer's approved pay is its first salary (P23 review). The offer is on a spec-local approved seat of Retail's
 // Store Operations, so Retail's vacant seat stays the other walks'. The rules are Mantle's Offers and mr-boss's PeopleOffers.
 // Run: ./moq accept mr-boss --spec PeopleOffersUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
@@ -165,43 +165,47 @@ feature("HR approves; the recruiter issues it (the letter with pay is payroll's)
     }
 })
 
-feature("HR hires from the accepted offer through the hire wizard, once; the hire makes no account and no pay record", {
-    when() {
-        const started = post(users.hr, "Employees/HireEmployee/Identity/startFromOffer", {employmentOfferId: state.offerId})
-        const hired = post(users.hr, "Employees/HireEmployee/ConfirmHire/hireEmployee", {reason: "From the offer walk"})
-        const offer = offerRow()
-        const second = asUser(users.hr, () =>
-            system(() =>
-                code(refusal(P + "hire#Employee", {employmentOfferId: state.offerId, operationKey: "PPL-OFFER-WALK-SECOND"}))
+feature(
+    "HR hires from the accepted offer through the hire wizard, once; the hire makes no account, and the offer's approved pay is the first salary",
+    {
+        when() {
+            const started = post(users.hr, "Employees/HireEmployee/Identity/startFromOffer", {employmentOfferId: state.offerId})
+            const hired = post(users.hr, "Employees/HireEmployee/ConfirmHire/hireEmployee", {reason: "From the offer walk"})
+            const offer = offerRow()
+            const second = asUser(users.hr, () =>
+                system(() =>
+                    code(refusal(P + "hire#Employee", {employmentOfferId: state.offerId, operationKey: "PPL-OFFER-WALK-SECOND"}))
+                )
             )
-        )
-        const restart = post(users.hr, "Employees/HireEmployee/Identity/startFromOffer", {employmentOfferId: state.offerId})
-        const accounts = system(() =>
-            ec.entity.find("moqui.security.UserAccount").condition("partyId", state.applicantPartyId).count()
-        )
-        const salaries = system(() =>
-            ec.entity
-                .find("mantle.humanres.employment.EmploymentSalary")
-                .condition("partyRelationshipId", offer.partyRelationshipId || "_NA_")
-                .count()
-        )
-        const application = system(() =>
-            ec.entity
-                .find("mantle.humanres.employment.EmploymentApplication")
-                .condition("employmentApplicationId", state.applicationId)
-                .one()
-        )
-        return {started, hired, offer, second, restart, accounts, salaries, application}
-    },
-    then({started, hired, offer, second, restart, accounts, salaries, application}) {
-        started.errors == ""
-        hired.errors == ""
-        offer.statusId == "OfrHired"
-        offer.partyRelationshipId != null
-        second == "OFFER_USED"
-        restart.errors.includes("accepted offer")
-        accounts == 0
-        salaries == 0
-        application.statusId == "EaHired"
+            const restart = post(users.hr, "Employees/HireEmployee/Identity/startFromOffer", {employmentOfferId: state.offerId})
+            const accounts = system(() =>
+                ec.entity.find("moqui.security.UserAccount").condition("partyId", state.applicantPartyId).count()
+            )
+            const salaries = system(() =>
+                ec.entity
+                    .find("mantle.humanres.employment.EmploymentSalary")
+                    .condition("partyRelationshipId", offer.partyRelationshipId || "_NA_")
+                    .count()
+            )
+            const application = system(() =>
+                ec.entity
+                    .find("mantle.humanres.employment.EmploymentApplication")
+                    .condition("employmentApplicationId", state.applicationId)
+                    .one()
+            )
+            return {started, hired, offer, second, restart, accounts, salaries, application}
+        },
+        then({started, hired, offer, second, restart, accounts, salaries, application}) {
+            started.errors == ""
+            hired.errors == ""
+            offer.statusId == "OfrHired"
+            offer.partyRelationshipId != null
+            second == "OFFER_USED"
+            restart.errors.includes("accepted offer")
+            accounts == 0
+            // P23 review (the user's call of Nov 12, 2026): the offer's approved pay is the employment's first salary
+            salaries == 1
+            application.statusId == "EaHired"
+        }
     }
-})
+)

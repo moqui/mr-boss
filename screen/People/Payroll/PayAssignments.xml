@@ -88,7 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PayrollSetupServices.store#PayrollProfile"
                     in-map="{partyRelationshipId:partyRelationshipId, benefitTypeId:benefitTypeId, fromDate:(fromDate || null),
                         thruDate:(thruDate || null), cost:(cost || null), employerPaidPercent:(employerPaidPercent || null),
-                        endBenefit:(endBenefit == 'true'), benefitFromDate:(benefitFromDate || null)}"/>
+                        endBenefit:(endBenefit == 'true'), benefitFromDate:(benefitFromDate || null), expectedRevision:(expectedRevision || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${endBenefit == 'true' ? 'Benefit ended' : 'Benefit added'}</message></if>
         </actions>
         <default-response url="."><parameter name="partyRelationshipId"/></default-response>
@@ -134,6 +134,8 @@ along with this software (see the LICENSE.md file). If not, see
                 profileValues['value' + (index + 1)] = field.value
             })
             benefitRows = Array.from(compensation?.benefits || [])
+            // P23 review: a benefit added or ended names the revision of the employment's benefits read
+            benefitRevision = compensation?.benefitRevision || null
             paymentRows = Array.from(compensation?.paymentMethods || [])
             employee360Url = sharedLinks?.['Employees/Employee360'] || null
         ]]></script>
@@ -406,8 +408,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                                 <container-dialog id="AddBenefitDialog" button-text="Add benefit" icon="sym_o_add" width="560"
                                         title="Add a benefit for ${employment.personName}" condition="canEdit">
-                                    <form-single name="AddBenefit" transition="storeBenefit" map="{partyRelationshipId:partyRelationshipId}">
+                                    <form-single name="AddBenefit" transition="storeBenefit" map="{partyRelationshipId:partyRelationshipId, expectedRevision:benefitRevision}">
                                         <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                         <field name="benefitTypeId">
                                             <default-field title="Benefit">
                                                 <drop-down allow-empty="true">
@@ -455,8 +458,9 @@ along with this software (see the LICENSE.md file). If not, see
                                             <container-dialog id="EndBenefit_${benefitTypeId}_${fromDate}" button-text="End" icon="sym_o_block" width="480"
                                                     title="End ${benefitText}" condition="canEdit &amp;&amp; state != 'ended'">
                                                 <form-single name="EndBenefit" transition="storeBenefit"
-                                                        map="{partyRelationshipId:partyRelationshipId, benefitTypeId:benefitTypeId, benefitFromDate:fromDate, endBenefit:'true'}">
+                                                        map="{partyRelationshipId:partyRelationshipId, benefitTypeId:benefitTypeId, benefitFromDate:fromDate, endBenefit:'true', expectedRevision:benefitRevision}">
                                                     <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                                     <field name="benefitTypeId"><default-field><hidden/></default-field></field>
                                                     <field name="benefitFromDate"><default-field><hidden/></default-field></field>
                                                     <field name="endBenefit"><default-field><hidden/></default-field></field>

@@ -1,10 +1,11 @@
 // People P23's "usable when" (impl-people P23; design-people §8 PayAssignments, §4 Employee360's Compensation and EmploymentChange's
 // pay change), as an acceptance walk with artifact authorization on, through the screens' transitions: the payroll operator
-// (people.payroll) gives Leon a salary on Employee360's Compensation (his first, set at once), assigns him a published structure and
+// (people.payroll) gives Leon a salary on Employee360's Compensation (his first, applied on the payroll approver's approval, the
+// user's call of Nov 12, 2026), assigns him a published structure and
 // the monthly pay group from a date on PayAssignments (previewed first), saves his tax profile with the demonstration localization's
 // fields and sees his readiness clear; the HR officer (people.hr) opens the same Employee360 with no Compensation region. Then a
-// raise for Tomas waits for his manager (people.manager, Hannah), who approves it on his Employee360, and the salary in effect
-// ends on its date. The rules themselves are Mantle's PayAssignments and mr-boss's PeoplePayAssignments and PeopleAccessLater.
+// raise for Tomas waits for the employer's payroll approver (people.payapprover), who reads and approves it, while his manager
+// (people.manager, Hannah) reads nothing of it, and the salary in effect ends on its date. The rules themselves are Mantle's PayAssignments and mr-boss's PeoplePayAssignments and PeopleAccessLater.
 // Run: ./moq accept mr-boss --spec PeoplePayAssignmentsUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -114,7 +115,7 @@ feature(
                 if (out.errors) problems.push(`${path}: ${out.errors}`)
                 return out
             }
-            // his first salary, on Employee360's Compensation: set at once
+            // his first salary, on Employee360's Compensation: a pay change the payroll approver approves
             post("Employees/Employee360/changePay", {
                 partyId: leonId,
                 partyRelationshipId: leonEmploymentId,
@@ -125,6 +126,13 @@ feature(
                 reason: "Starting salary",
                 expectedRevision: compensation(payroll, leonId).payRevision
             })
+            const leonChange = Array.from(compensation(payroll, leonId).payChanges || [])[0]
+            if (leonChange)
+                as(users.payApprover, "mantle.humanres.PeopleServices.decide#EmploymentChange", {
+                    employmentChangeId: leonChange.employmentChangeId,
+                    decision: "approve"
+                })
+            else problems.push("Leon's first salary is not waiting for approval")
             const assign = preview =>
                 post("Payroll/PayAssignments/assignPay", {
                     organizationPartyId: ids.organizationId,
@@ -192,52 +200,62 @@ feature("the HR officer opens Leon's Employee360 with no Compensation region; th
     }
 })
 
-feature("a raise for Tomas waits for his manager, who approves it on his Employee360; the salary in effect ends on its date", {
-    when() {
-        const problems = []
-        const post = (user, path, parameters) => {
-            const out = request(user, "apps/People/" + path, parameters, "post")
-            if (out.errors) problems.push(`${user} ${path}: ${out.errors}`)
-            return out
+feature(
+    "a raise for Tomas waits for the payroll approver, who reads and approves it; his manager reads nothing of it; the salary in effect ends on its date",
+    {
+        when() {
+            const problems = []
+            const post = (user, path, parameters) => {
+                const out = request(user, "apps/People/" + path, parameters, "post")
+                if (out.errors) problems.push(`${user} ${path}: ${out.errors}`)
+                return out
+            }
+            const change = (amount, effectiveDate, reason) =>
+                post(payroll, "Employees/Employee360/changePay", {
+                    partyId: ids.employeePartyId,
+                    partyRelationshipId: ids.employmentId,
+                    salaryAmount: amount,
+                    salaryCurrencyUomId: "USD",
+                    salaryPeriodTypeId: "PayrollMonth",
+                    effectiveDate,
+                    reason,
+                    expectedRevision: compensation(payroll, ids.employeePartyId).payRevision
+                })
+            // the payroll approver reads the change waiting and approves it (the employer's payroll approvers decide by default)
+            const approveWaiting = () => {
+                const changes = as(users.payApprover, "mantle.humanres.PeopleServices.find#EmploymentChanges", {
+                    partyId: ids.employeePartyId
+                }).changes
+                const waiting = Array.from(changes || []).find(row => row.isPayChange && row.canDecide)
+                if (waiting)
+                    as(users.payApprover, "mantle.humanres.PeopleServices.decide#EmploymentChange", {
+                        employmentChangeId: waiting.employmentChangeId,
+                        decision: "approve"
+                    })
+                return waiting || null
+            }
+            change("2800", "2026-01-01", "Starting salary")
+            approveWaiting()
+            const tomorrow = ec.l10n.format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+            change("3000", tomorrow, "Annual review")
+            const waiting = compensation(payroll, ids.employeePartyId).payChanges
+            const managerChanges = Array.from(
+                as(users.manager, "mantle.humanres.PeopleServices.find#EmploymentChanges", {partyId: ids.employeePartyId})
+                    .changes || []
+            )
+            const raise = approveWaiting()
+            const after = compensation(payroll, ids.employeePartyId)
+            return {problems, waiting, managerSees: managerChanges.some(row => row.isPayChange), raise, after}
+        },
+        then({problems, waiting, managerSees, raise, after}) {
+            problems.join("\n") == ""
+            waiting.length == 1
+            !managerSees
+            raise != null
+            raise.salaryText == "$3,000.00 a month"
+            after.payChanges.length == 0
+            after.salaries.map(row => row.salaryText) == ["$3,000.00 a month", "$2,800.00 a month"]
+            after.salaries[1].thruDateText != ""
         }
-        const change = (amount, effectiveDate, reason) =>
-            post(payroll, "Employees/Employee360/changePay", {
-                partyId: ids.employeePartyId,
-                partyRelationshipId: ids.employmentId,
-                salaryAmount: amount,
-                salaryCurrencyUomId: "USD",
-                salaryPeriodTypeId: "PayrollMonth",
-                effectiveDate,
-                reason,
-                expectedRevision: compensation(payroll, ids.employeePartyId).payRevision
-            })
-        change("2800", "2026-01-01", "Starting salary")
-        const tomorrow = ec.l10n.format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd")
-        change("3000", tomorrow, "Annual review")
-        const waiting = compensation(payroll, ids.employeePartyId).payChanges
-        // the manager reads the change she decides and approves it on Tomas's record
-        const changes = as(users.manager, "mantle.humanres.PeopleServices.find#EmploymentChanges", {
-            partyId: ids.employeePartyId
-        }).changes
-        const raise = Array.from(changes || []).find(row => row.isPayChange && row.canDecide)
-        if (raise)
-            post(users.manager, "Employees/Employee360/decideChange", {
-                partyId: ids.employeePartyId,
-                partyRelationshipId: ids.employmentId,
-                employmentChangeId: raise.employmentChangeId,
-                peopleApprovalId: raise.approval?.peopleApprovalId,
-                decision: "approve"
-            })
-        const after = compensation(payroll, ids.employeePartyId)
-        return {problems, waiting, raise, after}
-    },
-    then({problems, waiting, raise, after}) {
-        problems.join("\n") == ""
-        waiting.length == 1
-        raise != null
-        raise.salaryText == "$3,000.00 a month"
-        after.payChanges.length == 0
-        after.salaries.map(row => row.salaryText) == ["$3,000.00 a month", "$2,800.00 a month"]
-        after.salaries[1].thruDateText != ""
     }
-})
+)

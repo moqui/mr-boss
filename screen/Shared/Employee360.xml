@@ -47,8 +47,9 @@ along with this software (see the LICENSE.md file). If not, see
     P23, under People: Compensation, a payroll reader's of the opened employment's employer and absent from the context's answer for
     anyone else, HR included (mantle.humanres.PayrollSetupServices.get#Compensation through get#Employee360Context): the salary in
     effect and its history, the pay rates in effect, the pay assignments, the benefits, the pay changes waiting and the readiness;
-    Change salary for a payroll editor (a pay change, apply#EmploymentChange's kind pay: it waits for approval, the person's manager
-    by default, unless it is the first salary), and links to Pay assignments and Rates. A pay change in Employment changes shows
+    Set salary or Change salary for a payroll editor (a pay change, apply#EmploymentChange's kind pay: it waits for approval, the
+    employer's payroll approvers by default, the first salary too; the user's calls of Nov 12, 2026), and links to Pay assignments
+    and Rates. A pay change in Employment changes shows
     its salary only to payroll and its approver. TimeAndLeave (P12) joins with its phase. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
@@ -83,7 +84,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <!-- P23: a pay change asked by a payroll editor (Mantle checks the caller, the salary's terms and the salary revision read): it
-        waits for approval, or sets the first salary at once -->
+        waits for approval (P23 review: the first salary too) -->
     <transition name="changePay">
         <actions>
             <service-call name="mantle.humanres.PeopleServices.apply#EmploymentChange" out-map="payChanged"
@@ -175,7 +176,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <if condition="recordFound &amp;&amp; employee?.showsEquipment">
             <service-call name="mantle.humanres.PeopleServices.get#AssignedEquipment" out-map="equipmentFound" transaction="force-new"
-                    ignore-error="true" in-map="{partyId:partyId}"/>
+                    ignore-error="true" in-map="{partyId:partyId, checkOnly:true}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <!-- Maintenance (impl-maintenance P2, F62): the equipment the person holds that the user's maintenance scope reads -->
@@ -760,7 +761,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container-dialog id="ChangePayDialog" button-text="${compensation.currentSalary ? 'Change salary' : 'Set salary'}"
                                         icon="sym_o_payments" width="620" title="${compensation.currentSalary ? 'Change the salary' : 'Set the salary'} of ${overview.personName}"
                                         condition="canChangePay">
-                                    <label type="p" text="${compensation.salaries.length ? 'A pay change from a date: it waits for approval (the manager by default), then the salary in effect ends on that date.' : 'The first salary of this employment, set at once.'}"/>
+                                    <label type="p" text="${compensation.salaries.length ? 'A pay change from a date: it waits for approval (a payroll approver by default), then the salary in effect ends on that date.' : 'The first salary of this employment, from a date: it waits for approval (a payroll approver by default).'}"/>
                                     <form-single name="ChangePay" transition="changePay" map="payChangeValues">
                                         <field name="partyId"><default-field><hidden/></default-field></field>
                                         <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
@@ -800,8 +801,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="effectiveDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
                                         <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
                                         <field name="submitButton">
-                                            <default-field title="${compensation.salaries.length ? 'Ask for the pay change' : 'Set salary'}">
-                                                <submit confirmation="${compensation.salaries.length ? 'Ask for the pay change' : 'Set the salary'} of ${overview.personName}?"/></default-field>
+                                            <default-field title="Ask for the pay change">
+                                                <submit confirmation="Ask for the pay change of ${overview.personName}?"/></default-field>
                                         </field>
                                         <field-layout>
                                             <field-row><field-ref name="salaryAmount"/><field-ref name="salaryCurrencyUomId"/></field-row>

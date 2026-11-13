@@ -1849,7 +1849,8 @@ function changeParameters(partyRelationshipId, changeKind, draft) {
 function decisionUrl(row) {
     if (row.approvalKindEnumId === "PakPosition")
         return "/qapps/People/Staffing/PositionDetail?emplPositionId=" + encodeURIComponent(row.sourceId)
-    if (row.approvalKindEnumId === "PakEmploymentChange" && row.partyId)
+    // P23 review: a pay change (its own kind, PakPayChange) on the person's Employee360 too, where its approver reads its salary
+    if ((row.approvalKindEnumId === "PakEmploymentChange" || row.approvalKindEnumId === "PakPayChange") && row.partyId)
         return "/qapps/People/Employees/Employee360?partyId=" + encodeURIComponent(row.partyId)
     // P12: a leave request (or its cancellation) on LeaveRequestDetail
     if (row.approvalKindEnumId === "PakLeave") return leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(row.sourceId)
