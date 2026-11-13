@@ -435,7 +435,11 @@ function sweepRecords() {
         "Settings/SettingsHome": org,
         "Settings/ApprovalPolicies": org,
         "Settings/Preferences": org,
-        "Tasks/WorkItemDetail": {workEffortId: ids.onboardingId}
+        // Tasks opens its WorkItemDetail by default; an interview's event under the interviews calendar
+        Tasks: {workEffortId: ids.onboardingId},
+        "Staffing/InterviewsCalendar/EventDetail": {
+            workEffortId: first("mantle.humanres.recruitment.ApplicationInterview", "workEffortId")
+        }
     }
     return sweepRecordsMade
 }
@@ -500,6 +504,27 @@ function kioskTablet(name) {
     ec.message.clearErrors()
     return {cookie, deviceId: registered.deviceId, displayUserId}
 }
+// The annual leave policy an employment follows on a day (yyyy-MM-dd), or null: Retail's annual leave, or another a spec put it under
+// (an acceptance walk's leave requests are charged to it)
+function annualPolicyOn(partyRelationshipId, day) {
+    const at = Date.parse(day + "T12:00:00Z")
+    const time = value => (value == null ? null : ec.user.timestampMillis(value))
+    const open = row => {
+        const from = time(row.fromDate)
+        const thru = time(row.thruDate)
+        if (thru != null && thru <= (from ?? -Infinity)) return false
+        return (from ?? -Infinity) <= at && (thru ?? Infinity) > at
+    }
+    const rows = system(() =>
+        Array.from(
+            ec.entity
+                .find("mantle.humanres.leave.LeavePolicyAssignment")
+                .condition({partyRelationshipId, leaveTypeEnumId: "PltAnnual"})
+                .list()
+        )
+    )
+    return rows.find(open)?.leavePolicyId || null
+}
 // A request of a browser at the web root, as the device when a cookie is given (whoever is signed in on this thread), in a render
 // mode: its status, output and errors
 function deviceRequest(path, parameters, cookie, mode, method) {
@@ -530,5 +555,6 @@ function deviceRequest(path, parameters, cookie, mode, method) {
     sweepScreens,
     commonsMounts,
     kioskTablet,
-    deviceRequest
+    deviceRequest,
+    annualPolicyOn
 })

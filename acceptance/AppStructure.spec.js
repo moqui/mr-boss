@@ -509,8 +509,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
         // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns; Manufacturing P13 replaces Planning, P5a WorkOrders, P7 Quality, P14 Subcontracting, P10 ShopFloor, P16 Reports; Purchasing P1 replaces Home and adds Agreements, Receiving, Bills, Approvals and Products, 66, which its phases replace; Purchasing P2 replaces Suppliers, Settings and Products, 63; P14a replaces Replenishment, 62; P3 replaces Orders, 61; P4 replaces Approvals, 60; P5 replaces Receiving, 59; P6 replaces Bills, 58; P8 replaces Returns, 57; P10 replaces Requests, 56; P13 replaces Agreements, 55; P11 replaces Sourcing, 54; P15 replaces Performance, 53; Customer Service P1 replaces Home and adds Approvals and Reports, 54, which its phases replace; P2 replaces Cases and Settings, 52; P12 replaces Knowledge, 51; P3 replaces Customers, Orders and Availability, 48; P9 replaces Returns and Approvals, 46; P14 replaces Reports, 45; Commerce P1 adds Website, Customers, Promotions and Reports, which its phases replace: P4
         // Website, P7 Promotions and P6 Settings, 43; P8 Orders and Customers and P11 Reports, 40; P13 and P14 Integrations, 39;
         // Admin P1-P7 replace Home, Users, Settings, Data, Integrations and Organizations and Insights P1-P5 Home, Settings and
-        // FlowMap, 30, at gate 1)
-        placeholders.length >= 30
+        // FlowMap, 30, at gate 1; Maintenance P1 replaces its 6 and People P1 its 8, 16, Sales' and Marketing's)
+        placeholders.length >= 16
         failures.join("\n") == ""
     },
 })

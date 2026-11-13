@@ -38,7 +38,9 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
-        // the first day of the month three months ago, this year's first and last days, and next week's Monday to Friday
+        // the first day of the month three months ago, this year's first and last days, and the Monday to Friday of the week eight
+        // weeks from now (out of the way of the leave the walks after it ask for Tomas, PeopleLeaveUsable's and
+        // PeopleRosterUsable's, within five weeks: he stays under this policy in a whole run)
         const today = dayText(ec.user.timestampMillis(ec.user.nowTimestamp))
         const [year, month] = today.split("-").map(Number)
         const first = new Date(Date.UTC(year, month - 1 - 3, 1))
@@ -46,7 +48,7 @@ spec({
         state.yearFrom = year + "-01-01"
         state.yearThru = year + "-12-31"
         const weekday = new Date(today + "T12:00:00Z").getUTCDay()
-        const monday = new Date(Date.parse(today + "T12:00:00Z") + ((8 - weekday) % 7 || 7) * 86400000)
+        const monday = new Date(Date.parse(today + "T12:00:00Z") + (((8 - weekday) % 7 || 7) + 49) * 86400000)
         state.blockFrom = utcDayText(monday)
         state.blockThru = utcDayText(new Date(monday.getTime() + 4 * 86400000))
     },
@@ -166,7 +168,12 @@ feature(
                 Object.assign({operationKey: previewed.operationKey}, terms),
                 "post"
             )
-            const outcomes = previewed.rows.map(row => row.partyRelationshipId + ":" + (row.reasonCode || row.outcome)).sort()
+            // the three of the demo; another spec's hire into Store Operations (in a whole run) is not under the policy either
+            const known = [ids.employmentId, inesEmploymentId, rafaelEmploymentId]
+            const outcomes = previewed.rows
+                .filter(row => known.includes(row.partyRelationshipId))
+                .map(row => row.partyRelationshipId + ":" + (row.reasonCode || row.outcome))
+                .sort()
             return {preview, previewed, allocated, again, outcomes, granted, regranted: grants()}
         },
         then({preview, previewed, allocated, again, outcomes, granted, regranted}) {

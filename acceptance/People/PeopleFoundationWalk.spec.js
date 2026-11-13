@@ -1,13 +1,15 @@
 // People P1's "usable when" (impl-people P1), as an acceptance walk with artifact authorization on: the menu renders for each group
 // and each entry of it opens while the others are refused; people.hr opens Home with Ziziwork Retail's counts and due work and not
-// Ziziwork Services'; people.employee is refused the root; a Projects client and a PASS public account are refused the root and
-// every ironstone.people service; Admin's Health shows People's setup check and Admin's settings index People's entry, each only to
-// a user who may open it. The rules themselves are PeopleAccess's and Mantle's PeopleScope.
+// Ziziwork Services'; people.employee is refused the root but for the areas their own grants open (from P10); a Projects client
+// and a PASS public account are refused the root and every ironstone.people service; Admin's Health shows People's setup check and
+// Admin's settings index People's entry, each only to a user who may open it. The rules themselves are PeopleAccess's and Mantle's
+// PeopleScope.
 // Run: ./moq accept mr-boss --spec PeopleFoundationWalk
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, refusal, shell, page} = lib
 const admin = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
+const selfServiceAreas = ["Time", "Expenses", "Development", "Performance"]
 // every ironstone.people service a screen calls, with parameters it accepts from a user who has People
 const peopleServices = [
     ["ironstone.people.ContextServices.get#SharedContext", {}],
@@ -68,9 +70,12 @@ feature("people.hr opens Home with Retail's counts and due work and not Services
         const manager = asUser(users.manager, () => page("Home", {}, "html"))
         if (!opened(manager) || !manager.output.includes("your own work is below") || !manager.output.includes("My team"))
             problems.push(`the manager's Home: ${manager.status} ${manager.errors}`)
+        // the areas a self-service employee opens by their own grants (P10 Time, P15 Expenses, P18 Development, P20 Performance:
+        // their own time, leave, claims, qualifications, training, reviews and goals); every other entry of the root is refused
         for (const entry of ids.adminMenu) {
             const rendered = asUser(users.employee, () => page(entry, {}, "html"))
-            if (opened(rendered)) problems.push(`people.employee opens ${entry}`)
+            const ownArea = selfServiceAreas.includes(entry)
+            if (opened(rendered) !== ownArea) problems.push(`people.employee ${ownArea ? "is refused" : "opens"} ${entry}`)
         }
         if (shell(users.employee).apps.includes("People")) problems.push("people.employee's launcher has People")
         return {problems}

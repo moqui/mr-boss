@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The terminal twin of the team calendar (TeamCalendar.xml's tui text is a dynamic container of this screen): the next two weeks
     from date (today by default) of mantle.humanres.LeaveServices.get#TeamAbsences, who is out and when, each opening the request
-    when the user reads it, and of ScheduleServices.get#TeamShifts, who is on shift (P14). Read only; never a leave type or a
-    reason. -->
+    when the user reads it, and of ScheduleServices.get#TeamShifts, who is on shift (P14); Earlier, Today and Later open the calendar
+    two weeks before, today and two weeks after. Read only; never a leave type or a reason. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Team calendar" default-menu-include="false">
     <parameter name="date"/>
@@ -23,6 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date)
                 : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
         <set field="lastDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') + 13 * 86400000).toISOString().substring(0, 10)"/>
+        <!-- the two weeks before and after, which the calendar opens on (its date): the terminal's way through the calendar -->
+        <set field="earlierDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') - 14 * 86400000).toISOString().substring(0, 10)"/>
+        <set field="laterDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') + 14 * 86400000).toISOString().substring(0, 10)"/>
         <service-call name="mantle.humanres.LeaveServices.get#TeamAbsences" in-map="{start:firstDay, end:lastDay}" out-map="agenda"
                 transaction="force-new" ignore-error="true"/>
         <script>ec.message.clearErrors()</script>
@@ -38,7 +41,12 @@ along with this software (see the LICENSE.md file). If not, see
                 title: event.title, leaveRequestId: event.openable ? event.leaveRequestId : ''}))"/>
     </actions>
     <widgets>
-        <label text="Who is out and on shift: ${firstDay} to ${lastDay}" type="h6"/>
+        <container style="row items-center q-gutter-sm">
+            <label text="Who is out and on shift: ${firstDay} to ${lastDay}" type="h6" style="q-my-none"/>
+            <link url="../TeamCalendar" link-type="anchor" text="Earlier" parameter-map="{date:earlierDay}"/>
+            <link url="../TeamCalendar" link-type="anchor" text="Today"/>
+            <link url="../TeamCalendar" link-type="anchor" text="Later" parameter-map="{date:laterDay}"/>
+        </container>
         <form-list name="TeamAgenda" list="agendaRows" skip-form="true" paginate="false">
             <field name="when"><default-field title="When"><display/></default-field></field>
             <field name="title">

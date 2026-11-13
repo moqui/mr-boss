@@ -10,12 +10,29 @@
 // they show. The rules are Mantle's WorkProcess, UserProvisioning and PeopleChecklists and mr-boss's PeopleLifecycle and
 // PeopleAccess. Run: ./moq accept mr-boss --spec PeopleLifecycleUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
-const {ids, users, asUser, system, invoke, page} = lib
+const {ids, users, system, invoke, page} = lib
 const P = "mantle.humanres.PeopleServices."
 const S = "mantle.party.IdentityServices."
 const T = "org.moqui.admin.DataTransferServices."
 const run = String(Date.now()).slice(-6)
 const state = {}
+// the new employee's own password, chosen when they accept the invitation (the demo users' is the test login's default)
+const NEW_PASSWORD = "Moqui1!!usable"
+const passwords = {}
+// lib.asUser, and for the new employee a sign-in with their own password
+function asUser(username, action) {
+    if (!passwords[username]) return lib.asUser(username, action)
+    login(username, passwords[username])
+    const disabled = ec.artifactExecution.authzDisabled()
+    try {
+        ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.message.clearErrors()
+        if (disabled) ec.artifactExecution.disableAuthz()
+        login("john.doe")
+    }
+}
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 const codeOf = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message
 // a service call as the user (the screen's grant opens it; the service checks the user), with its refusal's code
@@ -151,13 +168,14 @@ feature(
                 invoke(S + "accept#Invitation", {
                     token,
                     username: "una.usable." + run,
-                    newPassword: "Moqui1!!usable",
-                    newPasswordVerify: "Moqui1!!usable"
+                    newPassword: NEW_PASSWORD,
+                    newPasswordVerify: NEW_PASSWORD
                 })
             )
             login("john.doe")
             out.accepted = [accepted.applied, accepted.accountCreated]
             const username = "una.usable." + run
+            passwords[username] = NEW_PASSWORD
             const handbook = state.tasks.find(task => task.workEffortName === "Sign the staff handbook")
             out.listed = phoneTasks(username).includes(handbook?.workEffortId)
             out.completed = as(username, "mantle.work.TaskServices.set#TaskStatus", {
@@ -207,9 +225,14 @@ feature(
                 fromPartyId: ids.reportPartyId,
                 toPartyId: ids.organizationId
             }).find(row => row.thruDate == null)
+            // her last day a year from now: the separation applies when decided (the Leaver checklist and the laptop's return start
+            // then) and she stays employed for the walks that run after this one in a whole run (her transfer, her leave, a manager
+            // change to her)
+            const lastDay = ec.l10n.format(new Date(ec.user.timestampMillis(ec.user.nowTimestamp) + 365 * 86400000), "yyyy-MM-dd")
             const asked = as(users.hr, P + "apply#EmploymentChange", {
                 partyRelationshipId: employment.partyRelationshipId,
                 changeKind: "separation",
+                effectiveDate: lastDay,
                 reason: "Moving abroad",
                 expectedRevision: revisionOf(employment.partyRelationshipId)
             })
@@ -239,7 +262,8 @@ feature(
                     "html"
                 )
             )
-            out.returned = opened(returned)
+            // the transition answers with its redirect back to the equipment, and no error
+            out.returned = returned.status === 302 && returned.errors.length === 0
             out.done = task ? one("mantle.work.effort.WorkEffort", {workEffortId: task}).statusId : ""
             return out
         },
@@ -269,7 +293,9 @@ feature(
                 .join("\n")
             const post = (path, parameters) =>
                 asUser(users.hr, () => page("Employees/EmployeeImport/Index/" + path, parameters, "html"))
-            out.staged = opened(post("stage", {organizationPartyId: ids.organizationId, sourceText: csv}))
+            // the wizard's transition answers with its redirect to the next step, and no error
+            const staged = post("stage", {organizationPartyId: ids.organizationId, sourceText: csv})
+            out.staged = staged.status === 302 && staged.errors.length === 0
             const key = rows("moqui.server.TransferBatch", {targetId: "employees", userId: "BOSS_PPL_HR"}).sort((a, b) =>
                 String(b.transferId).localeCompare(String(a.transferId))
             )[0]?.transferId

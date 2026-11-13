@@ -33,6 +33,13 @@ const groupUsers = [
 // the root's menu groups (a group's own menu is its subscreens)
 const groups = ["Employees", "Staffing", "Time", "Payroll", "Expenses", "Development", "Performance", "Settings"]
 const opened = got => got.status == 200 && got.errors.length == 0
+// a screen as the user opens it: html, or qvue for a .qvue screen with no html (the team and interviews calendars), as the shell
+// loads it
+function view(user, path, parameters = {}) {
+    const got = asUser(user, () => page(path, parameters, "html"))
+    if (!got.errors.some(error => /render mode html is not supported/.test(error))) return got
+    return asUser(user, () => page(path, parameters, "qvue"))
+}
 const failedRender = got => /Error rendering|Exception in render/.test(got.output)
 
 // the error nodes and node types of a TUI document
@@ -104,12 +111,12 @@ feature(
                 if (extra.length) problems.push(`${user}'s launcher has ${extra.join(", ")}`)
                 const mine = menuOf(user)
                 for (const path of mine) {
-                    const got = asUser(user, () => page(path, {}, "html"))
+                    const got = view(user, path)
                     if (!opened(got) || failedRender(got))
                         problems.push(`${user}: ${path} in their menu does not open: ${got.status} ${got.errors}`)
                 }
                 for (const path of full.filter(path => !mine.includes(path))) {
-                    const got = asUser(user, () => page(path, {}, "html"))
+                    const got = view(user, path)
                     if (failedRender(got)) problems.push(`${user}: ${path} fails to render: ${got.errors}`)
                     else if (opened(got)) outOfMenu.push(`${user}: ${path}`)
                 }
