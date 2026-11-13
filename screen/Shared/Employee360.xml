@@ -50,7 +50,12 @@ along with this software (see the LICENSE.md file). If not, see
     Set salary or Change salary for a payroll editor (a pay change, apply#EmploymentChange's kind pay: it waits for approval, the
     employer's payroll approvers by default, the first salary too; the user's calls of Nov 12, 2026), and links to Pay assignments
     and Rates. A pay change in Employment changes shows
-    its salary only to payroll and its approver. TimeAndLeave (P12) joins with its phase. Under Insights the Records mount serves no transition of this screen. -->
+    its salary only to payroll and its approver. P30, under People: Clocking badge, an HR editor's of the opened employment's employer
+    (mantle.humanres.AttendanceServices get#KioskBadge: its state, never its number or PIN), with Issue badge (a one-time PIN or none:
+    the worker sets their own PIN in self-service, the user's call of Nov 12, 2026; the badge before it revoked), Print badge
+    (Employees/BadgePrint, once, by its issuer within fifteen minutes; issuing again is the reprint), Reset PIN (a forgotten PIN: a
+    new one-time PIN or none) and Revoke badge.
+    TimeAndLeave (P12) joins with its phase. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
     <parameter name="partyId"/>
@@ -158,6 +163,35 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
     </transition>
+    <!-- P30: a clocking badge issued with a one-time PIN or none (its field is named newPassword, which the framework never echoes or
+        keeps after an error), a badge's PIN reset the same way, and a badge revoked, by an HR editor of the employer: Mantle checks the
+        employer, the employment and the PIN. The worker's own PIN is theirs alone (SelfService). -->
+    <transition name="issueBadge">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.issue#KioskBadge" out-map="badgeIssued"
+                    in-map="{partyRelationshipId:partyRelationshipId, oneTimePin:(newPassword || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Badge issued: print it within 15 minutes</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <transition name="resetBadgePin">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.reset#KioskPin"
+                    in-map="{kioskBadgeId:kioskBadgeId, oneTimePin:(newPassword || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">PIN reset: the badge works again once they set a new one in self-service</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <transition name="revokeBadge">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.revoke#KioskBadge" in-map="{kioskBadgeId:kioskBadgeId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Badge revoked</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
 
     <actions>
         <service-call name="ironstone.people.ContextServices.get#Employee360Context" out-map="employee" transaction="force-new"
@@ -196,6 +230,12 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="recordFound &amp;&amp; employee?.showsDevelopment">
             <service-call name="mantle.humanres.ReviewServices.find#Reviews" out-map="reviewsFound" transaction="force-new"
                     ignore-error="true" in-map="{partyId:partyId, pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <!-- P30: the opened employment's clocking badge, an HR editor's under People (Mantle answers its state alone) -->
+        <if condition="recordFound &amp;&amp; appRoot == 'People' &amp;&amp; employee?.canChangeEmployment &amp;&amp; record.partyRelationshipId">
+            <service-call name="mantle.humanres.AttendanceServices.get#KioskBadge" out-map="badgeFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyRelationshipId:record.partyRelationshipId}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <if condition="recordFound &amp;&amp; employee?.showsChanges">
@@ -270,6 +310,15 @@ along with this software (see the LICENSE.md file). If not, see
                 salaryPeriodTypeId: compensation.currentSalary?.timePeriodTypeId || null, payGradeId: compensation.currentSalary?.payGradeId || null,
                 operationKey: ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + (compensation.partyRelationshipId || '')} : {}
             payAssignmentsUrl = sharedLinks?.['Payroll/PayAssignments'] || null
+            // P30: the clocking badge, its state and what HR may do with it; its print opens in a window of its own (People's route)
+            badgeShown = !!badgeFound?.canIssue || !!badgeFound?.badge
+            kioskBadge = badgeFound?.badge || null
+            badgeStateColors = {active: 'positive', issued: 'primary', pinNeeded: 'primary', locked: 'warning', unprinted: 'grey-8', revoked: 'grey-8'}
+            badgeFacts = kioskBadge ? [['Issued', kioskBadge.issuedDateText], ['Printed', kioskBadge.printedDateText],
+                ['PIN set', kioskBadge.pinSetText], ['Last used', kioskBadge.lastUsedText]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+            badgePrintUrl = kioskBadge?.canPrint ? '/apps/People/Employees/BadgePrint?renderMode=html-print&kioskBadgeId=' +
+                encodeURIComponent(kioskBadge.kioskBadgeId) : null
+            badgeValues = {partyId, partyRelationshipId: record.partyRelationshipId || null, kioskBadgeId: kioskBadge?.kioskBadgeId || null}
             ratesUrl = sharedLinks?.['Payroll/Rates'] || null
             canChangeEmployment = !!employee?.canChangeEmployment && !!record.partyRelationshipId && opened?.state != 'ended'
             changeEmploymentId = record.partyRelationshipId || null
@@ -748,6 +797,81 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                             </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P30: the clocking badge (design §15 Badge, §6 ClockingKiosk): HR issues it with a one-time PIN or none, prints it
+                    once (issuing again is the reprint), resets a forgotten PIN and revokes it; the worker sets their own PIN in
+                    self-service; its number is never shown again and the worker's PIN never to HR -->
+                <section name="ClockingBadge" condition="badgeShown">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Clocking badge"/>
+                            <box-toolbar>
+                                <link url="${badgePrintUrl}" url-type="plain" text="Print badge" icon="sym_o_print" link-type="anchor-button"
+                                        target-window="_blank" btn-type="primary" condition="badgePrintUrl"/>
+                                <container-dialog id="IssueBadgeDialog" button-text="${kioskBadge &amp;&amp; kioskBadge.state != 'revoked' ? 'Issue a new badge' : 'Issue badge'}"
+                                        icon="sym_o_badge" width="520" title="Issue a clocking badge to ${overview.personName}" condition="badgeFound?.canIssue">
+                                    <label type="p" text="${kioskBadge &amp;&amp; kioskBadge.state != 'revoked' ? 'The badge in use is revoked when the new one is issued. ' : ''}Print the badge within 15 minutes of issuing it; its number is not shown again. The badge works at a kiosk once ${overview.personName} sets their own PIN in self-service."/>
+                                    <form-single name="IssueBadge" transition="issueBadge" map="badgeValues">
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="newPassword">
+                                            <default-field title="One-time PIN" tooltip="Optional, 4 to 8 digits: give it to the worker, who types it once to set their own PIN in self-service; it never works at a kiosk">
+                                                <password size="8" maxlength="8"/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Issue badge"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ResetBadgePinDialog" button-text="Reset PIN" icon="sym_o_password" width="520"
+                                        title="Reset ${overview.personName}'s badge PIN" condition="badgeFound?.canResetPin">
+                                    <label type="p" text="For a forgotten PIN: the badge works at no kiosk until ${overview.personName} sets a new PIN in self-service."/>
+                                    <form-single name="ResetBadgePin" transition="resetBadgePin" map="badgeValues">
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="kioskBadgeId"><default-field><hidden/></default-field></field>
+                                        <field name="newPassword">
+                                            <default-field title="One-time PIN" tooltip="Optional, 4 to 8 digits: give it to the worker, who types it once to set their own PIN">
+                                                <password size="8" maxlength="8"/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Reset PIN"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="RevokeBadgeDialog" button-text="Revoke badge" icon="sym_o_block" type="danger" width="520"
+                                        title="Revoke ${overview.personName}'s clocking badge" condition="badgeFound?.canRevoke">
+                                    <form-single name="RevokeBadge" transition="revokeBadge" map="badgeValues">
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="kioskBadgeId"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="">
+                                                <submit text="Revoke badge" type="danger"
+                                                        confirmation="Revoke ${overview.personName}'s clocking badge? Every kiosk refuses it from now on."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <section name="BadgeState" condition="kioskBadge">
+                                    <widgets>
+                                        <render-mode>
+                                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${badgeStateColors[kioskBadge.state] || 'grey-8'}">${
+                                                WebUtilities.encodeHtml(kioskBadge.stateText)}</q-chip>]]></text>
+                                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Badge: " + kioskBadge.stateText})}]]></text>
+                                            <text type="html">Badge: ${kioskBadge.stateText}</text>
+                                        </render-mode>
+                                        <form-list name="BadgeFacts" list="badgeFacts" skip-form="true" paginate="false">
+                                            <field name="label"><default-field title=""><display/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <label text="No badge yet. Issue one so they can clock in and out at a clocking kiosk." type="p" style="m-muted"
+                                        condition="!kioskBadge"/>
+                            </box-body>
                         </container-box>
                     </widgets>
                 </section>
