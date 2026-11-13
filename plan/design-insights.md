@@ -420,7 +420,8 @@ As built (impl-people P29, an owner contract): People's eight entries (`People.H
 `PeopleReportServices.get#Options` as their catalogue (the report's id its `catalogueKey`; the payroll register a payroll reader's
 alone) and open one route, People's Reports, with the report chosen: an entry's `routePath` may carry fixed parameters after a `?`
 (`People/Reports?reportId=headcount`), and `get#ReportLink` adds the context after them. People's datasets are class `InsDcPeople`,
-which Assist and MCP never admit, read in Insights only with People's Insights bundle (`BOSS_PEOPLE_INSIGHTS`).
+which Assist and MCP never admit, read in Insights only with People's Insights bundle (`BOSS_PEOPLE_INSIGHTS`); the Insights data
+steward stewards them (their update artifact alone, the user's call of Nov 12, 2026) and reads no row without the bundle.
 
 Planned (Nov 11, 2026): the `Sales.SalesAnalysis` entry's route moves from Accounting's to Sales' own, with Sales' catalogue service, and `Accounting/Reports/SalesAnalysis` becomes a mount of it with Accounting's finance columns (impl-sales P19).
 

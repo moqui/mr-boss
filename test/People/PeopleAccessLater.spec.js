@@ -1647,8 +1647,16 @@ feature(
             const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
             const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
             const register = {reportId: "payrollRegister", fromDate: "2026-01-01", thruDate: "2026-12-31"}
-            // the demo's own values, so nothing changes: Retail's intake handler and no clocking by default
-            const intake = {organizationPartyId: ids.organizationId, intakeHandlerIds: ids.caseHandlerPartyId}
+            // the demo's own values, so nothing changes: Retail's intake handler and no clocking by default; the intake names the
+            // settings revision it read (the P29 review)
+            const revision = asUser(users.admin, () =>
+                system(() => invoke("mantle.humanres.PeopleServices.get#Settings", {organizationPartyId: ids.organizationId}))
+            ).employers?.[0]?.revision
+            const intake = {
+                organizationPartyId: ids.organizationId,
+                intakeHandlerIds: ids.caseHandlerPartyId,
+                expectedRevision: revision
+            }
             const clocking = {organizationPartyId: ids.organizationId, clocking: "N"}
             const codes = {
                 hrRegister: as(users.hr, R, register),

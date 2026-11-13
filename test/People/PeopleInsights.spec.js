@@ -4,8 +4,9 @@
 // service and screen; every shipped definition loads; no shipped document carries pay, tax, private contact or an identity
 // number); Insights' catalog opens a People report on its route with the report chosen, and Mantle's catalogue offers the payroll
 // register to payroll alone; a People dataset is read through Insights by a holder of People's Insights bundle, their own
-// organization's rows, and by no other Insights reader; an Assist or MCP question on a People dataset is refused and none is
-// listed as a source; Reports' one render (headcount as HR, with its denominator and export) and its CSV, and Preferences' one
+// organization's rows, and by no other Insights reader; ending an employment updates or removes its holder's qualification
+// documents (the P29 review); the Insights data steward stewards the People datasets and reads none of their rows; an Assist or MCP
+// question or saved panel on a People dataset is refused and none is listed as a source; Reports' one render (headcount as HR, with its denominator and export) and its CSV, and Preferences' one
 // render (the People administrator's clocking default and case intake handlers by name). The report rules are Mantle's
 // PeopleReports; the access cases are PeopleAccessLater's; the "usable when" is the acceptance PeopleReportsUsable.
 // Run: ./moq test mr-boss --spec PeopleInsights
@@ -194,17 +195,122 @@ feature("a People dataset is read through Insights by People's bundle alone, eac
     }
 })
 
+// The qualification documents follow their holder's employments (the P29 review, the user's call of Nov 12, 2026): a spec person
+// employed by Retail and Services, with a verified qualification; ending the Services employment drops Services from the document,
+// revoking the qualification changes its verification there, and ending the Retail one deletes the document. All taken out after.
+feature("ending an employment updates or removes its holder's qualification documents", {
+    when() {
+        const person = "PPL_INS_SPEC_HOLDER"
+        const qualificationId = "PPL_INS_SPEC_QL"
+        const write = (service, parameters) =>
+            ec.service.sync().name(service).parameters(parameters).requireNewTransaction(true).call()
+        const employments = [ids.organizationId, ids.otherOrganizationId].map(toPartyId => ({
+            partyRelationshipId: person + "_" + toPartyId,
+            relationshipTypeEnumId: "PrtEmployee",
+            fromPartyId: person,
+            toPartyId,
+            fromDate: "2025-01-01 00:00:00"
+        }))
+        const documentNow = () => {
+            ec.search.processFeedPending(null, 10)
+            const found = ec.search.getDocument("BossPeopleQualification", qualificationId)
+            return found
+                ? {
+                      employers: Array.from(found.fromRelationships || [])
+                          .map(row => row.organizationPartyId)
+                          .sort(),
+                      verification: found.verificationStatusId
+                  }
+                : null
+        }
+        return system(() => {
+            try {
+                write("create#mantle.party.Party", {partyId: person, partyTypeEnumId: "PtyPerson"})
+                write("create#mantle.party.Person", {partyId: person, firstName: "Insights", lastName: "Holder"})
+                for (const employment of employments) write("create#mantle.party.PartyRelationship", employment)
+                write("create#mantle.humanres.ability.PartyQualification", {
+                    partyQualificationId: qualificationId,
+                    partyId: person,
+                    qualificationTypeEnumId: "QualCertification",
+                    title: "Spec certificate",
+                    fromDate: "2025-06-01 00:00:00",
+                    thruDate: "2027-06-01 00:00:00",
+                    verificationStatusId: "QlVerVerified"
+                })
+                const both = documentNow()
+                write("update#mantle.party.PartyRelationship", {
+                    partyRelationshipId: employments[1].partyRelationshipId,
+                    thruDate: ec.user.nowTimestamp
+                })
+                const retailOnly = documentNow()
+                write("update#mantle.humanres.ability.PartyQualification", {
+                    partyQualificationId: qualificationId,
+                    verificationStatusId: "QlVerRevoked"
+                })
+                const revoked = documentNow()
+                write("update#mantle.party.PartyRelationship", {
+                    partyRelationshipId: employments[0].partyRelationshipId,
+                    thruDate: ec.user.nowTimestamp
+                })
+                const left = documentNow()
+                return {both, retailOnly, revoked, left}
+            } finally {
+                write("delete#mantle.humanres.ability.PartyQualification", {partyQualificationId: qualificationId})
+                for (const employment of employments)
+                    write("delete#mantle.party.PartyRelationship", {partyRelationshipId: employment.partyRelationshipId})
+                write("delete#mantle.party.Person", {partyId: person})
+                write("delete#mantle.party.Party", {partyId: person})
+                ec.search.processFeedPending(null, 10)
+            }
+        })
+    },
+    then({both, retailOnly, revoked, left}) {
+        both.employers == [ids.organizationId, ids.otherOrganizationId].sort()
+        retailOnly.employers == [ids.organizationId]
+        revoked.verification == "QlVerRevoked"
+        revoked.employers == [ids.organizationId]
+        left == null
+    }
+})
+
+// The Insights data steward stewards the People datasets (the user's call of Nov 12, 2026): lists them as theirs, checks and refreshes
+// their indexes, and reads none of their rows without People's Insights bundle.
+feature("the Insights data steward stewards the People datasets without reading their rows", {
+    when() {
+        return asUser("insights.steward", () => ({
+            listed: Array.from(invoke(R + "find#BusinessDatasets", {}).datasets || [])
+                .filter(row => String(row.datasetId).startsWith("boss-people-"))
+                .map(row => row.datasetId + " " + !!row.stewarded)
+                .sort(),
+            checked: refusal(R + "validate#BusinessDataset", {datasetId: "boss-people-qualifications"}),
+            rows: refusal(R + "query#Documents", {datasetId: "boss-people-headcount", from: "now-9y", thru: "now+1y"})
+        }))
+    },
+    then({listed, checked, rows}) {
+        listed == datasets.map(datasetId => datasetId + " true")
+        checked == ""
+        rows != ""
+    }
+})
+
 feature("an Assist or MCP question on a People dataset is refused, and no People dataset is offered as a source", {
     when() {
         return asUser(analyst, () => ({
             // a refusal the asker can act on is the answer: not available, with its code
             assist: invoke(A + "run#DatasetQuery", {datasetId: "boss-people-headcount", aggregate: "count"}),
             mcp: invoke(A + "run#OperationsQuery", {datasetId: "boss-people-qualifications", aggregate: "count"}),
+            // a saved panel over a People dataset, the shipped workforce dashboard's, on both surfaces
+            panel: invoke(A + "run#PanelQuery", {definitionId: "boss-people-workforce", panelId: "employments"}),
+            mcpPanel: invoke(A + "run#OperationsPanel", {definitionId: "boss-people-workforce", panelId: "employments"}),
             sources: Array.from(invoke(A + "find#QuerySources", {}).datasets || []).map(row => row.datasetId),
             mcpSources: Array.from(invoke(A + "find#OperationsSources", {}).datasets || []).map(row => row.datasetId)
         }))
     },
-    then({assist, mcp, sources, mcpSources}) {
+    then({assist, mcp, panel, mcpPanel, sources, mcpSources}) {
+        panel.available == false
+        panel.refusedCode == "DATASET_UNAVAILABLE"
+        mcpPanel.available == false
+        mcpPanel.refusedCode == "DATASET_UNAVAILABLE"
         assist.available == false
         assist.refusedCode == "DATASET_UNAVAILABLE"
         mcp.available == false

@@ -28,11 +28,15 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="thruDate"/>
     <parameter name="groupBy"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the payroll register's amounts are opted out of AI: an agent's render gets no export of them (Assist, AI opt-out) -->
     <transition name="exportCsv" read-only="true" method="get">
         <actions>
+            <if condition="reportId == 'payrollRegister' &amp;&amp; sri.isAgentRender()">
+                <return error="true" message="The payroll register is not shared with AI"/></if>
             <service-call name="mantle.humanres.PeopleReportServices.run#Report" out-map="exported"
                     in-map="Object.assign({}, reportOptions, {format:'csv'})"/>
-            <script>ec.web.sendTextResponse(exported.csvText, 'text/csv', exported.fileName)</script>
+            <if condition="!ec.message.hasError()">
+                <script>ec.web.sendTextResponse(exported.csvText, 'text/csv', exported.fileName)</script></if>
         </actions>
         <default-response type="none"/>
     </transition>
@@ -129,7 +133,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${answer.optionsText}" type="p" style="text-caption m-muted q-mb-none"/>
                     </container>
                     <container style="col-auto">
-                        <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor" parameter-map="exportParameters"/>
+                        <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor" parameter-map="exportParameters"
+                                condition="!(answer.pay &amp;&amp; sri.isAgentRender())"/>
                     </container>
                 </container>
                 <label text="${answer.basisText}" type="p" style="m-muted"/>

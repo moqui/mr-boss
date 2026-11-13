@@ -21,11 +21,14 @@ along with this software (see the LICENSE.md file). If not, see
       employer, position and how it ended, never a tax or pay field of Employment), BossPeopleLeaveLedger (a leave ledger entry's
       type, kind, quantity and date, never a request's reason or the entry's description) and BossPeopleQualification (a
       qualification's type, title, issuer, validity and verification with its holder's current employers (fromRelationships, a list:
-      a person employed by two is each one's), never its document number);
+      a person employed by two is each one's; ironstone.people.InsightsServices.get#QualificationDocumentData keeps the employments
+      not ended and leaves out the document of a holder with none, so ending an employment updates or removes it), never its
+      document number);
     - the People datasets group BOSS_PEOPLE_INSIGHTS ("People data in Insights", People's Insights bundle): the datasets' artifacts
       and the documents are granted to it alone (and to ADMIN, the steward through REPORT_DATASETS_ADMIN), so an Insights reader
       reads them only with it, each their own organizations' rows; it opens no screen, so its member also reads Insights
-      (BOSS_INSIGHTS and BOSS_INSIGHTS_READ);
+      (BOSS_INSIGHTS and BOSS_INSIGHTS_READ); the Insights data steward (BOSS_INSIGHTS_DATA) stewards them, admission, checks
+      and index refresh, by their update artifact alone, reading no row without the bundle (the user's call of Nov 12, 2026);
     - the admission (moqui.report.BusinessDataset), each dataset's class (InsDcPeople: Insights' Assist and MCP admit only the
       operations and cost classes, so a People dataset is refused to both with no code, F70), the readiness and refresh rows
       DataReadiness reads (fixRoute insightsDataset), the catalog entries (one per registered People report, read through Mantle's
@@ -65,7 +68,8 @@ along with this software (see the LICENSE.md file). If not, see
         <fields fieldSeqId="13" fieldPath="reversedEntryId"/>
     </dataDocuments>
     <dataDocuments dataDocumentId="BossPeopleQualification" indexName="boss_people" documentName="People Qualification"
-            primaryEntityName="mantle.humanres.ability.PartyQualification" documentTitle="${partyQualificationId}">
+            primaryEntityName="mantle.humanres.ability.PartyQualification" documentTitle="${partyQualificationId}"
+            manualDataServiceName="ironstone.people.InsightsServices.get#QualificationDocumentData">
         <fields fieldSeqId="01" fieldPath="partyQualificationId"/>
         <fields fieldSeqId="02" fieldPath="partyId"/>
         <fields fieldSeqId="03" fieldPath="qualificationTypeEnumId"/>
@@ -78,10 +82,12 @@ along with this software (see the LICENSE.md file). If not, see
         <fields fieldSeqId="21" fieldPath="Party:fromRelationships:toPartyId" fieldNameAlias="organizationPartyId"/>
         <fields fieldSeqId="22" fieldPath="Party:fromRelationships:relationshipTypeEnumId" fieldNameAlias="relationshipTypeEnumId"/>
         <fields fieldSeqId="23" fieldPath="Party:fromRelationships:thruDate" fieldNameAlias="employmentThruDate"/>
-        <!-- the holder's employments in effect (an ended one leaves its employer out); a qualification of nobody employed now is
-            not indexed -->
+        <!-- the holder's employments: each with its end, so ending one is a write the feed takes (impl-people P29 review: an end in a
+            condition here stopped that write from being fed, and the document kept the employer); the manual data service keeps
+            those not ended and marks a holder with none noCurrentEmployment, which the post-query condition leaves out, so the
+            feed deletes the document -->
         <conditions conditionSeqId="01" fieldNameAlias="relationshipTypeEnumId" fieldValue="PrtEmployee"/>
-        <conditions conditionSeqId="02" fieldNameAlias="employmentThruDate" operator="is-null" fieldValue=""/>
+        <conditions conditionSeqId="90" fieldNameAlias="noCurrentEmployment" postQuery="Y"/>
     </dataDocuments>
     <moqui.entity.feed.DataFeed dataFeedId="BossPeopleReports" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
             feedName="People reports" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
@@ -112,6 +118,10 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.dataset.boss-people-leave-balances" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.dataset.boss-people-qualifications" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_PPL_DATASETS_INSIGHTS" userGroupId="BOSS_PEOPLE_INSIGHTS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <!-- the Insights data steward stewards them (the user's call of Nov 12, 2026): the update artifact alone, so admission, the
+            checks and the index refresh are theirs, and no view, so they read no row unless they hold People's bundle too (an
+            authorization's action is matched exactly: an update grants no view); no DataDocumentUserGroup row of theirs -->
+        <authz artifactAuthzId="BOSS_PPL_DATASETS_INSIGHTS_DATA" userGroupId="BOSS_INSIGHTS_DATA" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_UPDATE"/>
     </artifactGroups>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleEmployment" userGroupId="ADMIN"/>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleLeaveLedger" userGroupId="ADMIN"/>
