@@ -1194,6 +1194,17 @@ unassigned amounts appear separately. **Needs:** SAL-FORECAST, SAL-REPORT.
 Link the same settings from Admin's index. External hosts, credentials, gateways, mail transport,
 and tax/currency masters retain their existing owners. **Needs:** SAL-ACCESS, SAL-QUOTE.
 
+As built (impl-sales P2): Settings is an area (`BOSS_SAL_SETTINGS`: the root user group denied, the manager allowed) with the
+tabs Readiness (the landing, SalesReadiness), Stages, Teams, Sources (`LeadSources`) and Types and reasons, each gated by
+permission as the menu is; the administrator (`SALES_CONFIGURE`) opens them all, a manager (`SALES_TEAM_MANAGE`) Teams alone. The
+O verbs are `mantle.sales.OpportunityServices` `store#Pipeline`, `store#Stage`, `store#SalesTeam`, `store#SalesTeamMember`,
+`store#LeadSource`, `store#LostReason`, `get#SalesOptions` (what an organization offers now, to any Sales reader) and
+`get#SalesSetup` (the settings read, with ended rows, open-deal counts and edit flags, which the design did not name), over
+`mantle/sales/SalesSettings.js`; S's `get#SalesReadiness` answers the framework's readiness contract as `sales.readiness`
+(a default pipeline, stages for every pipeline in effect, a staffed team, a lead source offered; fix places `salesStages`,
+`salesTeams`, `salesLeadSources`), with the settings entry `sales.settings` in Admin's index. Every write of an existing row
+names the revision it read.
+
 **Source:** research §10; consolidated Odoo/Frappe settings and current Accounting readiness.
 
 ### Stages
@@ -1210,6 +1221,16 @@ intake pipeline and may have no stage until qualified. Retiring a used stage ret
 requires an explicit reassignment for open deals; it does not rewrite closed deals.
 **Needs:** SAL-CRM.
 
+As built (impl-sales P2): SalesPipeline has an organization, name, description, optional team, default flag and dates; a pipeline
+with no organization is the instance's shared pipeline, offered to every organization until it sets a default of its own, and
+changed only by a reader of every organization (the seeded `SalesDefault`, "Sales pipeline", with `SalesQualified`,
+`SalesDiscovery`, `SalesProposal` and `SalesNegotiation`, initial setup in mr-mantle `data/SalesData.xml`). One default per
+organization. A stage gains `salesPipelineId`, `foldFlag` and dates; the order is the numeric sequence with Up and Down, which
+renumber the current stages 10, 20, 30; a stage is retired by its `thruDate`, and one holding open deals (outcome not Won or Lost)
+only with another current stage of the same pipeline, to which they move, audit-logged. A pipeline is ended only when no open
+deal is on its stages. SalesOpportunity gains its outcome `statusId` (`SalesOppOpen`, `SalesOppWon`, `SalesOppLost`, seeded in
+`data/SalesCrmSeedData.xml`) here, for the retirement rule; P4 builds the lifecycle.
+
 **Source:** research §§1, 10; Mantle SalesOpportunityStage and Odoo pipeline configuration.
 
 ### Teams
@@ -1224,6 +1245,14 @@ another person/team identity table. Expiring membership changes access prospecti
 reassignment of open work. It does not rewrite historical attribution. **Needs:** SAL-CRM.
 
 **Source:** research §§3, 10; Moqui Sales team participation and Odoo teams.
+
+As built (impl-sales P2): a team is an Organization party with the `SalesTeam` role, owned by its organization, whose dated
+`PrtSalesTeamOf` relationship to the organization is its effective interval; a member is a dated `PrtSalesTeamMember` row from a
+person who works for the organization (an agent or employee in effect) as `SalesRepresentative` or `Manager`, so the manager is a
+membership. Joining and leaving are now or later, never back-dated; a person has one membership of a team at a time; ending a team
+ends its memberships; nothing is deleted. TeamMembers' lookup offers the organization's people by party, labelled with their job
+title from People's `find#Employees` for a holder of `PEOPLE_DIRECTORY_VIEW`, and a member links to Employee360 through People's
+`get#Employee360Link`. `SalesAccess.js` reads a team's organization and a person's current teams for P4's scope.
 
 ### LeadSources
 
@@ -1241,6 +1270,12 @@ O.store#LeadIntake looks up the intake's UTM source and medium (from Marketing's
 or the published form's link) and sets the lead's DataSource; source plus medium wins over source
 alone, and an unmapped pair leaves the publication's default source. The intake also writes the
 existing SalesOpportunityTracking join to the tracking code. **Needs:** SAL-CRM.
+
+As built (impl-sales P2): the binding is `SalesLeadSourceBinding` (dataSourceId, organization, dates); a new source is offered to
+its organization at once, an offer is added or ended per organization of the caller's, and a source's name or type is changed
+only by one whose scope covers every organization it is offered to (`SOURCE_SHARED`); another organization is named on the list
+only when it is in the reader's scope. The screen links only to itself and reads the mounting root's `sales` context, for
+Marketing's mount.
 
 **Source:** research §§2, 10; SalesData source types, framework DataSource and Odoo UTM.
 
@@ -1265,6 +1300,11 @@ forecast keys and hierarchy cycles are refused. **Needs:** SAL-FORECAST.
 Seed proposed Lead/Opportunity values under SalesOpportunityType and loss-reason values under a
 new SalesLostReason type. Do not attach the unused legacy LeadStatus flow to a nonexistent Lead
 entity. Reason retirement hides future selection, retaining old labels/history. **Needs:** SAL-CRM.
+
+As built (impl-sales P2): the types are `SotLead` and `SotOpportunity`, the reasons `SalesLostReason` values (`SlrPrice`,
+`SlrCompetitor`, `SlrNoBudget`, `SlrNoDecision`, `SlrTiming`, `SlrOther`, initial setup) ended by `Enumeration.thruDate`, and
+the recurring plans `SalesRecurringPlan` (`SrpMonthly` 1, `SrpQuarterly` 3, `SrpHalfYearly` 6, `SrpYearly` 12); SalesTypes
+lists the types and plans read only.
 
 **Source:** research §§2–3, 10; Odoo lost reasons and Mantle opportunity type discriminator.
 

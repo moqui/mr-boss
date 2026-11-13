@@ -97,13 +97,16 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="Choices" allow-remote="false" read-only="true">
         <description>The options of a Sales drop-down the user may choose, searched by term in the query ignoring case, with the
-            selected value's label (Sales.js choiceSources): organizations (those of the user's sales scope). Later phases add
-            theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
+            selected value's label (Sales.js choiceSources): organizations (those of the user's sales scope); P2: teams (an
+            organization's current sales teams) and teamMembers (the people who work for it, labelled with their job title for a
+            reader of People's directory). Later phases add theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
         <implements service="ironstone.sales.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
             <parameter name="term"/>
             <parameter name="selected"/>
+            <parameter name="organizationPartyId"><description>P2: the organization a team or team member is chosen
+                for</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

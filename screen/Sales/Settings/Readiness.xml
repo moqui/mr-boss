@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Settings › Readiness (design-sales §9 Settings SalesReadiness; style-guide §3.9 Settings; impl-sales P2): what an
+    organization's sales setup still needs, over Mantle's get#SalesReadiness (the provider sales.readiness that Admin's Health shows
+    too): a default pipeline, stages for every pipeline in effect, a team with a member and a lead source offered. Each finding
+    names its place, resolved here from its route key (fixRoute, the keys Admin.js mountRoutes gives Admin too); a ready check
+    needs none. The organization chosen, or each of the administrator's organizations that uses Sales. Later phases add theirs
+    (templates, policies, the commercial revision, the public app). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Readiness" default-menu-index="1"
+        default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <always-actions>
+        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales settings are the Sales administrator\'s')</script>
+    </always-actions>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.configure">
+            <service-call name="mantle.sales.SalesWorkspaceServices.get#SalesReadiness" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="readinessFound" from="!!found?.checks"/>
+        <!-- the places of the route keys a check names: Sales' own settings tabs -->
+        <set field="fixPlaces" from="{
+                salesSettings: {url: sales.sharedLinks['Settings/Readiness'], text: 'Readiness'},
+                salesStages: {url: sales.sharedLinks['Settings/Stages'], text: 'Stages', idParameter: 'salesPipelineId'},
+                salesTeams: {url: sales.sharedLinks['Settings/Teams'], text: 'Teams'},
+                salesLeadSources: {url: sales.sharedLinks['Settings/LeadSources'], text: 'Sources'}}"/>
+        <set field="checkRows" from="(found?.checks || []).map(row =&gt; {
+                const place = row.fixRoute ? fixPlaces[row.fixRoute] : null
+                return Object.assign({}, row, {
+                    fixUrl: place ? place.url : null,
+                    fixParameters: Object.assign({organizationPartyId: row.organizationPartyId},
+                        place?.idParameter &amp;&amp; row.fixId ? {[place.idParameter]: row.fixId} : {}),
+                    fixText: place?.text || '',
+                    stateColor: {ready: 'positive', warning: 'warning', failed: 'negative'}[row.state] || 'grey-8'})})"/>
+        <set field="attentionCount" from="checkRows.filter(row =&gt; row.state !== 'ready').length"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
+    </actions>
+    <widgets>
+        <label text="Setup readiness" type="h5"/>
+        <form-single name="ReadinessFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Check"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+        <label type="p" style="text-caption m-muted" condition="readinessFound &amp;&amp; checkRows.length"
+                text="${attentionCount ? attentionCount + ' to look at' : 'Everything checked is ready'}"/>
+        <label type="p" style="text-negative" condition="!readinessFound"
+                text="This organization is not available to you, or readiness cannot be checked just now."/>
+        <label type="p" style="m-muted" condition="readinessFound &amp;&amp; !checkRows.length"
+                text="No organization of yours uses Sales yet: choose one to check it."/>
+        <container-box condition="checkRows.length">
+            <box-body-nopad>
+                <form-list name="ReadinessRows" list="checkRows" skip-form="true" paginate="false">
+                    <field name="title"><default-field title="Check"><display/></default-field></field>
+                    <field name="subject"><default-field title="Organization"><display/></default-field></field>
+                    <field name="state">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(state)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state})}]]></text>
+                                <text type="html">${state}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="message"><default-field title="Finding"><display/></default-field></field>
+                    <field name="fix">
+                        <default-field title="Fix in">
+                            <link url="${fixUrl}" text="${fixText}" link-type="anchor" parameter-map="fixParameters" condition="fixUrl"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="message"/></column>
+                        <column><field-ref name="state"/><field-ref name="fix"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

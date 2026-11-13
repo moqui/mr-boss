@@ -10,7 +10,10 @@ const ids = {
     staffMenu: ["Home"],
     reportMenu: ["Home", "Reports"],
     reportsMenu: ["SalesSummary", "SalesAnalysis"],
-    keys: ["g s"]
+    keys: ["g s"],
+    // P2: Settings, the administrator's and, for Teams, the manager's (with Reports a manager's menu); its tabs
+    managerMenu: ["Home", "Reports", "Settings"],
+    settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons"]
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork
 // Sales only) and sales.manager2 and sales.admin (both), none in ADMIN; a Projects client contact, a PASS public account and another
