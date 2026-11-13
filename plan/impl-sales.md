@@ -323,7 +323,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F73) |
-| P1 Foundation | Mantle, BOSS | the Sales root and menu, Home's frame, Reports' two ported screens | — |
+| P1 Foundation | Mantle, BOSS | the Sales root and menu, Home's frame, Reports' two ported screens | built and reviewed Nov 13, merged |
 | P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | — |
 | P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | — |
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | — |
@@ -548,7 +548,7 @@ built.
 - Design edits: design-sales §1.1 (as built: the scope module, the grants, the administrator, Reports, the panels) and §3 Home
   (the frame as built); design-accounting §16.2's report adapters (owner contract: the Sales reader, the answer to
   impl-accounting §5's question).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F74 to F78 in order:
   - `BOSS_SALES_ADMIN`'s grants are not in design §1.1 ("SALES_CONFIGURE plus explicit Sales view/edit capabilities"): P1 gives
     it `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and
     `SALES_CUSTOMER_INVITE` among them) and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE` or
@@ -609,7 +609,7 @@ built.
     every organization and its record check admits Accounting's demo company, which the representative is refused, the manager of
     both organizations is not every organization's, and the capability list carries `allOrganizations` for ADMIN and the
     administrator only. (a) kept as built. Both are §4 rows and in design §1.1.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F79 to F81 in order:
   - the ported SalesAnalysis still shows a non-cost reader "Total Cost" in its sort choices (they now sort by nothing) and its Show SQL
     dialog; P19's rebuild over `run#SalesAnalysis` removes both;
   - `SALES_OWNER_CHANGE` goes to `BOSS_ADMIN_IDENTITY` only, where every other owner change (drive, mail, calendar, contact book,
@@ -1454,6 +1454,14 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F71 | P0 (Nov 13): the baseline forms ss-inventory maps to a Sales path (ss-inventory.md:650-688 Order, :694-734 Party, :874-891 Request) against the planned contexts. Covered: OrderDetail's header, audit, part edit, lines, close, send and mail list (P7, P11), notes and files (Chatter, RecordFiles); Customer360's roles, classifications, accounts and contacts (P3); ContactDetail's person and organization, notes, contact details and content by the contact record (P3, F68); RequestDetail's header, parties and items (P8). Not covered by a Sales context: the promotion codes (:656-658; promotions are store-only, P7), the payment and gateway forms (:673-676; Accounting's, read only by capability, P11), AddPartForm (:652; one part), ItemLimitForm (:659), SystemMessageList (:666), ChildOrderList (:667), AddOrderPartToShipmentForm (:668) and ReserveItem (:682; Warehouse's), CreateOrderPartParty (:671; parties by role), EditOrderItem on a placed order (:681; a commercial change, P14), RecurOptions (:653; P16), and RequestDetail's tasks and users (:882, :887-891) | Each phase marks its forms in ss-inventory's **Implemented in** with the reason, the uncovered ones as "—" with their owner or phase. P7 changed |
 | F72 | P0 (Nov 13): the demo's internal organizations without a store are ORG_ZIZI_CORP, ORG_ZIZI_SALES ("Ziziwork Sales", OrgInternal and Vendor, rolling up to ORG_ZIZI_CORP, mr-mantle data/ZbaOrganizationDemoData.xml:33-39) and ORG_ZIZI_HR; ORG_ZIZI_SERVICES has Commerce's store (data/BossCommerceDemoData.xml:53) and Projects' orders. ORG_ZIZI_SALES has no customers or orders and appears only in People's demo (data/BossPeopleDemoData.xml:241); no preference names a tax gateway (F62); `LOCAL` is Mantle's gateway (mr-mantle entity/AccountingOtherEntities.xml:306) | ORG_ZIZI_SALES is the second demo organization and the storeless seller: P1's users, P2's team, P3's customers, P7's preference naming `LOCAL`. P1, P7 changed |
 | F73 | P0 (Nov 13): PASS's copies as Deployment says (mr-pass docs/Deployment.md:392-402): `service/pass/Schema.js` and `Routes.js` with Mantle's `ForumSchema.js` and `script/PassRoutes.js`, kept identical by mr-pass test/Forum/Forum.spec.js; the three `TOKEN_WRITES` lists (mr-pass service/pass/Transport.js:57; mr-mantle script/PassApi.js:6, PassAuthority.js:9) hold the same 46 operations, kept equal by mr-pass test/Shop/ShopCart.spec.js:157-159 | P13, P17 as written |
+| F74 | P1 (Built Nov 13): `BOSS_SALES_ADMIN`'s grants are not in design §1.1 ("SALES_CONFIGURE plus explicit Sales view/edit capabilities"): P1 gives it `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them) and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE` or `SALES_OWNER_CHANGE`; Maintenance's administrator got every app permission by the user's call (impl-maintenance P1 review) | P1: as its Built note says |
+| F75 | P1 (Built Nov 13): Sales has no all-organizations permission: the administrator's root carries `MANTLE_ACTIVE_ORG`, so its entity reads see every organization with none active, but SalesAccess and the services answer its own organizations only (the demo administrator works both); Maintenance added `MAINTENANCE_ALL_ORGANIZATIONS` by the user's call for the same gap | P1: as its Built note says |
+| F76 | P1 (Built Nov 13): SalesAnalysis as ported still reads `OrderItemSalesSummary` itself, with the cost in its select, under the reader's organization filter and no service check; P1 hides its cost and margin columns for a reader without cost rights, and P19's rebuild over `run#SalesAnalysis` closes the read | P1: as its Built note says |
+| F77 | P1 (Built Nov 13): SalesSummary's Vendors, Stores and Customers drop-downs are the ported ones (`searchPartyList`, an unscoped store list under the root's filter), not Sales' `choices`; P19 replaces them | P1: as its Built note says |
+| F78 | P1 (Built Nov 13): `BOSS_SALES_CHANGE` holds only `BOSS_SALES`' view until P14 grants its two permissions (F43), so its bundle carries none and a change operator's Sales is Home alone | P1: as its Built note says |
+| F79 | P1 (Review Nov 13): the ported SalesAnalysis still shows a non-cost reader "Total Cost" in its sort choices (they now sort by nothing) and its Show SQL dialog; P19's rebuild over `run#SalesAnalysis` removes both | P1: as its Review note says |
+| F80 | P1 (Review Nov 13): `SALES_OWNER_CHANGE` goes to `BOSS_ADMIN_IDENTITY` only, where every other owner change (drive, mail, calendar, contact book, report, People's approvals) is also `BOSS_ADMIN_ADMIN`'s; §4's row says "Admin's identity group alone", so it is kept; P6 may ask whether the Admin administrator should hold it too | P1: as its Review note says |
+| F81 | P1 (Review Nov 13): SalesSummary's top products and customer classes are called without the chosen vendors (as ported), so they answer the whole scope while the order and invoice summaries answer the chosen organizations; P19's rebuild | P1: as its Review note says |
 
 ## 7. Later
 
