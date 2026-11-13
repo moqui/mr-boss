@@ -342,7 +342,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P27 Accounting handoff and settlement | Mantle, BOSS | PayRunDetail's Finalize and Settlement, InvoiceDetail; Accounting's finance screens | — |
 | P28 Payroll exchange | Mantle, BOSS | PayrollExchange | — |
 | P29 Reports, Insights and settings | Mantle, BOSS | Reports, Settings | — |
-| P30 Clocking kiosk | Mantle, BOSS | ClockingKiosk | — (Admin P18 built; no longer waits, F55) |
+| P30 Clocking kiosk | Mantle, BOSS | ClockingKiosk | built and reviewed Nov 12, merged |
 | P31 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -7470,7 +7470,7 @@ Admin P18's device credential, built (F55); Insights P11's wall display is the p
   baseline form). Design edits: design-people (header; §1.4 Devices; §4 Employee360 as built; §6 ClockingKiosk as built; §15 Badge),
   design-admin (§6 Devices as built: People's clocking kiosk; §14's shared-device registration row), design-crosscut (CX-DEVICE's
   need row; the device-credential remainder row).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F455 to F463 in order:
   - a badge's number is printed once and kept only as its hash: a print that fails (a jammed printer, a closed window) needs a new
     badge, which revokes the unprinted one; there is no reprint;
   - HR sets the worker's PIN when issuing the badge (agreed with the worker); the worker cannot change it themselves, and HR knows it;
@@ -7576,7 +7576,7 @@ and SharedDevices, 13 of 13; BOSS PeopleKiosk, PeopleAccessLater and AdminDevice
     employment first.
   - Issuing again is the reprint (the user's call of Nov 12, 2026): the Built note's first finding is accepted as built; recorded in
     §4 and design §15.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F464 to F468 in order:
   - the per-badge lock does not grow: someone holding a found badge gets five PIN guesses every fifteen minutes, so a 4-digit PIN falls
     in days, and five per quarter hour stays under the device's burst notice; a lock that grows, a longer PIN, or a notice to the
     worker or HR when their badge locks would close it;
@@ -7739,7 +7739,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20. Follow-up 3's F407 to F418 (Nov 12, 2026) are in its note after the Maintenance merge review.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes. P22's F395 to F406 (Nov 12, 2026) are in its Built and Review notes. P23's F419 to F434 (Nov 12, 2026) are in its Built and Review notes. P24's F435 to F454 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20. Follow-up 3's F407 to F418 (Nov 12, 2026) are in its note after the Maintenance merge review.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes. P22's F395 to F406 (Nov 12, 2026) are in its Built and Review notes. P23's F419 to F434 (Nov 12, 2026) are in its Built and Review notes. P24's F435 to F454 (Nov 12, 2026) are in its Built and Review notes. P30's F455 to F468 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
