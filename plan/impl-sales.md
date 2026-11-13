@@ -2078,7 +2078,9 @@ SAL-REPORT, SAL-ANALYTICS.
 - The inventories' **Implemented in** columns, the design's Impl column, Remaining-Work, the mr-boss README's Sales
   line, and mr-pass's README and Deployment for the Sales app.
 
-**Follow-up org default (Nov 13).** mr-mantle and mr-boss on branch `fix/orgdefault` (hashes in the worker's reply); mr-moqui
+### Follow-up 1 — a new record's organization default (F111)
+
+**Built Nov 13 (follow-up 1).** mr-mantle and mr-boss on branch `fix/orgdefault` (hashes in the worker's reply); mr-moqui
 unchanged, no Rust built. F111: a new record's organization defaults to the user's own when their scope holds its rollup children.
 - Checked first (the code over the plan): P4's Review note R1 and SalesAccess.js `defaultOrganization`; get#PartyInternalOrgIds
   (a member's direct rollup children with OrgInternal join their userOrgIds, so a Retail user's scope is Retail and the Ziziwork
@@ -2110,7 +2112,7 @@ unchanged, no Rust built. F111: a new record's organization defaults to the user
   one context call (about 0.05 s). `moqui lint --screens` (release): no flagged site in a changed screen. Prettier: no new issue
   in the changed JavaScript (several of the files were not clean before and are left so). Not run: ./moq test-apps, the
   acceptance suite.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F126 to F128 in order:
   - Accounting's root sets its working organization by the active one else the scope's only one (Accounting.xml, and
     AccountingPolicy `scope()` in the services), so an accountant of Retail has none chosen; there it is a read filter too (no
     organization reads every one allowed), so defaulting it to the user's own would narrow their lists and reports. Left as is;
@@ -2161,7 +2163,7 @@ unchanged, no Rust built. F111: a new record's organization defaults to the user
       appends a member's rollup children after the member. It differs only for a user of two organizations of their own,
       who gets one pre-chosen instead of an empty field. It is not a security matter; the inconsistency is below.
 - Fixed: none.
-- Provisional findings (for the lead to number):
+- Finding, numbered by the lead F129:
   - Low: Purchasing's get#SharedContext now answers `defaultOrganizationPartyId`, but only Shared InspectionTemplates reads it.
     Purchasing's own New forms (NewPurchaseOrder, NewQuoteRequest, NewPurchaseRequest, PurchaseOrders, BillList, Quotes,
     QuoteRequests, PurchaseRequests, AgreementList, SupplierList, MatchExceptions; Suppliers/Settings/Approvals.js) still take
@@ -2390,6 +2392,10 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F123 | P5 (Review Nov 13): TAG_TAKEN is instance-wide, so a configurer learns that another organization's team uses a plus tag | P5: as its Review note says |
 | F124 | P5 (Review Nov 13): with R1 a rep's inquiry from the email of another team's open lead makes a second open lead of the organization, which only the manager's duplicate review sees | P5: as its Review note says |
 | F125 | P5 (Review Nov 13): Marketing P13's capture job calls store#LeadIntake as the system, which trusts the organization, team and `verified` it is given: they must come from the publication and Marketing's own verification, never the submission | P5: as its Review note says |
+| F126 | Follow-up 1 (Built Nov 13): Accounting's root sets its working organization by the active one else the scope's only one (Accounting.xml, and AccountingPolicy `scope()` in the services), so an accountant of Retail has none chosen; there it is a read filter too (no organization reads every one allowed), so defaulting it to the user's own would narrow their lists and reports. Left as is; the user's call whether Accounting defaults it (or gives new-record forms a default of their own) | Follow-up 1: as its Built note says |
+| F127 | Follow-up 1 (Built Nov 13): Insights' report organization (Insights.js) has the same "active, else the only one" fallback for a report's organization; left, as a report choice rather than a new record's | Follow-up 1: as its Built note says |
+| F128 | Follow-up 1 (Built Nov 13): "the scope's first" stays in other apps' new-record defaults and services (Purchasing's new orders, bills, quotes, requests and agreements, Products' new categories, features and owners, Prices, People ChecklistTemplates, Maintenance WorkPolicy, CustomerService SavedReplies and Cases, the DataImport contexts, Mantle's catalog and price policies): the first of get#PartyInternalOrgIds' list is the user's own organization before its children, so the rollup case gives the right one there; a user of two organizations of their own gets the first rather than an empty field. Moving them to the rule (with the first as the fallback, as Sales' settings now do) is a consistency change, not this fix | Follow-up 1: as its Built note says |
+| F129 | Follow-up 1 (Review Nov 13): Low: Purchasing's get#SharedContext now answers `defaultOrganizationPartyId`, but only Shared InspectionTemplates reads it. Purchasing's own New forms (NewPurchaseOrder, NewQuoteRequest, NewPurchaseRequest, PurchaseOrders, BillList, Quotes, QuoteRequests, PurchaseRequests, AgreementList, SupplierList, MatchExceptions; Suppliers/Settings/Approvals.js) still take "active, else the first". The first is the first row of an unordered PartyRelationship find that also counts PrtMember rows, so for a user of several organizations it is not stable. When these move to the rule, put it ahead of the first, as Sales' settings screens do; Products, Commerce and CustomerService the same | Follow-up 1: as its Review note says |
 
 ## 7. Later
 
