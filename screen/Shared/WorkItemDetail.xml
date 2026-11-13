@@ -61,6 +61,11 @@ along with this software (see the LICENSE.md file). If not, see
     request) and the checklist's other tasks; an HR reader of the employment who is not one of its people sees that box alone, read
     only. A task of no checklist, or one People does not admit, is not available there.
 
+    Sales (impl-sales P4, crosscut §3.12 Sales row; ironstone.sales.ContextServices get#WorkItemContext): an activity of a lead or
+    opportunity the user sees (SalesOpportunityWorkEffort), at Sales/Pipeline/WorkItemDetail, on the Commons task rule (Overview,
+    Files and Chatter: no sub-task, time, clone or request), with a Deals box and the way back to its deal; completing it neither
+    qualifies nor closes the deal. A task of no such deal is not available there.
+
     Maintenance (impl-maintenance P7, crosscut §3.12 Maintenance row; ironstone.maintenance.WorkItemServices get#WorkItemContext): a
     follow-up task of a work order the user reads (a Caused By or Relates To link to its root), at Maintenance/WorkOrders/WorkItemDetail:
     the Commons task with a Work orders box and the way back to its work order. A work order's root or a step of its procedure is no
@@ -480,6 +485,11 @@ along with this software (see the LICENSE.md file). If not, see
                     pplContext = null
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
             }
+            // Sales (impl-sales P4, crosscut §3.12 Sales row): an activity of a deal the user sees, on the Commons rule (Overview, Files
+            // and Chatter; no sub-task, time, clone or request), with the way back to its deal; completing it neither qualifies nor closes it
+            salTask = appRoot === 'Sales'
+            salesTask = {}
+            if (salTask) detailPath = '/qapps/Sales/Pipeline/WorkItemDetail'
             // the Development tab: when the item's project has the Code module on or a repository linked (design §5)
             devShown = false
             if (projects) {
@@ -493,7 +503,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (clientView) devShown = false
             const tabKeys = clientView ? ['overview', 'subitems', 'chatter']
                     : projects ? ['overview', 'subitems', 'links'].concat(devShown ? ['development'] : []).concat(['time', 'files', 'chatter'])
-                    : pplTask ? ['overview', 'files', 'chatter']
+                    : (pplTask || salTask) ? ['overview', 'files', 'chatter']
                     : ['overview', 'subtasks', 'time', 'files', 'chatter']
             tab = tabKeys.includes(tab) ? tab : 'overview'
             let extra = {}
@@ -513,6 +523,14 @@ along with this software (see the LICENSE.md file). If not, see
                             .parameters({workEffortId: workEffortId}).call() || {}
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
                 recordFound = recordFound && !!maintenanceTask.available
+            }
+            if (salTask) {
+                ec.message.pushErrors()
+                try {
+                    salesTask = ec.service.sync().name('ironstone.sales.ContextServices.get#WorkItemContext')
+                            .parameters({workEffortId: workEffortId}).call() || {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = recordFound && !!salesTask.available
             }
             if (mfgTask && recordFound) {
                 ec.message.pushErrors()
@@ -583,7 +601,7 @@ along with this software (see the LICENSE.md file). If not, see
             const tabs = clientView ? [['overview', 'Overview'], ['subitems', 'Sub-items'], ['chatter', 'Messages']] : projects ? [['overview', 'Overview'], ['subitems', 'Sub-items' + ((extra.rollup?.childCount) ? ' (' + extra.rollup.childCount + ')' : '')],
                     ['links', 'Links' + ((extra.relationList || []).length ? ' (' + extra.relationList.length + ')' : '')]].concat(devShown ? [['development', 'Development']] : [])
                     .concat([['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']])
-                : pplTask ? [['overview', 'Overview'], ['files', 'Files'], ['chatter', 'Chatter']]
+                : (pplTask || salTask) ? [['overview', 'Overview'], ['files', 'Files'], ['chatter', 'Chatter']]
                 : [['overview', 'Overview'], ['subtasks', 'Sub-tasks' + (subTaskList.length ? ' (' + subTaskList.length + ')' : '')], ['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']]
             const base = detailPath + '?workEffortId=' + encodeURIComponent(workEffortId)
                     + (taskListFind ? '&taskListFind=' + encodeURIComponent(taskListFind) : '')
@@ -702,7 +720,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <link url="${sharedLinks['WorkOrders/Find']}" text="Back to Work orders" link-type="anchor"/>
             </box-body></container-box>
         </widgets></section>
-        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !mntTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
+        <section name="SalesTaskNotFound" condition="!recordFound &amp;&amp; salTask"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Task ${workEffortId} is not available in Sales: it is not an activity of a lead or opportunity you see."/>
+                <link url="${sharedLinks['Pipeline/Opportunities']}" text="Back to opportunities" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !mntTask &amp;&amp; !csTask &amp;&amp; !pplTask &amp;&amp; !salTask"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Task ${workEffortId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="tasks" text="${projects ? 'Back to Work items' : 'Back to Tasks'}" link-type="anchor"/>
@@ -728,7 +752,11 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="q-mb-xs"><link url="${maintenanceTask.orderRows[0].url}" url-type="plain" link-type="anchor"
                         text="Work order ${maintenanceTask.orderRows[0].workEffortId}" icon="arrow_back"/></container>
             </widgets></section>
-            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !mntTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
+            <section name="SalesBack" condition="salTask"><widgets>
+                <container style="q-mb-xs"><link url="${salesTask.opportunityRows[0].url}" url-type="plain" link-type="anchor"
+                        text="${salesTask.opportunityRows[0].typeText} ${salesTask.opportunityRows[0].opportunityName}" icon="arrow_back"/></container>
+            </widgets></section>
+            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !mntTask &amp;&amp; !csTask &amp;&amp; !pplTask &amp;&amp; !salTask"><widgets>
                 <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"/></container>
             </widgets></section>
             <section name="ManufacturingBack" condition="mfgTask"><widgets>
@@ -802,7 +830,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </container-dialog>
                             <link url="addToToday" link-type="hidden-form" text="Add to Today" icon="sym_o_today" style="q-ml-xs" condition="task.canAddToToday"
                                     parameter-map="{workEffortId:workEffortId, tab:tab}"/>
-                            <button-menu text="More" icon="more_horiz" style="q-ml-xs" condition="!pplTask">
+                            <button-menu text="More" icon="more_horiz" style="q-ml-xs" condition="!pplTask &amp;&amp; !salTask">
                                 <link url="cloneTask" link-type="hidden-form-link" text="Clone" icon="sym_o_content_copy" parameter-map="{workEffortId:workEffortId}"/>
                                 <link url="convertToRequest" link-type="hidden-form-link" text="Convert to request" icon="sym_o_support"
                                         confirmation="Draft a request from ${task.workEffortName}?" parameter-map="{workEffortId:workEffortId}"/>
@@ -971,6 +999,18 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </widgets></section-iterate>
                     <label text="This task follows up the work; the work order's steps are worked and completed there." type="div" style="text-caption m-muted"/>
+                </box-body></container-box>
+            </widgets></section>
+            <!-- Sales (impl-sales P4): the deals the activity is on -->
+            <section name="SalesWorkItemContext" condition="salTask"><widgets>
+                <container-box><box-header title="Deals"/><box-body>
+                    <section-iterate name="SalesDeals" list="salesTask.opportunityRows" entry="dealRow"><widgets>
+                        <container style="row items-center q-gutter-x-sm">
+                            <link url="${dealRow.url}" url-type="plain" link-type="anchor" text="${dealRow.typeText} ${dealRow.salesOpportunityId} · ${dealRow.opportunityName}"/>
+                            <label text="${dealRow.statusText}" type="span" style="text-caption m-muted"/>
+                        </container>
+                    </widgets></section-iterate>
+                    <label text="Completing this activity neither qualifies nor closes the deal." type="div" style="text-caption m-muted"/>
                 </box-body></container-box>
             </widgets></section>
             <!-- People (impl-people P7): the checklist the task is on, what it links to and the next steps -->

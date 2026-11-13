@@ -140,7 +140,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <link url="endContact" link-type="hidden-form-link" text="End" icon="sym_o_link_off"
                                                     btn-type="danger" condition="can.accountEdit"
                                                     confirmation="End the contact with ${accountName}? The person is kept."
-                                                    parameter-map="{partyRelationshipId:partyRelationshipId}"/>
+                                                    parameter-map="{partyRelationshipId:partyRelationshipId, expectedRevision:revision}"/>
                                         </default-field>
                                     </field>
                                     <columns type="mobile">

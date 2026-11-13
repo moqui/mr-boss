@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Pipeline › Opportunities (design-sales §3 Opportunities: OpportunityFind, OpportunityList, NewOpportunity, ChangeStage,
+    OpportunityBatch; style-guide §3.2 List, §3.6 Board; impl-sales P4): the opportunities of the user's sales scope
+    (mantle.sales.OpportunityServices.find#Opportunities, scoped in the query: an organization of the scope, the deals assigned to the
+    user or a team of theirs, or the organization's every deal for SALES_TEAM_VIEW), open ones by default, as a board (the default:
+    a column for each stage of one pipeline in order, empty stages too, the cards moved by dragging or the row's Change stage), a
+    list and a calendar of the expected close; the views share the filters, sort, saved finds and page. The totals are over the whole
+    filtered result, by currency. New opportunity is the primary action (SALES_OPPORTUNITY_EDIT); the selection moves, assigns or
+    loses the chosen deals, each on its own, naming each refused one. A stage move is not a closure: Won and Lost are
+    OpportunityDetail's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Opportunities" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="ownerPartyId"/>
+    <parameter name="mine"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="salesPipelineId"/>
+    <parameter name="opportunityStageId"/>
+    <parameter name="statusId"/>
+    <parameter name="closeFrom"/>
+    <parameter name="closeThru"/>
+    <parameter name="accountPartyId"/>
+    <parameter name="dataSourceId"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="orderByField"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="moveCard" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="changeStage" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="applyBatch" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="statusFilter" from="statusId == 'all' ? null : (statusId || 'SalesOppOpen')"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.sales.OpportunityServices.find#Opportunities" out-map="found" transaction="force-new"
+                    ignore-error="true"
+                    in-map="{typeEnumId:'SotOpportunity', text:text, organizationPartyId:organizationPartyId, ownerPartyId:ownerPartyId,
+                        mine:mine, teamPartyId:teamPartyId, salesPipelineId:salesPipelineId, opportunityStageId:opportunityStageId,
+                        statusId:statusFilter, closeFrom:closeFrom, closeThru:closeThru, accountPartyId:accountPartyId,
+                        dataSourceId:dataSourceId, marketingCampaignId:marketingCampaignId, orderByField:orderByField,
+                        pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="opportunityList" from="found?.opportunityList || []"/>
+        <set field="opportunityListCount" from="found?.opportunityListCount"/>
+        <set field="opportunityListPageIndex" from="found?.opportunityListPageIndex"/>
+        <set field="opportunityListPageSize" from="found?.opportunityListPageSize"/>
+        <set field="opportunityListPageMaxIndex" from="found?.opportunityListPageMaxIndex"/>
+        <set field="opportunityListPageRangeLow" from="found?.opportunityListPageRangeLow"/>
+        <set field="opportunityListPageRangeHigh" from="found?.opportunityListPageRangeHigh"/>
+        <!-- the board's columns: the stages of the pipeline shown, by name, in order -->
+        <set field="boardColumns" from="(found?.stageColumns || []).map(stage =&gt; stage.description)"/>
+        <set field="stageOptions" from="(found?.stageColumns || []).map(stage =&gt; ({key: stage.opportunityStageId, text: stage.description}))"/>
+        <set field="totalsText" from="(found?.totals || []).map(total =&gt; total.amountText + ' (' + total.count + ')').join(' · ')"/>
+        <set field="detailPath" from="sales.sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+        <set field="canEdit" from="!!can.opportunityEdit"/>
+        <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || salesPipelineId || opportunityStageId
+                || (statusId &amp;&amp; statusId != 'SalesOppOpen') || closeFrom || closeThru || accountPartyId || dataSourceId || marketingCampaignId)"/>
+        <set field="emptyText" from="filtered ? 'No opportunity matches these filters.' : 'No open opportunities' + (canEdit ? ' · Create one with New opportunity.' : '.')"/>
+        <set field="newDefaults" from="{typeEnumId: 'SotOpportunity', organizationPartyId: sales.defaultOrganizationPartyId}"/>
+        <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
+                {key:'won', text:'Won', icon:'sym_o_emoji_events', parameters:{statusId:'SalesOppWon'}},
+                {key:'lost', text:'Lost', icon:'sym_o_block', parameters:{statusId:'SalesOppLost'}}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read opportunities in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="OpportunitiesRegister" condition="can.anyRead">
+            <widgets>
+                <context title="Opportunities" selection-form="OpportunityList"/>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Opportunities" type="h5"/>
+                        <label text="Total ${totalsText}" type="p" style="text-caption m-muted q-mb-none" condition="totalsText"/>
+                    </container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewOpportunityDialog" button-text="New opportunity" title="New opportunity" icon="sym_o_add"
+                                width="760" type="primary" condition="canEdit">
+                            <section-include name="NewOpportunityForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
+                        </container-dialog>
+                        <section-iterate name="SavedFinds" list="savedFinds" entry="saved">
+                            <widgets>
+                                <link url="." text="${saved.text}" link-type="anchor-button" icon="${saved.icon}" parameter-map="saved.parameters"/>
+                            </widgets>
+                        </section-iterate>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="OpportunityList" list="opportunityList" skip-form="true" paginate="true" header-dialog="true"
+                                saved-finds="true" select-columns="true" views="board,list,calendar" show-csv-button="true">
+                            <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="canEdit">
+                                <action>
+                                    <form-single name="BatchMove" transition="applyBatch">
+                                        <field name="batch" from="'move'"><default-field><hidden/></default-field></field>
+                                        <field name="opportunityStageId">
+                                            <default-field title="Move to">
+                                                <drop-down allow-empty="false"><list-options list="stageOptions" key="${key}" text="${text}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Move">
+                                                <submit icon="sym_o_arrow_forward" confirmation="Move the selected opportunities? Each is moved on its own."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                                <action>
+                                    <form-single name="BatchAssign" transition="applyBatch">
+                                        <field name="batch" from="'assign'"><default-field><hidden/></default-field></field>
+                                        <field name="ownerPartyId">
+                                            <default-field title="Owner">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'owners', organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Assign">
+                                                <submit icon="sym_o_person_check" confirmation="Assign the selected opportunities? Each is assigned on its own."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                                <action>
+                                    <form-single name="BatchLose" transition="applyBatch">
+                                        <field name="batch" from="'lose'"><default-field><hidden/></default-field></field>
+                                        <field name="lostReasonEnumId">
+                                            <default-field title="Reason">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'lostReasons'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Close as lost">
+                                                <submit icon="sym_o_block" type="danger"
+                                                        confirmation="Close the selected opportunities as lost? Each is closed on its own."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                            <field name="revision"><default-field><hidden/></default-field></field>
+                            <field name="text">
+                                <header-field title="Name or id"><text-line size="20"/></header-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="ownerPartyId">
+                                <header-field title="Owner">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'owners', selected:ownerPartyId, organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="mine">
+                                <header-field title="Mine"><check><option key="Y" text="My opportunities"/></check></header-field>
+                            </field>
+                            <field name="teamPartyId">
+                                <header-field title="Team">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:(organizationPartyId || sales.defaultOrganizationPartyId)}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="salesPipelineId">
+                                <header-field title="Pipeline">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'pipelines', selected:salesPipelineId, organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="Outcome">
+                                    <drop-down allow-empty="true">
+                                        <option key="SalesOppOpen" text="Open"/>
+                                        <option key="SalesOppWon" text="Won"/>
+                                        <option key="SalesOppLost" text="Lost"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Outcome">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="closeFrom">
+                                <header-field title="Closing from"><date-time type="date"/></header-field>
+                            </field>
+                            <field name="closeThru">
+                                <header-field title="Closing through"><date-time type="date"/></header-field>
+                            </field>
+                            <field name="accountPartyId">
+                                <header-field title="Account">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="dataSourceId">
+                                <header-field title="Source">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'sources', selected:dataSourceId, organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="opportunityName">
+                                <conditional-field title="Opportunity" condition="detailPath">
+                                    <link url="${detailPath}" text="${opportunityName}" link-type="anchor"
+                                            parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                </conditional-field>
+                                <default-field title="Opportunity"><display/></default-field>
+                            </field>
+                            <field name="accountName"><default-field title="Account"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <field name="probabilityText" align="right"><default-field title="Probability"><display/></default-field></field>
+                            <field name="closeText"><default-field title="Expected close"><display/></default-field></field>
+                            <field name="estimatedCloseDate"><default-field title="Close date"><display format="yyyy-MM-dd"/></default-field></field>
+                            <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                            <field name="stageAgeText" align="right"><default-field title="In stage"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="nextActivityText"><default-field title="Next activity"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="ChangeStage_${salesOpportunityId}" button-text="Change stage" icon="sym_o_swap_horiz"
+                                            title="Change the stage of ${opportunityName}" width="520" condition="canEdit &amp;&amp; statusId == 'SalesOppOpen'">
+                                        <form-single name="ChangeStage" transition="changeStage"
+                                                map="{salesOpportunityId:salesOpportunityId, expectedRevision:revision, opportunityStageId:opportunityStageId}">
+                                            <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="opportunityStageId">
+                                                <default-field title="Stage">
+                                                    <drop-down allow-empty="false">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'stages', selected:opportunityStageId, organizationPartyId:organizationPartyId,
+                                                                    salesPipelineId:salesPipelineId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="probabilityModeEnumId">
+                                                <default-field title="Probability" tooltip="From the stage, or keep yours">
+                                                    <drop-down allow-empty="true">
+                                                        <option key="SpmStage" text="From the stage"/>
+                                                        <option key="SpmManual" text="Keep mine"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="note"><default-field title="Note"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Change stage"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns>
+                                <column><field-ref name="opportunityName"/><field-ref name="accountName"/></column>
+                                <column><field-ref name="amountText"/><field-ref name="probabilityText"/></column>
+                                <column><field-ref name="closeText"/></column>
+                                <column><field-ref name="stageText"/><field-ref name="stageAgeText"/></column>
+                                <column><field-ref name="statusId"/></column>
+                                <column><field-ref name="ownerName"/></column>
+                                <column><field-ref name="nextActivityText"/></column>
+                                <column><field-ref name="rowActions"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="opportunityName"/><field-ref name="accountName"/></column>
+                                <column><field-ref name="amountText"/><field-ref name="stageText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                            <view-board group-field="stageText" card-title-field="opportunityName" card-fields="accountName,amountText,closeText,rowActions"
+                                    key-fields="salesOpportunityId,revision" column-order="${boardColumns}" transition="moveCard"
+                                    move-condition="canEdit"/>
+                            <view-calendar start-field="estimatedCloseDate" title-field="opportunityName" key-fields="salesOpportunityId"
+                                    card-fields="accountName,amountText,stageText"/>
+                        </form-list>
+                        <section name="NoOpportunities" condition="!opportunityList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

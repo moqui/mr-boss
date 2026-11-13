@@ -462,6 +462,38 @@ contacts and internal organization use separate roles.
 tasks to WorkItemDetail. **States.** An unauthorized linked record contributes no title, amount
 or count. **Source:** research §§3, 8. **Needs:** SAL-CRM, SAL-COLLAB, SAL-QUOTE.
 
+### As built (impl-sales P4, Nov 13, 2026)
+
+- **One record.** A lead and an opportunity are one `SalesOpportunity`, its type SotLead or SotOpportunity; its outcome
+  (`statusId`: Open, Won, Lost), lost reason, pipeline, probability mode (SpmStage, SpmManual), recurring amount and plan, the
+  conversion and close time and actor, its creation and its stage's entry (stage age) are fields of it, the key ones
+  audit-logged with the type, account and close date. Its people are dated `SalesOpportunityParty` rows: the organization
+  (OrgInternal, kept equal to `organizationPartyId`), one current owner (SalesRepresentative), one current team (SalesTeam) and
+  contacts. A deal's revision is the latest stamp of the deal and its party rows, so a change of its people is a change of it.
+- **Scope** (Mantle `SalesAccess.js opportunityOf`): a Sales reader of the organization sees the deals whose current owner or team
+  row names them or a team of theirs (an unowned lead in a team's queue among them), a holder of `SALES_TEAM_VIEW` the
+  organization's; a customer link never widens it. A representative assigns a deal only to themselves or a member of one of their
+  teams; a manager (`SALES_TEAM_MANAGE`) anyone of the organization.
+- **Services** (`mantle.sales.OpportunityServices`, `SalesOpportunities.js`): `find#Opportunities`, `get#Opportunity`,
+  `create#Opportunity`, `update#Opportunity`, `move#Opportunity`, `close#Opportunity`, `reopen#Opportunity`, `qualify#Lead`
+  (its operation key a PostingOperation), `store#OpportunityParty`, `store#Competitor`, `apply#OpportunityBatch` (move, assign,
+  lose; keys `id@revision`), and beyond the design's list `add#OpportunityActivity` (a Commons task linked through
+  `link#WorkEffortRecord`, which writes `SalesOpportunityWorkEffort`, the opportunity's own join), `check#OpportunityAccess` and
+  `create#OpportunityContent`.
+- **The board** groups by the stage's name (`stageText`), not its id: the framework's board labels a column by the value unless
+  it is a status or an enumeration, and a stage's name is unique in its pipeline; `moveCard` maps the name back to the stage of
+  the deal's own pipeline. Its columns are the stages of the pipeline filtered, else the organization's default, empty ones too;
+  each card carries Change stage. The totals are over the whole filtered result, by currency.
+- **OpportunityDetail** is one screen of boxes (Overview, People, Activities, Competitors, Quotes and orders when there are any,
+  Conversation, Files), not tabs. Its primary action is Qualify for an open lead, Close for an open opportunity until P7's New
+  quote, Reopen for a closed one; Schedule activity beside it; Change stage, Disqualify and the account in More. Returning a
+  qualified opportunity to a lead is not built.
+- **Leads** is built for a second mount: Marketing's root (`Sales.js mountRoots`) mounts it at `Marketing/Leads` and LeadSources
+  at `Marketing/Settings/LeadSources`, its `sharedLinks` naming only those, so a lead's OpportunityDetail shows without a link
+  there; any other root is refused. LeadList has row selection (Assign, Disqualify); Marketing's bulk action joins it as an
+  owner contract.
+- **Home**'s MyPipeline stays "Not configured" until P6 builds Home over `find#Opportunities`.
+
 ### WorkItemDetail — Context passed
 
 Mount Projects' shared WorkItemDetail with the authorized opportunity/order/account host,
@@ -590,6 +622,10 @@ email or name similarity. Crosscut §3.1 row:
   admits, `get#ComparePair`, `merge#Contacts`, `mark#NotDuplicate`) with a Compare of its own (MergeCompare) carrying the
   opportunity, order and agreement counts (`get#AccountDocumentCounts`); Commons' Duplicates asks for a contact administrator,
   so it is not mounted. The guards are design-drawers-commons §6's as built.
+- **Since P4** (F98, F99): a representative edits a contact's identity and channels through Commons' `canEditIdentity`, not its
+  organizations, relationships, notes or photo, and only for a person of an organization of their scope who is a contact of an
+  account of such an organization (design-drawers-commons §6); `set#AccountManager` names the management's revision
+  (`get#CustomerSales` managerRevision) and `delete#Contact` the relationship's (`find#AccountContacts` revision).
 
 ## 5. Quotes and requests for quote
 
@@ -1327,7 +1363,10 @@ entity. Reason retirement hides future selection, retaining old labels/history. 
 As built (impl-sales P2): the types are `SotLead` and `SotOpportunity`, the reasons `SalesLostReason` values (`SlrPrice`,
 `SlrCompetitor`, `SlrNoBudget`, `SlrNoDecision`, `SlrTiming`, `SlrOther`, initial setup) ended by `Enumeration.thruDate`, and
 the recurring plans `SalesRecurringPlan` (`SrpMonthly` 1, `SrpQuarterly` 3, `SrpHalfYearly` 6, `SrpYearly` 12); SalesTypes
-lists the types and plans read only.
+lists the types and plans read only. Since P4 (the user's call, impl-sales §4 Nov 13): the reasons and plans are the instance's,
+so `store#LostReason` needs every organization's scope (`SALES_ALL_ORGANIZATIONS` or a system administrator, `ORGANIZATION_DENIED`
+otherwise), as the shared pipeline does, and LossReasons offers its actions only then (`get#SalesSetup` canEditReasons); a
+configurer of one organization reads them. No service writes the recurring plans yet.
 
 **Source:** research §§2–3, 10; Odoo lost reasons and Mantle opportunity type discriminator.
 

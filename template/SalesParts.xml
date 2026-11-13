@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Parts of the IronStone Sales screens (impl-sales P1). A screen includes each transition it uses by name
     (transition-include), so a form here posts to the screen it is on.
     - choices: the app's drop-downs (ironstone.sales.ContextServices.get#Choices: organizations; P2 teams and teamMembers, for an
-      organizationPartyId; later phases add theirs), after
+      organizationPartyId; P4 pipelines, stages for a salesPipelineId, owners, sources, lostReasons, recurringPlans, competitors
+      and dealContacts for an accountPartyId; later phases add theirs), after
       the root's Sales check. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -23,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
-                        organizationPartyId:(organizationPartyId || null)}"/>
+                        organizationPartyId:(organizationPartyId || null), salesPipelineId:(salesPipelineId || null),
+                        accountPartyId:(accountPartyId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>

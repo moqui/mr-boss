@@ -64,6 +64,12 @@ along with this software (see the LICENSE.md file). If not, see
                 icon = 'sym_o_badge'
                 return
             }
+            // a lead or opportunity (IronStone Sales P4, F39): its OpportunityDetail under Sales for a Sales reader of it, else nowhere
+            if (recordEntityName === 'mantle.sales.opportunity.SalesOpportunity') {
+                url = ec.resource.script('component://mr-boss/service/ironstone/sales/Sales.js').recordLink('opportunity', id)
+                icon = 'sym_o_trending_up'
+                return
+            }
             // a shared device (Admin P18; the clocking kiosk's refusals notice, impl-people follow-up 4): Admin's Security › Devices
             // with the device, where it is revoked, for one who may read it there and whose groups open that screen, else nowhere
             if (recordEntityName === 'moqui.security.DeviceCredential') {

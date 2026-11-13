@@ -10,7 +10,7 @@
 // opens Sales, and a PASS public account holds no BOSS group.
 //
 // Later phases extend the tables below rather than the functions: mountRoots (the app roots that mount Sales' shared screens:
-// Marketing's with P4), areas (menu areas whose authorization is a capability), recordKinds (a kind of record: its check and,
+// Marketing's since P4), areas (menu areas whose authorization is a capability), recordKinds (a kind of record: its check and,
 // once built, its screen), searchFinds (the palette), choiceSources (the drop-downs) and linkPaths (sharedLinks).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const salesAccess = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesAccess.js")
@@ -22,10 +22,14 @@ const areaLocation = area => "component://mr-boss/screen/Sales/" + area + ".xml"
 const choiceLimit = 30
 const organizationOptionLimit = 100
 
-// The app roots whose screens take Sales' context, each with its link base: Sales' own. Marketing's root mounts Leads, Accounts
-// and LeadSources with its own appRoot (impl-sales §2, impl-marketing P3), added when Leads is built (P4).
+// The app roots whose screens take Sales' context, each with its link base and the Sales screens it mounts (paths: every Sales path
+// under the same name when null, else Sales' path to the root's own). Sales' own; Marketing's (P4, impl-sales §2, F86;
+// design-marketing §2: Marketing/Leads and Marketing/Settings/LeadSources, impl-marketing P13), whose sharedLinks hold only what it
+// mounts, so a lead's OpportunityDetail, which Marketing does not mount, shows without a link there. Any other root is refused
+// (SALES_CONTEXT); a mount adds no right: the user's own Sales grant and scope decide.
 const mountRoots = {
-    Sales: "//Sales"
+    Sales: {linkBase: "//Sales", paths: null},
+    Marketing: {linkBase: "//Marketing", paths: {"Pipeline/Leads": "Leads", "Settings/LeadSources": "Settings/LeadSources"}}
 }
 // The menu areas whose authorization is a capability (data/BossSetupSalesData.xml BOSS_SAL_<Area>): Reports the report readers'
 // (P1). Home is every Sales user's; later phases add theirs (Settings P2, Approvals P9, Changes P14, Agreements P15).
@@ -163,7 +167,13 @@ const linkPaths = [
     "Settings/Stages",
     "Settings/Teams",
     "Settings/LeadSources",
-    "Settings/TypesAndReasons"
+    "Settings/TypesAndReasons",
+    // P4: leads and opportunities (design §3), Leads built for a second mount (impl-sales §2)
+    "Pipeline",
+    "Pipeline/Opportunities",
+    "Pipeline/Leads",
+    "Pipeline/OpportunityDetail",
+    "Pipeline/WorkItemDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -171,18 +181,25 @@ function sharedContext(p) {
     const userScope = required()
     const mantle = userScope.mantle
     const ids = organizationIds(userScope)
-    const linkBase = mountRoots[appRoot]
+    const mount = mountRoots[appRoot]
+    const linkBase = mount.linkBase
+    const sharedLinks = mount.paths
+        ? Object.fromEntries(Object.entries(mount.paths).map(([path, own]) => [path, linkBase + "/" + own]))
+        : Object.fromEntries(linkPaths.map(path => [path, linkBase + "/" + path]))
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: ids,
         activeOrganizationPartyId: mantle.activeOrganizationPartyId || null,
+        // a new record's organization when none is chosen: the active one, the scope's only one, or the only one of it the user
+        // works for (a representative of Retail whose scope also holds Retail's rollup children; P4 review)
+        defaultOrganizationPartyId: salesAccess.defaultOrganization(mantle),
         allOrganizations: !!mantle.allOrganizations,
         organizationOptions: organizationOptions(ids, null, organizationOptionLimit),
         partyId: mantle.partyId || null,
         appRoot,
         linkBase,
         webBase: "/qapps/" + appRoot,
-        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, linkBase + "/" + path]))
+        sharedLinks
     }
 }
 
@@ -206,10 +223,29 @@ const recordKinds = {
         name: "Account",
         icon: "sym_o_storefront",
         destination: "Accounts/Customer360",
+        parameter: "customerPartyId",
         read: (userScope, partyId) => {
             const account = salesAccess.accountOf(userScope.mantle, partyId)
             if (!account) return null
             return {organizationPartyId: account.organizationPartyId, label: partyLabel(account.party), detail: "Account"}
+        }
+    },
+    // P4: a lead or opportunity the user sees (SalesAccess.js opportunityOf: an organization of the scope, assigned to them or a team
+    // of theirs, or the organization's whole pipeline for SALES_TEAM_VIEW), OpportunityDetail
+    opportunity: {
+        name: "Opportunity",
+        icon: "sym_o_trending_up",
+        destination: "Pipeline/OpportunityDetail",
+        parameter: "salesOpportunityId",
+        read: (userScope, salesOpportunityId) => {
+            const found = salesAccess.opportunityOf(userScope.mantle, salesOpportunityId)
+            if (!found) return null
+            const row = found.opportunity
+            return {
+                organizationPartyId: found.organizationPartyId,
+                label: row.opportunityName || row.salesOpportunityId,
+                detail: row.typeEnumId === "SotLead" ? "Lead" : "Opportunity"
+            }
         }
     },
     contact: {
@@ -242,13 +278,13 @@ function partyLabel(party) {
         party.partyId
     )
 }
-const recordUrl = (kind, recordId, linkBase = mountRoots.Sales) =>
+const recordUrl = (kind, recordId, linkBase = mountRoots.Sales.linkBase) =>
     "/qapps" +
     linkBase.slice(1) +
     "/" +
     recordKinds[kind].destination +
     "?" +
-    (kind === "account" ? "customerPartyId" : "partyId") +
+    (recordKinds[kind].parameter || "partyId") +
     "=" +
     encodeURIComponent(recordId)
 function recordOf(userScope, kind, recordId) {
@@ -396,6 +432,160 @@ const choiceSources = {
         })
     }
 }
+// ===== P4: the deal's choices (impl-sales P4) =====
+// The organization a deal's choice is for: the one given (in the scope), else the default one (SalesAccess.js defaultOrganization).
+function choiceOrganization(userScope, p) {
+    if (p.organizationPartyId) return covers(userScope, p.organizationPartyId) ? p.organizationPartyId : null
+    return salesAccess.defaultOrganization(userScope.mantle)
+}
+const byTerm = (options, term) => {
+    const lower = term.toLowerCase()
+    return options.filter(option => !term || String(option.label).toLowerCase().includes(lower)).slice(0, choiceLimit)
+}
+Object.assign(choiceSources, {
+    // the pipelines the organization uses now (its own and the shared one)
+    pipelines: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        if (!organizationPartyId) return []
+        return byTerm(
+            salesSettings()
+                .pipelinesOf(organizationPartyId)
+                .filter(row => salesSettings().inEffect(row))
+                .map(row => ({value: row.salesPipelineId, label: row.pipelineName || row.salesPipelineId})),
+            term
+        )
+    },
+    // the current stages of a pipeline the organization uses (salesPipelineId), else of its default pipeline, in order
+    stages: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        if (!organizationPartyId) return []
+        const pipelines = salesSettings()
+            .pipelinesOf(organizationPartyId)
+            .filter(row => salesSettings().inEffect(row))
+        const pipeline = p.salesPipelineId
+            ? pipelines.find(row => row.salesPipelineId === p.salesPipelineId)
+            : salesSettings().defaultPipeline(organizationPartyId)
+        if (!pipeline) return []
+        return byTerm(
+            salesSettings()
+                .stagesOf(pipeline.salesPipelineId)
+                .map(row => ({value: row.opportunityStageId, label: row.description || row.opportunityStageId})),
+            term
+        )
+    },
+    // a deal's owner or an activity's assignee: the people who work for the organization (create#Opportunity checks the team rule)
+    owners: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        const ids = organizationPartyId ? memberIds([organizationPartyId]) : memberIds(organizationIds(userScope))
+        return withSelected(
+            peopleOptions(ids, term),
+            selected,
+            partyId => ids.includes(partyId),
+            partyId => partyLabel(one("mantle.party.Party", {partyId}))
+        )
+    },
+    // the lead sources offered to the organization
+    sources: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        if (!organizationPartyId) return []
+        return byTerm(
+            salesSettings()
+                .sourcesOffered(organizationPartyId)
+                .map(row => ({value: row.dataSourceId, label: row.description})),
+            term
+        )
+    },
+    // the instance's current lost reasons and recurring plans
+    lostReasons: (userScope, term) =>
+        byTerm(
+            salesSettings()
+                .reasonsOf()
+                .map(row => ({value: row.enumId, label: row.description || row.enumId})),
+            term
+        ),
+    recurringPlans: (userScope, term) =>
+        byTerm(
+            Array.from(
+                find("moqui.basic.Enumeration").condition("enumTypeId", "SalesRecurringPlan").orderBy("sequenceNum").list()
+            )
+                .filter(row => !salesSettings().ended(row))
+                .map(row => ({value: row.enumId, label: row.description || row.enumId})),
+            term
+        ),
+    // a competitor: an organization the scope may see, not internal (store#Competitor checks again)
+    competitors: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.PartyDetail")
+            .condition("partyTypeEnumId", "PtyOrganization")
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("disabled", "is-null", null), factory.makeCondition("disabled", "equals", "N")],
+                    "or"
+                )
+            )
+            .condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("privateOwnerUserId", "is-null", null),
+                        factory.makeCondition("privateOwnerUserId", "equals", ec.user.userId || "_NA_")
+                    ],
+                    "or"
+                )
+            )
+            .orderBy("^organizationName")
+            .limit(choiceLimit)
+        if (userScope.mantle.organizationPartyIds != null)
+            query = query.condition("ownerPartyId", "in", ["_NA_"].concat(userScope.mantle.organizationPartyIds))
+        const internal = Array.from(
+            find("mantle.party.PartyRole").condition("roleTypeId", "OrgInternal").selectField("partyId").list()
+        ).map(row => row.partyId)
+        if (internal.length) query = query.condition("partyId", "not-in", internal)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["partyId", "organizationName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        return withSelected(
+            Array.from(query.list()).map(row => ({value: row.partyId, label: row.organizationName || row.partyId})),
+            selected,
+            partyId => {
+                const party = salesAccess.visibleParty(userScope.mantle, partyId)
+                return !!party && party.partyTypeEnumId === "PtyOrganization" && !salesAccess.isInternal(partyId)
+            },
+            partyId => partyLabel(one("mantle.party.Party", {partyId}))
+        )
+    },
+    // P4: a person to make a deal's contact: the contacts of the deal's account first, else the people of the scope
+    dealContacts: (userScope, term, selected, p) =>
+        withSelected(
+            peopleOptions(
+                p.accountPartyId && salesAccess.accountOf(userScope.mantle, p.accountPartyId)
+                    ? accountContactIds(p.accountPartyId)
+                    : null,
+                term,
+                userScope
+            ),
+            selected,
+            partyId => !!salesAccess.visibleParty(userScope.mantle, partyId),
+            partyId => partyLabel(one("mantle.party.Party", {partyId}))
+        )
+})
+// The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
+function accountContactIds(accountPartyId) {
+    const ids = Array.from(
+        find("mantle.party.PartyRelationship")
+            .condition("toPartyId", accountPartyId)
+            .condition("relationshipTypeEnumId", "PrtContact")
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .selectField("fromPartyId")
+            .list()
+    ).map(row => row.fromPartyId)
+    return ids.length ? ids : null
+}
 function accountOptions(term) {
     const found = lib.probe("mantle.sales.SalesWorkspaceServices.find#Accounts", {text: term || null, pageSize: choiceLimit})
     return Array.from(found.accountList || []).map(row => ({value: row.partyId, label: row.name + " · " + row.ownerText}))
@@ -490,6 +680,26 @@ const searchFinds = [
         }
     }
 ]
+// P4: leads and opportunities, through Mantle's scoped find (find#Opportunities' text: name or id), open ones
+searchFinds.push({
+    kind: "opportunity",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.sales.OpportunityServices.find#Opportunities", {
+            text,
+            statusId: "SalesOppOpen",
+            pageSize: limit
+        })
+        return Array.from(found.opportunityList || []).map(row => ({
+            title: row.opportunityName,
+            subtitle: [row.typeText + " " + row.salesOpportunityId, row.accountName, row.stageText].filter(Boolean).join(" · "),
+            icon: recordKinds.opportunity.icon,
+            recordEntity: "mantle.sales.opportunity.SalesOpportunity",
+            recordId: row.salesOpportunityId,
+            url: recordUrl("opportunity", row.salesOpportunityId)
+        }))
+    }
+})
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}
@@ -508,9 +718,48 @@ function search(p) {
     return {rows: Array.from(found.values()).slice(0, limit)}
 }
 
-const operations = {sharedContext, checkRecord, choices, search}
+// ===== P4: record links and the work item context =====
+// A Sales record's screen under Sales for a user who may open it there (Commons' get#RecordLink, the palette, Today), else null.
+function recordLink(kind, recordId) {
+    try {
+        const userScope = scope()
+        if (!userScope.read) return null
+        recordOf(userScope, kind, recordId)
+        return recordUrl(kind, recordId)
+    } catch (error) {
+        return null
+    }
+}
+// WorkItemDetail's Sales context (crosscut §3.12 Sales row; design §3 WorkItemDetail): a task linked to deals the user sees
+// (SalesOpportunityWorkEffort), with those deals; a task of no such deal is not available. The task stays Commons': its actions are
+// Commons' task rule; completing it neither qualifies nor closes a deal.
+function workItemContext(p) {
+    const userScope = required()
+    const links = Array.from(
+        find("mantle.sales.opportunity.SalesOpportunityWorkEffort")
+            .condition("workEffortId", p.workEffortId || "")
+            .list()
+    )
+    const opportunityRows = []
+    for (const link of links) {
+        const found = salesAccess.opportunityOf(userScope.mantle, link.salesOpportunityId)
+        if (!found) continue
+        const row = found.opportunity
+        const status = row.statusId ? one("moqui.basic.StatusItem", {statusId: row.statusId}) : null
+        opportunityRows.push({
+            salesOpportunityId: row.salesOpportunityId,
+            opportunityName: row.opportunityName || row.salesOpportunityId,
+            typeText: row.typeEnumId === "SotLead" ? "Lead" : "Opportunity",
+            statusText: status?.description || "Open",
+            url: recordUrl("opportunity", row.salesOpportunityId)
+        })
+    }
+    return {available: opportunityRows.length > 0, opportunityRows}
+}
+
+const operations = {sharedContext, checkRecord, choices, search, workItemContext}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Sales operation " + op)
     return operations[op](p || {})
 }
-;({execute: run})
+;({execute: run, recordLink})

@@ -71,7 +71,8 @@ suite(
         "MaintenanceCorrectiveWalk",
         // last: WarehouseReceiptFinishWalk receives into stock, which none of the walks above counts on
         "WarehouseReceiptFinishWalk",
-        "ManufacturingWorkOrdersPhone"
+        "ManufacturingWorkOrdersPhone",
+        "SalesBoardWalk"
     ],
     {
         server: {

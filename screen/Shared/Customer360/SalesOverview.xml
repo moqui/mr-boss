@@ -41,6 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         title="Change the account manager" condition="customerDetail.canManage">
                                     <form-single name="ChangeManager" transition="setAccountManager">
                                         <field name="accountPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision" from="customerDetail.managerRevision"><default-field><hidden/></default-field></field>
                                         <field name="managerPartyId">
                                             <default-field title="Account manager">
                                                 <drop-down allow-empty="false">
@@ -57,7 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                 </container-dialog>
                                 <link url="setAccountManager" link-type="hidden-form-link" text="Take this account" icon="sym_o_person_check"
-                                        condition="canTake" parameter-map="{accountPartyId:customerPartyId, managerPartyId:sales.partyId}"/>
+                                        condition="canTake" parameter-map="{accountPartyId:customerPartyId, managerPartyId:sales.partyId, expectedRevision:customerDetail.managerRevision}"/>
                             </box-toolbar>
                             <box-body>
                                 <section-iterate name="ManagerRows" list="managerRows" entry="manager">

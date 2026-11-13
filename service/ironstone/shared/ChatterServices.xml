@@ -136,6 +136,11 @@ along with this software (see the LICENSE.md file). If not, see
                 const cycle = ec.entity.find('mantle.humanres.ability.ReviewCycle').condition('reviewCycleId', record.reviewCycleId).disableAuthz().one()
                 title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), cycle?.cycleName].filter(Boolean).join(' · ')
                 typeLabel = L('Review')
+            } else if (entityName === 'mantle.sales.opportunity.SalesOpportunity') {
+                // IronStone Sales' lead or opportunity (impl-sales P4): its name, read after get#RecordLinkInfo admitted the user as a
+                // Sales reader of it; never its amount
+                title = String(record.opportunityName || '')
+                typeLabel = L(record.typeEnumId === 'SotLead' ? 'Lead' : 'Opportunity')
             } else if (entityName === 'moqui.resource.GitMergeRequest') {
                 // a merge request by its number and title (get#RecordLinkInfo checked its repository's view right)
                 title = '!' + record.mergeRequestNum + ' ' + (record.title || '')

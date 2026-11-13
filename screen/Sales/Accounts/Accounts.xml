@@ -46,8 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="accountList" from="accountList || []"/>
         <set field="customer360Path" from="sharedLinks['Accounts/Customer360'] || null"/>
         <set field="filtered" from="!!(text || organizationPartyId || roleTypeId || partyTypeEnumId || managerPartyId || mine || parentAccountPartyId)"/>
-        <set field="newAccountDefaults" from="{organizationPartyId: sales.activeOrganizationPartyId ||
-                (sales.organizationPartyIds?.length == 1 ? sales.organizationPartyIds[0] : null), roleTypeId: 'Customer'}"/>
+        <set field="newAccountDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, roleTypeId: 'Customer'}"/>
     </actions>
     <widgets>
         <label text="You do not read accounts in Sales." type="p" style="m-muted" condition="!can.anyRead"/>

@@ -8,7 +8,8 @@
 // group's grants, SALES_OWNER_CHANGE the identity operator's alone). One feature per rule, each case of it a line of its problems,
 // with artifact authorization enabled. Mantle's scope rules (the organization filters, the report reader's organizations) are Mantle's
 // SalesOrganizationScope and SalesReports. The access and isolation walk is the acceptance SalesFoundationWalk. A later phase adds
-// a case only for an access rule it adds: P3 the account and contact record kinds and MergeAccounts.
+// a case only for an access rule it adds: P3 the account and contact record kinds and MergeAccounts; P4 the opportunity record kind,
+// its panels and Marketing's mount.
 // Run: ./moq test mr-boss --spec SalesAccess
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell} = lib
@@ -419,6 +420,57 @@ feature(
             const accountsMenu = shell(users.rep, true, "Accounts/Accounts", "Accounts").names
             if (JSON.stringify(accountsMenu) !== JSON.stringify(ids.accountsMenu))
                 problems.push(`the Accounts menu: ${accountsMenu}`)
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)
+
+// P4 (design §1.1, §3): a deal is its owner's and its team's, the organization's for a manager, never another organization's; its
+// notes and files under Sales follow it; Marketing's root mounts Leads and LeadSources alone
+feature(
+    "a deal is the rep's and their team's, the organization's for a manager, refused another's; Marketing's root mounts Leads",
+    {
+        when() {
+            const problems = []
+            const expect = (label, message, refusalText) => {
+                if (refusalText ? !message.includes(refusalText) : message !== "")
+                    problems.push(`${label}: ${message || "accepted"}`)
+            }
+            const record = recordId => refusal(checkRecord, {recordType: "opportunity", recordId})
+            asUser(users.rep, () => {
+                expect("Wingtip's refit (own)", record(ids.deals.wingtip))
+                expect("the trade fair lead (East's queue)", record(ids.deals.fairLead))
+                expect("Contoso's pilot (West's)", record(ids.deals.contoso), "RECORD_UNAVAILABLE")
+                expect("Fabrikam's upgrade (Ziziwork Sales')", record(ids.deals.fabrikam), "RECORD_UNAVAILABLE")
+            })
+            asUser(users.manager, () => expect("Contoso's pilot (the manager's organization)", record(ids.deals.contoso)))
+            asUser(users.otherRep, () => expect("Wingtip's refit (Retail's)", record(ids.deals.wingtip), "RECORD_UNAVAILABLE"))
+            const panels = asUser(users.rep, () => ({
+                own: panelRequest("apps/Sales/RecordFiles/filesData", {
+                    recordEntity: "mantle.sales.opportunity.SalesOpportunity",
+                    recordId: ids.deals.wingtip
+                }),
+                other: panelRequest("apps/Sales/RecordFiles/filesData", {
+                    recordEntity: "mantle.sales.opportunity.SalesOpportunity",
+                    recordId: ids.deals.contoso
+                })
+            }))
+            if (panels.own.errors) problems.push(`the rep's deal's files: ${panels.own.errors}`)
+            if (!panels.other.errors.includes("RECORD_PANEL_UNAVAILABLE"))
+                problems.push(`West's deal's files: ${panels.other.errors || "served"}`)
+            // a second root's context: Marketing's links are the Sales screens it mounts, under its own root
+            const marketing = asUser(users.rep, () => invoke(context, {appRoot: "Marketing"}))
+            if (
+                JSON.stringify(Object.keys(marketing.sharedLinks || {}).sort()) !== '["Pipeline/Leads","Settings/LeadSources"]' ||
+                marketing.sharedLinks["Pipeline/Leads"] !== "//Marketing/Leads"
+            )
+                problems.push(`Marketing's links: ${JSON.stringify(marketing.sharedLinks)}`)
+            const pipelineMenu = shell(users.rep, true, "Pipeline/Opportunities", "Pipeline").names
+            if (JSON.stringify(pipelineMenu) !== JSON.stringify(ids.pipelineMenu))
+                problems.push(`the Pipeline menu: ${pipelineMenu}`)
             return {problems}
         },
         then({problems}) {

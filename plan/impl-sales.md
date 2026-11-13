@@ -1114,6 +1114,217 @@ Today); SAL-CRM, SAL-COLLAB. The opportunity import is P6; the Comms intake P5.
   files; the same move through the board, the row action and the terminal gives the same result; ending a rep's
   team membership removes the team's deals from their list from that date (scenario 3).
 
+**Built Nov 13 (P4).** mr-mantle and mr-boss on branch `sal/p4` (hashes in the worker's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P1–P3's Built and Review notes and F74–F102; SalesEntities.xml (P2's `statusId`, F82), P2's
+  SalesSettings.js (pipelines, stages, teams, sources; `defaultPipeline`, `worksFor`) and SalesAccess.js (`teamOrganization`,
+  `memberTeams`), P3's `accountOf`, `visibleParty`, `contactAccounts`; F69's host pattern (get#RecordLinkInfo's maps and
+  `visible()`, RecordFiles' map, Chatter's title; People's EmploymentContent); Shared/WorkItemDetail's app branches (Maintenance's
+  `get#WorkItemContext`); Maintenance's work order list (board, calendar, bulk) and detail as the screen patterns; the framework's
+  view-board (StatusServices `get#ListViewColumns`); `link#WorkEffortRecord`; EntityLib's PostingOperation helpers;
+  design-marketing §2's mount paths. The code over the plan:
+  - no service writes the recurring plans, so the user's call on shared reasons and plans (carry-over 1) changes `store#LostReason`
+    only; the plans stay read only;
+  - the framework's board labels a column by its value unless the field is a status or an enumeration, so the board groups by the
+    stage's name (unique in a pipeline) and its move maps the name back to the deal's pipeline's stage (a finding);
+  - the plan's verbs needed three more: `add#OpportunityActivity` (the activity on a deal), `check#OpportunityAccess` (the host's
+    visibility) and `create#OpportunityContent` (its files);
+  - a deal's revision is the latest stamp of the deal and its party rows, so `store#OpportunityParty` names one and the batch keys
+    (`id@revision`) carry it;
+  - Marketing mounts Leads at `Marketing/Leads` and LeadSources at `Marketing/Settings/LeadSources` (design-marketing §2), not
+    under Sales' paths, so `mountRoots` maps each mounted Sales path to the root's own;
+  - OpportunityDetail is one screen of boxes, not tabs (Overview, People, Activities, Competitors, Quotes and orders when there are
+    any, Conversation, Files); returning a qualified deal to a lead (design §3, a manager's) is not built.
+- Mantle:
+  - `entity/SalesEntities.xml`: SalesOpportunity's `salesPipelineId`, `probabilityModeEnumId`, `lostReasonEnumId`, `recurringAmount`,
+    `recurringPlanEnumId`, `createdDate`, `stageEnteredDate`, `convertedDate`/`ByUserId`, `closedDate`/`ByUserId`, the key ones
+    audit-logged with `typeEnumId`, `accountPartyId` and `estimatedCloseDate` (now audited); SalesOpportunityContent (its content
+    types seeded with it). `data/SalesCrmSeedData.xml`: SalesProbabilityMode (SpmStage, SpmManual), SalesCompetitorPosition.
+  - `SalesAccess.js` (a P4 block): `opportunityRoles`, `assignmentParties`, `assignedOpportunityIds`, `opportunityOf` (a Sales reader of
+    the organization; the deal's current owner or team row names the caller or a team of theirs, or SALES_TEAM_VIEW),
+    `requireOpportunity`.
+  - `SalesOpportunities.js` (new) and `OpportunityServices.xml`: `find#Opportunities` (type, organization, owner or mine, team,
+    pipeline, stage, outcome, close period, account, source, campaign, text; paged in the query; the totals by currency over the
+    whole result; the board's stage columns), `get#Opportunity`, `create#Opportunity`, `update#Opportunity`, `move#Opportunity` (the
+    stage default copied in Stage mode only; the note in the audit log), `close#Opportunity` (Lost needs a current reason),
+    `reopen#Opportunity` (a reason; the outcome's fields cleared, the audit log keeps the history), `qualify#Lead` (atomic, the same
+    record; an account given, or a new prospect through `create#Account`, or the lead's own; a contact given, joined to the account
+    through `add#Contact`, or a new one through `create#Contact`; its PostingOperation key answers a retry with the first result),
+    `store#OpportunityParty` (one current owner, one team, contacts; dated), `store#Competitor`, `apply#OpportunityBatch` (move, assign,
+    lose; each on its own, each failure with its code), `add#OpportunityActivity`, `check#OpportunityAccess`,
+    `create#OpportunityContent` and `save#OpportunityContentFile`. Every write checks SALES_OPPORTUNITY_EDIT, the organization, the
+    assignment and each party, account, pipeline, stage, team, source and reason given, and the revision read; a representative
+    assigns only themselves or a member of their teams.
+  - `party/CommunicationServices.xml` get#RecordLinkInfo (owner contract, F69): SalesOpportunity's content entity, its work effort
+    join (SalesOpportunityWorkEffort, so `link#WorkEffortRecord` writes it), and a `visible()` branch over check#OpportunityAccess
+    for the deal and its files, whatever the authorization.
+  - Carry-over 1 (the user's call, §4 Nov 13): `store#LostReason` needs every organization's scope (`ORGANIZATION_DENIED`
+    otherwise); `get#SalesSetup` answers `canEditReasons`.
+  - Carry-over 3 (F99): `set#AccountManager` names the management's revision (the current manager relationship's, "0" with none;
+    `get#CustomerSales` managerRevision) and `delete#Contact` the relationship's (`find#AccountContacts` and `get#CustomerSales`
+    contact rows' revision, through a `relationshipStamp` alias of SalesAccountContact); both REVISION_CHANGED when stale.
+    `test/party/CrmMiscServices` passes the relationship's revision to `delete#Contact` (its one change).
+- BOSS:
+  - Carry-over 2 (F98, the user's call; owner contract with Commons): `check#ContactAccess` answers `canEditIdentity` (`need:
+    'identity'`), which `update#Contact`, `store#ContactInfo`, `store#ContactInfoPurpose` and ContactRecord's Edit, contact information
+    and address forms read; `canEdit` (Organizations, Relationships, Notes, the photo, files, merge) is the contact administrator's
+    and the owner's alone. The Sales editor gets `canEditIdentity` only, for a person owned by an organization of their scope (no
+    `_NA_` person) who is a contact of an account owned by an organization of the scope (no shared account). design-drawers-commons §6.
+  - `Sales.js`: `mountRoots` with Marketing's root (`Pipeline/Leads` → `Marketing/Leads`, `Settings/LeadSources` →
+    `Marketing/Settings/LeadSources`; any other root still SALES_CONTEXT), the record kind `opportunity`, the Pipeline link paths,
+    the choices `pipelines`, `stages`, `owners`, `sources`, `lostReasons`, `recurringPlans`, `competitors` and `dealContacts`, the
+    palette's open leads and opportunities, `recordLink` (Commons' get#RecordLink for a SalesOpportunity, F39) and
+    `workItemContext` (`ContextServices.get#WorkItemContext`). `template/SalesParts.xml` choices pass `salesPipelineId` and
+    `accountPartyId`.
+  - Screens: `Sales.xml` (the Pipeline item, menu index 2; the record panels admit an opportunity; keys `g o`, `g l`);
+    `Sales/Pipeline.xml` (Opportunities, Leads; WorkItemDetail mounted, hidden); `Pipeline/Opportunities` (OpportunityList as board,
+    list and calendar, NewOpportunity, ChangeStage on each row and card, the selection's Move, Assign and Close as lost, the totals);
+    `Pipeline/Leads` (LeadList with row selection: Assign, Disqualify; NewLead; a row's QualifyLead; built for a second mount over
+    `sales.sharedLinks`); `Pipeline/OpportunityDetail` (the header with the stage bar and outcome, Qualify, Close or Reopen, Schedule
+    activity, More: Change stage, Disqualify, the account; Overview with Edit, People with Add contact, Change owner, Set team and End,
+    Activities, Competitors, Quotes and orders, Conversation, Files); `template/SalesOpportunities.xml` (the transitions) and
+    `template/SalesOpportunityForms.xml` (NewOpportunity, NewLead, QualifyLead). Shared/WorkItemDetail's Sales context (owner
+    contract, crosscut §3.12): an activity of a deal the user sees, Overview, Files and Chatter, a Deals box and the way back.
+    TypesAndReasons offers the reasons' actions with `canEditReasons` only. The account transitions pass the revisions (F99).
+  - Owner contracts: RecordFilesServices (SalesOpportunity's content service, files changed by its editors), ChatterServices (its title
+    and kind, never its amount), PaletteServices get#RecordLink.
+  - Demo (`data/BossZSalesDemoData.xml`, a P4 block): Retail East's Wingtip refit (Proposal, with a contact, a competitor and an
+    activity), its maintenance plan (recurring), Kim Park's renewal (won), a website lead and the trade fair lead (East's queue);
+    Retail West's Contoso pilot (West's pipeline), Adatum's racks (lost to a competitor), Contoso's second site (a lead) and a partner
+    referral in West's queue; Ziziwork Sales' Fabrikam upgrade and an outbound-call lead.
+- Specs:
+  - Mantle `test/sales/SalesOpportunities` (new, 5 features, 1.5 s): a rep finds their own and their team's deals, not another team's
+    or organization's, a manager the organization's, and get#RecordLinkInfo answers the same; an ended membership ends the team's
+    deals; a stale move refused naming the stamp, a manual probability kept across a move, Stage copying the default, the note in the
+    audit log; Lost without a reason refused, a closed deal not moved, a reopen without a reason refused and with one keeping the close
+    history; a batch naming the stale deal and moving the other. `test/sales/SalesLeadQualify` (new, 2 features, 0.6 s): one
+    salesOpportunityId with a new prospect and contact, its activity kept, a retry under its key answering the first result with one
+    account and a changed request refused; another organization's account refused, an existing person joined, an opportunity not
+    qualified again. `SalesPipelineSetup`'s settings feature: a configurer of one organization refused a lost reason and reading
+    `canEditReasons` false, one of every organization admitted. `SalesAccounts`: a stale `delete#Contact` refused; a new feature
+    (0.2 s) for set#AccountManager's revision.
+  - mr-boss `test/Sales/SalesOpportunities` (new, 3 features, 0.9 s): Opportunities' one qvt render (the board's stage columns, the
+    rep's and team's deals, not West's or a lead, the totals, the row's Change stage) and a card moved by its column's name;
+    OpportunityDetail's one qvt render (people, competitor, activity, Chatter and Files, Close, no Qualify) and "not available" for
+    West's rep; Leads' one html render (the rep's and East's queue, not West's, a row's Qualify). `SalesAccess` gains one feature (0.3 s:
+    the opportunity record kind for the rep, the manager and Ziziwork Sales' rep, the deal's files panel, Marketing's links, the Pipeline
+    tabs; menus and keys gain Pipeline, `g o`, `g l`). `SalesAccounts`' ContactDetail feature (0.5 s, from 0.43): canEditIdentity and
+    no canEdit for the rep, the organization edit refused, a shared person's edit refused, no Organizations dialog.
+  - Client walk `test/client/Sales/SalesPipelineWalk` (new, registered in `test/client/suite.js`, 7.6 s): sales.rep's New lead,
+    Qualify on Wingtip Traders, Change stage, Close as won.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesPipelineScenarios` (3 features: scenario 1, a lead with no account
+    qualified on Dana Morales' account with its activity and file kept; scenario 2, the same move through the board's card, the row's
+    Change stage and the service; scenario 3, sales.rep2's West membership ended removes West's queue lead, their own kept) and
+    `test/acceptance/client/Sales/SalesBoardWalk` (a card dragged and kept after a reload, the row's Change stage, the board at 390 px).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOpportunities 5 of 5, SalesLeadQualify 2 of 2;
+  SalesPipelineSetup, SalesAccounts, CrmMiscServices, SalesOrganizationScope, Contacts and RecordVisibility 46 of 46; RecordLinks,
+  CommonsToday, PeopleChecklists, WorkTimesheets, SupportCases, ContactBooks and MaintenanceIntake with the four Sales specs 107 of
+  107. mr-boss SalesOpportunities 3 of 3; SalesAccess, SalesAccounts, SalesSettings, SalesReports, Contacts, ContactsDuplicates,
+  Chatter, RecordFiles, QuickCreate, Tasks, WorkItemDetail, MaintenanceChecklists, PeopleLifecycle, ManufacturingDowntime,
+  TodayPanel, CustomerServiceAccess, ProjectsAccess, ContactImport, CommsHome, Inbox, Consent and AppOrganizationFilters 258 of 258;
+  client SalesPipelineWalk 1 of 1. `moqui lint --screens` (release binary): 141 flagged sites, as before, none in the new or changed
+  screens. Prettier clean on the new and changed JavaScript (CrmMiscServices.spec.js was not clean before and is left so). Not run:
+  ./moq test-apps, the acceptance suite.
+- Inventories: no ss-inventory row names a Sales/Pipeline path (the baseline has no opportunity screens); usl-inventory's
+  create#Message, get#RecordLinkInfo, get#RecordTimeline, create#Account and create#SimpleTask rows name their Sales/Pipeline
+  screens, and an "Added in the Sales build: leads and opportunities" table the fourteen OpportunityServices verbs.
+- Design edits: design-sales §3 "As built (impl-sales P4)", §4's as-built (F98, F99), §9 TypesAndReasons (the shared reasons);
+  design-drawers-commons §6 (canEditIdentity, owner contract).
+- Findings (provisional, numbered by the lead):
+  - the framework's view-board labels a column by its value unless the group field is a status or an enumeration, so a board by an
+    id (a stage) shows ids for its empty columns; the board groups by the stage's name instead, unique in a pipeline. A column-label
+    attribute (or a display field) on view-board is the framework's fix;
+  - the recurring plans have no writer, so the user's call on shared reasons and plans changes only store#LostReason; a plan service,
+    when one is built, takes the same every-organization rule;
+  - `store#Competitor` changes no revision (its rows are not in the deal's revision), so a stale competitor edit is the last
+    writer's; the deal's own revision is checked first;
+  - returning a qualified opportunity to a lead (design §3: a manager, a reason and no placed linked order) and the duplicate
+    candidates in QualifyLead (the account and contact choosers find them) are not built; RelatedSales lists linked orders for a
+    SALES_TEAM_VIEW holder only until P7's and P11's scopes;
+  - the owners choice offers everyone who works for the organization; `create#Opportunity` and `store#OpportunityParty` refuse a
+    representative's choice outside their teams (PERMISSION_DENIED) only on submit;
+  - New lead and New opportunity under Sales leave the organization empty for sales.rep (one organization) in the client, so the
+    walk chooses it; the forms' `newDefaults` map is set as Accounts' is, and why the client shows it empty was not traced.
+- For the lead:
+  - budget share: mr-mantle about 2.4 s (SalesOpportunities 1.5 s, SalesLeadQualify 0.6 s, SalesAccounts' new feature 0.2 s, the other
+    added checks); mr-boss server about 1.3 s (SalesOpportunities 0.9 s, SalesAccess' new feature 0.3 s, ContactDetail's checks
+    0.07 s); client about 7.6 s (SalesPipelineWalk), within the user's 7 s client estimate for Sales only with a rounding;
+  - merge hot spots: mr-mantle `entity/SalesEntities.xml` (SalesOpportunity's fields, SalesOpportunityContent),
+    `data/SalesCrmSeedData.xml`, `service/mantle/sales/SalesAccess.js` (a P4 block before the module value and the export),
+    `OpportunityServices.xml` (appended), `SalesSettings.js` (store#LostReason, get#SalesSetup, the export),
+    `SalesAccounts.js`, `AccountServices.xml`, `entity/SalesAccountViewEntities.xml`,
+    `service/mantle/party/CommunicationServices.xml` (get#RecordLinkInfo's maps and `visible()`); mr-boss `Sales.js` (mountRoots,
+    linkPaths, recordKinds, the P4 choices, searchFinds, the operations and export), `ContextServices.xml`, `template/SalesParts.xml`,
+    `screen/Sales.xml`, `screen/Shared/WorkItemDetail.xml` (a Sales branch beside the other apps'),
+    `service/ironstone/commons/ContactServices.xml` and `template/ContactRecord.xml` (F98), `service/ironstone/shared/RecordFilesServices.xml`,
+    `ChatterServices.xml`, `service/ironstone/commons/PaletteServices.xml`, `data/BossZSalesDemoData.xml` (a P4 block),
+    `test/Sales/SalesSpecLib.js` (menus, keys, deals), `SalesAccess.spec.js`, `test/client/suite.js`, `test/acceptance/client/suite.js`,
+    `plan/usl-inventory.md`, `plan/design-sales.md` §3, §4, §9, `plan/design-drawers-commons.md` §6. Marketing's track touches
+    Sales.js mountRoots and Leads.xml (its bulk action) next;
+  - the user's call: none new; the shared reasons rule is built as the §4 row says, and the client budget may need the walk's
+    7.6 s counted against Sales' 7 s client estimate.
+
+**Review Nov 13 (P4).** A fresh review of `sal/p4` (mr-mantle 587c6b0b, mr-boss 217b935f) against P4, §2, §4, design §3, §12.2 and
+design-drawers-commons §6.
+- Checked and sound: opportunityOf (an organization of the scope; a current owner or team row naming the caller or a team of theirs,
+  or SALES_TEAM_VIEW for the organization's; never across organizations) is the one rule on every path: find#Opportunities (the
+  assignment ids and the organizations in the query, so the page, the count and the totals by currency read the same rows),
+  get#Opportunity (missing and unseen alike, an unseen account unnamed), the palette (find#Opportunities), check#Record and the
+  record link (Sales.js recordLink, PaletteServices), get#RecordLinkInfo's `visible()` and RecordFiles' catalogCanChange
+  (check#OpportunityAccess), Chatter's title (no amount), WorkItemDetail's Sales context (Commons' task rule and a deal the user sees),
+  the choices (pipelines, stages, owners, sources and contacts of the organization, each selected value checked) and each batch item
+  (the verb's own checks). qualify#Lead runs in one transaction (create#Account, add#Contact and create#Contact joined to it), its
+  key's PostingOperation row written last, so a concurrent first try fails on the key and rolls back its account; the request hash
+  leaves out the revision, so a retry answers the first result. Every change of a deal names the revision (update, move, close,
+  reopen, qualify, store#OpportunityParty, store#Competitor, the batch keys); party rows are dated and ended. Marketing's mountRoots
+  row adds no right: get#SharedContext gives a Marketing-root caller the same capabilities and scope as under Sales, its
+  sharedLinks hold only Marketing/Leads and Marketing/Settings/LeadSources, so a lead there shows unlinked and every transition is
+  Mantle's guarded service; any other root is SALES_CONTEXT. The carry-overs: store#LostReason refuses a configurer of fewer than
+  every organization (ORGANIZATION_DENIED) and TypesAndReasons offers it on canEditReasons only; check#ContactAccess' canEditIdentity
+  admits a Sales editor only for a person owned by an organization of the scope (no `_NA_` person) who is a contact of an
+  account owned by one (no shared account), with canEdit (organizations, relationships, notes, photo, merge) the contact
+  administrator's as before, Commons' specs unchanged; set#AccountManager and delete#Contact refuse a stale revision and every
+  caller passes it (SalesOverview's Change and Take, ContactDetail, Contacts and Customer360's SalesContacts End, CrmMiscServices).
+  The specs test what they claim.
+- Fixed:
+  - R1 (usability, medium; the Built note's last finding). New lead, New opportunity and New account left Organization empty for
+    sales.rep, and the rep's board had no stage columns (so no empty column to drop a card on): the rep's scope is Retail and its
+    rollup child Ziziwork Returns Center (BossWarehouseDemoData's PrtOrgRollup; get#PartyOrganizationInfo gives a member's direct
+    rollup children), so "the scope's only one" found two. SalesAccess.js `defaultOrganization` (the active one, else the scope's
+    only one, else the only one of it the user works for as an agent or employee) is used by create#Opportunity, the board's
+    columns and accountOrganization (create#Account), and get#SharedContext answers it as `defaultOrganizationPartyId`, which
+    Opportunities', Leads' and Accounts' new-record defaults, their team filters and the deal choices read. Mantle
+    SalesOpportunities: a rollup child of A in the users' scope, a lead created with no organization is A's and the board has
+    columns; BOSS SalesOpportunities' board renders with no organization asked (both failed on the unfixed code). The walk no
+    longer chooses the organization and checks it is shown.
+  - R2 (revision, medium; the Built note's third finding). store#Competitor checked the deal's revision but did not advance it, so
+    two stale competitor or deal edits both went through. A deal's revision is now the latest stamp of the deal, its party rows and
+    its competitor rows (find#Opportunities reads the page's competitor rows once); Mantle SalesOpportunities: a move at the revision
+    read before a competitor's change is REVISION_CHANGED (failed on the unfixed code).
+  - R3 (scope, low). find#Opportunities' board columns read any pipeline asked by id, so another organization's pipeline gave its
+    stage names; a pipeline asked now gives its stages only when shared or of an organization of the scope.
+  - The totals' scope had no check: Mantle SalesOpportunities now gives two deals amounts and checks the rep's USD total counts their
+    own (100, one deal) and the manager's the organization's (1100, two).
+- Provisional findings (for the lead to number):
+  - apply#OpportunityBatch items carry the revision but no operation key (§2 names a batch item among the keyed operations): a
+    retried batch answers REVISION_CHANGED for the items the first try did, not their first result; no data is changed twice;
+  - Marketing's mountRoots row maps Leads and LeadSources only; impl-sales §4 (Nov 11) has Marketing mount Accounts too, so
+    impl-marketing P3 adds `Accounts/Accounts` (and Customer360 if it mounts it) to the row's paths;
+  - other apps default a new record's organization by "the scope's only one" too (Maintenance's Procedures, Equipment and
+    Facilities, Warehouse's PoolList and facility parts, People's Training and ReviewCycles, Shared InspectionTemplates), and
+    Sales' settings screens take the scope's first; a user whose organization has a rollup child meets the same empty field;
+  - create#OpportunityContent has no `allow-remote="false"` (it checks the caller itself, as the other content services do).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOpportunities 5 of 5 (1.6 s), with SalesLeadQualify,
+  SalesAccounts, SalesPipelineSetup, SalesOrganizationScope, CrmMiscServices and RecordVisibility, 41 of 41; mr-boss
+  SalesOpportunities 3 of 3, with SalesAccess, SalesAccounts, SalesSettings, Contacts and WorkItemDetail, 73 of 73; the R1 and R2
+  checks failed on the unfixed code. Client SalesPipelineWalk 1 of 1: 7.86 s before the fixes, 6.77, 6.75 and 6.81 s after (the
+  organization drop-down step gone; the golden path kept whole, nothing moved to SalesBoardWalk). `moqui lint --screens` (release):
+  no new flagged site. Prettier clean on the changed JavaScript. Not run: ./moq test-apps, the acceptance suite.
+- For the lead: budget share about +0.05 s mr-mantle (SalesOpportunities' added checks) and none in mr-boss server; the client walk
+  is now within the 7 s Sales client estimate (about 6.8 s). Merge hot spots as the Built note, with mr-mantle `SalesAccess.js`
+  (defaultOrganization beside accountOrganization, and the export), mr-boss `Sales.js` sharedContext and choiceOrganization,
+  `ContextServices.xml` get#SharedContext's out-parameters and `screen/Sales/Accounts/Accounts.xml`'s defaults. No user's call
+  needed.
+
 ### P5 — Lead intake, Comms hooks and account sync
 
 Design §3 Leads (intake), §9 LeadSources' UtmSourceMap, §1.4 (Comms hooks, CX-MAIL-INTAKE, CX-SYNC), §4 Contacts'

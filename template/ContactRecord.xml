@@ -28,7 +28,8 @@ along with this software (see the LICENSE.md file). If not, see
     directory card), Activity (Chatter, opening on Send message), Calendar, Tasks, Requests, Files (record files) and Consent
     (template/ConsentRecord.xml: the state for anyone who may see the contact; subscribe, unsubscribe and record consent for
     contact admins, with "History and export in Comms Consent"; its transitions are included by the same screens). Edits
-    are for the owner of a personal contact and contact admins. Call and
+    are for the owner of a personal contact and contact admins (canEdit); the names and channels (Edit, contact information, addresses)
+    also for whom check#ContactAccess gives canEditIdentity alone (a Sales account editor of the contact, impl-sales P4, F98). Call and
     chat come with Comms calls and chat (later); print comes later. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-include="false">
@@ -205,6 +206,9 @@ along with this software (see the LICENSE.md file). If not, see
                     record = rec.record
                     access = rec.access
                     canEdit = !!access.canEdit
+                    // the names and channels (emails, phones, websites, addresses): canEdit, or a Sales account editor of the contact
+                    // (check#ContactAccess canEditIdentity; impl-sales P4, F98)
+                    canEditIdentity = !!access.canEditIdentity
                     isPersonal = !!access.isPersonal
                     // the chatter column beside the overview on a wide full screen; in the split's pane and below 1440 px a tab
                     chatterColumn = !inSplit
@@ -404,7 +408,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <!-- the names -->
                                         <container-box><box-header title="${record.isOrganization ? 'Organization' : 'Name'}"/>
                                             <box-toolbar>
-                                                <container-dialog id="ContactEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="${ec.l10n.localize('Edit')} ${record.name}" condition="canEdit">
+                                                <container-dialog id="ContactEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="${ec.l10n.localize('Edit')} ${record.name}" condition="canEditIdentity">
                                                     <form-single name="ContactEditForm" transition="contactUpdate" map="record" focus-field="${record.isOrganization ? 'organizationName' : 'firstName'}">
                                                         <field name="partyId" from="recordPartyId"><default-field><hidden/></default-field></field>
                                                         <field name="organizationName"><conditional-field condition="record.isOrganization" title="Name"><text-line size="40"/></conditional-field>
@@ -457,7 +461,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <container-box><box-header title="Contact info"/>
                                             <box-toolbar>
                                                 <render-mode><text type="qvt"><![CDATA[<m-link href="${showExpiredUrl}" class="q-mr-sm text-caption">${showExpired == 'Y' || rec.expiredCount ? expiredText : ''}</m-link>]]></text></render-mode>
-                                                <container-dialog id="ContactInfoAddDialog" button-text="Add" icon="add" width="520" title="Add contact info" condition="canEdit">
+                                                <container-dialog id="ContactInfoAddDialog" button-text="Add" icon="add" width="520" title="Add contact info" condition="canEditIdentity">
                                                     <form-single name="ContactInfoAdd" transition="contactInfoStore" focus-field="emailAddress">
                                                         <field name="partyId" from="recordPartyId"><default-field><hidden/></default-field></field>
                                                         <field name="kind"><default-field title="Kind"><radio no-current-selected-key="email">
@@ -495,7 +499,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                         </conditional-field>
                                                         <default-field title="Address or number"><display style="${expired ? 'text-strike m-muted' : (isPrimary ? 'text-weight-medium' : '')}"/></default-field></field>
                                                     <field name="detailText"><default-field title="Purpose"><display style="text-caption m-muted"/></default-field></field>
-                                                    <field name="rowActions" align="right"><conditional-field condition="canEdit &amp;&amp; !expired &amp;&amp; !readOnly" title="">
+                                                    <field name="rowActions" align="right"><conditional-field condition="canEditIdentity &amp;&amp; !expired &amp;&amp; !readOnly" title="">
                                                         <container style="row no-wrap justify-end items-center">
                                                             <container-dialog id="ContactInfoEditDialog" button-text="" icon="sym_o_edit" width="520" title="Change ${typeLabel}" tooltip="Change">
                                                                 <form-single name="ContactInfoEdit" transition="contactInfoStore">
@@ -550,7 +554,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <!-- addresses -->
                                         <container-box><box-header title="Addresses"/>
                                             <box-toolbar>
-                                                <container-dialog id="ContactAddressAddDialog" button-text="Add" icon="add" width="600" title="Add an address" condition="canEdit">
+                                                <container-dialog id="ContactAddressAddDialog" button-text="Add" icon="add" width="600" title="Add an address" condition="canEditIdentity">
                                                     <form-single name="ContactAddressAdd" transition="contactInfoStore" focus-field="address1">
                                                         <field name="partyId" from="recordPartyId"><default-field><hidden/></default-field></field>
                                                         <field name="kind" from="'postal'"><default-field><hidden/></default-field></field>
@@ -585,7 +589,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <form-list name="ContactAddressList" list="addressList" skip-form="true" paginate="false" skip-header="true">
                                                     <field name="oneLine"><default-field title="Address"><display style="${expired ? 'text-strike m-muted' : (isPrimary ? 'text-weight-medium' : '')}"/></default-field></field>
                                                     <field name="purposeText"><default-field title="Purpose"><display style="text-caption m-muted"/></default-field></field>
-                                                    <field name="rowActions" align="right"><conditional-field condition="canEdit &amp;&amp; !expired" title="">
+                                                    <field name="rowActions" align="right"><conditional-field condition="canEditIdentity &amp;&amp; !expired" title="">
                                                         <container style="row no-wrap justify-end items-center">
                                                             <container-dialog id="ContactAddressEditDialog" button-text="" icon="sym_o_edit" width="600" title="Change the address" tooltip="Change">
                                                                 <form-single name="ContactAddressEdit" transition="contactInfoStore">

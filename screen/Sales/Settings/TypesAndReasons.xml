@@ -16,7 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     P2): the opportunity types (Lead and Opportunity, fixed semantic ids), the outcomes and the recurring plans, read only
     (mantle.sales.OpportunityServices.get#SalesSetup); and the lost reasons, the instance's, added, renamed, reordered and ended,
     never deleted (store#LostReason): an ended reason stays on the deals that hold it and is offered for no new one.
-    SALES_CONFIGURE, which Mantle checks. -->
+    SALES_CONFIGURE, which Mantle checks; the reasons being the instance's, they are changed only by a configurer of every
+    organization (SALES_ALL_ORGANIZATIONS, get#SalesSetup canEditReasons; the user's call, impl-sales §4 Nov 13, P4), and a
+    configurer of one organization reads them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Types and reasons" default-menu-index="5"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
@@ -46,6 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="typeList" from="(setup?.types || []).map(row =&gt; Object.assign({}, row, {kindText: 'Opportunity type'}))
                 .concat((setup?.recurringPlans || []).map(row =&gt; Object.assign({}, row, {kindText: 'Recurring plan', note: row.enumCode + (row.enumCode == '1' ? ' month' : ' months')})))"/>
         <set field="reasonList" from="setup?.lostReasons || []"/>
+        <set field="canEditReasons" from="!!setup?.canEditReasons"/>
         <set field="findValues" from="{includeEnded: includeEnded || null}"/>
         <set field="newReason" from="{}"/>
     </actions>
@@ -71,7 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box condition="setupFound">
             <box-header title="Lost reasons"/>
             <box-toolbar>
-                <container-dialog id="NewReasonDialog" button-text="Add reason" icon="sym_o_add" type="default" width="520" title="Add a lost reason">
+                <container-dialog id="NewReasonDialog" button-text="Add reason" icon="sym_o_add" type="default" width="520" title="Add a lost reason"
+                        condition="canEditReasons">
                     <form-single name="NewReason" transition="storeReason" map="newReason">
                         <field name="description"><default-field title="Reason"><text-line size="40"/></default-field></field>
                         <field name="sequenceNum"><default-field title="Order" tooltip="Empty: last"><text-line size="5" input-type="number"/></default-field></field>
@@ -92,7 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="actions">
                         <default-field title="">
                             <container-dialog id="EditReason_${enumId}" button-text="Edit" icon="sym_o_edit" type="default" width="520"
-                                    title="Edit ${description}" condition="!ended">
+                                    title="Edit ${description}" condition="!ended &amp;&amp; canEditReasons">
                                 <form-single name="EditReason" transition="storeReason"
                                         map="{enumId:enumId, expectedRevision:revision, description:description, sequenceNum:sequenceNum}">
                                     <field name="enumId"><default-field><hidden/></default-field></field>
@@ -102,7 +106,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                                 </form-single>
                             </container-dialog>
-                            <link url="storeReason" text="End" icon="sym_o_event_busy" link-type="hidden-form" btn-type="default" condition="!ended"
+                            <link url="storeReason" text="End" icon="sym_o_event_busy" link-type="hidden-form" btn-type="default" condition="!ended &amp;&amp; canEditReasons"
                                     confirmation="End ${description}? Deals lost for it keep it." parameter-map="{enumId:enumId, expectedRevision:revision, endReason:'Y'}"/>
                         </default-field>
                     </field>
@@ -111,7 +115,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <column><field-ref name="stateText"/><field-ref name="actions"/></column>
                     </columns>
                 </form-list>
-                <label text="No lost reason yet: add the first." type="p" style="m-muted q-pa-sm" condition="!reasonList.length"/>
+                <label text="${canEditReasons ? 'No lost reason yet: add the first.' : 'No lost reason yet.'}" type="p" style="m-muted q-pa-sm" condition="!reasonList.length"/>
+                <label text="The lost reasons are shared by every organization; an administrator of every organization changes them."
+                        type="p" style="text-caption m-muted q-pa-sm" condition="!canEditReasons"/>
             </box-body-nopad>
         </container-box>
     </widgets>

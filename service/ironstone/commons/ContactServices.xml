@@ -35,10 +35,13 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="check" noun="ContactAccess" allow-remote="false">
         <description>A party as the current user may see it (the entity filters, and a personal contact only its owner's) and
             what the user may do with it. With need (view, edit or delete) an error when the user may not; a party the user may
-            not see is "not found". Who may change a directory party: a contact admin, and (Sales owner contract, impl-sales P3
-            review; the user's call of Nov 13, 2026) a holder of SALES_ACCOUNT_EDIT for a person who is a current contact of an
-            account of their sales scope (mantle/sales/SalesAccess.js contactAccounts: owned by an organization of the scope, or
-            shared) and has no user account; never delete.</description>
+            not see is "not found". Who may change a directory party (canEdit, need edit): a contact admin. Who may change its
+            identity and channels alone (canEditIdentity, need identity: the names, emails, phones, websites and addresses), besides
+            them: (Sales owner contract, impl-sales P3 review and P4, F98; the user's calls of Nov 13, 2026) a holder of
+            SALES_ACCOUNT_EDIT for a person owned by an organization of their sales scope (never a shared, _NA_, person) who is a
+            current contact of an account owned by an organization of the scope (mantle/sales/SalesAccess.js contactAccounts, not a
+            shared account) and has no user account (isSalesEditor); never the organizations, relationships, notes, photo or
+            delete, which stay canEdit's.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="need"><description>view, edit or delete; empty only reports</description></parameter>
@@ -53,12 +56,14 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="isSelf" type="Boolean"/>
             <parameter name="isDisabled" type="Boolean"/>
             <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canEditIdentity" type="Boolean"><description>May change the names and channels (emails, phones,
+                websites, addresses): canEdit, or a Sales account editor of the contact (isSalesEditor)</description></parameter>
             <parameter name="canDelete" type="Boolean"/>
         </out-parameters>
         <actions><script><![CDATA[
             const userId = ec.user.userId || null
             visible = false; isPersonal = false; isMine = false; isSelf = false; isDisabled = false; canEdit = false; canDelete = false
-            isSalesEditor = false
+            isSalesEditor = false; canEditIdentity = false
             isContactAdmin = !!userId && (ec.user.hasPermission('CONTACT_ADMIN') || ec.user.isInGroup('BOSS_CONTACT_ADMIN') || ec.user.isInGroup('ADMIN'))
             const found = ec.entity.find('mantle.party.PartyDetail').condition('partyId', partyId).one()
             if (found != null && (!found.privateOwnerUserId || found.privateOwnerUserId === userId)) {
@@ -69,16 +74,20 @@ along with this software (see the LICENSE.md file). If not, see
                 isSelf = !!userId && ec.user.userAccount?.partyId === partyId
                 isDisabled = found.disabled === 'Y'
                 canEdit = !isDisabled && (isMine || (!isPersonal && isContactAdmin))
-                // Sales (owner contract): an account editor changes the identity and channels of a contact of an account of their
-                // scope with Commons' own forms; a person with a user account (a login's email and name) stays the contact admin's
+                // Sales (owner contract, F98): an account editor changes the identity and channels alone (canEditIdentity) of a
+                // person of an organization of their scope who is a contact of an account of such an organization, with Commons' own
+                // forms; a shared (_NA_) person or account, and a person with a user account (a login's email and name), stay the
+                // contact admin's
                 if (!canEdit && !isDisabled && !isPersonal && !!userId && found.partyTypeEnumId === 'PtyPerson'
+                        && !!found.ownerPartyId && found.ownerPartyId !== '_NA_'
                         && ec.user.hasPermission('SALES_ACCOUNT_EDIT')
                         && ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().count() === 0) {
                     const sales = ec.resource.script('component://mr-mantle/service/mantle/sales/SalesAccess.js')
                     const salesScope = sales.scope()
-                    isSalesEditor = !!salesScope.capabilities.accountEdit && sales.contactAccounts(salesScope, partyId).length > 0
-                    canEdit = isSalesEditor
+                    isSalesEditor = !!salesScope.capabilities.accountEdit && sales.covers(salesScope, found.ownerPartyId)
+                        && sales.contactAccounts(salesScope, partyId).some((account) => !account.shared)
                 }
+                canEditIdentity = canEdit || isSalesEditor
                 if (!isDisabled && isMine) canDelete = true
                 else if (!isDisabled && !isPersonal && isContactAdmin && !isSelf) {
                     const hasUser = ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().count() > 0
@@ -88,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
             }
             if (!need) return
             if (!visible) { ec.message.addError(ec.resource.expand('Contact ${partyId} not found', '', {partyId: partyId})); return }
-            if (need === 'edit' && !canEdit) {
+            if ((need === 'edit' && !canEdit) || (need === 'identity' && !canEditIdentity)) {
                 ec.message.addError(ec.resource.expand(isDisabled ? 'Contact ${partyId} was merged or deleted' : 'You may not change contact ${partyId}', '', {partyId: partyId}))
             } else if (need === 'delete' && !canDelete) {
                 ec.message.addError(ec.resource.expand('You may not delete contact ${partyId}', '', {partyId: partyId}))
@@ -370,7 +379,8 @@ along with this software (see the LICENSE.md file). If not, see
                 kindLabel: L(isOrg ? 'Organization' : 'Person'), hasFaceImage: ec.entity.find('mantle.party.PartyContent').condition('partyId', partyId)
                         .condition('partyContentTypeEnumId', 'PcntFaceImage').count() > 0}
             const accessOut = {visible: true, isPersonal: !!access.isPersonal, isMine: !!access.isMine, isContactAdmin: !!access.isContactAdmin,
-                isSelf: !!access.isSelf, isDisabled: !!access.isDisabled, canEdit: !!access.canEdit, canDelete: !!access.canDelete}
+                isSelf: !!access.isSelf, isDisabled: !!access.isDisabled, canEdit: !!access.canEdit, canEditIdentity: !!access.canEditIdentity,
+                canDelete: !!access.canDelete}
             context.put('access', accessOut)
 
             roleList = Array.from(ec.entity.find('mantle.party.PartyRole').condition('partyId', partyId).list()).map((role) => {
@@ -677,7 +687,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="comments"/>
         </in-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'edit'}).call()
+            const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'identity'}).call()
             if (ec.message.hasError()) return
             const isOrg = access.party.partyTypeEnumId === 'PtyOrganization'
             const fields = {partyId: partyId}
@@ -812,7 +822,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="contactMechId"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'edit'}).call()
+            ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'identity'}).call()
             if (ec.message.hasError()) return
             const L = (text) => ec.l10n.localize(text)
             const cf = ec.entity.conditionFactory
@@ -863,7 +873,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="remove" type="Boolean" default="false"/>
         </in-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'edit'}).call()
+            ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'identity'}).call()
             if (ec.message.hasError()) return
             const cf = ec.entity.conditionFactory
             const rows = Array.from(ec.entity.find('mantle.party.contact.PartyContactMech').condition('partyId', partyId).condition('contactMechId', contactMechId)

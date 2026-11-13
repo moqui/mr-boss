@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The lead and opportunity forms of the IronStone Sales screens (impl-sales P4; design-sales §3 NewOpportunity, NewLead,
+    QualifyLead), included where a screen offers them (section-include): each posts to the transition of the same name the screen
+    includes from template/SalesOpportunities.xml, and its drop-downs are the screen's `choices` (template/SalesParts.xml), so a
+    second root that mounts Leads (Marketing's) offers the same forms. Mantle checks every value again.
+    - NewOpportunityForm: map newDefaults (typeEnumId SotOpportunity, the organization).
+    - NewLeadForm: map newLeadDefaults (the organization): a lead with no account needed.
+    - QualifyLeadForm: map qualifyValues ({salesOpportunityId, expectedRevision, organizationPartyId, accountPartyId}): an existing
+      account or a new prospect, an existing contact or a new one, the pipeline and stage, owner, amount and close. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="NewOpportunityForm">
+            <widgets>
+                <form-single name="NewOpportunity" transition="createOpportunity" map="newDefaults">
+                    <field name="typeEnumId"><default-field><hidden/></default-field></field>
+                    <field name="opportunityName"><default-field title="Name"><text-line required="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization" tooltip="The selling organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="accountPartyId">
+                        <default-field title="Account">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactPartyId">
+                        <default-field title="Contact" tooltip="The account's contacts first">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'dealContacts', selected:contactPartyId}">
+                                    <depends-on field="accountPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="salesPipelineId">
+                        <default-field title="Pipeline" tooltip="The organization's default when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'pipelines', selected:salesPipelineId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="opportunityStageId">
+                        <default-field title="Stage" tooltip="The pipeline's first stage when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stages', selected:opportunityStageId}">
+                                    <depends-on field="organizationPartyId"/><depends-on field="salesPipelineId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="ownerPartyId">
+                        <default-field title="Owner" tooltip="You, when left empty and you work for the organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'owners', selected:ownerPartyId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="teamPartyId">
+                        <default-field title="Team" tooltip="The owner's team when empty and they have one">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'teams', selected:teamPartyId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="estimatedAmount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency" tooltip="The organization's base currency when empty">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${uomId}" text="${description} (${uomId})">
+                                    <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                        <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                        <order-by field-name="description"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="estimatedCloseDate"><default-field title="Expected close"><date-time type="date"/></default-field></field>
+                    <field name="dataSourceId">
+                        <default-field title="Source">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sources', selected:dataSourceId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title=""><submit text="Create opportunity"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="opportunityName"/><field-ref name="organizationPartyId"/></field-row>
+                        <field-row><field-ref name="accountPartyId"/><field-ref name="contactPartyId"/></field-row>
+                        <field-row><field-ref name="salesPipelineId"/><field-ref name="opportunityStageId"/></field-row>
+                        <field-row><field-ref name="ownerPartyId"/><field-ref name="teamPartyId"/></field-row>
+                        <field-row><field-ref name="estimatedAmount"/><field-ref name="currencyUomId"/></field-row>
+                        <field-row><field-ref name="estimatedCloseDate"/><field-ref name="dataSourceId"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+
+        <section name="NewLeadForm">
+            <widgets>
+                <form-single name="NewLead" transition="createOpportunity" map="newLeadDefaults">
+                    <field name="typeEnumId" from="'SotLead'"><default-field><hidden/></default-field></field>
+                    <field name="opportunityName"><default-field title="Interest" tooltip="What they asked about"><text-line required="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization" tooltip="The selling organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="accountPartyId">
+                        <default-field title="Existing account" tooltip="Leave empty for a lead with no account yet">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactPartyId">
+                        <default-field title="Existing contact">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'dealContacts', selected:contactPartyId}">
+                                    <depends-on field="accountPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="ownerPartyId">
+                        <default-field title="Owner" tooltip="You, when left empty and you work for the organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'owners', selected:ownerPartyId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="teamPartyId">
+                        <default-field title="Team" tooltip="A team's queue">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'teams', selected:teamPartyId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="dataSourceId">
+                        <default-field title="Source">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sources', selected:dataSourceId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="description"><default-field title="Notes"><text-area rows="3" cols="60"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Create lead"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="opportunityName"/><field-ref name="organizationPartyId"/></field-row>
+                        <field-row><field-ref name="accountPartyId"/><field-ref name="contactPartyId"/></field-row>
+                        <field-row><field-ref name="ownerPartyId"/><field-ref name="teamPartyId"/></field-row>
+                        <field-ref name="dataSourceId"/>
+                        <field-ref name="description"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+
+        <section name="QualifyLeadForm">
+            <widgets>
+                <label text="The lead becomes an opportunity, the same record with its activities and files. Choose an existing account and contact, or name new ones."
+                        type="p" style="text-caption m-muted"/>
+                <form-single name="QualifyLead" transition="qualifyLead" map="qualifyValues">
+                    <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                    <field name="accountPartyId">
+                        <default-field title="Existing account">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="accountName"><default-field title="Or a new prospect"><text-line/></default-field></field>
+                    <field name="contactPartyId">
+                        <default-field title="Existing contact" tooltip="The account's contacts first">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'dealContacts', selected:contactPartyId}">
+                                    <depends-on field="accountPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactFirstName"><default-field title="Or a new contact: first name"><text-line/></default-field></field>
+                    <field name="contactLastName"><default-field title="Last name"><text-line/></default-field></field>
+                    <field name="contactEmail"><default-field title="Email"><text-line input-type="email"/></default-field></field>
+                    <field name="salesPipelineId">
+                        <default-field title="Pipeline">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'pipelines', selected:salesPipelineId, organizationPartyId:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="opportunityStageId">
+                        <default-field title="Stage">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stages', selected:opportunityStageId, organizationPartyId:organizationPartyId}">
+                                    <depends-on field="salesPipelineId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="ownerPartyId">
+                        <default-field title="Owner" tooltip="Kept when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'owners', selected:ownerPartyId, organizationPartyId:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="estimatedAmount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency" tooltip="The organization's base currency when empty">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${uomId}" text="${description} (${uomId})">
+                                    <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                        <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                        <order-by field-name="description"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="estimatedCloseDate"><default-field title="Expected close"><date-time type="date"/></default-field></field>
+                    <field name="submitButton">
+                        <default-field title=""><submit text="Qualify" confirmation="Qualify this lead as an opportunity?"/></default-field>
+                    </field>
+                    <field-layout>
+                        <field-row><field-ref name="accountPartyId"/><field-ref name="accountName"/></field-row>
+                        <field-row><field-ref name="contactPartyId"/><field-ref name="contactEmail"/></field-row>
+                        <field-row><field-ref name="contactFirstName"/><field-ref name="contactLastName"/></field-row>
+                        <field-row><field-ref name="salesPipelineId"/><field-ref name="opportunityStageId"/></field-row>
+                        <field-row><field-ref name="ownerPartyId"/><field-ref name="estimatedCloseDate"/></field-row>
+                        <field-row><field-ref name="estimatedAmount"/><field-ref name="currencyUomId"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -47,20 +47,21 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
-    <!-- a contact's relationship with an account ended; the person is kept -->
+    <!-- a contact's relationship with an account ended at the revision read (P4, F99); the person is kept -->
     <transition name="endContact">
         <actions>
-            <service-call name="mantle.sales.AccountServices.delete#Contact" in-map="{partyRelationshipId:partyRelationshipId}"/>
+            <service-call name="mantle.sales.AccountServices.delete#Contact"
+                    in-map="{partyRelationshipId:partyRelationshipId, expectedRevision:expectedRevision}"/>
             <if condition="!ec.message.hasError()"><message type="success">The contact no longer belongs to the account</message></if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
     </transition>
-    <!-- the account's manager from now -->
+    <!-- the account's manager from now, at the management's revision read (get#CustomerSales managerRevision; P4, F99) -->
     <transition name="setAccountManager">
         <actions>
             <service-call name="mantle.sales.AccountServices.set#AccountManager"
-                    in-map="{accountPartyId:accountPartyId, managerPartyId:managerPartyId}"/>
+                    in-map="{accountPartyId:accountPartyId, managerPartyId:managerPartyId, expectedRevision:expectedRevision}"/>
             <if condition="!ec.message.hasError()"><message type="success">Account manager changed</message></if>
         </actions>
         <default-response url="."/>

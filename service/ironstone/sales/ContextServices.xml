@@ -39,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="capabilities" type="Map"/>
             <parameter name="organizationPartyIds" type="List"/>
             <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="defaultOrganizationPartyId" type="String"><description>A new record's organization when none is chosen:
+                the active one, the scope's only one, or the only one of it the user works for (P4 review)</description></parameter>
             <parameter name="allOrganizations" type="Boolean"/>
             <parameter name="organizationOptions" type="List"><description>The organizations as {value, label}, by name, at most
                 100</description></parameter>
@@ -54,6 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="capabilities" from="shared.capabilities"/>
             <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
             <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="defaultOrganizationPartyId" from="shared.defaultOrganizationPartyId"/>
             <set field="allOrganizations" from="shared.allOrganizations"/>
             <set field="organizationOptions" from="shared.organizationOptions"/>
             <set field="partyId" from="shared.partyId"/>
@@ -64,8 +67,8 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="check" noun="Record" allow-remote="false" read-only="true">
-        <description>A record a Sales screen or mount was given: an organization (Sales.js recordKinds; later phases add the account,
-            opportunity, quote, order, agreement and forecast). Answers its kind's name, its organization in the user's scope, a
+        <description>A record a Sales screen or mount was given: an organization, an account and a contact (P3), an opportunity or
+            lead (P4) (Sales.js recordKinds; later phases add the quote, order, agreement and forecast). Answers its kind's name, its organization in the user's scope, a
             label and a short detail. Refuses a record that does not exist and one outside the scope alike (RECORD_UNAVAILABLE):
             an organization outside the user's, and any record for a user who reads nothing of Sales. With a capability named
             (reportRead, opportunityEdit, ...), refuses a user without it (PERMISSION_DENIED). Refuses a user without Sales
@@ -99,7 +102,9 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The options of a Sales drop-down the user may choose, searched by term in the query ignoring case, with the
             selected value's label (Sales.js choiceSources): organizations (those of the user's sales scope); P2: teams (an
             organization's current sales teams) and teamMembers (the people who work for it, labelled with their job title for a
-            reader of People's directory). Later phases add theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
+            reader of People's directory); P4: pipelines and stages (an organization's), owners (its people), sources (offered to it),
+            lostReasons, recurringPlans, competitors (organizations of the scope) and dealContacts (an account's contacts). Later
+            phases add theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
         <implements service="ironstone.sales.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
@@ -107,6 +112,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="selected"/>
             <parameter name="organizationPartyId"><description>P2: the organization a team or team member is chosen
                 for</description></parameter>
+            <parameter name="salesPipelineId"><description>P4: the pipeline whose stages are chosen</description></parameter>
+            <parameter name="accountPartyId"><description>P4: the account whose contacts a deal's contact is chosen from</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
@@ -115,6 +122,22 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
             <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
             <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="get" noun="WorkItemContext" allow-remote="false" read-only="true">
+        <description>WorkItemDetail's Sales context (P4; crosscut §3.12 Sales row): a task linked to deals the user sees
+            (SalesOpportunityWorkEffort; available), with those deals and their links. A task of no such deal is not available
+            there. Refuses a user without Sales (SALES_UNAVAILABLE).</description>
+        <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="opportunityRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
+            <set field="found" from="ec.resource.script(module).execute('workItemContext', context)"/>
+            <set field="available" from="!!found.available"/>
+            <set field="opportunityRows" from="found.opportunityRows || []"/>
         </actions>
     </service>
     <service verb="search" noun="Records" allow-remote="false" read-only="true">

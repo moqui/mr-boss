@@ -78,7 +78,10 @@ along with this software (see the LICENSE.md file). If not, see
                     'performanceReviewContentId', 'PerformanceReviewContentType'],
                 // People's payslip content host (impl-people P26, PE-01): payroll's files of a payslip, never on the Party
                 'mantle.humanres.payroll.Payslip': ['mantle.humanres.PayrollResultServices.create#PayslipContent',
-                    'payslipContentId', 'PayslipContentType']}
+                    'payslipContentId', 'PayslipContentType'],
+                // IronStone Sales' opportunity content host (impl-sales P4, F69): a lead's or opportunity's files
+                'mantle.sales.opportunity.SalesOpportunity': ['mantle.sales.OpportunityServices.create#OpportunityContent',
+                    'salesOpportunityContentId', 'SalesOpportunityContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
@@ -170,6 +173,12 @@ along with this software (see the LICENSE.md file). If not, see
                     && ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(info.recordId)) {
                 const access = ec.service.sync().name('mantle.request.RequestServices.check#PeopleCaseAccess')
                     .parameters({requestId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
+            }
+            // Sales P4: a lead's or opportunity's files: its editors add them (Mantle's check#OpportunityAccess, Sales' scope)
+            if (info.recordEntityName === 'mantle.sales.opportunity.SalesOpportunity') {
+                const access = ec.service.sync().name('mantle.sales.OpportunityServices.check#OpportunityAccess')
+                    .parameters({salesOpportunityId:info.recordId}).disableAuthz().call()
                 contentType.catalogCanChange = !!access?.canEdit
             }
             if (info.recordEntityName === 'mantle.party.Party') {
