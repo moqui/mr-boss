@@ -1,8 +1,8 @@
 # IronStone BOSS — People implementation
 
 Nov 13, 2026 — gate 5 built: P31 (finish) and with it every phase of the plan (P1–P31, P0's checks) and four follow-ups,
-each reviewed by a fresh agent and merged on its focused specs. Next: the full suites and the acceptance suite once (the
-user's call); their results go in a Final suites note under P31.
+each reviewed by a fresh agent and merged on its focused specs. The full suites and the acceptance suite ran once (Final
+suites and Acceptance notes under P31): People's tests all pass.
 Nov 13, 2026 — gate 4 built: P22–P28 (stage 4), payroll in preview mode, each phase reviewed by a fresh agent and merged on
 its focused specs, with P29 and P30 of stage 5 taken early and four follow-ups. Next: P31 (finish), then the full suites and
 the acceptance suite once (the user's call).
@@ -9175,6 +9175,34 @@ on the shared release binary (`--release --nobuild`, this phase's runtime; JavaS
     `plan/design-people.md` (§1.1 and the header);
   - the lead's call (§4, open to the user's override): PAYROLL_VIEW alone reads nothing of People;
   - the acceptance run: PeopleReviewWalk's readers are now HR and the deciding manager for the leave reason.
+
+**Final suites Nov 13.** On master after every phase, the four follow-ups and the acceptance fixes, with a release binary built
+from it (logs in mr-moqui `.claude/worktrees/wave-logs/ppl-G5-*`, `ppl-F-*`, `ppl-F2-*`):
+- `./moq test-framework`: everything passed but one cargo test, moqui-git's `large_objects_are_content_blobs_streamed_in_and_out`
+  ("Connection reset by peer" on a push to its local server under load); it passed alone. An earlier run's `monitor_tui` failure
+  (no fixture for the new Dashboards/CalcGrid) was the CalcGrid work's and is fixed upstream.
+- `./moq test-apps`: 4,053 of 4,054 server features and 37 of 37 client features. The one failure, Comms' new TextFiling
+  (`filedDate` null), is intermittent and not People's: it passed alone twice and in the two full runs before. Three
+  order-dependent failures of the run before (Commons Tasks, AdminAudit, MaintenancePlans) were the specs' own (other specs'
+  data on the same worker, a date past Nov 7), fixed in the specs (mr-mantle 69552a33, mr-boss 31b6c028).
+- The budgets, raised by the measured shares with the user's agreement (§4): mr-mantle 555 s (533.5 s; People's 39 specs
+  111.8 s), mr-boss server 338 s (335.9 s; People's 28 specs 55.3 s), client 77 s (76.7 s; PeopleHireWalk 7.2 s), mr-marble
+  client 10 s (8.9 s). No People spec over 15 s on the release binary.
+- `moqui lint --screens`: 0 parse failures; People's two flagged sites are the device check's static-class notes, as Insights'
+  and Maintenance's.
+
+**Acceptance Nov 13.** The first run of every People acceptance test (`./moq accept mr-boss mr-mantle`): 36 of about 990
+features failed, fixed on acc/ppla and acc/pplb (merged): mostly the tests' own assumptions (demo data, the order of a whole run,
+rules the reviews changed after they were written), and these code bugs: applicant names reached every user through universal
+search (Recruiting.js hiddenApplicants; high, confidentiality), a trainer who decides a place could not read its reason,
+Development's default denied to six groups, Employee import shown in the administrator's menu, the calendars' terminal twins
+with no actions, and a self-service employee unable to open any People area in the browser (the shell loaded the People root,
+refused by design): fixed in the framework by the user's call, a parent level the user may not open alone answers as the frame
+of a page below it they may open, in qvt and tui (mr-moqui `screen/frame.rs`, reviewed; Attack-Surface "Parent frames").
+The final run: every People acceptance test passes, server and client. Left as the user said (not People's): AppStructure's
+Shared-screen sweep and InsightsTui (Maintenance P2's EquipmentDetail tabs), InsightsFoundationWalk (CalcGrid has no html mode
+and the walk opens each entry in html), WarehouseServerStatic (the known Move link). ManufacturingScheduleWalk's intermittent
+"Request override" count was a timing race in the spec, fixed (it waits for the button).
 
 ## 4. Decisions
 
