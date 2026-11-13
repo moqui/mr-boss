@@ -5697,7 +5697,7 @@ along with this software (see the LICENSE.md file). If not, see
                 inheritAuthz="N"/>
         <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyPayslip.xml/myStatement"
                 artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
-        <artifacts artifactName="mantle\.humanres\.PayrollResultServices\.(find#Payslips|get#MyPayslip)" artifactTypeEnumId="AT_SERVICE"
+        <artifacts artifactName="mantle\.humanres\.PayrollResultServices\.(find#Payslips|get#MyPayslip|get#MyPayslipStatement)" artifactTypeEnumId="AT_SERVICE"
                 nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_PAYSLIP_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
@@ -5710,9 +5710,11 @@ along with this software (see the LICENSE.md file). If not, see
         issued payslip for "Explain this payslip". The tool is get#MyPayslip, the self-scope form of get#Payslip, since a tool's
         parameters are the model's to fill and get#Payslip answers payroll about other people. It returns the person's own amounts to
         their own session: pay's AI opt-out (the user's call of Nov 12, 2026) keeps amounts out of screens' agent renders and the
-        generic data tool, and this explicit self-only read is the design's own (impl-people P26 Built note, for the user's call). -->
+        generic data tool, and this explicit self-only read is the design's own (the user's call of Nov 12, 2026, as built). Its only
+        arguments are a payslipId or legacyKey, each checked as the caller's own (issued, never a preview); it never names where a
+        statement is stored (get#MyPayslipStatement, the screen's download, is no tool: P26 review). -->
     <moqui.agent.AgentToolExposure toolName="people_my_payslip" serviceName="mantle.humanres.PayrollResultServices.get#MyPayslip"
             title="My payslip"
-            description="get#MyPayslip: the signed-in user's own issued payslip (never anyone else's, never a preview or one not issued): payslipId's, else the latest. Its employer, period and pay date, each line the payslip shows with its amount, group and how it was worked out (the formula and values, proration, adjustments, rounding), the totals (gross, deductions, the localization's items, net, employer cost), the year to date, the corrections of it that are issued with the net effect, and the inputs it paid (hours, leave, pieces, claims). Pass forTool true."
+            description="get#MyPayslip: the signed-in user's own issued payslip (never anyone else's, never a preview or one not issued): payslipId's, else the latest. Its employer, period and pay date, each line the payslip shows with its amount, group and how it was worked out (the formula and values, proration, adjustments, rounding), the totals (gross, deductions, the localization's items, net, employer cost), the year to date, the corrections of it that are issued with the net effect, and the inputs it paid (hours, leave, pieces, claims). With a legacyKey from My payslips, the user's own historical pay record as it was recorded."
             classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
 </entity-facade-xml>

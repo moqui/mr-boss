@@ -722,7 +722,8 @@ employee opens it by People's own non-inheritable grant on the screen (`BOSS_PPL
 
 As built (impl-people P26): SelfService's My payslips lists the user's own issued payslips (none while every pay group is in
 preview mode), each opening `Commons/People/MyPayslip` (`Shared/PeopleMyPayslip.xml`, also mounted at `People/MyPayslip`), the slip
-as issued with its stored statement; its own non-inheritable grant (`BOSS_PPL_PAYSLIP_SELF`). Commons' root declares People's
+as issued with its stored statement; its own non-inheritable grant (`BOSS_PPL_PAYSLIP_SELF`). P26 review (the user's call of Nov 12,
+2026): the list also holds the user's own legacy pay history, labelled historical, opened read only by its key. Commons' root declares People's
 `PayslipIssued` topic (the notice opens that page) and the prompt "Explain this payslip" on it, as it declares People's Today source.
 
 ### Search

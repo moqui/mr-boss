@@ -1603,7 +1603,9 @@ feature(
             const listed = asUser(users.employee, () => system(() => invoke(P + "find#Payslips", {partyId: ids.reportPartyId})))
             const problems = []
             if (
-                Array.from(listed.payslips || []).some(row => row.statusId !== "PssIssued" || row.partyId !== ids.employeePartyId)
+                Array.from(listed.payslips || []).some(
+                    row => (!row.historical && row.statusId !== "PssIssued") || row.partyId !== ids.employeePartyId
+                )
             )
                 problems.push("the employee's find#Payslips answers another's or a slip not issued")
             for (const path of ["Payroll/Payslips", "Payroll/PayslipDetail"]) {

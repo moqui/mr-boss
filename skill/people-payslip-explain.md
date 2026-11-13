@@ -8,7 +8,8 @@ screens: [/qapps/People/MyPayslip, /qapps/Commons/People/MyPayslip, /qapps/Peopl
 risk: reversible
 ---
 A payslip is read from People's payroll as the signed-in user: the `people_my_payslip` tool answers their own issued payslips
-alone (the latest, or the one a `payslipId` names; pass `forTool` true). It only reads. A payslip the employer has not issued is
+alone (the latest, or the one a `payslipId` names), and their own historical pay records (a `legacyKey` from My payslips:
+shown as recorded, never recalculated). It only reads. A payslip the employer has not issued is
 not theirs to read yet, and nobody else's payslip is answered: never guess a number the tool did not give, and say so when the
 tool finds none.
 

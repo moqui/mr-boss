@@ -20,23 +20,23 @@ along with this software (see the LICENSE.md file). If not, see
     totals, the year to date, its issued corrections with the net effect and the inputs it paid; Download statement gives the
     statement as it was issued, never rendered again. "Explain this payslip" (the people-payslip-explain skill) answers from the same
     service, the user's own. Amounts are opted out of AI on the page. A self-service employee opens it by its own grant
-    (BOSS_PPL_PAYSLIP_SELF, non-inheritable, data/BossSetupData.xml). -->
+    (BOSS_PPL_PAYSLIP_SELF, non-inheritable, data/BossSetupData.xml). P26 review (the user's call of Nov 12, 2026): with legacyKey, the
+    user's own legacy pay record (EmploymentPayHistory, by its key), labelled historical, read only and never recalculated; the
+    download asks get#MyPayslipStatement, since get#MyPayslip (the Assistant's tool) names no stored statement's location. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="My payslip" default-menu-include="false" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <parameter name="payslipId"/>
+    <parameter name="legacyKey"/>
 
-    <!-- the statement as it was issued (Mantle admits the caller's own issued slip alone) -->
+    <!-- the statement as it was issued (Mantle's get#MyPayslipStatement admits the caller's own issued slip alone) -->
     <transition name="myStatement" read-only="true">
         <parameter name="payslipId"/>
         <actions>
-            <service-call name="mantle.humanres.PayrollResultServices.get#MyPayslip" out-map="slipFound" in-map="{payslipId:payslipId}"/>
+            <service-call name="mantle.humanres.PayrollResultServices.get#MyPayslipStatement" out-map="statementFound" in-map="{payslipId:payslipId}"/>
             <!-- the file is read as Mantle admitted it: the self-service grant does not reach the content store -->
             <script>if (!ec.message.hasError()) {
-                if (!slipFound.file) ec.message.addError('RECORD_UNAVAILABLE: This payslip has no statement')
-                else {
-                    const was = ec.artifactExecution.disableAuthz()
-                    try { ec.web.sendResourceResponse(slipFound.file.location, true, slipFound.file.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
-                }
+                const was = ec.artifactExecution.disableAuthz()
+                try { ec.web.sendResourceResponse(statementFound.location, true, statementFound.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
             }</script>
         </actions>
         <default-response type="none"/>
@@ -45,7 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <service-call name="mantle.humanres.PayrollResultServices.get#MyPayslip" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{payslipId:(payslipId || null)}"/>
+                in-map="{payslipId:(payslipId || null), legacyKey:(legacyKey || null)}"/>
         <script><![CDATA[
             ec.message.clearErrors()
             slip = found?.payslip || null
@@ -59,6 +59,9 @@ along with this software (see the LICENSE.md file). If not, see
             inputRows = Array.from(found?.inputs || [])
             hasFile = !!found?.file
             correction = !!slip?.correctsPayslipId
+            historical = !!slip?.historical
+            titleText = !slip ? '' : historical ? 'Historical pay record of ' + slip.payDateText
+                : (correction ? 'Pay correction' : 'Payslip') + ' for ' + slip.periodText
             captionText = slip ? [slip.organizationName, 'period ' + slip.periodText, 'pay date ' + slip.payDateText, slip.kindText]
                 .filter(Boolean).join(' · ') : ''
         ]]></script>
@@ -81,7 +84,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="m-record-header">
                     <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                         <container style="col-12 col-md m-record-title">
-                            <label text="${correction ? 'Pay correction' : 'Payslip'} for ${slip.periodText}" type="h5"/>
+                            <label text="${titleText}" type="h5"/>
                             <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
@@ -96,6 +99,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+                <label type="p" style="text-caption" condition="historical"
+                        text="A pay record from before this payroll, shown as it was recorded; it is never recalculated."/>
                 <label type="p" style="text-caption" condition="correction"
                         text="This corrects an earlier payslip${slip.correctionReason ? ': ' + slip.correctionReason : ''}. Its lines are the change from what was paid."/>
 
@@ -114,8 +119,10 @@ along with this software (see the LICENSE.md file). If not, see
                                         <column><field-ref name="amountText"/></column>
                                     </columns>
                                 </form-list>
-                                <label type="p" style="q-px-md q-pt-sm text-caption"
+                                <label type="p" style="q-px-md q-pt-sm text-caption" condition="!historical"
                                         text="Gross ${totalsText.gross} · deductions ${totalsText.deductions} · localization ${totalsText.localEmployee} · net ${totalsText.net} · cost to your employer ${totalsText.employerCost}"/>
+                                <label type="p" style="q-px-md q-pt-sm text-caption" condition="historical"
+                                        text="Gross ${totalsText.gross} · net ${totalsText.net} · taxable ${totalsText.taxable} · taxable year to date as recorded ${totalsText.taxableYearToDate}"/>
                             </box-body-nopad>
                         </container-box>
                     </widgets>
