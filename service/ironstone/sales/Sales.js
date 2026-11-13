@@ -283,7 +283,9 @@ const choiceSources = {
         }
         const people = Array.from(query.list())
         const titles = {}
-        if (access.has("PEOPLE_DIRECTORY_VIEW")) {
+        // People's own scope first (impl-sales P2 review): an organization People does not cover for the caller is not asked, as
+        // find#Employees would refuse it and the refused call is logged as an error
+        if (access.has("PEOPLE_DIRECTORY_VIEW") && peopleCovers(organizationPartyId)) {
             try {
                 const found = lib.probe("mantle.humanres.PeopleServices.find#Employees", {
                     organizationPartyId,
@@ -301,6 +303,11 @@ const choiceSources = {
             return {value: row.partyId, label: titles[row.partyId] ? name + ", " + titles[row.partyId] : name}
         })
     }
+}
+// P2: whether People's directory scope reaches an organization for the caller (People.js scopeOf: a staff reader's employers)
+function peopleCovers(organizationPartyId) {
+    const peopleScope = ec.resource.script("component://mr-mantle/service/mantle/humanres/People.js").scopeOf()
+    return !!peopleScope.capabilities?.staff && Array.from(peopleScope.organizationPartyIds || []).includes(organizationPartyId)
 }
 // P2: Mantle's setup module (the teams of an organization), read once per call
 let settingsModule = null

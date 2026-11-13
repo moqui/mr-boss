@@ -779,6 +779,67 @@ built.
     MantleSetupData and BossUsersDemoData are not touched;
   - nothing needs the user's call; the findings above are for the review.
 
+**Review Nov 13 (P2).** A fresh review of `sal/p2` (mr-mantle 16a62cbf, mr-boss 868d3c7b) against P2, §2, §4 and design §9.
+- Checked and sound: every settings verb checks its permission (SALES_CONFIGURE; teams SALES_CONFIGURE or SALES_TEAM_MANAGE) and
+  the organization before reading the record, and another organization's pipeline, stage, team or membership answers
+  RECORD_UNAVAILABLE as a missing one; revisions on every write of an existing row (pipeline, stage, team, membership, source,
+  reason); store#Stage's retirement (the revision first, the open deals those not Won or Lost or with no outcome, the target a
+  current stage of the same pipeline, each deal moved through update# so its stage is audit-logged, closed deals kept, a move
+  returning before any retirement) and store#Pipeline's end refused while open deals sit on its stages; the shared pipeline
+  changed only by a caller of every organization (a reader with no organization has `[]`, not null, so is refused too);
+  store#LeadSource across organizations (a new source and a bind or unbind for an organization of the caller's, a rename or
+  type change only when the caller covers every current binding, SOURCE_SHARED; the list names an organization outside the
+  scope only as "other organizations"); team membership dated, never deleted, from a person with an agent or employee
+  relationship in effect to the team's own organization, never back-dated, once at a time, ended with the team; the team
+  choices and TeamMembers' lookup bounded by the Sales scope (the lookup also by configure or teamManage); get#SalesReadiness
+  granted to ALL_USERS but refusing a caller without SALES_CONFIGURE and an organization outside the scope, and without an
+  organization answering only the caller's own internal organizations that use Sales (Admin's provider row also requires
+  SALES_CONFIGURE); the Settings tabs (each tab's menu-include and always-actions agree: Readiness, Stages, Sources and Types
+  and reasons SALES_CONFIGURE, Teams also SALES_TEAM_MANAGE; BOSS_SAL_SETTINGS denies the root user group and opens to the
+  manager; the transitions run behind the same always-actions; a manager lands on Teams); the load order: the loader sorts a
+  component's data files by name (moqui-entity `load_feed/locations.rs`), so `SalesCrmSeedData.xml` (seed: the
+  SalesLostReason and SalesRecurringPlan types, the outcomes) loads before `SalesData.xml` (seed-initial: the shared pipeline,
+  then its stages, the reasons and plans), whichever types a load takes, and `BossZSalesDemoData.xml` after
+  `BossUsersDemoData.xml` (the reps' PrtAgent rows that the memberships assume); the demo's source types are LEAD_SOURCE's
+  children. The specs test what they claim.
+- Fixed:
+  - R1 (confidentiality, medium). get#SalesSetup counted each stage's open deals over every organization, so on the shared
+    pipeline's stages (every organization's deals) an administrator of A read B's open-deal counts on Stages. A caller of fewer
+    than every organization now has the shared pipeline's stages counted for the organization read; its own pipelines and an
+    every-organization caller's counts are unchanged (they match STAGE_IN_USE). SalesPipelineSetup's readiness feature: B's open
+    deal on `SalesQualified` counted 1 for B's reader and 0 for A's (failed on the unfixed code, 1).
+  - R2 (scope, low). store#SalesTeamMember checked the team's end only at the time of the call, so a membership could start
+    after a team's scheduled end (or before a later team's start) and stay open with no end: SalesAccess `memberTeams`, which
+    P4's team scope reads, reads memberships alone, so it would have kept a person on an ended team. A membership now starts at
+    the team's start at the earliest, is refused from the team's end on (DATE_INVALID), and ends by the team's scheduled end.
+    SalesPipelineSetup's team feature: a team ending in two days refuses a member from day three and ends a member joining now
+    with it (the refusal failed on the unfixed code).
+  - R3 (noise, low; the Built note's finding). TeamMembers' lookup called People's find#Employees for any holder of
+    PEOPLE_DIRECTORY_VIEW, and the refused call for an organization People's scope does not reach was logged as a service ERROR
+    (as the spec runs show for every refused call). Sales.js now asks People.js `scopeOf` first and calls it only for an
+    organization of that scope; the labels are unchanged where it is. No spec: the demo has no Sales manager whose People scope
+    differs from their Sales scope.
+- Provisional findings (for the lead to number):
+  - lost reasons are the instance's, yet any SALES_CONFIGURE holder of one organization renames,
+    reorders and ends them for every organization; the shared pipeline needs every organization's scope for the same kind of
+    change. Whether store#LostReason should too (or reasons become per organization) is the user's call; kept as built, as
+    design §9 says "the reasons are the instance's";
+  - every configurer reads every lead source's name (get#SalesSetup lists the instance's sources, up to 500) and may offer any
+    of them to an organization of theirs, and DUPLICATE_VALUE on a new name confirms another organization's source; the design
+    makes sources shared, so kept; a source with no current binding (all ended) is renamed by any configurer;
+  - store#SalesTeamMember's "works for the organization" is checked at the time of the call, not at the membership's start, so a
+    person whose agency starts next month cannot be added from then, and an employment's end does not end the membership;
+  - a new pipeline with a future fromDate and the default flag clears the organization's current default at once, leaving the
+    shared one in effect until it starts.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPipelineSetup 5 of 5 (2.3 s feature time, from
+  1.9 s; on the unfixed SalesSettings.js the two new checks failed); mr-boss SalesSettings 3 of 3 (1.8 s), SalesAccess 7 of 7
+  (4.5 s). No screen changed, so no lint. Prettier clean on the changed JavaScript. Not run: ./moq test-apps, the acceptance
+  suite.
+- For the lead: budget share about +0.4 s mr-mantle (SalesPipelineSetup's added checks), mr-boss unchanged; merge hot spots as
+  the Built note, with mr-mantle `service/mantle/sales/SalesSettings.js` (openOnStage, stageView, salesSetup,
+  storeSalesTeamMember) and mr-boss `service/ironstone/sales/Sales.js` (teamMembers and `peopleCovers` before `salesSettings`);
+  the user's call: whether a change of the instance's lost reasons needs every organization's scope.
+
 ### P3 — Accounts and contacts
 
 Design §4 Accounts, Contacts, Customer360, ContactDetail and MergeAccounts; SAL-ACCOUNTS, SAL-ACCESS. The maps note of
