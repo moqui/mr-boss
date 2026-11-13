@@ -45,7 +45,7 @@
 // administrator and the instance administrator with the same parameters; no Commons list, access check or id lookup holds it;
 // RequestDetail's one qvt render as the handler (the case inside its AI opt-out) and the employee's html render by their own
 // grant; Grievances opened to the self-service employee by its own grant and refused another app's user, and the Employees group
-// with Grievances.
+// with Grievances; the People root (qvt) and Employees (tui) levels the employee's frame of Grievances, refused alone.
 // P20: a review cycle set up by a development editor of the employer (the HR officer refused with the same parameters, Services
 // refused to Retail's review administrator); Review cycles the review administrator's (the HR officer and the employee refused the
 // screen), Reviews the employee's by the area's own grant and their self-service link to it (the Performance group per user is
@@ -886,7 +886,7 @@ feature(
 )
 
 feature(
-    "confidential cases: the employee files a case with Retail's case handler, who reads it; the manager, the HR officer and the administrators are refused it with the same parameters; no other app's request list, detail or lookup holds it; RequestDetail shows it behind the AI opt-out to its handler and to the employee by their own grant; the employee opens Grievances by its own grant",
+    "confidential cases: the employee files a case with Retail's case handler, who reads it; the manager, the HR officer and the administrators are refused it with the same parameters; no other app's request list, detail or lookup holds it; RequestDetail shows it behind the AI opt-out to its handler and to the employee by their own grant; the employee opens Grievances by its own grant, the levels above it as its frame",
     {
         when() {
             const R = "mantle.request.RequestServices."
@@ -975,6 +975,41 @@ feature(
             if (own) problems.push(`the employee's Grievances: ${own}`)
             if (!unauthorized(screenRefusal(users.otherApp, "Employees/Grievances")))
                 problems.push("another app's user opens Grievances")
+            // the levels above Grievances the employee may not open alone (the People root, Employees) answer, loaded for
+            // Grievances, as its frame: in qvt the placeholder alone, in tui the active level (Employees has no tabs); asked for
+            // alone they are refused (the framework's rule, docs/security/Attack-Surface.md "Parent frames")
+            const level = (path, pagePath) =>
+                asUser(users.employee, () => {
+                    const test = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml")
+                    if (pagePath) test.header("X-Moqui-Page-Path", pagePath)
+                    const result = test.render(path, {}, null)
+                    const errors = Array.from(result.errorMessages || []).join(" | ")
+                    ec.message.clearErrors()
+                    return {status: result.status, output: String(result.output || ""), errors}
+                })
+            const grievances = "/apps/People/Employees/Grievances"
+            const rootFrame = level("apps/People.qvt", grievances)
+            if (
+                rootFrame.status != 200 ||
+                rootFrame.output != '<div class="m-frame"><m-subscreens-active></m-subscreens-active></div>'
+            )
+                problems.push(
+                    `the People root's frame for Grievances: ${rootFrame.status} ${rootFrame.errors} ${rootFrame.output.slice(0, 200)}`
+                )
+            const areaFrame = level("apps/People/Employees.tui", grievances)
+            const areaNodes = areaFrame.status == 200 ? JSON.parse(areaFrame.output).c : null
+            if (!areaNodes || areaNodes.length != 1 || areaNodes[0].t != "active")
+                problems.push(
+                    `Employees' terminal frame for Grievances: ${areaFrame.status} ${areaFrame.errors} ${areaFrame.output.slice(0, 200)}`
+                )
+            for (const [path, pagePath] of [
+                ["apps/People.qvt", null],
+                ["apps/People/Employees.tui", null],
+                ["apps/People/Employees.tui", "/apps/People/Employees/List"]
+            ]) {
+                const alone = level(path, pagePath)
+                if (alone.status == 200 && !alone.errors) problems.push(`the employee opens ${path} for ${pagePath}`)
+            }
             return {codes, problems}
         },
         then({codes, problems}) {
