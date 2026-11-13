@@ -152,6 +152,20 @@ and an employee's work card open for those who manage teams, as Maintenance's pl
 also seeds `SALES_OWNER_CHANGE`, which no Sales group holds: Admin's identity group gets it for the Sales lifecycle
 participant's transfer of a departing user's opportunities, accounts and open quotes (impl-sales F54).
 
+As built (impl-sales P1 and its review): Mantle seeds the twenty `SALES_*` permissions, each granted to `ADMIN`, and reads them in one scope
+module, `mantle/sales/SalesAccess.js` (the capabilities, the reads `anyRead` of `SALES_VIEW`, `SALES_TEAM_VIEW` or
+`SALES_REPORT_VIEW`, `teamRead` and `reportRead`, an edit permission alone reading nothing; the caller's own organizations, the
+active one when it is theirs, every one for a system administrator or a holder of `SALES_ALL_ORGANIZATIONS`, which reads nothing by
+itself). The setup is mr-boss `data/BossSetupSalesData.xml`:
+every ordinary group's user is in `BOSS_SALES`, which carries `SALES_VIEW`; the table's grants but the four a built service checks
+(`SALES_APPROVE`, `ORDER_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_CHANGE_HOLD_RELEASE`, granted with their screens, F43), so
+BOSS_SALES_APPROVE holds `SALES_ORDER_APPROVE` and BOSS_SALES_CHANGE nothing beyond the view until then; BOSS_SALES_ADMIN holds
+`SALES_CONFIGURE` with the manager's and the agreement keeper's views and edits (`SALES_IMPORT` among them) and no approval or
+owner change (the user's call, Nov 13), and `SALES_ALL_ORGANIZATIONS` alone of the groups (the user's call, Nov 13; Mantle seeds it,
+granted to `ADMIN`), so its Sales scope is every internal organization, as its root's `MANTLE_ACTIVE_ORG` is while none is active; `SALES_OWNER_CHANGE` is BOSS_ADMIN_IDENTITY's. Reports is an area of its own (`BOSS_SAL_REPORTS`: the root user
+group denied, the manager and the reader allowed) and is shown to a holder of `SALES_REPORT_VIEW`. The root serves the Chatter and
+RecordFiles panels of Sales' own record hosts only, which join with their records (P3, P4, P7, P11, P15).
+
 A rep sees shared accounts in the permitted organization and opportunities assigned to them or
 their dated team; managers/readers with team-view authority see the organization-wide pipeline.
 Order/quote access additionally requires the permitted selling organization and its record assignments;
@@ -334,6 +348,10 @@ state their period and denominator. Empty pipeline offers New lead and New oppor
 | AssignedWork | list, read | Next commercial action | record/name, customer, state, owner, due/expiry, action | record links; status chip | S.get#SalesHome | Carbon assigned documents |
 | MyPipeline | list, read | Compact open pipeline | opportunity, account, amount/currency, stage, next activity | native board/list | O.find#Opportunities | Odoo My Pipeline; research §1 |
 | PipelineFunnel | component | Stage conversion at a glance | stage, count, amount | framework funnel panel through `report-embed`, left out of server-static output, which cannot hold a viewer's data | the pipeline dataset (L6), whose row filter is Sales' scope (organization, then assignment or team) | framework Monitoring funnel panel |
+
+As built (impl-sales P1): Home's frame, an organization filter of the user's sales scope (checked by `check#Record`) above
+SalesWork's five counters, AssignedWork and MyPipeline, each "Not configured" until P4 and P6 answer them, never zero; a
+report reader gets a Sales summary shortcut, and a user who reads nothing of Sales is told so.
 
 **Actions.** New opportunity is primary; New lead, quote and activity are contextual shortcuts.
 An unavailable metric leaves other independent panels usable. **Source:** research §1, §8, §13.

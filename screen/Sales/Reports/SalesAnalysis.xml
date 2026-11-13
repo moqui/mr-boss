@@ -13,18 +13,20 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Sales Order Analysis" default-menu-index="2" menu-image="sym_o_table_chart" menu-image-type="icon">
-
-    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
-    <transition name="editProductStore"><default-response url="//${appRoot}/ProductStore/EditProductStore"/></transition>
-    <transition name="editProduct"><default-response url="//${appRoot}/Catalog/Product/EditProduct"/></transition>
-    <transition name="orderDetail"><default-response url="//${appRoot}/Order/OrderDetail"/></transition>
+        default-menu-title="Sales analysis" default-menu-index="2" menu-image="sym_o_table_chart" menu-image-type="icon">
 
     <transition-include name="searchPartyList" location="component://mr-boss/template/SearchTransitions.xml"/>
     <transition-include name="getProductList" location="component://mr-boss/template/SearchTransitions.xml"/>
 
     <actions>
         <set field="pageSize" from="pageSize || '100'"/>
+        <!-- the cost and margin columns for a holder of PRODUCT_COST_VIEW or report read only (design §8 SalesAnalysis); this ported
+            screen reads the summary view itself until P19 rebuilds it over the guarded run#SalesAnalysis (impl-sales P1, F2) -->
+        <set field="costShown" from="!!sales.capabilities.reportCosts"/>
+        <!-- nor sorted by cost for one who may not see it (its order would rank the hidden costs); the find skips totalCost's
+            search parameters for everyone (skip-fields), as no header filters on it and a range on it would test hidden costs -->
+        <if condition="!costShown &amp;&amp; orderByField &amp;&amp; String(orderByField).includes('totalCost')">
+            <set field="orderByField" from="null"/></if>
 
         <set field="orderStatusList" from="['OrderPlaced', 'OrderProcessing', 'OrderApproved', 'OrderSent', 'OrderCompleted', 'OrderHold']"/>
         <entity-find entity-name="moqui.basic.EnumGroupMember" list="productItemTypeEgms" cache="true">
@@ -35,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
         <form-list name="SalesAnalysis" list="summaryList" skip-form="true" header-dialog="true" select-columns="true"
                 saved-finds="true" show-csv-button="true" show-xlsx-button="true" show-all-button="true">
             <entity-find entity-name="mantle.order.OrderItemSalesSummary" list="summaryList" use-clone="true">
-                <search-form-inputs default-order-by="vendorPartyId,pseudoId">
+                <search-form-inputs default-order-by="vendorPartyId,pseudoId" skip-fields="totalCost">
                     <default-parameters placedDate_poffset="0" placedDate_period="month"/></search-form-inputs>
                 <econdition field-name="vendorRoleTypeId" value="OrgInternal"/>
                 <econdition field-name="orderStatusId" operator="in" from="orderStatusList"/>
@@ -50,14 +52,12 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="vendorPartyId">
                 <header-field title="Vendor" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
                     <dynamic-options transition="searchPartyList" server-search="true" min-length="0" parameter-map="{roleTypeId:'OrgInternal'}"/></drop-down></header-field>
-                <default-field><link url="editParty" text="PartyNameTemplate" link-type="anchor" condition="vendorPartyId"
-                        entity-name="mantle.party.PartyDetail" parameter-map="{partyId:vendorPartyId}"/></default-field>
+                <default-field><display-entity entity-name="mantle.party.PartyDetail" key-field-name="partyId" text="PartyNameTemplate"/></default-field>
             </field>
             <field name="customerPartyId">
                 <header-field title="Customer" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
                     <dynamic-options transition="searchPartyList" server-search="true" min-length="0" parameter-map="{roleTypeId:'Customer'}"/></drop-down></header-field>
-                <default-field><link url="editParty" text="PartyNameTemplate" link-type="anchor" condition="vendorPartyId"
-                        entity-name="mantle.party.PartyDetail" parameter-map="{partyId:customerPartyId}"/></default-field>
+                <default-field><display-entity entity-name="mantle.party.PartyDetail" key-field-name="partyId" text="PartyNameTemplate"/></default-field>
             </field>
             <field name="productStoreId">
                 <header-field title="Store" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
@@ -65,8 +65,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <entity-find entity-name="mantle.product.store.ProductStore">
                             <order-by field-name="storeName"/></entity-find></entity-options>
                 </drop-down></header-field>
-                <default-field><link url="editProductStore" text="${productStoreId}: ${storeName}" link-type="anchor" condition="productStoreId"
-                        entity-name="mantle.product.store.ProductStore"/></default-field>
+                <default-field><display-entity entity-name="mantle.product.store.ProductStore" text="${storeName}"/></default-field>
             </field>
 
             <field name="productId">
@@ -79,7 +78,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><display/></default-field></field>
 
             <field name="orderId"><header-field show-order-by="true"><text-find size="15" hide-options="ignore-case"/></header-field>
-                <default-field><link url="orderDetail" text="${orderId}" link-type="anchor"/></default-field></field>
+                <default-field><display/></default-field></field>
 
             <field name="minUnitAmount" align="right" show-total="min"><default-field title="Min"><display format="#,##0.00"/></default-field></field>
             <field name="maxUnitAmount" align="right" show-total="max"><default-field title="Max"><display format="#,##0.00"/></default-field></field>
@@ -94,12 +93,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><display format="#,##0"/></default-field></field>
             <field name="totalIssued" align="right" show-total="sum"><header-field show-order-by="true"/>
                 <default-field><display format="#,##0.00"/></default-field></field>
-            <field name="totalCost" align="right" show-total="sum"><header-field show-order-by="true"/>
+            <field name="totalCost" align="right" show-total="sum" hide="!costShown"><header-field show-order-by="true"/>
                 <default-field><display format="#,##0.00"/></default-field></field>
 
-            <field name="marginAmount" from="toDecimal(totalIssued || 0).subtract(toDecimal(totalCost || 0))" align="right" show-total="true">
+            <field name="marginAmount" from="toDecimal(totalIssued || 0).subtract(toDecimal(totalCost || 0))" align="right" show-total="true" hide="!costShown">
                 <default-field title="Margin Amount"><display format="#,##0.00"/></default-field></field>
-            <field name="marginPercent" align="right"><default-field title="Margin Percent">
+            <field name="marginPercent" align="right" hide="!costShown"><default-field title="Margin Percent">
                 <display text="${ec.l10n.format(totalIssued != null &amp;&amp; !toDecimal(totalIssued).isZero() ? toDecimal(totalIssued).subtract(toDecimal(totalCost || 0)).divide(toDecimal(totalIssued), 10, 'HALF_EVEN').multiply(toDecimal(100)) : toDecimal(0), '0.00')}"/></default-field></field>
 
             <field name="find"><header-field title="Find"><submit/></header-field></field>

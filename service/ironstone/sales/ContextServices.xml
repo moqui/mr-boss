@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Sales app's context (impl-sales §2, P1; design-sales §1.1, §12.1; Sales.js): the shared context every Sales screen reads in
+    the root's always-actions, the record check a screen or mount runs before a Mantle service, the drop-downs and the palette. A
+    user may open Sales through an authorization of their groups on its root (BOSS_SALES, the root user group, or
+    BOSS_SALES_ADMIN); the capabilities and organizations are Mantle's (mantle/sales/SalesAccess.js, from the SALES_* permissions),
+    and the menu areas' authorizations add theirs. Disabled artifact authorization widens nothing here; each Mantle sales service
+    checks again. Costs are never part of the context. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="Parameters" type="interface">
+        <description>The in-parameters the Sales context services share; each service declares what it returns.</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="SharedContext" allow-remote="false">
+        <description>Check that the user may open Sales and resolve their scope and the routes of the root that mounts Sales'
+            screens: capabilities (each SALES_* permission, the derived reads anyRead, teamRead and reportRead, an edit permission
+            alone reading nothing, the areas: reports, and reportCosts, whether the sales reports answer the user's costs: report read
+            or PRODUCT_COST_VIEW), the organizations of their sales scope (none for a user who reads
+            nothing of Sales; every internal organization for a system administrator, allOrganizations) as options, the active one,
+            the user's party and the links (sharedLinks under the mounting root). Refuses a user without Sales
+            (SALES_UNAVAILABLE), a Projects client contact and a PASS public account among them, and a root that mounts no Sales
+            screen (SALES_CONTEXT).</description>
+        <implements service="ironstone.sales.ContextServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="organizationPartyIds" type="List"/>
+            <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="allOrganizations" type="Boolean"/>
+            <parameter name="organizationOptions" type="List"><description>The organizations as {value, label}, by name, at most
+                100</description></parameter>
+            <parameter name="partyId" type="String"/>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="sharedLinks" type="Map"/>
+            <parameter name="linkBase" type="String"/>
+            <parameter name="webBase" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
+            <set field="shared" from="ec.resource.script(module).execute('sharedContext', context)"/>
+            <set field="capabilities" from="shared.capabilities"/>
+            <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
+            <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="allOrganizations" from="shared.allOrganizations"/>
+            <set field="organizationOptions" from="shared.organizationOptions"/>
+            <set field="partyId" from="shared.partyId"/>
+            <set field="appRoot" from="shared.appRoot"/>
+            <set field="sharedLinks" from="shared.sharedLinks"/>
+            <set field="linkBase" from="shared.linkBase"/>
+            <set field="webBase" from="shared.webBase"/>
+        </actions>
+    </service>
+    <service verb="check" noun="Record" allow-remote="false" read-only="true">
+        <description>A record a Sales screen or mount was given: an organization (Sales.js recordKinds; later phases add the account,
+            opportunity, quote, order, agreement and forecast). Answers its kind's name, its organization in the user's scope, a
+            label and a short detail. Refuses a record that does not exist and one outside the scope alike (RECORD_UNAVAILABLE):
+            an organization outside the user's, and any record for a user who reads nothing of Sales. With a capability named
+            (reportRead, opportunityEdit, ...), refuses a user without it (PERMISSION_DENIED). Refuses a user without Sales
+            (SALES_UNAVAILABLE).</description>
+        <implements service="ironstone.sales.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="recordType" required="true"><description>organization</description></parameter>
+            <parameter name="recordId" required="true"/>
+            <parameter name="capability"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="kindName"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="label"/>
+            <parameter name="detail"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
+            <set field="record" from="ec.resource.script(module).execute('checkRecord', context)"/>
+            <set field="recordType" from="record.recordType"/>
+            <set field="recordId" from="record.recordId"/>
+            <set field="kindName" from="record.kindName"/>
+            <set field="organizationPartyId" from="record.organizationPartyId"/>
+            <set field="label" from="record.label"/>
+            <set field="detail" from="record.detail"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Choices" allow-remote="false" read-only="true">
+        <description>The options of a Sales drop-down the user may choose, searched by term in the query ignoring case, with the
+            selected value's label (Sales.js choiceSources): organizations (those of the user's sales scope). Later phases add
+            theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
+        <implements service="ironstone.sales.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="search" noun="Records" allow-remote="false" read-only="true">
+        <description>The palette's Sales records, each opening its Sales screen, with recordEntity and recordId for Assist's
+            search (Sales.js searchFinds). None yet: accounts join with their screens (P3), opportunities and leads (P4), quotes
+            and orders (P7, P11), agreements (P15). No rows for a user without Sales.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="limit" type="Integer"/>
+            <parameter name="docTypes" type="List"/>
+            <parameter name="idMatch" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
+            <set field="found" from="ec.resource.script(module).execute('search', context)"/>
+            <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+</services>

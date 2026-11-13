@@ -12,9 +12,14 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Sales: root of the app for reps and account managers (initial-design.md app table); its sections follow
-    design-sales.md when that file is written. Not yet implemented: its BOSS_SALES grant in data/BossSetupData.xml
-    is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Sales (design-sales §1): the root of the app for representatives, managers, approvers, commercial-change operators,
+    agreement keepers, readers and administrators. The root user group BOSS_SALES and the administrator group BOSS_SALES_ADMIN open
+    it (data/BossSetupSalesData.xml, data/BossSetupData.xml), as ADMIN does (impl-sales F1: the grant was live for ADMIN and
+    BOSS_SALES_ADMIN before P1, whatever this comment said). The root grant opens navigation only:
+    ironstone.sales.ContextServices.get#SharedContext checks the user and resolves their capabilities, organizations and links for
+    every subscreen, and each Mantle sales service checks the permissions and the organization again (mantle/sales/SalesAccess.js).
+    The menu of design §1.2 grows by phase: P1 builds Home (every Sales user's) and Reports (a holder of SALES_REPORT_VIEW,
+    BOSS_SAL_REPORTS); each later phase adds its area, and the design's later entries stay absent. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
 
@@ -28,6 +33,25 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="searchPartyDocType" value="MantleParty"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.sales.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sales"/>
+        <!-- the record panels serve Sales' own record hosts only (the People P2, Insights P12 and Maintenance P1 mount lesson): this
+            root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to a user given
+            Sales without Commons. None yet: the account P3, the opportunity P4, the quote and order P7 and P11 and the agreement
+            P15 join with their checks (Sales.js recordKinds). A panel request with no record (a person search, an avatar) names
+            none. -->
+        <script><![CDATA[
+            const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+            const panelName = pathNames[pathNames.indexOf('Sales') + 1]
+            const wanted = ec.context.recordEntity
+            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
+                let entityName = String(wanted)
+                try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
+                const panelHosts = {}
+                if (!Object.hasOwn(panelHosts, entityName))
+                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+            }
+        ]]></script>
+        <set field="sharedLinks" from="sales.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -35,7 +59,19 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- P1: Reports (design §8), for a holder of SALES_REPORT_VIEW (BOSS_SAL_REPORTS denies the root user group and opens it to
+            the manager and the reader); Mantle's SalesReportServices check the permission and the organization again -->
+        <subscreens-item name="Reports" location="component://mr-boss/screen/Sales/Reports.xml" menu-index="7"
+                menu-include="ec.user.hasPermission('SALES_REPORT_VIEW')"/>
     </subscreens>
+
+    <!-- P1: the sales keymap (design §1.2). The palette source (P3, P4), quick create (P6), Today (P6), the Comms providers (P5,
+        P6) and the notification topics (P9, P14) arrive with their records. -->
+    <shell-providers>
+        <keymap scope="sales">
+            <key keys="g s" label="Sales home" screen="Sales/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="sales-panel" type="popup"/></widgets>
 </screen>

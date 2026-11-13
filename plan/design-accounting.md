@@ -2997,7 +2997,11 @@ Dated currency rates use active `moqui.basic.UomConversion`, not a separate date
 
 The report adapters read existing data sources (R-ACC-27). SalesAnalysis reads
 `SalesReportServices.get#SalesOrderSummary`, `get#SalesInvoiceSummary`, `get#SalesTopProduct` and
-`get#InvoicesByCustomerClass`, which the baseline SalesSummary calls. Aging reads the
+`get#InvoicesByCustomerClass`, which the baseline SalesSummary calls. They need report read (`ACCOUNTING_VIEW`); a holder of
+Commerce's `COMMERCE_VIEW` without it is answered for the stores of their scope, and since impl-sales P1 a holder of
+`SALES_REPORT_VIEW` without it for the organizations of their sales scope (an organization named must be one of them),
+both with the costs withheld without `PRODUCT_COST_VIEW`; report read's answers are unchanged (owner contract, the answer to
+impl-accounting §5's question for Sales). Aging reads the
 `InvoiceAgingSummary` and `InvoicePaymentApplicationSummary` views, and InventoryValuation reads
 `AssetValuationSummary`. `mantle.account.PaymentServices.apply#OrderPaymentsToInvoice` is called by
 `create#InvoiceFromSource` from OrderDetail. `mantle.ledger.AssetAutoPostServices.calculateAndPost#AllFixedAssetDepreciations`

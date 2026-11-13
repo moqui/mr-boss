@@ -375,13 +375,13 @@ is unchanged.
 | ReportList | AccountBalanceForm | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance#StatementOptions; Accounting/Reports/Reports#QuickOptions |
 | ReportList | PostedAmountSummaryForm | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary#PostedSummaryOptions |
 | ReportList | PostedBalanceSummaryForm | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary#PostedSummaryOptions |
-| SalesAnalysis | SalesAnalysis | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows |
+| SalesAnalysis | SalesAnalysis | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows; Sales/Reports/SalesAnalysis#SalesAnalysis (as ported, its dead links removed, Sales P1; rebuilt P19) |
 | SalesInvoiceAnalysis | SalesInvoiceAnalysis | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows |
-| SalesSummary | SummaryOptions | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisOptions |
-| SalesSummary | TopProductList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by product) |
-| SalesSummary | SalesOrderSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (ordered) |
-| SalesSummary | TopCustomerClassList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by customer class) |
-| SalesSummary | SalesInvoiceSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (invoiced) |
+| SalesSummary | SummaryOptions | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisOptions; Sales/Reports/SalesSummary#SummaryOptions (as ported, Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld) |
+| SalesSummary | TopProductList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by product); Sales/Reports/SalesSummary#TopProductList (as ported, Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld) |
+| SalesSummary | SalesOrderSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (ordered); Sales/Reports/SalesSummary#SalesOrderSummaryList (as ported, Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld) |
+| SalesSummary | TopCustomerClassList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by customer class); Sales/Reports/SalesSummary#TopCustomerClassList (as ported, Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld) |
+| SalesSummary | SalesInvoiceSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (invoiced); Sales/Reports/SalesSummary#SalesInvoiceSummaryList (as ported, Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld) |
 | ShipmentPackageSummary | ShipmentPackageSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Warehouse/Reports/OperationsHistory (HistoryReport: picked, shipped, delivered; packages §7) |
 | EditTimePeriod | CreateNextPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods |
 | EditTimePeriod | CreatePreviousPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods (a day in the earlier year) |
