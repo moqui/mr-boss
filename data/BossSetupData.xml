@@ -5417,12 +5417,16 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- P13: an employee's own clock on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is non-inheritable, so its
         clock transition and the services it calls need their own): get#MyClock and record#Punch take no party and answer the caller's
-        own employments alone (PEOPLE_SELF_SERVICE) -->
+        own employments alone (PEOPLE_SELF_SERVICE). P30 review (the user's call of Nov 12, 2026; F28's pattern): the worker's own
+        clocking badge PIN, set and changed on SelfService (setMyPin; get#MyKioskBadges and set#MyKioskPin take no party and admit the
+        caller's own badge alone) -->
     <artifactGroups artifactGroupId="BOSS_PPL_CLOCK_SELF" description="People own clock">
         <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/clock" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
                 inheritAuthz="N"/>
-        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(get#MyClock|record#Punch)" artifactTypeEnumId="AT_SERVICE"
-                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/setMyPin" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(get#MyClock|record#Punch|get#MyKioskBadges|set#MyKioskPin)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_CLOCK_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
@@ -5623,4 +5627,53 @@ along with this software (see the LICENSE.md file). If not, see
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="PeoplePayAdjustmentApproval" linkTemplate="/qapps/People/Payroll/PayAdjustments?show=decide"/>
+    <!-- impl-people P30 (design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; impl-people F55; owner contract with Admin,
+        impl-admin P18): the clocking kiosk on Admin's shared devices. The route group PEOPLE_CLOCKING (owner People, no fixed
+        parameter, homePath the kiosk's page, a week's idle timeout, a year's lifetime) names BOSS_DEV_PPL_CLOCKING, the device's
+        allow-list, which grants nothing: ClockingKiosk's render, its punch transition and the scanResolve transition its scan-input
+        asks, each by name and not inheritable, as BOSS_DEV_INS_WALL names WallDisplay's. The /qapps shell, People's other screens and
+        the directory are not members (impl-admin F285): the page needs none of them. The idle timeout stays a week: the page reloads
+        itself every half hour when idle, so a kiosk switched on stays seen and one switched off or replaced ends. -->
+    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_PPL_CLOCKING" description="Shared device route group: People clocking kiosk"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_PPL_CLOCKING" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_PPL_CLOCKING" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/punch"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_PPL_CLOCKING" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/scanResolve"/>
+    <moqui.security.DeviceRouteGroup routeGroupId="PEOPLE_CLOCKING" description="People clocking kiosk" ownerName="People"
+            artifactGroupId="BOSS_DEV_PPL_CLOCKING" homePath="/apps/People/Time/ClockingKiosk" defaultIdleMinutes="10080"
+            defaultLifetimeDays="365" sequenceNum="20"/>
+    <!-- P30: what a clocking kiosk's display account holds (impl-people F55; Insights' BOSS_INSIGHTS_DISPLAY is the pattern). The People
+        root is the launcher group's (BOSS_PEOPLE), which opens every People screen and the directory, so a display account is not in
+        it: it holds this bundle alone, which opens the kiosk's page, its two transitions and the two services they call, by name
+        and not inheritable, with the organization filters, and nothing else of People even if a route group were wider (the root
+        calls no get#SharedContext for a device's request, screen/People.xml), and PEOPLE_KIOSK_PUNCH, which Mantle's
+        record#KioskPunch asks beside the device's own request. It reaches no directory, payslip or search. A registered bundle with
+        no delegable permission: its permission is no sealed one, so ADMIN_ACCESS_MANAGE alone assigns it (Admin's delegation rule,
+        Access.js delegable and proposalBundles), and the identity operator proposes it when making the display account
+        (create#DisplayAccount's grant proposal). Meant for display accounts: a person given it opens the page, whose punches
+        Mantle refuses outside a registered device. -->
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_KIOSK" description="People clocking kiosk (display accounts)"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_KIOSK" userPermissionId="PEOPLE_KIOSK_PUNCH" fromDate="0"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_KIOSK" description="People: the clocking kiosk's page alone">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/punch" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/scanResolve" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(record#KioskPunch|resolve#KioskBadge)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_KIOSK_DISPLAY" userGroupId="BOSS_PEOPLE_KIOSK" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_KIOSK" appName="People" description="People clocking kiosk: records the punches of workers by badge and PIN on a shared device (display accounts only)" scopeDependency="organization; each worker by badge and PIN" sequenceNum="1210"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_KIOSK" userPermissionId="PEOPLE_KIOSK_PUNCH" capabilityKindEnumId="CpkEdit"/>
+    <!-- P30: a badge's print (Employees/BadgePrint) is HR's, with the hire and change wizards (BOSS_PPL_EMPLOYMENT), as the letters'
+        print is; Mantle's print#KioskBadge checks PEOPLE_HR_EDIT, the employer and the issuer again -->
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
+            artifactName="component://mr-boss/screen/People/Employees/BadgePrint.xml" artifactTypeEnumId="AT_XML_SCREEN"
+            inheritAuthz="Y"/>
 </entity-facade-xml>

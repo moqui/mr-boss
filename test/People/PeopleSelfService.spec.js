@@ -4,7 +4,7 @@
 // another person's emergency contacts refused; Commons Home's People card for them; My team's one qvt render as the manager (their
 // reports and no one else; P10: their last week and Remind missing time); and People's Today source, the decisions waiting on a
 // decider and nothing for the employee (P10: their weeks to submit are PeopleTime's). P10: SelfService's My time and missing-week card.
-// P13: SelfService's clock (the employee's employment has clocking on) and My attendance. The access
+// P13: SelfService's clock (the employee's employment has clocking on) and My attendance. P30 review: My clocking badge. The access
 // cases (the self-service grant, which opens SelfService and nothing else of People, and My team the managers') are PeopleAccess's;
 // Mantle's rules (the team's employments, self-service's own party, due work, emergency contacts) are Mantle's PeopleScope,
 // PeopleDirectory, PeopleApprovals and PeopleChecklists. The usable-when walk is the acceptance PeopleSelfServiceUsable.
@@ -81,6 +81,12 @@ feature(
     "SelfService under Commons shows the employee their employment, People tasks, requests and emergency contacts, and opens their record; another person's partyId changes nothing",
     {
         when() {
+            // P30 review: a clocking badge HR issued him, so My clocking badge shows (his PIN his own to set)
+            asUser(users.hr, () =>
+                system(() =>
+                    invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId})
+                )
+            )
             return {
                 rendered: asUser(users.employee, () => page("People/SelfService", {partyId: ids.reportPartyId}, "qvt", "Commons"))
             }
@@ -110,6 +116,9 @@ feature(
             rendered.output.includes("Clocked")
             rendered.output.includes("ClockRows")
             rendered.output.includes("/qapps/People/Time/Attendance")
+            // P30 review: his clocking badge, waiting for the PIN he sets here
+            rendered.output.includes("My clocking badge") && rendered.output.includes("Set my PIN")
+            rendered.output.includes("setMyPin") && rendered.output.includes("Issued, not printed yet")
         }
     }
 )

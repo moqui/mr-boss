@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A clocking badge (design-people §15 "Badge", §6 ClockingKiosk; style-guide §8 Print documents; impl-people P30), Employee360's
+    Print badge: with renderMode=html-print the badge's card, printed from the browser: the employer, the
+    person, the badge's number as a Code 128 barcode for the kiosk's scanner and in groups of four for typing. The number is made at
+    this render, once, by the badge's issuer within fifteen minutes of the issue (mantle.humanres.AttendanceServices.print#KioskBadge,
+    which keeps only its hash), so a second render says it was printed and a lost badge is replaced from Employee360. Never a tax id
+    or a password; the PIN is the worker's and is not printed. HR's (BOSS_PPL_EMPLOYMENT, with the hire and change wizards); Mantle
+    checks PEOPLE_HR_EDIT, the employer and the issuer. Out of the menu; in another render mode it links to the printed page, and
+    makes nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Clocking badge" default-menu-include="false" history="false">
+    <parameter name="kioskBadgeId" required="true"/>
+    <actions><script><![CDATA[
+        const enc = text => String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        const L = text => enc(ec.l10n.localize(text))
+        printUrl = '/apps/People/Employees/BadgePrint?renderMode=html-print&kioskBadgeId=' + encodeURIComponent(kioskBadgeId || '')
+        printHtml = ''
+        if (['html-print', 'html'].includes(sri.getRenderMode())) {
+            let printed = null
+            let refusal = ''
+            ec.message.pushErrors()
+            try {
+                printed = ec.service.sync().name('mantle.humanres.AttendanceServices.print#KioskBadge')
+                    .parameters({kioskBadgeId: kioskBadgeId || ''}).requireNewTransaction(true).call() || null
+                if (ec.message.hasError()) refusal = ec.message.getErrorsString()
+            } catch (error) {
+                refusal = String(error.message || error)
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+            // a refusal says why (printed already, too late, not the issuer, not available) in its own words, without its code
+            const reason = /\b[A-Z][A-Z0-9_]{3,}:\s*([^\n]*)/.exec(refusal)
+            printHtml = printed && !refusal
+                ? '<div style="width:85.6mm;min-height:54mm;box-sizing:border-box;border:1px solid #999;border-radius:3mm;padding:4mm;' +
+                    'font-family:sans-serif;display:flex;flex-direction:column;justify-content:space-between">' +
+                    '<div style="font-size:9pt;color:#555">' + enc(printed.organizationName) + ' · ' + L('Clocking badge') + '</div>' +
+                    '<div style="font-size:14pt;font-weight:bold">' + enc(printed.personName) + '</div>' +
+                    '<div>' + printed.barcodeSvg + '</div>' +
+                    '<div style="font-size:10pt;letter-spacing:1px">' + enc(printed.numberText) + '</div>' +
+                    '<div style="font-size:7pt;color:#777">' + L('Issued') + ' ' + enc(printed.issuedDateText) + ' · ' +
+                    L('Keep your PIN to yourself. If this badge is lost, ask HR to revoke it.') + '</div></div>'
+                : '<p>' + (reason ? enc(ec.l10n.localize(reason[1])) : L('This badge is not available')) + '</p>'
+        }
+    ]]></script></actions>
+    <widgets>
+        <render-mode>
+            <text type="html-print"><![CDATA[${printHtml}]]></text>
+            <text type="html"><![CDATA[${printHtml}]]></text>
+            <text type="qvt"><![CDATA[<p><a href="${WebUtilities.encodeHtml(printUrl)}" target="_blank">${ec.l10n.localize('Open the printable badge')}</a></p>]]></text>
+            <text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "BadgePrint", text: ec.l10n.localize("Open the printable badge"), url: printUrl})}]]></text>
+        </render-mode>
+    </widgets>
+</screen>

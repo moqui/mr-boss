@@ -41,7 +41,10 @@ along with this software (see the LICENSE.md file). If not, see
     Training (their own places, the same area). P17 review (the user's call of Nov 12, 2026):
     My letters, the issued lifecycle letters addressed to the user (a hire's confirmation, a transfer, a separation and the like:
     mantle.humanres.PeopleServices find#MyLetters, which takes no party), shown when they have any, each opened as it was stored,
-    whole, pay included (get#MyLetter refuses another person's letter as a missing one). Payslips (P26) join with their phase. -->
+    whole, pay included (get#MyLetter refuses another person's letter as a missing one). P30 review (the user's call of Nov 12,
+    2026): My clocking badge, the user's own badges in use (mantle.humanres.AttendanceServices get#MyKioskBadges, which takes no
+    party), shown when they have any, where they set their own PIN (set#MyKioskPin: the one-time PIN HR gave, if any, or the PIN they
+    have) before the badge works at a kiosk, and change it any time; HR never learns it. Payslips (P26) join with their phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -61,6 +64,18 @@ along with this software (see the LICENSE.md file). If not, see
             }</script>
         </actions>
         <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+
+    <!-- P30 review: the user's own badge PIN, set or changed (Mantle admits the caller's own badge alone and asks the PIN they have);
+        both fields are named with "password", which the framework never echoes or keeps after an error -->
+    <transition name="setMyPin">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.set#MyKioskPin"
+                    in-map="{kioskBadgeId:kioskBadgeId, currentPin:(currentPassword || null), newPin:(newPassword || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Your clocking PIN is set</message></if>
+        </actions>
+        <default-response url="."/>
         <error-response url="."/>
     </transition>
 
@@ -143,6 +158,18 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="letterRows" from="Array.from(myLetters?.letters || [])"/>
         <set field="letterEmployers" from="new Set(letterRows.map(row => row.organizationPartyId)).size"/>
         <set field="scorecardsText" from="String(myInterviews?.toAnswerCount || 0)"/>
+        <!-- P30 review: the user's own clocking badges (get#MyKioskBadges takes no party) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.AttendanceServices.get#MyKioskBadges" out-map="myBadges" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            badgeRows = Array.from(myBadges?.badges || [])
+            badgeEmployers = new Set(badgeRows.map(row => row.organizationPartyId)).size
+            badgeChoices = badgeRows.map(row => ({kioskBadgeId: row.kioskBadgeId, text: row.organizationName + ': ' + (row.pinSet ? 'change my PIN' : 'set my PIN')}))
+            badgeNeedsPin = badgeRows.some(row => !row.pinSet)
+            pinValues = {kioskBadgeId: badgeRows.find(row => !row.pinSet)?.kioskBadgeId || badgeRows[0]?.kioskBadgeId || null}
+        ]]></script>
     </actions>
 
     <widgets>
@@ -437,6 +464,49 @@ along with this software (see the LICENSE.md file). If not, see
                                     <columns type="mobile">
                                         <column><field-ref name="title"/></column>
                                         <column><field-ref name="issuedDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P30 review: My clocking badge, the user's own badges in use, shown when they have any: their PIN set or changed here -->
+                <section name="MyBadgeSection" condition="badgeRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My clocking badge"/>
+                            <box-toolbar>
+                                <container-dialog id="SetMyPinDialog" button-text="${badgeNeedsPin ? 'Set my PIN' : 'Change my PIN'}" icon="sym_o_password"
+                                        width="480" title="My clocking badge PIN">
+                                    <label type="p" text="Your PIN is yours alone: 4 to 8 digits you type with your badge at a clocking kiosk. HR never sees it."/>
+                                    <form-single name="SetMyPin" transition="setMyPin" map="pinValues">
+                                        <field name="kioskBadgeId">
+                                            <conditional-field condition="badgeRows.length &gt; 1" title="Badge">
+                                                <drop-down allow-empty="false"><list-options list="badgeChoices" key="${kioskBadgeId}" text="${text}"/></drop-down>
+                                            </conditional-field>
+                                            <default-field><hidden/></default-field>
+                                        </field>
+                                        <field name="currentPassword">
+                                            <default-field title="Current PIN" tooltip="The PIN you use now, or the one-time PIN HR gave you; empty if HR gave you none and you have not set one">
+                                                <password size="8" maxlength="8"/></default-field>
+                                        </field>
+                                        <field name="newPassword">
+                                            <default-field title="New PIN" tooltip="4 to 8 digits, not the one-time PIN HR gave you"><password size="8" maxlength="8"/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save my PIN"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="MyBadges" list="badgeRows" skip-form="true" paginate="false">
+                                    <field name="organizationName" hide="badgeEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="pinSetText"><default-field title="PIN set"><display/></default-field></field>
+                                    <field name="lastUsedText"><default-field title="Last used"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stateText"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="lastUsedText"/></column>
                                     </columns>
                                 </form-list>
                             </box-body-nopad>

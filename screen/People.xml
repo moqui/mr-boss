@@ -61,7 +61,9 @@ along with this software (see the LICENSE.md file). If not, see
     (Performance: Reviews, Goals, every People user's and a self-service employee's by the area's grant, BOSS_PPL_PERFORMANCE; Review
     cycles and Review forms the review administrator's, BOSS_PPL_REVIEW_ADMIN), a review as a record panel host (its files and notes,
     the reviewer's, development's and, once released, the person's; never the reviewer's private notes, which are not Chatter), the
-    PeopleReviewStep and PeopleReviewUpdate topics and the key g f. -->
+    PeopleReviewStep and PeopleReviewUpdate topics and the key g f. P30 the hidden Time/ClockingKiosk, the page a registered clocking
+    device opens (the PEOPLE_CLOCKING route group admits it alone), whose request runs as the device's display account:
+    get#SharedContext is not called for it (below). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -69,7 +71,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="People"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
-        <service-call name="ironstone.people.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="people"/>
+        <!-- P30: a shared device's request (a clocking kiosk; its route group admits Time/ClockingKiosk and its transitions alone) runs
+            as a display account, which is no People user and holds no root grant: it gets no context and no links (screen/Insights.xml's
+            wall display pattern); the kiosk's punch checks the device itself (Mantle's record#KioskPunch) -->
+        <if condition="UserSecurityChecks.currentDevice()"><then>
+            <set field="people" from="{sharedLinks: {}}"/>
+        </then><else>
+            <service-call name="ironstone.people.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="people"/>
+        </else></if>
         <set field="sharedLinks" from="people.sharedLinks"/>
         <!-- P2: the record panels serve People's HR hosts only (design §13 Chatter and RecordFiles; F66); a panel request with no
             record (a person search, an avatar) names none -->
