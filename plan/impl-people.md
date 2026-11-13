@@ -1,5 +1,8 @@
 # IronStone BOSS — People implementation
 
+Nov 13, 2026 — gate 5 built: P31 (finish) and with it every phase of the plan (P1–P31, P0's checks) and four follow-ups,
+each reviewed by a fresh agent and merged on its focused specs. Next: the full suites and the acceptance suite once (the
+user's call); their results go in a Final suites note under P31.
 Nov 13, 2026 — gate 4 built: P22–P28 (stage 4), payroll in preview mode, each phase reviewed by a fresh agent and merged on
 its focused specs, with P29 and P30 of stage 5 taken early and four follow-ups. Next: P31 (finish), then the full suites and
 the acceptance suite once (the user's call).
@@ -346,7 +349,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P28 Payroll exchange | Mantle, BOSS | PayrollExchange | built and reviewed Nov 12, merged |
 | P29 Reports, Insights and settings | Mantle, BOSS | Reports, Settings | built and reviewed Nov 12, merged |
 | P30 Clocking kiosk | Mantle, BOSS | ClockingKiosk | built and reviewed Nov 12, merged |
-| P31 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P31 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 13, merged |
 
 ### P0 — Checks
 
@@ -9063,7 +9066,7 @@ merged.
   of 46 (13.5 s feature time; the screens given phone columns and the lib). `moqui lint --screens`: 0 parse failures. Prettier clean on
   every changed and new JavaScript file. Not run: the five acceptance tests written here (the user's call), `./moq test-apps`,
   `./moq test-framework`.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F568 to F572 in order:
   - finance.payroll's PAYROLL_VIEW makes it a People staff reader (People.js `staffReads` includes `payrollView`): Mantle's People
     services (find#Employees, get#Employee360, get#Compensation) admit to it the employees and compensation of its own employers, with
     no People root; in the demo its employer is Accounting's organization, so it reads nothing of Retail, and PeopleReviewWalk checks
@@ -9142,7 +9145,7 @@ on the shared release binary (`--release --nobuild`, this phase's runtime; JavaS
     transition feature would have approved Ines's leave as Hannah, so "nothing changed" failed too. The manager is now among the
     reason's readers, with her positive case in the first feature.
   - R3 (low): design §2's SkillsMatrix Impl cell read `qvue`; it is an XML screen with a qvue mode, as ShiftRoster's.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F573 to F576 in order:
   - A cell starting with a space or a line feed before `=` (` =1+1`, `\n=1+1`) is written as it is by `delimitedCell` and by the
     screen CSV writer, as before P31; the common lists (OWASP's) name only `=`, `+`, `-`, `@`, tab and CR, and a spreadsheet takes a
     leading space as text, so low; a reading of LibreOffice's import with "evaluate formulas" would settle it.
@@ -9327,7 +9330,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20. Follow-up 3's F407 to F418 (Nov 12, 2026) are in its note after the Maintenance merge review.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes. P22's F395 to F406 (Nov 12, 2026) are in its Built and Review notes. P23's F419 to F434 (Nov 12, 2026) are in its Built and Review notes. P24's F435 to F454 (Nov 12, 2026) are in its Built and Review notes. P30's F455 to F468 (Nov 12, 2026) are in its Built and Review notes.Follow-up 4's F469 to F475 (Nov 12, 2026) are in its note after P30. Follow-up 2's F476 to F479 (Nov 12, 2026, numbered after follow-up 4's) are in its note after P20.  P25's F480 to F496 (Nov 12, 2026) are in its Built and Review notes. P26's F497 to F515 (Nov 12, 2026) are in its Built and Review notes. P29's F516 to F530 (Nov 12, 2026) are in its Built and Review notes. P27's F531 to F550 (Nov 12, 2026) are in its Built and Review notes. P28's F551 to F567 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20. Follow-up 3's F407 to F418 (Nov 12, 2026) are in its note after the Maintenance merge review.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes. P22's F395 to F406 (Nov 12, 2026) are in its Built and Review notes. P23's F419 to F434 (Nov 12, 2026) are in its Built and Review notes. P24's F435 to F454 (Nov 12, 2026) are in its Built and Review notes. P30's F455 to F468 (Nov 12, 2026) are in its Built and Review notes.Follow-up 4's F469 to F475 (Nov 12, 2026) are in its note after P30. Follow-up 2's F476 to F479 (Nov 12, 2026, numbered after follow-up 4's) are in its note after P20.  P25's F480 to F496 (Nov 12, 2026) are in its Built and Review notes. P26's F497 to F515 (Nov 12, 2026) are in its Built and Review notes. P29's F516 to F530 (Nov 12, 2026) are in its Built and Review notes. P27's F531 to F550 (Nov 12, 2026) are in its Built and Review notes. P28's F551 to F567 (Nov 12, 2026) are in its Built and Review notes.P31's F568 to F576 (Nov 13, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
