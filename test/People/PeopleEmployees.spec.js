@@ -31,6 +31,12 @@ feature(
     "Employee360 under People shows an HR officer the employee's work identity, personal information, history and the employment's files",
     {
         when() {
+            // a badge Tomas's HR officer has just issued, so the render offers its print
+            asUser(users.hr, () =>
+                system(() =>
+                    invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId})
+                )
+            )
             return {
                 rendered: asUser(users.hr, () =>
                     page("Employees/Employee360", {partyId: ids.employeePartyId, partyRelationshipId: ids.employmentId})
@@ -59,8 +65,11 @@ feature(
             rendered.output.includes("Skills and reviews")
             rendered.output.includes("Self-declared")
             rendered.output.includes("No resume line yet.") && rendered.output.includes("Add resume line")
-            // P30: the clocking badge, HR's: its box and Issue badge (whether PeopleKiosk issued Tomas's first or not)
+            // P30: the clocking badge, HR's: its box and Issue badge; its print a POST with the session token in a window of its own,
+            // never a link (follow-up 4)
             rendered.output.includes("Clocking badge") && rendered.output.includes("Issue a clocking badge to Tomas Lindqvist")
+            rendered.output.includes('<form method="post" action="/apps/People/Employees/BadgePrint/print" target="_blank"')
+            rendered.output.match(/name="moquiSessionToken" value="[^"]+"/) != null && !rendered.output.includes("BadgePrint?")
         }
     }
 )

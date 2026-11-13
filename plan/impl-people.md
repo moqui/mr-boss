@@ -7604,6 +7604,100 @@ and SharedDevices, 13 of 13; BOSS PeopleKiosk, PeopleAccessLater and AdminDevice
     the time import);
   - the user's calls of Nov 12 are in §4; the burst notice's link, and whether the lock should grow, are the user's to decide.
 
+**Follow-up Nov 12 (follow-up 4).** A small kiosk follow-up after P30, on the user's two calls of Nov 12 (§4) and P30's review
+finding that the badge print was a GET. Branch `ppl/fix4`: mr-mantle 59309f48 and mr-boss (this commit). Not merged.
+- Checked first (the code over the plan): `KioskIdentity.js` after P30's review (`identify` and `set#MyKioskPin` read and write the
+  badge under its row lock in a transaction of their own; `countWrongPin`; `noticeBurst` and `hrEditorUsers`; the notice's
+  `.record(DeviceCredential)`), the `PeopleKioskRefusals` topic (no link), Commons' notification lists (`decorate#Notifications`
+  and `open#Notification` resolve a notice's record per viewer through `PaletteServices.get#RecordLink`, else its topic's link,
+  else none), Admin's registry (`Admin.js` `recordKinds`, `recordOf`, `mountRoutes`, `destinationOpens`; `AdminRegistry.js
+  openUrls`), Admin's Devices (`find#SharedDevices` passes its parameters to the framework's `find#Devices`, which takes
+  `deviceId`), BadgePrint (the number made at a GET render) and Employee360's Print badge link, the framework's CSRF rule
+  (`webapp_require_session_token`: a POST to a transition that runs actions needs `moquiSessionToken`; a `method="post"`
+  transition answers a GET 405; every response but `type="none"` redirects) and Login.xml's native form with
+  `${ec.web.sessionToken}`.
+- The badge lock grows (the user's call 1), Mantle:
+  - `KioskBadge` gains `lockCount` (lockouts since the last right PIN), `disabledDate` and `pinResetDate`; `KioskAttempt` an
+    index on the badge and its date, and a wrong PIN typed in self-service is one too, with no device (the device's pacing
+    counts by device, so it is untouched);
+  - `countWrongPin` (under the row lock its callers hold) keeps the wrong PIN as an attempt and counts the badge's wrong PINs of
+    the last 24 hours since HR's last reset: the twentieth stops the badge; else the fifth in a row locks it for 15 minutes ×
+    2^lockCount (30, 60, … ; the exponent stops at 20 so the date stays one). A right PIN, at a kiosk or in self-service, clears
+    the count and the lockouts, not the day's count; HR's `reset#KioskPin` clears all of it, starts a stopped badge and sets
+    `pinResetDate`, so the wrong PINs before it no longer count. The answers say how long ("locked for 30 minutes", "1 hour")
+    or that the badge is stopped until HR resets its PIN;
+  - a stopped badge is `BADGE_DISABLED` at the kiosk (counted at the device) and in `set#MyKioskPin`; its state is `disabled`
+    (HR: "Stopped after 20 wrong PINs on …: reset its PIN or issue a new badge"; the worker's My clocking badge: "ask HR to reset
+    its PIN"); Employee360's chip negative;
+  - the stop tells the HR editors of the badge's employer (`hrEditorUsers`) once, after the stop is committed, in a transaction of
+    its own (the refusal rolls the caller's back), a failure logged: `PeopleKioskBadgeDisabled`, direct only, its message the
+    person's and employer's names, the party and the employment, its record the employment (Employee360 for an HR reader, where
+    the PIN is reset); never the badge's number, id or a PIN.
+- The refusals notice's link (the user's call 2), BOSS: the notice already names its device as its record; Commons' record-link
+  resolver gains the device (`PaletteServices.get#RecordLink`, `moqui.security.DeviceCredential`), which asks `Admin.js
+  recordLink`: Admin's new record kind `device` (`ADMIN_ACCESS_VIEW`, the display account in Mantle's identity scope as a user's
+  is, labelled by the device's name) and its mount route `adminDevice` (`../../Security/Devices` with `deviceId`), answered as
+  `/qapps/Admin/Security/Devices?deviceId=…` only where `recordOf` admits the viewer and `destinationOpens` finds the screen
+  open to their own groups; else null, so the lists and `open#Notification` show no link ("This notification has no link").
+  Devices takes `deviceId` (that device alone, revoked or not). The topic keeps no link template, so its email has no link.
+- The badge print is a POST (the review's finding): BadgePrint's `print` transition (`method="post"`, the session token required
+  as for every state-changing transition) calls `print#KioskBadge` and answers the printable badge as a page of its own
+  (`type="none"`, `sendTextResponse`), so the number is in no redirect, session or saved message, and a refusal is a page with
+  its words; a GET of `print` is 405. BadgePrint's page (a GET) makes nothing: it reads the badge by id (`get#KioskBadge` takes
+  `kioskBadgeId`) and says when it was printed, that it is not printed yet (print it from Employee360), that it was revoked, or
+  that it is not available. Employee360's Print badge is a native form posting to `print` with `${ec.web.sessionToken}` in a
+  window of its own (qvt and html; the tui says to print from a browser).
+- Specs (release feature time): Mantle KioskIdentity gains "each further lockout … stops it until HR resets its PIN, telling HR
+  alone" (0.55 s: after P30's lock five more lock 30 minutes, four and one in self-service an hour, four leave it unlocked and
+  the twentieth stops it; the right PIN refused at the kiosk and in self-service, HR reads it stopped, twenty wrong today, one
+  notice to HR of A alone naming Bob with no number or PIN; reset, Bob's PIN again, a wrong PIN not stopping it, Bob in). BOSS
+  PeopleKiosk: the print feature (0.35 s) takes a GET before (refused, nothing made), the GET of `print` (405), the POST (the
+  number) and the page after (printed on, no number); the tablet's refused list adds the POST of `print`; the HR feature (0.11 s)
+  resolves the burst notice on the tablet as Commons' lists do (under the Commons root): no link for HR, Admin's Devices with the
+  device for admin.access. AdminDevices gains "a device's record link …" (0.23 s: the access administrator's link; none for the
+  Admin reader (no Security area), a BOSS user without Admin, or another organization's device; `find#SharedDevices` by id
+  answering the revoked device). PeopleEmployees' Employee360 render issues Tomas's badge first and checks the POST form with a
+  session token and no BadgePrint link (the feature from about 0.3 s to 0.7 s, the badge script's first load).
+  PeopleAccessLater's P30 feature: the reader's POST of the print refused. Acceptance `acceptance/People/PeopleKioskUsable`
+  changed (prints by POST; the second print refused and the page saying when), not run.
+- Tests run (the shared release binary from the main checkout, `--release --nobuild`, this runtime): Mantle KioskIdentity and
+  Attendance 14 of 14, KioskIdentity 8 of 8 again after formatting; BOSS PeopleKiosk and AdminDevices 7 of 7, PeopleEmployees,
+  PeopleAccessLater and PeopleSelfService 24 of 24, PeopleAccessLater 15 of 15 after its change, PeopleEmployees, PeopleKiosk,
+  AdminDevices and PeopleSelfService 16 of 16 after formatting. `moqui lint --screens`: no parse failure, no flagged site in the
+  changed screens. Prettier clean on the changed JavaScript that was clean before (AdminDevices.spec.js was not, and is left in
+  its style). Not run: `./moq test-apps`, the acceptance suite.
+- Owner contracts and records: design-people (header; §4 Employee360's Print badge and the stopped state; §6 ClockingKiosk's lock,
+  stop and the notice's link; §15 Badge), design-admin (§6 Devices: the device record kind and `deviceId`), usl-inventory
+  (`print#KioskBadge`, `get#KioskBadge` on BadgePrint), ss-inventory's P30 note; §4's two rows above.
+- Findings (provisional, numbered by the lead):
+  - the refusals notice still goes to the HR editors alone (P30's review), so its link helps only an HR editor who also has Admin's
+    Security area; the access administrators who revoke devices are not told unless they are HR editors;
+  - the stop is a lever too: anyone holding a found badge can stop it with twenty wrong PINs in about two hours (15 + 30 + 60
+    minutes of lockouts), and the worker clocks nowhere until HR resets the PIN; HR is told at once;
+  - a right PIN clears the doubling (not the day's count), so guesses spread around the worker's own clocking get nineteen a day,
+    each fifth locking for 15 minutes, before the stop: about 1 in 500 of a 4-digit PIN a day;
+  - the stop notice is sent once, at the stop; one that fails is logged and not sent again;
+  - Employee360's print form carries the session token rendered with the page (as Login's form does); a token replaced while the
+    page is open refuses the print until the page is reloaded;
+  - the print's answer is a plain page of its own (no html-print render, no print button), and a refusal is a 200 page with its
+    words.
+- For the lead:
+  - budget share: mr-mantle about +0.55 s (KioskIdentity's new feature); mr-boss about +0.25 s (AdminDevices' feature, PeopleKiosk's
+    added checks) and PeopleEmployees' first feature about +0.4 s (the issue before its render);
+  - merge hot spots (P25 touches BossSetupData.xml, untouched here, and PeopleAccessLater): mr-boss `test/People/PeopleAccessLater.spec.js`
+    (the header's P30 paragraph rewrapped, the P30 feature's BadgePrint checks), `service/ironstone/admin/Admin.js` (`mountRoutes`'
+    end, `readDevice` and `recordKinds`, `recordLink`, the exports), `service/ironstone/commons/PaletteServices.xml` (a branch before
+    the qualification's), `screen/Admin/Security/Devices.xml`, `screen/Shared/Employee360.xml` (the Clocking badge toolbar and the
+    badge lines of the actions), `screen/People/Employees/BadgePrint.xml`, `test/People/PeopleKiosk.spec.js`,
+    `test/People/PeopleEmployees.spec.js` (the first feature), `test/Admin/AdminDevices.spec.js` (a feature appended),
+    `acceptance/People/PeopleKioskUsable.spec.js`, `plan/design-people.md` (header, §4, §6, §15), `plan/design-admin.md` (§6),
+    `plan/usl-inventory.md`, `plan/ss-inventory.md`, this file (§4's two rows, this note); mr-mantle `entity/PeopleAttendanceEntities.xml`,
+    `service/mantle/humanres/KioskIdentity.js`, `AttendanceServices.xml` (descriptions, `get#KioskBadge`'s parameters),
+    `data/PeopleAttendanceSetupData.xml` (a topic after `PeopleKioskRefusals`), `test/humanres/KioskIdentity.spec.js` (a feature
+    after the lock's);
+  - the user's call wanted: whether the refusals notice should go to the device's access administrators too (they revoke it), and
+    whether the stop should tell the worker as well.
+
 ### P31 — Finish
 
 - The tui and server-static screen sweeps of People, one acceptance test per mode (each screen's twin is built in
@@ -7721,6 +7815,8 @@ the owner's design.
 | Nov 12, 2026 | The worker sets their own clocking badge PIN: HR issues the badge with a one-time PIN or none, the badge works at no kiosk until the worker sets their PIN in SelfService (People and Commons mounts, F28's grants), and the worker changes it any time with the PIN they have; a forgotten PIN is reset by HR (a new one-time PIN or none). HR never learns the worker's PIN | The user's call (P30's review). Built in P30's review, R2: `KioskBadge.oneTimePinHash` and `pinSetDate`, `AttendanceServices.reset#KioskPin`, `get#MyKioskBadges`, `set#MyKioskPin` (`PIN_REUSED`, `PIN_NOT_SET`), SelfService's My clocking badge, Employee360's Reset PIN; design-people §3, §4, §6, §15 |
 | Nov 12, 2026 | A clocking device with many refused proofs slows down instead of refusing everyone: each further attempt waits a growing pause, capped at a few seconds; the per-badge lockout stays; a burst of refusals at a device tells the HR officers of its organization, direct only and rate-limited; refused attempts are kept 90 days, pruned by a failure-tolerant job | The user's call (P30's review). Built in P30's review, R3: from 5 refusals in 10 minutes a pause of 1 s doubling to 5 s after the last (`KIOSK_WAIT`, enforced by pacing: the script host has no sleep), from 10 the `PeopleKioskRefusals` notice to the HR editors at most hourly per device (`KioskDeviceNotice`), `prune#KioskAttempts` daily; design-people §6 |
 | Nov 12, 2026 | A clocking badge has no reprint: a print that fails or a badge lost is replaced by issuing a new one, which revokes the one before | The user's call (P30's review, on the Built note's first finding): accepted as built; design-people §15 |
+| Nov 12, 2026 | The clocking badge lock grows: each further lockout of a badge lasts twice as long (15 minutes, 30, 60, …) until a right PIN; after 20 wrong PINs within a day the badge is stopped until HR resets its PIN or issues a new badge, and the employer's HR editors get a direct-only notice naming the person, never the badge's number or a PIN; all under the badge's row lock as P30's review (R1) made it | The user's call (P30's review, on the finding that a found badge's PIN falls in days). Built in follow-up 4: `KioskBadge.lockCount`, `disabledDate`, `pinResetDate`; `KioskIdentity.js countWrongPin` (a self-service wrong PIN a `KioskAttempt` with no device, so the day's count is the badge's wherever typed; the count since HR's last reset), `BADGE_DISABLED`, `PeopleKioskBadgeDisabled` (its record the employment); design-people §4, §6 |
+| Nov 12, 2026 | The kiosk's burst-of-refusals notice links to the device in Admin › Security › Devices, where it is revoked, through Admin's route keys and record kinds, for a recipient who may open it there; HR without Admin access sees the notice without a link | The user's call (P30's review). Built in follow-up 4: the notice's record is the device, resolved for each viewer by Commons' record-link resolver (`PaletteServices.get#RecordLink`) through `Admin.js recordLink` (`recordKinds.device`, the mount route `adminDevice`, `recordOf` and `destinationOpens`); Devices takes `deviceId`; design-people §6, design-admin §6 Devices |
 
 ## 5. Open questions
 

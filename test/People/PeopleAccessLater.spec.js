@@ -64,10 +64,10 @@
 // group missing to Retail's payroll; Hours for pay the payroll operator's and the manager's (the HR officer refused the screen),
 // Pay adjustments payroll's (the HR officer refused the screen).
 // P30: a clocking badge issued by an HR officer of the employer (the directory reader refused with the same parameters, Services'
-// employment refused to Retail's HR), its print HR's (the reader refused the screen); its PIN set by the employee alone (HR refused
-// with the same parameters) and reset by HR (the reader and the employee refused); a kiosk punch refused outside a registered
-// device to the instance administrator, who holds PEOPLE_KIOSK_PUNCH, and to the employee, with the same parameters (the device's own
-// punch is PeopleKiosk's); the kiosk bundle assigned by the access administrator and proposed by the identity operator under Admin's
+// employment refused to Retail's HR), its print HR's (the reader refused the screen and the print's POST, follow-up 4); its PIN
+// set by the employee alone (HR refused with the same parameters) and reset by HR (the reader and the employee refused); a kiosk
+// punch refused outside a registered device to the instance administrator, who holds PEOPLE_KIOSK_PUNCH, and to the employee,
+// with the same parameters (the device's own punch is PeopleKiosk's); the kiosk bundle assigned by the access administrator and proposed by the identity operator under Admin's
 // delegation rule, and refused to the reader.
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
@@ -1342,6 +1342,17 @@ feature(
             if (opened) problems.push(`the HR officer's BadgePrint: ${opened}`)
             const refusedScreen = screenRefusal(users.reader, "Employees/BadgePrint", {kioskBadgeId: "0"})
             if (!unauthorized(refusedScreen)) problems.push(`${users.reader} opens BadgePrint: ${refusedScreen || "opened"}`)
+            // follow-up 4: the print is a POST to BadgePrint's print, refused the reader as the page is
+            const printed = asUser(users.reader, () =>
+                ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .render("apps/People/Employees/BadgePrint/print", {kioskBadgeId}, "post")
+            )
+            const printRefusal = printed.status + " " + Array.from(printed.errorMessages || []).join(" | ")
+            ec.message.clearErrors()
+            if (!unauthorized(printRefusal) || String(printed.output || "").includes("<svg"))
+                problems.push(`${users.reader} prints a badge: ${printRefusal}`)
             return {codes, problems}
         },
         then({codes, problems}) {

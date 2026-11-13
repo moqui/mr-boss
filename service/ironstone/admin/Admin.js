@@ -451,6 +451,8 @@ const mountRoutes = {
     accountingPostingDefaults: {url: "/qapps/Accounting/Settings/PostingDefaults", plain: true},
     accountingCostingPolicies: {url: "/qapps/Accounting/Settings/CostingPolicies", plain: true},
     adminGroups: {url: "../../Access/Groups"},
+    // a shared device (P18) in Security › Devices, where it is revoked: People's clocking kiosk notice links it (People follow-up 4)
+    adminDevice: {url: "../../Security/Devices", idParameter: "deviceId"},
     ...settingsRoutes
 }
 function sharedContext(p) {
@@ -518,6 +520,15 @@ function readGroup(userGroupId) {
     return {owners: [], instance: true, label: group.description || userGroupId, detail: userGroupId}
 }
 
+// A shared device (P18): its display account's organizations, in Mantle's identity scope as the account's are (SharedDevices.js
+// reads a device the same way), labelled by the device's name.
+function readDevice(deviceId) {
+    const device = deviceId ? one("moqui.security.DeviceCredential", {deviceId}) : null
+    const account = device ? readUser(device.displayUserId) : null
+    if (!account) return null
+    return Object.assign(account, {label: device.deviceName || deviceId, detail: account.label})
+}
+
 // Each kind an Admin screen, mount, palette or record link may be given: its name, icon, the capability that reads it (null
 // for the scope alone), the screen that opens it (destination, the path and id parameter under the root; null until its
 // phase builds it: users in P4, organizations in P7) and its read (owners: the organizations it names; inScope, for an identity:
@@ -535,7 +546,32 @@ const recordKinds = {
     // P3: a group, and a user as a group's member: an access administrator reads the users of the organizations they administer
     // to add or end their memberships, without the identity operator's ADMIN_IDENTITY_VIEW
     group: {name: "Group", icon: "sym_o_group", need: "accessView", destination: "Access/GroupDetail", read: readGroup},
-    member: {name: "User", icon: "sym_o_person", need: "accessView", destination: null, read: readUser}
+    member: {name: "User", icon: "sym_o_person", need: "accessView", destination: null, read: readUser},
+    // P18's devices, for the record link of a notice on one (People follow-up 4: the clocking kiosk's refusals); its place is the
+    // mount route adminDevice
+    device: {name: "Device", icon: "sym_o_tv_signin", need: "accessView", destination: "Security/Devices", read: readDevice}
+}
+
+// The places of the kinds a record link opens under Admin (recordLink), by their mount route keys
+const recordRoutes = {device: "adminDevice"}
+// A record's link under Admin for the current user (Commons' record-link resolver, PaletteServices.get#RecordLink, which the
+// notification lists and open#Notification use): the kind's mount route as a /qapps path with the record's id, only where the
+// user may read the record (its capability and scope, recordOf) and the place opens to their own groups (destinationOpens);
+// else null, so a notice on the record shows no link to one who may not open it.
+function recordLink(kind, recordId) {
+    const route = Object.hasOwn(recordRoutes, kind) ? mountRoutes[recordRoutes[kind]] : null
+    if (!route || !recordId || !ec.user.userId) return null
+    const userScope = scope()
+    if (!userScope.read) return null
+    try {
+        recordOf(userScope, kind, String(recordId))
+    } catch (error) {
+        if (["RECORD_UNAVAILABLE", "PERMISSION_DENIED"].includes(lib.reasonCode(error))) return null
+        throw error
+    }
+    const path = "Admin/" + route.url.replace(/^\.\.\/\.\.\//, "")
+    if (!destinationOpens(userScope.grants, path)) return null
+    return "/qapps/" + path + "?" + route.idParameter + "=" + encodeURIComponent(String(recordId))
 }
 
 // A record the user may administer: the organizations it names are theirs (every one, or for an identity one of them); one
@@ -883,6 +919,7 @@ const operations = {sharedContext, checkRecord, search, choices, memberScope}
     required,
     administers,
     recordOf,
+    recordLink,
     destinationOpens,
     settingsIndexOnly,
     execute: (op, parameters) => {

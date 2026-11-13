@@ -53,7 +53,8 @@ along with this software (see the LICENSE.md file). If not, see
     its salary only to payroll and its approver. P30, under People: Clocking badge, an HR editor's of the opened employment's employer
     (mantle.humanres.AttendanceServices get#KioskBadge: its state, never its number or PIN), with Issue badge (a one-time PIN or none:
     the worker sets their own PIN in self-service, the user's call of Nov 12, 2026; the badge before it revoked), Print badge
-    (Employees/BadgePrint, once, by its issuer within fifteen minutes; issuing again is the reprint), Reset PIN (a forgotten PIN: a
+    (a POST to Employees/BadgePrint's print, with the session token, in a window of its own: once, by its issuer within fifteen
+    minutes; issuing again is the reprint; follow-up 4), Reset PIN (a forgotten PIN: a
     new one-time PIN or none) and Revoke badge.
     TimeAndLeave (P12) joins with its phase. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -310,14 +311,14 @@ along with this software (see the LICENSE.md file). If not, see
                 salaryPeriodTypeId: compensation.currentSalary?.timePeriodTypeId || null, payGradeId: compensation.currentSalary?.payGradeId || null,
                 operationKey: ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + (compensation.partyRelationshipId || '')} : {}
             payAssignmentsUrl = sharedLinks?.['Payroll/PayAssignments'] || null
-            // P30: the clocking badge, its state and what HR may do with it; its print opens in a window of its own (People's route)
+            // P30: the clocking badge, its state and what HR may do with it; its print is a POST with the session token to People's
+            // BadgePrint, which answers the printable badge in a window of its own (follow-up 4: a GET prints nothing)
             badgeShown = !!badgeFound?.canIssue || !!badgeFound?.badge
             kioskBadge = badgeFound?.badge || null
-            badgeStateColors = {active: 'positive', issued: 'primary', pinNeeded: 'primary', locked: 'warning', unprinted: 'grey-8', revoked: 'grey-8'}
+            badgeStateColors = {active: 'positive', issued: 'primary', pinNeeded: 'primary', locked: 'warning', disabled: 'negative', unprinted: 'grey-8', revoked: 'grey-8'}
             badgeFacts = kioskBadge ? [['Issued', kioskBadge.issuedDateText], ['Printed', kioskBadge.printedDateText],
                 ['PIN set', kioskBadge.pinSetText], ['Last used', kioskBadge.lastUsedText]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
-            badgePrintUrl = kioskBadge?.canPrint ? '/apps/People/Employees/BadgePrint?renderMode=html-print&kioskBadgeId=' +
-                encodeURIComponent(kioskBadge.kioskBadgeId) : null
+            badgePrintable = !!kioskBadge?.canPrint
             badgeValues = {partyId, partyRelationshipId: record.partyRelationshipId || null, kioskBadgeId: kioskBadge?.kioskBadgeId || null}
             ratesUrl = sharedLinks?.['Payroll/Rates'] || null
             canChangeEmployment = !!employee?.canChangeEmployment && !!record.partyRelationshipId && opened?.state != 'ended'
@@ -809,8 +810,15 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Clocking badge"/>
                             <box-toolbar>
-                                <link url="${badgePrintUrl}" url-type="plain" text="Print badge" icon="sym_o_print" link-type="anchor-button"
-                                        target-window="_blank" btn-type="primary" condition="badgePrintUrl"/>
+                                <section name="PrintBadge" condition="badgePrintable">
+                                    <widgets>
+                                        <render-mode>
+                                            <text type="qvt"><![CDATA[<form method="post" action="/apps/People/Employees/BadgePrint/print" target="_blank" class="inline-block"><input type="hidden" name="kioskBadgeId" value="${WebUtilities.encodeHtml(kioskBadge.kioskBadgeId)}"><input type="hidden" name="moquiSessionToken" value="${WebUtilities.encodeHtml(ec.web.sessionToken)}"><q-btn type="submit" color="primary" unelevated no-caps icon="sym_o_print" label="${WebUtilities.encodeHtml(ec.l10n.localize('Print badge'))}"></q-btn></form>]]></text>
+                                            <text type="html"><![CDATA[<form method="post" action="/apps/People/Employees/BadgePrint/print" target="_blank" style="display:inline-block"><input type="hidden" name="kioskBadgeId" value="${WebUtilities.encodeHtml(kioskBadge.kioskBadgeId)}"><input type="hidden" name="moquiSessionToken" value="${WebUtilities.encodeHtml(ec.web.sessionToken)}"><button type="submit">${WebUtilities.encodeHtml(ec.l10n.localize('Print badge'))}</button></form>]]></text>
+                                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: ec.l10n.localize("Print badge: open Employee360 in a browser to print this badge.")})}]]></text>
+                                        </render-mode>
+                                    </widgets>
+                                </section>
                                 <container-dialog id="IssueBadgeDialog" button-text="${kioskBadge &amp;&amp; kioskBadge.state != 'revoked' ? 'Issue a new badge' : 'Issue badge'}"
                                         icon="sym_o_badge" width="520" title="Issue a clocking badge to ${overview.personName}" condition="badgeFound?.canIssue">
                                     <label type="p" text="${kioskBadge &amp;&amp; kioskBadge.state != 'revoked' ? 'The badge in use is revoked when the new one is issued. ' : ''}Print the badge within 15 minutes of issuing it; its number is not shown again. The badge works at a kiosk once ${overview.personName} sets their own PIN in self-service."/>

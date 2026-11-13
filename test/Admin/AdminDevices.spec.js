@@ -3,12 +3,14 @@
 // in Security › Devices for Insights' wall display, and Devices' one qvt render shows the device, its code this once and
 // another organization's device only as a count; the code makes one browser the device, which is then refused everything
 // outside its route group (Admin, Insights' other screens, its own account's pages), and revoking it in Devices refuses its
-// next request. The services' rules are Mantle's (party/SharedDevices) and the credential's the framework's
+// next request; a device's record link (a notice on it: People's clocking kiosk refusals) opens Devices with that device, revoked
+// or not, only for one who may read it there and whose groups open the screen (impl-people follow-up 4). The services' rules are
+// Mantle's (party/SharedDevices) and the credential's the framework's
 // (DeviceCredential, user::device::tests); who may register is AdminAccess's. What a registered display plays is Insights
 // P11's (InsightsWallDisplay).
 // Run: ./moq test mr-boss --spec Admin/AdminDevices
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
-const {users, ids, asUser, system, invoke, page} = lib
+const {users, outsiders, ids, asUser, system, invoke, page} = lib
 const S = "mantle.party.IdentityServices."
 const DEVICE = "moqui.security.DeviceCredential"
 const find = (entityName, conditions) => ec.entity.find(entityName).condition(conditions).disableAuthz()
@@ -155,5 +157,34 @@ feature("the code makes one browser the device, which opens nothing outside its 
         seen.redeemedDate != null && seen.lastSeenDate != null
         revoked.revokedDate != null && revoked.revokedByUserId != null
         next.errors.includes("registration was revoked")
+    }
+})
+
+feature("a device's record link opens Devices with it for the access administrator, and nowhere for one who may not open it there", {
+    when() {
+        // as Commons' notification lists resolve a notice's record, under the Commons root
+        const link = (username, deviceId) =>
+            asUser(username, () =>
+                ec.artifactExecution.runAsUser("component://mr-boss/screen/Commons.xml", () =>
+                    invoke("ironstone.commons.PaletteServices.get#RecordLink", {recordEntityName: DEVICE, id: deviceId})
+                )
+            ).url || null
+        const other = deviceNamed("Spec services lobby")
+        return {
+            access: link(users.access, device.deviceId),
+            // the reader holds no Security area; a BOSS user without Admin; another organization's device
+            reader: link(users.reader, device.deviceId),
+            outsider: link(outsiders.warehouseManager, device.deviceId),
+            otherOrganization: link(users.access, other?.deviceId),
+            // the link's list: the one device, revoked as it is
+            listed: asUser(users.access, () =>
+                invoke(S + "find#SharedDevices", {deviceId: device.deviceId, includeEnded: true})
+            ).deviceList
+        }
+    },
+    then({access, reader, outsider, otherOrganization, listed}) {
+        access == "/qapps/Admin/Security/Devices?deviceId=" + encodeURIComponent(device.deviceId)
+        reader == null && outsider == null && otherOrganization == null
+        listed.length == 1 && listed[0].deviceId == device.deviceId && listed[0].state == "revoked"
     }
 })
