@@ -33,7 +33,7 @@ the coverage ledger and batch record below distinguish current observations from
 - [Implementation](impl-drawers-commons.md), [design](design-drawers-commons.md),
   [research](research-drawers-commons.md), [crosscut design](design-crosscut.md) and
   [crosscut research](research-crosscut.md): intended behavior, reusable screens and the earlier reference survey.
-- [Comms framework plan](../../../../plans/Comms-Framework.md), current `Commons.xml` / `Comms.xml`, component
+- [Comms framework plan](../../../../plans/archive/Comms-Framework.md), current `Commons.xml` / `Comms.xml`, component
   configuration, theme/provider registrations, `screen-extend/basic-comms` and `screen-extend/webroot` (the launcher):
   current ownership and mounts take precedence over historical inventories when deciding what can be reviewed.
 

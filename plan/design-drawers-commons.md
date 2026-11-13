@@ -19,7 +19,7 @@ Oct 18, 2026 — reviewed; mailboxes added after review (§12); terminology pass
 `EmailClientServices`, meeting room); drives and revision storage after mr-moqui's git and version-diff work (§9,
 §10, §19); implementation review against mr-moqui and Mantle, its findings (R1–R27) and the build plan in
 [impl-drawers-commons.md](impl-drawers-commons.md); Oct 28 — one survey builder in Commons (§20); Oct 30 — Comms
-moves to a framework component, with chat federation, voice and an SFU, in mr-moqui `plans/Comms-Framework.md`
+moves to a framework component, with chat federation, voice and an SFU, in mr-moqui `plans/archive/Comms-Framework.md`
 (here §2.2, §13, §14); Oct 31 — Marketing's shared forms and registration (§15, §17, §20); Nov 1 — review changes
 (§4 approval topics, §16 Email preferences, §19 FormPublication, §20); Nov 1, 2026 — consistency pass (calls,
 Sync, the public pages and Moderation marked built; four tray tabs)
@@ -350,7 +350,7 @@ card.
 Oct 30, 2026: the mail, chat and call screens move to the framework component `runtime/base-component/basic-comms`
 (the `BasicComms` app), and this app mounts them and adds its parts (the Internal account and mailboxes, record links,
 Consent, Moderation, Chatter) by `screen-extend`, providers, declared actions and panel slots (mr-moqui
-`plans/Comms-Framework.md` §3). The launcher shows this app, not BasicComms. What follows is the BOSS app as designed before that move. The plan names which screens move, split or stay.
+`plans/archive/Comms-Framework.md` §3). The launcher shows this app, not BasicComms. What follows is the BOSS app as designed before that move. The plan names which screens move, split or stay.
 
 Root `screen/Comms.xml`, menu title "IronStone Comms", icon `sym_o_forum`, default item `Inbox`
 (the landing `Home` is in the menu but a mail app opens on its inbox). Menu:
@@ -1573,6 +1573,11 @@ records who saved each version and the page's moves. Until the editor lands, the
 
 ## 12. Comms Home, Inbox and email
 
+> Built (Nov 12, 2026): Home, Inbox, Compose and MessageDetail (with the Internal account, mailboxes, filing and the Home boxes as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
+> kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
+> app's `screen/Comms.xml` and `screen-extend/basic-comms`.
+
 The Inbox is a full mail client, good enough to be someone's only one. Its model: a **mail
 account** (`EmailAccount`, new, §19) is an **external account** the framework polls over IMAP
 or POP (password or OAuth for Google and Microsoft 365), a **hosted account** at a hosted domain
@@ -1817,9 +1822,14 @@ that today's Mailbox implementation already performs them.
 
 ## 13. Chat
 
+> Built (Nov 12, 2026): Chat, its tray panel and the chat settings (with record rooms, filing and Create from as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
+> kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
+> app's `screen/Comms.xml` and `screen-extend/basic-comms`.
+
 Federation and bridges (SMS, WhatsApp, Meta and Telegram first, then an XMPP server, then a Matrix server in Moqui;
 a Matrix appservice on an external homeserver as an option) and end-to-end encrypted rooms are planned in mr-moqui
-`plans/Comms-Framework.md` §4.
+`plans/archive/Comms-Framework.md` §4.
 
 Chat is Slack and Teams inside the suite, over the framework's Matrix-style store
 (initial-design): a **room** (`ChatRoom`, new, §19) is a direct message, a private or public
@@ -1882,7 +1892,12 @@ answered, and the two stay separate stores.
 
 ## 14. Calls
 
-Superseded in its media design by mr-moqui `plans/Comms-Framework.md` §5 and §6: every call goes through an SFU in
+> Built (Nov 12, 2026): Calls, Call, the Dialer, Voicemail and Recordings (with the meetings, the screen pop and who may be called as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
+> kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
+> app's `screen/Comms.xml` and `screen-extend/basic-comms`.
+
+Superseded in its media design by mr-moqui `plans/archive/Comms-Framework.md` §5 and §6: every call goes through an SFU in
 mr-moqui (webrtc-rs) with TURN built in, there is no mesh mode, and calls gain voice over SIP and the phone network
 with voicemail. The screens below keep their shape and move to the framework comms component.
 
@@ -2179,6 +2194,11 @@ capability. Person-level data needs audience-view separately. This is the durabl
 trace, not the personal Inbox/Outbox; it reads the one Comms delivery ledger above filtered to the
 campaign's sends, and the ledger's retry and reconciliation rules are authoritative.
 
+> Built (Nov 12, 2026): MailAccounts, Identities, Rules, OutOfOffice, TextBlocks, ChatSettings and CallSettings (Settings under Comms) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
+> kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
+> app's `screen/Comms.xml` and `screen-extend/basic-comms`.
+
 ### MailAccounts
 
 - **Layout:** settings page with the accounts list and an **Add account** wizard.
@@ -2377,8 +2397,8 @@ bare `entity-find`.
 | --- | --- | --- | --- | --- |
 | Chat store | data model | Framework entities `moqui.chat.ChatRoom` {type, name, topic, avatar, visibility, recordEntityName, recordId, retentionDays}, `ChatRoomMember` {userId or agent reference, role, joinedDate, lastReadEventId, notificationLevel, pinned}, `ChatEvent` {room, eventSeq, type, senderUserId, contentJson, replyToEventId, threadRootEventId, editsEventId, sentDate}, `ChatAttachment` (DbResource), and later `ChatPoll` and `ChatPollVote` | Chat, ChatPanel, Chatter | initial-design "Matrix-style persistence" |
 | Chat services | service type + protocol server | `org.moqui.chat.ChatServices`: `find#Rooms`, `create#Room`, `update#Room`, `add#Member`, `remove#Member`, `set#MemberRole`, `set#Notification`, `get#Timeline`, `send#Message`, `edit#Message`, `redact#Message`, `react#Message`, `pin#Message`, `mark#Read`, `upload#Attachment`, `create#Poll`, `vote#Poll`; typing, read markers and new events on WebSocket topics `chatRoom:<id>` and `chatUser:<id>`; an agent entry point for the Assist port | Chat | |
-| WebRTC | protocol server | Signaling over the notification WebSocket (offer, answer, ICE), TURN built in (coturn documented), an SFU for every call from the first (mr-moqui `plans/Comms-Framework.md` §6) | Calls, Call, LiveCall | initial-design "WebRTC built into mr-moqui" |
-| Call store and services | data model + service type | `moqui.call.CallSession` (mr-moqui `plans/Comms-Framework.md` §5.4 has the full model), `CallParticipant`, `CallLink` {token, name, expiry, policy}; `org.moqui.call.CallServices` `start#Call`, `join#Call`, `leave#Call`, `admit#Guest`, `create#CallLink`, `revoke#CallLink`, `find#Calls`; a finished call writes the `Call` communication event | Calls, Call, LiveCall | |
+| WebRTC | protocol server | Signaling over the notification WebSocket (offer, answer, ICE), TURN built in (coturn documented), an SFU for every call from the first (mr-moqui `plans/archive/Comms-Framework.md` §6) | Calls, Call, LiveCall | initial-design "WebRTC built into mr-moqui" |
+| Call store and services | data model + service type | `moqui.call.CallSession` (mr-moqui `plans/archive/Comms-Framework.md` §5.4 has the full model), `CallParticipant`, `CallLink` {token, name, expiry, policy}; `org.moqui.call.CallServices` `start#Call`, `join#Call`, `leave#Call`, `admit#Guest`, `create#CallLink`, `revoke#CallLink`, `find#Calls`; a finished call writes the `Call` communication event | Calls, Call, LiveCall | |
 | `CommunicationEventType` `Call` | seed data | `Call` (voice or video call in BOSS) beside `Phone` (a logged external call) | Chatter, call history | |
 | Call recording | tool | Recording a call to a `DbResource` file with consent shown to every participant | Call | built (Comms-Framework W1–W8) |
 
@@ -2464,7 +2484,7 @@ bare `entity-find`.
 | Chatter is one component with a generic record link (`CommunicationEventRecord`, `WorkEffortRecord`, `RecordFollower`) beside the existing per-type joins | Answers crosscut §8 "Generic record links"; the design-crosscut file references §15 rather than redesigning it |
 | A meeting activity is a `WetEvent` with purpose `WepMeeting` (`create#Event`); call, email and to-do activities are `WetTask`s (`create#SimpleTask`) | Odoo's meeting activity opens the calendar; one record serves the calendar, Chatter and the Today panel |
 | Dropped from the candidate inventory: a separate Outbox screen (a folder view), a separate Events area (`EventDetail` under Calendar), a Comms Chatter screen (one component), the My Account Time entries (Projects' My timesheet and the Task Time tab), Scheduled finds (Insights' saved reports) and Expense (People and Accounting), the org chart (`later`) | The My Account forms they held are covered as noted in §8 and §11 or carried by those files; People’s expense forms are now mapped in ss-inventory by [People §14.2](design-people.md#142-baseline-forms-and-service-coverage); Scheduled finds and unowned Wiki blog forms remain for the Insights and Marketing designs |
-| `Comms/Settings/Calls`, Calls, Call and LiveCall were `later` and are built in basic-comms (mr-moqui `plans/Comms-Framework.md` W1), as `Commons/Settings/Sync` was (built Oct 21, 2026); every row in the tables is `parity` or `new` | Calls and DAV sync waited on their protocol work. `parity` marks a screen that replaces a My Account, Party, Wiki or search screen or form (Notifications, Inbox, Compose, MessageDetail, Chatter and RecordFiles among them); `new` marks one with no baseline |
+| `Comms/Settings/Calls`, Calls, Call and LiveCall were `later` and are built in basic-comms (mr-moqui `plans/archive/Comms-Framework.md` W1), as `Commons/Settings/Sync` was (built Oct 21, 2026); every row in the tables is `parity` or `new` | Calls and DAV sync waited on their protocol work. `parity` marks a screen that replaces a My Account, Party, Wiki or search screen or form (Notifications, Inbox, Compose, MessageDetail, Chatter and RecordFiles among them); `new` marks one with no baseline |
 | The shell aggregates the app roots' providers in one `shellData` transition per page load; the palette groups beyond Recent, Screens, Saved finds and Actions are `<palette-source>` providers | Menu data stays per path; the framework still never calls Mantle, since Commons and Comms register the services (§1.5, §19) |
 | Personal HR (Oct 31, 2026) | Commons Home/Today host authorized People summaries, and Commons/People/SelfService mounts People’s single shared definition. As built (impl-people P2, F46): `Commons/People`, out of the menu, mounts People's `Shared/Employee360` with Commons' context (the public work card of a person People's scope admits, and the user's own personal information with the corrections they may make); the record panels know People's employment host (`get#RecordInfo` names it, `get#RecordLink` links it under People for an HR reader, RecordFiles' content type adds its files to an HR editor), and People's palette group is "Employees", beside Commons' "People" (contacts). Account/preferences remain Commons-owned; Employee360 and private child-record access are People-owned. Settles the earlier Me open question; [People §3](design-people.md#3-home-and-self-service), crosscut §3.4. |
 | Chatter and record files are mounted hidden in every BOSS app root (`<App>/Chatter`, `<App>/RecordFiles`) from `Shared/`, and check the record's visibility themselves | Each loads as its own request, so the host screen's authorization is not in it; mounting under the app keeps that app's authz and filters (§9, §15) |
@@ -2473,8 +2493,8 @@ bare `entity-find`.
 | The anonymous pages (`/s/`, `/u/`, `/cal/`, `/call/`) run in a public shell without the header, drawers or session | A qvt or `.qvue` screen runs only inside `m-qapps-root` today (§19 "Anonymous token routes") |
 | Files ships without WebDAV; WebDAV and SFTP over drives come with Sync | Sync and the DAV servers were `later`, built Oct 21, 2026 (§9, §11) |
 | Mail accounts connect with a password first (a Gmail app password included), OAuth after; the OAuth client and token store are built (impl-drawers-commons M5e, §8), Google and Microsoft 365 calendar subscriptions stay `later` (§11 Calendars) | A personal Gmail account on an unverified OAuth app gets short-lived refresh tokens; a deployment registers its own Google OAuth client, and Gmail's IMAP scope is restricted, so publishing the app needs Google's verification |
-| Chat federation: the business channels first, then an XMPP server (OMEMO carried through PEP), then a Matrix server in Moqui; a Matrix appservice on an external homeserver is an option (Oct 30, 2026) | Matrix-style is internal persistence, not the Matrix protocol; mr-moqui `plans/Comms-Framework.md` §4, revised the same day for embedded first |
-| Phone installation: a PWA manifest and web push in the framework, built first as step P0 of mr-moqui `plans/Comms-Framework.md` §7 (Oct 30, 2026) | Comms installs on a phone and pushes chat and mail notifications |
+| Chat federation: the business channels first, then an XMPP server (OMEMO carried through PEP), then a Matrix server in Moqui; a Matrix appservice on an external homeserver is an option (Oct 30, 2026) | Matrix-style is internal persistence, not the Matrix protocol; mr-moqui `plans/archive/Comms-Framework.md` §4, revised the same day for embedded first |
+| Phone installation: a PWA manifest and web push in the framework, built first as step P0 of mr-moqui `plans/archive/Comms-Framework.md` §7 (Oct 30, 2026) | Comms installs on a phone and pushes chat and mail notifications |
 | Git access from desktops: clone, fetch and push over HTTPS and the framework's SSH server (mr-moqui `docs/interfaces/Git-Hosting.md`); a drive's settings show its clone addresses with its WebDAV and SFTP addresses | Built in the framework (impl-drawers-commons §6); a version-controlled drive's repository takes the drive's members by the drive's own rule |
 | A survey builder in Commons (Oct 28, 2026; crosscut §8) | Commons owns one survey builder over framework DbForm and FormResponse, which Customer Service, Marketing and People mount. This reverses the earlier Open recommendation that surveys stay in Marketing. Its screens are designed in a later Commons pass; until then Customer Service's FeedbackForms and FeedbackFormDetail ([design-customer-service §9](design-customer-service.md#9-settings)) carry the form summaries. |
 | People, Sales and Marketing approval topics are listed here, each approved and refused by its domain decision service (Nov 1, 2026; review R-PPL-17, R-SAL-07, R-MKT-07); each is seeded by its owner, the People and Sales topics in Mantle beside their decision services and Marketing's with its setup data (Nov 11, 2026; impl-people F42, impl-sales F26, impl-marketing F42) | §4 Notifications lists the seventeen topics and their handlers, matching People's ApprovalPolicies table, Sales Approvals, Marketing Approvals and Maintenance's two; People PE-15 owns the routing policy |

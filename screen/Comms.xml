@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
         <!-- the screens of the framework's BasicComms, mounted here and extended from screen-extend/basic-comms
-            (plans/Comms-Framework.md §3.4) -->
+            (plans/archive/Comms-Framework.md §3.4) -->
         <subscreens-item name="Home" location="component://basic-comms/screen/BasicComms/Home.xml" menu-title="Home" menu-index="1"/>
         <subscreens-item name="Inbox" location="component://basic-comms/screen/BasicComms/Inbox.xml" menu-title="Inbox" menu-index="2"/>
         <subscreens-item name="Chat" location="component://basic-comms/screen/BasicComms/Chat.xml" menu-title="Chat" menu-index="3"/>
@@ -50,18 +50,18 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="ChatMention"/>
         <notification-topic topic="NewMail"/>
         <keymap><key keys="g i" label="Inbox" screen="Comms/Inbox"/></keymap>
-        <!-- the Internal account and mailboxes in the BasicComms screens (plans/Comms-Framework.md §3.3) -->
+        <!-- the Internal account and mailboxes in the BasicComms screens (plans/archive/Comms-Framework.md §3.3) -->
         <inbox-source name="boss.internal" service="ironstone.comms.InboxServices.get#InboxSource"/>
         <!-- the records of chat rooms and messages: their cards, filing a message on a record, a task, request or event from it -->
         <record-lookup name="boss.records" service="ironstone.comms.ChatServices.get#RecordLookup"/>
         <record-link name="boss.records" service="ironstone.comms.ChatServices.file#OnRecord"/>
         <create-from name="boss.records" service="ironstone.comms.ChatServices.create#FromChat"/>
-        <!-- the user's calendar meetings, for the Calls screen's Meetings (plans/Comms-Framework.md W3) -->
+        <!-- the user's calendar meetings, for the Calls screen's Meetings (plans/archive/Comms-Framework.md W3) -->
         <meetings-source name="boss.calendar" service="ironstone.comms.CommsHomeServices.get#MeetingsSource"/>
-        <!-- people and organizations with their phone numbers, for the Dialer's search (plans/Comms-Framework.md §3.3, V3) -->
+        <!-- people and organizations with their phone numbers, for the Dialer's search (plans/archive/Comms-Framework.md §3.3, V3) -->
         <recipient-source name="boss.parties" service="ironstone.comms.ComposeServices.get#RecipientSource"/>
         <call-context name="boss.parties" service="ironstone.comms.ComposeServices.get#CallContext"/>
-        <!-- the answer to a message's invitation, on the user's calendar (plans/Comms-Framework.md §3.3) -->
+        <!-- the answer to a message's invitation, on the user's calendar (plans/archive/Comms-Framework.md §3.3) -->
         <invitation name="boss.calendar" service="ironstone.comms.InboxServices.respond#InvitationProvider"/>
         <!-- who a sender or recipient is: the party with the address, for the reading pane's contact card -->
         <contact-card name="boss.parties" service="ironstone.comms.InboxServices.get#ContactCardProvider"/>

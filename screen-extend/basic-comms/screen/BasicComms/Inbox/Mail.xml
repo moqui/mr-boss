@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone's parts of the BasicComms Inbox (plans/Comms-Framework.md §3.4, A3): the mailboxes (Mantle's contact lists of type
+<!-- IronStone's parts of the BasicComms Inbox (plans/archive/Comms-Framework.md §3.4, A3): the mailboxes (Mantle's contact lists of type
     MAILBOX: browse, join, leave, delivery, members, settings), their member drop-down by party, and the pickerFolder of Save to
     Files, which names the records drive's folders by their records' titles (Mantle; the rest of the picker is BasicComms'). The
     threads, the reading pane and the rail come from IronStone's inbox-source provider. -->

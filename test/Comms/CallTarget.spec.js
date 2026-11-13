@@ -1,5 +1,5 @@
 // IronStone's call-target provider (screen/Comms.xml, service/ironstone/comms/ComposeServices.xml get#CallTarget;
-// plans/Comms-Framework.md §3.3, the hardening pass): a BOSS user calls, transfers a call to and adds to a call only the users
+// plans/archive/Comms-Framework.md §3.3, the hardening pass): a BOSS user calls, transfers a call to and adds to a call only the users
 // whose party they may see, under the rules of the recipient-source provider (the Comms app's organization filter, not
 // disabled, not another user's private contact). joe.developer reaches a user of a shared party and a user with no party (in
 // no organization), and is refused, with the very same calls, a user of another organization's party: the framework's start#Call answers

@@ -1443,7 +1443,7 @@ bounce domain: each recipient execution sends with a VERP Return-Path (`bounces+
 that domain), which reaches a hosted bounce account through the SMTP listener's plus-tag lookup,
 and readiness checks that the account exists. SMS is not an adapter of Marketing's: it is the
 framework's C4-SMS in `moqui-channels`, built with Comms C1
-([Comms-Framework §7](../../../../plans/Comms-Framework.md#7-order)), with STOP and START kept by
+([Comms-Framework §7](../../../../plans/archive/Comms-Framework.md#7-order)), with STOP and START kept by
 the framework; SMS is in the build as its last stage (M8, §17). An SMS profile is bound to one of
 the organization's messaging numbers and reports ready only with a messaging bridge. The ledger's
 attempt checks `PcpSms` consent on the send's topic and the suppression before the call, as for
@@ -1958,7 +1958,7 @@ Dependencies are explicit so a convenient early screen is not mistaken for a saf
 | M5 — Public forms and campaign content | Commons form publication with Marketing context, surveys/results, blog posts, storeless landing pages on the shared Pages, tracking links with authority capture, Sales lead capture through `store#LeadIntake`; public replay and content/access tests pass |
 | M6 — Events | Commons context, registration/tickets, free and paid flows on storeless orders through Accounting's coordinator, capacity/waitlist, entry credentials, video links and transactional schedules; capacity/payment/cancellation cases pass |
 | M7 — Integration and reporting | Shared promotion/customer/source contexts, attribution writer, complete shell providers, reconciled reports with shipped definitions and alerts registered with Insights, and fast end-to-end walks; the privacy provider later, with Admin's PrivacyServices |
-| M8 — SMS | SMS sends, Send SMS automation steps and SMS preferences on framework C4-SMS, built with Comms C1 ([Comms-Framework §7](../../../../plans/Comms-Framework.md#7-order)); in the build, last; topic consent checked in the ledger, STOP mapping and segment estimates pass, receipts where the messaging bridge reports them |
+| M8 — SMS | SMS sends, Send SMS automation steps and SMS preferences on framework C4-SMS, built with Comms C1 ([Comms-Framework §7](../../../../plans/archive/Comms-Framework.md#7-order)); in the build, last; topic consent checked in the ledger, STOP mapping and segment estimates pass, receipts where the messaging bridge reports them |
 
 Existing capabilities and new dependencies are named again in the needs register. A deployment may
 disable unused channels/events, but first-release delivery is not complete by dropping M0–M7.

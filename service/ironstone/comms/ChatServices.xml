@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone's records in the BasicComms Chat screens (mr-moqui basic-comms, plans/Comms-Framework.md §3.3): the providers
+<!-- IronStone's records in the BasicComms Chat screens (mr-moqui basic-comms, plans/archive/Comms-Framework.md §3.3): the providers
     Comms.xml declares (record-lookup boss.records, record-link boss.records, create-from boss.records) over Mantle's
     communication services. The BasicComms services call them as the user, under Comms' authorization and entity filters.
 
@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="RecordLookup">
         <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>
         <description>IronStone's record-lookup provider (Comms.xml shell-providers, boss.records) for the BasicComms Chat
-            screens (plans/Comms-Framework.md §3.3), over the user's own reach of the records:
+            screens (plans/archive/Comms-Framework.md §3.3), over the user's own reach of the records:
             - info: for records, each record's {recordEntityName, recordId, entity, visible, title, typeLabel, url, icon}
               (ironstone.shared.ChatterServices.get#RecordInfo under the user's filters); one that cannot be read is logged and
               left out;
@@ -185,7 +185,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="file" noun="ExternalConversation">
         <implements service="org.moqui.comms.ProviderInterfaces.external#Conversation"/>
-        <description>The external-conversation provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): the first
+        <description>The external-conversation provider of IronStone's Comms root (plans/archive/Comms-Framework.md §3.3): the first
             text of a new outside number is filed on the one party the user may see with that number (get#CallContext's
             match), as File on a record files a message (file#OnRecord: a communication event on the party's Chatter). No
             party, or more than one, files nothing (filed false), and a later text tries again. The communication event is

@@ -1069,7 +1069,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="ContactCardProvider">
         <implements service="org.moqui.comms.ProviderInterfaces.contact#Card"/>
-        <description>The contact-card provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): get#ContactCard for
+        <description>The contact-card provider of IronStone's Comms root (plans/archive/Comms-Framework.md §3.3): get#ContactCard for
             the framework's Inbox, the party the user may see with the address, and its threads.</description>
         <actions><script><![CDATA[
             card = ec.service.sync().name('ironstone.comms.InboxServices.get#ContactCard').parameters({emailAddress: address || null,
@@ -1142,7 +1142,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="InboxSource">
         <implements service="org.moqui.comms.ProviderInterfaces.inbox#Source"/>
         <description>The inbox-source provider of IronStone (Comms.xml shell-providers, boss.internal) for the BasicComms Inbox,
-            MessageDetail, Compose and Home (plans/Comms-Framework.md §3.3, A3). The BasicComms screens call
+            MessageDetail, Compose and Home (plans/archive/Comms-Framework.md §3.3, A3). The BasicComms screens call
             org.moqui.comms.InboxServices.run#Operation, which hands each operation here: IronStone answers it with its own
             service of that name (this file, ComposeServices, CommsHomeServices), over the mail and its internal messages and
             mailboxes together, so its Inbox is one list. Only the operations named here are answered (handled false for any
@@ -1278,7 +1278,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="respond" noun="InvitationProvider">
         <implements service="org.moqui.comms.ProviderInterfaces.invitation#Response"/>
-        <description>The invitation provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): the framework's
+        <description>The invitation provider of IronStone's Comms root (plans/archive/Comms-Framework.md §3.3): the framework's
             InboxServices.respond#Invitation asks it to answer a message's invitation, which respond#Invitation does on the
             user's calendar; eventUrl is the event in Commons, Calendar.</description>
         <actions><script><![CDATA[

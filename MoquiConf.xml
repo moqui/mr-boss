@@ -65,7 +65,7 @@
             <subscreens-item name="Insights" menu-title="Insights" menu-index="60" location="component://mr-boss/screen/Insights.xml"/>
             <subscreens-item name="Admin" menu-title="Admin" menu-index="61" location="component://mr-boss/screen/Admin.xml"/>
             <!-- one Comms in the launcher: BOSS's, which mounts and extends the BasicComms screens; /qapps/BasicComms still
-                works (plans/Comms-Framework.md §3.4) -->
+                works (plans/archive/Comms-Framework.md §3.4) -->
             <subscreens-item name="BasicComms" menu-include="false"/>
         </screen>
     </screen-facade>
