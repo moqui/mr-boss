@@ -40,7 +40,7 @@ function planningPage(kind) {
             if (name === 'schedule') return Promise.resolve({json:{resource:{moveTransition:'moveOperation',decideTransition:'decideOverride'}}});
             return new Promise((resolve,reject) => pending.push({name,params:options.params,resolve,reject}));
         };
-        fetch('/files/runtime/component/mr-boss/screen/Projects/WorkItems/${kind}.qvue').then(response => response.text()).then(text => {
+        fetch('/files/component/mr-boss/screen/Projects/WorkItems/${kind}.qvue').then(response => response.text()).then(text => {
             const part = tag => text.slice(text.indexOf('<' + tag + '>') + tag.length + 2,text.lastIndexOf('<' + '/' + tag + '>'));
             const module = {}; new Function('module',part('script'))(module);
             const style = document.createElement('style'); style.textContent = part('style');

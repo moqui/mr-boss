@@ -28,7 +28,7 @@ function variantPage() {
             calls.push({name,params});
             return new Promise((resolve,reject)=>pending.push({name,params,resolve,reject}));
         };
-        fetch('/files/runtime/component/mr-boss/screen/Products/Products/VariantBuilder.qvue').then(response=>response.text()).then(text=>{
+        fetch('/files/component/mr-boss/screen/Products/Products/VariantBuilder.qvue').then(response=>response.text()).then(text=>{
             const part=tag=>text.slice(text.indexOf('<'+tag+'>')+tag.length+2,text.lastIndexOf('</'+tag+'>'));
             const module={};new Function('module',part('script'))(module);
             window.app=Vue.createApp({data(){return{basePath:'/apps',linkBasePath:'/qapps',

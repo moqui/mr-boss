@@ -40,7 +40,7 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
                 else if (name === 'updateTimer') { runningTimer.comments = request.params.comments; request.resolve({json: {updated: true}}); }
                 else { saved[request.params.workEffortId] = Number(request.params.hours); request.resolve({json: {timeEntryId: request.params.workEffortId + '-ENTRY', hours: Number(request.params.hours)}}); }
             };
-            fetch('/files/runtime/component/mr-boss/screen/Projects/Time/MyTime.qvue').then(response => response.text()).then(text => {
+            fetch('/files/component/mr-boss/screen/Projects/Time/MyTime.qvue').then(response => response.text()).then(text => {
                 const part = tag => text.slice(text.indexOf('<' + tag + '>') + tag.length + 2, text.lastIndexOf('<' + '/' + tag + '>'));
                 const module = {}; new Function('module', part('script'))(module);
                 const app = Vue.createApp({data() { return {basePath: '/apps', linkBasePath: '/qapps', currentPathList: ['Projects', 'Time', 'MyTime'], currentParameters: {}, show: true}; },

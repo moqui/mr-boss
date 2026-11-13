@@ -27,7 +27,7 @@ feature("staffing and people answers belong to the dialog that requested them; p
             };
             window.allocation = id => ({workEffortAllocationId: id, rootWorkEffortId: 'P', projectName: 'Project ' + id, roleText: 'Developer',
                 fromDay: '2026-11-09', thruDay: '2026-11-15', hoursPerWeek: 8, statusId: 'WealRequested'});
-            fetch('/files/runtime/component/mr-boss/screen/Projects/Resources/TeamPlanner.qvue').then(response => response.text()).then(text => {
+            fetch('/files/component/mr-boss/screen/Projects/Resources/TeamPlanner.qvue').then(response => response.text()).then(text => {
                 const part = tag => text.slice(text.indexOf('<' + tag + '>') + tag.length + 2, text.lastIndexOf('<' + '/' + tag + '>'));
                 const module = {}; new Function('module', part('script'))(module);
                 const app = Vue.createApp({data() { return {basePath: '/apps', linkBasePath: '/qapps', appRootPath: '/apps', currentPathList: ['Projects', 'Resources', 'TeamPlanner'], currentParameters: {}, show: true}; },

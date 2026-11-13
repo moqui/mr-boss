@@ -25,7 +25,7 @@ spec({
             moqui.notifyMessages = (messages) => notified.push(messages);
             moqui.handleAjaxError = (error) => notified.push(String(error));
             window.settle = () => new Promise(resolve => setTimeout(resolve, 0)).then(() => Vue.nextTick());
-            fetch('/files/runtime/component/mr-boss/screen/Projects/Code/MergeRequestDetail/Changes.qvue')
+            fetch('/files/component/mr-boss/screen/Projects/Code/MergeRequestDetail/Changes.qvue')
                 .then(response => response.text()).then(text => {
                     const module = {};
                     const part = tag => text.slice(text.indexOf('<' + tag + '>') + tag.length + 2, text.lastIndexOf('<' + '/' + tag + '>'));
