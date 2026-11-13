@@ -324,7 +324,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F73) |
 | P1 Foundation | Mantle, BOSS | the Sales root and menu, Home's frame, Reports' two ported screens | built and reviewed Nov 13, merged |
-| P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | — |
+| P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | built and reviewed Nov 13, merged |
 | P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | — |
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | — |
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | — |
@@ -752,7 +752,7 @@ built.
   setup), so nothing to fill.
 - Design edits: design-sales §9 Settings, Stages, Teams, LeadSources and TypesAndReasons (as built); design-admin §14's Sales
   row (owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F82 to F86 in order:
   - P4 owns the opportunity lifecycle but P2 adds `SalesOpportunity.statusId` for the retirement rule; P4 builds on it (and adds
     the pipeline, lost reason and the other fields of SAL-CRM);
   - the readiness's team and source checks are warnings and the default pipeline always passes while the shared `SalesDefault`
@@ -819,7 +819,7 @@ built.
     (as the spec runs show for every refused call). Sales.js now asks People.js `scopeOf` first and calls it only for an
     organization of that scope; the labels are unchanged where it is. No spec: the demo has no Sales manager whose People scope
     differs from their Sales scope.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F87 to F90 in order:
   - lost reasons are the instance's, yet any SALES_CONFIGURE holder of one organization renames,
     reorders and ends them for every organization; the shared pipeline needs every organization's scope for the same kind of
     change. Whether store#LostReason should too (or reasons become per organization) is the user's call; kept as built, as
@@ -1636,6 +1636,15 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F79 | P1 (Review Nov 13): the ported SalesAnalysis still shows a non-cost reader "Total Cost" in its sort choices (they now sort by nothing) and its Show SQL dialog; P19's rebuild over `run#SalesAnalysis` removes both | P1: as its Review note says |
 | F80 | P1 (Review Nov 13): `SALES_OWNER_CHANGE` goes to `BOSS_ADMIN_IDENTITY` only, where every other owner change (drive, mail, calendar, contact book, report, People's approvals) is also `BOSS_ADMIN_ADMIN`'s; §4's row says "Admin's identity group alone", so it is kept; P6 may ask whether the Admin administrator should hold it too | P1: as its Review note says |
 | F81 | P1 (Review Nov 13): SalesSummary's top products and customer classes are called without the chosen vendors (as ported), so they answer the whole scope while the order and invoice summaries answer the chosen organizations; P19's rebuild | P1: as its Review note says |
+| F82 | P2 (Built Nov 13): P4 owns the opportunity lifecycle but P2 adds `SalesOpportunity.statusId` for the retirement rule; P4 builds on it (and adds the pipeline, lost reason and the other fields of SAL-CRM) | P2: as its Built note says |
+| F83 | P2 (Built Nov 13): the readiness's team and source checks are warnings and the default pipeline always passes while the shared `SalesDefault` is in effect, so an organization that never configured Sales reads "ready" there; a stricter rule (an organization's own default) would be a later call | P2: as its Built note says |
+| F84 | P2 (Built Nov 13): TeamMembers' lookup probes `find#Employees`, which logs an ERROR when People's scope refuses the organization (a manager of an organization People does not cover for them); the labels fall back to names, but the log is noise | P2: as its Built note says |
+| F85 | P2 (Built Nov 13): a lead source offered to an organization outside the administrator's scope cannot be renamed by them (`SOURCE_SHARED`), so a source shared by two organizations is renamed only by an administrator of both (the demo's `sales.admin`) | P2: as its Built note says |
+| F86 | P2 (Built Nov 13): LeadSources reads `sales` from its mounting root, but `Sales.js mountRoots` holds only Sales until P4 adds Marketing's root, so Marketing's mount (impl-marketing P13) needs that row too | P2: as its Built note says |
+| F87 | P2 (Review Nov 13): lost reasons are the instance's, yet any SALES_CONFIGURE holder of one organization renames, reorders and ends them for every organization; the shared pipeline needs every organization's scope for the same kind of change. Whether store#LostReason should too (or reasons become per organization) is the user's call; kept as built, as design §9 says "the reasons are the instance's" | P2: as its Review note says |
+| F88 | P2 (Review Nov 13): every configurer reads every lead source's name (get#SalesSetup lists the instance's sources, up to 500) and may offer any of them to an organization of theirs, and DUPLICATE_VALUE on a new name confirms another organization's source; the design makes sources shared, so kept; a source with no current binding (all ended) is renamed by any configurer | P2: as its Review note says |
+| F89 | P2 (Review Nov 13): store#SalesTeamMember's "works for the organization" is checked at the time of the call, not at the membership's start, so a person whose agency starts next month cannot be added from then, and an employment's end does not end the membership | P2: as its Review note says |
+| F90 | P2 (Review Nov 13): a new pipeline with a future fromDate and the default flag clears the organization's current default at once, leaving the shared one in effect until it starts | P2: as its Review note says |
 
 ## 7. Later
 
