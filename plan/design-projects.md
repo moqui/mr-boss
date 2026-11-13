@@ -1790,7 +1790,10 @@ an entry of which a finalized pay input paid is not reopened (`get#TimesheetAcce
 stays approved"; TimesheetDetail says why), and its entries are neither changed nor removed (`PAY_FINALIZED`); reopening a
 week, or changing an entry's hours, rates, pieces, day, person or week, voids a pay input not finalized that consumed it, so
 payroll prepares it again (a payroll approval of what it read no longer stands). Customer billing (`TimeEntry.invoiceId`) is
-unaffected.
+unaffected. P24 review: the bulk rate reset (`resetAndGet#TimeEntryRates`, `resetAndGet#ProjectTimeEntryRates`, through
+`get#TimeEntryRate`) keeps the worker rates of an entry a finalized pay input paid (its client rates are found again) and voids a
+pay input not finalized whose entry's worker rate it changes; payroll locks the entries it consumes and reads them again, as the
+worker invoice locks the entries it bills, so the two never both take one; an entry's pieces are payroll's on any time basis.
 
 ### MyTime
 
