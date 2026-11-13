@@ -1,5 +1,11 @@
 # IronStone BOSS — Sales design
 
+Nov 13, 2026 — impl-sales P0's remaining checks written in (impl-sales F53–F73): the Comms hooks as Comms renders them
+(Mail's `message-actions` slot made to render in P5, a voicemail's action a transition, the `contact-card` read by Mail; §§1.4, 3, 12.2);
+template text rendered by `fancy-locked-html` from a stored location with an explicit map (§§1.4, 5); the
+OrderChangeApproval link resolved per recipient (§§1.3, 5); the funnel's row filter and its static output (§§3, 8); the
+borrowed `PEOPLE_DIRECTORY_VIEW` and the lifecycle's `SALES_OWNER_CHANGE` (§1.1); the active-organization user-facts
+provider built by Sales (§1.4).
 Nov 11, 2026 — the plan's decisions written in (impl-sales §4): a seller's SalesPolicy approval setting stops every
 automatic approval of its sales orders; a pre-approval warning, Sales' own too, blocks auto-approval as built, and with
 the setting on the warnings are shown to the approver only (§§1.1, 5, 6, 9, 13.1);
@@ -141,6 +147,11 @@ does not confer unrestricted read access.
 | BOSS_SALES_READ | SALES_VIEW, SALES_TEAM_VIEW, SALES_REPORT_VIEW; permitted organization reports and records, no mutation |
 | BOSS_SALES_ADMIN | SALES_CONFIGURE plus explicit Sales view/edit capabilities; configuration does not confer finance, cost, stock or deployment authority |
 
+BOSS_SALES_MANAGER and BOSS_SALES_ADMIN also hold People's `PEOPLE_DIRECTORY_VIEW`, so TeamMembers' employee lookup
+and an employee's work card open for those who manage teams, as Maintenance's planners hold it (impl-sales F53). Mantle
+also seeds `SALES_OWNER_CHANGE`, which no Sales group holds: Admin's identity group gets it for the Sales lifecycle
+participant's transfer of a departing user's opportunities, accounts and open quotes (impl-sales F54).
+
 A rep sees shared accounts in the permitted organization and opportunities assigned to them or
 their dated team; managers/readers with team-view authority see the organization-wide pipeline.
 Order/quote access additionally requires the permitted selling organization and its record assignments;
@@ -208,7 +219,9 @@ carries `recordEntity` and `recordId` so Assist's `search` tool can open it. Rec
 identifies the host and source selection; Today reuses WorkEffort activities rather than
 `nextStep` text. Approval notifications use the SalesQuoteApproval topic, seeded in Mantle beside
 the built OrderChangeApproval topic (no topic of that name is seeded yet; impl-sales P9); its push
-title names the quote, never the amount.
+title names the quote, never the amount. A notification has one link for all its recipients, so OrderChangeApproval's link
+is Commons' `openRecord` link of the change request, which opens Sales' OrderChangeDetail for a Sales approver of a
+commercial kind and Customer Service's otherwise (impl-sales F58).
 All providers use the same domain filters as lists. Chatter, files, mail composition,
 calendar and reminders retain their existing owners. **Needs:** SAL-ACCESS, SAL-SHELL, SAL-COLLAB.
 
@@ -219,14 +232,14 @@ need in §17.
 
 | Contract | Sales entries |
 | --- | --- |
-| CX-ASSIST (L1) | Procedure skills in mr-boss `skill/`: `sales-qualify-lead.md`, `sales-issue-quote.md`, `sales-follow-up.md`, `sales-log-call.md`, each with `screens:` so they show as chips, `skill/aliases.json` (quote, RFQ, deal, account) and `test/skill-retrieval.json`. `assist-prompt` chips: OpportunityDetail "Summarize this deal", "Draft a follow-up", "What changed since the last activity"; OrderDetail quote context "Explain this price", "Draft a cover note"; Customer360 "Open work for this account". `response-action`s "Log as note" (a Chatter note on the host) and "Send as message" (opens Comms Compose). `AgentToolExposure` rows only for O/Q verbs no single screen does: O.create#Opportunity, O.move#Opportunity, O.close#Opportunity, Q.preview#Quote and Q.send#Quote, every mutating one behind an Assist approval; `exposeMcp` is Y for O.find#Opportunities and Q.find#Quotes and N for mutating verbs. Prerequisite: the Mantle active-organization user-facts provider (crosscut CX-ASSIST). **Needs:** SAL-ASSIST |
-| Comms hooks (L8) | `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest; `ext-action`s "Create lead" in `chat-message-actions`, `message-actions` and `voicemail-actions`, "Create RFQ" in `message-actions`, "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call. When Comms builds the planned `contact-card` hook, Sales answers it with the sender's account or lead card. **Needs:** SAL-SHELL |
+| CX-ASSIST (L1) | Procedure skills in mr-boss `skill/`: `sales-qualify-lead.md`, `sales-issue-quote.md`, `sales-follow-up.md`, `sales-log-call.md`, each with `screens:` so they show as chips, `skill/aliases.json` (quote, RFQ, deal, account) and `test/skill-retrieval.json`. `assist-prompt` chips: OpportunityDetail "Summarize this deal", "Draft a follow-up", "What changed since the last activity"; OrderDetail quote context "Explain this price", "Draft a cover note"; Customer360 "Open work for this account". `response-action`s "Log as note" (a Chatter note on the host) and "Send as message" (opens Comms Compose). `AgentToolExposure` rows only for O/Q verbs no single screen does: O.create#Opportunity, O.move#Opportunity, O.close#Opportunity, Q.preview#Quote and Q.send#Quote, every mutating one behind an Assist approval; `exposeMcp` is Y for O.find#Opportunities and Q.find#Quotes and N for mutating verbs. Prerequisite: the Mantle active-organization user-facts provider (crosscut CX-ASSIST), which no component registers yet, so Sales builds it (impl-sales P6, F65); the facts are fixed when a conversation starts, so a tool still takes its organization. **Needs:** SAL-ASSIST |
+| Comms hooks (L8) | As Comms renders them (impl-sales F64): `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest, which Comms offers on a chat message; `ext-action`s "Create lead" in `chat-message-actions` and `voicemail-actions` (a voicemail's action is a transition given the voicemail, on Customer Service's pattern) and "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call; `contact-card`, which Comms' Mail reads, answers with the sender's account or lead card. "Create lead" and "Create RFQ" are in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13). **Needs:** SAL-SHELL |
 | Meetings (L7) | A meeting activity is a Commons Event with a CallLink ("Add video call" on EventDetail); prospects are invited by iMIP through `mantle.work.EventServices.send#EventInvitations` and join by the link as guests, without an account (§3) |
 | CX-SYNC (L2) | Activities are events and tasks in the user's own CalDAV calendar already. Account contacts appear on reps' phones as a read-only projected CardDAV address book, "My accounts", answered by S with the rep's account scope (§4). **Needs:** SAL-SYNC |
 | CX-MAIL-INTAKE (L3) | `EmailRuleAction` actions `createLead` (O.store#LeadIntake) and `createQuoteRequest` (Q.create#QuoteRequest), reached by plus-tag intake addresses such as `sales+leads@` and `sales+rfq@` (§§3, 5). **Needs:** SAL-MAIL-INTAKE |
 | CX-DELIVERY (L4, X8) | Storeless order confirmation, quote reminders and QuoteBatch sends are sources of the one Comms delivery ledger (§13) |
 | CX-OPS-REPORTS (L6) | A shipped pipeline dataset, dashboard and alert templates ("quote expiring", "deal stalled") and a weekly pipeline/forecast digest schedule beside Mantle's `report/mantle-sales*.json`; `operation`/`operation-ref` on QuoteBatch, opportunity import and the recurrence guard (§8). These replace bespoke operational-measure lists. **Needs:** SAL-REPORT |
-| Templates and extraction (L9) | Quote cover text, terms and reminder templates render with the built `fancy-locked-html` renderer (§5); QuoteExtraction uses `org.moqui.agent.AiTaskServices.run#Extract` and returns proposals reviewed before any write (§11) |
+| Templates and extraction (L9) | Quote cover text, terms and reminder templates render with the built `fancy-locked-html` renderer (§5): stored at a resource location and rendered by the mail's and print's script with an explicit map of the fields they may use, inside the trusted mail body and print (impl-sales F70); QuoteExtraction uses `org.moqui.agent.AiTaskServices.run#Extract` and returns proposals reviewed before any write (§11) |
 
 ## 2. Screens
 
@@ -320,7 +333,7 @@ state their period and denominator. Empty pipeline offers New lead and New oppor
 | SalesWork | display | Counts and links to work | organization, period, RFQs, quotes, blocked orders, activity count | number-card; scoped drill-down | S.get#SalesHome | Carbon sales dashboard; Marble dashboard |
 | AssignedWork | list, read | Next commercial action | record/name, customer, state, owner, due/expiry, action | record links; status chip | S.get#SalesHome | Carbon assigned documents |
 | MyPipeline | list, read | Compact open pipeline | opportunity, account, amount/currency, stage, next activity | native board/list | O.find#Opportunities | Odoo My Pipeline; research §1 |
-| PipelineFunnel | component | Stage conversion at a glance | stage, count, amount | framework funnel panel through `report-embed` | the pipeline dataset (L6) | framework Monitoring funnel panel |
+| PipelineFunnel | component | Stage conversion at a glance | stage, count, amount | framework funnel panel through `report-embed`, left out of server-static output, which cannot hold a viewer's data | the pipeline dataset (L6), whose row filter is Sales' scope (organization, then assignment or team) | framework Monitoring funnel panel |
 
 **Actions.** New opportunity is primary; New lead, quote and activity are contextual shortcuts.
 An unavailable metric leaves other independent panels usable. **Source:** research §1, §8, §13.
@@ -383,8 +396,9 @@ conversion time/actor, retain source and all joins. Retry returns the same recor
 qualification invokes the same operation per lead. Disqualify records an explicit lost outcome
 and reason. Reopen restores an open lead; returning a qualified opportunity to lead requires a
 manager, reason and no placed linked order. Conversion history remains audit-readable.
-"Create lead" also appears on a chat message, a mail message and a voicemail in Comms (`create-from`,
-§1.4); it opens NewLead prefilled from the message, and the lead keeps the message as its source.
+"Create lead" also appears on a chat message and a voicemail in Comms (`create-from` and `ext-action`,
+§1.4); it opens NewLead prefilled from the message, and the lead keeps the message as its source. On a mail message
+the same action is in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13).
 The bulk "Add to list (evidenced)" action, shown with Marketing's audience capability, files an
 evidenced subscription request per lead contact through Marketing; it never subscribes directly.
 **Source:** research §2. **Needs:** SAL-CRM, SAL-ACCOUNTS, SAL-SHELL, SAL-MAIL-INTAKE.
@@ -629,7 +643,7 @@ The crosscut receives the added QuoteOffer/QuoteSend/QuoteResponse forms and act
   QuoteBatch, reminders and any send on behalf of another rep use the framework
   `org.moqui.mail.EmailServices.send#EmailTemplate` with a registered template, recorded on the Comms
   delivery ledger (X8) and filed by `EmailMessageFiling`. Template text renders with
-  `fancy-locked-html`. The PDF print header carries a QR of the PASS quote link. An accepted delivery
+  `fancy-locked-html` from its stored location with an explicit map (§1.4 L9). The PDF print header carries a QR of the PASS quote link. An accepted delivery
   is not proof of customer acceptance. Partial recipient failure remains visible and retryable.
 - **Revision binding (X2).** Issue, approval, the PASS capability and the shared change proposal bind
   to the Mantle `orderRevision` counter, which X2 narrows to commercial changes: OrderContent and
@@ -748,7 +762,8 @@ Mount Commons' approval list filtered to SalesQuoteApproval and OrderChangeAppro
 the suite inbox. It opens the source quote/change at the requested revision. Approve/Refuse calls
 Q.decide#Quote or C.decide#OrderChange, checks the approver and separation-of-duty policy, and returns
 stale/expired decisions without changing the source. Notifications are pointers, never authority.
-The SalesQuoteApproval topic is seeded in Mantle beside OrderChangeApproval (impl-sales F26, P9). Mounted at
+The SalesQuoteApproval topic is seeded in Mantle beside OrderChangeApproval (impl-sales F26, P9); OrderChangeApproval's
+link opens by the recipient through Commons' `openRecord` (impl-sales F58). Mounted at
 `Sales/Quotes/Approvals`;
 crosscut §3.15 row:
 
@@ -1116,7 +1131,8 @@ Accounting's finance columns. **Needs:** SAL-REPORT.
 Stage durations use audited transitions, including reopenings; historical gaps are reported as
 unknown. Lead-to-opportunity conversion uses conversion events over an explicit lead-created cohort,
 not current type counts. The funnel and stage chart use the built framework funnel panel through
-`report-embed` on this screen and on Home, with no wait for SAL-ANALYTICS; only a generic pivot
+`report-embed` on this screen and on Home (a table in html and print, text bars in tui, none in server-static; the
+dataset's row filter is Sales' scope, impl-sales F66), with no wait for SAL-ANALYTICS; only a generic pivot
 remains later. **Needs:** SAL-FORECAST, SAL-REPORT, SAL-ANALYTICS.
 
 **Source:** research §§1, 9; Odoo CRM reports and ERPNext funnel.
@@ -1636,7 +1652,7 @@ in §§3–7 and are registered in crosscut, rather than copied into Sales.
 | Calendar and Today | Existing Commons calendar/activity screens, assignee and permitted host fixed; no Sales scheduler; nextStep remains free text rather than a due activity |
 | Approvals | Existing Commons provider filtered to SalesQuoteApproval and OrderChangeApproval (both Mantle topics; impl-sales F26); original source-policy actions, revision and recipient checks |
 | Palette | Scoped O/S/Q/G searches; selected destination is a same-app record route; rows carry `recordEntity` and `recordId`. Hidden field data is never indexed into a readable snippet |
-| Comms providers | `record-lookup`, `create-from` (Lead, QuoteRequest), `ext-action`s in the chat, message, voicemail and call slots, and `call-context` answering with the caller's open opportunities and quotes the user may see (§1.4) |
+| Comms providers | `record-lookup`, `create-from` (Lead, QuoteRequest), `ext-action`s in the chat, voicemail and call slots, `contact-card` in Mail, and `call-context` answering with the caller's open opportunities and quotes the user may see (§1.4) |
 | Meetings | Commons EventDetail with a CallLink and iMIP invitations for prospect meetings (L7); no Sales guest-link mechanism |
 | Sync | Read-only projected CardDAV address book of the rep's account contacts (§4); no writes from devices |
 | Mail intake | `createLead` and `createQuoteRequest` EmailRuleAction rows on the Sales intake addresses (§§3, 5) |

@@ -1,5 +1,18 @@
 # IronStone BOSS — Sales implementation
 
+Nov 13, 2026 — P0 done: the checks left after the plan's review, F53–F73 (§6), against the code as People, Maintenance,
+Admin P17–P19, Insights P11–P12, Admin's "screens down" and the runtime/components/{base,addon,dev,test} layout left it.
+Sales' setup goes in its own `data/BossSetupSalesData.xml`, as Maintenance's did (F55); TeamMembers' lookup needs People's
+`PEOPLE_DIRECTORY_VIEW` for the manager and administrator (F53); the lifecycle participant answers Admin's disable, not
+People's access-end request, under a new `SALES_OWNER_CHANGE` (F54); OrderChangeApproval opens by recipient through
+Commons' `openRecord` (F58); the report entry gets Sales' catalogue and Accounting's mount an entry of its own (F59);
+X1 changes no built order or spec today (F62); the Comms hooks follow what Comms renders, and P5 makes basic-comms' Mail
+render `message-actions` for a mail message's "Create lead" and "Create RFQ" (F64, the user's call); P6 builds Mantle's active-organization user-facts provider (F65) and the funnel's dashboard with a
+Sales-scoped row filter (F66); P7 adds Sales' catalogue context (F67); template text renders from a stored location with
+an explicit map (F70); ORG_ZIZI_SALES is the second demo organization and the storeless seller (F72). P1–P11, P14 and
+P19 changed in place; P12, P13 and P15–P18 take the contracts as found. §5 Q2, Q5 and Q7 answered
+as recommended; Q12 (Projects' estimate approval under the approval setting) is open for P11. Build order and the suites'
+runs in §4: Sales P1–P6 first, then Marketing as a second track; at most three phase workers at once.
 Nov 11, 2026 — the open questions answered (§4): the budgets may rise by the plan's estimates as its phases land, the
 import target names `SALES_IMPORT`, a quote template is an order of purpose `OrpSalesQuoteTemplate`, approvals extend
 OrderDecision, a high-value acceptance needs PASS sign-in above a threshold unset by default, and a seller's approval
@@ -193,8 +206,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   lifecycle participant move P4's records; P7 needs P3's customers; P9's preview reads P7's lines; P10 issues what P9
   approved; P11 places what P10 accepted; P13 answers through P10's response service; P14 changes P11's orders; P16's
   bases are P11's orders and may name P15's agreements; P17 shows P11's orders; P18 and P19 read P4's and P11's
-  records. A phase of a side-by-side pair that appends to the same file as the other (BossSetupData.xml,
-  BossUsersDemoData.xml, Sales.xml's `shell-providers`) rebases on it before merging.
+  records. A phase of a side-by-side pair that appends to the same file as the other (BossSetupSalesData.xml,
+  BossUsersDemoData.xml, Sales.xml's `shell-providers`) rebases on it before merging. Marketing's track runs beside
+  Sales' from P7 (§4).
 
 ## 2. Ground rules
 
@@ -308,12 +322,12 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 11 (§6 F1–F51); the checks below left |
+| P0 Checks | all (read) | — | done Nov 13 (§6 F1–F73) |
 | P1 Foundation | Mantle, BOSS | the Sales root and menu, Home's frame, Reports' two ported screens | — |
 | P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | — |
 | P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | — |
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | — |
-| P5 Lead intake, Comms hooks and account sync | Mantle, BOSS | Leads' intake rows; the Comms actions | — |
+| P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | — |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | — |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | — |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
@@ -334,7 +348,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 Verify the design's riskiest assumptions against the code before building. Each result is a row in §6 and, where it
 changes the design, an edit there. F1–F42 were found on Nov 11 while writing this plan and F43–F51 in its review; the
-edits they call for in design-sales were made then. Still to check:
+edits they call for in design-sales were made then. The checks below were done Nov 13, 2026 (F53–F73), against the
+code as People, Maintenance, Admin P17–P19 and Insights P11–P12 left it; the design edits they call for were made the
+same day. Redo the Admin P17 check only if Admin registers a business entity's projection (F57).
 
 - **People and Maintenance as built** (they are built before Sales, §4): the route and grant of Employee360 for a
   team member's link (impl-people P2 mounts it at `People/Employees/Employee360` and `Commons/People/Employee360`,
@@ -392,8 +408,8 @@ and SalesAnalysis (kept reachable); SAL-ACCESS, SAL-SHELL.
   - The permissions of design §1.1 seeded in MantleSetupData, each granted to `ADMIN`: `SALES_VIEW`, `SALES_TEAM_VIEW`,
     `SALES_TEAM_MANAGE`, `SALES_OPPORTUNITY_EDIT`, `SALES_ACCOUNT_EDIT`, `SALES_QUOTE_EDIT`, `SALES_QUOTE_SEND`,
     `SALES_ORDER_EDIT`, `SALES_ORDER_APPROVE`, `SALES_ORDER_CHANGE`, `SALES_APPROVE`, `SALES_AGREEMENT_EDIT`,
-    `SALES_RECURRENCE_MANAGE`, `SALES_FORECAST_EDIT`, `SALES_REPORT_VIEW`, `SALES_CUSTOMER_INVITE`, `SALES_IMPORT`
-    and `SALES_CONFIGURE`. `SALES_APPROVE` and `SALES_ORDER_CHANGE` are the two OrderChangeServices already checks
+    `SALES_RECURRENCE_MANAGE`, `SALES_FORECAST_EDIT`, `SALES_REPORT_VIEW`, `SALES_CUSTOMER_INVITE`, `SALES_IMPORT`,
+    `SALES_CONFIGURE` and `SALES_OWNER_CHANGE` (the lifecycle transfer, no Sales group's; P6, F54). `SALES_APPROVE` and `SALES_ORDER_CHANGE` are the two OrderChangeServices already checks
     (F13). `SALES_IMPORT` is the app's own import permission, which the `opportunities` import target names (P6;
     §4); BossSetupData grants it to `BOSS_SALES_MANAGER`, who run the import, and it is in that group's bundle.
     `ORDER_APPROVE` and `ORDER_CHANGE_HOLD_RELEASE`, which design §1.1 also maps to Sales groups, exist.
@@ -405,12 +421,13 @@ and SalesAnalysis (kept reachable); SAL-ACCESS, SAL-SHELL.
     costs withheld without `PRODUCT_COST_VIEW`, as they accept a store-scoped `COMMERCE_VIEW` now (F2; owner contract:
     the answer to Accounting's open question, written into design-accounting; `ACCOUNTING_VIEW`'s and Commerce's
     answers unchanged, with `test/sales/SalesReports` and `SalesReportStoreScope` passing as they are).
-- **Access** (design §1.1), on Commerce's pattern (BossSetupData.xml:1903-1924): `BOSS_SALES` as the root user group
+- **Access** (design §1.1), on Commerce's pattern (BossSetupData.xml:1903-1924), in a setup file of Sales' own,
+  `data/BossSetupSalesData.xml`, as Maintenance's is (F55): `BOSS_SALES` as the root user group
   beside the artifact group of that name, and `_REP`, `_MANAGER`, `_APPROVE`, `_CHANGE`, `_AGREEMENT` and `_READ`;
   `BOSS_SALES_ADMIN` keeps its row. The ordinary groups' authz on the root with `MANTLE_USER_ORG` and
   `MANTLE_PRIVATE_CONTACT`; the `ironstone\.sales\..*` service pattern on the artifact group; `sales` added to each
-  row of the client deny pattern as Maintenance's P1 left them, a row split only if it would pass 255 characters,
-  which none should (F25). An area only some groups see (Quotes' Approvals, Orders' Changes, Agreements, Reports,
+  of the fifteen rows of the client deny pattern (BossSetupData.xml:461-487, :4093), none split: the longest is then
+  244 characters (F25, F55). An area only some groups see (Quotes' Approvals, Orders' Changes, Agreements, Reports,
   Settings) is an artifact group that denies the root group and allows its capability groups, added by the phase
   that builds the area. The permissions granted by design §1.1's table, except the four a built Mantle service
   already checks, which a group gets with the phase that builds its screens (F43): `SALES_APPROVE` in P9,
@@ -428,9 +445,10 @@ and SalesAnalysis (kept reachable); SAL-ACCESS, SAL-SHELL.
 - **Reports, as ported:** SalesSummary opens for a holder of `SALES_REPORT_VIEW` over the guarded summaries;
   SalesAnalysis keeps its route and loses its four dead links (F2). Both are rebuilt in P19.
 - **Home** (design §3): its frame, with SalesWork, AssignedWork and MyPipeline showing "Not configured" until P4 and P6.
-- **Demo data.** BossUsersDemoData gains `sales.rep` and `sales.rep2` (two teams of ORG_ZIZI_RETAIL), `sales.manager`,
+- **Demo data.** BossUsersDemoData gains, after Maintenance's users, `sales.rep` and `sales.rep2` (two teams of
+  ORG_ZIZI_RETAIL), `sales.manager`,
   `sales.approver`, `sales.change`, `sales.agreement`, `sales.reader` and `sales.admin`, none in `ADMIN`; a rep of
-  the second demo organization only; and a manager who works for both.
+  the second demo organization, ORG_ZIZI_SALES (F72), only; and a manager who works for both.
 - **Specs.**
   - `test/Sales/SalesSpecLib.js` (ids, users, `shell`, `page`).
   - `SalesAccess`: the app's one access spec, with authorization on: each group's permissions, the menu per group,
@@ -467,10 +485,12 @@ TypesAndReasons; SAL-CRM (its settings part), SAL-ACCESS.
   over `get#SalesReadiness`, on Commerce's rows (BossSetupData.xml:2569-2575); since Nov 11, 2026 the framework's
   `moqui.server` entities, a place named as a route key of Admin's mount (impl-admin §9).
 - **People** (§4, the connection built here): TeamMembers' lookup offers the organization's employees, from
-  `mantle.humanres.PeopleServices.find#Employees`' public work projection, and its representatives; a member who is
+  `mantle.humanres.PeopleServices.find#Employees`' work identity, which it answers only to a People reader (F53), so
+  `BOSS_SALES_MANAGER` and `BOSS_SALES_ADMIN` get People's `PEOPLE_DIRECTORY_VIEW` here, as Maintenance's planners have
+  it, and a caller without it picks representatives by party; a member who is
   an employee links to `People/Employees/Employee360` for a People user and `Commons/People/Employee360` otherwise,
-  for a viewer `get#Employee360` admits; Employee360 has no Sales context row and Sales mounts none (impl-people P2
-  and §7; P0). Mantle's team services read no People record: an organization without People picks members by party.
+  for a viewer `get#Employee360` admits, through People.js `employee360Link`; Employee360 has no Sales context row
+  and Sales mounts none (impl-people P2 and §7; F53). Mantle's team services read no People record: an organization without People picks members by party.
 - **Screens:** Settings (SalesReadiness); Stages (PipelineStages, PipelineDefinition); Teams (SalesTeams, TeamMembers);
   LeadSources at `Sales/Settings/LeadSources` (Sources), built for a second mount (§2); TypesAndReasons (SalesTypes,
   LossReasons). The Settings area for `BOSS_SALES_ADMIN`, Teams also for the manager.
@@ -504,7 +524,10 @@ design §4 waits for the framework's Maps work, as Admin's did (§7).
 - **Shared screens** (owner contracts, F34): the Sales context of Customer360 (crosscut §3.2's row: the tabs of
   design §4, with Opportunities, RFQs, Quotes, Orders and Agreements filling in as their phases land) in
   `template/SalesCustomer360.xml`, as Customer Service's and Commerce's branches are built
-  (Customer360.xml:20-28); the Sales context of the Commons contact record and list (crosscut §3.1); Commons Duplicates
+  (Customer360.xml:20-28), with Sales added to the four conditions that make Accounting's the default (F68); the
+  Sales context of the Commons contact record (crosscut §3.1): ContactDetail includes template/ContactRecord.xml's
+  section and transitions behind a Sales gate service, as Customer Service's ContactDetail does, and Contacts is
+  Sales' own list (F68); Commons Duplicates
   and Compare mounted as MergeAccounts with the Sales document counts, Commons' merge service admitting the Sales
   merger the Mantle guard admits (F45).
 - **Screens:** Accounts at `Sales/Accounts/Accounts` (AccountFind, AccountList, NewAccount, NewPerson), built for a
@@ -540,7 +563,9 @@ Today); SAL-CRM, SAL-COLLAB. The opportunity import is P6; the Comms intake P5.
   `reopen#Opportunity`, `store#OpportunityParty` (one active primary representative; dated team and contact roles; the
   organization field kept equal, P1), `store#Competitor` and `apply#OpportunityBatch` (each deal on its own). Each
   checks its permission, the organization and the assignment, and the revision it was given.
-- **Collaboration** (owner contracts): SalesOpportunity registered as a Chatter and files host (P0), its activities
+- **Collaboration** (owner contracts): SalesOpportunity registered as a Chatter and files host on People's pattern
+  (F69: SalesOpportunityContent and its create service, entries in `get#RecordLinkInfo`'s and RecordFiles' maps, a
+  `visible()` branch over Sales' assignment scope, a Chatter title), its activities
   through `mantle.work.TaskServices.create#SimpleTask` and Commons events with `WorkEffortRecord`, keeping
   SalesOpportunityWorkEffort; a meeting is a Commons Event with a CallLink (L7); the Sales context of
   Shared/WorkItemDetail (crosscut §3.12's row); a record link for SalesOpportunity (F39).
@@ -590,10 +615,15 @@ Design §3 Leads (intake), §9 LeadSources' UtmSourceMap, §1.4 (Comms hooks, CX
     answers "My accounts" with the contacts of the accounts the rep may see, computed per request; a device write is
     refused.
 - **The Sales root's providers** (design §1.4, on Comms' and Customer Service's rows, Comms.xml:56-58,
-  CustomerService.xml:68): `record-lookup` for SalesOpportunity (quotes and orders join it in P7); `create-from` kind
-  Lead; the `ext-action`s "Create lead" on a chat message, a mail message and a voicemail and "Log call on
-  opportunity" on a call and a voicemail; `call-context` with the caller's open opportunities the user may see; and
-  `contact-card` if P0 finds Comms reads it.
+  CustomerService.xml:68), as Comms renders them (F64): `record-lookup` for SalesOpportunity (quotes and orders join
+  it in P7); `create-from` kind Lead, which Comms offers on a chat message; "Create lead" on a voicemail as a
+  screen-extend transition given the voicemail (Customer Service's Voicemail.xml:21-37), making the intake from its
+  transcript; "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` with the caller's
+  open opportunities the user may see; and `contact-card`, which Comms' Mail reads, with the sender's account or
+  lead. A mail message's "Create lead" is a `message-actions` action: P5 makes basic-comms' Mail render that slot
+  (mr-moqui `runtime/components/base/basic-comms`, the user's call, Nov 13), with the email message's id, as Chat's
+  `chat-message-actions` renders its own, and calls `create-from` with the emailMessageId it already takes; P8 adds
+  "Create RFQ" to the same slot.
 - **Screens:** LeadSources' UtmSourceMap; LeadList's intake columns (source, received, verification) and NewLead
   prefilled from a message; the intake address shown in Settings.
 - **Specs:** Mantle `test/sales/SalesLeadIntake` (one lead for a message delivered twice; a mapped source and medium
@@ -616,8 +646,12 @@ funnel). Ends stage 1.
   - `SalesWorkspaceServices.get#SalesHome` (the counters and assigned work, each from the scoped lists; a failed
     metric unavailable, never zero).
   - The pipeline dataset, `report/mantle-sales-pipeline.json` over a DataDocument of SalesOpportunity with its stage,
-    pipeline, organization, owner, source and amounts, fed as each is written, with the organization row filter
-    (§4), beside Mantle's sales datasets.
+    pipeline, organization, owner, source and amounts, fed as each is written, beside Mantle's sales datasets (§4).
+    Its `rowFilterService` is Sales' scope, the organization and then the assignment or team (§2), not
+    `get#OrganizationRowFilter` alone, which would show a rep the organization's pipeline (F66).
+  - The active-organization `user-facts` provider (F65): a service implementing
+    `org.moqui.agent.AgentServices.get#UserFacts` (the user's organizations and the active one), registered in Mantle's
+    MoquiConf.xml `llm-facade` beside its constitution provider; the prerequisite of the Sales skills (design §1.4).
   - The `opportunities` import target (design §3, §16; F24): a `moqui.server.TransferTarget` in rows mode on the
     staff invitations' pattern (PartyInvitationData.xml:48-61), with `validate#OpportunityImportRow`,
     `apply#OpportunityImportRow` (the create, update and qualify services, one row a transaction, its key the source
@@ -629,13 +663,15 @@ funnel). Ends stage 1.
 - **Admin and Insights registrations** (owner contracts, as built):
   - the dataset admitted with its class, readiness provider and index refresh, on the rows of Customer Service's
     datasets (BossSetupData.xml:3200, 3283, 4790) and Insights' own (3345-3353, 3385-3392);
-  - a `LifecycleParticipant` "Sales assignments" on Projects' row (BossSetupData.xml:4060-4064): the open
-    opportunities, accounts and, from P7, quotes a departing user owns, its lookup and transfer services in
-    `SalesWorkspaceServices` on the owned-resource contract, reassigning through `store#OpportunityParty` and the
-    order part's party roles; an access end People asks for (impl-people P7) reaches it through Admin's lifecycle;
+  - an `ironstone.admin.LifecycleParticipant` "Sales assignments" on People's row (BossSetupData.xml:5203-5209): the
+    open opportunities, accounts and, from P7, quotes a departing user owns, its lookup and transfer services in
+    `SalesWorkspaceServices` on the owned-resource contract (framework IdentityServices.xml:136-160), reassigning
+    through `store#OpportunityParty` and the order part's party roles, its `requiredPermission` `SALES_OWNER_CHANGE`,
+    granted to `BOSS_ADMIN_IDENTITY` (F54). Admin's disable or removal of the user lists and transfers them; People's
+    access-end request (impl-people P7) ends the access and calls no participant;
   - the pipeline export listed as an owner export target, as Projects' work-item list is (BossSetupData.xml:4955-4957),
-    its place a key added to Admin's owner routes; Shared/DataImport's mount gains a Sales branch for the one target
-    `opportunities` (F44).
+    its place a key of Admin.js `mountRoutes` (:404-440); Shared/DataImport's mount gains a Sales branch for the one
+    target `opportunities` beside People's and Maintenance's (DataImport.js:51-85), before the catalog branch (F44, F55).
 - **Shell:** QuickCreate (Lead, Opportunity, Account, Contact, Activity; Quote in P7) over the hosts' own forms; the
   palette's sources of P3 and P4 checked as one provider over `search#Records` with `recordEntity` and `recordId`;
   Today's source; Opportunities' and Leads'
@@ -645,14 +681,16 @@ funnel). Ends stage 1.
   Customer360's prompt chips; the "Log as note" and "Send as message" response actions; `AgentToolExposure` rows for
   `find#Opportunities` (Assistant and MCP) and `create#`, `move#` and `close#Opportunity` (Assistant, behind approval,
   no MCP), on Admin's rows (BossSetupData.xml:2544, 3177).
-- **Screens:** Home (SalesWork, AssignedWork, MyPipeline, PipelineFunnel through `report-embed`); QuickCreate.
+- **Screens:** Home (SalesWork, AssignedWork, MyPipeline, PipelineFunnel through `report-embed` over the funnel panel
+  of `report/boss-sales-pipeline.json`, shipped here with that one panel and completed in P19, and left out of
+  server-static output, where `report-embed` throws, F66); QuickCreate.
 - **Specs:** Mantle `test/sales/SalesOpportunityImport` (an unknown stage a row error; a matched ID updated only under
   the update strategy; a repeat under its key answers the first result) and `SalesPipelineDataset` (another
   organization's deals not in a reader's rows); BOSS `SalesHome` (Home's one qvt render; a counter equal to its
   list's count); `test/skill-retrieval.json` gains the Sales cases.
 - **Usable when** (`test/acceptance/Sales/SalesHomeUsable`; gate 1): Home's counters open the lists they count; a CSV of
-  five deals, one with an unknown stage, imports four and names the one; an offboarded rep's deals wait in Admin's
-  lifecycle for a new owner; Assist qualifies a lead only after the user approves the step.
+  five deals, one with an unknown stage, imports four and names the one; disabling an offboarded rep in Admin lists
+  their deals and moves them to a new owner; Assist qualifies a lead only after the user approves the step.
 
 ### P7 — Quote drafts, pricing and storeless tax
 
@@ -665,8 +703,9 @@ Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability
     (:192), falling back to the seller's `PartyAcctgPreference.taxGatewayConfigId`, and
     `handle#OrderMajorChange` runs its tax step without a store (F8). A store order is unchanged; promotions and
     carrier estimates stay store-only, and freight on a storeless quote is a charge line (§5). This is Mantle's fix
-    for every storeless sales order of a seller with a gateway, not a rule behind Sales' policy: the orders P0 found
-    are taxed as their invoices are, and their owners' specs are updated with them. Marketing's storeless ticket
+    for every storeless sales order of a seller with a gateway, not a rule behind Sales' policy. No seller's
+    preference names a gateway today, so no built order or spec changes (F62); a Projects estimate of a seller that
+    sets one is taxed as its invoice already is. Marketing's storeless ticket
     order rests on it (impl-marketing P17).
   - `mantle.order.SalesQuoteServices` (Q): `find#Quotes` (sales-direction parts of the purpose SalesQuote in Open,
     Requested or Proposed, with cancelled history; never a cart or a base), `create#Quote` (over `create#Order` and
@@ -675,14 +714,19 @@ Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability
     provenance; a manual price or discount keeps the calculated basis, the entered value, reason and actor on the
     item; a missing price blocks, an explicit free line needs its permission.
 - **Shared screens** (owner contracts, F34): the Sales quote context of Shared/OrderDetail in
-  `template/SalesOrderDetail.xml`, on the pattern of the other apps' templates (OrderDetail.xml:15-53): Overview,
+  `template/SalesOrderDetail.xml`, on the pattern of the other apps' templates (OrderDetail.xml:15-53), a branch of
+  its appRoot chain before Projects' default (:177) and Sales in its not-found list (:213) (F68): Overview,
   Items, Terms, History, Chatter and Files, the draft's actions, validity on the part; the Sales rows of Product360,
   InventoryAvailability (read only without a Warehouse grant) and PriceExplain (the safe selected-price explanation
-  for a rep, the trace with `PRICE_VIEW`). A record link for a sales quote and order (F39; Purchasing's F46).
+  for a rep, the trace with `PRICE_VIEW`), over a `salesContext()` in Products' SharedContext.js, which refuses an
+  unknown root today (:448), on Customer Service's (:236-302), and a Sales branch of PriceExplain (:43-49) (F67).
+  A record link for a sales quote and order (F39; Purchasing's F46). The baseline OrderDetail forms no Sales context
+  covers are marked in ss-inventory with their reason (F71).
 - **Screens:** Quotes (QuoteFind, QuoteList with its saved lists, NewQuote); OrderDetail at
   `Sales/Orders/OrderDetail`, the one route; Products' Product360 and InventoryAvailability; PriceExplain. Quick
   create's Quote; OpportunityDetail's and Customer360's Quotes.
-- **Demo data:** draft quotes for both organizations, one for the storeless seller with a tax gateway (P0), one with a
+- **Demo data:** draft quotes for both organizations, one for the storeless seller ORG_ZIZI_SALES, whose accounting
+  preference names the `LOCAL` gateway (F72), one with a
   customer price and one with a manual override.
 - **Specs:** Mantle `test/order/StorelessOrderTax` (a storeless quote taxed through the seller's gateway and retaxed
   on a line change; a store order's tax as before; no gateway, no tax and no error) and `SalesQuoteDrafts` (a cart and
@@ -701,10 +745,12 @@ Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff
   `create#Request`; from a message, with the message and its files linked), `create#QuoteFromRequest` (selected
   items, the request's stamp; one quote and its source links atomically, the same key returning it; an authorized
   `RqtWarranty` source keeps its decision and scope and exposes none of it), `decline#QuoteRequest`. The
-  `ErActCreateQuoteRequest` mail action. The request rules type-guarded for `RqtQuote` (F31, P0): no triage notice,
-  no case rules and no completion from linked work unless it is in a service queue.
-- **Shared screens:** the Sales context of Shared/RequestDetail (crosscut §3.11's row) and "Create RFQ" as a Comms
-  message action and `create-from` kind.
+  `ErActCreateQuoteRequest` mail action. The request rules type-guarded for `RqtQuote` (F31, F63): RequestTriageNotice
+  and `complete#RequestFromWork`'s type list leave it out; the case rules need no guard, since a request is a case only
+  in a service queue or of a type an organization service-enables.
+- **Shared screens:** the Sales context of Shared/RequestDetail (crosscut §3.11's row), a branch before its Commons
+  fall-through (F68), and "Create RFQ" as a `create-from` kind on a chat message and in the mail `message-actions` slot P5 made
+  Mail render (§4, Nov 13).
 - **Screens:** QuoteRequests (QuoteRequestFind, QuoteRequestList, NewQuoteRequest); QuoteRequestDetail.
 - **Specs:** Mantle `test/order/SalesQuoteRequests` (one request for a message delivered twice; a quote from selected
   items with its links; the same key no second quote; an RqtQuote not triaged; a warranty source's diagnosis absent
@@ -731,8 +777,10 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
     never returned), `decide#Quote` (the approver, not the author unless the rule allows; the revision bound; a stale
     or expired decision refused naming the current revision) and the `SalesQuoteApproval` topic seeded in Mantle
     beside OrderChangeApproval (MantleSetupData.xml:750, F26) with its approve and refuse handlers and a title naming
-    the quote and no amount; BossSetupData gives the topic its link to Sales' OrderDetail, as it does
-    OrderChangeApproval's. Until an organization sets rules, a manual override on a quote made through Q needs an
+    the quote and no amount; BossSetupSalesData gives the topic its link to Sales' OrderDetail. OrderChangeApproval's
+    link becomes Commons' `openRecord` link of the change request, and `PaletteServices.get#RecordLink`'s request
+    branch opens a commercial change for a Sales approver in Sales (from P14) and in Customer Service otherwise: one
+    topic, opened by recipient (F58; owner contract with Customer Service and Commons). Until an organization sets rules, a manual override on a quote made through Q needs an
     approver other than its author; the rule guards `propose#Quote`, not native order entry.
   - Sales' pre-approval warnings (an unresolved Sales approval, a price under its floor; §4): a SECA on
     `check#OrderPreApprove` adds them to its `approveWarnings`, as Accounting's credit warning and Purchasing's
@@ -747,7 +795,7 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
   approval section. The readiness findings for no policy and the commercial revision off (F9). From this grant a
   commercial order change that Customer Service files notifies the Sales approver: Approvals lists
   `OrderChangeApproval` too and the change is decided from the list, its row opening as P0 settles, until P14 gives
-  it its detail.
+  it its detail (F58).
 - **Specs:** Mantle `test/order/SalesQuoteApprovals` (an override over the rule needs the approver; self-approval
   refused; a decision at an earlier revision refused; a line change invalidates it; a file added does not; with
   the seller's approval setting off a Sales warning stops `autoApprove#Order` and not a person's `approve#Order`;
@@ -778,8 +826,10 @@ CX-DELIVERY (X8), X2, X3.
     `salesCommercialRevisionOnly` is on; `send#Quote` refuses otherwise with the readiness finding, and SalesDefaults
     sets it (§4).
   - The delivery ledger sources (F16): quote sends, reminders and batch sends as `MessageDeliverySource` rows with
-    their build services, as cart recovery's is (CartRecoverySetupData.xml:14); the quote and reminder EmailTemplates
-    with `fancy-locked-html` text; the print header's QR of the quote link from P13 (the staff path until then).
+    their build services, as cart recovery's is (CartRecoverySetupData.xml:14); the quote and reminder EmailTemplates,
+    whose cover and reminder text is a `.html.fancy-locked` resource rendered by the body's and print's script with an
+    explicit map (the quote, customer and rep names, issue and validity dates, totals as text, the link), inside the
+    trusted `.html.fancy` body and print, as OrderConfirmations.js:144 renders (F70); the print header's QR of the quote link from P13 (the staff path until then).
 - **Screens:** OrderDetail's Issues and responses (QuoteOffer, QuoteSend, QuoteResponse), Propose, Send, Record
   acceptance, Record decline, Withdraw, Revise and Clone by state; QuoteBatch on Quotes; the quote's html-print and
   PDF. Assist's `sales-issue-quote.md`, the quote context's chips, and the `preview#Quote` and `send#Quote`
@@ -815,7 +865,13 @@ CX-CREDIT, X1, X4.
     delayed job `autoApprove#OrdersDelayed` (OrderServices.xml:1463-1494) and the credit hold's release
     (account/Credit.js:305-306). The payment is still authorized; only the approval waits. A purchase part and a
     seller with the setting off, its default, approve as today: there any warning of `check#OrderPreApprove`,
-    P9's among them, still stops the auto-approval, as built.
+    P9's among them, still stops the auto-approval, as built. `autoApprove#Order` acts only on a covering
+    authorization, so a net-terms order is never auto-approved (F60).
+  - The manual callers (F61): Customer Service's replacement orders approve through `approve#Order` under
+    `ORDER_APPROVE` (ReturnServices.xml:1094-1098, :1127-1129); for a seller with the setting on they ask
+    `approve#Order`'s own check and leave the replacement placed for a Sales approver, as a settler without
+    `ORDER_APPROVE` does now (owner contract). Projects' estimate approval approves outside `approve#Order`
+    (ProjectServices.xml:3486-3496), as §5 Q12 answers.
   - Existing callers (owner contracts with Shop and Commerce): Shop's checkout and renewals and Commerce's orders
     are approved by that path today, on the payment authorization at placement. Their behaviour changes only for a
     seller with the setting on, whose store orders then wait in Awaiting approval, and for an order that carries
@@ -825,7 +881,8 @@ CX-CREDIT, X1, X4.
   - Q: `create#SalesOrder` (direct entry, purpose SalesOrder), `place#SalesOrder` and `approve#SalesOrder` (the policy
     and revision guard, then the native primitive), `apply#SalesOrderBatch` (approve or close remainders, each order
     through `approve#Order`, so none skips the credit check as the baseline's bulk status change does, F12), and the
-    option that approves an accepted net-terms order as the system when credit and every rule pass, which applies
+    option that approves an accepted net-terms order as the system when credit and every rule pass (through
+    `approve#Order` at the acceptance, not `autoApprove#Order`, F60), which applies
     only while the seller's approval setting is off: with it on, that order waits for a holder too.
     `SalesWorkspaceServices.find#SalesOrders` (direction from each part; holds and shipped and billed progress by line
     unit and currency; carts and bases excluded).
@@ -933,8 +990,9 @@ Design §6 OrderChanges, OrderChangeDetail, ShipmentDetail and InvoiceDetail; SA
 - **Shared screens** (owner contracts): the Sales context of Shared/OrderChangeDetail, which answers "not available"
   to every root but Customer Service's today (OrderChangeDetail.xml:15-18): the commercial kinds' proposal, impact,
   decision and apply; the Sales rows of ShipmentDetail (read only) and InvoiceDetail (a receivable reader; the PASS
-  Billing pay link for a holder of Accounting's issuer grant). The topic's route for a Sales approver (P0, F26), in
-  place of P9's decision from the list. Customer Service's context and `CustomerServiceOrderChanges`' checks stay
+  Billing pay link for a holder of Accounting's issuer grant). The topic's route for a Sales approver
+  (`get#RecordLink`'s branch, F26, F58), in place of P9's decision from the list; OrderChangeDetail's appRoot gate
+  (:136, :149) and CustomerService.js:331-332 admit Sales' context. Customer Service's context and `CustomerServiceOrderChanges`' checks stay
   as they are.
 - **Screens:** OrderChanges (ChangeFind, ChangeList, NewChange) for the change operator, approver and manager;
   OrderChangeDetail; OrderDetail's Changes tab and New change; ShipmentDetail and InvoiceDetail under Orders, with
@@ -1059,12 +1117,14 @@ SAL-REPORT, SAL-ANALYTICS.
   named; SalesAnalysis rebuilt at its route over `run#SalesAnalysis`, replacing the entity read (F2), and
   `Accounting/Reports/SalesAnalysis` made a mount of it with Accounting's finance columns (Z10; owner contract);
   PipelineAnalysis (with the funnel) and WinLoss; their CSV, XLSX and print.
-- **Insights registrations** (owner contracts, as built; F3, F24): the `Sales.SalesAnalysis` entry's route moved to
-  Sales' with Sales' catalogue service (BossSetupData.xml:3594-3601); entries for SalesSummary, PipelineAnalysis,
+- **Insights registrations** (owner contracts, as built; F3, F24, F59): the `Sales.SalesAnalysis` entry's route moved
+  to Sales' with Sales' catalogue service, `get#SalesReports` answering `reports` for the root `Sales`
+  (BossSetupData.xml:3603-3609), since Accounting's catalogue refuses any root but Accounting; an entry of
+  Accounting's own for its mount, under its catalogue; entries for SalesSummary, PipelineAnalysis,
   WinLoss, Forecast and TargetAttainment; metrics for open and weighted pipeline, won value and win rate beside
   `Sales.Orders` and `Sales.OrderValue`; flow targets for Leads, Opportunities, Quotes, Orders and Order changes on
   Commerce's rows (BossSetupData.xml:4545-4548), so the suite's flow-map templates' Sales steps become links; the
-  shipped `report/boss-sales-pipeline.json` dashboard, the alert templates "quote expiring in N days" and "deal with
+  `report/boss-sales-pipeline.json` dashboard's other panels (P6 shipped its funnel), the alert templates "quote expiring in N days" and "deal with
   no activity for N days", and the weekly pipeline and forecast digest, on the files Customer Service and Insights
   ship (`report/boss-service-sla-breach.json`, `report/insights-weekly-digest.json`). The `operation` marks on
   QuoteBatch, the import rows and the recurrence worker.
@@ -1122,6 +1182,12 @@ the owner's design.
 | Nov 11, 2026 | `Shared/Subscriptions` replaces Commerce's own list, Commerce's route kept as its mount | F23; design §7's "mount Commerce's Subscriptions list"; owner contract with Commerce |
 | Nov 11, 2026 | The Sales privacy provider (design §12.2) waits for Admin's PrivacyServices, which is later; the purge of unverified lead intakes is built in P5 | impl-admin §7; §7 here |
 | Nov 11, 2026 | The regression budgets may be raised by this plan's estimates as its phases land, each raise by the phase's measured share: about 50 s on mr-mantle, 20 s on mr-boss's server budget, 7 s on its client budget and a second or two on mr-pass's. A raise beyond an estimate needs the user's agreement again. No spec may pass 15 seconds, as before. The phase order of §1 stands as written | The user's call (AGENTS.md: a budget is raised only with the user's agreement). The estimate: about twenty-four Mantle specs, seventeen BOSS specs, one client walk and one mr-pass spec, at the earlier apps' measure (about two seconds a Mantle spec: Purchasing's seventeen 32.5 s, Customer Service's fifteen 34.2 s; about 20 s server and 5 to 7 s client in mr-boss). Today's budgets are mr-boss 264 s server and 57 s client, mr-mantle 393 s and mr-pass 20 s and 9 s (F37, F51), before People's and Maintenance's shares. A phase that would pass an estimate cuts a duplicate or moves a scenario to acceptance |
+| Nov 13, 2026 | §5 Q2, Q5 and Q7 are answered as recommended: storeless freight is a shipping-charge line the rep enters, taxed by X1, a carrier rate without a store waiting for Warehouse (P7); the customer and supplier AgreementDetail screens share Mantle's records and status flow, not form definitions (P15); a native recurring base stays an Approved order marked `OrpRecurringTemplate` (P16) | The user's call |
+| Nov 13, 2026 | The build order: Sales P1–P6 first, then Marketing as a second track beside Sales. Marketing P13 waits for Sales P5, Marketing P17 for Sales P7, P9 and P11, and Marketing P20 for Sales P19. At most three phase workers run at once; each phase is reviewed by a fresh agent and merged on its focused specs | The user's call. Sales keeps its own order (§1) and side-by-side pairs; impl-marketing §4 needs the same row, for its owner |
+| Nov 13, 2026 | The full suites run once at the end of the build, then Sales' and Marketing's acceptance tests once | The user's call, as People's and Maintenance's builds did; a phase's Done (§2) is its focused specs and their suites' budgets, and its acceptance tests are written, not run |
+| Nov 13, 2026 | §5 Q12 answered as recommended: with a seller's approval setting on, Projects' estimate approval places the estimate's sales orders and leaves them in Awaiting approval for a holder of `SALES_ORDER_APPROVE`, as every other sales order of that seller; with the setting off it approves them as today (P11) | The user's call; F61 |
+| Nov 13, 2026 | The permission changes of P0 are confirmed: `PEOPLE_DIRECTORY_VIEW` for `BOSS_SALES_MANAGER` and `BOSS_SALES_ADMIN` (P2, F53), and the new `SALES_OWNER_CHANGE`, held by Admin's identity group alone, for Sales' lifecycle participant (P1, P6; F54) | The user's call |
+| Nov 13, 2026 | "Create lead" and "Create RFQ" on a mail message are built, not left for later: P5 makes basic-comms' Mail render the `message-actions` slot (a framework change in mr-moqui's `runtime/components/base`, P5 working in an mr-moqui worktree too), and P8 adds the RFQ action | The user's call; F64 had moved them to §7 |
 
 ## 5. Open questions
 
@@ -1129,21 +1195,23 @@ Each has the plan's recommended answer; the phases are written to it.
 
 | Question | Decides | Notes |
 | --- | --- | --- |
-| Q2. Storeless freight (design §19 item 1) | P7 | Recommend the design's answer: an explicit shipping-charge line the rep enters, taxed by the X1 path; a carrier rate without a store waits for a Warehouse rating service (§7) |
+| Q2. (answered Nov 13, §4) Storeless freight (design §19 item 1) | P7 | As recommended, the design's answer: an explicit shipping-charge line the rep enters, taxed by the X1 path; a carrier rate without a store waits for a Warehouse rating service (§7) |
 | Q4. Commissions, now that People is built before Sales | §7 or a phase after gate 3 | Recommend it stays later: it is a `later` row whose other gate, the calculation and earning-basis rules (design §19 item 4), is open. When taken it is a phase of its own over People's PayrollInputSource type `SalesCommission` and Accounting's payable intake |
-| Q5. Do the customer and supplier AgreementDetail screens share form definitions (design §19 item 5, X13)? | P15 | Recommend not now: Purchasing's screen is built around releases, caps and approved revisions (F19); Sales builds `Shared/AgreementDetail` for customer agreements, and the two share Mantle's status flow and records. Sharing forms is a later refactor of both |
-| Q7. Does a native recurring base stay an Approved order, as the worker asks today? | P16 | Recommend yes, marked `OrpRecurringTemplate` so every exclusion holds (F7, F22), since Shop's bases already work so; the phase confirms no reader counts an approved base |
+| Q5. (answered Nov 13, §4) Do the customer and supplier AgreementDetail screens share form definitions (design §19 item 5, X13)? | P15 | As recommended, not now: Purchasing's screen is built around releases, caps and approved revisions (F19); Sales builds `Shared/AgreementDetail` for customer agreements, and the two share Mantle's status flow and records. Sharing forms is a later refactor of both |
+| Q7. (answered Nov 13, §4) Does a native recurring base stay an Approved order, as the worker asks today? | P16 | As recommended, yes, marked `OrpRecurringTemplate` so every exclusion holds (F7, F22), since Shop's bases already work so; the phase confirms no reader counts an approved base |
 | Q9. The public lead form before Marketing is built | §7 | Recommend none: `store#LeadIntake` is built in P5 with the mail and Comms sources; the one public lead page is Marketing's, built by its plan. Design §14.3 scenario 13's form part is Marketing's acceptance test |
 | Q10. (answered Nov 11, §4) Who may run an app's own import? | P6; impl-people P7 and P13, impl-maintenance P18, impl-marketing P4 | A holder of the app's own import permission, here `SALES_IMPORT`, with the app's permissions its target names. Nothing is open |
 | Q11. Preventive maintenance of customer-owned equipment under a service agreement (design-maintenance §15, R-MNT-F01) | §7 | Not this plan's to answer: it is later and Maintenance's to design, after P15's AgreementDetail, and the question is impl-maintenance §5 Q8. Design-sales has no screen or need for it, and its billing is the later ContractSchedules |
+| Q12. (answered Nov 13, §4) With a seller's approval setting on, does Projects' estimate approval still approve the estimate's sales orders? | P11 | It places and then approves them with a direct status write, outside `approve#Order`'s credit check and the Sales guard (F61). Recommend not: with the setting on it places them and leaves them in Awaiting approval for a holder of `SALES_ORDER_APPROVE`, as every other sales order of that seller; with it off, as today (an owner contract with Projects, its specs unchanged) |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here |
 
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too; an edit a finding calls for in a shared file is named for its owner. F1–F42 were found on Nov
-11, 2026, while writing this plan, and F43–F51 in its review the same day. Paths without a component are mr-boss's;
-Mantle's start `mr-mantle/`.
+11, 2026, while writing this plan, and F43–F51 in its review the same day; F53–F73 are P0's remaining checks, Nov 13.
+Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr-pass/`, the framework's `framework/`
+(runtime/components/base/framework) or `crates/`.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1199,6 +1267,27 @@ Mantle's start `mr-mantle/`.
 | F50 | P0 (review): the other two earlier plans. impl-people provides what Sales uses (`find#Employees` and `Shared/Employee360` in its P2, the access-end entry in its P7) and its §7 lists both with the phases here that use them (P2, P6), and the commission input and customer retainers as later. impl-maintenance §7 leaves three links to this plan: the chargeable repair's quote (P8, Customer Service's handoff, F40); customer-equipment maintenance under a service agreement, an open item of design-maintenance §15 that design-sales does not have; and supplier warranty terms as an Agreement "when Sales has adopted the shared agreement states", which is a purchase-direction agreement on statuses Purchasing already seeded (F19) | §1, §7; the question on customer-equipment maintenance is impl-maintenance §5 Q8 (§5 Q11 points to it); both plans' §7 were reconciled with this one |
 | F51 | P0 (review): the plan's spec count and cost were low. It names about twenty-four new Mantle specs, not sixteen, and a Mantle spec of this kind is not "well under a second": Purchasing's seventeen measured 32.5 s and Customer Service's fifteen 34.2 s (mr-mantle test/budget), with 20.3 s and 18.2 s server in mr-boss (test/budget) | §4: the estimate the user approved is the corrected one |
 | F52 | Nov 11 (the user's answer on order approval): every automatic approval goes through `mantle.order.OrderServices.autoApprove#Order` (mr-mantle service/mantle/order/OrderServices.xml:1495-1539), which approves a Placed order whose authorized, delivered or confirmed payments cover its total, with no `check#OrderPreApprove` warning and no earlier approval. Its callers: `authorize#OrderPayments` (service/mantle/account/PaymentServices.xml:1689-1691), run on placement by the SECA `OrderPlacedAuthorizePayments` (service/AccountingPayment.secas.xml:17-20); the SECA `OrderPlacedAutoApprove` (service/OrderReturn.secas.xml:50-59) for a store with no approval delay; the job `autoApprove#OrdersDelayed` (OrderServices.xml:1463-1494); and the credit hold's release (service/mantle/account/Credit.js:305-306). Shop's and Commerce's store orders are approved by this path, and nothing in it reads a seller's policy | P11: the seller's approval setting is checked in `autoApprove#Order`, so all four callers meet it; off by default, so Shop's and Commerce's specs pass unchanged; P9's warnings join those of the check it already refuses on (§4) |
+| F53 | P0 (Nov 13): `find#Employees` (mr-mantle service/mantle/humanres/PeopleServices.xml:143-189; Employees.js:259) reads by People's scope (People.js:287-327) and refuses `PERMISSION_DENIED` a caller with no People read (Employees.js:286); a staff read is `PEOPLE_DIRECTORY_VIEW` or an HR, recruit, develop, case or configure permission (People.js:67). It answers the work identity (name, job title, manager, work email and phone, location), never private contacts or pay, and takes `organizationPartyId`. Employee360 is mounted at `People/Employees/Employee360` and `Commons/People/Employee360` (screen/People/Employees.xml:32; screen/Commons/People.xml:27), and Insights and Maintenance mount it too; `get#Employee360` admits by the same scope, so a Sales user with no People permission sees "not available". People.js's `employee360Apps` (:1643-1669) names Sales as an app with no row, linked by `employee360Link` (:1737-1749). Maintenance gave its planners `PEOPLE_DIRECTORY_VIEW` for a custodian's card (data/BossSetupMaintenanceData.xml:86-100) | P2: `BOSS_SALES_MANAGER` and `BOSS_SALES_ADMIN` get `PEOPLE_DIRECTORY_VIEW` for TeamMembers' lookup and the link; a rep sees a teammate's card only with it. Design §1.1 changed. P2 changed |
+| F54 | P0 (Nov 13): the participant is still `ironstone.admin.LifecycleParticipant` (entity/AdminEntities.xml:140: lookup, transfer and pause services, `resourceParameter`, `requiredPermission`). `request#AccessEnd` (service/ironstone/admin/LifecycleServices.xml:107; Provisioning.js:104-116, to Mantle's `request#AccessEnd`, mr-mantle service/mantle/party/Lifecycle.js:1255) calls no participant: Admin's `find#OwnedResources` and the disable and removal operations do (service/ironstone/admin/Lifecycle.js:89-146, :192-212), as the identity operator, on the contract of framework service/org/moqui/admin/IdentityServices.xml:136-160 (lookup: `userId` to `resourceList`; transfer: `fromUserId`, `toUserId`, `reason` and the resource parameter, to `transferred`). People's row names a Mantle service and an owner-change permission of its own granted to `BOSS_ADMIN_IDENTITY` (data/BossSetupData.xml:5203-5209); Projects' names `ADMIN_IDENTITY_VIEW` over a BOSS service (:4068) | P1 seeds `SALES_OWNER_CHANGE`; P6's participant follows People's row, `SalesWorkspaceServices`' lookup and transfer checking it, granted to `BOSS_ADMIN_IDENTITY`; its usable-when walks Admin's disable. Design §1.1 changed. P1, P6 changed |
+| F55 | P0 (Nov 13): the deny pattern's fifteen rows (data/BossSetupData.xml:461-487, :4093) name `people` and `maintenance` and not `marketing`; the longest is 238 characters, 244 with `sales` and 254 with `marketing` too, so none splits (the comment at :458-459 says so). Maintenance put its setup in a file of its own, data/BossSetupMaintenanceData.xml, "so that its appends and People's do not meet" (:14-17); People's is at BossSetupData.xml:5054-5753, and the demo users end with Maintenance's (data/BossUsersDemoData.xml:1343-1478). The registries are `moqui.server.SettingsEntry`, `ReadinessProvider` and `TransferTarget` and `moqui.security.CapabilityBundle`; the owner routes are Admin.js `mountRoutes` (service/ironstone/admin/Admin.js:404-440); Shared/DataImport has People's and Maintenance's branches (service/ironstone/shared/DataImport.js:51-66, :70-85), and any other root falls through to the catalog branch (:87-99) rather than a refusal; People's and Maintenance's targets name their import permission with the app's own (mr-mantle data/PeopleLifecycleSetupData.xml:43; MaintenanceSettingsData.xml:44) | F25 settled: P1 adds `sales` to each row, no split. Sales' setup is `data/BossSetupSalesData.xml` (loading after BossSetupData), so its appends and Marketing's track do not meet; demo users after Maintenance's. P6's DataImport branch goes before the catalog branch. §1, P1, P6 changed |
+| F56 | P0 (Nov 13): the budgets as People and Maintenance left them: mr-boss 338 s server and 77 s client (test/budget:8-20; People's 28 specs 55.3 s, Maintenance's share 26.3 s and its walk 8.1 s), mr-mantle 555 s (test/budget:11-16; People's 39 specs 111.8 s, Maintenance's 47.6 s), mr-pass 20 s and 9 s, the framework 17 s and 6 s. F37's figures are superseded | §4's estimates stand as raises on these: about 50 s mr-mantle, 20 s and 7 s mr-boss, a second or two mr-pass |
+| F57 | P0 (Nov 13): Admin P17's audit reader reads only fields with a `moqui.server.AuditProjection` row (framework entity/ServerEntities.xml:818-850), shows a value only for `valueMode` `show` and never an encrypted or secret-named field (framework service/org/moqui/admin/Audit.js:57-62, :118, :127, :431-434), and lists nothing unregistered (:516-520). Only framework data and mr-mantle data/PartyAuditData.xml register rows; no order, agreement, opportunity or forecast entity is registered, and the raw log is the instance administrator's (tools screen/System/Audit/AuditChanges.xml:28-31). An issue's token is stored as a digest only (mr-mantle entity/ExternalAccessEntities.xml:33). P18's `moqui.security.DeviceRouteGroup` (framework entity/SecurityEntities.xml:472) is seeded only by Insights and People (BossSetupData.xml:5033, :5677) | Sales registers no projection and no device route group: its audited fields stay in OrderDetail's, OpportunityDetail's and the policies' History, as People's do (impl-people F56); whether a business entity belongs in AuditChanges is Admin's F257, the user's call. §7 changed |
+| F58 | P0 (Nov 13): a notification has one link for every recipient: `NotificationTopic.linkTemplate` (framework entity/SecurityEntities.xml:699) expanded once into `NotificationMessage.linkText` (crates/moqui-core/src/notify/message.rs:317-323, :606). Commons' `open#Notification` opens an approval topic's own `/qapps` link first (service/ironstone/commons/CommonsServices.xml:311-313), but resolves a `/qapps/Commons/openRecord?` link per user through `PaletteServices.get#RecordLink` (:322-336), as People's timesheet topics do; OrderChangeApproval's link is Customer Service's OrderChangeDetail (data/BossSetupData.xml:1912-1913), and that screen and its access answer only the CustomerService root (screen/Shared/OrderChangeDetail.xml:136, :149; service/ironstone/customerservice/CustomerService.js:331-332) | P9: OrderChangeApproval's link becomes the `openRecord` link of the change request; `get#RecordLink`'s request branch (PaletteServices.xml:88, :108) opens a commercial-kind change in Sales for a Sales approver from P14, in Customer Service otherwise. No second topic. Design §§1.3 and 5 changed; crosscut §3.15 and design-customer-service §4 need the same line, for their owners. P9, P14 changed |
+| F59 | P0 (Nov 13): `ironstone.insights.ReportCatalogEntry`'s `catalogueService` is called as the viewer with `appRoot` the route's first segment (entity/AdminEntities.xml:46-49; service/ironstone/insights/Registry.js:93-128), answers `reports` [{entryId or reportId}], and a refusal hides the entry. `Sales.SalesAnalysis` (data/BossSetupData.xml:3603-3609) names Accounting's `ReportServices.get#Catalog`, which refuses any root but Accounting (service/ironstone/accounting/AccountingLib.js:16-20) and admits a ledger report reader (Reports.js:24-28, :47-60) | P19: the moved entry names Sales' `get#SalesReports` on that contract for the root `Sales`, refusing by reason code a user with no Sales report scope; Accounting's mount gets an entry of its own under its catalogue (owner contract). Design-insights §6's Sales row for its owner. P19 changed |
+| F60 | P0 (Nov 13): `autoApprove#Order` (mr-mantle service/mantle/order/OrderServices.xml:1495-1539) acts only on a Placed order whose authorized, delivered or confirmed payments cover its total, never approved before, with no `check#OrderPreApprove` warning; its callers are F52's four and no other. Besides the credit (AccountingCredit.secas.xml:20) and purchase (Purchase.secas.xml:22) SECAs, `check#OrderPreApprove` (order/OrderInfoServices.xml:861-1110) warns on an open hold, a payment in another currency, payments promised or authorized short, a part with no vendor or customer, a store's ProductStoreApprove validators, and, for an internal seller, a new customer, a missing, untrusted or listed shipping address and differing billing and shipping addresses, each switched off only by a store setting. The seller is the part's `vendorPartyId` with the OrgInternal role (:898-900); `approveRefusal` tells a purchase part by its customer (order/PurchaseOrders.js:442-456); a storeless part has its vendor alone | P9: Sales' SECA adds warnings only for an order that meets a Sales rule, so an organization without rules sees none. P11: the setting's rule reads each part's vendor; a net-terms order is never auto-approved today, so the accepted net-terms option approves through `approve#Order` at acceptance. P11 changed |
+| F61 | P0 (Nov 13): the manual approvals of a sales order outside Sales: Customer Service's replacement orders call `approve#Order` under `ORDER_APPROVE` (mr-mantle service/mantle/order/ReturnServices.xml:1094-1098, :1127-1129), and so do the order import (OrderServices.xml:3137), the bulk status change (OrderBulkServices.xml:322) and the demo loaders (service/ironstone/accounting/Demo.js:906 and six more; customerservice/Demo.js:59). Projects' estimate approval places and approves the estimate's open or proposed orders with `update#OrderStatus` (mr-mantle service/mantle/work/ProjectServices.xml:3486-3496), outside `approve#Order`, its credit check and any Sales guard. Shop's base and the drop-ship order write Approved directly too (product/ShopSubscriptions.js:676-681; order/DropShip.js:320), a recurring base and a purchase order | P11: with the setting on, a replacement order is left placed for a Sales approver (the return services ask `approve#Order`'s check, as they skip it for a settler without `ORDER_APPROVE`); the other callers are unchanged with it off. Projects' estimate is §5 Q12, the user's call before P11. P11 changed |
+| F62 | P0 (Nov 13): X1's reach today. `calculate#OrderSalesTax` reads the store's gateway alone (mr-mantle service/mantle/other/TaxServices.xml:85-100) and `handle#OrderMajorChange`'s tax step runs only with a store (OrderServices.xml:2779); X1's fallback is the seller's `PartyAcctgPreference.taxGatewayConfigId`, which no install or demo data sets (the one gateway is a store's, data/ZcaProductDemoData.xml:196; ORG_ZIZI_CORP's preference names none). Customer Service's replacement orders are storeless and priced at zero (ReturnServices.xml:1056-1061, :1074-1076); Projects' estimates are storeless orders of ORG_ZIZI_SERVICES; the one spec that sets a seller's gateway, AccountingTax (test/other/AccountingTax.spec.js:201-205), does so on its own fixture organization for an invoice | P7: X1 changes no built order and no spec; P7's own spec and demo set a gateway. P7 changed |
+| F63 | P0 (Nov 13): RequestTriageNotice still leaves out only `RqtPurchaseRfq` and `RqtHrCase` (mr-mantle entity/Request.eecas.xml:22-25). `complete#RequestFromWork` (service/mantle/request/RequestServices.xml:1546-1600), run by WorkEffortRequestFromWork (entity/Work.eecas.xml:39-41), moves a request only for a task of a project with WstRequestFromWork or the Requests module, and skips `RqtPurchaseRfq`, `RqtInventory`, `RqtHrCase`, an organization's purchase request and a case; an RqtQuote linked to a project task would be completed. SupportCaseRule queues every request but `ensure#CaseProfile` makes a case only of one in a service queue or of a type an organization's request type service-enables (service/mantle/request/SupportCases.js:111, :165-189) | P8: RqtQuote added to RequestTriageNotice's exclusion and `complete#RequestFromWork`'s type list; the case rules need no guard. P8 changed |
+| F64 | P0 (Nov 13): Comms as it consumes the hooks. `contact-card` is read by Mail alone (basic-comms screen/BasicComms/Inbox/Mail.xml:98-104; service/org/moqui/comms/InboxServices.xml:424-449, called with address, partyId and name), with Comms' own provider (screen/Comms.xml:67). Of the `ext-action` slots in the schema only `chat-message-actions` (Chat.qvue:500: chatRoomId, eventSeq), `voicemail-actions` (Calls/Voicemail.qvue:61-63: voicemailId, fromNumber, callSessionId) and `call-actions` (webroot js/WebrootCall.js:1486: callSessionId) render; Mail renders none. `create-from` is called by Chat alone, with kind, emailMessageId, chatRoomId and eventSeq (ProviderInterfaces.xml:83-91; Chat.xml:332); a voicemail's action is a screen-extend transition given the voicemail (screen-extend/basic-comms/screen/BasicComms/Calls/Voicemail.xml:21-37, Customer Service's `createCase`, which reads the transcript) | P5: `create-from` Lead on a chat message, the voicemail's "Create lead" a transition, "Log call on opportunity" in the call and voicemail slots, and a `contact-card` provider; a mail message's "Create lead" and "Create RFQ" wait for Comms (§7), a mail's lead and RFQ coming from the intake addresses. Design §§1.4, 3 and 12.2 changed. P5, P8 changed |
+| F65 | P0 (Nov 13): no component registers a `user-facts` provider: the only `llm-facade` blocks are Mantle's constitution provider (mr-mantle MoquiConf.xml:9) and the demo's, and the framework's conf holds a commented example (framework conf/MoquiDefaultConf.xml:1058-1060). The built-in facts are the user's name, username, id, locale and time zone (crates/moqui-llm/src/prompt.rs:951-972); a provider implements `org.moqui.agent.AgentServices.get#UserFacts` (crates/moqui-llm/src/facts.rs:15-29), and the facts are fixed in a conversation's prefix | P6 builds Mantle's provider (the user's organizations and the active one), the design's prerequisite; a Sales tool still takes and checks its organization, since the active one may change mid-conversation. Design §1.4 changed. P6 changed |
+| F66 | P0 (Nov 13): `report-embed` (framework xsd/xml-screen-3.xsd:1491-1511; template/screen/ScreenSupport.js:85-106) renders a dashboard's panel through `render#Dashboard` as the viewer; a funnel is a client visualization (webroot js/WebrootReport.js:1530-1532) drawn in qvt, as text bars in tui (crates/moqui-tui/src/components/report/visual.rs:42), as a plain table in html and print (ScreenSupport.js:177), and server-static throws (ScreenQvtStatic.js:2574). The dataset's row filter applies for the viewer (crates/moqui-report/src/lib.rs:184-186, :293-330); Mantle's sales datasets use `get#OrganizationRowFilter` (report/mantle-sales-orders.json:9), the organization alone. No dashboard has a funnel panel today, and Insights admits a dataset to Assist or MCP only in the operations or cost class (impl-people F70) | P6: the pipeline dataset's row filter is Sales' scope; `report/boss-sales-pipeline.json` ships in P6 with the funnel panel and P19 adds its other panels; Home's and PipelineAnalysis' funnel are left out of server-static output. Design §§3 and 8 changed. P6, P19 changed |
+| F67 | P0 (Nov 13): Product360, InventoryAvailability, Prices, PriceLists, PriceListDetail and PriceExplain take their scope from `ironstone.products.CatalogServices.get#SharedContext` (e.g. screen/Shared/Prices.xml:32; PriceExplain.xml:34), whose `context()` knows Maintenance, Commerce, CustomerService, Warehouse, Manufacturing, Purchasing and Products and throws for any other root (service/ironstone/products/SharedContext.js:440-448); the pricing services route each call through the root too (Pricing.js:5; ProductsLib.js:89-90). Price read is `PRICE_VIEW` or `PRICE_EDIT` (Pricing.js:20-31). PriceExplain branches Purchasing and CustomerService (PriceExplain.xml:42-49) | P7 adds `salesContext()` on Customer Service's (:236-302: catalogue read, availability read only, price by Products' permissions, no cost) and PriceExplain's Sales branch; P15 extends it for price lists. P7 changed |
+| F68 | P0 (Nov 13): how the shared screens choose a context. The Commons contact record has no app table: an app includes template/ContactRecord.xml's section and transitions behind its own gate, as Customer Service's ContactDetail does (screen/CustomerService/Customers/ContactDetail.xml:27-62, gate `check#ServiceContact`, service/ironstone/customerservice/CustomerServices.xml:77-89); no app mounts Commons' list. Customer360 shows Accounting's context to any root but CustomerService and Commerce (screen/Shared/Customer360.xml:71, :86, :92, :106). OrderDetail is an appRoot chain whose default is Projects' (:126-196, :177; not-found list :213). RequestDetail and WorkItemDetail fall through to Commons' detail for an unknown root (RequestDetail.xml:401-402; WorkItemDetail.xml:437-471), with no refusal | P3: ContactDetail by include with a Sales gate, Contacts Sales' own list, Customer360's four conditions; P7, P11: OrderDetail's branch; P4, P8: their branches before the fall-through. P3, P7, P8 changed |
+| F69 | P0 (Nov 13): a Chatter and files host is an entry in `get#RecordLinkInfo`'s literal maps (mr-mantle service/mantle/party/CommunicationServices.xml:2146-2208), a branch of its `visible()` check (about :2600-2720) when the entity filters are not enough, an entry in RecordFiles' map with its content service (service/ironstone/shared/RecordFilesServices.xml:43-81) and a Chatter title (ChatterServices.xml:94-151); People added each host so (CommunicationServices.xml:2194-2208, :2652-2677). Agreement is a host already, visible to a user of its organization who may see the other party (:2171, :2643-2650; RecordFilesServices.xml:46); SalesOpportunity is in none and has no content entity | P4 builds SalesOpportunityContent and the four entries on People's pattern; P15 keeps Agreement's branch. P4 changed |
+| F70 | P0 (Nov 13): `fancy-locked-html` (crates/moqui-core/src/script/template.rs:100-127, :343-353; framework conf/MoquiDefaultConf.xml:930-931, extension `html.fancy-locked`) runs in a sandbox that sees only the map it is given (template.rs:17-22, :1437-1483: no `ec`, no service or entity, dates and decimals as text). It renders only by location, through `ec.resource.template(location, map)` (crates/moqui-core/src/script/host/globals.rs:699-711); a screen's text include passes no map (crates/moqui-core/src/screen/sri/sections.rs:660), so an EmailTemplate body screen or html-print including such a file renders every field empty. Only storefront themes use it; Mantle's prints render a trusted `.html.fancy` with an explicit map (mr-mantle service/mantle/order/OrderConfirmations.js:144) | P10 (and P12's templates, P11's confirmation text): the cover, terms and reminder text are `.html.fancy-locked` resources, rendered by the mail body's and print's script with an explicit map that is the list of fields they may use. Design §§1.4 and 5 changed. P10 changed |
+| F71 | P0 (Nov 13): the baseline forms ss-inventory maps to a Sales path (ss-inventory.md:650-688 Order, :694-734 Party, :874-891 Request) against the planned contexts. Covered: OrderDetail's header, audit, part edit, lines, close, send and mail list (P7, P11), notes and files (Chatter, RecordFiles); Customer360's roles, classifications, accounts and contacts (P3); ContactDetail's person and organization, notes, contact details and content by the contact record (P3, F68); RequestDetail's header, parties and items (P8). Not covered by a Sales context: the promotion codes (:656-658; promotions are store-only, P7), the payment and gateway forms (:673-676; Accounting's, read only by capability, P11), AddPartForm (:652; one part), ItemLimitForm (:659), SystemMessageList (:666), ChildOrderList (:667), AddOrderPartToShipmentForm (:668) and ReserveItem (:682; Warehouse's), CreateOrderPartParty (:671; parties by role), EditOrderItem on a placed order (:681; a commercial change, P14), RecurOptions (:653; P16), and RequestDetail's tasks and users (:882, :887-891) | Each phase marks its forms in ss-inventory's **Implemented in** with the reason, the uncovered ones as "—" with their owner or phase. P7 changed |
+| F72 | P0 (Nov 13): the demo's internal organizations without a store are ORG_ZIZI_CORP, ORG_ZIZI_SALES ("Ziziwork Sales", OrgInternal and Vendor, rolling up to ORG_ZIZI_CORP, mr-mantle data/ZbaOrganizationDemoData.xml:33-39) and ORG_ZIZI_HR; ORG_ZIZI_SERVICES has Commerce's store (data/BossCommerceDemoData.xml:53) and Projects' orders. ORG_ZIZI_SALES has no customers or orders and appears only in People's demo (data/BossPeopleDemoData.xml:241); no preference names a tax gateway (F62); `LOCAL` is Mantle's gateway (mr-mantle entity/AccountingOtherEntities.xml:306) | ORG_ZIZI_SALES is the second demo organization and the storeless seller: P1's users, P2's team, P3's customers, P7's preference naming `LOCAL`. P1, P7 changed |
+| F73 | P0 (Nov 13): PASS's copies as Deployment says (mr-pass docs/Deployment.md:392-402): `service/pass/Schema.js` and `Routes.js` with Mantle's `ForumSchema.js` and `script/PassRoutes.js`, kept identical by mr-pass test/Forum/Forum.spec.js; the three `TOKEN_WRITES` lists (mr-pass service/pass/Transport.js:57; mr-mantle script/PassApi.js:6, PassAuthority.js:9) hold the same 46 operations, kept equal by mr-pass test/Shop/ShopCart.spec.js:157-159 | P13, P17 as written |
 
 ## 7. Later
 
@@ -1227,7 +1316,8 @@ Designed, not in this build:
   (P11) and the pre-approval warnings it refuses on (P9), which that ticket order meets, its registration and
   ticket following the approval (its P17); consent read only on ContactDetail.
 - **What waits on Admin and Insights:** the Sales privacy provider with Admin's PrivacyServices (design §12.2); the
-  audit reader's projections of Sales' fields with Admin P17 (P0); the funnel with Insights' later funnel.
+  funnel with Insights' later funnel. Sales registers no audit projection (F57): whether a business entity belongs in
+  Admin's AuditChanges is Admin's F257, the user's call.
 - **Links to Maintenance** (F50; impl-maintenance §7 says the same): the chargeable repair's sales quote is built
   here (P8), from Customer Service's warranty decision. Preventive maintenance of customer-owned equipment under a
   service agreement (design-maintenance R-MNT-F01) is later and Maintenance's to design, after P15's AgreementDetail
