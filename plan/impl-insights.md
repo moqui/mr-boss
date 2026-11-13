@@ -64,7 +64,7 @@ found in the code, §6):
     [design-warehouse.md](design-warehouse.md), [design-manufacturing.md](design-manufacturing.md),
     [design-projects.md](design-projects.md) §11, [design-purchasing.md](design-purchasing.md), and
     [design-drawers-commons.md](design-drawers-commons.md) Knowledge (ProcessStory)
-  - mr-moqui `plans/Monitoring.md` (dashboards and reports) and `docs/tools/Monitoring.md` (the built reporting guide,
+  - mr-moqui `plans/archive/Monitoring.md` (dashboards and reports) and `docs/tools/Monitoring.md` (the built reporting guide,
     "Security")
 - Plans:
   - [impl-admin.md](impl-admin.md), its companion, which holds the one build order.

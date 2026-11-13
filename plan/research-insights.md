@@ -4,7 +4,7 @@ Oct 18, 2026
 
 Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-crosscut.md).
 Updated Oct 25, 2026 with references to the framework dashboards and reports tooling planned in
-mr-moqui `plans/Monitoring.md`.
+mr-moqui `plans/archive/Monitoring.md`.
 
 Deeper research pass on the **IronStone Insights** app (initial-design sections: Dashboards
 & KPIs · Report builder · Saved reports · Business flow map as clickable documentation),
@@ -19,7 +19,7 @@ the reused record screens in an Insights context. Style mirrors
 [research-maintenance.md](research-maintenance.md) and
 [research-people.md](research-people.md).
 
-**Framework tooling (planned).** mr-moqui `plans/Monitoring.md` ("Dashboards and reports",
+**Framework tooling (planned).** mr-moqui `plans/archive/Monitoring.md` ("Dashboards and reports",
 Oct 25, 2026) plans a framework dashboards and reports tool on the SearchFacade. It is drawn
 from Grafana and OpenSearch Dashboards, and has its own Dashboards app in the tools component.
 Monitor uses it first, and Insights can reuse its screens and widgets. It provides:
@@ -243,7 +243,7 @@ The design already calls for switchable views on every find screen (list, kanban
 calendar, pivot, graph), generalized in mr-moqui forms and lists (initial-design). Insights
 reuses the same pivot/graph renderer for its widgets and adds "add to dashboard". Whether
 the renderer is framework code or an Insights component was an open question (§17). mr-moqui
-`plans/Monitoring.md` now plans the panel renderers and the pivot transformation as framework
+`plans/archive/Monitoring.md` now plans the panel renderers and the pivot transformation as framework
 code; the find-screen view modes themselves are not in that plan.
 
 | App | Screen/page | What it is | Key files |
@@ -433,7 +433,7 @@ paths are relative to `mr-moqui-base/runtime`.
 
 Missing: any dashboard, widget, widget placement, KPI/number-card definition, alert or flow-map
 record. The Mantle `*Dimension` entities are measurements, not analytics dimensions (§11).
-mr-moqui `plans/Monitoring.md` plans the dashboard, panel and alert definitions; the flow map is
+mr-moqui `plans/archive/Monitoring.md` plans the dashboard, panel and alert definitions; the flow map is
 not part of it (see
 [Framework tooling planned in mr-moqui](#framework-tooling-planned-in-mr-moqui)).
 
@@ -548,7 +548,7 @@ the first two, with a generic report query service and alert rule evaluation.
   condition, frequency, channel, recipients, run-as user, last/next run); report catalog
   entry and pin (screen path, app, user pins); flow map → lane (actor) → step (label, target
   screen + parameter map or saved find, count definition, sequence).
-- **Planned in mr-moqui:** `plans/Monitoring.md` plans one saved-definition entity, holding JSON
+- **Planned in mr-moqui:** `plans/archive/Monitoring.md` plans one saved-definition entity, holding JSON
   definitions with versions and named references. It covers:
   - the dashboard, with widget placement in its layout tree
   - the widget definition, as a library panel
@@ -584,7 +584,7 @@ the first two, with a generic report query service and alert rule evaluation.
 
 ### Framework tooling planned in mr-moqui
 
-mr-moqui `plans/Monitoring.md`, section "Dashboards and reports" (Oct 25, 2026), plans the
+mr-moqui `plans/archive/Monitoring.md`, section "Dashboards and reports" (Oct 25, 2026), plans the
 tooling below as framework pieces. It has its own **Dashboards** app in the tools component, at
 menu-index 96, with these screens:
 - dashboard
@@ -599,7 +599,7 @@ menu-index 96, with these screens:
 The concepts come from Grafana (ideas only, since it is AGPL) and OpenSearch Dashboards.
 Monitor uses the tool first. A business dashboard on `mantle_sales`, shipped from mr-mantle, is
 its check that business reporting works. Section names in the table are those of
-`plans/Monitoring.md`.
+`plans/archive/Monitoring.md`.
 
 | Insights area | Planned framework piece | Plan section | Milestone | Not covered by the plan |
 | --- | --- | --- | --- | --- |
