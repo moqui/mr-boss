@@ -4,7 +4,8 @@
 // another person's emergency contacts refused; Commons Home's People card for them; My team's one qvt render as the manager (their
 // reports and no one else; P10: their last week and Remind missing time); and People's Today source, the decisions waiting on a
 // decider and nothing for the employee (P10: their weeks to submit are PeopleTime's). P10: SelfService's My time and missing-week card.
-// P13: SelfService's clock (the employee's employment has clocking on) and My attendance. P30 review: My clocking badge. The access
+// P13: SelfService's clock (the employee's employment has clocking on) and My attendance. P30 review: My clocking badge. P26
+// review: My payslips with his own legacy pay record, historical. The access
 // cases (the self-service grant, which opens SelfService and nothing else of People, and My team the managers') are PeopleAccess's;
 // Mantle's rules (the team's employments, self-service's own party, due work, emergency contacts) are Mantle's PeopleScope,
 // PeopleDirectory, PeopleApprovals and PeopleChecklists. The usable-when walk is the acceptance PeopleSelfServiceUsable.
@@ -87,8 +88,23 @@ feature(
                     invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId})
                 )
             )
-            return {
-                rendered: asUser(users.employee, () => page("People/SelfService", {partyId: ids.reportPartyId}, "qvt", "Commons"))
+            // P26 review (the user's call of Nov 12, 2026): a legacy pay record of his employment, his own historical pay in My
+            // payslips (removed after the render: no demo data makes one, F71)
+            const legacy = {partyRelationshipId: ids.employmentId, payDate: "2025-12-31"}
+            system(() => {
+                call(
+                    "create#mantle.humanres.employment.EmploymentPayHistory",
+                    Object.assign({payAmount: "2900", netPayAmount: "2400", currencyUomId: "USD"}, legacy)
+                )
+            })
+            try {
+                return {
+                    rendered: asUser(users.employee, () =>
+                        page("People/SelfService", {partyId: ids.reportPartyId}, "qvt", "Commons")
+                    )
+                }
+            } finally {
+                system(() => call("delete#mantle.humanres.employment.EmploymentPayHistory", legacy))
             }
         },
         then({rendered}) {
@@ -119,6 +135,9 @@ feature(
             // P30 review: his clocking badge, waiting for the PIN he sets here
             rendered.output.includes("My clocking badge") && rendered.output.includes("Set my PIN")
             rendered.output.includes("setMyPin") && rendered.output.includes("Issued, not printed yet")
+            // P26 review: My payslips lists his own legacy pay record, historical and opened by its key
+            rendered.output.includes("My payslips") && rendered.output.includes("Historical (read only)")
+            rendered.output.includes("legacyKey")
         }
     }
 )

@@ -279,7 +279,12 @@ const linkPaths = [
     "Payroll/PayAdjustments",
     // P25: pay runs (design §8 PayRuns, PayRunDetail), payroll's under Payroll
     "Payroll/PayRuns",
-    "Payroll/PayRunDetail"
+    "Payroll/PayRunDetail",
+    // P26: payslips and a slip's detail (design §8 Payslips, PayslipDetail), payroll's under Payroll, and the user's own issued
+    // payslip beside SelfService
+    "Payroll/Payslips",
+    "Payroll/PayslipDetail",
+    "MyPayslip"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -301,6 +306,8 @@ function sharedContext(p) {
             webBase: "/qapps/People",
             sharedLinks: {
                 SelfService: "//People/SelfService",
+                // P26: their own issued payslip (its own grant, BOSS_PPL_PAYSLIP_SELF)
+                MyPayslip: "//People/MyPayslip",
                 "Time/MyTime": "//People/Time/MyTime",
                 // P12: their own leave requests and the team calendar (the time area's own grant)
                 "Time/LeaveRequests": "//People/Time/LeaveRequests",

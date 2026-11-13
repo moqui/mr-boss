@@ -235,7 +235,21 @@ feature(
                     "employerCostAmount",
                     "splitText"
                 ],
-                "mantle.humanres.payroll.PayrollRunResult": ["amount", "explanation"]
+                "mantle.humanres.payroll.PayrollRunResult": ["amount", "previousAmount", "explanation"],
+                // P26's payslips and their lines, and the legacy pay history
+                "mantle.humanres.payroll.Payslip": [
+                    "grossAmount",
+                    "deductionAmount",
+                    "contributionAmount",
+                    "localEmployeeAmount",
+                    "localEmployerAmount",
+                    "netAmount",
+                    "employerCostAmount",
+                    "splitText"
+                ],
+                "mantle.humanres.payroll.PayslipItem": ["amount", "previousAmount", "explanation"],
+                "mantle.humanres.employment.EmploymentPayHistory": ["payAmount", "netPayAmount", "taxableYtdIncome"],
+                "mantle.humanres.employment.EmploymentPayDetail": ["amount"]
             }
             const shared = Object.entries(fields).flatMap(([entityName, names]) =>
                 names.filter(name => !optedOut(entityName, name)).map(name => entityName + "." + name)

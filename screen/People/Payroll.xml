@@ -30,13 +30,19 @@ along with this software (see the LICENSE.md file). If not, see
     (Mantle's PayrollInputServices check them). P25: Pay runs (menu 1, the area's default) and PayRunDetail out of the menu, screens of
     this directory: a group's run for a prepared period, its population, inputs, calculation and review, and its approval, read with
     PAYROLL_VIEW, prepared with PAYROLL_EDIT and decided with PAYROLL_APPROVE (Mantle's PayrollRunServices check them); no invoice or
-    payment is made. Payslips and the payroll exchange join with P26 to P28. -->
+    payment is made. P26: Payslips (menu 2) and PayslipDetail out of the menu, screens of this directory: an approved run's slips
+    (preview slips in this build, payroll's alone and never issued), each explained line by line, issued once final, and corrected by a
+    linked correction run, read with PAYROLL_VIEW, issued and corrected with PAYROLL_EDIT (Mantle's PayrollResultServices and
+    PayrollRunServices check them); the person's own issued slips are SelfService's (MyPayslip). The payroll exchange joins with P28. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="PayRuns">
         <!-- P25: pay runs (menu 1, the area's landing, design §1.2) and a run's wizard out of the menu -->
         <subscreens-item name="PayRuns" location="component://mr-boss/screen/People/Payroll/PayRuns.xml" menu-title="Pay runs" menu-index="1"/>
         <subscreens-item name="PayRunDetail" location="component://mr-boss/screen/People/Payroll/PayRunDetail.xml" menu-include="false"/>
+        <!-- P26: payslips (menu 2, design §1.2) and a slip's detail out of the menu -->
+        <subscreens-item name="Payslips" location="component://mr-boss/screen/People/Payroll/Payslips.xml" menu-title="Payslips" menu-index="2"/>
+        <subscreens-item name="PayslipDetail" location="component://mr-boss/screen/People/Payroll/PayslipDetail.xml" menu-include="false"/>
         <subscreens-item name="Rates" location="component://mr-boss/screen/Projects/Billing/Rates.xml" menu-title="Rates" menu-index="5"/>
         <!-- P15: the shared InvoiceDetail in People's context (an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE; F19), out of the menu -->
         <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml" menu-include="false"/>

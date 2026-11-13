@@ -116,6 +116,11 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="WikiPageReview"/>
         <notification-topic topic="WikiPageReviewDecision"/>
         <notification-topic topic="FileShare"/>
+        <!-- People's payslip notice and prompt (owner contract, impl-people P26): declared here too, since a self-service employee
+            opens no People root; the notice opens their own slip under Commons/People/MyPayslip -->
+        <notification-topic topic="PayslipIssued"/>
+        <assist-prompt label="Explain this payslip" text="Explain this payslip: each line, how it was worked out, what changed from my last one, and what the year to date counts"
+                screen="Commons/People/MyPayslip" sequence="44"/>
 
         <keymap>
             <key keys="g h" label="Commons home" screen="Commons/Home"/>

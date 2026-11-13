@@ -72,6 +72,10 @@
 // P25: a pay run created by the payroll operator and refused to the HR officer with the same parameters; Services' group missing to
 // Retail's payroll; the runs read by the payroll approver and refused to the HR officer; PayRuns and PayRunDetail the payroll
 // operator's and the approver's (the HR officer refused both screens).
+// P26: a payslip corrected by the payroll operator and refused to the HR officer with the same parameters; the slip read by the payroll
+// approver and missing to the HR officer; Services' slip missing to Retail's payroll; the employee's own preview slip missing to
+// them through get#MyPayslip, and find#Payslips answering them nothing but their own issued slips; Payslips and PayslipDetail refused
+// to the HR officer; MyPayslip opened to the employee by its own grant (BOSS_PPL_PAYSLIP_SELF) and refused another app's user.
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -84,6 +88,8 @@ const unauthorized = message => /^40[13] |is not authorized/.test(message)
 const teamOnly = "PPL_SPEC_TEAM_ONLY"
 // P15: a spec-local HR officer of Retail (PEOPLE_HR_VIEW and PEOPLE_HR_EDIT) without PEOPLE_EXPENSE_MANAGE
 const hrOnly = "PPL_SPEC_HR_ONLY"
+// P26: the payslip case's group, made in its feature
+const state26 = {}
 
 spec({
     setupSpec() {
@@ -1460,6 +1466,167 @@ feature(
                     payrollServices: "RECORD_UNAVAILABLE",
                     approverReads: "accepted",
                     hrReads: "PERMISSION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P26: a payslip is payroll's: corrected by the payroll operator and refused to the HR officer with the same parameters, Services' slip missing to Retail's payroll; the employee's own issued slips alone",
+    {
+        when() {
+            const R = "mantle.humanres.PayrollRunServices."
+            const P = "mantle.humanres.PayrollResultServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            const call2 = (user, service, parameters) => asUser(user, () => system(() => invoke(service, parameters)))
+            // Retail's group with its July, Tomas (people.employee) assigned with a salary, made as data; a run approved by the payroll
+            // approver makes his preview slip. Services' slip as data (Kenji's): only its employer matters here
+            system(() => {
+                const g = "PPL_SPEC_PAL_SG"
+                call("create#mantle.humanres.payroll.PayrollGroup", {
+                    payrollGroupId: g,
+                    organizationPartyId: ids.organizationId,
+                    groupName: g,
+                    currencyUomId: "USD",
+                    timePeriodTypeId: "PayrollMonth",
+                    firstPeriodFromDate: "2026-07-01",
+                    periodsPerYear: 12,
+                    payDateOffsetDays: 0,
+                    prorationEnumId: "PprCalendarDays",
+                    timeBasisEnumId: "PtbSchedule",
+                    payrollLocalizationId: "PlzDemonstration",
+                    liveEnabled: "N",
+                    fromDate: 0
+                })
+                const existing = ec.entity
+                    .find("mantle.party.time.TimePeriod")
+                    .condition({partyId: ids.organizationId, timePeriodTypeId: "PayrollMonth", fromDate: "2026-07-01"})
+                    .one()
+                const timePeriodId = existing
+                    ? existing.timePeriodId
+                    : call("mantle.party.TimeServices.create#TimePeriod", {
+                          partyId: ids.organizationId,
+                          timePeriodTypeId: "PayrollMonth",
+                          fromDate: "2026-07-01",
+                          thruDate: "2026-07-31"
+                      }).timePeriodId
+                call("create#mantle.humanres.payroll.PayrollGroupPeriod", {
+                    payrollGroupId: g,
+                    timePeriodId,
+                    payDate: "2026-07-31"
+                })
+                call("create#mantle.humanres.payroll.PayrollComponent", {
+                    payrollComponentId: g + "_C",
+                    organizationPartyId: ids.organizationId,
+                    componentCode: g + "_SAL",
+                    componentName: "Access spec salary",
+                    componentKindEnumId: "PckEarning"
+                })
+                call("create#mantle.humanres.payroll.PayrollComponentTerm", {
+                    payrollComponentId: g + "_C",
+                    statusId: "PtsPublished",
+                    fromDate: 0,
+                    basisEnumId: "PcbFormula",
+                    formula: "round(annualSalary / periodsPerYear, 2)",
+                    inputNames: "annualSalary,periodsPerYear",
+                    currencyUomId: "USD"
+                })
+                call("create#mantle.humanres.payroll.PayrollStructure", {
+                    payrollStructureId: g + "_S",
+                    organizationPartyId: ids.organizationId,
+                    structureName: g,
+                    currencyUomId: "USD",
+                    payBasisEnumId: "PpbSalaried",
+                    statusId: "PtsPublished",
+                    fromDate: 0
+                })
+                call("create#mantle.humanres.payroll.PayrollStructureComponent", {
+                    payrollStructureId: g + "_S",
+                    payrollComponentId: g + "_C",
+                    statusId: "PtsPublished",
+                    fromDate: 0,
+                    sequenceNum: 1
+                })
+                call("create#mantle.humanres.payroll.PayrollAssignment", {
+                    partyRelationshipId: ids.employmentId,
+                    partyId: ids.employeePartyId,
+                    organizationPartyId: ids.organizationId,
+                    payrollStructureId: g + "_S",
+                    payrollGroupId: g,
+                    isPrimary: "Y",
+                    fromDate: "2026-07-01 00:00:00",
+                    thruDate: "2026-08-01 00:00:00"
+                })
+                call("create#mantle.humanres.employment.EmploymentSalary", {
+                    partyRelationshipId: ids.employmentId,
+                    fromDate: "2026-07-01 00:00:00",
+                    thruDate: "2026-08-01 00:00:00",
+                    amount: "36000",
+                    currencyUomId: "USD",
+                    timePeriodTypeId: "PayrollYear"
+                })
+                call("create#mantle.humanres.payroll.Payslip", {
+                    payslipId: "PPL_SPEC_PAL_SLIP_SVC",
+                    organizationPartyId: ids.otherOrganizationId,
+                    partyRelationshipId: ids.otherEmploymentId,
+                    partyId: ids.otherEmployeePartyId,
+                    payDate: "2026-07-31",
+                    currencyUomId: "USD",
+                    runKindEnumId: "PrkRegular",
+                    statusId: "PssPreview",
+                    isPreview: "Y"
+                })
+                state26.group = {payrollGroupId: g, timePeriodId}
+            })
+            const runId = call2(users.payroll, R + "create#Run", state26.group).payrollRunId
+            call2(users.payroll, R + "calculate#Run", {payrollRunId: runId})
+            call2(users.payroll, R + "submit#Run", {payrollRunId: runId})
+            call2(users.payApprover, R + "approve#Run", {payrollRunId: runId})
+            const payslipId = system(() =>
+                ec.entity
+                    .find("mantle.humanres.payroll.Payslip")
+                    .condition({payrollRunId: runId, partyRelationshipId: ids.employmentId})
+                    .one()
+            )?.payslipId
+            const correction = {payslipId, reason: "Access spec"}
+            // the HR officer first, with the parameters the payroll operator then corrects the slip with
+            const codes = {
+                hrCorrects: as(users.hr, R + "create#Correction", correction),
+                payrollCorrects: as(users.payroll, R + "create#Correction", correction),
+                approverReads: as(users.payApprover, P + "get#Payslip", {payslipId}),
+                hrReads: as(users.hr, P + "get#Payslip", {payslipId}),
+                payrollServices: as(users.payroll, P + "get#Payslip", {payslipId: "PPL_SPEC_PAL_SLIP_SVC"}),
+                employeeOwnPreview: as(users.employee, P + "get#MyPayslip", {payslipId})
+            }
+            const listed = asUser(users.employee, () => system(() => invoke(P + "find#Payslips", {partyId: ids.reportPartyId})))
+            const problems = []
+            if (
+                Array.from(listed.payslips || []).some(
+                    row => (!row.historical && row.statusId !== "PssIssued") || row.partyId !== ids.employeePartyId
+                )
+            )
+                problems.push("the employee's find#Payslips answers another's or a slip not issued")
+            for (const path of ["Payroll/Payslips", "Payroll/PayslipDetail"]) {
+                const refusedScreen = screenRefusal(users.hr, path, {payslipId})
+                if (!unauthorized(refusedScreen)) problems.push(`${users.hr} opens ${path}: ${refusedScreen || "opened"}`)
+            }
+            const opened = screenRefusal(users.employee, "MyPayslip", {})
+            if (opened) problems.push(`the employee's MyPayslip: ${opened}`)
+            const otherApp = screenRefusal(users.otherApp, "MyPayslip", {})
+            if (!unauthorized(otherApp)) problems.push(`${users.otherApp} opens MyPayslip: ${otherApp || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    hrCorrects: "PERMISSION_DENIED",
+                    payrollCorrects: "accepted",
+                    approverReads: "accepted",
+                    hrReads: "RECORD_UNAVAILABLE",
+                    payrollServices: "RECORD_UNAVAILABLE",
+                    employeeOwnPreview: "RECORD_UNAVAILABLE"
                 }
             problems.join("\n") == ""
         }

@@ -498,7 +498,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P25, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P26, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -724,6 +724,13 @@ the screens that call it.
 | PayrollRunServices | get#Run | People/Payroll/PayRunDetail (CalculateAndReview, Approval) | People/Payroll/PayRunDetail (the header, the steps and progress, the population, an employee's lines and inputs, the Approval step's totals) (People P25) |
 | PayrollRunServices | submit#Run, approve#Run, return#Run | People/Payroll/PayRunDetail (Approval); the PayrollRunApproval topic | People/Payroll/PayRunDetail (Approval: Ask for approval, Approve, Return); People/Approvals and the tray (the topic's approve and return) (People P25) |
 | PayrollRunServices | cancel#Run | People/Payroll/PayRunDetail (the record header) | People/Payroll/PayRunDetail (Cancel run with its reason, a run not approved; its inputs released) (People P25 review) |
+| PayrollRunServices | create#Correction | People/Payroll/PayslipDetail (CorrectPay) | People/Payroll/PayslipDetail (Correct pay: a correction run with the reason and a pay date, opened in PayRunDetail; its slip linked to the original) (People P26) |
+| PayrollResultServices | find#Payslips | People/Payroll/Payslips (Slips) | People/Payroll/Payslips (FindPayslips, SlipList: preview, final, issued and corrections, the legacy history labelled historical); People/SelfService and Commons/People/SelfService (My payslips: the user's own issued slips, with mine) (People P26) |
+| PayrollResultServices | get#Payslip | People/Payroll/PayslipDetail (PayBreakdown) | People/Payroll/PayslipDetail (the header, Pay breakdown with each line's rule and explanation, Year to date, Original and corrections with the net effect, Inputs paid, Download statement; a legacy pay record by its own key) (People P26) |
+| PayrollResultServices | get#MyPayslip | People/Payroll/PayslipDetail (own issued slips; the Assistant's tool) | People/MyPayslip and Commons/People/MyPayslip (the user's own issued slip, or their own legacy pay record by its key: P26 review); the Assistant's people_my_payslip tool ("Explain this payslip", the people-payslip-explain skill) (People P26) |
+| PayrollResultServices | get#MyPayslipStatement | People/Payroll/PayslipDetail (own issued slips' statement) | MyPayslip's Download statement (the user's own issued slip's stored statement; no tool) (People P26 review) |
+| PayrollResultServices | issue#Payslip | People/Payroll/PayslipDetail (StatementOutput) | People/Payroll/PayslipDetail (Issue statement, a final slip's: rendered once, stored, the PayslipIssued notice) (People P26) |
+| PayrollResultServices | check#PayslipAccess, create#PayslipContent | People/RecordFiles (the payslip host, PE-01) | People/Payroll/PayslipDetail (Files: RecordFiles of Payslip, payroll's, through get#RecordLinkInfo and RecordFiles' get#ContentType) (People P26) |
 
 ## Ledger (81 services)
 

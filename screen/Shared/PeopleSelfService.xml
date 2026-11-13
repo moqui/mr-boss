@@ -44,7 +44,11 @@ along with this software (see the LICENSE.md file). If not, see
     whole, pay included (get#MyLetter refuses another person's letter as a missing one). P30 review (the user's call of Nov 12,
     2026): My clocking badge, the user's own badges in use (mantle.humanres.AttendanceServices get#MyKioskBadges, which takes no
     party), shown when they have any, where they set their own PIN (set#MyKioskPin: the one-time PIN HR gave, if any, or the PIN they
-    have) before the badge works at a kiosk, and change it any time; HR never learns it. Payslips (P26) join with their phase. -->
+    have) before the badge works at a kiosk, and change it any time; HR never learns it. P26: My payslips, the user's own issued slips
+    (mantle.humanres.PayrollResultServices find#Payslips with mine: never a preview, a slip not issued or another person's), shown
+    when they have any, each opening MyPayslip beside this screen (none in this build outside a live payroll: pay groups are in preview
+    mode, design §5 Q3); the net is opted out of AI. P26 review (the user's call of Nov 12, 2026): their own legacy pay history in the
+    same list, labelled historical, opening the record read only by its key (MyPayslip with legacyKey). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -158,6 +162,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="letterRows" from="Array.from(myLetters?.letters || [])"/>
         <set field="letterEmployers" from="new Set(letterRows.map(row => row.organizationPartyId)).size"/>
         <set field="scorecardsText" from="String(myInterviews?.toAnswerCount || 0)"/>
+        <!-- P26: the user's own issued payslips, newest first (find#Payslips with mine never widens past them) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.PayrollResultServices.find#Payslips" out-map="myPayslips" transaction="force-new"
+                    ignore-error="true" in-map="{mine:true, pageSize:6}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="payslipRows" from="Array.from(myPayslips?.payslips || [])"/>
+        <set field="payslipEmployers" from="new Set(payslipRows.map(row => row.organizationPartyId)).size"/>
         <!-- P30 review: the user's own clocking badges (get#MyKioskBadges takes no party) -->
         <if condition="available">
             <service-call name="mantle.humanres.AttendanceServices.get#MyKioskBadges" out-map="myBadges" transaction="force-new" ignore-error="true"/>
@@ -464,6 +476,36 @@ along with this software (see the LICENSE.md file). If not, see
                                     <columns type="mobile">
                                         <column><field-ref name="title"/></column>
                                         <column><field-ref name="issuedDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P26: My payslips, the user's own issued slips, shown when they have any, each opening their payslip -->
+                <section name="MyPayslipsSection" condition="payslipRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My payslips"/>
+                            <box-body-nopad>
+                                <form-list name="MyPayslips" list="payslipRows" skip-form="true" paginate="false">
+                                    <field name="payDateText">
+                                        <default-field title="Pay date">
+                                            <link url="../MyPayslip" text="${payDateText}" link-type="anchor" parameter-map="{payslipId:payslipId, legacyKey:legacyKey}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                                    <field name="kindText">
+                                        <conditional-field condition="correctsPayslipId" title="Kind"><display text="Correction"/></conditional-field>
+                                        <conditional-field condition="historical" title="Kind"><display text="Historical (read only)"/></conditional-field>
+                                        <default-field title="Kind"><display/></default-field>
+                                    </field>
+                                    <field name="organizationName" hide="payslipEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="payDateText"/><field-ref name="periodText"/></column>
+                                        <column><field-ref name="netText"/></column>
                                     </columns>
                                 </form-list>
                             </box-body-nopad>

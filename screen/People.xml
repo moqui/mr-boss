@@ -63,7 +63,9 @@ along with this software (see the LICENSE.md file). If not, see
     the reviewer's, development's and, once released, the person's; never the reviewer's private notes, which are not Chatter), the
     PeopleReviewStep and PeopleReviewUpdate topics and the key g f. P30 the hidden Time/ClockingKiosk, the page a registered clocking
     device opens (the PEOPLE_CLOCKING route group admits it alone), whose request runs as the device's display account:
-    get#SharedContext is not called for it (below). -->
+    get#SharedContext is not called for it (below). P26: Payslips and a slip's detail under Payroll (payroll's), the user's own issued
+    payslip beside SelfService (MyPayslip, also Commons'), a payslip's files (its content host, payroll's), the PayslipIssued topic and
+    the prompt "Explain this payslip". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -94,7 +96,10 @@ along with this software (see the LICENSE.md file). If not, see
                 // files and notes (its content host, Mantle's check#ReviewAccess)
                 const confidentialCase = entityName === 'mantle.request.Request' && !!ec.context.recordId && ec.resource
                         .script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(String(ec.context.recordId))
-                if (!confidentialCase && !['mantle.humanres.employment.Employment', 'mantle.humanres.employment.EmploymentApplication',
+                // P26: a payslip's files (its content host, payroll's alone: Mantle's check#PayslipAccess); no notes, which would reach
+                // the person once the slip is issued
+                const payslipFiles = panelName === 'RecordFiles' && entityName === 'mantle.humanres.payroll.Payslip'
+                if (!confidentialCase && !payslipFiles && !['mantle.humanres.employment.Employment', 'mantle.humanres.employment.EmploymentApplication',
                         'mantle.humanres.ability.PartyQualification', 'mantle.humanres.ability.PerformanceReview'].includes(entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
             }
@@ -112,6 +117,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P16 review (the user's call of Nov 12, 2026): an interview panel member's own interview and scorecard, beside SelfService
             and opened from its My interviews, the same definition as Commons/People/MyInterview -->
         <subscreens-item name="MyInterview" location="component://mr-boss/screen/Shared/PeopleMyInterview.xml" menu-include="false"/>
+        <!-- P26: the user's own issued payslip, beside SelfService and opened from its My payslips, the same definition as
+            Commons/People/MyPayslip -->
+        <subscreens-item name="MyPayslip" location="component://mr-boss/screen/Shared/PeopleMyPayslip.xml" menu-include="false"/>
     </subscreens>
 
     <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b; P14: g h; P16: g n and g v; P18: g k and g q). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
@@ -217,6 +225,11 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P25: a pay run to approve (PayrollRunApproval; PayrollRunServices approve#Run and return#Run), a title naming the group
             and the period, never a person or an amount -->
         <notification-topic topic="PayrollRunApproval"/>
+        <!-- P26: the person's payslip issued (PayslipIssued: direct only, no amount), opening their own slip; "Explain this payslip" on
+            it (the people-payslip-explain skill, answered from the user's own people_my_payslip tool) -->
+        <notification-topic topic="PayslipIssued"/>
+        <assist-prompt label="Explain this payslip" text="Explain this payslip: each line, how it was worked out, what changed from my last one, and what the year to date counts"
+                screen="People/MyPayslip" sequence="44"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

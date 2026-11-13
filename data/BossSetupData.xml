@@ -5685,4 +5685,36 @@ along with this software (see the LICENSE.md file). If not, see
         PayRunDetail at the Approval step, where its approver (a payroll approver who neither selected nor calculated it) decides. -->
     <moqui.security.user.NotificationTopic topic="PayrollRunApproval"
             linkTemplate="/qapps/People/Payroll/PayRunDetail?payrollRunId=${payrollRunId}"/>
+    <!-- impl-people P26 (design-people §8 Payslips, PayslipDetail, §3 SelfService, §1.4 Assist, §15; F28's pattern): Payslips and
+        PayslipDetail are under Payroll's grant (BOSS_PPL_PAYROLL: the payroll operator issues and corrects, the payroll approver reads).
+        An employee's own issued payslips: a non-inheritable ALLOW on the shared MyPayslip screen (one location for both mounts,
+        People/MyPayslip and Commons/People/MyPayslip), its statement's download, and the Mantle services it and SelfService's My
+        payslips call, each of which admits the caller's own issued slips alone (find#Payslips with mine, get#MyPayslip, which takes no
+        party). Nothing of payroll opens to them. The PayslipIssued notice (Mantle's topic, direct only, no amount) opens the slip under
+        Commons, every self-service employee's mount. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_PAYSLIP_SELF" description="People own payslips for employees">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyPayslip.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyPayslip.xml/myStatement"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.PayrollResultServices\.(find#Payslips|get#MyPayslip|get#MyPayslipStatement)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYSLIP_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PayslipIssued"
+            linkTemplate="/qapps/Commons/People/MyPayslip?payslipId=${payslipId}"/>
+    <!-- P26 (design-people §1.4 Assist: a self-scope read; exposeMcp N, as no HR or payroll service is offered to MCP): the user's own
+        issued payslip for "Explain this payslip". The tool is get#MyPayslip, the self-scope form of get#Payslip, since a tool's
+        parameters are the model's to fill and get#Payslip answers payroll about other people. It returns the person's own amounts to
+        their own session: pay's AI opt-out (the user's call of Nov 12, 2026) keeps amounts out of screens' agent renders and the
+        generic data tool, and this explicit self-only read is the design's own (the user's call of Nov 12, 2026, as built). Its only
+        arguments are a payslipId or legacyKey, each checked as the caller's own (issued, never a preview); it never names where a
+        statement is stored (get#MyPayslipStatement, the screen's download, is no tool: P26 review). -->
+    <moqui.agent.AgentToolExposure toolName="people_my_payslip" serviceName="mantle.humanres.PayrollResultServices.get#MyPayslip"
+            title="My payslip"
+            description="get#MyPayslip: the signed-in user's own issued payslip (never anyone else's, never a preview or one not issued): payslipId's, else the latest. Its employer, period and pay date, each line the payslip shows with its amount, group and how it was worked out (the formula and values, proration, adjustments, rounding), the totals (gross, deductions, the localization's items, net, employer cost), the year to date, the corrections of it that are issued with the net effect, and the inputs it paid (hours, leave, pieces, claims). With a legacyKey from My payslips, the user's own historical pay record as it was recorded."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
 </entity-facade-xml>
