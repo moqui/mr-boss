@@ -8244,6 +8244,101 @@ Design §8.4 (external processing, migration), PayrollExchange, §15; PE-19. End
     preview of an external group's results before it is live; corrections and off-cycle pay of an external processor; a column mapping
     step for exchange files; whether the payroll operator should hold `PEOPLE_IMPORT` or a payroll import permission of its own.
 
+**Review Nov 13 (P28).** A fresh review of `git diff master...ppl/p28` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design-people §8.4, PayrollExchange and §15, and the framework's data transfer contracts (`DataTransferExports.js` `requestOf`,
+`fileOf`; `DataTransferLib.js` `writeDelimited`, `parseDelimited`), the replay, double counting, finalization path and the export's
+field permissions first; the user's three calls of Nov 13 built and recorded in §4 and §7; fixes committed apart per repository
+("People P28 review: …"). mr-boss was first rebased onto master (c995c940, §4's F356–F360 note): it replayed cleanly; mr-mantle was
+current. Tested on the shared release binary (`--release --nobuild`, this phase's runtime).
+- Checked and found sound:
+  - Replay: a batch's key is its kind, scope and the content's SHA-256 (an export's, its inputs and their stamps), unique, so the same
+    file answers its batch (`repeated`); a different file adds nothing by its rows' keys: history's employment and day (`known` with
+    the same amounts, `CONFLICT` with others, `duplicate` within the file), results' employment in the period's run (`known`) or with
+    a net pay obligation of the period (`ALREADY_PAID`). Each check is made again at reconciliation and, under the employment's lock,
+    in each row's or employee's own transaction at execution; a row that fails is named (`failed` with its reason) and the rest go on.
+  - History makes `EmploymentPayHistory` (internal payroll N) alone: no invoice, obligation or slip; no year to date counts it.
+  - Results: the group in external processing (`NOT_EXTERNAL`), `requireLive` and `requireProjection` at execution, as finalization
+    calls them; the run is made in review with calculated employments and their results, and Ask for approval, Approve (never a
+    preparer or a person paid) and `finalize#Run` are P27's own path unchanged: the same slips, statements, obligations and payee
+    invoices, the period's approved inputs taken and finalized. Native calculation is refused on every entry point that calculates
+    (`create#Run`, `select#Employments`, `calculate#Run`, `create#Correction`: `EXTERNAL_PROCESSING`; `get#Run` answers no edit);
+    PayrollConfiguration.js's `computeTerm` callers are the configuration's test tools, which make no run.
+  - Access: every service checks its own permission and People's employer scope (another employer's batch is a missing one); the
+    import target's permissions are `PEOPLE_IMPORT`, `PAYROLL_VIEW` and `PAYROLL_EDIT`, all required by the framework and again by
+    `preview#Batch` and `execute#Batch`, no `ADMIN_*`; the stored file's download goes through `get#Batch` and its holder check.
+  - The export target: the framework's `run#Export` admits each field by its permission for every caller (`requestOf`: amount and
+    rate `PAYROLL_VIEW`), and `export#InputsTransfer` checks PAYROLL_VIEW and PAYROLL_EDIT itself. Finding 7 (Admin's DataExport
+    exports the whole period): it is still scoped by the caller's employers: `find#ExportScopes` lists only the groups of the
+    caller's People scope, `run#Export` refuses a scope not listed, and `export#InputsTransfer` refuses a group of another employer
+    (`SCOPE_INVALID`) and a batch of another group or period (`BATCH_INVALID`); what it exports beyond People's own export is the
+    period's whole approved inputs (no `NOT_IN_GROUP` filter, no batch or manifest), as the Built note says.
+  - The uploaded file: 1 MiB (`FILE_TOO_LARGE`, by the item's size and the text's length), the framework's bounded parser (5,000
+    rows, 30 columns, 200 characters a cell, quotes, no NUL), each cell trimmed and cut before it is stored; shown escaped
+    (`encodeHtml` in qvt, the rows' CSV through the framework's screen writer, which guards formulas and keeps plain numbers).
+    The manifest names the stored file's SHA-256, computed over the same text the file is stored with.
+  - Amounts `ai-opt-out` on the entities (row amounts, gross, net, the signed-off totals, the manifest) and the screen's amount
+    columns.
+- Fixed:
+  - R1 (high, no self-approval): a second results file imported into the period's external run while it waits for approval left its
+    importer out of the run's preparers, so a second importer holding PAYROLL_APPROVE could approve the employees they imported, and
+    a request waiting on the run stayed pending for a population it never saw. Whoever imports into an existing run is added to
+    `preparedByUserIds` (as a calculation adds its user), and adding employees supersedes a waiting request
+    (`Approvals.sourceChanged`, as a change of a calculated run does). Spec PayrollExchange (Eve's results from a second importer
+    who also approves: the first request `PapSuperseded`, their approval `SELF_APPROVAL`, the approver's approval and finalization
+    with three net pay invoices; each check fails on the unfixed code).
+  - R2 (high, no double count): `PAID_HERE` refused history only on the very day of a final or issued slip, so a former system's pay
+    of a period People also paid (a mid-month pay day, or the last day of a month People paid on another day) was recorded beside
+    it. A history row is now refused on or after the start of the first period People paid the employment (its slips' periods or
+    pay days, `paidFrom`). Spec PayrollExchange (another day of the paid month refused; the unfixed code made it ready).
+  - R3 (medium, finding 6): the pay inputs file wrote a negative amount as `'-10` (the framework's `delimitedCell` escapes any
+    leading "-"). People's export now writes its own file (`inputsFile`): a quantity, amount or rate whose value is a plain number
+    (`-?digits[.digits]`) is written as that number, every other cell (headers, names, input names, keys) through the framework's
+    `delimitedCell`, so a formula stays text. Spec PayrollExchange (Cal's -10.00 adjustment named `=1+2`: `"-10"` and `"'=1+2"` in
+    the file; the unfixed code wrote `"'-10"`). The framework's writer is left for the lead (below).
+  - R4 (medium): an import amount dropped every comma, so `2.000,00` read as 2.00000 and was recorded as 2.00 (a history row whose
+    net is under its gross passes). Commas are now taken only as thousands separators (`1,234.50`); anything else is
+    `AMOUNT_INVALID`. Spec PayrollExchange (a comma decimal row refused; the unfixed code made it ready).
+  - R5 (low): the exchange's signed-off gross and net fields (whose tooltips carry the amounts) are `ai-opt-out`.
+  - R6 (the user's call of Nov 13, 2026): the recovery settings hold an amount cap and a percentage cap together. `capFor`: with a
+    percentage and a last finalized regular net, that share at most the amount; with no net, the amount (else zero, the recovery
+    waiting a period); an amount alone, the cap; `store#RecoverySettings` no longer refuses both; `capText` names both;
+    PayRecovery's two fields (Most a period: percentage of net pay, amount) in place of the kind radio. Specs PayObligations (a
+    percentage above 100 refused in place of both kinds; the P28 feature: both stored and read, 40.00 before a first net, then with
+    a 1,000.00 net 40.00 under an amount of 40 and 300.00 under 450 or alone).
+  - R7 (the user's calls of Nov 13, 2026): §7 records the external-processing extras; §4 the three calls.
+- Provisional findings (for the lead to number):
+  - The framework's `DataTransferLib.js` `delimitedCell` escapes every cell with a leading "-", so any `rows` target's negative
+    number reaches a file as text; the screen CSV writer (`moqui-core`, `csv_guards_formula_text_and_quotes_a_carriage_return`)
+    already keeps a plain number. The framework's writer could do the same; People's export no longer depends on it.
+  - A results file's employees added in a transaction of their own are marked on the batch's rows in the service's transaction: a
+    rollback after them (the 600 s timeout) leaves the employees in the run and the batch Reconciled with its rows ready; a
+    reconcile then finds them `known` and the execute is `NOTHING_READY`, so the batch never reads Done though nothing counts twice.
+  - A results file replayed after its run was cancelled answers its executed batch (`repeated`): the same content cannot be
+    imported again; a file that differs in any byte can.
+  - `find#ExportScopes` lists periods from about 400 days back to 62 days ahead, at most 200; People's export of a period outside
+    that list fails in `run#Export` as a scope not available.
+  - An export batch re-exported from Admin's DataExport (its `batch` option) writes its inputs as they are now, whatever their state.
+  - The Built note's findings stand (the projection always in place; no preview of results before live; an external run's
+    approval binding the imported results; no external corrections, off-cycle results or column mapping, now §7; history as a
+    record's header with no year to date; Admin's DataExport without People's manifest; `PEOPLE_IMPORT` for the payroll operator,
+    now the user's call; the qualifications index rebuilt once; a group's processing changed only with no open run). Carry-over
+    (c)'s "not both" is superseded by R6.
+- Tests run (release, this phase's runtime): after the rebase and fixes, mr-mantle PayrollExchange 3 of 3 (0.41, 0.24, 1.79 s; R1's
+  three checks, R2, R3 and R4 fail on the unfixed code, each tried apart) and PayObligations 6 of 6 (0.52, 1.47, 0.72, 1.50, 0.44,
+  0.34 s), 9 of 9 in 28.6 s; mr-boss PeopleAccessLater and PeopleAccess 36 of 36 (39.1 s, features 17.7 s). `moqui lint --screens`
+  (the release binary, this runtime): 139 flagged sites as before, none in PayRecovery or PayrollExchange. Prettier clean on the
+  changed JavaScript. Not run: test-apps, test-framework, the acceptance suite (PeoplePayrollExchangeUsable unchanged by the review).
+- For the lead:
+  - budget share: mr-mantle PayrollExchange about 2.4 s release (the Built note's 1.3 to 2.0 s, plus Eve's import and approval) and
+    PayObligations' P28 feature 0.34 s (the Built note's 0.01 s: it now stores the settings through the service five times);
+  - merge hot spots beside the Built note's: mr-mantle `PayrollExchange.js` (`amountOf`, `paidFrom`, `historyState`,
+    `executeResults`, `inputsFile`), `PayrollObligations.js` (`capFor`, `capText`, `storeRecoverySettings`),
+    `PayrollSetupServices.xml` (the recovery settings' descriptions), both specs; mr-boss `PayRecovery.xml`, `PayrollExchange.xml`,
+    design-people's header and §8.2's and §8.4's paragraphs, §4's last three rows, §7;
+  - the framework's delimited writer and a plain negative number (the first finding) is the lead's to take to mr-moqui;
+  - the user's calls of Nov 13, 2026 are recorded in §4 (three rows) and §7 and built (R6); R2's reading of "never double counts"
+    (history refused from the start of the first period People paid, not only its pay day) is the review's, for the user to confirm.
+
 ### P29 — Reports, Insights and settings
 
 Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, Assist), §15; PE-17, PE-24.
@@ -9014,6 +9109,9 @@ the owner's design.
 | Nov 13, 2026 | People's Insights qualifications dataset leaves out identity documents and work permits: the qualification document of one is not indexed (and is deleted by the feed), whatever its verification | The user's call (P29's carry-over, built in P28: `BossSetupPeopleReportData.xml`'s post-query condition `restrictedType`, set by `InsightsServices.get#QualificationDocumentData`; an index built before is rebuilt once; PeopleInsights) |
 | Nov 13, 2026 | Employer contributions go on the payee's invoice at finalization and post when Accounting approves that invoice; People makes no ledger entries itself | The user's call (P27's carry-over, confirming the P27 review's reading): recorded only, as built; design-people §8.2 |
 | Nov 13, 2026 | The overpayment recovery percentage cap is read from the employee's last finalized regular net pay; when there is no earlier net, the recovery waits one period (or uses the amount cap if one is set) instead of being uncapped | The user's call (P27's carry-over, built in P28: PayrollObligations.js `capFor` and `recoveryInputs`; Mantle PayObligations); design-people §8.2 |
+| Nov 13, 2026 | The recovery settings may hold an amount cap and a percentage cap together: the percentage of the last finalized net applies when there is one, the amount cap applies before the first net pay and as an upper bound otherwise | The user's call on P28's finding (built in P28's review: PayrollObligations.js `capFor`, `capText`; `store#RecoverySettings` no longer refuses both; People › Payroll › Overpayment recovery's two fields; Mantle PayObligations; design-people §8.2) |
+| Nov 13, 2026 | External-processing extras are later: a preview of an external processor's results before a group is live, the processor's corrections and off-cycle pay, and a column-mapping step for exchange files | The user's call on P28's findings: recorded in §7, not built |
+| Nov 13, 2026 | The payroll exchange import keeps `PEOPLE_IMPORT` as People's one import permission, with PAYROLL_VIEW and PAYROLL_EDIT beside it; no payroll import permission of its own | The user's call on P28's finding, as built (the `payrollExchange` target's import permissions; `BOSS_PEOPLE_PAYROLL` holds `PEOPLE_IMPORT`) |
 
 ## 5. Open questions
 
@@ -9166,6 +9264,10 @@ Designed, not in this build:
   adopting `check#Qualifications`; People's privacy provider and retention purposes, when Admin builds
   PrivacyServices and Retention (F47); whether People's changes belong in Admin's AuditChanges at all, Admin's F257
   (People registers no audit projection, F56).
+- **External payroll processing extras** (P28; the user's call, §4, Nov 13, 2026): a preview of an external processor's results
+  as preview slips before its group is live (today a results file waits on the live group at execution, its reconciliation naming
+  why); a results kind for the processor's corrections and off-cycle pay (`create#Correction` refuses an external slip); a
+  column-mapping step for exchange files (the columns are fixed: worker, component, amount; history worker, payDate, gross, net).
 - **Read receipt from a photo** (P15; the user's call, §4, Nov 12, 2026): `run#Extract` takes text only, so a photo's receipt
   is read only once the framework offers an image or OCR input (a framework ask in mr-moqui's `plans/Remaining-Work.md`);
   `read#Receipt` would then pass the receipt file itself.

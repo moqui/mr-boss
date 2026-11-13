@@ -245,11 +245,11 @@ along with this software (see the LICENSE.md file). If not, see
                                         tooltip="${kind == 'results' ? 'Required' : 'Optional'}: compared when reconciling"><text-line size="6" input-type="number"/></conditional-field>
                                 <default-field><ignored/></default-field>
                             </field>
-                            <field name="expectedGross">
+                            <field name="expectedGross" ai-opt-out="true">
                                 <conditional-field condition="kind != 'export'" title="Gross signed off"><text-line size="12" input-type="number"/></conditional-field>
                                 <default-field><ignored/></default-field>
                             </field>
-                            <field name="expectedNet">
+                            <field name="expectedNet" ai-opt-out="true">
                                 <conditional-field condition="kind != 'export'" title="Net signed off"><text-line size="12" input-type="number"/></conditional-field>
                                 <default-field><ignored/></default-field>
                             </field>
@@ -354,12 +354,12 @@ along with this software (see the LICENSE.md file). If not, see
                                         <text-line size="6" input-type="number"/></conditional-field>
                                     <default-field><ignored/></default-field>
                                 </field>
-                                <field name="expectedGross">
+                                <field name="expectedGross" ai-opt-out="true">
                                     <conditional-field condition="batch.exchangeKindEnumId != 'PxkExport'" title="Gross signed off" tooltip="${batch.expectedGrossText}">
                                         <text-line size="12" input-type="number"/></conditional-field>
                                     <default-field><ignored/></default-field>
                                 </field>
-                                <field name="expectedNet">
+                                <field name="expectedNet" ai-opt-out="true">
                                     <conditional-field condition="batch.exchangeKindEnumId != 'PxkExport'" title="Net signed off" tooltip="${batch.expectedNetText}">
                                         <text-line size="12" input-type="number"/></conditional-field>
                                     <default-field><ignored/></default-field>

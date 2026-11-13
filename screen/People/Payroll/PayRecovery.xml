@@ -14,8 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- People › Payroll › Overpayment recovery (impl-people P27 review, the user's call of Nov 13, 2026; design-people §8.2): each
     employer's overpayment recovery settings from mantle.humanres.PayrollSetupServices.get#RecoverySettings (a payroll reader's): the
-    deduction a negative correction is recovered through on the next regular runs, and the most recovered a period, an amount or a
-    percentage of net pay (the employee's wage net on their latest finalized regular run). A configuration holder (PAYROLL_EDIT and
+    deduction a negative correction is recovered through on the next regular runs, and the most recovered a period: an amount, a
+    percentage of net pay (the employee's wage net on their latest finalized regular run), or both (P28 review, the user's call of Nov
+    13, 2026: the percentage of the last net, at most the amount, and the amount before a first net). A configuration holder (PAYROLL_EDIT and
     PAYROLL_CONFIGURE, which Mantle checks) changes them at the revision read (store#RecoverySettings; audited). Beside Pay groups,
     payroll's area. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -25,8 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.PayrollSetupServices.store#RecoverySettings"
                     in-map="{organizationPartyId:organizationPartyId, expectedRevision:(expectedRevision || null),
-                        payrollComponentId:(payrollComponentId ?? ''), capAmount:(capKind == 'amount' ? (capAmount ?? '') : ''),
-                        capPercent:(capKind == 'percent' ? (capPercent ?? '') : '')}"/>
+                        payrollComponentId:(payrollComponentId ?? ''), capAmount:(capAmount ?? ''), capPercent:(capPercent ?? '')}"/>
             <if condition="!ec.message.hasError()"><message type="success">Recovery settings saved</message></if>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
@@ -44,8 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
                 (employerRows.length == 1 ? employerRows[0] : null)
             deductionOptions = opened ? Array.from(opened.deductions || []) : []
             settingsValues = opened ? {organizationPartyId: opened.organizationPartyId, expectedRevision: opened.revision,
-                payrollComponentId: opened.payrollComponentId, capKind: opened.capPercent != null ? 'percent' : (opened.capAmount != null ? 'amount' : 'none'),
-                capAmount: opened.capAmount, capPercent: opened.capPercent} : {}
+                payrollComponentId: opened.payrollComponentId, capAmount: opened.capAmount, capPercent: opened.capPercent} : {}
         ]]></script>
     </actions>
     <widgets>
@@ -93,27 +92,20 @@ along with this software (see the LICENSE.md file). If not, see
                                             <drop-down allow-empty="true"><list-options list="deductionOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
-                                    <field name="capKind">
-                                        <default-field title="Most a period">
-                                            <radio>
-                                                <option key="none" text="No cap: the whole rest"/>
-                                                <option key="amount" text="An amount"/>
-                                                <option key="percent" text="A percentage of net pay"/>
-                                            </radio>
-                                        </default-field>
+                                    <field name="capPercent">
+                                        <default-field title="Most a period: percentage of net pay"
+                                                tooltip="Of the employee's net pay on their latest finalized regular run, above 0 and at most 100. Before their first, the amount below applies, or with none the recovery waits a period. Empty with no amount: no cap, the whole rest">
+                                            <text-line size="6" input-type="number"/></default-field>
                                     </field>
                                     <field name="capAmount">
-                                        <default-field title="Amount" tooltip="In the pay group's currency"><text-line size="10" input-type="number"/></default-field>
-                                    </field>
-                                    <field name="capPercent">
-                                        <default-field title="Percentage" tooltip="Of the employee's net pay on their latest finalized regular run, above 0 and at most 100; before their first, the recovery waits a period">
-                                            <text-line size="6" input-type="number"/></default-field>
+                                        <default-field title="Most a period: amount"
+                                                tooltip="In the pay group's currency. With a percentage, the most it takes and what is taken before the employee's first net pay; alone, the cap">
+                                            <text-line size="10" input-type="number"/></default-field>
                                     </field>
                                     <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                                     <field-layout>
                                         <field-ref name="payrollComponentId"/>
-                                        <field-ref name="capKind"/>
-                                        <field-row><field-ref name="capAmount"/><field-ref name="capPercent"/></field-row>
+                                        <field-row><field-ref name="capPercent"/><field-ref name="capAmount"/></field-row>
                                         <field-ref name="submitButton"/>
                                     </field-layout>
                                 </form-single>
