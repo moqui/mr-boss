@@ -288,9 +288,10 @@ const capabilityUsers = [
         ]
     },
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
-    // P28: PEOPLE_IMPORT for the payroll exchange's imports
-    {user: users.payroll, granted: ["import", "payrollView", "payrollEdit", "payrollConfigure", "staff", "payroll"]},
-    {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff", "payroll"]},
+    // P28: PEOPLE_IMPORT for the payroll exchange's imports; P31 review: PEOPLE_DIRECTORY_VIEW, the People read of the payroll groups
+    // (PAYROLL_VIEW alone reads nothing of People, the lead's call of Nov 13, 2026)
+    {user: users.payroll, granted: ["directory", "import", "payrollView", "payrollEdit", "payrollConfigure", "staff", "payroll"]},
+    {user: users.payApprover, granted: ["directory", "payrollView", "payrollApprove", "staff", "payroll"]},
     {user: users.develop, granted: ["developView", "developEdit", "staff"]},
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},
     {

@@ -9095,6 +9095,84 @@ merged.
   - the §3 phase table's P31 row and §6 are the lead's;
   - the user's call: the first finding (finance.payroll as a People reader).
 
+**Review Nov 13 (P31).** A fresh review of `git diff master...ppl/p31` in mr-moqui, mr-mantle and mr-boss against the phase's text,
+§2, §4, design-people §1.1, §8, §14.3 and §15; the lead's call on the first finding built and recorded in §4; fixes committed apart per
+repository ("People P31 review: …"). The three branches were first rebased onto master (mr-moqui 9dc336a5, IronCalc-DB Phase 2b;
+mr-mantle 2f972a6b, CalcGrid's sales profile; mr-boss faebce83, the user's call on P28's history rule): each replayed cleanly. Tested
+on the shared release binary (`--release --nobuild`, this phase's runtime; JavaScript only).
+- Checked and found sound:
+  - `delimitedCell`: a cell starting with `=`, `+`, `-`, `@`, a tab or a CR is written behind an apostrophe unless the whole cell is
+    `[+-]?[\d,]*\.?\d+` (ASCII digits, the regex has no `u` flag), the rule `ScreenCsv.js` already had. Probed: `-1+1`, `+cmd`, `=1`,
+    `@SUM(A1)`, `-0x1`, `-1e5`, `--1`, `+-1`, `-`, `-,`, `-1.`, `-1 `, `-1\t`, `-1\n`, `-1\r\n=cmd`, `-1\u0000`, Arabic-Indic and
+    mathematical digits all escaped; `-10.00`, `+1`, `-1,234.50`, `-.5` and numbers written as they are. A cell the exemption admits
+    holds only a sign, digits, commas and a point: no function, reference, DDE or operator but a leading sign, so no formula can run.
+    Every cell is quoted and its quotes doubled, so a CR/LF inside one stays in the cell. The three callers (DataTransferBatch's
+    result and sample files, DataTransferExports' rows file, Mantle PayrollExchange `inputsFile`) pass every header and value through
+    it; PayrollExchange's own number columns are rightly gone. AdminDataExport's check fails on the unfixed writer (`'-10.00`).
+  - The 18 lists' phone columns: every field each names is one of its list's shown fields (none hidden, none missing), two columns
+    each; no People or People-mounted Shared list of three or more shown fields is left without them (PeopleNavigationWalk's own
+    check emulated over the tree: 200 lists, none missing).
+  - The acceptance tests, by reading (not run): each uses demo users and records or makes its own (secrets keyed by the run's time,
+    a spec-local opening, the walk's own allocation key, a tablet revoked after), and states its order assumptions (a sweep's
+    screen with no record of its kind is logged, not failed); PeopleTui and PeopleServerStatic sweep one mode each; PeopleReviewWalk's
+    eight features cover §14.3's "Confidentiality across every path" list (URLs, transitions, the import and the CSV exports, the
+    palette, choices and universal search, Assist, files, Chatter, notifications, direct calls, REST, the kiosk), each negative case
+    with a reader's positive one; PeopleNavigationWalk covers "Navigation and devices" (launchers, menus, Not available, phone
+    columns, terminal twins, Commons, the kiosk); PeoplePhoneWalk follows MaintenancePhoneWalk at 390 px.
+  - Design §15's table against the screens; design-people's §2 Impl column (every row a phase or later; each built path exists),
+    §16.1, crosscut's addendum and §7.5, ss-inventory's and usl-inventory's People rows, the README paragraph and Remaining-Work's
+    People row (PE-21 and PE-09 already built there; the receipt image row it points to is below it).
+- Fixed:
+  - R1 (the lead's call, high, pay leaving its lane): PAYROLL_VIEW alone made a People staff reader (Mantle `People.js` `staffReads`),
+    so Accounting's Payroll finance group read the employees, compensation, pay runs and payslips of its organizations' employees
+    through Mantle's People services. `payrollView` is out of `staffReads`; the payroll operator and approver, whose groups held only
+    payroll permissions and read People through `payrollView`, now hold `PEOPLE_DIRECTORY_VIEW` (BossSetupData's group permissions
+    and capability bundles; design §1.1's table and rule), which keeps what they read (the employments in effect, as `payrollView`
+    gave them). Accounting is unchanged: `PayrollOrigin.js` checks the permission alone, so finance.payroll still approves and pays
+    payroll invoices (AccountingPayrollOrigin passes). Mantle's spec-local payroll users gain `PEOPLE_DIRECTORY_VIEW` (PayConfiguration,
+    PayAssignments, PeoplePositions, Offers, ExpenseClaims, PayrollExchange, Payslips, PayRuns, PayObligations, PayInputs,
+    PeopleReports; the finance accounts of PayObligations keep PAYROLL_VIEW alone). Specs: PeopleScope (PAYROLL_VIEW alone: not
+    staff, no employer), PeopleAccessLater's new P31 feature (a spec-local Payroll finance user, an agent of Retail, refused Tomas's
+    record and compensation, `RECORD_UNAVAILABLE`, and Retail's directory, `ORGANIZATION_DENIED`; the payroll operator answered all
+    three with the same parameters; on the unfixed scope the finance user was answered all three), PeopleAccess (the payroll groups'
+    capabilities). PeopleReviewWalk now checks finance.payroll's payroll register answers no rows, in place of logging it.
+  - R2 (medium, acceptance test): PeopleReviewWalk took the leave reason to be HR's alone ("Hannah does not decide Ines's leave"),
+    but Ines reports to Hannah (people.manager) and with no leave rule her manager decides (`Approvals.js`: ParManager), and an
+    approver reads the reason (`Leave.js` `readsReason`). The walk would have failed on Hannah's LeaveRequestDetail and, worse, its
+    transition feature would have approved Ines's leave as Hannah, so "nothing changed" failed too. The manager is now among the
+    reason's readers, with her positive case in the first feature.
+  - R3 (low): design §2's SkillsMatrix Impl cell read `qvue`; it is an XML screen with a qvue mode, as ShiftRoster's.
+- Provisional findings (for the lead to number):
+  - A cell starting with a space or a line feed before `=` (` =1+1`, `\n=1+1`) is written as it is by `delimitedCell` and by the
+    screen CSV writer, as before P31; the common lists (OWASP's) name only `=`, `+`, `-`, `@`, tab and CR, and a spreadsheet takes a
+    leading space as text, so low; a reading of LibreOffice's import with "evaluate formulas" would settle it.
+  - The other CSV writers keep their own rules, now differing from the framework's: PeopleReports' and Commerce, Purchasing and
+    Customer Service Reporting's exempt only `-?\d+(\.\d+)?` (no `+` or thousands commas); Mantle StoreFeeds, StoreSummary, CatalogCsv,
+    ForumOperations and the tools' ReportDelivery escape any leading `-`, plain negative numbers too (P28's `'-10.00` elsewhere). All
+    are safe; one shared rule would make them agree.
+  - The payroll operator and approver now hold `PEOPLE_DIRECTORY_VIEW`: their reads are as before, but an Admin capability review or
+    a delegation that lists bundles shows the directory permission in both payroll bundles.
+  - Design §2's Impl column calls Chatter and RecordFiles `qvue` and TeamCalendar and InterviewsCalendar "xml with a qvue mode",
+    with the same render modes; cosmetic.
+- Tests run (the shared release binary, `--release --nobuild`): framework AdminDataExport 3 of 3 (0.2 s); Mantle PayConfiguration,
+  PayAssignments, PeoplePositions, Offers, ExpenseClaims, PayrollExchange, Payslips, PayRuns, PayObligations, PayInputs,
+  PeopleReports, PeopleScope and LaborCostingRate (WorkResources and WorkTimeEntries, which read PAYROLL_VIEW by permission alone,
+  passed unchanged) all passing after R1 (about 37 s feature time; before the spec users' change 29 features failed, as expected);
+  BOSS PeopleAccessLater (21, the new feature 0.24 s), PeopleAccess, PeoplePayConfiguration, PeoplePayAssignments, PeopleTime,
+  PeopleInsights, PeoplePayRuns, PeoplePayInputs, PeopleOffers, PeopleExpenses, PeoplePayslips, PeoplePositions,
+  AccountingPayrollOrigin, PeopleEmployees, PeopleLeave, PeopleReviews and PeopleKiosk, 87 of 87 (28 s feature time); the new P31
+  feature run on the unfixed scope fails as it should. Prettier clean on every changed JavaScript file. No screen changed in the
+  review, so no lint. Not run: the five acceptance tests and the full suites (the lead's).
+- For the lead:
+  - budget share: PeopleAccessLater +1 feature (about 0.25 s); PeopleScope one more user in a feature (nothing measurable);
+  - merge: all three repositories together (mr-mantle `People.js` and mr-boss `BossSetupData.xml` are one change: merged apart,
+    the payroll operator reads no employer); hot spots: mr-mantle `service/mantle/humanres/People.js` (`staffReads`), eleven
+    `test/humanres/*.spec.js` users' permission lists; mr-boss `data/BossSetupData.xml` (the payroll groups' permissions and
+    bundles), `test/People/PeopleAccessLater.spec.js` (setup and the last feature), `PeopleAccess.spec.js`'s capability rows,
+    `plan/design-people.md` (§1.1 and the header);
+  - the lead's call (§4, open to the user's override): PAYROLL_VIEW alone reads nothing of People;
+  - the acceptance run: PeopleReviewWalk's readers are now HR and the deciding manager for the leave reason.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-people.md or
@@ -9230,6 +9308,7 @@ the owner's design.
 | Nov 13, 2026 | External-processing extras are later: a preview of an external processor's results before a group is live, the processor's corrections and off-cycle pay, and a column-mapping step for exchange files | The user's call on P28's findings: recorded in §7, not built |
 | Nov 13, 2026 | The payroll exchange import keeps `PEOPLE_IMPORT` as People's one import permission, with PAYROLL_VIEW and PAYROLL_EDIT beside it; no payroll import permission of its own | The user's call on P28's finding, as built (the `payrollExchange` target's import permissions; `BOSS_PEOPLE_PAYROLL` holds `PEOPLE_IMPORT`) |
 | Nov 13, 2026 | Imported pay history is refused from the start of the first period People paid the employment (`paidFrom`), not only on a paid slip's pay day (P28's review, R2) | The user's call, confirming P28's review |
+| Nov 13, 2026 | PAYROLL_VIEW alone is no People staff read: Mantle's People scope (`People.js` `staffReads`) no longer counts `payrollView`, so reading People's employees, compensation, pay runs and payslips needs a People read permission beside it; the payroll operator and approver hold `PEOPLE_DIRECTORY_VIEW` (their group and bundle), and Accounting's Payroll finance (`BOSS_ACCOUNTING_PAYROLL`) reads nothing of People while its PAYROLL_VIEW still opens payroll-origin invoices and payments in Accounting (`PayrollOrigin.js` checks the permission alone) | The lead's call on P31's first finding (the user was asked and had not answered; open to the user's override), built in P31's review: Mantle People.js; BossSetupData's two payroll groups and bundles; design-people §1.1; Mantle's spec-local payroll users given `PEOPLE_DIRECTORY_VIEW` (eleven humanres specs); specs PeopleScope (PAYROLL_VIEW alone: no staff, no employer), PeopleAccessLater (P31: a spec-local Payroll finance agent of Retail refused Tomas's record, the directory and his compensation, the payroll operator served with the same parameters), PeopleAccess (the payroll groups' capabilities) |
 
 ## 5. Open questions
 

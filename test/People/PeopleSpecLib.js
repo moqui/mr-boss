@@ -219,7 +219,8 @@ const users = {
     client: "sheldon.acme",
     pass: "dana@joesdist.example.com",
     otherApp: "customerservice.read",
-    // P27 review: Accounting's payroll finance (BOSS_ACCOUNTING_PAYROLL, PAYROLL_VIEW), an agent of Accounting's demo organization
+    // P27 review: Accounting's payroll finance (BOSS_ACCOUNTING_PAYROLL, PAYROLL_VIEW), an agent of Accounting's demo organization;
+    // P31 review: it reads nothing of People (PAYROLL_VIEW alone is no People read)
     financePayroll: "finance.payroll",
     system: "john.doe"
 }

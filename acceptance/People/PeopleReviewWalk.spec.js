@@ -4,11 +4,12 @@
 // - pay: Tomas's salary (48,213.57 a year), the payroll readers' of Retail (people.payroll, people.payapprover, people.admin);
 // - private person data: Ines's home phone, and her passport, whose number HR reads only masked (its last four); people.hr's;
 // - a confidential case Tomas files with Retail's intake handler, with the handler's note and a file: people.case's and Tomas's;
-// - a leave request HR asks for Ines with a reason: HR's (who asked, and HR of Retail; Hannah does not decide Ines's leave);
+// - a leave request HR asks for Ines with a reason: HR's (who asked, and HR of Retail) and Hannah's, her manager, who decides it with
+//   no rule (Leave.js readsReason: the person, who asked, HR and the approvers);
 // - an application to a Retail opening: the recruiter's (people.recruiter).
 // Then each user of a People group with no other launcher (people.reader, .employee, .manager, .hr, .recruiter, .payroll,
-// .payapprover, .develop, .case, .admin) and Accounting's payroll finance (finance.payroll, PAYROLL_VIEW, an agent of Accounting's
-// demo organization) gets none of a secret that is not theirs, with valid ids and parameters: not by URL (Employee360 under People and
+// .payapprover, .develop, .case, .admin) and Accounting's payroll finance (finance.payroll, PAYROLL_VIEW, which reads nothing of
+// People: PeopleAccessLater's P31 feature) gets none of a secret that is not theirs, with valid ids and parameters: not by URL (Employee360 under People and
 // Commons, RequestDetail under People and Commons, LeaveRequestDetail, ApplicantDetail, PayAssignments, Payslips, the lists), the
 // screens' services (get#Employee360Context, get#Employee360, get#Compensation, get#PeopleCase, get#Request, get#Application, the
 // payroll register), direct calls of the Mantle services and the REST entity paths, transitions (Employee360's storePersonalInfo on
@@ -67,7 +68,7 @@ const readers = {
     salary: [users.payroll, users.payApprover, users.admin],
     private: [users.hr],
     caseText: [users.caseHandler, users.employee],
-    leaveReason: [users.hr],
+    leaveReason: [users.hr, users.manager],
     applicant: [users.recruiter]
 }
 const outsidersOf = kind => groupUsers.filter(user => !readers[kind].includes(user))
@@ -258,7 +259,7 @@ spec({
 })
 
 feature(
-    "the readers get their secrets: the payroll operator Tomas's salary, HR Ines's phone masked passport, the handler the case, HR the leave reason, the recruiter the applicant",
+    "the readers get their secrets: the payroll operator Tomas's salary, HR Ines's phone masked passport, the handler the case, HR and the deciding manager the leave reason, the recruiter the applicant",
     {
         when() {
             const compensation = call(users.payroll, "ironstone.people.ContextServices.get#Employee360Context", {
@@ -274,19 +275,22 @@ feature(
                 passportShown: fullPassport(ines.output),
                 caseText: leaks("caseText", json(call(users.caseHandler, R + "get#PeopleCase", {requestId: state.requestId}))),
                 leaveReason: call(users.hr, L + "get#Request", {leaveRequestId: state.leaveRequestId}).out?.request?.reason,
+                managerReason: call(users.manager, L + "get#Request", {leaveRequestId: state.leaveRequestId}).out?.request
+                    ?.reason,
                 applicant: leaks(
                     "applicant",
                     json(call(users.recruiter, H + "get#Application", {employmentApplicationId: state.applicationId}))
                 )
             }
         },
-        then({setupProblems, salary, privatePage, passportShown, caseText, leaveReason, applicant}) {
+        then({setupProblems, salary, privatePage, passportShown, caseText, leaveReason, managerReason, applicant}) {
             setupProblems == []
             salary.length > 0
             privatePage.length == 2
             passportShown == false
             caseText.length > 0
             leaveReason == secrets.leaveReason
+            managerReason == secrets.leaveReason
             applicant.length > 0
         }
     }
@@ -433,15 +437,17 @@ feature(
                     const got = hit(user, path)
                     if (!got.refused) problems.push(`${user}: ${path} is not refused: ${got.status} ${got.output.slice(0, 120)}`)
                 }
-                // the payroll register is a payroll reader's (finance.payroll reads its own employer's, logged)
+                // the payroll register is a payroll reader's; finance.payroll's PAYROLL_VIEW is no People read (the lead's call of
+                // Nov 13, 2026), so it is answered no employer's rows
                 const register = call(user, "mantle.humanres.PeopleReportServices.run#Report", {
                     reportId: "payrollRegister",
                     fromDate: "2026-01-01",
                     thruDate: "2027-12-31"
                 })
-                if (user === users.financePayroll)
-                    log.info(`finance.payroll's payroll register: ${register.refused || "answered"}`)
-                else if (!readers.salary.includes(user) && !register.refused)
+                if (user === users.financePayroll) {
+                    if (!register.refused && Array.from(register.out?.rows || []).length)
+                        problems.push(`${user}: the payroll register answered rows`)
+                } else if (!readers.salary.includes(user) && !register.refused)
                     problems.push(`${user}: the payroll register answered`)
                 // the id lookup knows no case but its readers'
                 if (
