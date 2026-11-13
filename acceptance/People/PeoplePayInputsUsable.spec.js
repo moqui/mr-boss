@@ -1,8 +1,8 @@
 // People P24's "usable when" (impl-people P24; design-people §6 HoursForPay, §8 PayAdjustments, §14.3 "Source lock and worker invoice
 // collision"), as an acceptance walk with artifact authorization on, through the screens' transitions: Retail's March has Tomas's
-// approved week and approved paid leave, and Rafael's submitted week still waiting. The payroll operator (people.payroll) reconciles
-// the period on Hours for pay (Tomas ready, Rafael blocked by his unapproved week), previews and prepares it (Tomas's hours and
-// leave become inputs, Rafael is named and left out), and makes a bonus for Tomas on Pay adjustments, which the payroll approver
+// approved week and approved paid leave, and Ines's submitted week still waiting. The payroll operator (people.payroll) reconciles
+// the period on Hours for pay (Tomas ready, Ines blocked by her unapproved week), previews and prepares it (Tomas's hours and
+// leave become inputs, Ines is named and left out), and makes a bonus for Tomas on Pay adjustments, which the payroll approver
 // (people.payapprover) approves from To decide; preparing again makes nothing twice. Then a worker invoice that names Tomas's paid
 // time entry is refused, and his week, once a pay input of it is finalized, is not reopened. The rules themselves are Mantle's
 // PayInputs and mr-boss's PeoplePayInputs and PeopleAccessLater. Run: ./moq accept mr-boss --spec PeoplePayInputsUsable
@@ -12,7 +12,7 @@ const S = "mantle.humanres.PayrollInputServices."
 const INPUT = "mantle.humanres.payroll.PayrollInput"
 const webroot = "component://webroot/screen/webroot.xml"
 const tomasEmploymentId = ids.employmentId
-const rafaelEmploymentId = "BOSS_PPL_RAFAEL_EMP"
+const inesEmploymentId = "BOSS_PPL_INES_EMP"
 const prefix = "WALK24"
 const state = {}
 // a request under the web root as the user (a transition's post), with its errors
@@ -39,8 +39,9 @@ const liveInputs = partyRelationshipId =>
 spec({
     setupSpec() {
         login("john.doe")
-        // Retail's hourly group paid from approved timesheets with its March, Tomas and Rafael in it, their weeks, Tomas's paid leave
-        // and an earning for bonuses, made as data: configuration, assignment, time and leave are their own walks'
+        // Retail's hourly group paid from approved timesheets with its March, Tomas and Ines in it (March's alone, so the other pay
+        // walks' periods are their own), their weeks, Tomas's paid leave and an earning for bonuses, made as data: configuration,
+        // assignment, time and leave are their own walks'. Ines, not Rafael, has the waiting week: Rafael joined in October.
         system(() => {
             state.group = prefix + "_G"
             call("create#mantle.humanres.payroll.PayrollGroup", {
@@ -77,7 +78,7 @@ spec({
             })
             for (const [partyRelationshipId, partyId] of [
                 [tomasEmploymentId, ids.employeePartyId],
-                [rafaelEmploymentId, "BOSS_PPL_RAFAEL"]
+                [inesEmploymentId, "BOSS_PPL_INES"]
             ])
                 call("create#mantle.humanres.payroll.PayrollAssignment", {
                     partyRelationshipId,
@@ -85,7 +86,8 @@ spec({
                     organizationPartyId: ids.organizationId,
                     payrollGroupId: state.group,
                     isPrimary: "Y",
-                    fromDate: "2026-01-01 00:00:00"
+                    fromDate: "2026-01-01 00:00:00",
+                    thruDate: "2026-04-01 00:00:00"
                 })
             const week = (timesheetId, partyId, statusId) =>
                 call("create#mantle.work.time.Timesheet", {
@@ -97,7 +99,7 @@ spec({
                 })
             state.tomasWeek = prefix + "_TS_TOMAS"
             week(state.tomasWeek, ids.employeePartyId, "TmshApproved")
-            week(prefix + "_TS_RAFAEL", "BOSS_PPL_RAFAEL", "TmshCompleted")
+            week(prefix + "_TS_INES", "BOSS_PPL_INES", "TmshCompleted")
             state.tomasEntry = prefix + "_TE_TOMAS"
             call("create#mantle.work.time.TimeEntry", {
                 timeEntryId: state.tomasEntry,
@@ -108,9 +110,9 @@ spec({
                 hours: "8"
             })
             call("create#mantle.work.time.TimeEntry", {
-                timeEntryId: prefix + "_TE_RAFAEL",
-                partyId: "BOSS_PPL_RAFAEL",
-                timesheetId: prefix + "_TS_RAFAEL",
+                timeEntryId: prefix + "_TE_INES",
+                partyId: "BOSS_PPL_INES",
+                timesheetId: prefix + "_TS_INES",
                 fromDate: "2026-03-03 09:00:00",
                 thruDate: "2026-03-03 17:00:00",
                 hours: "8"
@@ -169,7 +171,7 @@ spec({
 })
 
 feature(
-    "the payroll operator reconciles and prepares March: Tomas's hours and leave become inputs once, Rafael's unapproved week blocks him alone",
+    "the payroll operator reconciles and prepares March: Tomas's hours and leave become inputs once, Ines's unapproved week blocks her alone",
     {
         when() {
             const period = {payrollGroupId: state.group, timePeriodId: state.march}
@@ -196,19 +198,19 @@ feature(
                 preview: [preview.errors, previewWrote],
                 prepared: prepared.errors,
                 tomas,
-                rafael: liveInputs(rafaelEmploymentId).length,
+                ines: liveInputs(inesEmploymentId).length,
                 again: Array.from(again.rows || [])
                     .map(row => row.partyId + " " + (row.reasonCode || row.outcome))
                     .sort()
             }
         },
-        then({reconciled, preview, prepared, tomas, rafael, again}) {
+        then({reconciled, preview, prepared, tomas, ines, again}) {
             reconciled == [200, 0, true, true]
             preview == ["", 0]
             prepared == ""
             tomas == ["PitPaidLeave", "PitWorked"]
-            rafael == 0
-            again == ["BOSS_PPL_RAFAEL WEEK_NOT_APPROVED", ids.employeePartyId + " repeated"]
+            ines == 0
+            again == ["BOSS_PPL_INES WEEK_NOT_APPROVED", ids.employeePartyId + " repeated"]
         }
     }
 )
@@ -279,7 +281,8 @@ feature("a worker invoice for Tomas's paid time is refused, and his week, once i
                 invoiceDate: "2026-03-31 10:00:00"
             })
         )
-        const invoiced = asUser(users.system, () =>
+        // Mantle's rule itself, called as the system (the service is Accounting's, which john.doe's groups do not grant)
+        const invoiced = system(() =>
             lib.refusal("mantle.account.InvoiceServices.create#TimeEntryInvoiceItems", {
                 invoiceId: prefix + "_WINV",
                 ratePurposeEnumId: "RaprVendor",
@@ -289,7 +292,7 @@ feature("a worker invoice for Tomas's paid time is refused, and his week, once i
         // the pay run's finalization (P27) finalizes the week's hours; made here as data
         const worked = liveInputs(tomasEmploymentId).find(row => row.inputTypeEnumId === "PitWorked")
         system(() => call("update#" + INPUT, {payrollInputId: worked.payrollInputId, statusId: "PinFinalized"}))
-        const reopened = asUser(users.system, () =>
+        const reopened = system(() =>
             lib.refusal("mantle.work.TimesheetServices.reopen#Timesheet", {timesheetId: state.tomasWeek})
         )
         const detail = asUser(users.manager, () => page("Time/TimesheetDetail", {timesheetId: state.tomasWeek}, "html"))

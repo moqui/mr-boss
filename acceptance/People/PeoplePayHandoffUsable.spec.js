@@ -14,6 +14,8 @@ const webroot = "component://webroot/screen/webroot.xml"
 const prefix = "WALK27"
 const ines = {partyId: ids.reportPartyId, employmentId: "BOSS_PPL_INES_EMP"}
 const financePayroll = prefix + "_FINANCE"
+// the username the walk signs in with (asUser logs in by username, not by userId)
+const financePayrollUsername = "walk.finance.payroll"
 const state = {}
 // a request under the web root as the user (a transition's post), with its errors
 function request(user, path, parameters, method) {
@@ -141,6 +143,19 @@ spec({
                 isPrimary: "Y",
                 fromDate: 0
             })
+            // Ines's salary for the month (the demo data gives no one a salary; a salaried unit without one is in error), ending
+            // when the next month starts so PeoplePayRunsUsable's December is its own
+            const monthStart = today().slice(0, 8) + "01"
+            const [year, month] = monthStart.split("-").map(Number)
+            const nextMonth = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10)
+            call("store#mantle.humanres.employment.EmploymentSalary", {
+                partyRelationshipId: ines.employmentId,
+                fromDate: monthStart + " 00:00:00",
+                thruDate: nextMonth + " 00:00:00",
+                amount: "48000",
+                currencyUomId: "USD",
+                timePeriodTypeId: "PayrollYear"
+            })
             // a payroll finance user of Accounting: Retail's agent with the approver's and treasury's groups and PAYROLL_VIEW
             call("create#moqui.security.UserGroup", {userGroupId: financePayroll, description: "Walk payroll finance"})
             call("create#moqui.security.UserGroupPermission", {
@@ -159,7 +174,7 @@ spec({
             })
             call("create#moqui.security.UserAccount", {
                 userId: financePayroll,
-                username: "walk.finance.payroll",
+                username: financePayrollUsername,
                 partyId: financePayroll,
                 currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
                 passwordHashType: "SHA"
@@ -278,14 +293,14 @@ feature("Accounting approves, posts and pays the net pay; Settlement shows it; a
         const stamp = () =>
             system(() => ec.entity.find("mantle.account.invoice.Invoice").condition({invoiceId: state.net}).one())
                 .lastUpdatedStamp
-        const approved = as(financePayroll, "mantle.account.InvoiceServices.approve#Payable", {
+        const approved = as(financePayrollUsername, "mantle.account.InvoiceServices.approve#Payable", {
             invoiceId: state.net,
             lastUpdatedStamp: stamp()
         })
         const unpaid = system(() =>
             ec.entity.find("mantle.account.invoice.Invoice").condition({invoiceId: state.net}).one()
         ).unpaidTotal
-        const payment = as(financePayroll, "mantle.account.PaymentServices.create#Payment", {
+        const payment = as(financePayrollUsername, "mantle.account.PaymentServices.create#Payment", {
             paymentTypeEnumId: "PtPayrollPayment",
             fromPartyId: ids.organizationId,
             toPartyId: ines.partyId,
@@ -295,7 +310,7 @@ feature("Accounting approves, posts and pays the net pay; Settlement shows it; a
             statusId: "PmntDelivered",
             effectiveDate: ec.user.nowTimestamp
         })
-        as(financePayroll, "mantle.account.PaymentServices.apply#InvoicePayment", {
+        as(financePayrollUsername, "mantle.account.PaymentServices.apply#InvoicePayment", {
             paymentId: payment.paymentId,
             invoiceId: state.net
         })

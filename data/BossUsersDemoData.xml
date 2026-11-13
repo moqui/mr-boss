@@ -1327,13 +1327,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PEOPLE_ADMIN" userId="BOSS_PPL_ADMIN" fromDate="0"/>
     <!-- People P29: people.analyst, an Insights author of Ziziwork Retail with People's Insights bundle (BOSS_PEOPLE_INSIGHTS: People's
         datasets, Retail's rows), who opens the People workforce dashboard, schedules the monthly headcount report and copies the
-        qualification alert; no People group, so no People screen -->
+        qualification alert (a personal schedule is emailed, so the account has an address); no People group, so no People screen -->
     <mantle.party.Party partyId="BOSS_PPL_ANALYST" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_ANALYST" firstName="People" lastName="Analyst"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_ANALYST_ORG" relationshipTypeEnumId="PrtAgent"
             fromPartyId="BOSS_PPL_ANALYST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
     <moqui.security.UserAccount userId="BOSS_PPL_ANALYST" username="people.analyst"
-            userFullName="People Analyst" partyId="BOSS_PPL_ANALYST"
+            userFullName="People Analyst" partyId="BOSS_PPL_ANALYST" emailAddress="people.analyst@ziziwork.example"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PPL_ANALYST" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_PPL_ANALYST" fromDate="0"/>

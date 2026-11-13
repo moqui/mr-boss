@@ -32,11 +32,15 @@ const unitOf = partyRelationshipId =>
             .condition({payrollRunId: state.runId, partyRelationshipId})
             .one()
     )
+const inesInvoices = () =>
+    system(() => ec.entity.find("mantle.account.invoice.Invoice").condition({toPartyId: party.ines}).count())
 const money = value => (value == null ? null : String(toDecimal(value).setScale(2)))
 
 spec({
     setupSpec() {
         login("john.doe")
+        // the invoices to Ines before the walk (PeoplePayHandoffUsable's net pay in a whole run): the walk makes none
+        state.inesInvoices = inesInvoices()
         // Retail's monthly group with its December, a salaried and an hourly structure (pieces elective), the four employees assigned,
         // Ines's salary, the hourly and piece rates, and the approved hours and pieces, made as data: configuration, assignment and
         // inputs are their own walks'
@@ -156,9 +160,23 @@ spec({
                         extra || {}
                     )
                 )
-            call("create#mantle.humanres.employment.EmploymentSalary", {
+            // Leon has no salary in December: one another walk gave him (PeoplePayAssignmentsUsable's first salary, from its run's
+            // day) ends when December starts, as a whole run makes it before this walk
+            const december = "2026-12-01 00:00:00"
+            const decemberMs = ec.user.timestampMillis(december)
+            for (const row of Array.from(
+                ec.entity.find("mantle.humanres.employment.EmploymentSalary").condition("partyRelationshipId", emp.leon).list()
+            )) {
+                const key = {partyRelationshipId: row.partyRelationshipId, fromDate: row.fromDate}
+                if (ec.user.timestampMillis(row.fromDate) >= decemberMs)
+                    call("delete#mantle.humanres.employment.EmploymentSalary", key)
+                else if (row.thruDate == null || ec.user.timestampMillis(row.thruDate) > decemberMs)
+                    call("update#mantle.humanres.employment.EmploymentSalary", Object.assign(key, {thruDate: december}))
+            }
+            call("store#mantle.humanres.employment.EmploymentSalary", {
                 partyRelationshipId: emp.ines,
                 fromDate: "2026-12-01 00:00:00",
+                thruDate: null,
                 amount: "48000",
                 currencyUomId: "USD",
                 timePeriodTypeId: "PayrollYear"
@@ -305,7 +323,7 @@ feature("the payroll operator asks for approval and may not approve; the payroll
             "post"
         )
         const after = as(users.payroll, S + "get#Run", {payrollRunId: state.runId})
-        const invoices = system(() => ec.entity.find("mantle.account.invoice.Invoice").condition({toPartyId: party.ines}).count())
+        const invoices = inesInvoices() - state.inesInvoices
         return {
             submittedErrors: submitted.errors,
             waiting: !!found.approval?.waiting && found.canDecide,

@@ -30,6 +30,8 @@ function request(user, path, parameters, method) {
 const as = (user, service, parameters) => asUser(user, () => system(() => invoke(service, parameters)))
 const slipOf = (payrollRunId, partyRelationshipId) =>
     system(() => ec.entity.find(SLIP).condition({payrollRunId, partyRelationshipId}).one())
+const tomasInvoices = () =>
+    system(() => ec.entity.find("mantle.account.invoice.Invoice").condition({toPartyId: party.tomas}).count())
 let seq = 0
 function input(who, values) {
     seq++
@@ -77,6 +79,8 @@ function calculateAskApprove(payrollRunId) {
 spec({
     setupSpec() {
         login("john.doe")
+        // the invoices to Tomas before the walk (another walk's, an expense claim's say): the walk makes none
+        state.tomasInvoices = tomasInvoices()
         // Retail's monthly group with its November, an hourly and a salaried structure, Tomas and Ines assigned for November, Ines's
         // salary, Tomas's hourly rate and his approved hours, made as data: configuration, assignment and inputs are their own walks'
         system(() => {
@@ -182,7 +186,8 @@ spec({
                     fromDate: "2026-11-01 00:00:00",
                     thruDate: "2026-12-01 00:00:00"
                 })
-            call("create#mantle.humanres.employment.EmploymentSalary", {
+            // stored, not created: PeoplePayHandoffUsable gives Ines the same salary for the month it runs in
+            call("store#mantle.humanres.employment.EmploymentSalary", {
                 partyRelationshipId: emp.ines,
                 fromDate: "2026-11-01 00:00:00",
                 thruDate: "2026-12-01 00:00:00",
@@ -326,7 +331,7 @@ feature("issued (the acceptance fixture's final slips), the employee is told wit
             correctionRead: ["Pay correction", "Net effect", "Download statement"].every(text =>
                 correction.output.includes(text)
             ),
-            invoices: system(() => ec.entity.find("mantle.account.invoice.Invoice").condition({toPartyId: party.tomas}).count())
+            invoices: tomasInvoices() - state.tomasInvoices
         }
     },
     then({issued, told, card, correctionRead, invoices}) {

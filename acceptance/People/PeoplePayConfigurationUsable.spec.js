@@ -252,7 +252,9 @@ feature(
             }
             post("PayGroups/storeGroup", {
                 organizationPartyId: ids.organizationId,
-                groupName: "Walk monthly",
+                // a name of its own: PeoplePayAssignmentsUsable's "Walk monthly" and PeoplePayRunsUsable's "Walk monthly staff"
+                // are Retail's too in a whole run, and a search by this name finds only this one
+                groupName: "Walk configured monthly",
                 currencyUomId: "USD",
                 timePeriodTypeId: "PayrollMonth",
                 firstPeriodFromDate: "2027-01-01",
@@ -262,7 +264,7 @@ feature(
                 timeBasisEnumId: "PtbTimesheets",
                 payrollLocalizationId: "PlzDemonstration"
             })
-            const group = read(configurer, P + "find#Groups", {term: "Walk monthly"}).groups[0]
+            const group = read(configurer, P + "find#Groups", {term: "Walk configured monthly"}).groups[0]
             post("PayGroups/preparePeriods", {payrollGroupId: group.payrollGroupId, periodCount: "3"})
             const shown = asUser(configurer, () => page("Payroll/PayGroups", {payrollGroupId: group.payrollGroupId}, "html"))
             if (shown.errors.length) problems.push(`PayGroups: ${shown.errors.join(" | ")}`)
