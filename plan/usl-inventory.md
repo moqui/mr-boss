@@ -498,14 +498,17 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P26, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P26 and P29, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | PeopleServices | get#Scope | People | People (the root, through ironstone.people.ContextServices); Projects/Resources/PersonDetail and Admin/Users/UserDetail (the Employee360 link, get#Employee360Link) (People P1, P2) |
 | PeopleServices | get#Home | People/Home | People/Home (People P1; P8: the vacancies and decisions waiting counts) |
-| PeopleServices | get#Readiness | People/Settings | People/Settings/SettingsHome; Admin/Operations/Health (the readiness registry, people.setup) (People P1) |
+| PeopleServices | get#Readiness | People/Settings | People/Settings/SettingsHome; Admin/Operations/Health (the readiness registry, people.setup) (People P1; P29: every phase's checks, each opening the place that sets it up) |
+| PeopleServices | get#Settings, store#Settings | People/Settings (PeoplePreferences) | People/Settings/Preferences (Clocking, Confidential cases: the employer's clocking default and case intake handlers); People/Time/Attendance (Who clocks: Employer's default, an HR editor's) (People P29) |
+| PeopleReportServices | get#Options | People/Reports (ReportOptions) | People/Reports (ReportOptions: the reports the user reads); Insights/Reports (the catalog's People entries, People's catalogue) (People P29) |
+| PeopleReportServices | run#Report | People/Reports (ReportResults) | People/Reports (each report's results, totals and basis; Export CSV, exportCsv) (People P29) |
 | PeopleServices | find#Employees | People/Employees | People/Employees/List (and its CSV export); the People palette's directory and the Person record-lookup (ironstone.people.ContextServices search#Records, lookup#Records) (People P2) |
 | PeopleServices | get#Employee360 | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360; Insights/Records/Employee360 (through get#Employee360Context) (People P2) |
 | PeopleServices | get#EmploymentHistory | People/Employees/Employee360 | People/Employees/Employee360 (Employment history; P6: the dated assignments) (People P2, P6) |

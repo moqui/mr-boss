@@ -6,7 +6,7 @@
     "kind": "flowmap",
     "folder": "Insights",
     "description": "What the organization does for itself: the catalog, production, stock, projects, the books and its people. Copy it for your organization to rename steps and link your own procedures.",
-    "templateVersion": 2,
+    "templateVersion": 3,
     "lanes": [
       {
         "laneId": "catalog",
@@ -205,7 +205,10 @@
         "laneId": "people",
         "title": "Hire and schedule people",
         "sequenceNum": 1,
-        "description": "Employees, their time off and their pay. The People app is not part of this installation yet, so this step is information only."
+        "description": "Employees hired, organized and scheduled: the directory of each employer, its headcount and turnover, and the employees still waiting for a manager.",
+        "targetRegistrationId": "People.Employees",
+        "countProviderKey": "People.NoManager",
+        "catalogEntryId": "People.Headcount"
       },
       {
         "stepId": "maintain",

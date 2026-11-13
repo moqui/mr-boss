@@ -301,7 +301,9 @@ function reportLink(p) {
     const query = Object.entries(parameters)
         .map(([name, value]) => encodeURIComponent(name) + "=" + encodeURIComponent(value))
         .join("&")
-    return {url: "/qapps/" + entry.routePath + (query ? "?" + query : "")}
+    // a route may carry its own fixed parameters (People's Reports: the report's id), which the options follow
+    const joiner = String(entry.routePath).includes("?") ? "&" : "?"
+    return {url: "/qapps/" + entry.routePath + (query ? joiner + query : "")}
 }
 
 // ===== metrics (design §6.1, §6.2, §6.3) =====

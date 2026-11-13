@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Settings › Preferences (design-people §12 Settings PeoplePreferences; style-guide §3.9 Settings; impl-people P29, §4
+    Nov 12): an employer's People preferences, over mantle.humanres.PeopleServices.get#Settings and store#Settings, each change
+    audit-logged with its reason: Clocking (the employer's default, PeopleClocking: employees clock in and out, or not unless HR sets
+    an employee apart in Attendance's Who clocks, whose rule is Attendance.js isClockingOn), and Confidential cases (the intake
+    handlers, PeopleCaseIntake: the people a confidential case filed at the employer goes to, each an enabled account holding
+    PEOPLE_CASE_HANDLE who works for it; shown by name, never a case; with nobody a filing there is refused). The People
+    administrator's, as the rest of Settings (BOSS_PPL_SETTINGS); an HR editor sets the clocking default from Who clocks. The other
+    preferences of design §12 link to their own editors (leave policies, holidays, approval rules, checklists): Settings links to
+    domain editors rather than arbitrary settings. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Preferences" default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="storeClocking">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#Settings" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, clocking:clocking, reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stored.settings.clockingText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <transition name="storeIntake">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#Settings" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, intakeHandlerIds:(intakeHandlerIds || ''), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Confidential cases go to: ${stored.settings.intakeText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PeopleServices.get#Settings" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null)}"/>
+        <set field="settingsError" from="ec.message.hasError()"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="employerRows" from="Array.from(found?.employers || [])"/>
+        <set field="employer" from="organizationPartyId ? employerRows.find(row =&gt; row.organizationPartyId === organizationPartyId) || null : null"/>
+        <set field="candidates" from="Array.from(employer?.intakeCandidates || [])"/>
+        <set field="findValues" from="{organizationPartyId:organizationPartyId || null}"/>
+        <set field="clockingValues" from="{organizationPartyId:organizationPartyId, clocking:employer?.clocking || 'N', expectedRevision:employer?.revision}"/>
+        <set field="intakeValues" from="{organizationPartyId:organizationPartyId, intakeHandlerIds:Array.from(employer?.intakeHandlerIds || []),
+                expectedRevision:employer?.revision}"/>
+        <set field="clockingOptions" from="[{value:'Y', label:'Employees clock in and out'}, {value:'N', label:'Off, unless set for an employee'}]"/>
+        <set field="editorLinks" from="[{title:'Leave policies', url:sharedLinks?.['Time/LeavePolicies']}, {title:'Holidays', url:sharedLinks?.['Time/HolidayCalendars']},
+                {title:'Working schedules', url:sharedLinks?.['Time/WorkingSchedules']}, {title:'Approval rules', url:sharedLinks?.['Settings/ApprovalPolicies']},
+                {title:'Checklists', url:sharedLinks?.['Employees/ChecklistTemplates']}].filter(row =&gt; row.url)"/>
+    </actions>
+    <widgets>
+        <label text="Preferences" type="h5"/>
+        <label text="Each employer's People preferences; every change is kept with its reason." type="p" style="m-muted"/>
+        <label text="People's preferences are the People administrator's." type="p" style="m-muted" condition="settingsError &amp;&amp; !organizationPartyId"/>
+        <label text="This employer is not available to you." type="p" style="text-negative" condition="organizationPartyId &amp;&amp; !employer"/>
+        <form-single name="PreferencesFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Employer">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Open"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+
+        <!-- with no employer chosen: each employer's preferences in brief, opening it -->
+        <section name="EmployerSummary" condition="!organizationPartyId &amp;&amp; employerRows.length">
+            <widgets>
+                <form-list name="EmployerPreferences" list="employerRows" skip-form="true" paginate="false">
+                    <field name="organizationName">
+                        <default-field title="Employer">
+                            <link url="." text="${organizationName}" link-type="anchor" parameter-map="{organizationPartyId:organizationPartyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="clockingText"><default-field title="Clocking"><display/></default-field></field>
+                    <field name="intakeText"><default-field title="Confidential cases go to"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="organizationName"/></column>
+                        <column><field-ref name="clockingText"/><field-ref name="intakeText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+
+        <section name="EmployerPreferencesShown" condition="employer">
+            <widgets>
+                <container-box>
+                    <box-header title="Clocking"/>
+                    <box-toolbar>
+                        <container-dialog id="ChangeClocking" button-text="Change" icon="sym_o_edit" width="560"
+                                title="Clocking at ${employer.organizationName}" condition="employer.canChangeClocking">
+                            <label type="p" text="The employer's default. An employee HR set apart in Attendance's Who clocks keeps their own setting."/>
+                            <form-single name="ClockingForm" transition="storeClocking" map="clockingValues">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="clocking">
+                                    <default-field title="Clocking">
+                                        <radio><list-options list="clockingOptions" key="${value}" text="${label}"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason" tooltip="Kept with the change"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${employer.clockingText}." type="p"/>
+                    </box-body>
+                </container-box>
+                <container-box condition="employer.canChangeIntake">
+                    <box-header title="Confidential cases"/>
+                    <box-toolbar>
+                        <container-dialog id="ChangeIntake" button-text="Change" icon="sym_o_edit" width="600"
+                                title="Who takes confidential cases at ${employer.organizationName}">
+                            <label type="p" text="A confidential case filed at this employer goes to these people. Only someone who may handle cases and works for the employer can be named."/>
+                            <form-single name="IntakeForm" transition="storeIntake" map="intakeValues">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="intakeHandlerIds">
+                                    <default-field title="Intake handlers">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <list-options list="candidates" key="${partyId}" text="${name}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason" tooltip="Kept with the change"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Confidential cases go to: ${employer.intakeText}." type="p"/>
+                        <label text="Someone named no longer may take cases here and is skipped." type="p" style="text-warning"
+                                condition="employer.intakeHandlers.some(row =&gt; !row.eligible)"/>
+                        <label text="Nobody here may handle cases yet: give someone who works for this employer the case handler capability first."
+                                type="p" style="m-muted" condition="!candidates.length"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <section name="EditorLinks" condition="editorLinks.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Set up in their own places"/>
+                    <box-body>
+                        <section-iterate name="EditorLinkList" list="editorLinks" entry="editorLink">
+                            <widgets><link url="${editorLink.url}" text="${editorLink.title}" link-type="anchor"/></widgets>
+                        </section-iterate>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

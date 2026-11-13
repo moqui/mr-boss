@@ -76,6 +76,11 @@
 // approver and missing to the HR officer; Services' slip missing to Retail's payroll; the employee's own preview slip missing to
 // them through get#MyPayslip, and find#Payslips answering them nothing but their own issued slips; Payslips and PayslipDetail refused
 // to the HR officer; MyPayslip opened to the employee by its own grant (BOSS_PPL_PAYSLIP_SELF) and refused another app's user.
+// P29: the payroll register run by the payroll operator and refused to the HR officer with the same parameters, Services' headcount
+// refused to Retail's HR; Reports opened to HR and payroll and refused to the directory reader and the manager; the confidential case
+// intake set by the People administrator and refused to the HR officer with the same parameters; the clocking default set by the HR
+// officer and refused to the directory reader with the same parameters, Services' refused to Retail's HR; Preferences the People
+// administrator's (the HR officer refused the screen).
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -1627,6 +1632,60 @@ feature(
                     hrReads: "RECORD_UNAVAILABLE",
                     payrollServices: "RECORD_UNAVAILABLE",
                     employeeOwnPreview: "RECORD_UNAVAILABLE"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P29: the payroll register is payroll's, Reports a report reader's; the case intake the People administrator's, the clocking default HR's",
+    {
+        when() {
+            const R = "mantle.humanres.PeopleReportServices.run#Report"
+            const S = "mantle.humanres.PeopleServices.store#Settings"
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            const register = {reportId: "payrollRegister", fromDate: "2026-01-01", thruDate: "2026-12-31"}
+            // the demo's own values, so nothing changes: Retail's intake handler and no clocking by default
+            const intake = {organizationPartyId: ids.organizationId, intakeHandlerIds: ids.caseHandlerPartyId}
+            const clocking = {organizationPartyId: ids.organizationId, clocking: "N"}
+            const codes = {
+                hrRegister: as(users.hr, R, register),
+                payrollRegister: as(users.payroll, R, register),
+                hrServicesHeadcount: as(users.hr, R, {reportId: "headcount", organizationPartyId: ids.otherOrganizationId}),
+                hrIntake: as(users.hr, S, intake),
+                adminIntake: as(users.admin, S, intake),
+                readerClocking: as(users.reader, S, clocking),
+                hrClocking: as(users.hr, S, clocking),
+                hrServicesClocking: as(users.hr, S, {organizationPartyId: ids.otherOrganizationId, clocking: "N"})
+            }
+            const problems = []
+            for (const user of [users.hr, users.payroll]) {
+                const opened = screenRefusal(user, "Reports", {reportId: "headcount"})
+                if (opened) problems.push(`${user}'s Reports: ${opened}`)
+            }
+            for (const [user, path] of [
+                [users.reader, "Reports"],
+                [users.manager, "Reports"],
+                [users.hr, "Settings/Preferences"]
+            ]) {
+                const refusedScreen = screenRefusal(user, path, {})
+                if (!unauthorized(refusedScreen)) problems.push(`${user} opens ${path}: ${refusedScreen || "opened"}`)
+            }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    hrRegister: "PERMISSION_DENIED",
+                    payrollRegister: "accepted",
+                    hrServicesHeadcount: "ORGANIZATION_DENIED",
+                    hrIntake: "PERMISSION_DENIED",
+                    adminIntake: "accepted",
+                    readerClocking: "PERMISSION_DENIED",
+                    hrClocking: "accepted",
+                    hrServicesClocking: "ORGANIZATION_DENIED"
                 }
             problems.join("\n") == ""
         }

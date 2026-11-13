@@ -65,7 +65,9 @@ along with this software (see the LICENSE.md file). If not, see
     device opens (the PEOPLE_CLOCKING route group admits it alone), whose request runs as the device's display account:
     get#SharedContext is not called for it (below). P26: Payslips and a slip's detail under Payroll (payroll's), the user's own issued
     payslip beside SelfService (MyPayslip, also Commons'), a payslip's files (its content host, payroll's), the PayslipIssued topic and
-    the prompt "Explain this payslip". -->
+    the prompt "Explain this payslip". P29 Reports (every People user's, each report its capability's), Settings'
+    Preferences, the hidden LogNote and SendMessage (the Assist answers' response actions, "Log as note" on an application and "Send
+    as message") and the people-hire and people-policy-question skills. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -203,6 +205,12 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="People/Staffing/JobClassDetail" sequence="42"/>
         <assist-prompt label="Draft a job description" text="Draft the description of a job opening: the role, what it asks and what it offers, in plain words, without pay figures or anything about age, gender or family"
                 screen="People/Staffing/Openings" sequence="43"/>
+        <!-- P29 (design §1.4 Assist): an answer logged as a note on the page's application (a recruiter's; LogNote) or sent as an
+            internal message (SendMessage), each opened in the quick-create frame with the text to read and edit first -->
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="People/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="62"/>
+        <response-action label="Send as message" icon="sym_o_send" screen="People/SendMessage" text-parameter="messageText"
+                sequence="63"/>
         <!-- P18: the person's own qualification expiring (QualificationExpiring, Mantle's daily reminder; Today's item is the source above) -->
         <notification-topic topic="QualificationExpiring"/>
         <!-- P17: an offer of employment to approve (PeopleOfferApproval), opening OfferDetail -->

@@ -7877,6 +7877,154 @@ Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, As
   it; an Insights reader with the People grant opens the dashboard and schedules the monthly report; an alert fires
   for a qualification expiring within thirty days.
 
+**Built Nov 12 (P29).** mr-mantle and mr-boss (this commit), branch `ppl/p29`; mr-moqui unchanged, no Rust built. Taken ahead of
+P26–P28 (it waits on nothing in them), with P26 built beside it on `ppl/p26`.
+- Checked first (the code over the plan): F70 in Insights' code (Assist.js `classed`: only `InsDcOperations` and `InsDcCost`; the class
+  enum `InsDcPeople` already seeded) and the framework's business datasets (docs/tools/Monitoring.md: admission needs a registered feed,
+  a built index and a registered scope policy, the ten-year range cap, `query#Documents` refusing a reader without the dataset's
+  artifact); Maintenance P17's registrations as the pattern (BossMaintenanceReportData.xml, the P17 block of BossSetupMaintenanceData.xml,
+  `report/boss-maintenance-*.json`); Registry.js (a `catalogueService` called as the viewer, a refusal hiding the owner's entries;
+  `reportLink` appending the context with "?"; `destinationOpens` stripping a query; an attention provider asked only once its route
+  opens), InsightsHome's `registeredKeys`, the internal flow map (People's step information only, template version 2); the §4 rows for
+  P29: the clocking default (Attendance.js `isClockingOn`, the employer's `PeopleClocking`, P13's R2), the case intake (PeopleCases.js
+  `intakeHandlers` and `eligibleHandler`, `NO_CASE_HANDLER`), payroll's readiness (P23's `people.payroll` check, already built);
+  PartySetting not audit-logged (F232); the readiness contract (fixRoute keys resolved by Admin.js); the DataDocument builder (a "many"
+  relationship nests its fields under the relationship's name, and a condition on it is a WHERE that drops the rows it filters).
+- Mantle:
+  - `service/mantle/humanres/PeopleReportServices.xml` (new) over `PeopleReports.js` (new): `get#Options` (the reports the caller reads
+    and their employers; PERMISSION_DENIED for one who reads none, so Insights hides People's entries from them) and `run#Report` over a
+    table of registered reports, each with the capabilities that read it: `headcount` (HR or the People administrator: headcount at the
+    start and end of the period, distinct people; employments at the end; joins and exits, employments; turnover over the average
+    headcount, the denominator said; by employer, department, the primary assignment's at each moment, or all together), `recruiting`
+    (a recruiter or HR: applications received in the period by stage now, by opening and by source, a duplicate left out; the vacant
+    seats now through `find#Positions`), `attendance` (HR: days with a missing in or out or a repeated punch, corrected or not),
+    `leaveBalances` (HR: the ledger as of a date by employment and type, granted, accrued, taken, expired, adjusted, the balance; never a
+    reason or an entry's description), `expenses` (HR or PEOPLE_EXPENSE_MANAGE: claims submitted in the period by employer, state and
+    currency, each currency apart), `qualifications` (development or HR: the current employees' verified qualifications expired and not
+    renewed, or expiring in the window, 90 days by default; never a number), `reviews` (development or HR: each started cycle's reviews by
+    state and the completed share; never a rating or a note) and `payrollRegister` (PAYROLL_VIEW alone: each calculated employee of the
+    runs paid in the period, gross, deductions, contributions, net and employer cost, each currency apart; PERMISSION_DENIED for anyone
+    else). ORGANIZATION_DENIED outside the scope, PERIOD_INVALID, REPORT_UNAVAILABLE; rows capped at 20,000 (`capped` said). `format=csv`
+    answers the same rows as `csvText` with the options, basis and denominator, each cell a spreadsheet would read as a formula behind an
+    apostrophe.
+  - PeopleServices `get#Settings` and `store#Settings` over `PeopleSettings.js` (new): an employer's clocking default (`PeopleClocking`,
+    Y or N; the People administrator or an HR editor of it) and its case intake handlers (`PeopleCaseIntake`; the People administrator
+    alone, each checked as a filing checks it, HANDLER_NOT_ELIGIBLE; get#Settings answers them by name with whether each may take a case
+    now, and with one employer asked the people who could); NOTHING_TO_CHANGE, `expectedRevision` (REVISION_STALE). Attendance.js
+    `isClockingOn` and PeopleCases.js stay the readers; PeopleCases.js exports `INTAKE`, `listOf`, `eligibleHandler` and `intakeHandlers`.
+    PartySetting.settingValue is audit-logged (`enable-audit-log="true"`), so each change keeps its reason (`settingValue_changeReason`);
+    the settings stay plain PartySetting rows, not dated (F232 decided so: the history is the audit log).
+  - People.js `readinessChecks` gains every phase's checks: `people.positions` (NO_POSITION), `people.approvals` (an HR fallback in
+    effect, NO_HR_FALLBACK), `people.checklists` (an onboarding template, NO_ONBOARDING_CHECKLIST), `people.schedules`
+    (NO_WORKING_SCHEDULE), `people.leave` (NO_LEAVE_POLICY) and `people.caseIntake` (NO_CASE_HANDLER), each with its fixRoute.
+- BOSS:
+  - `People/Reports` (new, menu 14; BOSS_PPL_REPORTS: ALWAYS for HR, recruiting, development, payroll and the payroll approver, denied to
+    the root user group): ReportOptions (the report, employer, by, from, through), ReportResults (one section per report with its own
+    form-list and phone columns, the basis and the denominator, the totals; the payroll register's amounts `ai-opt-out`) and Export CSV
+    (`exportCsv`, run#Report's csv). Insights opens it by `reportId`.
+  - `People/Settings/Preferences` (new, Settings' tab 5): each employer's clocking default and intake handlers in brief, one employer's
+    Clocking and Confidential cases boxes with their Change dialogs (the candidates by name; a named handler who no longer may is said),
+    and links to the domain editors. SettingsHome links each check to the place that sets it up (its fixRoute, as Admin's Health).
+    Attendance's Who clocks gains Employer's default for an HR editor (`storeEmployerClocking`, store#Settings).
+  - `People/LogNote` and `People/SendMessage` (new, out of the menu) and the root's response actions "Log as note" (an application, its
+    recruiter's: get#Application, then log#RecordNote) and "Send as message" (Comms' send#Compose, filed on the page's application when
+    the user is its recruiter); `skill/people-hire.md`, `skill/people-policy-question.md`, aliases `employee`, `hire`, `policy`,
+    `headcount`.
+  - `data/BossSetupPeopleReportData.xml` (new, seed-initial, after BossSetupData): the DataDocuments `BossPeopleEmployment` (Employment
+    with its relationship's party, employer and dates, position class and how it ended; no tax or pay field), `BossPeopleLeaveLedger`
+    (the ledger entry's type, kind, unit, signed quantity as `leaveQuantity`, dates; no description) and `BossPeopleQualification` (type,
+    title, issuer, validity, verification, and the holder's current employments as `fromRelationships`, a list); the push feed
+    `BossPeopleReports`; BOSS_PPL_REPORTS; People's Insights bundle `BOSS_PEOPLE_INSIGHTS` ("People data in Insights", a capability
+    bundle of People's) holding the three datasets' artifacts and documents, with ADMIN alone beside it (the steward through
+    REPORT_DATASETS_ADMIN); the admission, the `InsDcPeople` classes, readiness and refresh rows; the catalog entries `People.Headcount`,
+    `.Recruiting`, `.Attendance`, `.LeaveBalances`, `.Expenses`, `.Qualifications`, `.Reviews` and `.PayrollRegister` (catalogue: Mantle's
+    get#Options; route `People/Reports?reportId=<id>`); the measures `People.Headcount` and `People.Turnover`; the attention providers
+    `People.NoManager`, `.Vacancies` and `.Decisions` (get#Home's counts); the flow target `People.Employees`; the wizard export target
+    `peopleReports`. `report/boss-people-headcount.json`, `-leave-balances.json`, `-qualifications.json` (each over Mantle's organization
+    row filter; the qualifications' on `fromRelationships.organizationPartyId`), `-workforce.json` (dashboard: employments in effect by
+    employer, joins by month, leave taken by type, qualifications by expiry) and `-qualification-expiring.json` (alert template: verified
+    qualifications expiring in the next 30 days). `report/insights-flowmap-internal.json`: the People step opens People.Employees, counts
+    People.NoManager and names People.Headcount (template version 3).
+  - Owner contracts: Insights' `Registry.js reportLink` joins the context with "&" after a route's own parameters, and
+    ReportCatalogEntry.routePath says a route may carry them (design-insights §6.1); Admin.js `mountRoutes` gains the readiness places
+    (`peoplePositions`, `peopleApprovalRules`, `peopleChecklists`, `peopleWorkingSchedules`, `peopleLeavePolicies`, `peoplePreferences`)
+    and `peopleReports`; People.js `linkPaths` gains `Reports` and `Settings/Preferences`. Demo: `people.analyst` (BossUsersDemoData), an
+    Insights reader and author of Retail with BOSS_PEOPLE_INSIGHTS and no People group.
+- Specs:
+  - Mantle `test/humanres/PeopleReports` (4 features, 0.9 s): headcount as of a date (Jan–Feb: 6 at the start, 8 at the end, 2 joins;
+    March: one exit over 7.5, 13.3%, the denominator said; as of December 31 nothing joined), Services refused ORGANIZATION_DENIED, the CSV
+    with the employer "=…" behind an apostrophe and the total line; qualification expiry (an expired one not renewed and one expiring, a
+    renewed, a leaver's and an unverified one left out, no number) and leave balances as of March 31 (20 granted, 3 taken, 17; the June
+    entry out; no description); the payroll register refused to HR (PERMISSION_DENIED) and answered to payroll with the same parameters,
+    HR never offered it, a directory reader offered nothing; the clocking default by HR, audit-logged with its reason, the intake refused
+    to HR and to an ineligible handler, refused at a stale revision, set by the People administrator with the handler's name, the
+    readiness's case intake warning then ready, Services refused, and the nine checks.
+  - BOSS `test/People/PeopleInsights` (5 features, about 0.6 s): the registrations resolve (eight entries, two measures, three providers,
+    three `InsDcPeople` classes admitted, the flow target and step, template version 3, every service and route), the five definitions
+    load, no document field names pay, tax, contact, a reference or a description; Insights' catalog and its link with the report chosen,
+    Mantle's catalogue per user (HR without the register, payroll the register alone, the recruiter the funnel, the reader refused); the
+    employments and qualifications datasets read by the analyst, Retail's rows alone (a forged Services filter finds none; Kenji's
+    Services qualification never), refused to an Insights reader without the bundle; Assist's `run#DatasetQuery` and MCP's
+    `run#OperationsQuery` refused DATASET_UNAVAILABLE and neither lists a People dataset; Reports' one qvt render as HR (headcount by
+    department, the denominator, Export CSV, no payroll register) with its CSV, and Preferences' one qvt render as the People administrator.
+  - `PeopleAccessLater` gains the P29 case (0.5 s); owner specs changed by the added rows only: PeopleSpecLib's menus (Reports for HR,
+    payroll and the administrator; Settings' Preferences), PeopleAccess's readiness feature (its two P1 checks kept, nine in all),
+    Mantle PeopleScope's readiness feature (the same), InsightsHome's `registeredKeys` (three People keys), InsightsAlerts' templates (the
+    People one).
+  - Acceptance, written and not run: `acceptance/People/PeopleReportsUsable` (3 features: people.hr's headcount and turnover for Retail
+    this year and its CSV, the totals the report's; people.analyst opens the People workforce dashboard and schedules it monthly for
+    themselves, an Insights reader without the bundle reading none of it; the qualifications expiring template copied and activated tells
+    its owner once when Rafael's first aid certificate is moved to expire in twenty days, and not at the next check; all put back).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): mr-mantle PeopleReports, PeopleScope, Attendance,
+  PeopleCases, KioskIdentity, PartyServices, InternalOrganizations, AccountingSetup, PayAssignments and Qualifications 58 of 58 (18.3 s of
+  features), and before Prettier also AccountingProjectCost, WorkTimesheets, WorkTimeEntries, WorkProjectFoundation, MaintenanceIntake and
+  PeopleOrganization (PartySetting's audit and the readiness); mr-boss PeopleInsights, PeopleAccessLater, PeopleAccess, PeopleAttendance,
+  PeopleSelfService, PeopleRecruiting, InsightsHome, InsightsFlowMaps, InsightsCatalog, InsightsDatasets, InsightsAccess,
+  InsightsSettings, InsightsAlerts, AdminExports, AdminRegistries, AdminCapabilities, AdminSettings, AdminUsers, AdminAccess and
+  MaintenanceReports 120 of 120 (20 specs, 37.6 s of features). A one-off probe of every report as the system administrator on the demo
+  data (not kept): each answered with no error (headcount 14 people, a qualification expiring; the demo has no 2026 applications, ledger,
+  claims, started review cycles or pay runs for the others). `moqui lint --screens` (Debug): 139 flagged sites, none in the new or changed
+  screens; no TUI finding in them. Prettier clean on the new JavaScript, PeopleScope and PeopleSpecLib; the hunks in BOSS People.js and
+  Registry.js (not clean on master) match Prettier's output. Not run: test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's People Added rows (get#Readiness's checks, get#Settings and store#Settings, PeopleReportServices) and its
+  heading; ss-inventory's P29 note (no baseline form).
+- Design edits: design-people (header; §1.2 Reports; §1.4 Shipped reports and Assist as built; §12 Reports and Settings as built);
+  design-insights §6.1 (People's entries and a route's fixed parameters); impl-insights §7 "What waits on People" (built).
+- Findings (provisional, numbered by the lead):
+  - The datasets' row filter is Mantle's organization policy (MantleOrganization), as Maintenance's: the People grant is the bundle, and
+    an Insights reader with it reads their organizations' employments, leave ledger and qualifications whatever their People
+    capabilities. A People scope policy (HR readers of the employer only) would be a ReportScopePolicy of Mantle's; not built.
+  - Only ADMIN (REPORT_DATASETS_ADMIN) stewards the People datasets: the Insights data steward (BOSS_INSIGHTS_DATA) is not granted them,
+    so Admin's readiness refresh of their indexes is the system administrator's.
+  - A qualification document carries its holder's current employers as a list (`fromRelationships`); when an employment ends, the
+    feed's reindex of that document drops the employer, but a person with no current employment produces no document and the old one
+    stays in the index until the dataset is rebuilt (the feed deletes a document only when its record is deleted).
+  - Design §1.4's alert templates for a payroll run with failed units and for missing timesheets are not built: neither has a dataset
+    (a pay run unit dataset without amounts and a timesheet dataset would be new documents); the qualifications expiring template is.
+  - Design §12 Reports' time-to-hire, referral by referring employee, the payroll variance and liabilities, advances and the leave ledger
+    report are not built; the leave ledger is the dataset, the referral funnel is by source only.
+  - PeoplePreferences holds the clocking default and the case intake only: the attendance zone policy, self-service features,
+    notification choices and retention purposes of design §12 are not settings (retention waits on Admin's PrivacyServices).
+  - Home's expiring qualifications and payroll exceptions number cards (P18's and P25's notes) are not built; the reports and the alert
+    template answer them.
+  - The catalog's People entries share one route (`People/Reports?reportId=…`); a pin or a ReportLink carries the report's id.
+  - Upgrade: an existing database loads `data/BossSetupPeopleReportData.xml` and the new demo user, then rebuilds the three People
+    datasets' indexes (Admin's readiness offers it); the internal flow map template is version 3, and a copy of version 2 keeps its
+    information-only People step until copied again. PartySetting's audit log starts with the next change.
+- For the lead:
+  - Budget share: mr-mantle PeopleReports about 0.9 s; mr-boss server PeopleInsights about 0.6 s and PeopleAccessLater +0.5 s; client
+    unchanged; budgets not changed.
+  - Merge hot spots with P26 (`ppl/p26`): BOSS `service/ironstone/people/People.js` (`linkPaths`: Reports and Settings/Preferences after
+    Settings/FormDetail), `screen/People.xml` (the header comment's end, the two response actions after P16's prompts),
+    `test/People/PeopleSpecLib.js` (adminMenu, hrMenu, payrollMenu, settingsMenu), `test/People/PeopleAccessLater.spec.js` (the header
+    line before "Run:" and the P29 feature appended at the end), `plan/usl-inventory.md` (rows after get#Readiness, the heading),
+    design-people's header and §12, this plan; Mantle `People.js` (`readinessChecks` after people.payroll), `PeopleServices.xml` (the P29
+    block appended at the end). Elsewhere: Insights' `Registry.js` and InsightsHome/InsightsAlerts specs, Admin.js `mountRoutes`,
+    `report/insights-flowmap-internal.json`, BossUsersDemoData.xml (after people.admin), Attendance.xml, PartyEntities.xml.
+  - For the user's call: (1) the People datasets' scope (the organization row filter with the bundle, as built, or a People scope
+    policy of HR readers); (2) whether the Insights data steward stewards People's datasets (built: ADMIN alone); (3) Reports for a
+    manager (built: not shown; a manager reads no report).
+
 ### P30 — Clocking kiosk
 
 Design §6 ClockingKiosk, §1.4 (devices), §15 (the badge); PE-05 (kiosk identity), PE-22. After P13 (punches) and on

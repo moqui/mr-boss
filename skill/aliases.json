@@ -13,5 +13,9 @@
     "payslip": ["pay slip", "salary slip", "pay stub", "wage slip"],
     "work order": ["maintenance job", "repair order", "job card"],
     "equipment": ["machine", "asset", "device"],
-    "problem": ["fault", "breakdown", "defect", "malfunction"]
+    "problem": ["fault", "breakdown", "defect", "malfunction"],
+    "employee": ["staff member", "worker", "team member"],
+    "hire": ["onboard", "take on", "recruit"],
+    "policy": ["handbook", "rule", "guideline"],
+    "headcount": ["staff count", "number of employees", "fte"]
 }

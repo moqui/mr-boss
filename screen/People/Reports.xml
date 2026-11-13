@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Reports (design-people §12 Reports; style-guide §3.7 Report; impl-people P29): ReportOptions, the reports the user reads
+    (mantle.humanres.PeopleReportServices.get#Options: each by the capability it names; the payroll register a payroll reader's
+    alone) with the employer, the period or as-of date and, for headcount, the grouping; ReportResults, the chosen report's rows,
+    totals and what it counts (run#Report: headcount with its turnover denominator, the hiring funnel with its sources, attendance
+    exceptions, leave balances, expense claims and the payroll register in each currency apart, qualification expiry, review
+    completion), and its CSV (exportCsv: the same projection and options, safe from spreadsheet formulas). Every People user's by
+    the root's grant; a user who reads no report is told which access it needs. Insights' catalog opens a report here by its id
+    (People's ReportCatalogEntry rows; the route's reportId). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reports" default-menu-index="14" menu-image="sym_o_bar_chart" menu-image-type="icon">
+    <parameter name="reportId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="groupBy"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="mantle.humanres.PeopleReportServices.run#Report" out-map="exported"
+                    in-map="Object.assign({}, reportOptions, {format:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.csvText, 'text/csv', exported.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="reportOptions" from="{reportId:reportId || null, organizationPartyId:organizationPartyId || null,
+                fromDate:fromDate || null, thruDate:thruDate || null, groupBy:groupBy || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="mantle.humanres.PeopleReportServices.get#Options" out-map="options" transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="reportList" from="Array.from(options?.reports || [])"/>
+        <set field="chosen" from="reportList.find(row =&gt; row.reportId === reportId) || reportList[0] || null"/>
+        <set field="answer" from="null"/>
+        <if condition="chosen">
+            <service-call name="mantle.humanres.PeopleReportServices.run#Report" out-map="answer" transaction="force-new" ignore-error="true"
+                    in-map="Object.assign({}, reportOptions, {reportId:chosen.reportId})"/>
+            <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="reportFound" from="!!answer?.columns"/>
+        <set field="shownId" from="reportFound ? answer.reportId : null"/>
+        <set field="resultRows" from="Array.from(answer?.rows || [])"/>
+        <set field="totals" from="answer?.totals || {}"/>
+        <set field="sourceRows" from="Array.from(answer?.sourceRows || [])"/>
+        <set field="currencyRows" from="Array.from(answer?.currencyRows || [])"/>
+        <set field="findValues" from="Object.assign({}, reportOptions, {reportId:chosen?.reportId || null,
+                groupBy:groupBy || 'organization'})"/>
+        <set field="takes" from="Array.from(chosen?.options || [])"/>
+        <set field="groupOptions" from="[{value:'organization', label:'Employer'}, {value:'department', label:'Department'}, {value:'none', label:'All together'}]"/>
+        <set field="exportParameters" from="Object.assign({}, reportOptions, {reportId:shownId})"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Reports" type="h5"/>
+                <label text="People's reports, each over the employers you may read: distinct people and employments are labelled, headcount is as of a date and turnover shows its denominator."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <label text="People reports need HR, recruiting, development, expense or payroll access." type="p" style="m-muted"
+                condition="!reportList.length"/>
+        <section name="ReportOptions" condition="reportList.length">
+            <widgets>
+                <form-single name="ReportOptionsForm" transition="." map="findValues">
+                    <field name="reportId">
+                        <default-field title="Report">
+                            <drop-down><list-options list="reportList" key="${reportId}" text="${title}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Employer" tooltip="Every employer you read when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="groupBy" hide="!takes.includes('groupBy')">
+                        <default-field title="By">
+                            <drop-down><list-options list="groupOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate" hide="!takes.includes('fromDate')">
+                        <default-field title="From" tooltip="The first of the month when empty (today for qualifications)">
+                            <date-time type="date"/></default-field>
+                    </field>
+                    <field name="thruDate">
+                        <default-field title="Through" tooltip="Today when empty; the as-of date of headcount and leave balances">
+                            <date-time type="date"/></default-field>
+                    </field>
+                    <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="reportId"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="groupBy"/>
+                        </field-row-big>
+                        <field-row-big>
+                            <field-ref name="fromDate"/>
+                            <field-ref name="thruDate"/>
+                            <field-ref name="submit"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <label text="${reportError || 'This report is not available for these choices.'}" type="p" style="text-negative"
+                        condition="!reportFound"/>
+            </widgets>
+        </section>
+        <section name="ReportResults" condition="reportFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="${answer.title}" type="h6"/>
+                        <label text="${answer.optionsText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-auto">
+                        <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor" parameter-map="exportParameters"/>
+                    </container>
+                </container>
+                <label text="${answer.basisText}" type="p" style="m-muted"/>
+                <label text="${answer.denominatorText}" type="p" condition="answer.denominatorText"/>
+                <label text="More rows than a report reads: narrow the employer or the period." type="p" style="text-warning"
+                        condition="answer.capped"/>
+                <label text="Nothing to report for these choices." type="p" style="m-muted" condition="!resultRows.length"/>
+
+                <section name="HeadcountResults" condition="shownId == 'headcount' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <form-list name="HeadcountRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="groupName"><default-field title="${answer.groupBy == 'department' ? 'Department' : 'Employer'}"><display/></default-field></field>
+                            <field name="startHeadcount" align="right"><default-field title="Headcount at start"><display format="#,##0"/></default-field></field>
+                            <field name="endHeadcount" align="right"><default-field title="Headcount at end"><display format="#,##0"/></default-field></field>
+                            <field name="employmentCount" align="right"><default-field title="Employments at end"><display format="#,##0"/></default-field></field>
+                            <field name="joinCount" align="right"><default-field title="Joins"><display format="#,##0"/></default-field></field>
+                            <field name="exitCount" align="right"><default-field title="Exits"><display format="#,##0"/></default-field></field>
+                            <field name="averageHeadcount" align="right"><default-field title="Average headcount"><display format="#,##0.#"/></default-field></field>
+                            <field name="turnoverText" align="right"><default-field title="Turnover"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupName"/><field-ref name="endHeadcount"/></column>
+                                <column><field-ref name="exitCount"/><field-ref name="turnoverText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="Total: ${totals.endHeadcount} people as of the end (${totals.startHeadcount} at the start), ${totals.employmentCount} employments, ${totals.joinCount} joins, ${totals.exitCount} exits, turnover ${totals.turnoverText}."
+                                type="p" style="text-weight-medium"/>
+                    </widgets>
+                </section>
+
+                <section name="RecruitingResults" condition="shownId == 'recruiting'">
+                    <widgets>
+                        <label text="Vacant seats now: ${answer.vacancyCount}. Applications in the period: ${totals.applicationCount}, hired ${totals.hiredCount}."
+                                type="p" style="text-weight-medium"/>
+                        <form-list name="FunnelRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="openingTitle"><default-field title="Opening"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="openingStatusName"><default-field title="Opening state"><display/></default-field></field>
+                            <field name="applicationCount" align="right"><default-field title="Applications"><display/></default-field></field>
+                            <field name="receivedCount" align="right"><default-field title="Received"><display/></default-field></field>
+                            <field name="screeningCount" align="right"><default-field title="Screening"><display/></default-field></field>
+                            <field name="interviewCount" align="right"><default-field title="Interview"><display/></default-field></field>
+                            <field name="offerCount" align="right"><default-field title="Offer"><display/></default-field></field>
+                            <field name="hiredCount" align="right"><default-field title="Hired"><display/></default-field></field>
+                            <field name="refusedCount" align="right"><default-field title="Refused"><display/></default-field></field>
+                            <field name="withdrawnCount" align="right"><default-field title="Withdrawn"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="openingTitle"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="applicationCount"/><field-ref name="hiredCount"/></column>
+                            </columns>
+                        </form-list>
+                        <container-box condition="sourceRows.length">
+                            <box-header title="By source"/>
+                            <box-body-nopad>
+                                <form-list name="SourceRows" list="sourceRows" skip-form="true" paginate="false">
+                                    <field name="sourceName"><default-field title="Source"><display/></default-field></field>
+                                    <field name="applicationCount" align="right"><default-field title="Applications"><display/></default-field></field>
+                                    <field name="hiredCount" align="right"><default-field title="Hired"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="sourceName"/></column>
+                                        <column><field-ref name="applicationCount"/><field-ref name="hiredCount"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="AttendanceResults" condition="shownId == 'attendance' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <label text="${totals.dayCount} days: ${totals.missingOutCount} without a clock out, ${totals.missingInCount} without a clock in, ${totals.repeatedCount} with a repeated punch; ${totals.correctedCount} corrected."
+                                type="p" style="text-weight-medium"/>
+                        <form-list name="AttendanceRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="attendanceDateText"><default-field title="Day"><display/></default-field></field>
+                            <field name="flagsText"><default-field title="Exception"><display/></default-field></field>
+                            <field name="stateName"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="attendanceDateText"/></column>
+                                <column><field-ref name="flagsText"/><field-ref name="stateName"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+
+                <section name="LeaveResults" condition="shownId == 'leaveBalances' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <label text="As of ${answer.asOfText}." type="p" style="text-weight-medium"/>
+                        <form-list name="LeaveRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="leaveTypeName"><default-field title="Leave type"><display/></default-field></field>
+                            <field name="unitName"><default-field title="Unit"><display/></default-field></field>
+                            <field name="grantedQuantity" align="right"><default-field title="Granted"><display format="#,##0.##"/></default-field></field>
+                            <field name="accruedQuantity" align="right"><default-field title="Accrued"><display format="#,##0.##"/></default-field></field>
+                            <field name="takenQuantity" align="right"><default-field title="Taken"><display format="#,##0.##"/></default-field></field>
+                            <field name="expiredQuantity" align="right"><default-field title="Expired"><display format="#,##0.##"/></default-field></field>
+                            <field name="adjustedQuantity" align="right"><default-field title="Adjusted"><display format="#,##0.##"/></default-field></field>
+                            <field name="balanceQuantity" align="right"><default-field title="Balance"><display format="#,##0.##"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="leaveTypeName"/></column>
+                                <column><field-ref name="balanceQuantity"/><field-ref name="unitName"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+
+                <section name="ExpenseResults" condition="shownId == 'expenses' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <form-list name="ExpenseCurrencyRows" list="currencyRows" skip-form="true" paginate="false">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="claimCount" align="right"><default-field title="Claims"><display/></default-field></field>
+                            <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="currencyUomId"/></column>
+                                <column><field-ref name="claimCount"/><field-ref name="totalText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="ExpenseRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="stateName"><default-field title="State"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="claimCount" align="right"><default-field title="Claims"><display/></default-field></field>
+                            <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="organizationName"/><field-ref name="stateName"/></column>
+                                <column><field-ref name="claimCount"/><field-ref name="totalText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+
+                <section name="QualificationResults" condition="shownId == 'qualifications' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <label text="${totals.expiredCount} expired and not renewed, ${totals.expiringCount} expiring, ${answer.windowText}."
+                                type="p" style="text-weight-medium"/>
+                        <form-list name="QualificationRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="qualificationTypeName"><default-field title="Type"><display/></default-field></field>
+                            <field name="title"><default-field title="Qualification"><display/></default-field></field>
+                            <field name="expiryText"><default-field title="Expires"><display/></default-field></field>
+                            <field name="stateName"><default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${expired ? 'negative' : 'warning'}">${
+                                        WebUtilities.encodeHtml(stateName)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateName})}]]></text>
+                                    <text type="html">${stateName}</text>
+                                    <text type="csv">${stateName}</text>
+                                </render-mode>
+                            </default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="title"/></column>
+                                <column><field-ref name="expiryText"/><field-ref name="stateName"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+
+                <section name="ReviewResults" condition="shownId == 'reviews' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <form-list name="ReviewRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="cycleName"><default-field title="Review cycle"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                            <field name="cycleStateName"><default-field title="Cycle state"><display/></default-field></field>
+                            <field name="reviewCount" align="right"><default-field title="Reviews"><display/></default-field></field>
+                            <field name="assessingCount" align="right"><default-field title="Assessing"><display/></default-field></field>
+                            <field name="approvalCount" align="right"><default-field title="Waiting for approval"><display/></default-field></field>
+                            <field name="completedCount" align="right"><default-field title="Completed"><display/></default-field></field>
+                            <field name="completionText" align="right"><default-field title="Completed share"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="cycleName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="reviewCount"/><field-ref name="completionText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+
+                <section name="PayrollResults" condition="shownId == 'payrollRegister' &amp;&amp; resultRows.length">
+                    <widgets>
+                        <form-list name="PayrollCurrencyRows" list="currencyRows" skip-form="true" paginate="false">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="employeeCount" align="right"><default-field title="Employees"><display/></default-field></field>
+                            <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                            <field name="deductionText" align="right" ai-opt-out="true"><default-field title="Deductions"><display/></default-field></field>
+                            <field name="contributionText" align="right" ai-opt-out="true"><default-field title="Contributions"><display/></default-field></field>
+                            <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                            <field name="employerCostText" align="right" ai-opt-out="true"><default-field title="Employer cost"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="currencyUomId"/><field-ref name="employeeCount"/></column>
+                                <column><field-ref name="grossText"/><field-ref name="netText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="PayrollRows" list="resultRows" skip-form="true" paginate="false">
+                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                            <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
+                            <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                            <field name="deductionText" align="right" ai-opt-out="true"><default-field title="Deductions"><display/></default-field></field>
+                            <field name="contributionText" align="right" ai-opt-out="true"><default-field title="Contributions"><display/></default-field></field>
+                            <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                            <field name="employerCostText" align="right" ai-opt-out="true"><default-field title="Employer cost"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="payDateText"/></column>
+                                <column><field-ref name="grossText"/><field-ref name="netText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

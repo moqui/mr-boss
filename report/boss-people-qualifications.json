@@ -1,0 +1,35 @@
+{
+  "id": "boss-people-qualifications",
+  "type": "dataset",
+  "title": "Qualifications",
+  "body": {
+    "folder": "People",
+    "description": "Current employees' qualifications (degrees, certifications, licences, identity documents and work permits) with their type, title, issuer, validity and verification and the holder's current employers (fromRelationships), by expiry date. Each viewer reads the qualifications of their own organizations' employees. Never a document's number, a file or any pay.",
+    "documentType": "BossPeopleQualification",
+    "timeField": "thruDate",
+    "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "fromRelationships.organizationPartyId"
+    },
+    "fieldDefaults": {
+      "qualificationTypeEnumId": {
+        "enumTypeId": "QualificationType"
+      },
+      "verificationStatusId": {
+        "lookup": {
+          "entityName": "moqui.basic.StatusItem",
+          "keyField": "statusId",
+          "displayField": "description"
+        }
+      },
+      "fromRelationships.organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      }
+    }
+  }
+}

@@ -50,12 +50,25 @@ const ids = {
         "Expenses",
         "Development",
         "Performance",
+        "Reports",
         "Settings"
     ],
     // P8: My team, the managers' (and the administrator's, through the root's ALWAYS)
     managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development", "Performance"],
-    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development", "Performance"],
-    payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Development", "Performance"],
+    // P29: Reports, the readers of a report's (HR, recruiting, development, payroll; BOSS_PPL_REPORTS)
+    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development", "Performance", "Reports"],
+    payrollMenu: [
+        "Home",
+        "Approvals",
+        "Employees",
+        "Staffing",
+        "Time",
+        "Payroll",
+        "Expenses",
+        "Development",
+        "Performance",
+        "Reports"
+    ],
     // P15: Expenses' menu, every People user's (and a self-service employee's by the area's own grant)
     expensesMenu: ["ExpenseClaims", "EmployeeAdvances"],
     // P18: Skills & training's menu: the skills matrix development's, HR's and the managers', the qualifications every People user's;
@@ -99,7 +112,7 @@ const ids = {
         "HoursForPay"
     ],
     // P16: Forms, the survey builder with People's registration
-    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms"],
+    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms", "Preferences"],
     // P10: Rates; P22 (its review's call of Nov 12, 2026): payroll configuration's components, structures and groups, payroll's;
     // P23: pay assignments, before Rates; P24: pay adjustments, after them
     // P25: pay runs first; P26: payslips after them

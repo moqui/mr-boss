@@ -15,8 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- People › Settings › Settings (design-people §12 Settings; style-guide §3.9 Settings; impl-people P1): SetupReadiness, the
     checks of what is built for each employer in the People administrator's scope that has employees (a department set up,
     every employee with a manager), over mantle.humanres.PeopleServices.get#Readiness, the same checks Admin's Health shows
-    from its readiness registry (people.setup). An employer with no employees has no check yet. The readiness grows with the
-    phases (positions, policies, payroll); PeoplePreferences is P29's. -->
+    from its readiness registry (people.setup). An employer with no employees has no check yet. P29: every phase's checks (payroll,
+    positions, the approval rules' HR fallback, an onboarding checklist, a working schedule, a leave policy, the confidential case
+    intake), each linking the place that sets it up; PeoplePreferences is the Preferences tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="1">
     <parameter name="organizationPartyId"/>
@@ -30,8 +31,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="readinessFound" from="!!readiness?.checks"/>
         <set field="stateNames" from="{ready: 'Ready', warning: 'Warning', failed: 'Failed', unavailable: 'Unavailable'}"/>
         <set field="stateColors" from="{ready: 'positive', warning: 'warning', failed: 'negative', unavailable: 'grey-8'}"/>
+        <!-- P29: each check opens the place that sets it up (its fixRoute, the key Admin's Health resolves too) -->
+        <set field="fixPaths" from="{peopleSettings: 'Settings', peoplePayAssignments: 'Payroll/PayAssignments', peoplePayGroups: 'Payroll/PayGroups',
+                peoplePositions: 'Staffing/Positions', peopleApprovalRules: 'Settings/ApprovalPolicies', peopleChecklists: 'Employees/ChecklistTemplates',
+                peopleWorkingSchedules: 'Time/WorkingSchedules', peopleLeavePolicies: 'Time/LeavePolicies', peoplePreferences: 'Settings/Preferences'}"/>
         <set field="checkRows" from="(readiness?.checks || []).map(row =&gt; Object.assign({}, row, {
-                stateName: stateNames[row.state] || stateNames.unavailable, stateColor: stateColors[row.state] || stateColors.unavailable}))"/>
+                stateName: stateNames[row.state] || stateNames.unavailable, stateColor: stateColors[row.state] || stateColors.unavailable,
+                fixUrl: row.fixRoute &amp;&amp; fixPaths[row.fixRoute] &amp;&amp; row.fixRoute !== 'peopleSettings' ? sharedLinks?.[fixPaths[row.fixRoute]] || null : null}))"/>
         <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
     </actions>
     <widgets>
@@ -75,9 +81,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         </render-mode>
                                     </default-field></field>
                                     <field name="message"><default-field title="Explanation"><display/></default-field></field>
+                                    <field name="fixUrl">
+                                        <default-field title="">
+                                            <link url="${fixUrl}" text="Set up" link-type="anchor" condition="fixUrl"/>
+                                        </default-field>
+                                    </field>
                                     <columns type="mobile">
                                         <column><field-ref name="title"/><field-ref name="organizationName"/><field-ref name="message"/></column>
-                                        <column><field-ref name="stateName"/></column>
+                                        <column><field-ref name="stateName"/><field-ref name="fixUrl"/></column>
                                     </columns>
                                 </form-list>
                             </box-body>

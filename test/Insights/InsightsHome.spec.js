@@ -43,7 +43,11 @@ const registeredKeys = [
     // Maintenance's (impl-maintenance P17)
     "Maintenance.Unassigned",
     "Maintenance.OverduePm",
-    "Maintenance.ResourcesDown"
+    "Maintenance.ResourcesDown",
+    // People's (impl-people P29)
+    "People.NoManager",
+    "People.Vacancies",
+    "People.Decisions"
 ]
 // The spec's own providers (owner InsightsSpec), over Insights' own services: one that answers, one whose answer lacks its
 // count and one whose call fails (both failures), one whose owner refuses, one whose route the reader cannot open and one for

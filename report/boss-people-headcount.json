@@ -1,0 +1,38 @@
+{
+  "id": "boss-people-headcount",
+  "type": "dataset",
+  "title": "Employments",
+  "body": {
+    "folder": "People",
+    "description": "Employments (an employee's employment by an employer of the organization) with their employer, start and end, position class and, once ended, how it ended, by start date: headcount as of a date is the employments begun and not ended then, counted by person; joins and exits are the employments begun and ended in a period. Each viewer reads their own organizations' employments. No pay, tax, private contact or identity number.",
+    "documentType": "BossPeopleEmployment",
+    "timeField": "fromDate",
+    "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "terminationReasonEnumId": {
+        "enumTypeId": "TerminationReason"
+      },
+      "terminationTypeEnumId": {
+        "enumTypeId": "TerminationType"
+      },
+      "emplPositionClassId": {
+        "lookup": {
+          "entityName": "mantle.humanres.position.EmplPositionClass",
+          "keyField": "emplPositionClassId",
+          "displayField": "title"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "boss-people-qualification-expiring",
+  "type": "alert",
+  "title": "Qualifications expiring",
+  "body": {
+    "description": "Fires when verified qualifications of the current employees expire within the next 30 days, by type, among the organizations its owner reads (a qualification renewed by a later one still counts until it expires: the People qualification expiry report leaves renewed ones out). A template: copy it in Insights \u203a Business alerts, set the threshold, the window and the audience, then activate it; it tells its subscribers when it starts firing, not at every check.",
+    "query": {
+      "datasetId": "boss-people-qualifications",
+      "from": "now",
+      "thru": "now+30d",
+      "aggregations": [
+        {
+          "id": "type",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "qualificationTypeEnumId",
+            "size": 50
+          }
+        },
+        {
+          "id": "qualifications",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "partyQualificationId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "field": {
+              "name": "verificationStatusId",
+              "op": "eq",
+              "value": "QlVerVerified"
+            }
+          },
+          "label": "Verified"
+        }
+      ]
+    },
+    "field": "qualifications",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "people",
+      "severity": "warning"
+    }
+  }
+}
