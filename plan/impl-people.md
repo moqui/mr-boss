@@ -8981,6 +8981,120 @@ merged.
 - The inventories' **Implemented in** columns, the design's Impl column and crosscut's People rows,
   Remaining-Work (PE-21 and PE-09 built), the mr-boss README's People line.
 
+**Built Nov 13 (P31).** mr-moqui, mr-mantle and mr-boss (this commit), branch `ppl/p31`; no Rust changed, nothing built.
+- Checked first (the code over the plan): the earlier finish phases' sweeps and walks (Admin P19's AdminTui, AdminServerStatic and
+  AdminReviewWalk with AdminSpecLib's `sweepScreens` and `sweepParameters`; Insights P12's InsightsTui and InsightsReviewWalk;
+  Maintenance P20's MaintenanceTui, MaintenanceServerStatic, MaintenanceAccessWalk and MaintenancePhoneWalk with MaintenanceSpecLib's
+  `mountedScreens`, `mountTabs` and `sweepParameters`, the closest pattern; ServerStaticLib; TuiRender and AppStructure, which do not
+  sweep People); People's screen tree (95 XML files under the root, 29 screens mounted from Shared, Projects and Commons, and the tabs
+  the menu shows of EquipmentDetail and Projects' Import), the Commons mounts of SelfService, MyPayslip, MyInterview and Employee360;
+  every service, parameter, transition and refusal the new walks call against the code (People.js's choice sources and
+  `staffReads`, Employees.js's projections, Leave.js `readsReason`, Recruiting.js's recruitView rule, PeopleCases, DataTransferImports'
+  `get#ImportTarget` and `stage#Import`, the two Assist tools, PeopleKiosk's device requests); design §15's outputs against the screens;
+  the inventories' People rows; Remaining-Work (PE-21 and PE-09 already marked built; no People row in its Apps table). A throwaway
+  probe (deleted) ran the new helpers once: `sweepScreens` 137 paths, the mounts and tabs as listed, the menu levels, the launchers
+  (an employee's Commons and Comms, an HR officer's the same and People), a kiosk tablet's tui render (its IdentifyAndClock form) and
+  its refusal of Home, the choices and the employees import target per user.
+- mr-moqui (framework, JavaScript only): `DataTransferLib.js` `delimitedCell` leaves a plain number (`-10.00`, `+1`, `-1,234.50`) as it
+  is, as `template/screen/ScreenCsv.js` does, and still writes a cell that starts with `=`, `+`, `-`, `@`, a tab or a CR and is no plain
+  number as text (P28 review's finding: a negative amount reached a file as `'-10.00`); spec `AdminDataExport` (its two translations now
+  `-10.00` and `-1+1`: the first written as it is, the second as text); docs/security/Attack-Surface.md's two lines on it;
+  docs/security/Shared-Devices.md names People's clocking kiosk (P30's last finding); plans/Remaining-Work.md gains People's row.
+- Mantle: `PayrollExchange.js` `inputsFile` is the framework's `writeDelimited` now (P28's own number columns are no longer needed);
+  design §8.4's sentence says so.
+- BOSS:
+  - `test/People/PeopleSpecLib.js` (appended; no regression spec calls them): `mountedScreens` (each People file's `subscreens-item` of
+    a location outside screen/People), `mountTabs`, `sweepRecords` and `sweepParameters` (the demo ids, else the first record of a kind,
+    else `NONE`), `sweepScreens`, `commonsMounts`, `kioskTablet` (PeopleKiosk's display account and redeemed device) and
+    `deviceRequest`; `users.financePayroll`.
+  - Acceptance, written and not run (the user's call: the acceptance suite runs once after the full suites):
+    `acceptance/People/PeopleTui` (3 features: every People screen file, mount and mounted tab in tui as john.doe with authorization on,
+    a TUI document with no error node, the screens with no record of their kind logged; the four Commons mounts as people.employee; the
+    kiosk as Retail's registered tablet, its form and no "Not a clocking device"); `acceptance/People/PeopleServerStatic` (2 features:
+    ServerStaticLib's full check of every plain XML People screen, mount and tab, and of the Commons mounts as the employee; no error
+    verdict, the marked ones clean); `acceptance/People/PeopleReviewWalk` (8 features, "Confidentiality across every path": five secrets
+    set in Retail (Tomas's salary, Ines's home phone and passport, a confidential case with a note and a file, a leave reason HR asks for
+    Ines, an application), each user of every People group and finance.payroll given none that is not theirs by URL under People and
+    Commons, the screens' services, direct calls and the REST entity paths, the payroll register, three transitions (refused, nothing
+    changed), the employees import and the CSV exports, the palette, choices and universal search, Assist's two self-only tools and a
+    reader's agent renders, the files and Chatter checks and every notice sent during the walk; the readers get theirs; the kiosk tablet
+    reaches none of it); `acceptance/People/PeopleNavigationWalk` (6 features, "Navigation and devices": each launcher People beside the
+    employee's baseline, every entry of each user's menu at the root and in each group opens, an entry out of the menu refused or
+    logged; Services' employee and seat "Not available" naming nothing; every People list of more than two shown fields with two phone
+    columns; the six custom screens' terminal action paths for their roles; People's Commons mounts for the employee and the manager,
+    no People screen for the employee; the kiosk tablet refused every menu entry, the shell, Commons and the menu data, a person told it
+    records nothing); `acceptance/client/People/PeoplePhoneWalk` (3 features at 390 px: the employee's SelfService, Leave requests and
+    Expense claims; the manager's My team, its rows' names and availability, and Approvals; HR's directory with names and Current; no
+    sideways scroll).
+  - Phone columns (design §1.1's mobile columns, Practices-App-Dev "Lists"), found by the navigation walk's check and added: the 18 People
+    lists of three or more shown fields that had none (ExpenseClaimDetail's payments, approval steps and decisions; LeaveRequestDetail's
+    blocked days, approval steps and decisions; PayComponentDetail's and PayStructureDetail's approval steps and decisions;
+    PayAssignments' profile; PayslipDetail's year to date; PayRunDetail's inputs taken; ReviewDetail's decisions and notes;
+    OfferDetail's approval steps; Employee360's pay changes waiting; MyPayslip's corrections), each the name or what it is first and the
+    state, amount or date second.
+  - Records: design-people (header; §2's Impl column, each row the phase that built it, TalentPool, TravelRequests and
+    PayrollStatements later; §8.4; §16.1 built); design-crosscut (header; the People addendum; §7.5 built); ss-inventory (a header
+    bullet, the P31 note, EditParty's identification, email, web and other contact rows, FromRelationshipForm, ClockInForm);
+    usl-inventory (a header bullet, the 33 blank HumanRes rows: the legacy payroll and statutory document services, `delete#Employment`,
+    `get#PartyEmployersAndPositionClasses`; `get#FutureBusinessDay`; the Added header now P1 to P30); README's People paragraph.
+- Design §15's outputs, each with its phase's screen action (none built here):
+
+  | Output | Screen action | Phase |
+  | --- | --- | --- |
+  | Employment/offer and lifecycle letters | OfferDetail: Preview the letter (Staffing/OfferLetter), The issued letter (`letter`), Send (`sendLetter`), the signed letter (`evidence`); Employee360's employment changes: Issue letter (`issueLetter`), Employees/EmploymentLetter; SelfService's My letters | P17 |
+  | Employee directory | Employees/List's CSV (the list's projection) | P2 |
+  | Badge | Employee360's Clocking badge: Issue, Print badge (a POST to Employees/BadgePrint's print), Revoke, Reset PIN | P30, follow-up 4 |
+  | Interview invitation | ApplicantDetail's Schedule interview (`scheduleInterview`; `send#InterviewInvitations` on commit, Send again); InterviewsCalendar's EventDetail (Send invitations, Export .ics) | P16 |
+  | Leave decision/balance statement | LeaveRequestDetail's balance statement and the PeopleLeaveDecision notice; LeaveBalances' movements CSV | P11, P12 |
+  | Shift/attendance/timesheet | ShiftRoster's print (Time/ShiftRosterPrint); Attendance's CSV; Projects' TimesheetPrint, mounted | P14, P13, P10 |
+  | Payslip | PayslipDetail's Download statement (`statementFile`); MyPayslip's (`myStatement`); the PayslipIssued notice | P26 |
+  | Payroll register and reconciliation | Reports' payroll register and Export CSV (`exportCsv`); PayRunDetail's input reconciliation | P29, P24, P25 |
+  | Payment/bank files | PayRunDetail's Settlement (each obligation linked to Payroll's InvoiceDetail; Accounting's payment runs own the files) | P27 |
+  | Statutory statement/file | none: PayrollStatements is later (§7) | — |
+  | Expense claim and receipts | ExpenseClaimDetail's Print and Download PDF (Expenses/ExpenseClaimPrint), Evidence bundle (`evidence`) | P15 |
+  | Qualification/training completion | TrainingDetail's certificate PDF (`certificatePdf`) and Development/TrainingCertificate | P19 |
+  | Review release | ReviewDetail's Released review (Performance/ReviewRelease) and PDF (`releasePdf`) | P20 |
+  | Employee/employment setup import | Employees/EmployeeImport (Shared/DataImport, the `employees` target) | P7 |
+  | Time/attendance import | Time/TimeImport | P13 |
+  | Payroll history/provider exchange | Payroll/PayrollExchange (export with its manifest, history and results imports) | P28 |
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime; JavaScript only, so no Debug build): framework
+  AdminDataExport 3 of 3 (0.2 s); Mantle PayrollExchange 3 of 3 (2.3 s); BOSS PeopleExpenses, PeopleLeave, PeoplePayConfiguration,
+  PeoplePayAssignments, PeoplePayslips, PeoplePayRuns, PeopleReviews, PeopleOffers, PeopleEmployees, PeopleKiosk and PeopleAccess 46
+  of 46 (13.5 s feature time; the screens given phone columns and the lib). `moqui lint --screens`: 0 parse failures. Prettier clean on
+  every changed and new JavaScript file. Not run: the five acceptance tests written here (the user's call), `./moq test-apps`,
+  `./moq test-framework`.
+- Findings (provisional, numbered by the lead):
+  - finance.payroll's PAYROLL_VIEW makes it a People staff reader (People.js `staffReads` includes `payrollView`): Mantle's People
+    services (find#Employees, get#Employee360, get#Compensation) admit to it the employees and compensation of its own employers, with
+    no People root; in the demo its employer is Accounting's organization, so it reads nothing of Retail, and PeopleReviewWalk checks
+    that and logs its payroll register. Whether a finance group's PAYROLL_VIEW should read People's records at all is the user's call
+    (a payroll finance permission of its own, or People's staff reads leaving `payrollView` alone out).
+  - 18 People lists of three or more fields had no phone columns (fixed here); the regression suite has no check of it, and
+    PeopleNavigationWalk's is an acceptance test.
+  - Most detail screens have no demo record (leave requests, pay runs, payslips, applications, offers, reviews, cases, training places,
+    badges, exchanges): on a database where no earlier acceptance spec made one, the sweeps render their "not available" state, which is
+    a render but not the screen's content; PeopleTui logs which.
+  - A People entry the user's menu leaves out often opens by URL and its services refuse (the area grants admit every People user, the
+    menus are by permission): PeopleNavigationWalk logs them rather than failing, and the confidentiality is checked through the
+    services (PeopleReviewWalk), not the screens' grants.
+  - Under People, EquipmentDetail's menu shows john.doe Maintenance's tabs too (Meters, Registrations, Maintenance, Book, Schedule): the
+    sweep renders them; a People user's menu may differ.
+- For the lead:
+  - budget share: none (no regression spec or feature added; AdminDataExport and the People specs gained no feature; PeopleSpecLib's
+    helpers run only in acceptance);
+  - merge: mr-mantle `PayrollExchange.js` now depends on mr-moqui's `delimitedCell` change (merge both, or PayrollExchange's `'-10`
+    check fails); hot spots: mr-boss `test/People/PeopleSpecLib.js` (the users map and the helpers before the export), the eleven
+    screens given phone columns (`Employee360.xml`, `PeopleMyPayslip.xml`, ExpenseClaimDetail, LeaveRequestDetail, PayComponentDetail,
+    PayStructureDetail, PayAssignments, PayslipDetail, PayRunDetail, ReviewDetail, OfferDetail: one block before a `</form-list>` each),
+    `plan/design-people.md` (header, §2's Impl cells, §8.4, §16.1), `plan/design-crosscut.md` (header, the addendum, §7.5), the two
+    inventories, README; mr-moqui `plans/Remaining-Work.md` (the People row after Maintenance's), `docs/security/Attack-Surface.md`,
+    `Shared-Devices.md`;
+  - the acceptance run will be the first of these five tests: a sweep failure is a screen to fix in its phase's code, and a walk failure
+    may be the walk's assumption (each is commented: the readers of each secret, Hannah not deciding Ines's leave, the employees import
+    HR's alone, the launcher baseline);
+  - the §3 phase table's P31 row and §6 are the lead's;
+  - the user's call: the first finding (finance.payroll as a People reader).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-people.md or

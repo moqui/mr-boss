@@ -22,6 +22,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 - **Implemented in** for [design-admin.md](design-admin.md) was filled phase by phase during the Admin build and completed on Nov 11, 2026 at its end (impl-admin.md P19): every service with an Admin **Designed in** path names the Admin screen that calls it, mostly through `mantle.party.IdentityServices` (accounts, invitations, internal organizations and their defaults), or `—` with what Admin does instead and the phase. The framework's `org.moqui.admin` services and BOSS's `ironstone.admin` are outside this inventory (design-admin §17.2).
 - **Implemented in** for [design-commerce.md](design-commerce.md) and [design-shop.md](../../mr-pass/plan/design-shop.md) was filled phase by phase during the Commerce and Shop build and completed on Nov 7, 2026 at its end (impl-commerce.md P15, which does both plans' inventories, impl-shop F59): every service with a Commerce or `PASS:Shop` **Designed in** path names the Commerce screen or Shop page that calls it, through the Commerce and Shop services (`mantle.order.ShopCartServices`, `ShopCheckoutServices`, `mantle.party.ShopCustomerServices`, `StoreOperationsServices`, `StoreChannelServices`), or `—` with what Commerce or Shop does instead and the phase. Commerce's OrderDetail is read only (its order work is Customer Service's and Accounting's).
 - **Implemented in** for [design-maintenance.md](design-maintenance.md) was filled phase by phase during the Maintenance build and checked on Nov 12, 2026 at its end (impl-maintenance.md P20): every service with a Maintenance **Designed in** path names the Maintenance screen (and tab or action) or Mantle service that carries it, or `—` with why. The check filled eight blank rows (Accounting's book services, read only in EquipmentDetail's Book tab, their actions Accounting's; the asset metadata writer, Warehouse's; the facility certification writer, not built) and gave the Maintenance part of rows that named only another app: a managed work order's assignments through `schedule#MaintenanceWorkOrder`, its timer through Maintenance's own timer services, its files on the WorkEffort, and the facility location and product policy services, which Maintenance's FacilityDetail context does not carry. Dispatch's rows (`find#StaffingCandidates`, `get#PartyCapacity`) are P8's and customer repair's P12's, filled by those phases.
+- **Implemented in** for [design-people.md](design-people.md) was filled phase by phase during the People build and checked on Nov 13, 2026 at its end (impl-people.md P31): every HumanRes row and every People row of the Added table names the People screen (and form, region or transition) that calls it, or `—` with why; P31 filled the 33 HumanRes rows left blank, the legacy payroll services (PayrollServices, `check#NextPayrollTimePeriods`) and the statutory documents (PayrollDocumentServices) that People neither calls nor reads (design-people §8.4), `delete#Employment` (an employment is ended, never deleted) and `get#PartyEmployersAndPositionClasses`.
 
 **People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) maps verified current services used by People forms and inherited time/rate forms, with required guard/source extensions labelled in the design. Proposed People services and legacy payroll helpers mentioned only for disposition are not added as active screen calls. Implemented in is unchanged. The already-existing get#PartyCapacity service receives a separate source-verified row under Work.
 
@@ -461,44 +462,44 @@ Added in Accounting P17 (returns and order changes):
 | --- | --- | --- | --- |
 | EmploymentServices | create#Employment | People/Employees/HireEmployee | People/Employees/HireEmployee (through PeopleServices.hire#Employee; its overlap check of PrtEmployee alone, F3) (People P6) |
 | EmploymentServices | update#Employment |  | — (its overlap check of PrtEmployee alone, F3; People ends an employment through apply#EmploymentChange) (People P6) |
-| EmploymentServices | delete#Employment |  |  |
+| EmploymentServices | delete#Employment |  | — (an employment is ended by apply#EmploymentChange, never deleted) (People P31) |
 | EmploymentServices | create#EmploymentSalary | People/Employees/Employee360 | People/Employees/Employee360 (Compensation's Set salary and Change salary, through PeopleServices.apply#EmploymentChange's pay change, approved first, which writes the salary as this service does: the row in effect ended on the new one's date, F4); this service checks PAYROLL_EDIT and the payroll reader's employer and asks a first salary only, as a pay change waiting for approval (People P24 review, the user's call of Nov 12, 2026), and writes one at once only for an audited repair with PAYROLL_REPAIR (People P23 and its review) |
-| EmploymentServices | check#NextPayrollTimePeriods |  |  |
-| PayrollDocumentServices | get#EmploymentInfo |  |  |
-| PayrollDocumentServices | get#EmploymentWageAndTaxInfo |  |  |
-| PayrollDocumentServices | create#PeriodWageAndTaxRecords |  |  |
-| PayrollDocumentServices | get#UsaIrsW2FormData |  |  |
-| PayrollDocumentServices | generate#Efw2File |  |  |
-| PayrollDocumentServices | get#UsaIrs1099MiscFormData |  |  |
-| PayrollServices | get#TimePeriodEmployments |  |  |
-| PayrollServices | process#TimePeriodPay |  |  |
-| PayrollServices | reopen#PayrollPeriod |  |  |
-| PayrollServices | approve#PeriodInvoices |  |  |
-| PayrollServices | create#PeriodPayments |  |  |
-| PayrollServices | set#PeriodPaymentDates |  |  |
-| PayrollServices | set#PeriodPaymentRefNums |  |  |
-| PayrollServices | authorize#PeriodPayments |  |  |
-| PayrollServices | deliver#PeriodPayments |  |  |
-| PayrollServices | process#EmploymentPay |  |  |
-| PayrollServices | get#EmploymentPayAmount |  |  |
-| PayrollServices | get#TimePeriodTotalPayAmount |  |  |
-| PayrollServices | get#EmploymentPayDetail |  |  |
-| PayrollServices | calculate#Adjustment |  |  |
-| PayrollServices | calculate#PayrollAdjustment |  |  |
-| PayrollServices | create#WorkersCompRate |  |  |
-| PayrollServices | delete#WorkersCompRate |  |  |
-| PayrollServices | update#WorkersCompRate |  |  |
-| PayrollServices | create#GarnishmentDetail |  |  |
-| PayrollServices | update#GarnishmentDetail |  |  |
-| PayrollServices | create#PayrollAdjustmentAndDetail |  |  |
-| PayrollServices | update#PayrollAdjustmentAndDetail |  |  |
-| PayrollServices | delete#PayrollAdjustmentAndDetail |  |  |
-| PayrollServices | create#PayrollInvoice |  |  |
-| PositionServices | get#PartyEmployersAndPositionClasses |  |  |
+| EmploymentServices | check#NextPayrollTimePeriods |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollDocumentServices | get#EmploymentInfo |  | — (statutory documents wait on a real localization, PayrollStatements later, impl-people §7; People neither calls nor reads them) (People P31) |
+| PayrollDocumentServices | get#EmploymentWageAndTaxInfo |  | — (statutory documents wait on a real localization, PayrollStatements later, impl-people §7; People neither calls nor reads them) (People P31) |
+| PayrollDocumentServices | create#PeriodWageAndTaxRecords |  | — (statutory documents wait on a real localization, PayrollStatements later, impl-people §7; People neither calls nor reads them) (People P31) |
+| PayrollDocumentServices | get#UsaIrsW2FormData |  | — (statutory documents wait on a real localization, PayrollStatements later, impl-people §7; People neither calls nor reads them) (People P31) |
+| PayrollDocumentServices | generate#Efw2File |  | — (statutory documents wait on a real localization, PayrollStatements later, impl-people §7; People neither calls nor reads them) (People P31) |
+| PayrollDocumentServices | get#UsaIrs1099MiscFormData |  | — (statutory documents wait on a real localization, PayrollStatements later, impl-people §7; People neither calls nor reads them) (People P31) |
+| PayrollServices | get#TimePeriodEmployments |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | process#TimePeriodPay |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | reopen#PayrollPeriod |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | approve#PeriodInvoices |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | create#PeriodPayments |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | set#PeriodPaymentDates |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | set#PeriodPaymentRefNums |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | authorize#PeriodPayments |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | deliver#PeriodPayments |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | process#EmploymentPay |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | get#EmploymentPayAmount |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | get#TimePeriodTotalPayAmount |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | get#EmploymentPayDetail |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | calculate#Adjustment |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | calculate#PayrollAdjustment |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | create#WorkersCompRate |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | delete#WorkersCompRate |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | update#WorkersCompRate |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | create#GarnishmentDetail |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | update#GarnishmentDetail |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | create#PayrollAdjustmentAndDetail |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | update#PayrollAdjustmentAndDetail |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | delete#PayrollAdjustmentAndDetail |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PayrollServices | create#PayrollInvoice |  | — (the legacy payroll, which People neither calls nor reads, design-people §8.4; kept for its specs and history) (People P31) |
+| PositionServices | get#PartyEmployersAndPositionClasses |  | — (People's choices read the employer's seats and classes through ironstone.people get#Choices) (People P31) |
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P26 and P29, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P30, Nov 11–13, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -1475,7 +1476,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | EventServices | get#FullCalendarData | Commons/Home; Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Home; Comms/Calls; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Home; Comms/Home; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (bookings and unavailableList, through ScheduleServices.get#ResourceBookings with includeUnavailable, impl-maintenance P16) |
 | EventServices | create#Event | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Inbox; Comms/Chat; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar; Marketing/Events; Marketing/Events/EventDetail; Marketing/QuickCreate | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/QuickCreate; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (Book, through ScheduleServices.book#ResourceSlot, impl-maintenance P16); People/Development/Training (a session, a WepTraining event, through DevelopmentServices.store#Training, People P19) |
 | EventServices | get#NextBusinessDay | People/Time/LeaveRequests | Maintenance/Preventive/Plans/PlanDetail and Plans (a plan's planned day after a weekend or holiday, over the organization's WepHoliday events and the plan's People holiday calendar, through MaintenancePlanServices.get#MaintenanceDue; impl-maintenance P13) |
-| EventServices | get#FutureBusinessDay | Projects/WorkItems/Timeline; People/Time/LeaveRequests |  |
+| EventServices | get#FutureBusinessDay | Projects/WorkItems/Timeline; People/Time/LeaveRequests | — (no screen calls it; Mantle's TaskServices does. People: a leave request is charged by the person's working schedule and holiday calendars, Leave.js, not the business-day services, People P12) |
 | GitServices | add#ProjectRepository | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Code; Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings | Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings; Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Code |
 | GitServices | remove#ProjectRepository | Projects/Projects/ProjectDetail/Code; Projects/Code/RepositoryDetail/Settings | Projects/Code/RepositoryDetail/Settings; Projects/Projects/ProjectDetail/Code |
 | GitServices | create#ProjectRepository | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Code; Projects/Code/Repositories | Projects/Code/Repositories; Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Code |

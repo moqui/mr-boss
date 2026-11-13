@@ -40,6 +40,14 @@ MaintenanceServerStatic and the access walk MaintenanceAccessWalk are in `accept
 MaintenancePhoneWalk in `acceptance/client/Maintenance/`. A database made before Maintenance loads its seed as
 [Upgrading](../mr-mantle/docs/Upgrading.md#maintenance-november-2026) says.
 
+People (`screen/People/`) is built: the directory and Employee360, organization and positions, hire, change and
+separation, self-service in Commons, time, leave and attendance with the clocking kiosk, expenses, recruiting,
+development and reviews, confidential cases, and payroll in preview mode until a real localization
+([design](plan/design-people.md), [impl-people](plan/impl-people.md)). Its rules are tested in `test/People/` with the
+walk `test/client/People/PeopleHireWalk`; its scenario walks, the screen sweeps PeopleTui and PeopleServerStatic and the
+review walks PeopleReviewWalk and PeopleNavigationWalk are in `acceptance/People/`, the phone walk PeoplePhoneWalk in
+`acceptance/client/People/`.
+
 UI review and refinement plans use `plan/ui-review-*.md`, starting with
 [drawers, Commons and Comms](plan/ui-review-drawers-commons.md): screen coverage, complete user processes,
 refinement criteria, findings and verification. The [document guide](plan/design-doc-guide.md#ui-review-and-refinement-phase)

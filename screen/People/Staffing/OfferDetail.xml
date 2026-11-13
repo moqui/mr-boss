@@ -424,6 +424,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="stepText"><default-field title="Step"><display/></default-field></field>
                                     <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
                                     <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
                                 </form-list>
                                 <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
                                     <field name="decisionText"><default-field title="Decision"><display/></default-field></field>

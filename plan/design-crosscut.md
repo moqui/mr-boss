@@ -1,5 +1,7 @@
 # IronStone BOSS — Cross-application design
 
+Nov 13, 2026 — impl-people P31: People's needs PE-01 to PE-24 marked built (§7.5 and the People addendum)
+
 Nov 11, 2026 — the generic screens of Admin and Insights are the framework's System and Dashboards screens, shown under the BOSS roots, and the readiness, refresh and settings registries are the framework's (mr-moqui [plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md)): §3.30, §4.9 (Z5, Z9), §5, §7 (ADM-SETTINGS, INS-04, INS-09) and §8
 
 Nov 11, 2026 — impl-people P2 as built: Employee360's mounts and per-app context, and the links of the apps with no row (§3.4)
@@ -19,7 +21,7 @@ its implementation assertions retain their original scope.
 
 The Oct 31 People design adds [Employee360 and personal HR](design-people.md#4-employees-and-organization),
 [time/payroll/expense contracts](design-people.md#8-payroll-and-compensation) and the [People needs](#75-people-needs).
-People owns these domain definitions; this addendum does not mark their services or placeholder screens implemented.
+People owns these domain definitions; they are built (impl-people P1–P31, Nov 11–13, 2026; §7.5).
 
 The Oct 31 [Maintenance design](design-maintenance.md) adds core maintenance work, reusable WorkEffort
 process templates and execution checklists, preventive schedules and resource-booking administration.
@@ -3650,8 +3652,12 @@ shared contract. The proposed records, consumers and acceptance stay in the owni
 [People §16](design-people.md#16-framework-and-data-needs) owns the detailed contracts: 24 needs,
 PE-01 to PE-24. They extend CX-ACCESS, CX-SHELL and the existing time, accounting and
 shared-screen contracts; they do not create parallel platform subsystems. PE-22 is the same work
-item as ADM-DEVICES, which owns it. All are proposed, including extensions of otherwise
-implemented services.
+item as ADM-DEVICES, which owns it.
+
+Built Nov 11–13, 2026 by impl-people P1–P30: PE-01 to PE-24, PE-21 and PE-09's decimal evaluator
+in the framework (P12, P22), PE-22 by Admin P18, AC-23's payroll-origin projection by P27 as an
+owner contract. Later (impl-people §7): talent tags, travel requests, statutory statements and live
+finalization (which wait on a real localization), and an image input for reading a receipt.
 
 | Need | Kind | Owner | Shared contract |
 | --- | --- | --- | --- |

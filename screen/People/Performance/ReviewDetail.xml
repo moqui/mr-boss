@@ -299,6 +299,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
                                     <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
                                     <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                                    </columns>
                                 </form-list>
                             </box-body>
                         </container-box>
@@ -434,6 +438,10 @@ along with this software (see the LICENSE.md file). If not, see
                                                     confirmation="Remove this note?"/>
                                         </default-field>
                                     </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="noteText"/><field-ref name="noteDateText"/></column>
+                                        <column><field-ref name="actions"/></column>
+                                    </columns>
                                 </form-list>
                             </box-body-nopad>
                         </container-box>

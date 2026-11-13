@@ -217,6 +217,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="itemName"><default-field title="Line"><display/></default-field></field>
                                     <field name="kindText"><default-field title="Kind"><display/></default-field></field>
                                     <field name="yearToDateText" align="right"><default-field title="Year to date"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="itemName"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="yearToDateText"/></column>
+                                    </columns>
                                 </form-list>
                             </box-body-nopad>
                         </container-box>

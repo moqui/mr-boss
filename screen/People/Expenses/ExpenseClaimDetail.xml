@@ -428,6 +428,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="kindText"><default-field title="Applied"><display/></default-field></field>
                             <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
                             <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="kindText"/><field-ref name="appliedDateText"/></column>
+                                <column><field-ref name="amountText"/></column>
+                            </columns>
                         </form-list>
                         <form-list name="OpenAdvances" list="advanceRows" skip-form="true" paginate="false" condition="advanceRows.length">
                             <field name="employeeAdvanceId"><default-field title="Advance outstanding"><display/></default-field></field>
@@ -444,12 +448,20 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="stepText"><default-field title="Step"><display/></default-field></field>
                             <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
                             <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
                         </form-list>
                         <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
                             <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
                             <field name="decidedByName"><default-field title="By"><display/></default-field></field>
                             <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
                             <field name="reason"><default-field title="Why"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                            </columns>
                         </form-list>
                         <label type="p" style="q-pa-md m-muted" condition="!approval" text="Not submitted for approval yet."/>
                     </box-body-nopad>

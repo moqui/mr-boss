@@ -156,6 +156,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="kindText"><default-field title="Kind"><display/></default-field></field>
                                     <field name="netText" align="right"><default-field title="Net"><display/></default-field></field>
                                     <field name="reason"><default-field title="What changed"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="kindText"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="netText"/><field-ref name="payDateText"/></column>
+                                    </columns>
                                 </form-list>
                                 <label type="p" style="q-pa-md text-weight-medium" text="Net effect: ${corrections.netEffectText}"/>
                             </box-body-nopad>
