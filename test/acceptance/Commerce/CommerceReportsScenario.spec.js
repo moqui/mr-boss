@@ -59,7 +59,7 @@ feature("a placed order and its invoice of the demo store this month reach the s
             salesChannelEnumId: "ScWeb",
             entryDate: ec.user.nowTimestamp,
             placedDate: ec.user.nowTimestamp,
-            grandTotal: 30
+            grandTotal: 75000
         })
         make("mantle.order.OrderPart", {
             orderId,
@@ -75,7 +75,8 @@ feature("a placed order and its invoice of the demo store this month reach the s
             itemTypeEnumId: "ItemProduct",
             productId,
             quantity: 3,
-            unitAmount: 10
+            // large enough to be among the month's top five products whatever the other specs ordered before it
+            unitAmount: 25000
         })
         make("mantle.account.invoice.Invoice", {
             invoiceId,
@@ -93,7 +94,7 @@ feature("a placed order and its invoice of the demo store this month reach the s
             itemTypeEnumId: "ItemProduct",
             productId,
             quantity: 3,
-            amount: 10
+            amount: 25000
         })
         const started = Date.now()
         let settled = false

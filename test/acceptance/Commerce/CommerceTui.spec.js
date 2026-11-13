@@ -86,7 +86,8 @@ feature("the twins show the demo's data: the store, its order and its categories
     when() {
         return {
             store: tui("Stores/StoreDetail", parameters["Stores/StoreDetail"]),
-            orders: tui("Orders/Orders", {productStoreId: lib.ids.storeId}),
+            // the demo order by its id: the specs before this one add the store's newer orders ahead of it
+            orders: tui("Orders/Orders", {productStoreId: lib.ids.storeId, term: lib.ids.storeOrderId}),
             categories: tui("Merchandising/StoreCategoriesTui", parameters["Merchandising/StoreCategoriesTui"])
         }
     },
