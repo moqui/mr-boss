@@ -40,6 +40,8 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-include="false">
     <parameter name="assetId" required="true"/>
     <parameter name="organizationPartyId"/>
+    <!-- Insights (impl-insights P6): the record its InsightsRecord subscreen shows -->
+    <always-actions><if condition="appRoot == 'Insights'"><set field="insightsRecordType" value="EquipmentDetail"/><set field="insightsRecordId" from="assetId"/></if></always-actions>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <!-- Manufacturing (impl-manufacturing P11): report a stop of the equipment and request its maintenance -->
     <transition-include name="downtimeChoices" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
@@ -101,11 +103,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <!-- Insights (appRoot Insights, mounted at Insights/Records/EquipmentDetail; design-insights §10, crosscut's Insights row, impl-insights
         P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
-        below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads
+        below runs, and the fail-widgets show the InsightsRecord subscreen (template/InsightsRecord.xml): the record as the admitted datasets the viewer reads
         show it, the owners' screens of it that open to them, and the return to the report; no action. -->
     <!-- Maintenance's tabs (impl-maintenance P2, F21): each renders only under Maintenance, so the other apps' contexts, which
         render no subscreens, are unchanged -->
     <subscreens default-item="Identity">
+        <!-- under Insights the one subscreen, which Insights' links name (a default tab is chosen before the app is known) -->
+        <subscreens-item name="InsightsRecord" location="component://mr-boss/screen/Shared/InsightsRecord.xml" menu-include="false"/>
         <subscreens-item name="Identity" location="component://mr-boss/screen/Shared/EquipmentDetail/Identity.xml" menu-index="1"/>
         <subscreens-item name="Hierarchy" location="component://mr-boss/screen/Shared/EquipmentDetail/Hierarchy.xml" menu-index="2"/>
         <subscreens-item name="Assignments" location="component://mr-boss/screen/Shared/EquipmentDetail/Assignments.xml" menu-index="3"/>
@@ -937,13 +941,5 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
     </widgets>
-    <fail-widgets>
-        <section name="InsightsContext">
-            <actions>
-                <set field="insightsRecordType" value="EquipmentDetail"/>
-                <set field="insightsRecordId" from="assetId"/>
-            </actions>
-            <widgets><section-include name="InsightsRecord" location="component://mr-boss/template/InsightsRecord.xml"/></widgets>
-        </section>
-    </fail-widgets>
+    <fail-widgets><subscreens-active/></fail-widgets>
 </screen>
