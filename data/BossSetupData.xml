@@ -5676,4 +5676,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
             artifactName="component://mr-boss/screen/People/Employees/BadgePrint.xml" artifactTypeEnumId="AT_XML_SCREEN"
             inheritAuthz="Y"/>
+    <!-- People follow-up 4 (the user's call of Nov 12, 2026): the worker's notice that their clocking badge is stopped opens their
+        SelfService under Commons (every self-service employee's mount), where My clocking badge shows it stopped until HR resets
+        its PIN. Only the link is set here; the topic is Mantle's. -->
+    <moqui.security.user.NotificationTopic topic="PeopleMyKioskBadgeDisabled" linkTemplate="/qapps/Commons/People/SelfService"/>
 </entity-facade-xml>

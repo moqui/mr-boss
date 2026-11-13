@@ -1,14 +1,14 @@
-// People P30's "usable when" (impl-people P30; design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; crosscut CX-DEVICE), as
-// an acceptance walk with artifact authorization on, through the screens and their transitions: the identity operator makes a
+// People P30's "usable when" (impl-people P30; design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; crosscut CX-DEVICE),
+// as an acceptance walk with artifact authorization on, through the screens and their transitions: the identity operator makes a
 // display account for Ziziwork Retail with the kiosk bundle alone (Admin › Users) and the access administrator registers a tablet
 // for the clocking route group and reads its code once (Security › Devices); the code makes one browser the tablet at /Device. HR
 // issues Tomas's and Ines's badges from Employee360 (Tomas's with a one-time PIN; Ines's clocking turned on in Attendance's Who
-// clocks) and prints each once; the instance administrator issues Kenji's (Ziziwork Services); Tomas sets his own PIN on SelfService
-// (Ines and Kenji have no account here: their PINs are written as set#MyKioskPin writes them, once Ines's badge was refused for
-// having none). As the tablet, with no one signed in: the kiosk's page and its form, Tomas and Ines clock in by badge and PIN, Kenji
-// is refused as another employer's worker, and the tablet
-// opens nothing else of People, the directory, self-service, the shell or the app list; revoking it in Admin refuses its next
-// request. The rules are Mantle's KioskIdentity and mr-boss's PeopleKiosk, the credential the framework's (DeviceCredential).
+// clocks) and prints each once (a POST to BadgePrint's print, follow-up 4); the instance administrator issues Kenji's (Ziziwork
+// Services); Tomas sets his own PIN on SelfService (Ines and Kenji have no account here: their PINs are written as set#MyKioskPin
+// writes them, once Ines's badge was refused for having none). As the tablet, with no one signed in: the kiosk's page and its
+// form, Tomas and Ines clock in by badge and PIN, Kenji is refused as another employer's worker, and the tablet opens nothing
+// else of People, the directory, self-service, the shell or the app list; revoking it in Admin refuses its next request. The
+// rules are Mantle's KioskIdentity and mr-boss's PeopleKiosk, the credential the framework's (DeviceCredential).
 // Run: ./moq accept mr-boss --spec PeopleKioskUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system} = lib
@@ -55,7 +55,8 @@ function badge(user, partyId, partyRelationshipId, oneTimePin) {
     const issued = system(() =>
         find("mantle.humanres.attendance.KioskBadge", {partyRelationshipId}).orderBy("-issuedDate").limit(1).one()
     )
-    const printed = asRequest(user, "apps/People/Employees/BadgePrint", {kioskBadgeId: issued?.kioskBadgeId}, "html-print")
+    // printing is a POST to BadgePrint's print, answered with the printable badge (follow-up 4)
+    const printed = asRequest(user, "apps/People/Employees/BadgePrint/print", {kioskBadgeId: issued?.kioskBadgeId}, null, "post")
     return (numberPattern.exec(printed.output) || [""])[0]
 }
 const latestBadge = partyRelationshipId =>
@@ -156,7 +157,7 @@ feature("HR issues Tomas's and Ines's badges from Employee360 and prints each on
             "post"
         )
         ownPin(ids.otherEmploymentId, "9044")
-        // a second print of Tomas's badge says it was printed
+        // a second print of Tomas's badge says it was printed, and its page shows when, never the number
         const tomasBadge = system(() =>
             find("mantle.humanres.attendance.KioskBadge", {partyRelationshipId: ids.employmentId})
                 .orderBy("-issuedDate")
@@ -165,16 +166,24 @@ feature("HR issues Tomas's and Ines's badges from Employee360 and prints each on
         )
         const again = asRequest(
             users.hr,
+            "apps/People/Employees/BadgePrint/print",
+            {kioskBadgeId: tomasBadge.kioskBadgeId},
+            null,
+            "post"
+        )
+        const shown = asRequest(
+            users.hr,
             "apps/People/Employees/BadgePrint",
             {kioskBadgeId: tomasBadge.kioskBadgeId},
             "html-print"
         )
-        return {again, pinSet}
+        return {again, shown, pinSet}
     },
-    then({again, pinSet}) {
+    then({again, shown, pinSet}) {
         state.tomas != "" && state.ines != "" && state.kenji != ""
         pinSet.messages.includes("Your clocking PIN is set")
         again.output.includes("printed already") && !numberPattern.test(again.output)
+        shown.output.includes("was printed on") && !numberPattern.test(shown.output)
     }
 })
 

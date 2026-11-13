@@ -47,7 +47,8 @@ along with this software (see the LICENSE.md file). If not, see
                 mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
                 opens under Manufacturing for its users), mantle.order.OrderHeader or mantle.party.agreement.Agreement (a purchase
                 order, supplier quote or purchase agreement opens under Purchasing for its users; a sales order under Customer Service for its users),
-                mantle.product.store.ProductStore (a store opens under Commerce for its users)</description></parameter>
+                mantle.product.store.ProductStore (a store opens under Commerce for its users), moqui.security.DeviceCredential (a
+                shared device opens Admin's Security › Devices for one who may read it there)</description></parameter>
             <parameter name="id" required="true"/>
             <parameter name="workEffortTypeEnumId"/>
             <parameter name="partyTypeEnumId"/>
@@ -61,6 +62,13 @@ along with this software (see the LICENSE.md file). If not, see
             if (recordEntityName === 'mantle.humanres.employment.Employment') {
                 url = ec.resource.script('component://mr-boss/service/ironstone/people/People.js').employmentLink(id)
                 icon = 'sym_o_badge'
+                return
+            }
+            // a shared device (Admin P18; the clocking kiosk's refusals notice, impl-people follow-up 4): Admin's Security › Devices
+            // with the device, where it is revoked, for one who may read it there and whose groups open that screen, else nowhere
+            if (recordEntityName === 'moqui.security.DeviceCredential') {
+                url = ec.resource.script('component://mr-boss/service/ironstone/admin/Admin.js').recordLink('device', id)
+                icon = 'sym_o_tv_signin'
                 return
             }
             // a qualification (People's qualification host, impl-people P18): the person's or HR's qualifications with its files, else

@@ -12,23 +12,25 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- A clocking badge (design-people §15 "Badge", §6 ClockingKiosk; style-guide §8 Print documents; impl-people P30), Employee360's
-    Print badge: with renderMode=html-print the badge's card, printed from the browser: the employer, the
-    person, the badge's number as a Code 128 barcode for the kiosk's scanner and in groups of four for typing. The number is made at
-    this render, once, by the badge's issuer within fifteen minutes of the issue (mantle.humanres.AttendanceServices.print#KioskBadge,
-    which keeps only its hash), so a second render says it was printed and a lost badge is replaced from Employee360. Never a tax id
-    or a password; the PIN is the worker's and is not printed. HR's (BOSS_PPL_EMPLOYMENT, with the hire and change wizards); Mantle
-    checks PEOPLE_HR_EDIT, the employer and the issuer. Out of the menu; in another render mode it links to the printed page, and
-    makes nothing. -->
+<!-- A clocking badge (design-people §15 "Badge", §6 ClockingKiosk; style-guide §8 Print documents; impl-people P30, follow-up 4),
+    Employee360's Print badge. Printing is a POST: Employee360's button posts to the print transition with the page's session token,
+    in a window of its own, and the transition makes the number (mantle.humanres.AttendanceServices.print#KioskBadge: once, by the
+    badge's issuer within fifteen minutes of the issue; only its hash kept) and answers the badge's printable page: the employer,
+    the person, the number as a Code 128 barcode for the kiosk's scanner and in groups of four for typing. A GET of this screen
+    makes nothing: it says the badge was printed and when, or refuses (not printed: print it from Employee360; not available), so
+    a link another site has an HR officer open spends no badge (the review's finding of P30). Never a tax id or a password; the
+    PIN is the worker's and is not printed. HR's (BOSS_PPL_EMPLOYMENT, with the hire and change wizards); Mantle checks
+    PEOPLE_HR_EDIT, the employer and the issuer. Out of the menu. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Clocking badge" default-menu-include="false" history="false">
     <parameter name="kioskBadgeId" required="true"/>
-    <actions><script><![CDATA[
-        const enc = text => String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-        const L = text => enc(ec.l10n.localize(text))
-        printUrl = '/apps/People/Employees/BadgePrint?renderMode=html-print&kioskBadgeId=' + encodeURIComponent(kioskBadgeId || '')
-        printHtml = ''
-        if (['html-print', 'html'].includes(sri.getRenderMode())) {
+
+    <!-- the print: a POST with the session token (the framework refuses one without it, and a GET of it), answered with the
+        printed page itself, so the number is in no redirect, session or saved message; a refusal is a page saying why -->
+    <transition name="print" method="post">
+        <actions><script><![CDATA[
+            const enc = text => String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            const L = text => enc(ec.l10n.localize(text))
             let printed = null
             let refusal = ''
             ec.message.pushErrors()
@@ -44,9 +46,9 @@ along with this software (see the LICENSE.md file). If not, see
             }
             // a refusal says why (printed already, too late, not the issuer, not available) in its own words, without its code
             const reason = /\b[A-Z][A-Z0-9_]{3,}:\s*([^\n]*)/.exec(refusal)
-            printHtml = printed && !refusal
+            const content = printed && !refusal
                 ? '<div style="width:85.6mm;min-height:54mm;box-sizing:border-box;border:1px solid #999;border-radius:3mm;padding:4mm;' +
-                    'font-family:sans-serif;display:flex;flex-direction:column;justify-content:space-between">' +
+                    'display:flex;flex-direction:column;justify-content:space-between">' +
                     '<div style="font-size:9pt;color:#555">' + enc(printed.organizationName) + ' · ' + L('Clocking badge') + '</div>' +
                     '<div style="font-size:14pt;font-weight:bold">' + enc(printed.personName) + '</div>' +
                     '<div>' + printed.barcodeSvg + '</div>' +
@@ -54,14 +56,47 @@ along with this software (see the LICENSE.md file). If not, see
                     '<div style="font-size:7pt;color:#777">' + L('Issued') + ' ' + enc(printed.issuedDateText) + ' · ' +
                     L('Keep your PIN to yourself. If this badge is lost, ask HR to revoke it.') + '</div></div>'
                 : '<p>' + (reason ? enc(ec.l10n.localize(reason[1])) : L('This badge is not available')) + '</p>'
+            ec.web.sendTextResponse('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + L('Clocking badge') +
+                '</title><style>body{font-family:sans-serif;margin:12mm}@page{margin:10mm}</style></head><body>' + content +
+                '</body></html>', 'text/html', null)
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <actions><script><![CDATA[
+        // what a GET shows: the badge's state as HR reads it (never its number), made nothing of
+        stateText = ''
+        if (['html-print', 'html'].includes(sri.getRenderMode())) {
+            let found = null
+            ec.message.pushErrors()
+            try {
+                found = ec.service.sync().name('mantle.humanres.AttendanceServices.get#KioskBadge')
+                    .parameters({kioskBadgeId: kioskBadgeId || ''}).requireNewTransaction(true).call() || null
+                if (ec.message.hasError()) found = null
+            } catch (error) {
+                found = null
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+            const badge = found?.badge || null
+            stateText = !badge
+                ? 'This badge is not available'
+                : badge.printedDateText
+                  ? 'This badge was printed on ' + badge.printedDateText + ': its number is not shown again. If it is lost, issue a new one from Employee360.'
+                  : badge.state === 'revoked'
+                    ? 'This badge was revoked'
+                    : badge.canPrint
+                      ? 'This badge is not printed yet: print it with Print badge in Employee360.'
+                      : 'This badge is not printed, and it is printed only by who issued it within 15 minutes: issue a new one from Employee360.'
         }
     ]]></script></actions>
     <widgets>
         <render-mode>
-            <text type="html-print"><![CDATA[${printHtml}]]></text>
-            <text type="html"><![CDATA[${printHtml}]]></text>
-            <text type="qvt"><![CDATA[<p><a href="${WebUtilities.encodeHtml(printUrl)}" target="_blank">${ec.l10n.localize('Open the printable badge')}</a></p>]]></text>
-            <text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "BadgePrint", text: ec.l10n.localize("Open the printable badge"), url: printUrl})}]]></text>
+            <text type="html-print"><![CDATA[<p>${WebUtilities.encodeHtml(ec.l10n.localize(stateText || ''))}</p>]]></text>
+            <text type="html"><![CDATA[<p>${WebUtilities.encodeHtml(ec.l10n.localize(stateText || ''))}</p>]]></text>
+            <text type="qvt"><![CDATA[<p>${ec.l10n.localize('Print a clocking badge with Print badge in Employee360.')}</p>]]></text>
+            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: ec.l10n.localize("Print a clocking badge with Print badge in Employee360, in a browser.")})}]]></text>
         </render-mode>
     </widgets>
 </screen>
