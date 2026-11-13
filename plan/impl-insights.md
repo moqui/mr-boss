@@ -3339,6 +3339,13 @@ Designed, not in this build:
   attention providers and confidential-dataset classes.
   - Picked up by [impl-people.md](impl-people.md) (Nov 11, 2026): all in its P29, except the Employee360 record mount
     and its crosscut row, P2.
+  - Built by impl-people P29 (Nov 12, 2026): Mantle's `PeopleReportServices` (get#Options, People's catalogue; run#Report), the
+    eight catalog entries opening People's Reports with the report chosen (a route's fixed parameters, `Registry.js reportLink`),
+    the measures `People.Headcount` and `People.Turnover`, three attention providers (`People.NoManager`, `.Vacancies`,
+    `.Decisions`), three admitted `InsDcPeople` datasets (employments, the leave ledger, qualifications) with their readiness and
+    refresh rows, read only with People's Insights bundle (`BOSS_PEOPLE_INSIGHTS`), a dashboard, the qualifications expiring alert
+    template, and the flow target `People.Employees`, which the internal flow map's People step opens (template version 3);
+    InsightsHome's provider list gained the three keys.
 - **What waits on Marketing:** visits and attribution metrics, CampaignPerformance, DeliveryAnalysis, AudienceGrowth and
   Attribution entries, the campaign-sent annotation, the funnel.
   - Picked up by [impl-marketing.md](impl-marketing.md) (Nov 11, 2026), its P20: the metrics `Marketing.Visits` and

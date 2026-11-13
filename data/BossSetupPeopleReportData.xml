@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People's shipped datasets and its registrations in Insights (design-people §1.4 Shipped reports, §12 Reports, CX-OPS-REPORTS;
+    impl-people P29, F27, F70; impl-insights §7 "What waits on People"), on Maintenance's pattern (BossMaintenanceReportData.xml and
+    BossSetupMaintenanceData.xml's P17 block), in one file loaded after BossSetupData.xml (it names the Insights groups):
+    - three DataDocuments indexed by the BossPeopleReports push feed as their records are written, each carrying its employer
+      (organizationPartyId), on which Mantle's organization row filter (the ReportScopePolicy MantleOrganization) scopes the
+      datasets, and no pay, private contact, identity number or confidential record: BossPeopleEmployment (an employment's dates,
+      employer, position and how it ended, never a tax or pay field of Employment), BossPeopleLeaveLedger (a leave ledger entry's
+      type, kind, quantity and date, never a request's reason or the entry's description) and BossPeopleQualification (a
+      qualification's type, title, issuer, validity and verification with its holder's current employers (fromRelationships, a list:
+      a person employed by two is each one's; ironstone.people.InsightsServices.get#QualificationDocumentData keeps the employments
+      not ended and leaves out the document of a holder with none, so ending an employment updates or removes it), never its
+      document number);
+    - the People datasets group BOSS_PEOPLE_INSIGHTS ("People data in Insights", People's Insights bundle): the datasets' artifacts
+      and the documents are granted to it alone (and to ADMIN, the steward through REPORT_DATASETS_ADMIN), so an Insights reader
+      reads them only with it, each their own organizations' rows; it opens no screen, so its member also reads Insights
+      (BOSS_INSIGHTS and BOSS_INSIGHTS_READ); the Insights data steward (BOSS_INSIGHTS_DATA) stewards them, admission, checks
+      and index refresh, by their update artifact alone, reading no row without the bundle (the user's call of Nov 12, 2026);
+    - the admission (moqui.report.BusinessDataset), each dataset's class (InsDcPeople: Insights' Assist and MCP admit only the
+      operations and cost classes, so a People dataset is refused to both with no code, F70), the readiness and refresh rows
+      DataReadiness reads (fixRoute insightsDataset), the catalog entries (one per registered People report, read through Mantle's
+      PeopleReportServices.get#Options, the report's id its catalogue key; the payroll register a payroll reader's alone), the
+      measures (headcount, turnover), the attention providers (employees with no manager, vacant seats, People decisions waiting),
+      the flow target People.Employees (the internal flow map's People step) and the wizard export target peopleReports (Reports'
+      CSV, listed in Admin's Exports). -->
+<entity-facade-xml type="seed-initial">
+    <dataDocuments dataDocumentId="BossPeopleEmployment" indexName="boss_people" documentName="People Employment"
+            primaryEntityName="mantle.humanres.employment.Employment" documentTitle="${partyRelationshipId}">
+        <fields fieldSeqId="01" fieldPath="partyRelationshipId"/>
+        <fields fieldSeqId="02" fieldPath="emplPositionId"/>
+        <fields fieldSeqId="03" fieldPath="terminationReasonEnumId"/>
+        <fields fieldSeqId="04" fieldPath="terminationTypeEnumId"/>
+        <fields fieldSeqId="11" fieldPath="partyRel:fromPartyId" fieldNameAlias="partyId"/>
+        <fields fieldSeqId="12" fieldPath="partyRel:toPartyId" fieldNameAlias="organizationPartyId"/>
+        <fields fieldSeqId="13" fieldPath="partyRel:fromDate" fieldNameAlias="fromDate"/>
+        <fields fieldSeqId="14" fieldPath="partyRel:thruDate" fieldNameAlias="thruDate"/>
+        <fields fieldSeqId="15" fieldPath="partyRel:relationshipTypeEnumId" fieldNameAlias="relationshipTypeEnumId"/>
+        <fields fieldSeqId="21" fieldPath="position:emplPositionClassId" fieldNameAlias="emplPositionClassId"/>
+        <conditions conditionSeqId="01" fieldNameAlias="relationshipTypeEnumId" fieldValue="PrtEmployee"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossPeopleLeaveLedger" indexName="boss_people" documentName="People Leave Ledger"
+            primaryEntityName="mantle.humanres.leave.LeaveLedgerEntry" documentTitle="${leaveLedgerEntryId}">
+        <fields fieldSeqId="01" fieldPath="leaveLedgerEntryId"/>
+        <fields fieldSeqId="02" fieldPath="partyRelationshipId"/>
+        <fields fieldSeqId="03" fieldPath="partyId"/>
+        <fields fieldSeqId="04" fieldPath="organizationPartyId"/>
+        <fields fieldSeqId="05" fieldPath="leaveTypeEnumId"/>
+        <fields fieldSeqId="06" fieldPath="leavePolicyId"/>
+        <fields fieldSeqId="07" fieldPath="entryTypeEnumId"/>
+        <fields fieldSeqId="08" fieldPath="unitEnumId"/>
+        <fields fieldSeqId="09" fieldPath="amount" fieldNameAlias="leaveQuantity"/>
+        <fields fieldSeqId="10" fieldPath="effectiveDate"/>
+        <fields fieldSeqId="11" fieldPath="periodFromDay"/>
+        <fields fieldSeqId="12" fieldPath="periodThruDay"/>
+        <fields fieldSeqId="13" fieldPath="reversedEntryId"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossPeopleQualification" indexName="boss_people" documentName="People Qualification"
+            primaryEntityName="mantle.humanres.ability.PartyQualification" documentTitle="${partyQualificationId}"
+            manualDataServiceName="ironstone.people.InsightsServices.get#QualificationDocumentData">
+        <fields fieldSeqId="01" fieldPath="partyQualificationId"/>
+        <fields fieldSeqId="02" fieldPath="partyId"/>
+        <fields fieldSeqId="03" fieldPath="qualificationTypeEnumId"/>
+        <fields fieldSeqId="04" fieldPath="title"/>
+        <fields fieldSeqId="05" fieldPath="issuerName"/>
+        <fields fieldSeqId="06" fieldPath="fromDate"/>
+        <fields fieldSeqId="07" fieldPath="thruDate"/>
+        <fields fieldSeqId="08" fieldPath="verificationStatusId"/>
+        <fields fieldSeqId="09" fieldPath="renewsQualificationId"/>
+        <fields fieldSeqId="21" fieldPath="Party:fromRelationships:toPartyId" fieldNameAlias="organizationPartyId"/>
+        <fields fieldSeqId="22" fieldPath="Party:fromRelationships:relationshipTypeEnumId" fieldNameAlias="relationshipTypeEnumId"/>
+        <fields fieldSeqId="23" fieldPath="Party:fromRelationships:thruDate" fieldNameAlias="employmentThruDate"/>
+        <!-- the holder's employments: each with its end, so ending one is a write the feed takes (impl-people P29 review: an end in a
+            condition here stopped that write from being fed, and the document kept the employer); the manual data service keeps
+            those not ended and marks a holder with none noCurrentEmployment, which the post-query condition leaves out, so the
+            feed deletes the document -->
+        <conditions conditionSeqId="01" fieldNameAlias="relationshipTypeEnumId" fieldValue="PrtEmployee"/>
+        <conditions conditionSeqId="90" fieldNameAlias="noCurrentEmployment" postQuery="Y"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossPeopleReports" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="People reports" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossPeopleEmployment"/>
+        <documents dataDocumentId="BossPeopleLeaveLedger"/>
+        <documents dataDocumentId="BossPeopleQualification"/>
+    </moqui.entity.feed.DataFeed>
+
+    <!-- People's Reports area (design §12 Reports, §1.2: a section with no capability is omitted): the readers of a report, HR
+        (headcount, attendance, leave, expenses, qualifications, reviews), recruiters (the hiring funnel), development (qualifications,
+        reviews) and payroll (the payroll register); denied to the root user group, so a directory reader, a manager or a case
+        handler does not see it; the People administrator and ADMIN open it through the root. Mantle checks each report again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_REPORTS" description="People reports">
+        <artifacts artifactName="component://mr-boss/screen/People/Reports.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_RECRUIT" userGroupId="BOSS_PEOPLE_RECRUIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_PAYROLL" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_PAYAPPROVE" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+
+    <!-- People's Insights bundle: the People datasets, each viewer their own organizations' rows -->
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_INSIGHTS" description="People data in Insights"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_DATASETS" description="People: the shipped datasets">
+        <artifacts artifactName="org.moqui.report.dataset.boss-people-headcount" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-people-leave-balances" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-people-qualifications" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_PPL_DATASETS_INSIGHTS" userGroupId="BOSS_PEOPLE_INSIGHTS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <!-- the Insights data steward stewards them (the user's call of Nov 12, 2026): the update artifact alone, so admission, the
+            checks and the index refresh are theirs, and no view, so they read no row unless they hold People's bundle too (an
+            authorization's action is matched exactly: an update grants no view); no DataDocumentUserGroup row of theirs -->
+        <authz artifactAuthzId="BOSS_PPL_DATASETS_INSIGHTS_DATA" userGroupId="BOSS_INSIGHTS_DATA" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_UPDATE"/>
+    </artifactGroups>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleEmployment" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleLeaveLedger" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleQualification" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleEmployment" userGroupId="BOSS_PEOPLE_INSIGHTS"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleLeaveLedger" userGroupId="BOSS_PEOPLE_INSIGHTS"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossPeopleQualification" userGroupId="BOSS_PEOPLE_INSIGHTS"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_INSIGHTS" appName="People" description="People data in Insights: headcount and turnover, leave balances and qualifications, each of the viewer's organizations (with the Insights reader bundle)" scopeDependency="organization" sequenceNum="1220"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PEOPLE_INSIGHTS" artifactGroupId="BOSS_PPL_DATASETS" description="People's shipped datasets (read)" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+
+    <!-- admitted by setup, People data (InsDcPeople) -->
+    <moqui.report.BusinessDataset datasetId="boss-people-headcount" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-people-leave-balances" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-people-qualifications" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="boss-people-headcount" version="1" domainOwner="People" classEnumId="InsDcPeople"/>
+    <ironstone.insights.DatasetClass datasetId="boss-people-leave-balances" version="1" domainOwner="People" classEnumId="InsDcPeople"/>
+    <ironstone.insights.DatasetClass datasetId="boss-people-qualifications" version="1" domainOwner="People" classEnumId="InsDcPeople"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-people-headcount" version="1" ownerApp="Insights"
+            title="Employments index" description="The headcount and turnover dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-people-headcount" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-people-leave-balances" version="1" ownerApp="Insights"
+            title="Leave ledger index" description="The leave balances dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-people-leave-balances" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-people-qualifications" version="1" ownerApp="Insights"
+            title="Qualifications index" description="The qualifications dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-people-qualifications" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-people-headcount.index" version="1" ownerApp="Insights"
+            title="Rebuild the employments index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-people-headcount" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-people-headcount"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-people-leave-balances.index" version="1" ownerApp="Insights"
+            title="Rebuild the leave ledger index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-people-leave-balances" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-people-leave-balances"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-people-qualifications.index" version="1" ownerApp="Insights"
+            title="Rebuild the qualifications index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-people-qualifications" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-people-qualifications"/>
+
+    <!-- People's reports in Insights' catalog (owner contract, impl-insights §7; design-insights §6.1): read through Mantle's
+        PeopleReportServices.get#Options, called as the viewer (each report by the capability it names; a user who reads none is
+        refused, which hides the entries), each opening People's Reports with its report chosen (the route's fixed reportId) -->
+    <ironstone.insights.ReportCatalogEntry entryId="People.Headcount" version="1" ownerApp="People" title="Headcount and turnover"
+            description="Headcount at the start and end of a period, joins, exits and turnover with its denominator, by employer or department."
+            purpose="People" basis="Headcount as of a date (distinct people); joins and exits are employments; turnover over the average headcount"
+            routePath="People/Reports?reportId=headcount" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report" metricIds="People.Headcount,People.Turnover"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="headcount"
+            exportFormats="CSV" sequenceNum="710"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.Recruiting" version="1" ownerApp="People" title="Vacancies and hiring funnel"
+            description="Vacant seats now and the applications of a period by opening, stage and source."
+            purpose="People" basis="Applications received in the period, by their stage now"
+            routePath="People/Reports?reportId=recruiting" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="recruiting"
+            exportFormats="CSV" sequenceNum="720"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.Attendance" version="1" ownerApp="People" title="Attendance exceptions"
+            description="Days of a period with a missing clock in or out or a repeated punch, and whether they were corrected."
+            purpose="People" basis="Attendance days in the period"
+            routePath="People/Reports?reportId=attendance" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="attendance"
+            exportFormats="CSV" sequenceNum="730"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.LeaveBalances" version="1" ownerApp="People" title="Leave balances"
+            description="Each employee's leave by type as of a date: granted, accrued, taken, expired, adjusted and the balance."
+            purpose="People" basis="The leave ledger as of a date"
+            routePath="People/Reports?reportId=leaveBalances" parameterContract="organizationPartyId,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="leaveBalances"
+            exportFormats="CSV" sequenceNum="740"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.Expenses" version="1" ownerApp="People" title="Expense claims"
+            description="Claims submitted in a period by employer and state, counted and totalled in each currency."
+            purpose="People" basis="Submitted in the period, by state now; each currency apart"
+            routePath="People/Reports?reportId=expenses" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="expenses"
+            exportFormats="CSV" sequenceNum="750"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.Qualifications" version="1" ownerApp="People" title="Qualification expiry"
+            description="Verified qualifications of the employees expired and not renewed, or expiring within a window."
+            purpose="People" basis="Expiry within the window (90 days by default)"
+            routePath="People/Reports?reportId=qualifications" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="qualifications"
+            exportFormats="CSV" sequenceNum="760"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.Reviews" version="1" ownerApp="People" title="Review completion"
+            description="Each review cycle's reviews by state and the share completed."
+            purpose="People" basis="Started review cycles, by the reviews' state now"
+            routePath="People/Reports?reportId=reviews" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="reviews"
+            exportFormats="CSV" sequenceNum="770"/>
+    <ironstone.insights.ReportCatalogEntry entryId="People.PayrollRegister" version="1" ownerApp="People" title="Payroll register"
+            description="Each employee's gross, deductions, contributions, net and employer cost in the pay runs of a period, by currency."
+            purpose="People" basis="Pay runs paid in the period; each currency apart"
+            routePath="People/Reports?reportId=payrollRegister" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.humanres.PeopleReportServices.run#Report"
+            catalogueService="mantle.humanres.PeopleReportServices.get#Options" catalogueKey="payrollRegister"
+            exportFormats="CSV" sequenceNum="780"/>
+    <!-- People's measures (owner contract, design-insights §6.2): headcount and turnover -->
+    <ironstone.insights.MetricRegistration metricId="People.Headcount" version="1" ownerApp="People" title="Headcount"
+            description="Distinct people with an employment in effect at a moment."
+            serviceName="mantle.humanres.PeopleReportServices.run#Report" datasetIds="boss-people-headcount"
+            catalogEntryId="People.Headcount" grain="Person (an employment's holder)" recordKey="partyId"
+            dateBasis="As of a time" statusBasis="An employment in effect: begun and not ended"
+            aggregation="snapshot" unitPolicy="count" additiveDimensions="none (a person employed by two employers counts once)"
+            nonAdditiveDimensions="date, employer, department" allowedDimensions="employer, department"
+            supportedFilters="organizationPartyId, thruDate"
+            exclusions="Agents and contractors; an employment not begun or already ended at the as-of time"
+            scopePolicy="The viewer's employers; an HR reader or the People administrator" freshness="Live" sequenceNum="120"/>
+    <ironstone.insights.MetricRegistration metricId="People.Turnover" version="1" ownerApp="People" title="Turnover"
+            description="Employments ended in a period over the average headcount of the period."
+            serviceName="mantle.humanres.PeopleReportServices.run#Report" datasetIds="boss-people-headcount"
+            catalogEntryId="People.Headcount" grain="Employment" recordKey="partyRelationshipId"
+            dateBasis="Ended in the period" statusBasis="Exits: employments ended in the period"
+            aggregation="ratio" numerator="Exits: employments ended in the period"
+            denominator="Average headcount: (headcount at the start + headcount at the end) / 2" unitPolicy="percent"
+            additiveDimensions="none (recompute from the parts)" nonAdditiveDimensions="every dimension"
+            allowedDimensions="employer, department" supportedFilters="organizationPartyId, fromDate, thruDate"
+            exclusions="Agents and contractors"
+            scopePolicy="The viewer's employers; an HR reader or the People administrator" freshness="Live" sequenceNum="130"/>
+    <!-- People's worklists on Insights' attention board (owner contract, design-insights §7): People Home's counts, null for a user a
+        count is not for (then left out); a user without People's staff read is refused there and shown nothing -->
+    <ironstone.insights.AttentionProvider providerKey="People.NoManager" version="1" ownerApp="People" title="Employees with no manager"
+            description="Current employments with no manager at their employer."
+            countService="mantle.humanres.PeopleServices.get#Home" countField="dueWorkCount" organizationParameter="organizationPartyId"
+            routePath="People/Home" requiredPermission="PEOPLE_HR_VIEW" organizationScope="Your employers" sequenceNum="950"/>
+    <ironstone.insights.AttentionProvider providerKey="People.Vacancies" version="1" ownerApp="People" title="Vacant seats"
+            description="Approved seats in effect with no one in them."
+            countService="mantle.humanres.PeopleServices.get#Home" countField="counts.vacancies" organizationParameter="organizationPartyId"
+            routePath="People/Staffing/Positions" routeParameters="vacancy=vacant" organizationScope="Your employers" sequenceNum="960"/>
+    <ironstone.insights.AttentionProvider providerKey="People.Decisions" version="1" ownerApp="People" title="People decisions waiting"
+            description="People requests waiting for your decision (leave, expenses, positions, changes and the others)."
+            countService="mantle.humanres.PeopleServices.get#Home" countField="counts.decisions"
+            routePath="People/Approvals" organizationScope="Yours" sequenceNum="970"/>
+    <!-- People's worklist for the flow maps (owner contract, impl-insights P9): the internal flow's People step opens it -->
+    <ironstone.insights.FlowTarget targetId="People.Employees" version="1" ownerApp="People" title="Employees"
+            description="The employee directory of your employers."
+            routePath="People/Employees/List" parameterContract='{"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="360"/>
+    <!-- Reports' exports in Admin's Exports (owner contract, impl-admin P16; F53, F72): one wizard target for People's Reports, whose
+        reports export their own rows as CSV (run#Report's projection), nothing dispatched -->
+    <moqui.server.TransferTarget targetId="peopleReports" direction="export" targetMode="wizard" title="People reports"
+            description="A People report's rows as CSV, from Reports in People (headcount and turnover, the hiring funnel, leave balances, the others)"
+            ownerApp="People" targetVersion="1" ownerRoute="peopleReports" sequenceNum="69"/>
+</entity-facade-xml>

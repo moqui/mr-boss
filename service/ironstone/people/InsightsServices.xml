@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People's shipped datasets (impl-people P29 and its review; data/BossSetupPeopleReportData.xml): what the search documents need
+    beyond their fields. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="QualificationDocumentData" authenticate="anonymous-all" allow-remote="false">
+        <description>The manual data service of the search document BossPeopleQualification: a qualification's holder's employments
+            (fromRelationships) are kept only while not ended (no end recorded), so the employers the organization row filter reads
+            are the current ones; a holder with none left gains the field noCurrentEmployment, which the document's post-query
+            condition leaves out, so the feed deletes the document. The document carries every employment's end, so ending one is a
+            write of a document field the feed takes (an end in a SQL condition of the document stopped the write from being fed, and
+            the document stayed). Reads nothing.</description>
+        <in-parameters>
+            <parameter name="dataDocumentId"/>
+            <parameter name="document" type="Map"/>
+        </in-parameters>
+        <out-parameters><parameter name="document" type="Map"/></out-parameters>
+        <actions>
+            <script><![CDATA[
+                const found = context.document || {}
+                const current = Array.from(found.fromRelationships || []).filter(row => row && row.employmentThruDate == null)
+                context.document = Object.assign({}, found, {fromRelationships: current},
+                    current.length ? {} : {noCurrentEmployment: "Y"})
+            ]]></script>
+        </actions>
+    </service>
+</services>

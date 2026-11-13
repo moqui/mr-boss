@@ -35,8 +35,9 @@ along with this software (see the LICENSE.md file). If not, see
         <field name="purpose" type="text-short"><description>The business purpose it is grouped by (Service, Sales, Finance,
             Inventory, Production, Projects, Catalog, Purchasing)</description></field>
         <field name="basis" type="text-medium"><description>Its date or status basis, as the owner states it</description></field>
-        <field name="routePath" type="text-medium"><description>The canonical owner route, a path under /qapps; empty for a
-            report opened from a record (Customer Service's CaseAnalytics)</description></field>
+        <field name="routePath" type="text-medium"><description>The canonical owner route, a path under /qapps, which may carry fixed
+            parameters after a "?" (People's Reports: ?reportId=headcount); empty for a report opened from a record (Customer
+            Service's CaseAnalytics)</description></field>
         <field name="definitionId" type="id-long"><description>Or the report engine definition it opens</description></field>
         <field name="parameterContract" type="text-medium"><description>The shared parameters the route takes from Insights
             (comma separated: organizationPartyId, fromDate, thruDate, timePeriodId); any other is never passed</description></field>

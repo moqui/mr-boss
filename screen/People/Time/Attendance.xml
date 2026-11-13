@@ -102,6 +102,17 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <!-- P29: an HR editor sets the employer's clocking default (the PartySetting PeopleClocking, People's preferences: store#Settings,
+        audit-logged with the reason); an employee set apart keeps their own setting -->
+    <transition name="storeEmployerClocking">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#Settings" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, clocking:clocking, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stored.settings.organizationName}: ${stored.settings.clockingText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="show" value="clocking"/></default-response>
+        <error-response url="."><parameter name="show" value="clocking"/></error-response>
+    </transition>
     <actions>
         <set field="caps" from="people?.capabilities || {}"/>
         <set field="seesOthers" from="!!(caps.team || caps.hrView)"/>
@@ -393,7 +404,8 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
 
         <!-- Who clocks: HR's list of the employments that clock (their own setting or the employer's default, impl-people §4 Nov 12)
-            and those set apart from the default; the employer's default is People Settings' (P29) -->
+            and those set apart from the default; the employer's default is set here by an HR editor (Employer's default, P29) and in
+            People Settings' Preferences by the People administrator -->
         <section name="ClockingShown" condition="showing == 'clocking'">
             <widgets>
                 <container-box>
@@ -421,6 +433,29 @@ along with this software (see the LICENSE.md file). If not, see
                                 </field>
                                 <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
                                 <field name="submitButton"><default-field title="Turn on"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="EmployerClocking" button-text="Employer's default" icon="sym_o_domain" width="560"
+                                title="An employer's clocking default" condition="caps.hrEdit">
+                            <label type="p" text="Whether the employer's employees clock in and out unless set apart here. Each change is kept with its reason."/>
+                            <form-single name="EmployerClocking" transition="storeEmployerClocking" map="{clocking:'Y'}">
+                                <field name="organizationPartyId">
+                                    <default-field title="Employer">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="clocking">
+                                    <default-field title="Default">
+                                        <radio>
+                                            <option key="Y" text="Employees clock in and out"/>
+                                            <option key="N" text="Off, unless set for an employee"/>
+                                        </radio>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                             </form-single>
                         </container-dialog>
                         <link url="." text="Back to days" icon="sym_o_arrow_back" link-type="anchor" parameter-map="{show:null}"/>

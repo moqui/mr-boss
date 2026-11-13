@@ -1,0 +1,208 @@
+{
+  "id": "boss-people-workforce",
+  "type": "dashboard",
+  "title": "People workforce",
+  "body": {
+    "folder": "People",
+    "description": "Employments by employer, joins by month, leave taken by type and qualifications by expiry, among the organizations each viewer reads. Counts and days only: no pay, private contact or confidential record.",
+    "panels": {
+      "employments": {
+        "title": "Employments in effect by employer",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-people-headcount",
+            "aggregations": [
+              {
+                "id": "employer",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "organizationPartyId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "employments",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "partyRelationshipId"
+                }
+              },
+              {
+                "id": "people",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "partyId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "thruDate",
+                    "op": "exists"
+                  }
+                },
+                "negated": true,
+                "label": "Not ended"
+              }
+            ]
+          }
+        ]
+      },
+      "joins": {
+        "title": "Joins by month",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "boss-people-headcount",
+            "aggregations": [
+              {
+                "id": "month",
+                "type": "date_histogram",
+                "role": "x-axis",
+                "params": {
+                  "field": "fromDate",
+                  "calendar_interval": "1M"
+                }
+              },
+              {
+                "id": "joins",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "partyRelationshipId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "leaveTaken": {
+        "title": "Leave taken by type",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-people-leave-balances",
+            "aggregations": [
+              {
+                "id": "type",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "leaveTypeEnumId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "taken",
+                "type": "sum",
+                "role": "metric",
+                "params": {
+                  "field": "leaveQuantity"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "entryTypeEnumId",
+                    "op": "eq",
+                    "value": "LletConsumption"
+                  }
+                },
+                "label": "Leave taken"
+              }
+            ]
+          }
+        ]
+      },
+      "qualifications": {
+        "title": "Verified qualifications by expiry",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "boss-people-qualifications",
+            "aggregations": [
+              {
+                "id": "month",
+                "type": "date_histogram",
+                "role": "x-axis",
+                "params": {
+                  "field": "thruDate",
+                  "calendar_interval": "1M"
+                }
+              },
+              {
+                "id": "type",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "qualificationTypeEnumId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "qualifications",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "partyQualificationId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "verificationStatusId",
+                    "op": "eq",
+                    "value": "QlVerVerified"
+                  }
+                },
+                "label": "Verified"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

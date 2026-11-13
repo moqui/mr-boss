@@ -44,6 +44,11 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**People P29 (Nov 12, 2026):** no baseline form maps to People's Reports or Settings' Preferences (new screens over Mantle's new
+PeopleReportServices and PeopleServices get#Settings and store#Settings, design §12); Marble's HumanRes reports are none to carry
+over. Their **Implemented in** is in usl-inventory's People rows, and People's report entries, measures, attention providers,
+datasets and flow target are Insights' registries (BossSetupPeopleReportData.xml).
+
 **Maintenance P7 (Nov 12, 2026):** no baseline form maps to the execution checklist (WorkOrderDetail's Procedure tab, StepResponse and ExecutionAmendment are new, design-maintenance §3, §4.3); their Implemented in is in usl-inventory's ProcessServices rows. WorkOrderDetail's Files keep a check's evidence (Mantle's evidence policy); Maintenance mounts WorkItemDetail for a work order's follow-up tasks.
 **Maintenance P9 (Nov 12, 2026):** the baseline's run consumption forms (RunProducts, RunConsumed) map to WorkOrderDetail's Parts tab and Maintenance/WorkOrders/MaterialIssueReceipt (Shared, Maintenance's context); the services are in usl-inventory's MaintenanceExecutionServices rows. Accounting's PostingDefaults gains the Maintenance expense mapping kind (MaintenanceCostPolicy, AC-24).
 **Maintenance P17 (Nov 12, 2026):** no baseline form maps to the reports (Reports, its Overview, WorkStatusReport and PreventiveComplianceReport are new, design-maintenance §8); their Implemented in is in usl-inventory's MaintenanceReportServices rows, and Maintenance's report entries, measures, attention providers, datasets and flow target are Insights' registries (BossSetupMaintenanceData.xml).

@@ -415,6 +415,14 @@ Proposed `ironstone.insights.RegistryServices` validates and reads these registr
 
 As built (impl-insights P4, §4): the catalog is `ironstone.insights.ReportCatalogEntry` and the domain service registrations are `ironstone.insights.MetricRegistration`, BOSS seed records in mr-boss's registry entity file, each owner's rows in a block of its own in BossSetupData. An entry names its owner's catalogue service (Customer Service's and Commerce's `get#ReportCatalogue`, Accounting's `get#Catalog` by `reportId`) or none, in which case the route's screen authorization decides; one entry, SalesAnalysis, is Sales' and opens Accounting's route, whose catalogue decides, until impl-sales P19 moves it to Sales' route. A panel names its measure in its body (`business: {metricId, metricVersion, target}`); a dataset definition may carry its own descriptor (`body.business` with its grain), though Mantle's shipped datasets carry none (they are Mantle's files), so their metrics are registrations naming the dataset. `RegistryServices.get#Metric` answers the descriptor with the comparison rules as sentences (native currencies apart, ratios from their parts, snapshots not summed, recurring base orders excluded) and a panel's version change.
 
+As built (impl-people P29, an owner contract): People's eight entries (`People.Headcount`, `.Recruiting`, `.Attendance`,
+`.LeaveBalances`, `.Expenses`, `.Qualifications`, `.Reviews`, `.PayrollRegister`) are read through Mantle's
+`PeopleReportServices.get#Options` as their catalogue (the report's id its `catalogueKey`; the payroll register a payroll reader's
+alone) and open one route, People's Reports, with the report chosen: an entry's `routePath` may carry fixed parameters after a `?`
+(`People/Reports?reportId=headcount`), and `get#ReportLink` adds the context after them. People's datasets are class `InsDcPeople`,
+which Assist and MCP never admit, read in Insights only with People's Insights bundle (`BOSS_PEOPLE_INSIGHTS`); the Insights data
+steward stewards them (their update artifact alone, the user's call of Nov 12, 2026) and reads no row without the bundle.
+
 Planned (Nov 11, 2026): the `Sales.SalesAnalysis` entry's route moves from Accounting's to Sales' own, with Sales' catalogue service, and `Accounting/Reports/SalesAnalysis` becomes a mount of it with Accounting's finance columns (impl-sales P19).
 
 A saved query and its drill/export/alert must share this contract. Unit conversion, privacy and business rules are not inferred from column names. Unknown metadata blocks admission for a published business KPI; a private exploratory result is visibly an analysis, not a certified domain measure. Schema validation and a successful query are necessary but do not prove semantic correctness.

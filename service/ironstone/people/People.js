@@ -237,6 +237,10 @@ const linkPaths = [
     "Staffing/InterviewsCalendar",
     "Settings/Forms",
     "Settings/FormDetail",
+    // P29: the reports (design §12 Reports, every People user's, each report its capability's) and the People administrator's
+    // preferences (design §12 Settings PeoplePreferences)
+    "Reports",
+    "Settings/Preferences",
     // P18: skills and qualifications (design §10): the matrix and its terminal twin (development, HR and the managers), and the
     // qualifications (every People user's and a self-service employee's by the area's own grant)
     "Development",

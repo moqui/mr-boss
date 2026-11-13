@@ -390,6 +390,13 @@ const settingsRoutes = {
     // People P23: the payroll check's places (people.setup's people.payroll check)
     peoplePayAssignments: {url: "/qapps/People/Payroll/PayAssignments", plain: true},
     peoplePayGroups: {url: "/qapps/People/Payroll/PayGroups", plain: true},
+    // People P29: every phase's readiness checks' places (people.setup) and the preferences
+    peoplePositions: {url: "/qapps/People/Staffing/Positions", plain: true},
+    peopleApprovalRules: {url: "/qapps/People/Settings/ApprovalPolicies", plain: true},
+    peopleChecklists: {url: "/qapps/People/Employees/ChecklistTemplates", plain: true},
+    peopleWorkingSchedules: {url: "/qapps/People/Time/WorkingSchedules", plain: true},
+    peopleLeavePolicies: {url: "/qapps/People/Time/LeavePolicies", plain: true},
+    peoplePreferences: {url: "/qapps/People/Settings/Preferences", plain: true},
     maintenanceSettings: {url: "/qapps/Maintenance/Settings", plain: true},
     voice: {url: "/qapps/system/Voice", plain: true},
     toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
@@ -417,6 +424,8 @@ const mountRoutes = {
     maintenanceDue: {url: "/qapps/Maintenance/Preventive/DueMaintenance", plain: true},
     // Maintenance's Reports: its reports' exports (impl-maintenance P17, F72)
     maintenanceReports: {url: "/qapps/Maintenance/Reports", plain: true},
+    // People's Reports: its reports' exports (impl-people P29)
+    peopleReports: {url: "/qapps/People/Reports", plain: true},
     commonsContacts: {url: "/qapps/Commons/Contacts/List", plain: true},
     insightsDatasets: {url: "/qapps/Insights/ReportBuilder/Datasets", plain: true},
     insightsReports: {url: "/qapps/Insights/Reports", plain: true},

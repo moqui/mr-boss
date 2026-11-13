@@ -1,0 +1,41 @@
+{
+  "id": "boss-people-leave-balances",
+  "type": "dataset",
+  "title": "Leave ledger",
+  "body": {
+    "folder": "People",
+    "description": "Leave ledger entries (opening balances, allocations, accruals, leave taken, expiries, adjustments and reversals) of each employment and leave type, with their signed quantity in days or hours, by effective date: a balance is the sum of an employment's entries of a type up to a date. Each viewer reads their own organizations' entries. Never a request's reason, the entry's description or any pay.",
+    "documentType": "BossPeopleLeaveLedger",
+    "timeField": "effectiveDate",
+    "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "leaveTypeEnumId": {
+        "enumTypeId": "PeopleLeaveType"
+      },
+      "entryTypeEnumId": {
+        "enumTypeId": "LeaveLedgerEntryType"
+      },
+      "unitEnumId": {
+        "enumTypeId": "LeaveUnit"
+      },
+      "leavePolicyId": {
+        "lookup": {
+          "entityName": "mantle.humanres.leave.LeavePolicy",
+          "keyField": "leavePolicyId",
+          "displayField": "policyName"
+        }
+      }
+    }
+  }
+}

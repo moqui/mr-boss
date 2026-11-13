@@ -462,8 +462,10 @@ feature(
             }
         },
         then({checks, otherDepartments, admin, hr}) {
-            checks.filter(check => !check.startsWith("people.payroll ")).sort() ==
+            checks.filter(check => /^people\.(departments|managers) /.test(check)).sort() ==
                 ["people.departments ready ", "people.managers warning EMPLOYEE_NO_MANAGER"]
+            // P29: every phase's checks join them (their rules are Mantle's PeopleReports)
+            checks.length == 9
             // P23: the payroll check, a warning while Retail has no pay group or an employee without a pay assignment
             checks.filter(check => check.startsWith("people.payroll warning ")).length == 1
             otherDepartments.join(",") == "ready"
