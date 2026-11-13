@@ -32,6 +32,8 @@ function request(user, path, parameters) {
 }
 const read = (user, service, parameters) => asUser(user, () => system(() => invoke(service, parameters)))
 const state = {}
+// Store Operations' members in the demo data: Tomas, Ines and Rafael
+const demoMembers = [ids.employeePartyId, ids.reportPartyId, "BOSS_PPL_RAFAEL"]
 
 spec({stepwise: true})
 
@@ -75,7 +77,10 @@ feature("the review administrator adds a template asking for approval and starts
         cycle.status == 302 && cycle.errors == "" && state.cycleId
         preview.status == 200 && preview.output.includes("Tomas Lindqvist") && preview.output.includes("Hannah Okafor")
         started.status == 302 && started.errors == ""
-        state.reviewId && reviews.length == 3 && reviews.every(row => row.managerPartyId == ids.managerPartyId)
+        // the demo's Store Operations, each reviewed by Hannah (in a whole run the hire, offer and lifecycle walks have hired more
+        // into the department, each with a review of their own)
+        state.reviewId
+        demoMembers.every(partyId => reviews.some(row => row.partyId == partyId && row.managerPartyId == ids.managerPartyId))
     }
 })
 
@@ -180,7 +185,8 @@ feature("Hannah's private note is in no export, Chatter, notice or search, nor i
             ).map(row => String(row.messageJson || "") + " " + String(row.titleText || ""))
         )
         const search = [users.manager, users.employee, users.hr].map(
-            user => read(user, "mantle.search.UniversalSearchServices.search#Universal", {q: "family move"}).results || []
+            // the note's words as a phrase (lexical search otherwise matches either word alone, in any of the demo's records)
+            user => read(user, "mantle.search.UniversalSearchServices.search#Universal", {q: '"family move"'}).results || []
         )
         const agent = asUser(users.manager, () =>
             ec.screen

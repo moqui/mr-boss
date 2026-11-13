@@ -517,14 +517,9 @@ feature(
         when() {
             const problems = []
             const T = "org.moqui.admin.DataTransferServices."
+            // the employees import batches (a TransferBatch keeps no operation key; no one else stages one during the feature)
             const batches = () =>
-                system(() =>
-                    ec.entity
-                        .find("moqui.server.TransferBatch")
-                        .condition("targetId", "employees")
-                        .condition("operationKey", "like", "PPL_P31_WALK_%")
-                        .count()
-                )
+                system(() => ec.entity.find("moqui.server.TransferBatch").condition("targetId", "employees").count())
             const before = batches()
             for (const user of groupUsers) {
                 const target = call(user, T + "get#ImportTarget", {targetId: "employees"})
@@ -574,7 +569,9 @@ feature("nor through the palette, the choices or universal search", {
                 const palette = call(user, C + "search#Records", {text}, false)
                 if (leaks(kind, json(palette)).length) problems.push(`${user}: the palette finds the ${kind} by "${text}"`)
                 const search = call(user, "mantle.search.UniversalSearchServices.search#Universal", {q: text})
-                if (leaks(kind, json(search)).length) problems.push(`${user}: universal search finds the ${kind} by "${text}"`)
+                // its results alone: the answer echoes the text searched for as its query
+                if (leaks(kind, JSON.stringify(search.out?.results ?? null)).length)
+                    problems.push(`${user}: universal search finds the ${kind} by "${text}"`)
             }
             // the drop-downs offer no other employer and no one of Services to a user of Retail's (the People administrator reads
             // every employer), and no private value
@@ -746,6 +743,8 @@ feature("the kiosk display account, as Retail's registered tablet, reaches none 
                 if (leaks(kind, got.output).length) problems.push(`the tablet's ${path} shows the ${kind}`)
         }
         const kiosk = lib.deviceRequest("apps/People/Time/ClockingKiosk", {}, tablet.cookie)
+        // the device's requests leave the thread signed out; the identity and access administrator revokes it
+        login(users.system)
         system(() =>
             invoke("mantle.party.IdentityServices.revoke#SharedDevice", {deviceId: tablet.deviceId, reason: "Review walk done"})
         )

@@ -15,6 +15,8 @@ const opened = rendered => rendered.status === 200 && rendered.errors === ""
 const state = {}
 // a Projects manager of the demo (TIME_ENTRY_RATE, no PAYROLL_VIEW), made for the walk
 const projectsManager = "PPL_TIME_ACC_PM"
+// the username the walk signs in with (asUser logs in by username, not by userId)
+const projectsManagerUsername = "people.time.pm"
 const financeAdmin = "finance.admin"
 // a screen under the web root as the user (a page, or a transition's post), with its errors
 function request(user, path, parameters = {}, method = null) {
@@ -51,7 +53,7 @@ spec({
             })
             call("create#moqui.security.UserAccount", {
                 userId: projectsManager,
-                username: "people.time.pm",
+                username: projectsManagerUsername,
                 partyId: projectsManager,
                 currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
                 passwordHashType: "SHA"
@@ -161,14 +163,14 @@ feature(
                 problems.push(`payroll's Rates: ${rates.status} ${rates.errors}`)
             // the Projects manager's Rates (Projects' own mount): the employee's worker pay rate without its amount
             const pmRows =
-                as(projectsManager, "ironstone.projects.BillingServices.find#RateRows", {
+                as(projectsManagerUsername, "ironstone.projects.BillingServices.find#RateRows", {
                     ratePurposeEnumId: "RaprVendor",
                     partyId: ids.employeePartyId
                 }).rowList || []
             const row = pmRows.find(one => one.partyId === ids.employeePartyId)
             if (!row || row.amountText !== "Set by payroll" || row.rateAmount != null || row.canChange)
                 problems.push(`the Projects manager reads the pay rate: ${JSON.stringify(row)}`)
-            const pmRates = request(projectsManager, "apps/Projects/Billing/Rates", {purpose: "RaprVendor"})
+            const pmRates = request(projectsManagerUsername, "apps/Projects/Billing/Rates", {purpose: "RaprVendor"})
             if (!opened(pmRates) || pmRates.output.includes("27.75"))
                 problems.push(`the Projects manager's Rates: ${pmRates.status} ${pmRates.errors}`)
             return {problems}

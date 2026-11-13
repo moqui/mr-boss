@@ -64,7 +64,14 @@ spec({
             inputValues: "monthlySalary = 3200",
             expectedAmount: "3200.00"
         })
-        as(payroll, P + "publish#Component", {payrollComponentId: salary, expectedRevision: componentRevision(), reason: "Walk"})
+        // published from the start of today, so an assignment from today finds them in effect (published with no date, they
+        // start at the publishing moment, after today's midnight)
+        as(payroll, P + "publish#Component", {
+            payrollComponentId: salary,
+            expectedRevision: componentRevision(),
+            fromDate: today(),
+            reason: "Walk"
+        })
         approve({payrollComponentId: salary})
         state.structureId = as(payroll, P + "store#Structure", {
             organizationPartyId: ids.organizationId,
@@ -82,6 +89,7 @@ spec({
         as(payroll, P + "publish#Structure", {
             payrollStructureId: state.structureId,
             expectedRevision: structureRevision(),
+            fromDate: today(),
             reason: "Walk"
         })
         approve({payrollStructureId: state.structureId})

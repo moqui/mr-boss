@@ -90,8 +90,22 @@ spec({
                     row.update()
                 }
             }
-            if (state.scheduleId)
-                ec.entity.find("moqui.screen.ScreenScheduled").condition("screenScheduledId", state.scheduleId).deleteAll()
+            if (state.scheduleId) {
+                // the schedule's own rows first (its lock, recipients and occurrences), as Insights' delivery walk removes one
+                const screenScheduledId = state.scheduleId
+                for (const occurrence of ec.entity.find("moqui.report.ReportOccurrence").condition({screenScheduledId}).list())
+                    ec.entity
+                        .find("moqui.report.ReportRecipientDelivery")
+                        .condition("occurrenceId", occurrence.occurrenceId)
+                        .deleteAll()
+                for (const entityName of [
+                    "moqui.report.ReportOccurrence",
+                    "moqui.report.ReportScheduleRecipient",
+                    "moqui.screen.ScreenScheduledLock"
+                ])
+                    ec.entity.find(entityName).condition({screenScheduledId}).deleteAll()
+                ec.entity.find("moqui.screen.ScreenScheduled").condition({screenScheduledId}).deleteAll()
+            }
         })
         reindex()
         if (state.ruleId && one("moqui.report.Definition", {definitionId: state.ruleId}))
@@ -167,7 +181,11 @@ feature("the analyst opens the People workforce dashboard and schedules the mont
         saved.errors == ""
         state.scheduleId != null
         mode == "personal"
-        !outsider.output.includes("Employments in effect by employer") || outsider.output.includes("not available")
+        // the outsider gets the dashboard's frame with each panel's dataset refused, no rows: the People datasets are the bundle's
+        !outsider.output.includes("Employments in effect by employer") ||
+            ["boss-people-headcount", "boss-people-leave-balances", "boss-people-qualifications"].every(datasetId =>
+                outsider.output.includes("is not authorized for AT_SERVICE [org.moqui.report.dataset." + datasetId + "]")
+            )
     }
 })
 

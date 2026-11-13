@@ -120,7 +120,9 @@ feature(
             recruiterView.payAmount == null
             !JSON.stringify(recruiterView).includes("39,500")
             submitted.errors == ""
-            own == "SELF_APPROVAL"
+            // the recruiter decides no approval at all (PEOPLE_REQUEST_APPROVE is the managers' and HR's; P5 review), so the
+            // refusal comes before the self-approval rule's
+            own == "PERMISSION_DENIED"
             offer.statusId == "OfrSubmitted"
         }
     }
@@ -150,16 +152,18 @@ feature("HR approves; the recruiter issues it (the letter with pay is payroll's)
             revision: revision(),
             responseNote: "Signed and returned"
         })
-        return {view, approved, issued, recruiterLetter, payrollLetter, accepted, offer: offerRow()}
+        // the stored letter's text, read as the walk's own check (the letter's location is payroll's to open, not the spec's user's)
+        const letterText = system(() => String(ec.resource.extractText(payrollLetter.letter.location, "people-offer-walk") || ""))
+        return {view, approved, issued, recruiterLetter, payrollLetter, letterText, accepted, offer: offerRow()}
     },
-    then({view, approved, issued, recruiterLetter, payrollLetter, accepted, offer}) {
+    then({view, approved, issued, recruiterLetter, payrollLetter, letterText, accepted, offer}) {
         view.canDecide == true
         approved.errors == ""
         issued.errors == ""
         recruiterLetter == "PERMISSION_DENIED"
         payrollLetter.issued == true
         payrollLetter.letter.includesPay == true
-        ec.resource.extractText(payrollLetter.letter.location, "people-offer-walk").includes("39,500")
+        letterText.includes("39,500")
         accepted.errors == ""
         offer.statusId == "OfrAccepted"
     }
