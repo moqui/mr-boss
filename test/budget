@@ -7,9 +7,14 @@
 # (CustomerServiceCasesWalk), rounded up.
 # Nov 12, 2026: raised by Maintenance's measured share (the user's agreement, impl-maintenance §4 and its final suites): its
 # fifteen test/Maintenance specs' feature time in the final ./moq test-apps, 26.3 s server, rounded up.
-server = 291
+# Nov 13, 2026: raised to the final ./moq test-apps of People's build (the user's agreement, impl-people §4 and its Final
+# suites note): 337.4 s of feature time, People's twenty-eight regression specs (with AccountingPayrollOrigin) 55.3 s of it,
+# rounded up.
+server = 338
 # Nov 6, 2026: client raised by Commerce's golden-path walk, CommerceThemesWalk, 7.6 s in the gate C1/S1 ./moq test-apps
 # (the user's agreement, impl-commerce §4: raised at each wave end by the measured share), rounded up.
 # Nov 12, 2026: client raised by Maintenance's golden-path walk, MaintenanceWorkOrdersWalk, 8.1 s in the final ./moq test-apps
 # (the user's agreement, impl-maintenance §4: up to 9 s), rounded up.
-client = 66
+# Nov 13, 2026: client raised to the final ./moq test-apps of People's build (the user's agreement): 76.9 s, People's
+# golden-path walk PeopleHireWalk 7.2 s of it and the rest other apps' changes (CalcGrid among them), rounded up.
+client = 77
