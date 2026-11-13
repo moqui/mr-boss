@@ -9115,6 +9115,7 @@ the owner's design.
 | Nov 13, 2026 | The recovery settings may hold an amount cap and a percentage cap together: the percentage of the last finalized net applies when there is one, the amount cap applies before the first net pay and as an upper bound otherwise | The user's call on P28's finding (built in P28's review: PayrollObligations.js `capFor`, `capText`; `store#RecoverySettings` no longer refuses both; People › Payroll › Overpayment recovery's two fields; Mantle PayObligations; design-people §8.2) |
 | Nov 13, 2026 | External-processing extras are later: a preview of an external processor's results before a group is live, the processor's corrections and off-cycle pay, and a column-mapping step for exchange files | The user's call on P28's findings: recorded in §7, not built |
 | Nov 13, 2026 | The payroll exchange import keeps `PEOPLE_IMPORT` as People's one import permission, with PAYROLL_VIEW and PAYROLL_EDIT beside it; no payroll import permission of its own | The user's call on P28's finding, as built (the `payrollExchange` target's import permissions; `BOSS_PEOPLE_PAYROLL` holds `PEOPLE_IMPORT`) |
+| Nov 13, 2026 | Imported pay history is refused from the start of the first period People paid the employment (`paidFrom`), not only on a paid slip's pay day (P28's review, R2) | The user's call, confirming P28's review |
 
 ## 5. Open questions
 
