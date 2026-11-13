@@ -37,6 +37,9 @@ along with this software (see the LICENSE.md file). If not, see
                         periodsPerYear:(periodsPerYear ?? null), payDateOffsetDays:(payDateOffsetDays ?? null), prorationEnumId:(prorationEnumId ?? null),
                         timeBasisEnumId:(timeBasisEnumId ?? null), workweekTimeZone:(workweekTimeZone ?? null),
                         payrollLocalizationId:(payrollLocalizationId ?? null), description:(description ?? null), end:(end == 'true'),
+                        localizationPayeePartyId:(localizationPayeePartyId ?? null),
+                        localizationLiabilityGlAccountId:(localizationLiabilityGlAccountId ?? null),
+                        localizationExpenseGlAccountId:(localizationExpenseGlAccountId ?? null), liveEnabled:(liveEnabled ?? null),
                         thruDate:(thruDate || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">${end == 'true' ? 'Pay group ended' : (payrollGroupId ? 'Pay group saved' : 'Pay group created')}</message></if>
@@ -88,7 +91,9 @@ along with this software (see the LICENSE.md file). If not, see
                 currencyUomId: group.currencyUomId, timePeriodTypeId: group.timePeriodTypeId, firstPeriodFromDate: group.firstPeriodFromDateText,
                 periodsPerYear: group.periodsPerYear, payDateOffsetDays: group.payDateOffsetDays, prorationEnumId: group.prorationEnumId,
                 timeBasisEnumId: group.timeBasisEnumId, workweekTimeZone: group.workweekTimeZone,
-                payrollLocalizationId: group.payrollLocalizationId, description: group.description} : {}
+                payrollLocalizationId: group.payrollLocalizationId, description: group.description,
+                localizationPayeePartyId: group.localizationPayeePartyId, localizationLiabilityGlAccountId: group.localizationLiabilityGlAccountId,
+                localizationExpenseGlAccountId: group.localizationExpenseGlAccountId, liveEnabled: group.liveEnabled ? 'Y' : 'N'} : {}
             groupFacts = group ? [
                 {term: 'Employer', value: group.organizationName},
                 {term: 'Currency', value: group.currencyUomId},
@@ -99,6 +104,8 @@ along with this software (see the LICENSE.md file). If not, see
                 {term: 'Hours from', value: group.timeBasisText},
                 {term: 'Workweek time zone', value: group.workweekTimeZone || 'Not set'},
                 {term: 'Localization', value: group.localizationName || 'None'},
+                {term: 'Localization payee', value: group.localizationPayeeName || 'Not set'},
+                {term: 'Live pay', value: group.liveEnabled ? 'Yes: finalizing a run makes its pay obligations' : 'No: its runs are previews'},
                 {term: 'Readiness', value: group.readiness.message}
             ] : []
         ]]></script>
@@ -275,13 +282,45 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </drop-down>
                                             </default-field>
                                         </field>
+                                        <!-- P27: the localization binding (its payee and the accounts its amounts post to) and live pay, which
+                                            only a group whose localization is real and covers today may have (none in this build) -->
+                                        <field name="localizationPayeePartyId">
+                                            <default-field title="Localization payee" tooltip="Who is paid the localization's amounts">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payrollPayees'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="localizationLiabilityGlAccountId">
+                                            <default-field title="Localization liability account">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'glAccounts', choiceOrganizationPartyId:group.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="localizationExpenseGlAccountId">
+                                            <default-field title="Localization expense account">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'glAccounts', choiceOrganizationPartyId:group.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="liveEnabled">
+                                            <default-field title="Live pay" tooltip="Finalizing a run makes its pay obligations; only with a real localization that covers today">
+                                                <drop-down><option key="N" text="No: preview only"/><option key="Y" text="Yes"/></drop-down>
+                                            </default-field>
+                                        </field>
                                         <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
                                         <field name="submitButton"><default-field title="Save policy"><submit/></default-field></field>
                                         <field-layout>
                                             <field-row><field-ref name="groupName"/><field-ref name="periodsPerYear"/></field-row>
                                             <field-row><field-ref name="payDateOffsetDays"/><field-ref name="prorationEnumId"/></field-row>
                                             <field-row><field-ref name="timeBasisEnumId"/><field-ref name="workweekTimeZone"/></field-row>
-                                            <field-row><field-ref name="payrollLocalizationId"/><field-ref name="reason"/></field-row>
+                                            <field-row><field-ref name="payrollLocalizationId"/><field-ref name="localizationPayeePartyId"/></field-row>
+                                            <field-row><field-ref name="localizationLiabilityGlAccountId"/><field-ref name="localizationExpenseGlAccountId"/></field-row>
+                                            <field-row><field-ref name="liveEnabled"/><field-ref name="reason"/></field-row>
                                             <field-ref name="submitButton"/>
                                         </field-layout>
                                     </form-single>

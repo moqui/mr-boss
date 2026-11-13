@@ -1480,6 +1480,20 @@ choiceSources.payrollLocalizations = (userScope, term, selected) => {
         id => one(L, {payrollLocalizationId: id})?.localizationName || id
     )
 }
+// P27: a pay group's localization payee (the authority its localization's amounts are paid to): an organization, by name, a
+// payroll reader's; never an internal one (an employer pays it, it is no employer)
+choiceSources.payrollPayees = (userScope, term, selected) => {
+    if (!userScope.capabilities.payrollView) return []
+    const D = "mantle.party.PartyDetail"
+    const base = () => find(D).condition("partyTypeEnumId", "PtyOrganization").condition("privateOwnerUserId", "is-null", null)
+    const rows = Array.from(searched(base(), term, ["organizationName", "partyId"]).orderBy("organizationName").limit(choiceLimit).list())
+    return withSelected(
+        rows.map(row => ({value: row.partyId, label: row.organizationName || row.partyId})),
+        selected,
+        id => base().condition("partyId", id).count() > 0,
+        id => one(D, {partyId: id})?.organizationName || id
+    )
+}
 
 function choices(p) {
     const userScope = required()

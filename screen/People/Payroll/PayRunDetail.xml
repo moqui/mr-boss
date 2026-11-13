@@ -22,10 +22,13 @@ along with this software (see the LICENSE.md file). If not, see
     ones; the progress, each employee's gross, deductions, net, employer cost, variance from the previous run and reason; an employee
     opened shows its lines with their explanations, how its period was split and the inputs it took), and Approval (the totals by
     type, the counts, the exclusions and warnings; Ask for approval, submit#Run, a payroll editor's; Approve and Return, the payroll
-    approver's who neither selected nor calculated it, approve#Run and return#Run, confirming the count and net). Finalize and
-    Settlement are P27's. Cancel run (P25 review): a run not approved cancelled with its reason, cancel#Run, its inputs released and the
+    approver's who neither selected nor calculated it, approve#Run and return#Run, confirming the count and net). P27: Finalize
+    (finalize#Run, a payroll editor's, confirming the count: why the group is not live when it is not, which every group of this build
+    is not; a pending finalization's reason and Finalize again) and Settlement (get#Settlement: each obligation's invoice, its state,
+    posting, unpaid and payments, linked to Payroll's InvoiceDetail; each person's wage net, reimbursement due and payment
+    instruction; the overpayments to recover). Cancel run (P25 review): a run not approved cancelled with its reason, cancel#Run, its inputs released and the
     period free to run again. Amounts are opted out of AI, the approval's confirmation naming no net in an agent's render. Nothing here
-    makes an invoice or a payment. P26: an approved run's payslips linked from its header (preview slips in this build), a correction
+    makes a payment; only Finalize makes the draft obligations, which Accounting approves, posts and pays. P26: an approved run's payslips linked from its header (preview slips in this build), a correction
     run's original slip and reason, and an off-cycle run's adjustments. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay run" default-menu-include="false">
@@ -88,6 +91,19 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="payrollRunId"/></default-response>
         <error-response url="."><parameter name="payrollRunId"/></error-response>
     </transition>
+    <!-- P27: an approved run of a live group finalized (or a pending finalization finished): its pay obligations made and released
+        to Accounting -->
+    <transition name="finalizeRun">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.finalize#Run" out-map="finalized" in-map="{payrollRunId:payrollRunId}"/>
+            <if condition="!ec.message.hasError()">
+                <if condition="finalized.complete"><message type="success">Pay run finalized: ${finalized.obligationCount} obligations released to Accounting</message>
+                    <else><message type="warning">Finalization pending: ${finalized.message}</message></else></if>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="finalize"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="finalize"/></error-response>
+    </transition>
     <transition name="decideRun">
         <actions>
             <if condition="decision == 'return'">
@@ -120,6 +136,9 @@ along with this software (see the LICENSE.md file). If not, see
             canCalculate = !!found?.canCalculate
             canSubmit = !!found?.canSubmit
             canDecide = !!found?.canDecide
+            // P27: why the group is not live, and whether this run may be finalized now
+            canFinalize = !!found?.canFinalize
+            liveReasons = Array.from(runInfo.liveReasons || [])
             progressPercent = found?.progressPercent || 0
             employment = found?.employment || null
             resultRows = Array.from(employment?.results || [])
@@ -133,15 +152,19 @@ along with this software (see the LICENSE.md file). If not, see
             employmentsPageRangeHigh = found?.employmentsPageRangeHigh || 0
             excludedRows = unitRows.filter(row => row.state === 'excluded')
             const byState = runInfo.state
-            currentStep = step || (byState === 'draft' ? 'population' : ['waiting', 'approved', 'stale'].includes(byState) ? 'approval' : 'review')
+            currentStep = step || (byState === 'draft' ? 'population' : ['waiting', 'approved', 'stale'].includes(byState) ? 'approval'
+                : byState === 'finalizing' ? 'finalize' : byState === 'finalized' ? 'settlement' : 'review')
             stepList = [
                 {key: 'population', text: '1 Population', done: !!steps.population},
                 {key: 'inputs', text: '2 Inputs', done: !!steps.population},
                 {key: 'review', text: '3 Calculate and review', done: !!steps.resolved},
-                {key: 'approval', text: '4 Approval', done: !!steps.approved}
+                {key: 'approval', text: '4 Approval', done: !!steps.approved},
+                {key: 'finalize', text: '5 Finalize', done: !!steps.finalized},
+                {key: 'settlement', text: '6 Settlement', done: false}
             ].map(item => Object.assign(item, {label: item.text + (item.done ? ' ✓' : '') + (item.key === currentStep ? ' (here)' : '')}))
             stateColors = {draft: 'grey-8', calculating: 'primary', review: 'orange-9', waiting: 'primary', approved: 'positive', returned: 'negative',
-                stale: 'negative', closed: 'grey-8', pending: 'grey-8', calculated: 'positive', error: 'negative', excluded: 'grey-8'}
+                stale: 'negative', closed: 'grey-8', pending: 'grey-8', calculated: 'positive', error: 'negative', excluded: 'grey-8',
+                finalizing: 'orange-9', finalized: 'positive'}
             headerCaption = [runInfo.periodText, 'pay date ' + runInfo.payDateText, runInfo.kindText, runInfo.organizationName, runInfo.currencyUomId].filter(Boolean).join(' · ')
             reconciliation = null
             if (recordFound && currentStep === 'inputs') {
@@ -152,6 +175,21 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.message.clearErrors()
             }
             inputCounts = reconciliation?.counts || {}
+            // P27: the settlement, Accounting's outcome of the run's obligations
+            settlement = null
+            if (recordFound && currentStep === 'settlement') {
+                try {
+                    settlement = ec.service.sync().name('mantle.humanres.PayrollRunServices.get#Settlement')
+                        .parameters({payrollRunId: payrollRunId}).call()
+                } catch (error) { settlement = null }
+                ec.message.clearErrors()
+            }
+            obligationRows = Array.from(settlement?.obligations || [])
+            settlementPeople = Array.from(settlement?.people || [])
+            recoveryRows = Array.from(settlement?.recoveries || [])
+            invoiceDetailUrl = sharedLinks?.['Payroll/InvoiceDetail'] || '../InvoiceDetail'
+            finalizeConfirm = 'Finalize ' + (counts.calculated || 0) + ' employees? Their pay obligations go to Accounting, and the run is not changed again.'
+
             hoursUrl = sharedLinks?.['Time/HoursForPay'] || null
             adjustmentsUrl = sharedLinks?.['Payroll/PayAdjustments'] || null
             runsUrl = sharedLinks?.['Payroll/PayRuns'] || '../PayRuns'
@@ -418,6 +456,123 @@ along with this software (see the LICENSE.md file). If not, see
                     </widgets>
                 </section>
 
+                <!-- P27 (design §8.2 step 6): finalize an approved run of a live group; why a group is not live -->
+                <section name="FinalizeStep" condition="currentStep == 'finalize'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Finalize"/>
+                            <box-toolbar>
+                                <container-dialog id="FinalizeDialog" button-text="${runInfo.statusId == 'PrnFinalizing' ? 'Finalize again' : 'Finalize'}"
+                                        icon="sym_o_lock" type="primary" width="520" title="Finalize this pay run" condition="canFinalize">
+                                    <label type="p" text="Each employee's payslip becomes final and their pay obligations are made: net pay as a draft invoice from the person, the expense claims it reimburses linked as they are, the localization's amounts as one invoice from its payee. Nothing is released to Accounting until every employee is final; Accounting then approves, posts and pays."/>
+                                    <form-single name="FinalizeRun" transition="finalizeRun" map="{payrollRunId:payrollRunId}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Finalize"><submit confirmation="${finalizeConfirm}"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <section name="NotLive" condition="liveReasons.length">
+                                    <widgets>
+                                        <label type="p" text="This pay group is not live, so its runs are previews and are not finalized:"/>
+                                        <form-list name="LiveReasons" list="liveReasons" skip-form="true" paginate="false">
+                                            <field name="message"><default-field title="Why"><display/></default-field></field>
+                                            <field name="reasonCode"><default-field title="Reason"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="message"/></column>
+                                                <column><field-ref name="reasonCode"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <label type="p" text="Approve the run before finalizing it." condition="!liveReasons.length &amp;&amp; !['PrnApproved', 'PrnFinalizing', 'PrnFinalized'].includes(runInfo.statusId)"/>
+                                <label type="p" style="text-warning" text="${runInfo.finalizeMessage}" condition="runInfo.statusId == 'PrnFinalizing' &amp;&amp; runInfo.finalizeMessage"/>
+                                <label type="p" text="Finalized ${runInfo.finalizedDateText}. ${runInfo.finalizeMessage}" condition="runInfo.statusId == 'PrnFinalized'"/>
+                                <link url="." text="Settlement" link-type="anchor" icon="sym_o_account_balance"
+                                        parameter-map="{payrollRunId:payrollRunId, step:'settlement'}" condition="runInfo.statusId == 'PrnFinalized'"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- P27 (design §8.2 step 7): what Accounting did with the run's obligations -->
+                <section name="SettlementStep" condition="currentStep == 'settlement'">
+                    <widgets>
+                        <label type="p" style="m-muted" text="Nothing is finalized yet: the run's obligations are made when it is finalized."
+                                condition="!obligationRows.length &amp;&amp; !recoveryRows.length"/>
+                        <label type="p" style="text-warning" text="${settlement?.pendingText}" condition="settlement?.pendingText &amp;&amp; !settlement?.complete"/>
+                        <section name="SettlementAmounts" ai-opt-out="true" condition="obligationRows.length || recoveryRows.length">
+                            <widgets>
+                                <section name="SettlementPeopleBox" condition="settlementPeople.length">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Payment instructions"/>
+                                            <box-body-nopad>
+                                                <form-list name="SettlementPeople" list="settlementPeople" skip-form="true" paginate="false">
+                                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                                    <field name="wageNetText" align="right"><default-field title="Wage net"><display/></default-field></field>
+                                                    <field name="reimbursementDueText" align="right"><default-field title="Reimbursement due"><display/></default-field></field>
+                                                    <field name="instructionText" align="right"><default-field title="To pay now"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="personName"/><field-ref name="wageNetText"/></column>
+                                                        <column><field-ref name="instructionText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <section name="SettlementObligationsBox" condition="obligationRows.length">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Obligations"/>
+                                            <box-body-nopad>
+                                                <form-list name="SettlementObligations" list="obligationRows" skip-form="true" paginate="false">
+                                                    <field name="invoiceId">
+                                                        <default-field title="Invoice">
+                                                            <link url="${invoiceDetailUrl}" url-type="plain" text="${invoiceId}" link-type="anchor"
+                                                                    parameter-map="{invoiceId:invoiceId}" condition="invoiceId"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                                    <field name="payeeName"><default-field title="Payee"><display/></default-field></field>
+                                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                                    <field name="invoiceStateText"><default-field title="State"><display/></default-field></field>
+                                                    <field name="postedText"><default-field title="Posting"><display/></default-field></field>
+                                                    <field name="unpaidText" align="right"><default-field title="Unpaid"><display/></default-field></field>
+                                                    <field name="paymentsText"><default-field title="Payments"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="invoiceId"/><field-ref name="payeeName"/></column>
+                                                        <column><field-ref name="unpaidText"/><field-ref name="invoiceStateText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <section name="SettlementRecoveriesBox" condition="recoveryRows.length">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Overpayments to recover"/>
+                                            <box-body-nopad>
+                                                <form-list name="SettlementRecoveries" list="recoveryRows" skip-form="true" paginate="false">
+                                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                                    <field name="routeText"><default-field title="How"><display/></default-field></field>
+                                                    <field name="amountText" align="right"><default-field title="To recover"><display/></default-field></field>
+                                                    <field name="recoveredText" align="right"><default-field title="Recovered"><display/></default-field></field>
+                                                    <field name="remainingText" align="right"><default-field title="Left"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="personName"/><field-ref name="routeText"/></column>
+                                                        <column><field-ref name="remainingText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
                 <section name="ApprovalStep" condition="currentStep == 'approval'">
                     <widgets>
                         <container-box>

@@ -48,7 +48,8 @@ along with this software (see the LICENSE.md file). If not, see
     People (design-people §13 InvoiceDetail; crosscut §3.16 People row; impl-people P15, F19; mounted at People/Payroll/InvoiceDetail):
     an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE at the employer (mantle.humanres.ExpenseServices.get#Claim), read and reconcile
     only: the header, the settlement (route, applied, unpaid, the payments applied), the lines and the claim. Its widgets are
-    template/PeopleInvoiceDetail.xml's; payroll-origin invoices join with P27.
+    template/PeopleInvoiceDetail.xml's. P27: a payroll reader's branch, an invoice a pay run's obligation names (net pay, a payee's
+    amounts, a receivable, a claim it settled; mantle.humanres.PayrollRunServices.get#Obligation): read and reconcile only.
 
     Customer Service (crosscut §3.16 Customer Service row; impl-customer-service P3, F53; mounted at
     CustomerService/Orders/InvoiceDetail): a sales invoice of a customer the user serves
@@ -120,6 +121,22 @@ along with this software (see the LICENSE.md file). If not, see
             } finally {
                 ec.message.clearErrors()
                 ec.message.popErrors()
+            }
+            // P27: an invoice a pay run's obligation names (net pay, a payee's amounts, a receivable, a claim it settled), for a
+            // payroll reader of the employer (mantle.humanres.PayrollRunServices.get#Obligation)
+            peopleObligation = null
+            if (!peopleClaim) {
+                ec.message.pushErrors()
+                try {
+                    const read = ec.service.sync().name('mantle.humanres.PayrollRunServices.get#Obligation')
+                        .parameters({invoiceId: invoiceId || ''}).requireNewTransaction(true).call() || {}
+                    peopleObligation = !ec.message.hasError() && read.obligation ? read : null
+                } catch (error) {
+                    peopleObligation = null
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
             }
             recordFound = false
             return

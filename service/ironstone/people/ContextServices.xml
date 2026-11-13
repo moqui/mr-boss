@@ -115,7 +115,8 @@ along with this software (see the LICENSE.md file). If not, see
             its structures published and not ended, the elective lines of payrollStructureId, and the benefit types; never an
             amount); hoursGroups, payPeriods and payAdvances (P24: the pay groups a payroll reader's employers have, or the groups a
             manager's reports are paid in now; payrollGroupId's prepared periods, newest first; partyRelationshipId's approved
-            employee advances for a payroll reader, never an amount). Refuses a user without People and an unknown choice.</description>
+            employee advances for a payroll reader, never an amount); payrollPayees (P27: organizations by name, a pay group's
+            localization payee, a payroll reader's). Refuses a user without People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>

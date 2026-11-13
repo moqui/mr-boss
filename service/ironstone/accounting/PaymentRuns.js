@@ -93,7 +93,9 @@ function runContext(parameters) {
             statusColor: statusColors[run.statusId] || "grey-7",
             selectedTotalText: money(run.selectedTotal, run.currencyUomId),
             approvedTotalText: money(run.approvedTotal, run.currencyUomId),
-            discountTotalText: money(run.discountTotal, run.currencyUomId)
+            discountTotalText: money(run.discountTotal, run.currencyUomId),
+            // People P27 (AC-23): the run's payroll bills, for a reader without PAYROLL_VIEW one masked amount
+            payrollMaskedText: run.payrollMaskedCount ? money(run.payrollMaskedTotal, run.currencyUomId) : null
         }),
         selectedItems: items.filter(row => row.selectedIndicator === "Y"),
         excludedItems: items.filter(row => row.selectedIndicator !== "Y"),

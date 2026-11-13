@@ -1,5 +1,7 @@
 # IronStone BOSS — Accounting design
 
+Nov 12, 2026 — AC-23 built by impl-people P27, as an owner contract (ExpensePosting's payroll-origin paragraph): the payroll-origin projection in Mantle (`mantle/account/PayrollOrigin.js` over People's `PayrollObligation`) behind the bills, invoices, payments, journal and entry reads, the invoice workflow, the payables aging, payment runs and universal search; approval, finalizing and payment of a payroll obligation's invoice wait for its run's completed finalization; a payment run pays a payroll invoice as `PtPayrollPayment` from the person's payroll account and leaves a payroll payee that is no person to its own channel.
+
 Nov 12, 2026 — AC-24 built by impl-maintenance P9, as an owner contract (PostingDefaults' "Maintenance expense routing", §18): `mantle.ledger.config.MaintenanceCostPolicy` edited as the Maintenance expense mapping kind, and the issuance and return routing in AssetAutoPostServices for managed maintenance work only.
 Nov 12, 2026 — impl-people P15 as built (owner contract): ExpensePosting lists an employee's expense claim once its business approval is done, finance's approval refuses one before it or reserved for payroll, and the Employee advances tab pays and applies advances (§5 ExpensePosting).
 Nov 11, 2026 — the decisions of the People, Maintenance and Sales plans written in: People builds AC-23 (impl-people P27), with external payroll processing gated on it, and Maintenance builds AC-24 (impl-maintenance P9); `RaprCost` is the one labor costing purpose; a seller's SalesPolicy approval setting stops the automatic approval of its sales orders, and the credit warning stays as built and blocks auto-approval, as every pre-approval warning does (§1.4, OrderDetail, §19; impl-sales §4); the invoiced revenue metric is the registered `Accounting.InvoicedRevenue` (AC-12, §19)
@@ -853,6 +855,26 @@ gets no more than the screen shows. People payroll finalize stays off until AC-2
 acceptance passes ([People §8.3](design-people.md#83-accounting-and-confidentiality)). People's plan
 builds AC-23 (impl-people P27), as an owner contract, and external payroll processing, whose results
 create the same payroll invoices, is gated on it as finalize is (Nov 11, 2026).
+
+**As built (impl-people P27; Nov 12, 2026).** A payroll-origin document is an invoice a `PayrollObligation` made (net pay,
+a payee's amounts, a receivable from a person who left; an expense claim a run settles stays an ordinary bill), a payment of
+type `PtPayrollPayment`, and a transaction of either. Without `PAYROLL_VIEW` (`PayrollOrigin.js canRead`) they are left out:
+`AccountingPolicy.js query` (the invoices, bills and payments kinds by condition, through `InvoiceFinance`'s obligation join;
+journals and entries through the new `AcctgTransFinance` and `AcctgTransAndEntryFinance` views, a locked read checked on its
+row), so the lists, palette search and record reads behind Bills, Invoices, Payments, JournalEntries, TransactionEntries and
+AccountDetail; `InvoiceWorkflowLib.js invoice` (BillDetail, InvoiceDetail and every invoice read or operation: missing,
+`INVOICE_UNAVAILABLE`); `find#Payables` (Bills, ExpensePosting) and `find#Receivables`; `PaymentWorkflow.js paymentQuery`
+(Payments, PaymentDetail); universal search (a payroll ledger hit dropped); the payables and receivables aging, where they are one
+"Payroll" row a currency, so the totals reconcile; payment runs, which select payroll bills only for a reader of payroll, refuse
+paying them to anyone else (`PAYROLL_VIEW_REQUIRED`), and show a reader without it one masked "Payroll" amount
+(PaymentRunDetail's Payroll card). Approval, finalizing and paying an obligation's invoice wait for its run's completed
+finalization (`InvoiceWorkflow.js issue`: `PAYROLL_NOT_FINALIZED`), and a claim on the payroll route is approved for payment once
+a finalized run settles it. A payment run (F69) takes a payment's type from its bills' invoice type, as `create#InvoicePayment`
+does (`PtPayrollPayment` for net pay, posted through new DefaultSettings mappings: payroll payable applied, payables unapplied),
+pays a payroll payee from its `PmpPayroll` account first, and leaves a payroll payee's invoice (the localization authority's
+`InvoiceTax`) out of an ACH run (`PrxPayeeChannel`: a PPD file pays people). Not covered: the Customer360 and Supplier360 finance
+panes beyond these services, CSV and print exports of other screens, the GL and partner ledger reports' line detail (aggregates
+by account carry no person), and a payment applied to a payroll invoice that is not of the payroll type.
 
 ### LandedCosts
 

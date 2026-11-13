@@ -314,6 +314,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <number-card title="Bills" value="${run.selectedCount}"/>
                     <number-card title="Discounts taken" value="${run.discountTotalText}"/>
                     <number-card title="Left out" value="${run.excludedCount}"/>
+                    <!-- People P27 (AC-23): payroll bills a reader without PAYROLL_VIEW sees as one amount, in the total to pay -->
+                    <number-card title="Payroll" value="${run.payrollMaskedText}" condition="run.payrollMaskedText"/>
                     <number-card title="Failed" value="${run.failedCount}" condition="run.statusId == 'PrunExecuted'"/>
                 </dashboard>
                 <container-box>
