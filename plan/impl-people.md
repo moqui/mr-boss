@@ -8025,6 +8025,92 @@ P26–P28 (it waits on nothing in them), with P26 built beside it on `ppl/p26`.
     policy of HR readers); (2) whether the Insights data steward stewards People's datasets (built: ADMIN alone); (3) Reports for a
     manager (built: not shown; a manager reads no report).
 
+**Review Nov 12 (P29).** A fresh review of `git diff master...ppl/p29` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §12 Reports and Settings and §1.4, access, scope and confidentiality first: each report's capability and employers, the payroll
+register's lane, the shipped documents and registrations, CSV safety, the `InsDcPeople` class on Assist's and MCP's paths, the settings
+writes, the new response actions, Insights' `Registry.js` change and the readiness links; the user's four calls of Nov 12 built and
+recorded in §4; fixes committed apart per repository ("People P29 review: …"). mr-boss was rebased onto master first (mr-mantle had not
+moved), and both again after P26's merge: mr-boss conflicted in `screen/People.xml` (the header's P26 sentence, then P29's),
+`PeopleAccessLater.spec.js` (P26's header and feature kept whole, P29's after them), design-people (the header paragraphs; the Assist
+row is P26's with P29's sentence after it), usl-inventory's heading and §4 (P26's review rows, then this review's); mr-mantle replayed
+cleanly. Tested on the shared release binary (`--release --nobuild`, this phase's runtime); mr-moqui unchanged.
+- Checked and found sound:
+  - Reports: every report is read by the capabilities it names (`readable`) and over the employers of the caller's People scope, one
+    asked outside it ORGANIZATION_DENIED; the payroll register PAYROLL_VIEW alone (HR refused PERMISSION_DENIED with the same
+    parameters, never offered it), pay in no other report; the qualifications report reads no reference number, the leave balances no
+    reason or description, the reviews no rating, answer or note, the attendance no reason; amounts each currency apart.
+  - CSV: every cell (the options, basis and employer names too) that a spreadsheet would read as a formula (`=`, `+`, `-`, `@`, a tab
+    or a carriage return) is behind an apostrophe, a number left as it is; the export is run#Report's own projection.
+  - The shipped documents carry no pay, tax, private contact, reference or confidential record; the attention providers count
+    through get#Home's own projection; the eight catalog entries are filtered by Mantle's catalogue as the viewer (a reader of none is
+    refused and sees none).
+  - `InsDcPeople` is refused on every Insights Assist and MCP path: the typed query and the sources on both surfaces, and a saved
+    panel (`checkPanel` holds every dataset a panel's queries name to its class); the framework exposes no report engine operation
+    as an agent tool (no `AgentToolExposure` row names one; `run#Query` deliberately not exposed), Assist's `search` reads the
+    palette providers, not the search index.
+  - Settings: the clocking default by the People administrator or an HR editor of the employer, the intake handlers by the People
+    administrator alone, each checked as a filing checks it; PartySetting.settingValue audit-logged with its reason (no PartySetting
+    type holds a secret); get#Settings answers the intake only to the People administrator, names and eligibility, never a case.
+  - LogNote files a note on an application only (a recruiter's, get#Application, and log#RecordNote's own content-host check);
+    SendMessage files on an application only when People admits the user to it and otherwise sends an internal message through Comms'
+    own checks; neither reaches a case, a review, a qualification or an employment.
+  - `Registry.js reportLink` is unchanged for a route without its own `?` (every other app's); `destinationOpens` and `appOf` strip
+    or ignore the query. The readiness keys resolve in Admin.js and SettingsHome to existing screens.
+- Fixed:
+  - R1 (medium, the user's call of Nov 12, 2026): ending an employment never reached the qualification documents. The document's
+    condition on the related employment's end (`employmentThruDate is-null`) made the feed skip the write that set it (a write with
+    another value in a condition's field is not fed), so the document kept the ex-employer, and a holder with no employment left was
+    never deleted (the worker's finding understated it: no reindex happened at all). `BossPeopleQualification` now carries each
+    employment's end and its manual data service, `ironstone.people.InsightsServices.get#QualificationDocumentData`, keeps those not
+    ended and marks a holder with none, which a post-query condition leaves out, so the feed deletes the document. A revocation is a
+    write of the document's verification; an expiry is its end date, which every window reads. Spec PeopleInsights (a holder at Retail
+    and Services: Services ended, Retail alone; revoked, the verification; Retail ended, no document; it failed on the unfixed code).
+  - R2 (the user's call of Nov 12, 2026): the Insights data steward stewards the People datasets: `BOSS_INSIGHTS_DATA` holds their
+    update artifact alone (an authorization's action is matched exactly, so no view) and no DataDocumentUserGroup row. Spec
+    PeopleInsights (the three listed as stewarded, validate#BusinessDataset answered, query#Documents refused; it failed without
+    the grant).
+  - R3 (medium): the expense claims report of an expense manager without a staff read (Accounting's payables clerks hold
+    PEOPLE_EXPENSE_MANAGE) was offered over no employer and answered nothing: PEOPLE_EXPENSE_MANAGE is no staff read, so their People
+    scope is empty. A report's employers are now `employersFor` it: the expense claims add the employers whose claims the caller
+    manages (as Expense.js `expenseScope`). Spec PeopleReports (an expense manager of A offered the claims over A, B refused, headcount
+    refused; it failed on the unfixed code).
+  - R4 (low): a change of the confidential case intake handlers, which replaces the whole list, did not need the revision it read
+    (`expectedRevision` was checked only when given); it now does (REVISION_STALE), the clocking default's still checked when given
+    (Who clocks sets one value without reading the rest). HANDLER_NOT_ELIGIBLE named any party given by name; it names the id given.
+    Specs PeopleReports and PeopleAccessLater.
+  - R5 (low): Reports' Export CSV of the payroll register (amounts `ai-opt-out` on the page) was offered and answered in an agent's
+    render; it is neither now. Not covered by a spec.
+- Provisional findings (for the lead to number):
+  - The qualifications dataset carries identity documents and work permits (title, issuer, expiry; never the number) to any holder
+    of People's Insights bundle, who needs no People capability: a work permit's existence and expiry is immigration status, which
+    P18 shows only to development and HR readers. A user's call: leave the restricted kinds out of the document, or keep them.
+  - An Assist screen session renders Insights' Drill, DatasetView and the dashboards as the user, so an agent reads a People
+    dataset's rows there for a bundle holder: the class closes Insights' Assist tools, not its screens (the same holds for a cost
+    dataset).
+  - A qualification document drops an employer once an end is recorded, so an employee working out their notice leaves the
+    qualifications dataset and its alert early (privacy over completeness; an end is not re-read when it passes).
+  - store#Settings changing the intake handlers does not route a case left waiting with no handler (rerouteCases runs at a
+    separation and in the daily job only), so such a case waits until the employer's next separation.
+  - The recruiting report counts the vacant seats through `find#Positions` as the caller; a recruiter it refuses counts none, silently
+    (logged).
+  - The Built note's findings stand except the first three: the first two are now the user's calls (§4; the second built, R2),
+    and the third is built (R1).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime, after the second rebase): mr-mantle PeopleReports
+  (4 features, 1.06 s), PeopleScope, PeopleCases and Attendance, 22 of 22; mr-boss PeopleInsights (7 features, 0.84 s),
+  PeopleAccessLater (17 features; P29's 0.55 s), PeopleAccess, PeopleAttendance, PeoplePayslips, InsightsHome, InsightsAlerts,
+  InsightsDatasets, InsightsSettings and AdminRegistries, 75 of 75; before the rebase also InsightsAccess and AdminCapabilities.
+  PeopleInsights with R1 and R2 taken out failed their two features; PeopleReports with R3 taken out failed its feature. `moqui lint
+  --screens` (release): none of Reports, Preferences, LogNote or SendMessage flagged. Prettier clean on the changed JavaScript. Not
+  run: test-apps, test-framework, the acceptance suite (PeopleReportsUsable unchanged).
+- For the lead:
+  - budget share: mr-mantle PeopleReports about +0.15 s (1.06 s); mr-boss PeopleInsights about +0.25 s (0.84 s), PeopleAccessLater
+    unchanged;
+  - merge hot spots: mr-boss `data/BossSetupPeopleReportData.xml` (the qualification document, the steward's authz), the new
+    `service/ironstone/people/InsightsServices.xml`, `screen/People/Reports.xml` (exportCsv), the specs PeopleInsights and
+    PeopleAccessLater (P29's feature), design-people (header, §1.4, §12), design-insights §6.1, §4; mr-mantle `PeopleReports.js`
+    (`employersFor`), `PeopleSettings.js` (storeSettings), PeopleServices.xml (store#Settings' description), PeopleReports.spec.js;
+  - the user's calls: the four of Nov 12 are in §4, two as built and two built here (R1, R2); the first finding above asks one more.
+
 ### P30 — Clocking kiosk
 
 Design §6 ClockingKiosk, §1.4 (devices), §15 (the badge); PE-05 (kiosk identity), PE-22. After P13 (punches) and on
