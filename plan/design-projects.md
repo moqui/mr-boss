@@ -2206,6 +2206,11 @@ line waits for Sales.
 
 ## 11. Reports
 
+**Profitability and AI (impl-people P25 review, the user's call of Nov 12, 2026).** ProfitabilityReport's cost is the hours at the
+workers' pay rates, so it is opted out of AI as the rates are (design-people §1.1 "Pay and AI"): the Cost card and column, the
+margin and margin % that give it back from the billable value, and the chart that draws them; an agent's render shows "Not shared
+with AI" there. Billable value, billed and unbilled stay readable.
+
 **Insights registration (impl-insights P4, Nov 7, 2026).** Portfolio, Profitability, Progress, Sprints, Time, Utilization and
 WorkItems are `ironstone.insights.ReportCatalogEntry` rows (`Projects.*`) read by their routes' screen authorization
 (Profitability and Utilization the managers'); `Projects.Utilization` (hours logged over capacity, recomputed from its

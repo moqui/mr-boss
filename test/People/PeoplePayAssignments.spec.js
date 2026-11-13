@@ -223,7 +223,19 @@ feature(
                 "mantle.humanres.payroll.PayrollComponentExample": ["inputValues", "expectedAmount"],
                 "mantle.humanres.payroll.PayrollInput": ["amount", "rateAmount"],
                 // the worker rates copied on a time entry (the user's call of Nov 12, 2026)
-                "mantle.work.time.TimeEntry": ["vendorHourRate", "vendorPieceRate"]
+                "mantle.work.time.TimeEntry": ["vendorHourRate", "vendorPieceRate"],
+                // P25's pay run amounts and explanations
+                "mantle.humanres.payroll.PayrollRunEmployment": [
+                    "grossAmount",
+                    "deductionAmount",
+                    "contributionAmount",
+                    "localEmployeeAmount",
+                    "localEmployerAmount",
+                    "netAmount",
+                    "employerCostAmount",
+                    "splitText"
+                ],
+                "mantle.humanres.payroll.PayrollRunResult": ["amount", "explanation"]
             }
             const shared = Object.entries(fields).flatMap(([entityName, names]) =>
                 names.filter(name => !optedOut(entityName, name)).map(name => entityName + "." + name)

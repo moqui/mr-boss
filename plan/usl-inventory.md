@@ -723,6 +723,7 @@ the screens that call it.
 | PayrollRunServices | calculate#Run | People/Payroll/PayRunDetail (CalculateAndReview) | People/Payroll/PayRunDetail (Calculate and review: Calculate, resuming pending, failed and changed employees) (People P25) |
 | PayrollRunServices | get#Run | People/Payroll/PayRunDetail (CalculateAndReview, Approval) | People/Payroll/PayRunDetail (the header, the steps and progress, the population, an employee's lines and inputs, the Approval step's totals) (People P25) |
 | PayrollRunServices | submit#Run, approve#Run, return#Run | People/Payroll/PayRunDetail (Approval); the PayrollRunApproval topic | People/Payroll/PayRunDetail (Approval: Ask for approval, Approve, Return); People/Approvals and the tray (the topic's approve and return) (People P25) |
+| PayrollRunServices | cancel#Run | People/Payroll/PayRunDetail (the record header) | People/Payroll/PayRunDetail (Cancel run with its reason, a run not approved; its inputs released) (People P25 review) |
 
 ## Ledger (81 services)
 

@@ -19,7 +19,10 @@ along with this software (see the LICENSE.md file). If not, see
     chart by project of billable value against cost with the margin as a line, with the table behind it (ProfitabilityTable: client,
     project, budget, cost, billable value, billed, unbilled, margin, margin %, budget used, a note for entries without a rate; a totals
     row; CSV and XLSX) and the totals by client (ProfitabilityClients). Print opens the same report in html-print. Over
-    mantle.work.ProjectReportServices.get#ProjectProfitability, with §11's measures. -->
+    mantle.work.ProjectReportServices.get#ProjectProfitability, with §11's measures. The cost is the hours at the workers' pay rates,
+    so it is opted out of AI as the rates are (IronStone People PE-21, the user's call of Nov 12, 2026; impl-people P25 review): the
+    Cost card and column, and the margin and margin % that give it back from the billable value, with the chart that draws them; an
+    agent's render shows "Not shared with AI" there. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Profitability" default-menu-index="6" menu-image="sym_o_trending_up" menu-image-type="icon">
 
@@ -123,14 +126,19 @@ along with this software (see the LICENSE.md file). If not, see
 
             <dashboard min-width="150" style="q-mb-sm">
                 <number-card title="Billable value" value="${billableValue}" icon="sym_o_payments" size="sm"/>
-                <number-card title="Cost" value="${costValue}" icon="sym_o_account_balance_wallet" size="sm"/>
-                <number-card title="Margin" value="${marginValue}" icon="sym_o_trending_up" size="sm"/>
-                <number-card title="Margin %" value="${marginPctValue}" icon="sym_o_percent" size="sm"/>
                 <number-card title="Billed" value="${billedValue}" icon="sym_o_receipt_long" size="sm"/>
                 <number-card title="Unbilled" value="${unbilledValue}" icon="sym_o_pending_actions" size="sm"/>
             </dashboard>
+            <!-- the worker cost and what gives it back, opted out of AI with the pay rates it comes from -->
+            <section name="ProfitabilityCostCards" ai-opt-out="true"><widgets>
+                <dashboard min-width="150" style="q-mb-sm">
+                    <number-card title="Cost" value="${costValue}" icon="sym_o_account_balance_wallet" size="sm"/>
+                    <number-card title="Margin" value="${marginValue}" icon="sym_o_trending_up" size="sm"/>
+                    <number-card title="Margin %" value="${marginPctValue}" icon="sym_o_percent" size="sm"/>
+                </dashboard>
+            </widgets></section>
 
-            <section name="ProfitabilityChartBox" condition="hasChart"><widgets>
+            <section name="ProfitabilityChartBox" condition="hasChart" ai-opt-out="true"><widgets>
                 <container-box><box-header title="Billable value and cost by project · ${rangeText}"/><box-body>
                     <render-mode><text type="qvt"><![CDATA[${chartHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(chartTui)}]]></text></render-mode>
                 </box-body></container-box>
@@ -142,12 +150,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="workEffortName"><conditional-field condition="isTotal" title="Project"><display style="text-weight-bold"/></conditional-field>
                         <default-field title="Project"><link url="projectDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId}" link-type="anchor"/></default-field></field>
                     <field name="budgetText" align="right"><default-field title="Budget"><display/></default-field></field>
-                    <field name="costText" align="right"><default-field title="Cost"><display/></default-field></field>
+                    <field name="costText" align="right" ai-opt-out="true"><default-field title="Cost"><display/></default-field></field>
                     <field name="valueText" align="right"><default-field title="Billable value"><display/></default-field></field>
                     <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
                     <field name="unbilledText" align="right"><default-field title="Unbilled"><display/></default-field></field>
-                    <field name="marginText" align="right"><default-field title="Margin"><display style="${negative ? 'text-negative' : ''}"/></default-field></field>
-                    <field name="marginPctText" align="right"><default-field title="Margin %"><display style="${negative ? 'text-negative' : ''}"/></default-field></field>
+                    <field name="marginText" align="right" ai-opt-out="true"><default-field title="Margin"><display style="${negative ? 'text-negative' : ''}"/></default-field></field>
+                    <field name="marginPctText" align="right" ai-opt-out="true"><default-field title="Margin %"><display style="${negative ? 'text-negative' : ''}"/></default-field></field>
                     <field name="budgetUsedText" align="right"><default-field title="Budget used"><display/></default-field></field>
                     <field name="noteText"><default-field title="Note"><display style="text-caption text-warning"/></default-field></field>
                     <columns>
@@ -171,12 +179,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <form-list name="ProfitabilityClients" list="clientRows" skip-form="true" paginate="false" show-csv-button="true" show-xlsx-button="true">
                         <field name="clientName"><default-field title="Client"><display/></default-field></field>
                         <field name="projectCount" align="right"><default-field title="Projects"><display/></default-field></field>
-                        <field name="costText" align="right"><default-field title="Cost"><display/></default-field></field>
+                        <field name="costText" align="right" ai-opt-out="true"><default-field title="Cost"><display/></default-field></field>
                         <field name="valueText" align="right"><default-field title="Billable value"><display/></default-field></field>
                         <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
                         <field name="unbilledText" align="right"><default-field title="Unbilled"><display/></default-field></field>
-                        <field name="marginText" align="right"><default-field title="Margin"><display style="${negative ? 'text-negative' : ''}"/></default-field></field>
-                        <field name="marginPctText" align="right"><default-field title="Margin %"><display/></default-field></field>
+                        <field name="marginText" align="right" ai-opt-out="true"><default-field title="Margin"><display style="${negative ? 'text-negative' : ''}"/></default-field></field>
+                        <field name="marginPctText" align="right" ai-opt-out="true"><default-field title="Margin %"><display/></default-field></field>
                         <columns>
                             <column><field-ref name="clientName"/><field-ref name="projectCount"/></column>
                             <column><field-ref name="costText"/><field-ref name="valueText"/></column>

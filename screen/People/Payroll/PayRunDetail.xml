@@ -23,7 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
     opened shows its lines with their explanations, how its period was split and the inputs it took), and Approval (the totals by
     type, the counts, the exclusions and warnings; Ask for approval, submit#Run, a payroll editor's; Approve and Return, the payroll
     approver's who neither selected nor calculated it, approve#Run and return#Run, confirming the count and net). Finalize and
-    Settlement are P27's. Amounts are opted out of AI. Nothing here makes an invoice or a payment. -->
+    Settlement are P27's. Cancel run (P25 review): a run not approved cancelled with its reason, cancel#Run, its inputs released and the
+    period free to run again. Amounts are opted out of AI, the approval's confirmation naming no net in an agent's render. Nothing here
+    makes an invoice or a payment. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay run" default-menu-include="false">
     <parameter name="payrollRunId"/>
@@ -75,6 +77,16 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="approval"/></default-response>
         <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="approval"/></error-response>
     </transition>
+    <!-- P25 review (finding 5): a run not approved cancelled with its reason; its inputs released and the period free to run again -->
+    <transition name="cancelRun">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.cancel#Run" out-map="cancelled"
+                    in-map="{payrollRunId:payrollRunId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Pay run cancelled; ${cancelled.releasedCount} inputs released</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/></error-response>
+    </transition>
     <transition name="decideRun">
         <actions>
             <if condition="decision == 'return'">
@@ -103,6 +115,7 @@ along with this software (see the LICENSE.md file). If not, see
             approval = found?.approval || null
             steps = found?.steps || {}
             canEdit = !!found?.canEdit
+            canCancel = !!found?.canCancel
             canCalculate = !!found?.canCalculate
             canSubmit = !!found?.canSubmit
             canDecide = !!found?.canDecide
@@ -141,7 +154,9 @@ along with this software (see the LICENSE.md file). If not, see
             hoursUrl = sharedLinks?.['Time/HoursForPay'] || null
             adjustmentsUrl = sharedLinks?.['Payroll/PayAdjustments'] || null
             runsUrl = sharedLinks?.['Payroll/PayRuns'] || '../PayRuns'
-            netConfirm = 'Approve ' + (counts.calculated || 0) + ' employees, net ' + (totalsText.net || '') + (counts.excluded ? ', ' + counts.excluded + ' excluded' : '') + '?'
+            // the net is opted out of AI (P25 review): an agent's render of the confirmation names the count alone
+            netConfirm = 'Approve ' + (counts.calculated || 0) + ' employees' + (sri.isAgentRender() ? '' : ', net ' + (totalsText.net || '')) +
+                (counts.excluded ? ', ' + counts.excluded + ' excluded' : '') + '?'
         ]]></script>
     </actions>
     <widgets>
@@ -177,6 +192,17 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md row q-gutter-md">
                             <link url="${runsUrl}" url-type="plain" text="Pay runs" link-type="anchor" icon="sym_o_arrow_back"/>
                             <label text="${runInfo.readinessText}" type="span" style="text-caption"/>
+                        </container>
+                        <container style="col-12 col-md-auto">
+                            <container-dialog id="CancelRunDialog" button-text="Cancel run" icon="sym_o_cancel" width="480"
+                                    title="Cancel this pay run" condition="canCancel">
+                                <label type="p" text="The run is kept as cancelled, its inputs are released and the period may be run again. Nothing was paid or posted."/>
+                                <form-single name="CancelRun" transition="cancelRun" map="{payrollRunId:payrollRunId}">
+                                    <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Cancel run"><submit type="danger" confirmation="Cancel this pay run?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
                         </container>
                     </container>
                 </container>

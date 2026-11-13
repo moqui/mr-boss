@@ -134,7 +134,9 @@ feature(
                 "The structure pays a salary",
                 "Progress",
                 "Calculate",
-                "Preview only"
+                "Preview only",
+                // P25 review: a run not approved is cancelled from its record
+                "Cancel run"
             ])
                 if (!out.includes(text)) problems.push("missing " + text)
             return {status: rendered.status, errors: rendered.errors, problems, calculated: state.calculated}
