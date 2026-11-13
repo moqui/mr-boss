@@ -13,8 +13,8 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone's boxes on the BasicComms Home (plans/Comms-Framework.md D-A4): the follow-ups due and the meetings with Join
-    before the chat rooms, and the mailboxes with unread after the shortcuts; their lists come from IronStone's get#CommsHome,
-    which its inbox-source provider answers. Needs reply is the framework's box, which shows IronStone's list (mail and
+    before the chat rooms; their lists come from IronStone's get#CommsHome, which its inbox-source provider answers. The mailboxes
+    with unread are its home-source box (CommsHomeServices.get#HomeSource), which BasicComms Home shows. Needs reply is the framework's box, which shows IronStone's list (mail and
     internal messages) from the same answer. -->
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets-extend name="HomeRooms" where="before">
@@ -52,17 +52,6 @@ along with this software (see the LICENSE.md file). If not, see
             </form-list>
             <section name="NoMeetings" condition="!meetingList.length"><widgets>
                 <label type="p" text="No meetings today or in the next two days" style="m-muted q-pa-sm q-mb-none"/>
-            </widgets></section>
-        </box-body-nopad></container-box>
-    </widgets-extend>
-    <widgets-extend name="HomeShortcuts" where="after">
-        <container-box><box-header title="Mailboxes with unread"/><box-body-nopad>
-            <form-list name="MailboxesUnread" list="mailboxList" skip-form="true" skip-header="true" paginate="false">
-                <field name="name"><default-field><link url="${link}" url-type="plain" text="${name}"/></default-field></field>
-                <field name="countText" align="right"><default-field><display style="text-caption text-weight-medium text-no-wrap"/></default-field></field>
-            </form-list>
-            <section name="NoMailboxes" condition="!mailboxList.length"><widgets>
-                <label type="p" text="Nothing new in your mailboxes" style="m-muted q-pa-sm q-mb-none"/>
             </widgets></section>
         </box-body-nopad></container-box>
     </widgets-extend>

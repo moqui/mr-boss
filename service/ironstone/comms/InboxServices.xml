@@ -369,50 +369,31 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="get" noun="InvitationCard" allow-remote="false">
-        <description>The invitation a message carries (an iMIP text/calendar part or .ics file, IronStone design §12 ImipCard),
-            read by the framework's ICalendar tool: {method, uid, summary, start, end, allDay, location, organizer, attendeeCount,
-            emailMessageAttachmentId, workEffortId (the event on the user's calendar by its UID, when there is one), myStatus
-            (accepted, tentative, declined or needsAction)}, or null without one or without the tool. A file that does not
-            parse is logged and no card shows.</description>
+        <description>The invitation a message carries (IronStone design §12 ImipCard): the framework's card
+            (org.moqui.comms.InboxServices.get#InvitationCard: method, uid, summary, start, end, allDay, location, organizer,
+            attendeeCount, emailMessageAttachmentId), with workEffortId (the event on the user's calendar by its UID, when there
+            is one) and myStatus (accepted, tentative, declined or needsAction), or null without one.</description>
         <in-parameters>
             <parameter name="attachmentList" type="List"/>
         </in-parameters>
         <out-parameters><parameter name="invitation" type="Map"/></out-parameters>
         <actions><script><![CDATA[
-            invitation = null
-            const file = Array.from(attachmentList || []).find((item) => /text\/calendar/i.test(item.contentType || '') || /\.ics$/i.test(item.fileName || ''))
-            if (!file || !file.attachmentLocation || Number(file.fileSize || 0) > 512 * 1024) return
-            if (ec.factory.getToolFactory('ICalendar') == null) return
-            try {
-                const text = ec.resource.getLocationReference(file.attachmentLocation).getText()
-                const parsed = ec.factory.getTool('ICalendar').parse(text)
-                const event = Array.from(parsed?.events || [])[0]
-                if (!event) return
-                const method = parsed.method ? String(parsed.method).toUpperCase() : null
-                let workEffortId = null
-                let myStatus = 'needsAction'
-                const partyId = ec.user.userAccount?.partyId || null
-                if (event.uid) {
-                    const efforts = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('universalId', String(event.uid))
-                            .condition('workEffortTypeEnumId', 'WetEvent').selectField('workEffortId').disableAuthz().list())
-                    for (const effort of efforts) {
-                        const rows = partyId ? Array.from(ec.entity.find('mantle.work.effort.WorkEffortParty').condition('workEffortId', effort.workEffortId)
-                                .condition('partyId', partyId).condition(ec.entity.conditionFactory.makeConditionDate('fromDate', 'thruDate', null)).disableAuthz().list()) : []
-                        if (!rows.length) continue
-                        workEffortId = effort.workEffortId
-                        const status = rows[0].statusId
-                        myStatus = status === 'WeptDeclined' ? 'declined' : (status === 'WeptTentative' ? 'tentative' : (status === 'WeptAssigned' ? 'accepted' : 'needsAction'))
-                        break
-                    }
-                }
-                invitation = {method: method, uid: event.uid ?? null, summary: event.summary ?? null, start: event.start ?? null, end: event.end ?? null,
-                    allDay: event.allDay === true, location: event.location ?? null, organizer: event.organizer ?? null,
-                    attendeeCount: Array.from(event.attendees || []).length, status: event.status ?? null,
-                    emailMessageAttachmentId: file.emailMessageAttachmentId, workEffortId: workEffortId, myStatus: myStatus}
-            } catch (err) {
-                ec.logger.warn(`The invitation of attachment ${file.emailMessageAttachmentId} is not shown: ${err && err.message ? err.message : err}`)
-                ec.message.clearErrors()
-                invitation = null
+            invitation = ec.service.sync().name('org.moqui.comms.InboxServices.get#InvitationCard').parameter('attachmentList',
+                    Array.from(attachmentList || [])).call()?.invitation || null
+            if (!invitation) return
+            invitation.canRespond = true
+            const partyId = ec.user.userAccount?.partyId || null
+            if (!invitation.uid || !partyId) return
+            const efforts = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('universalId', String(invitation.uid))
+                    .condition('workEffortTypeEnumId', 'WetEvent').selectField('workEffortId').disableAuthz().list())
+            for (const effort of efforts) {
+                const rows = Array.from(ec.entity.find('mantle.work.effort.WorkEffortParty').condition('workEffortId', effort.workEffortId)
+                        .condition('partyId', partyId).condition(ec.entity.conditionFactory.makeConditionDate('fromDate', 'thruDate', null)).disableAuthz().list())
+                if (!rows.length) continue
+                invitation.workEffortId = effort.workEffortId
+                const status = rows[0].statusId
+                invitation.myStatus = status === 'WeptDeclined' ? 'declined' : (status === 'WeptTentative' ? 'tentative' : (status === 'WeptAssigned' ? 'accepted' : 'needsAction'))
+                break
             }
         ]]></script></actions>
     </service>
@@ -1086,6 +1067,16 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- ========== Contacts, sync, invitations ========== -->
 
+    <service verb="get" noun="ContactCardProvider">
+        <implements service="org.moqui.comms.ProviderInterfaces.contact#Card"/>
+        <description>The contact-card provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): get#ContactCard for
+            the framework's Inbox, the party the user may see with the address, and its threads.</description>
+        <actions><script><![CDATA[
+            card = ec.service.sync().name('ironstone.comms.InboxServices.get#ContactCard').parameters({emailAddress: address || null,
+                partyId: partyId || null, name: name || null}).call()?.card || null
+        ]]></script></actions>
+    </service>
+
     <service verb="get" noun="ContactCard">
         <description>Who an address or party is, for the contact card of the reading pane: the party the user may see with
             that address (match#Addresses, R7) with its organization, email addresses and phone, the link to its contact
@@ -1186,8 +1177,8 @@ along with this software (see the LICENSE.md file). If not, see
             const INBOX = 'ironstone.comms.InboxServices.', COMPOSE = 'ironstone.comms.ComposeServices.', HOME = 'ironstone.comms.CommsHomeServices.'
             const SERVICES = {
                 'get#InboxData': INBOX, 'find#InboxRows': INBOX, 'get#ThreadView': INBOX, 'get#MessageAttachment': INBOX, 'set#ThreadState': INBOX,
-                'apply#ViewAction': INBOX, 'get#MessageDetail': INBOX, 'search#Messages': INBOX, 'get#ContactCard': INBOX, 'search#LinkRecords': INBOX,
-                'link#ThreadRecord': INBOX, 'unlink#ThreadRecord': INBOX, 'prepare#CreateFromMessage': INBOX, 'respond#Invitation': INBOX,
+                'apply#ViewAction': INBOX, 'get#MessageDetail': INBOX, 'search#Messages': INBOX, 'search#LinkRecords': INBOX,
+                'link#ThreadRecord': INBOX, 'unlink#ThreadRecord': INBOX, 'prepare#CreateFromMessage': INBOX,
                 'get#MailboxHeader': INBOX, 'save#MessageFiles': INBOX,
                 'get#ComposeData': COMPOSE, 'search#Recipients': COMPOSE, 'send#Compose': COMPOSE, 'cancel#ComposeSend': COMPOSE,
                 'save#ComposeDraft': COMPOSE, 'attach#DriveFiles': COMPOSE, 'remove#ComposeAttachment': COMPOSE, 'discard#ComposeDraft': COMPOSE,
@@ -1198,7 +1189,6 @@ along with this software (see the LICENSE.md file). If not, see
             if (ec.message.hasError()) return
             result = out || {}
             const eventUrl = (workEffortId) => workEffortId ? '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(workEffortId) : null
-            if (operation === 'respond#Invitation') result.eventUrl = eventUrl(result.workEffortId)
             if (operation === 'get#ThreadView' && result.thread) for (const message of Array.from(result.thread.messageList || []))
                 if (message.invitation) message.invitation.eventUrl = eventUrl(message.invitation.workEffortId)
             handled = true
@@ -1283,6 +1273,22 @@ along with this software (see the LICENSE.md file). If not, see
             } catch (err) {
                 ec.logger.warn(`The answer to invitation ${invitation.uid} was not sent to ${organizer.email}: ${err && err.message ? err.message : err}`)
             } finally { ec.message.clearErrors(); ec.message.popErrors() }
+        ]]></script></actions>
+    </service>
+
+    <service verb="respond" noun="InvitationProvider">
+        <implements service="org.moqui.comms.ProviderInterfaces.invitation#Response"/>
+        <description>The invitation provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): the framework's
+            InboxServices.respond#Invitation asks it to answer a message's invitation, which respond#Invitation does on the
+            user's calendar; eventUrl is the event in Commons, Calendar.</description>
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.comms.InboxServices.respond#Invitation').parameters({emailMessageId: emailMessageId,
+                response: response}).call()
+            if (ec.message.hasError()) return
+            workEffortId = out?.workEffortId ?? null
+            statusId = out?.statusId ?? null
+            replySent = out?.replySent === true
+            eventUrl = workEffortId ? '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(workEffortId) : null
         ]]></script></actions>
     </service>
 

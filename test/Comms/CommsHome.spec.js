@@ -83,7 +83,6 @@ feature("john.doe's Home: a counter per account and for the messages, the failed
         out.problemAccountList[0].link.includes("fix=Y")
         out.followUpList.some((item) => item.workEffortId == FOLLOW_UP && item.kindLabel == "Email")
         out.meetingList.some((item) => item.workEffortId == MEETING && item.joinUrl == "https://meet.example.com/pricing")
-        out.mailboxList.some((box) => box.contactListId == "BOSS_DEMO_MBX_OFFICE" && box.link == "/qapps/Comms/Inbox?mailbox=BOSS_DEMO_MBX_OFFICE")
         out.needsReplyList.every((row) => row.link.startsWith("/qapps/Comms/Inbox?thread="))
         page.output.includes("Support: the sign-in failed")
         page.output.includes("Email the price list to Acme")

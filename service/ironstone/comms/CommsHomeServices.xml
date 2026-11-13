@@ -23,10 +23,29 @@ along with this software (see the LICENSE.md file). If not, see
     left out, and the rest is answered. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
+    <service verb="get" noun="HomeSource">
+        <implements service="org.moqui.comms.ProviderInterfaces.home#Source"/>
+        <description>The home-source provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): the box of the
+            user's mailboxes with unread (mantle.party.CommunicationServices.get#InboxUnreadCounts), ten at most, each into
+            its mailbox in the Inbox.</description>
+        <actions><script><![CDATA[
+            cardList = []
+            const counts = ec.service.sync().name('mantle.party.CommunicationServices.get#InboxUnreadCounts').call()
+            if (ec.message.hasError()) return
+            const boxes = Array.from(counts?.mailboxList || [])
+            if (!boxes.length) return
+            const L = (text) => ec.l10n.localize(text)
+            cardList.push({key: 'mailboxes', title: L('Mailboxes with unread'), emptyText: L('Nothing new in your mailboxes'),
+                rowList: boxes.filter((box) => (box.unreadCount || 0) > 0).slice(0, 10).map((box) => ({contactListId: box.contactListId,
+                    title: box.contactListName || box.contactListId, countText: ec.resource.expand('${n} unread', '', {n: box.unreadCount}),
+                    link: '/qapps/Comms/Inbox?mailbox=' + encodeURIComponent(box.contactListId)}))})
+        ]]></script></actions>
+    </service>
+
     <service verb="get" noun="CommsHome">
         <description>Comms Home for the current user. cardList: the counters, each {key, title, value, icon, link}: one per
             mail account with its unread Inbox mail, Messages (internal), Flagged, Snoozed (back by the end of today), Mentions and Not sent
-            (sends that failed), Missed calls and Voicemail (unheard, when the user has a box). needsReplyList, followUpList, meetingList, mailboxList and roomList: the lists, ten at most; an end-to-end encrypted room's snippet is "Encrypted message" (the server has no text for it).
+            (sends that failed), Missed calls and Voicemail (unheard, when the user has a box). needsReplyList, followUpList, meetingList and roomList: the lists, ten at most (the mailboxes are get#HomeSource's box); an end-to-end encrypted room's snippet is "Encrypted message" (the server has no text for it).
             hasMailAccount is false until the user has a mail account; problemAccountList names the accounts whose sign-in or
             sync failed, with canManage (only a manager fixes one). failedParts names what could not be read.</description>
         <out-parameters>
@@ -34,7 +53,6 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="needsReplyList" type="List"/>
             <parameter name="followUpList" type="List"/>
             <parameter name="meetingList" type="List"/>
-            <parameter name="mailboxList" type="List"/>
             <parameter name="roomList" type="List"/>
             <parameter name="hasMailAccount" type="Boolean"/>
             <parameter name="problemAccountList" type="List"/>
@@ -49,7 +67,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const number = Number(value)
                 return Number.isNaN(number) ? new Date(String(value)).getTime() : number
             }
-            cardList = []; needsReplyList = []; followUpList = []; meetingList = []; mailboxList = []; roomList = []
+            cardList = []; needsReplyList = []; followUpList = []; meetingList = []; roomList = []
             hasMailAccount = false; problemAccountList = []; failedParts = []
             const nowMillis = toMillis(ec.user.nowTimestamp)
             const day = (millis) => ec.l10n.format(new Date(Number(millis)), 'yyyy-MM-dd')
@@ -79,8 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
                 return day(millis) === todayText ? ec.l10n.format(new Date(Number(millis)), 'h:mm a') : ec.l10n.format(new Date(Number(millis)), 'MMM d')
             }
 
-            // the unread of each account, the internal messages and the mailboxes
-            let mailboxes = []
+            // the unread of each account and the internal messages
             part('unread', () => {
                 const counts = callService('mantle.party.CommunicationServices.get#InboxUnreadCounts')
                 let notSent = 0
@@ -99,7 +116,6 @@ along with this software (see the LICENSE.md file). If not, see
                         value: account.unreadCount == null ? '–' : count(account.unreadCount), icon: 'sym_o_mail', link: INBOX + '?account=' + encodeURIComponent(account.emailAccountId)})
                 }
                 if (hasMailAccount) cardList.push({key: 'notSent', title: L('Not sent'), value: count(notSent), icon: notSent ? 'sym_o_error' : 'sym_o_outbox', link: INBOX + '?view=outbox'})
-                mailboxes = Array.from(counts.mailboxList || [])
             })
             part('flagged', () => {
                 const rows = threads({view: 'flagged', pageSize: 100})
@@ -152,8 +168,6 @@ along with this software (see the LICENSE.md file). If not, see
             })
             part('followUps', () => { followUpList = Array.from(callService('ironstone.comms.CommsHomeServices.get#HomeFollowUps').followUpList || []) })
             part('meetings', () => { meetingList = Array.from(callService('ironstone.comms.CommsHomeServices.get#HomeMeetings').meetingList || []) })
-            mailboxList = mailboxes.filter((box) => (box.unreadCount || 0) > 0).slice(0, 10).map((box) => ({contactListId: box.contactListId,
-                name: box.contactListName || box.contactListId, unreadCount: box.unreadCount, link: INBOX + '?mailbox=' + encodeURIComponent(box.contactListId)}))
             if (rooms) roomList = Array.from(rooms.roomList || []).filter((room) => (room.unreadCount || 0) > 0 || (room.mentionCount || 0) > 0).slice(0, 10)
                 .map((room) => ({chatRoomId: room.chatRoomId, name: room.displayName || room.roomName || room.chatRoomId, unreadCount: room.unreadCount || 0,
                     mentionCount: room.mentionCount || 0, snippet: room.lastMessage ? ((room.lastMessage.senderName ? room.lastMessage.senderName + ': ' : '') +

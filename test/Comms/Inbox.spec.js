@@ -494,6 +494,7 @@ feature("an invitation from outside is answered: the event goes on the calendar 
         answered.status == 200
         answered.json.workEffortId != null
         answered.json.statusId == "WeptAssigned"
+        answered.json.eventUrl == "/qapps/Commons/Calendar/EventDetail?workEffortId=" + answered.json.workEffortId
         event.workEffortName == "Partner planning session"
         event.location == "Partner office, 2nd floor"
         party.statusId == "WeptAssigned"

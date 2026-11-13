@@ -537,7 +537,7 @@ along with this software (see the LICENSE.md file). If not, see
             for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', partyIds).condition(visible).condition(notDisabled)
                     .orderBy('partyId').limit(5).list()) {
                 seen.push(party.partyId)
-                contactList.push({name: party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId,
+                contactList.push({partyId: party.partyId, name: party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId,
                     kind: party.partyTypeEnumId === 'PtyOrganization' ? 'organization' : 'person',
                     url: '/qapps/Commons/Contacts/ContactDetail?partyId=' + encodeURIComponent(party.partyId), detail: label(purposeOf[party.partyId])})
             }

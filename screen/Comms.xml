@@ -61,6 +61,14 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- people and organizations with their phone numbers, for the Dialer's search (plans/Comms-Framework.md §3.3, V3) -->
         <recipient-source name="boss.parties" service="ironstone.comms.ComposeServices.get#RecipientSource"/>
         <call-context name="boss.parties" service="ironstone.comms.ComposeServices.get#CallContext"/>
+        <!-- the answer to a message's invitation, on the user's calendar (plans/Comms-Framework.md §3.3) -->
+        <invitation name="boss.calendar" service="ironstone.comms.InboxServices.respond#InvitationProvider"/>
+        <!-- who a sender or recipient is: the party with the address, for the reading pane's contact card -->
+        <contact-card name="boss.parties" service="ironstone.comms.InboxServices.get#ContactCardProvider"/>
+        <!-- its boxes on Comms Home: the mailboxes with unread -->
+        <home-source name="boss.mailboxes" service="ironstone.comms.CommsHomeServices.get#HomeSource"/>
+        <!-- the first text of a new outside number, filed on the party with that number -->
+        <external-conversation name="boss.parties" service="ironstone.comms.ChatServices.file#ExternalConversation"/>
         <!-- who a user may call, transfer a call to or add to one: the users of the parties they may see (§3.3, the hardening pass) -->
         <call-target name="boss.parties" service="ironstone.comms.ComposeServices.get#CallTarget"/>
     </shell-providers>

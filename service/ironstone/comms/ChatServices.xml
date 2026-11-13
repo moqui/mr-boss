@@ -183,6 +183,33 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
 
+    <service verb="file" noun="ExternalConversation">
+        <implements service="org.moqui.comms.ProviderInterfaces.external#Conversation"/>
+        <description>The external-conversation provider of IronStone's Comms root (plans/Comms-Framework.md §3.3): the first
+            text of a new outside number is filed on the one party the user may see with that number (get#CallContext's
+            match), as File on a record files a message (file#OnRecord: a communication event on the party's Chatter). No
+            party, or more than one, files nothing (filed false), and a later text tries again. The communication event is
+            made once per message, so the same idempotencyKey again does not file it twice.</description>
+        <actions><script><![CDATA[
+            filed = false
+            recordUrl = null
+            if (!chatActorId || eventSeq == null) return
+            const actor = ec.entity.find('moqui.chat.ChatActor').condition('chatActorId', chatActorId).disableAuthz().one()
+            const external = actor?.chatExternalUserId ? ec.entity.find('moqui.chat.ChatExternalUser')
+                .condition('chatExternalUserId', actor.chatExternalUserId).disableAuthz().one() : null
+            if (!external?.externalUserId) return
+            const context = ec.service.sync().name('ironstone.comms.ComposeServices.get#CallContext').parameter('number', external.externalUserId).call()
+            if (ec.message.hasError()) return
+            const contacts = Array.from(context?.contactList || [])
+            if (contacts.length !== 1 || !contacts[0].partyId) return
+            const out = ec.service.sync().name('ironstone.comms.ChatServices.file#OnRecord').parameters({chatRoomId: chatRoomId, eventSeq: eventSeq,
+                recordEntityName: 'mantle.party.Party', recordId: contacts[0].partyId}).call()
+            if (ec.message.hasError()) return
+            filed = true
+            recordUrl = out?.url || contacts[0].url || null
+        ]]></script></actions>
+    </service>
+
     <service verb="file" noun="OnRecord">
         <implements service="org.moqui.comms.ProviderInterfaces.record#Link"/>
         <description>File a chat message on a record (the message actions' File on a record): the message as a communication
