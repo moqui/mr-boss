@@ -1,7 +1,8 @@
 // The clocking kiosk (impl-people P30; design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; crosscut CX-DEVICE): HR issues
 // Tomas's badge with a one-time PIN and prints it once, by a POST to BadgePrint's print (the barcode and the number; a GET of the
 // page before makes nothing and refuses, a GET of the print is refused, and the page after says it was printed: follow-up 4); the
-// burst notice's device opens Admin's Security › Devices for the access administrator and nowhere for HR (follow-up 4); and Tomas,
+// burst notice's device opens Admin's Security › Devices for the access administrator and nowhere for HR, and a stopped badge's
+// notice to its worker opens their SelfService under Commons (follow-up 4); and Tomas,
 // with self-service alone, sets his own PIN through SelfService's setMyPin under Commons (the one-time PIN asked); a display account
 // for Retail holding the kiosk bundle alone is made and a tablet registered for the PEOPLE_CLOCKING route group and redeemed; as the
 // tablet, the bare page (the one html render) and its island (the one qvt render: the form, the employer, no "not a device" note), a
@@ -211,7 +212,7 @@ feature("as the tablet: the bare page and its form, Tomas clocks in and out by b
 })
 
 feature(
-    "as an HR officer, not a device: the page says it records nothing here, a punch through it is refused, and the tablet's refusals notice links nowhere for them",
+    "as an HR officer, not a device: the page says it records nothing here, a punch through it is refused, and the tablet's refusals notice links nowhere for them; a stopped badge's notice opens its worker's SelfService",
     {
         when() {
             // the burst notice on the tablet as Commons' notification lists show it (its record the device): Admin's Devices for the
@@ -234,11 +235,35 @@ feature(
                 punched: request(kiosk + "/punch", {badgeText: state.number, password: pin}, null, null, "post"),
                 punches: kioskPunches(),
                 hrLink: openUrl(),
-                adminLink: asUser("admin.access", openUrl)
+                adminLink: asUser("admin.access", openUrl),
+                // a stopped badge's notice to its worker (follow-up 4) opens their SelfService under Commons
+                workerLink: asUser(users.employee, () => {
+                    const sent = system(() =>
+                        ec
+                            .makeNotificationMessage()
+                            .topic("PeopleMyKioskBadgeDisabled")
+                            .message({organizationName: "Ziziwork Retail", wrongCount: 20})
+                            .userIds([ec.user.userId])
+                            .directOnly()
+                            .send()
+                    )
+                    const link = sent.getLink()
+                    const notice = {
+                        notificationMessageId: "SpecKioskStopped",
+                        topic: "PeopleMyKioskBadgeDisabled",
+                        linkText: link
+                    }
+                    const shown = ec.artifactExecution.runAsUser("component://mr-boss/screen/Commons.xml", () =>
+                        invoke("ironstone.commons.CommonsServices.decorate#Notifications", {notificationList: [notice]})
+                    ).rows[0]
+                    return {link, openUrl: shown.openUrl, screen: shown.openIsScreen}
+                })
             }))
         },
-        then({tui, punched, punches, hrLink, adminLink}) {
+        then({tui, punched, punches, hrLink, adminLink, workerLink}) {
             hrLink == null && adminLink == "/qapps/Admin/Security/Devices?deviceId=" + encodeURIComponent(state.deviceId)
+            workerLink.link == "/qapps/Commons/People/SelfService" && workerLink.openUrl == workerLink.link
+            workerLink.screen === true
             tui.status == 200 && tui.errors == "" && tui.output.includes("Not a clocking device") && tui.output.includes("PIN")
             !/Error rendering|Exception in render/.test(tui.output)
             punched.errors == "" && punched.messages.includes("recorded only at a registered clocking device")
