@@ -1870,7 +1870,7 @@ add only a source-verified row and identify the addition; do not count XML-comme
 
 ### 16.3 Implementation acceptance scenarios
 
-Each scenario is an acceptance test to write (`acceptance/Marketing/`, `acceptance/client/Marketing/`), named in the
+Each scenario is an acceptance test to write (`test/acceptance/Marketing/`, `test/acceptance/client/Marketing/`), named in the
 implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
 acceptance test, one per app per mode.
 

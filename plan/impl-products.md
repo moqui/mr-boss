@@ -81,7 +81,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - builds and commits.
 
   `ProductsWalk` is the app's one golden-path client walk in the regression suite (`test/client/`); every other walk,
-  and a check at phone width on `ProductsPhone.spec.js`'s pattern, is an acceptance test (`acceptance/client/`). No
+  and a check at phone width on `ProductsPhone.spec.js`'s pattern, is an acceptance test (`test/acceptance/client/`). No
   spec takes screenshots.
 - **Catalog rows through services.** No entity filter covers a product's prices, associations, parties, content or
   identifiers (F1). Products reads and writes them only through services: `ironstone.products.CatalogServices` checks
@@ -129,7 +129,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Products/`, `acceptance/client/Products/`), named in the phase;
+  scenario are acceptance tests to write (`test/acceptance/Products/`, `test/acceptance/client/Products/`), named in the phase;
   running them is not part of Done.
 
 ## 3. Phases

@@ -1078,7 +1078,7 @@ actor table.
 
 This is an inventory of source coverage, not a record of tests run for this document. BOSS has **13 Customer
 Service server regression specs**, **one browser regression walk**, **18 server acceptance specs**, and no
-`acceptance/client/CustomerService/`. A server acceptance walk that posts transitions or renders qvt/TUI is not
+`test/acceptance/client/CustomerService/`. A server acceptance walk that posts transitions or renders qvt/TUI is not
 observed browser interaction.
 
 | Current BOSS regression source under `test/CustomerService/` | What it supplies to the review | Activities |
@@ -1103,7 +1103,7 @@ fixtures; it is a helper, not a spec. The one registered browser regression is
 duplicates, creates a distinct case and resolves it with Reopen offered. It establishes none of the other
 activities, a phone layout, the themes or public Support.
 
-| Current BOSS acceptance source under `acceptance/CustomerService/` | Existing scenario/supporting coverage | Activities |
+| Current BOSS acceptance source under `test/acceptance/CustomerService/` | Existing scenario/supporting coverage | Activities |
 | --- | --- | --- |
 | `CustomerServiceFoundationWalk.spec.js` | Menus/areas/quick create per group, palette scope, forged ids, `sheldon.acme` refused; the demo orders | CS-01–02, 15, 34 |
 | `CustomerServiceCasesWalk.spec.js` | NewCase with duplicates, chat-made case, employee request, board and row moves, bulk result, work completion, Commons' hidden actions, Privacy | CS-03–04, 06, 09, 34 |
@@ -1125,18 +1125,18 @@ activities, a phone layout, the themes or public Support.
 | `CustomerServiceServerStatic.spec.js` | Server-static qvt structure of each plain screen; no journey or visual result | CS-35 |
 
 Keep the same-named server acceptance and browser regression `CustomerServiceCasesWalk` distinct by runner and
-path. BOSS `acceptance/client/suite.js` registers no Customer Service browser walk; do not relabel the transition
+path. BOSS `test/acceptance/client/suite.js` registers no Customer Service browser walk; do not relabel the transition
 walks as browser coverage or add a second regression golden path to fill the gap.
 
 | Owning component/source | Existing coverage to reuse and limitation |
 | --- | --- |
 | Mantle `test/request/` | `SupportCases`, `SupportSla`, `SupportAssignment`, `SupportReplies`, `SupportChannels`, `SupportTemplates`, `SupportRelations`, `SupportKnowledge`, `SupportWarranty`, `CaseFeedback`, `SupportPortal`: business rules and refusals, not BOSS usability evidence |
 | Mantle `test/order/` | `OrderChanges`, `OrderConfirmations`, `ReturnPolicies`, `AccountingReturns`, `WarehouseReturns`; match a changed rule's owner instead of duplicating it through BOSS |
-| Mantle `acceptance/order/SupportImmediateCancelWalk.spec.js` | Policy-sensitive customer cancellation; acceptance authorization still required |
+| Mantle `test/acceptance/order/SupportImmediateCancelWalk.spec.js` | Policy-sensitive customer cancellation; acceptance authorization still required |
 | PASS `test/Support/SupportAccess.spec.js` | Support access contract; `SupportFixtures.js` is its helper |
-| PASS `acceptance/SupportFixtures.spec.js`, `SupportIsolation.spec.js` | Public fixture setup and customer isolation |
-| PASS `acceptance/client/SupportPagesHttp.spec.js`, `SupportFeedbackHttp.spec.js` | Public-page forms and feedback against a configured fixture, registered in PASS's acceptance client suite |
-| PASS `acceptance/RemoteFixtures.spec.js`, `acceptance/client/RemoteHttp.spec.js` | The remote frontend in general; whether they cover Support pages is to verify; a local facade call does not establish a remote browser handoff |
+| PASS `test/acceptance/SupportFixtures.spec.js`, `SupportIsolation.spec.js` | Public fixture setup and customer isolation |
+| PASS `test/acceptance/client/SupportPagesHttp.spec.js`, `SupportFeedbackHttp.spec.js` | Public-page forms and feedback against a configured fixture, registered in PASS's acceptance client suite |
+| PASS `test/acceptance/RemoteFixtures.spec.js`, `test/acceptance/client/RemoteHttp.spec.js` | The remote frontend in general; whether they cover Support pages is to verify; a local facade call does not establish a remote browser handoff |
 | Commons/Projects/Products/Warehouse/Accounting/Insights | Existing shared component, task, stock, quality, finance and dataset checks; choose a second consumer only for a shared behavior later changed |
 
 ### Verification rules for later refinements

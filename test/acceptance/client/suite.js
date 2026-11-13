@@ -1,4 +1,4 @@
-// The acceptance walks of mr-boss (./moq accept mr-boss), against mr-boss with the fixtures of test/ and acceptance/.
+// The acceptance walks of mr-boss (./moq accept mr-boss), against mr-boss with the fixtures of test/ and test/acceptance/.
 suite(
     [
         "AccountingLedgerWalk",

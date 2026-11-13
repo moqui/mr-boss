@@ -965,7 +965,7 @@ Legacy saved finds/schedules are inventoried by ID, owner, source route and shar
 
 ### 13.3 Acceptance scenarios
 
-Each scenario is an acceptance test to write (`acceptance/Insights/`, `acceptance/client/Insights/`), named in the
+Each scenario is an acceptance test to write (`test/acceptance/Insights/`, `test/acceptance/client/Insights/`), named in the
 implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
 acceptance test, one per app per mode.
 

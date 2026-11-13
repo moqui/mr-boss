@@ -711,10 +711,10 @@ test breadth is not a reason to add duplicate rules, renders or scenarios.
 | mr-boss regression `test/Projects/` | ProjectsAccess, ClientBilling | PR-24–25; selected rule refusals are not the complete access walk |
 | mr-boss regression `test/Shared/`, `test/Commons/` | Chatter, RecordFiles; Knowledge, KnowledgeReview, Calendar, QuickCreate, TodayPanel, Notifications | PR-01, 04, 06, 08, 11, 16–17, 25; reuse affected shared-rule checks without duplicating the Commons review |
 | mr-boss regression `test/Commons/` | Tasks, Requests | PR-05–06, 11–12; the Commons consumers of Shared WorkItemDetail (as TaskDetail) and RequestDetail, for the shared-fix retest |
-| mr-boss acceptance `acceptance/Projects/` | SprintWalk, TimelineWalk, ReleaseWalk | PR-07–10, 14; TimelineWalk includes import mapping/options/preview and row failure; server scenarios, not browser/terminal interaction evidence |
-| mr-boss acceptance `acceptance/Projects/` | RequestWalk, CodeReviewWalk | PR-11–14; server scenarios with their own fixture/prerequisite scope |
-| mr-boss acceptance `acceptance/Projects/` | TimeWalk, ResourceWalk, BillingWalk, MilestoneBillingWalk | PR-16–21; existing scenarios to reuse if execution is requested |
-| mr-boss acceptance `acceptance/Projects/` | ProjectsServerStatic, ProjectsTui | Supporting render coverage; ProjectsTui also exercises selected transitions, not a live keyboard terminal walk |
+| mr-boss acceptance `test/acceptance/Projects/` | SprintWalk, TimelineWalk, ReleaseWalk | PR-07–10, 14; TimelineWalk includes import mapping/options/preview and row failure; server scenarios, not browser/terminal interaction evidence |
+| mr-boss acceptance `test/acceptance/Projects/` | RequestWalk, CodeReviewWalk | PR-11–14; server scenarios with their own fixture/prerequisite scope |
+| mr-boss acceptance `test/acceptance/Projects/` | TimeWalk, ResourceWalk, BillingWalk, MilestoneBillingWalk | PR-16–21; existing scenarios to reuse if execution is requested |
+| mr-boss acceptance `test/acceptance/Projects/` | ProjectsServerStatic, ProjectsTui | Supporting render coverage; ProjectsTui also exercises selected transitions, not a live keyboard terminal walk |
 | mr-boss acceptance root | AppStructure, ServerStatic, TuiRender | Structural/shared coverage; do not add another sweep of the same app/mode |
 | mr-mantle regression `test/work/` | WorkProjectFoundation, WorkProjectServices, WorkProjectHub, WorkProjectItems | PR-01–06; business rules belong here |
 | mr-mantle regression `test/work/` | WorkProjectSprints, WorkProjectPlan, WorkProjectMilestones, WorkProjectReleases, BusinessTime | PR-07–09; planning/gates/releases/business dates |
@@ -723,10 +723,10 @@ test breadth is not a reason to add duplicate rules, renders or scenarios.
 | mr-mantle regression `test/work/` | WorkProjectBilling, WorkProjectReports, WorkProjectClients | PR-20–25; billing/projections/client visibility |
 | mr-mantle regression `test/work/` | WorkPlanToCashBasicFlow, CommonsToday | PR-16–21 plan-to-cash time/expense invoicing; PR-01, 16–17 Today rows and shell counts |
 | webroot regression `test/client/` | WebrootVue.qvt, WebrootVue.qvt.shell, WebrootVue.qvt.layout, WebrootVue.qvt.records, WebrootVue.qvt.static, WebrootVue.qvt.views, WebrootVue.qvt.markdown, WebrootTerminal, QvtKeys, Keys | Shared widget/shell/render fixes only; use existing focused assertions for the affected control |
-| webroot acceptance `acceptance/client/` | ThemeLayout | Existing offline theme/geometry acceptance home for a reusable contrast/layout check; not a reason to run it during plan writing |
+| webroot acceptance `test/acceptance/client/` | ThemeLayout | Existing offline theme/geometry acceptance home for a reusable contrast/layout check; not a reason to run it during plan writing |
 
 All eleven Projects acceptance files listed above are **server specs**. Neither BOSS `test/client/suite.js` nor
-`acceptance/client/suite.js` currently includes a Projects browser walk. There is no `ProjectsClientFixtures` or
+`test/acceptance/client/suite.js` currently includes a Projects browser walk. There is no `ProjectsClientFixtures` or
 Projects golden-path browser spec. Record this as a coverage gap, not a plan-writing requirement to create tests.
 If later automation is requested, name the activity and spec first, retain at most one regression golden-path client
 walk for Projects and place additional complete journeys, phone/access walks and sweeps in acceptance. The old

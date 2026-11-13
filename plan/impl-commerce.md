@@ -257,8 +257,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Commerce/`, `acceptance/client/Commerce/`; for a phase that
-  touches Shop, mr-pass `acceptance/` on ForumHttp's and RemoteHttp's pattern), named in the phase; running them is not
+  scenario are acceptance tests to write (`test/acceptance/Commerce/`, `test/acceptance/client/Commerce/`; for a phase that
+  touches Shop, mr-pass `test/acceptance/` on ForumHttp's and RemoteHttp's pattern), named in the phase; running them is not
   part of Done.
 
 ## 3. Phases
@@ -358,7 +358,7 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
     group, Home's one qvt render, and the refused REST paths and raw mutators. A later phase adds a case only for an
     access rule it adds.
   - Mantle: none in P1 beyond the seed (no Mantle rule yet).
-- **Usable when** (an acceptance test to write, `acceptance/Commerce/CommerceFoundationWalk`): the menu renders for each
+- **Usable when** (an acceptance test to write, `test/acceptance/Commerce/CommerceFoundationWalk`): the menu renders for each
   group; the reader finds POPC_DEFAULT through the palette and not BOSS_COM_DIGITAL; the store-limited member sees only
   POPC_DEFAULT; a forged store ID is refused by `check#Record` and the palette; a Projects client and a PASS public
   account are refused the root and every `ironstone.commerce` service.
@@ -417,7 +417,7 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
   (the fixture `test/screens/CommerceStoreRows.xml`) for the reader, the other organization and the store-limited member;
   the record check of each kind with another organization's, unassigned and forged ids and a capability on a record;
   record links, the guarded areas, the REST paths and raw mutators). Acceptance:
-  `acceptance/Commerce/CommerceFoundationWalk` (5 features, every area per user, the palette and Home of the reader, staff
+  `test/acceptance/Commerce/CommerceFoundationWalk` (5 features, every area per user, the palette and Home of the reader, staff
   member and other organization, forged ids, a Projects client and a PASS public account refused the root and every
   `ironstone.commerce` service, the demo's state), run once: 5 passed. The mr-boss acceptance suite with it: 430
   features, 419 passed, 9 failed, 2 skipped; the same nine fail at the commit before P1 on the same runtime (425
@@ -631,7 +631,7 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
     CommerceStores, ProjectsAccess, AppOrganizationFilters, WarehousePolicies, CustomerServiceAccess (65 features; that
     run flagged CustomerServiceAccess at 21.4 s and ProjectsAccess at 15.7 s over 15 s, under the concurrent load, files
     P2 did not change). Not run: `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/Commerce/CommerceStoresWalk` (5 features: the new store through Stores' `createStore` with the
+- Acceptance: `test/acceptance/Commerce/CommerceStoresWalk` (5 features: the new store through Stores' `createStore` with the
   organization's currency and no site, a facility from tomorrow and a staff member, readiness naming site, tax, order email
   and facility; the clone of POPC_DEFAULT through `cloneStore` with its categories, facilities and staff and no customer
   row, product, mount or promotion; the merchandiser reading StoreDetail and refused `saveStore`; Services' manager refused
@@ -819,7 +819,7 @@ publication part), with SHOP-CATALOG's resolver core.
   ProductsSharedContext, ProductsPricing, ProductsPriceLists, ProductsFinish, ProductsInventory, CustomerServiceAccess,
   CustomerServiceOrders, PurchasingAccess, WarehouseAccess, ManufacturingAccess, AccountingAccess, CommerceStores,
   ProjectsAccess (166 features). Not run: `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/Commerce/CommerceAssortmentWalk` (6 features: DEMO_VAR published through PublishProducts with
+- Acceptance: `test/acceptance/Commerce/CommerceAssortmentWalk` (6 features: DEMO_VAR published through PublishProducts with
   three variants made active, the preview listing every variant, the active ones public by the virtual's row, the drafts
   not sellable, BOSS_COM_DIGITAL unchanged; one variant excluded and the others public; a move of DEMO_ONE shared with a
   second store naming both and refused unconfirmed, a cycle refused; the twin's Move down and the tree view's moves giving
@@ -1045,7 +1045,7 @@ Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page 
   SitePages); mr-boss Knowledge, KnowledgeReview, Notes, CustomerServiceKnowledge, CustomerServiceAccess, ProjectsAccess,
   CommerceAssortment, CommerceStores, CommerceAccess, ProductsTaxonomy, ProductsSharedContext, ProductsAccess (108 with
   CommerceSitePages). Not run: `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/Commerce/CommerceSitePagesWalk` (4 features: the designer saves a new returns policy version in
+- Acceptance: `test/acceptance/Commerce/CommerceSitePagesWalk` (4 features: the designer saves a new returns policy version in
   PageContent, not live; the publisher schedules it in PagePublication, the job shows it at its date, by role and by route
   and locale, and the Forum's guidelines page of ZIZI_SHOP reads as before; Navigation refuses a menu item of the draft
   DEMO_VAR, a redirect onto `/api` and one into a loop; a delivery page scheduled by a publisher who then loses the
@@ -1200,7 +1200,7 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
   render, the editors' tui twins once). The golden-path client walk, `test/client/Commerce/CommerceThemesWalk`, starts
   here: a designer opens the
   starter theme, moves a section, previews at phone width, and a publisher publishes it. Acceptance:
-  `acceptance/client/Commerce/ThemeEditorWalk` (drag and keyboard reorder agree, the preview's origin check).
+  `test/acceptance/client/Commerce/ThemeEditorWalk` (drag and keyboard reorder agree, the preview's origin check).
 - **Usable when** (design §12.2 scenarios 5 and 6, with Shop P3, the stage gate; scenario 5's bad required checkout
   component blocking purchase is checked in Shop P5):
   - a designer copies the starter theme, rearranges the home page's sections, edits a heading and a color, previews at
@@ -1295,7 +1295,7 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
   Integrations, Transport, Portals, SupportAccess, SupplierPages, Operations (65 with ShopPreview); mr-boss CommerceAccess,
   CommerceSitePages, CommerceStores, CommerceAssortment, CustomerServiceKnowledge (28 with CommerceThemes). Not run:
   `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/client/Commerce/ThemeEditorWalk` (in `acceptance/client/suite.js`; 3 features: a dragged section
+- Acceptance: `test/acceptance/client/Commerce/ThemeEditorWalk` (in `test/acceptance/client/suite.js`; 3 features: a dragged section
   and the same move by Alt+Down agree and the saved draft has it; the preview answers neither a wrong nonce in the
   editor's frame nor a page of the live shop's origin with the right nonce, and its host answers the preview with
   no-store, noindex, no referrer, `frame-ancestors` the BOSS origins and no X-Frame-Options, `/`, `/account/Login` and a
@@ -1487,7 +1487,7 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
   features); mr-pass ShopAccess, Forum, Portals, ShopThemes, Integrations (29); BOSS CommerceAccess, CommerceStores,
   CommercePromotions, CommerceAssortment, CommerceSitePages, AccountingAccess, AccountingPayables, AccountingPayments,
   ProjectsAccess (62 with CommerceCheckoutSettings). Not run: `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/Commerce/CommerceCheckoutWalk` (4 features: readiness blocking on local rates and the Terms page;
+- Acceptance: `test/acceptance/Commerce/CommerceCheckoutWalk` (4 features: readiness blocking on local rates and the Terms page;
   the manager's rates for US Continental and Canada through `saveRate`, the simulator quoting 6.00 and 14.00 and nothing for
   Japan, the local rates' finding ready; TEST_DECLINE refused through `savePayment` and TEST_APPROVE kept; Services' manager
   Not available; CheckoutSettings in qvt and html), run: 4 passed; it ends its rates in cleanup. Also run: AppStructure
@@ -1672,7 +1672,7 @@ COM-PROMO.
     CustomerServiceOrderChanges, CustomerServiceAccess, ProjectsAccess (54 features); mr-marble OrderRoleFilters and
     ProjectSummarySource (21) and its client BrowserSmoke (3: OrderDetail and PrintOrder of the flow orders). Not run:
     `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/Commerce/CommercePromotionsWalk` (6 features: the manager's 10% promotion of POPC_DEFAULT
+- Acceptance: `test/acceptance/Commerce/CommercePromotionsWalk` (6 features: the manager's 10% promotion of POPC_DEFAULT
   through createPromotion, its three rule values and its order, a code limited to one use per customer; 50 codes with a
   prefix previewed in GenerateCodes and generated; one customer's two carts with the code, the first placed with 2.00 off
   one unit, the second refused `PROMOTION_LIMIT_REACHED`, repriced and placed without it, a third cart refused the code;
@@ -1865,7 +1865,7 @@ customer and request rows; COM-OPS, CX-ASSIST and the Comms hooks (design §1.4)
     user of the Orders area.
   - `skill/store-readiness.md` and `skill/cart-recovery.md`, `skill/aliases.json` (cart, store), `test/skill-retrieval.json`
     (+4 cases; recall@3 1.00, 10 of 10).
-- mr-pass: `acceptance/ShopOrdersInCommerce.spec.js` and its README line (below).
+- mr-pass: `test/acceptance/ShopOrdersInCommerce.spec.js` and its README line (below).
 - Specs:
   - Mantle `test/order/StoreOperations` (3 features, 1.1 s alone, 1.6 s under load): orders leave out carts, carry the Payment hold and the cancel
     request, list a stuck placement (ORDER_CHANGED), keep to the scope (the reader PERMISSION_DENIED, the other
@@ -1883,7 +1883,7 @@ customer and request rows; COM-OPS, CX-ASSIST and the Comms hooks (design §1.4)
     ClientBilling, CommonsSettings, CommsHome, CustomerService* (9), Manufacturing* (4), Notifications, ProductsAccess,
     ProjectRequests, ProjectsAccess, Purchasing* (4), QuickCreate, Requests, TodayPanel, Warehouse* (4),
     AppOrganizationFilters): 338 features, 71.8 s; `moqui test mr-boss --skills`. Not run: `./moq test-apps` and the budget.
-- Acceptance: mr-pass `acceptance/ShopOrdersInCommerce` (5 features, dependsOn ShopFixtures and ShopOrderScenarios; every
+- Acceptance: mr-pass `test/acceptance/ShopOrdersInCommerce` (5 features, dependsOn ShopFixtures and ShopOrderScenarios; every
   feature ignored without mr-boss, so PASS stands alone): physical and digital-only Shop orders placed through a page's
   calls and approved, with ShopOrderScenarios' mixed order, in Orders with their payment and fulfillment (the digital
   "Downloads ready", the mixed "Shipped · Downloads revoked" after that spec's refund) and in Warehouse's and Accounting's
@@ -1911,7 +1911,7 @@ customer and request rows; COM-OPS, CX-ASSIST and the Comms hooks (design §1.4)
   - Order again needs COMMERCE_ORDER_VIEW (the subscription operator's too) and makes an open order only; whoever places it
     places it through the order's owner.
   - Customer360 in Commerce is one page, not tabs; its Accounting tabs stay Accounting's.
-  - The P8 acceptance lives in mr-pass beside the Shop scenarios it reads (F106), not in `acceptance/Commerce/`.
+  - The P8 acceptance lives in mr-pass beside the Shop scenarios it reads (F106), not in `test/acceptance/Commerce/`.
   - Routed items: F8, F42, F43, F51 and F70 done as above. impl-shop F85: stuck placements listed (Orders' Attention, Home's
     Placements waiting, CartDetail's banner) and the OhtPayment hold shown read only. F91: a store-scoped review, read only
     (`find#StoreDeliveries`, OrderDetail's Notices, Orders' "Notice not delivered", Home's count); resolving stays
@@ -2066,7 +2066,7 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   StoreFulfillment, DeliveryLedger, ShopCustomer, StorePublication, ThemeAuthoring, ThemeReleases, PassAuthority; mr-pass
   Transport, ShopAccess, ShopCatalog, ShopAccount, ShopThemes, ShopPreview, ShopCart; mr-boss CommerceAccess,
   CommerceAssortment, ProductsAccess. Not run: `./moq test-apps` (the brief: no whole suites).
-- Acceptance: `acceptance/Commerce/CommerceReviewsScenario` (mr-boss, 3 features: the usable-when on POPC_DEFAULT's
+- Acceptance: `test/acceptance/Commerce/CommerceReviewsScenario` (mr-boss, 3 features: the usable-when on POPC_DEFAULT's
   DEMO_1_1 through a spec site, the Shop operations and the Reviews transitions as commerce.merchandiser, with the reader
   refused), run once: 3 passed.
 - Lint: `moqui lint --screens` 132 flagged sites as before, none in Reviews, Review or ShopReviews.
@@ -2339,7 +2339,7 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
     Transport; mr-boss CommerceAccess, CommerceStores, CommerceCheckoutSettings, CommerceOrders, CommerceRecovery, Unsubscribe
     (124 features; mr-pass ShopCheckout's page feature fails only in that one combined run, F128, and passes with its own
     component's specs). Not run: `./moq test-apps` (the brief).
-- Acceptance: `acceptance/Commerce/CommerceRecoveryScenario` (mr-boss, 3 features, stepwise, run once: 3 passed): a new verified
+- Acceptance: `test/acceptance/Commerce/CommerceRecoveryScenario` (mr-boss, 3 features, stepwise, run once: 3 passed): a new verified
   shopper turns on POPC_DEFAULT's cart reminders through `storeEmailPreferences` and adds to a cart on a spec site; a guest adds
   another; both left two hours; the manager turns recovery on through CheckoutSettings' `saveRecovery`; the job sends the
   shopper one notice (with the preferences link) and the guest none (GUEST), a second run none; in a fresh session (no cart
@@ -2532,7 +2532,7 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
     StoreOperations, StorePromotions, CartRecovery, StoreAdmin, Promotions (54 features, 12.0 s); BOSS CommerceReports,
     CommerceAccess, CommerceOrders, CommercePromotions, CommerceRecovery, CommerceStores, AccountingReporting,
     AccountingAccess, CustomerServiceReports (46 features, 19.1 s). Not run: `./moq test-apps` (the brief).
-- Acceptance: `acceptance/Commerce/CommerceReportsScenario` (mr-boss, 6 features, stepwise): a placed order and its invoice of
+- Acceptance: `test/acceptance/Commerce/CommerceReportsScenario` (mr-boss, 6 features, stepwise): a placed order and its invoice of
   POPC_DEFAULT this month indexed; OnlineSales (six months, USD) equal period by period to john.doe's
   `get#SalesOrderSummary` and `get#SalesInvoiceSummary` for the same store, organization and currency (orders, gross, net,
   net invoiced); Home's strip the same totals, Home rendered; the store-limited staff member's totals POPC_DEFAULT's and
@@ -2697,7 +2697,7 @@ Shop P7's records and coordinator. Ends stage C3/S3.
     CommerceRecovery, ProductsSharedContext, ProductsAccess, ProductsTools (59). Not run: `./moq test-apps` and the budget
     measure; the new feature time (Mantle about 1.5 s, BOSS 0.9 s) fits both budgets (365.8 + 1.5 of 383 s, 246.4 + 0.9 of
     264 s), so no raise is asked.
-- Acceptance (usable when, design §12.2 scenarios 11 and 14): mr-pass `acceptance/ShopSubscriptionsInCommerce` (4 features
+- Acceptance (usable when, design §12.2 scenarios 11 and 14): mr-pass `test/acceptance/ShopSubscriptionsInCommerce` (4 features
   on ZIZI_DIGITAL's demo offer, as ShopOrdersInCommerce needs mr-boss and ignores every feature without it; a spec-local
   subscription operator of Ziziwork Services, as the demo one works Retail): a verified buyer subscribes and the operator
   finds the contract, with Subscriptions, SubscriptionDetail and Customer360 opening for the operator in qvt; a declined
@@ -2873,7 +2873,7 @@ Design §9 Integrations, IntegrationDetail and ChannelImport; COM-CHANNEL.
   - Also run, all pass: Mantle StoreChannels, EdiX12, StoreOperations (23 features), AuthorizeNetGateway, ShippoGateway,
     PayTraceGateway, StorePublication, ShopCheckout (59 features); BOSS CommerceChannels, CommerceAccess, CommerceOrders,
     CommerceSubscriptions (19 features, 5.9 s); `moqui test mr-boss --skills`. Not run: `./moq test-apps` and the budget.
-- Acceptance: `acceptance/Commerce/CommerceChannelsScenario` (5 features), run once: 5 passed. The channel operator binds
+- Acceptance: `test/acceptance/Commerce/CommerceChannelsScenario` (5 features), run once: 5 passed. The channel operator binds
   POPC_DEFAULT, enabled only after the operator's secret; two orders over `receive#IncomingSystemMessage` (the API path)
   made; a CSV with one of them unchanged, the other changed, a new one and an unsold product: one order for the duplicate,
   the conflict quarantined with `items.0.quantity 1 → 3`, the new order made, the failing one not stopping the rest; the
@@ -3057,7 +3057,7 @@ Design §9 Feeds and FeedDetail, §3 ChannelHealth; COM-FEED. Ends stage C4/S4 w
     StoreFeeds); mr-pass ShopAccess, ShopCatalog, Forum, Integrations, Portals, Transport (30 with ShopFeeds); mr-boss
     CommerceAccess, CommerceReports, CommerceStores, CommerceSitePages, CommerceRecovery, CommerceAssortment,
     CommerceSubscriptions, CommerceOrders (33 with CommerceFeeds). Not run: `./moq test-apps` and the budget measure.
-- Acceptance: `acceptance/Commerce/CommerceFeedsWalk` (mr-boss, 3 features): the channel operator starts a Google Merchant
+- Acceptance: `test/acceptance/Commerce/CommerceFeedsWalk` (mr-boss, 3 features): the channel operator starts a Google Merchant
   feed of POPC_DEFAULT on a walk site with Shop at `/` through Feeds' and FeedDetail's transitions, builds and publishes it,
   and `/feeds/{key}.xml` routes to the feed and serves it with the product and canonical links; the publisher withdraws a
   product in it, the feed is 404, FeedDetail names the product, the old build's publication is refused, the rebuild

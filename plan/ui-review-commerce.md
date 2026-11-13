@@ -47,7 +47,7 @@ was performed for this document. Documentation completion does not authorize acc
 | Mantle `service/mantle/order/StoreOperationsServices.xml`, `ShopOperationsServices.xml`, `ShopCartServices.xml`, `ShopCheckoutServices.xml` | Scoped staff reads, reorder, consent-based recovery, stuck placement and checkout/payment identity |
 | Mantle `service/mantle/product/ShopSubscriptionServices.xml`, public site/authority services and party customer services | Paid-access bindings, recurring offers/contracts, renewal/payment/access separation and local/remote authority |
 | PASS `screen/Shop.xml`, `screen/Shop/`, `service/`, `theme/starter/`, `MoquiConf.xml` | Published storefront consumer, HTML forms, optional Vue, guest capabilities, downloads and Support/Billing handoffs |
-| BOSS `test/Commerce/`, `test/client/Commerce/`, `acceptance/Commerce/`, `acceptance/client/Commerce/`, both client `suite.js` files | Actual rules, selected renders, one regression golden path and separate acceptance scenarios |
+| BOSS `test/Commerce/`, `test/client/Commerce/`, `test/acceptance/Commerce/`, `test/acceptance/client/Commerce/`, both client `suite.js` files | Actual rules, selected renders, one regression golden path and separate acceptance scenarios |
 | Mantle `test/product/`, `test/order/`, `test/public/`; PASS Shop regression/acceptance specs | Business-rule assertions and companion scenarios; no result is inherited as live review evidence |
 
 Use earlier comparisons as lenses: Odoo's store/order triage and website authoring, Frappe's content/portal patterns,
@@ -862,7 +862,7 @@ and data setup are prerequisites to inspect before any future run, not authoriza
 
 | Current acceptance source | Actual scenario boundary |
 | --- | --- |
-| `acceptance/Commerce/CommerceFoundationWalk.spec.js` | Group menus/areas, palette/store scope, forged records, public/client outsider refusal and demo foundation |
+| `test/acceptance/Commerce/CommerceFoundationWalk.spec.js` | Group menus/areas, palette/store scope, forged records, public/client outsider refusal and demo foundation |
 | `CommerceStoresWalk.spec.js` | Store creation/clone/configuration/read-only/scope/history and Stores route/tab walk |
 | `CommerceAssortmentWalk.spec.js` | Virtual/variant publication/withdrawal, shared/cyclic category changes, form/tree agreement, no price-edit grant and Merchandising opens |
 | `CommerceSitePagesWalk.spec.js` | Draft/publish schedule and Forum separation, invalid menu/redirect, lost publisher permission at schedule, Website opens |
@@ -876,10 +876,10 @@ and data setup are prerequisites to inspect before any future run, not authoriza
 | `CommerceIsolationWalk.spec.js` | Consuming-context cost/price/margin constraints, credentials absent from configuration/CSV/print, record/preview/palette/choice scope |
 | `CommerceServerStatic.spec.js` | Source audit and eligible qvt rendering across the sweep's discovered screens; no visual or full hidden-transition claim |
 | `CommerceTui.spec.js` | Sweep model documents/no error node and selected twin data; does not establish terminal interaction |
-| `acceptance/client/Commerce/ThemeEditorWalk.spec.js` | Drag versus keyboard section order/save, preview origin/nonce behavior and unsafe source diagnostic followed by clean save |
+| `test/acceptance/client/Commerce/ThemeEditorWalk.spec.js` | Drag versus keyboard section order/save, preview origin/nonce behavior and unsafe source diagnostic followed by clean save |
 
 There are **14 Commerce server acceptance specs** and **one Commerce client acceptance spec**; the client registration is
-in `acceptance/client/suite.js`, separate from the regression golden path. The sweep helper discovers physical and selected
+in `test/acceptance/client/suite.js`, separate from the regression golden path. The sweep helper discovers physical and selected
 mounted descendants; its route count must not substitute for the explicit inventory here. A sweep assertion over rendered
 models does not establish permissions for every transition or actual responsive/keyboard/terminal usability.
 
@@ -901,7 +901,7 @@ contracts are `StoreChannelServices.get#StoreIntegration`, `store#StoreIntegrati
 `StoreChannels.js`'s scoped `retryStoreMessage` path; binding/mapping is not editable for EDI-managed connections.
 
 PASS's Shop regression and acceptance sources establish consumer-side contracts. In particular
-`acceptance/ShopOrdersInCommerce.spec.js` and `ShopSubscriptionsInCommerce.spec.js` exercise paired staff/public
+`test/acceptance/ShopOrdersInCommerce.spec.js` and `ShopSubscriptionsInCommerce.spec.js` exercise paired staff/public
 outcomes when BOSS is installed; they are conditional companion scenarios, not a published Shop dependency on BOSS.
 Shop theme-release, order, payment, subscription, operations, mount and local/remote fixture scenarios plus browser HTTP,
 checkout/cart and accessibility walks remain in the Shop review's verification map. Confirm actual registrations and
@@ -924,7 +924,7 @@ For a later implementation correction:
 - Render a screen at most once per mode across regression; a second mode requires that screen's own qvue/tui/render-mode
   branch. Consolidate assertions on the existing render. Do not add an application-wide screen/mode sweep or access matrix
   to regression. Keep the one Commerce browser golden path; put complete flows/matrices in acceptance.
-- Acceptance is `acceptance/` / `acceptance/client/`, executed only when requested or when its test is added/changed under
+- Acceptance is `test/acceptance/` / `test/acceptance/client/`, executed only when requested or when its test is added/changed under
   the repository rule. This document changes no test and supplies no such permission.
 - Current BOSS regression budgets are **264 seconds server / 57 seconds client**, as recorded in `test/budget`; verify
   current values at execution. A spec over **15 seconds** must be moved to acceptance or removed, not hidden by a budget

@@ -175,8 +175,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     organization's record refused), not every service and mount;
   - its row and **Built** note here.
 
-  The phase's "usable when" and its §8 scenario are acceptance tests to write (`acceptance/Warehouse/`,
-  `acceptance/client/Warehouse/`, the handheld mounts at 390 px among them), named in the phase; running them is not
+  The phase's "usable when" and its §8 scenario are acceptance tests to write (`test/acceptance/Warehouse/`,
+  `test/acceptance/client/Warehouse/`, the handheld mounts at 390 px among them), named in the phase; running them is not
   part of Done.
 
 ## 3. Phases

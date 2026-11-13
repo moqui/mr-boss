@@ -369,8 +369,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Marketing/`, `acceptance/client/Marketing/`, and in mr-pass
-  `acceptance/`), named in the phase; running them is not part of Done.
+  scenario are acceptance tests to write (`test/acceptance/Marketing/`, `test/acceptance/client/Marketing/`, and in mr-pass
+  `test/acceptance/`), named in the phase; running them is not part of Done.
 
 ## 3. Phases
 
@@ -521,7 +521,7 @@ seeds); stage M0.
   - Mantle `test/marketing/MarketingScope`: the filters (a campaign, a list and a segment of another organization
     not found; an unowned list not writable; a mailbox unaffected), and adoption applied once per record.
   - `AppOrganizationFilters` gains the three entities.
-- **Usable when** (an acceptance test to write, `acceptance/Marketing/MarketingFoundationWalk`): the menu renders
+- **Usable when** (an acceptance test to write, `test/acceptance/Marketing/MarketingFoundationWalk`): the menu renders
   for each group; `marketing.reader` opens Home and no settings; the ORG_ZIZI_SERVICES author sees none of
   ORG_ZIZI_RETAIL's campaigns, lists or segments by URL, choice, palette or direct service; the administrator adopts
   a legacy list and it becomes editable; a Projects client and a PASS public account are refused the root and every
@@ -574,7 +574,7 @@ RecordFiles hosts), §18 (the campaign plan print); MKT-CAMPAIGN, MKT-APPROVAL, 
   approval; self-approval refused under the policy, and with the flag on admitted under 500 recipients, recorded
   as a self-approval, and refused at 500; one decision per draft); BOSS `MarketingCampaigns`
   (CampaignDetail's one qvt render).
-- **Usable when** (`acceptance/Marketing/MarketingCampaignsWalk`): `marketing.author` plans a campaign with a budget
+- **Usable when** (`test/acceptance/Marketing/MarketingCampaignsWalk`): `marketing.author` plans a campaign with a budget
   and a manager, `marketing.approver` approves it from Approvals, the author's later budget change returns it to
   review, a cost linked to an Accounting line shows in actual cost once, and the ORG_ZIZI_SERVICES author can open
   none of it.
@@ -617,7 +617,7 @@ ContactDetail's Add to list; MKT-AUDIENCE, MKT-CONSENT (the suppression and scop
   does not end it; ending needs the review permission); the Consent spec's scoped grant against a global
   withdrawal; BOSS `MarketingLists` (ListDetail's one qvt render; the Sales bulk action refused without the
   permission, on the context service, with no second render of Sales' lists); Sales' specs unchanged.
-- **Usable when** (`acceptance/Marketing/MarketingAudienceWalk`; design §16.3 scenario 2): `marketing.audience`
+- **Usable when** (`test/acceptance/Marketing/MarketingAudienceWalk`; design §16.3 scenario 2): `marketing.audience`
   makes a list, adds three contacts with evidence and two without, sees two pending; a salesperson without the
   audience permission sees no bulk action and one with it files requests that arrive pending; a complaint
   suppression stays after the contact resubscribes; the Forum's and Comms' mailboxes behave as before.
@@ -651,7 +651,7 @@ MKT-AUDIENCE.
   withdrawal after the preview survives the apply; a private contact of another user never matched; a list supplies
   no evidence); `test/marketing/ListMerge` (no party merged; pending stays pending; consent of another topic not
   carried); BOSS `MarketingImport` (the wizard's one qvt render; the target listed in Admin's Imports with its runs).
-- **Usable when** (`acceptance/Marketing/MarketingImportWalk`; scenario 4): a CSV of six contacts, one malformed and
+- **Usable when** (`test/acceptance/Marketing/MarketingImportWalk`; scenario 4): a CSV of six contacts, one malformed and
   one already unsubscribed, imports four as pending or accepted by their evidence and names the two; the run shows
   in Admin's Imports for a data operator who also holds `MARKETING_AUDIENCE_VIEW`, as a summary with no row or
   address; two lists merge with their histories kept.
@@ -680,7 +680,7 @@ Design §4 Segments, SegmentDetail and AudiencePreview; MKT-SEGMENT, MKT-ACCESS;
   (the buckets sum to the matched total and are exclusive; a duplicate destination chosen deterministically; an
   untracked recipient stays eligible; no count of a source the caller cannot read); BOSS `MarketingSegments`
   (SegmentDetail's one qvt render).
-- **Usable when** (`acceptance/Marketing/MarketingAudiencePreviewWalk`; scenario 3): a preview over two lists and a
+- **Usable when** (`test/acceptance/Marketing/MarketingAudiencePreviewWalk`; scenario 3): a preview over two lists and a
   segment with missing addresses, a duplicate, a pending and an unsubscribed member, a suppression and a tracking
   refusal shows bucket totals that sum exactly, with addresses masked for `marketing.author`.
 
@@ -729,7 +729,7 @@ Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §1
   and the next report processed); `test/party/SendingProfiles` (not ready without a bounce account; no host or
   credential in any answer; a delivery naming a profile goes out with its sender and bounce address, and one naming
   none as before); BOSS `MarketingTemplates` (MessageTemplateDetail's one qvt render).
-- **Usable when** (`acceptance/Marketing/MarketingReadinessWalk`; scenario 17): the administrator binds a profile
+- **Usable when** (`test/acceptance/Marketing/MarketingReadinessWalk`; scenario 17): the administrator binds a profile
   and sees it ready; a template editor publishes a template with a fallback variable; a DSN and an ARF report sent
   to the VERP address of a transactional delivery that names the profile each suppress the destination once and
   show on the delivery; a profile with no
@@ -771,7 +771,7 @@ offer; MKT-PUBLIC, MKT-AUDIENCE, MKT-CONSENT; gate 2.
   ShopCheckout and Consent specs unchanged.
 - **Docs:** Attack-Surface gains the app's first three operations and the verification mail's limits; mr-pass
   Deployment its Marketing section (the mount, the readiness service, the sending profile it needs).
-- **Usable when** (mr-pass `acceptance/MarketingSubscribeHttp`, and `MarketingRemoteHttp` through a remote
+- **Usable when** (mr-pass `test/acceptance/MarketingSubscribeHttp`, and `MarketingRemoteHttp` through a remote
   frontend; scenario 5): a visitor subscribes to one of two published topics, a scanner's GET of the link changes
   nothing, the confirm button grants that topic alone, the preferences page withdraws it with a reason, and a
   mailbox membership is untouched throughout.
@@ -805,7 +805,7 @@ its text alternative and the test message); MKT-SEND, MKT-TEMPLATE, MKT-APPROVAL
   enters no count; the prepared body is what a later read returns after the template changes);
   `test/party/DeliveryLedger` gains the source-given subject and body; BOSS
   `MarketingSends` (SendDetail's and Compose's one qvt render each).
-- **Usable when** (`acceptance/Marketing/MarketingComposeWalk`; scenario 10): `marketing.author` writes a send from
+- **Usable when** (`test/acceptance/Marketing/MarketingComposeWalk`; scenario 10): `marketing.author` writes a send from
   a template, is refused a script and an unapproved private file, tests it to an allowed address, prepares it and
   asks for approval; `marketing.approver` sees the count and approves; the author's edit of the subject returns it
   to review.
@@ -848,7 +848,7 @@ jobs), §18 (the delivery report); MKT-SEND, MKT-TRANSPORT; CX-DELIVERY.
   gains the organization and the topic's consent; BOSS `MarketingDelivery` (CampaignDelivery's one qvt render; addresses
   masked for the dispatcher without the audience permission); the golden walk `MarketingSendWalk` (make a send from a
   template, approve it, release it, see it delivered).
-- **Usable when** (`acceptance/Marketing/MarketingDispatchScenario`; scenarios 6 and 7): author, approver and
+- **Usable when** (`test/acceptance/Marketing/MarketingDispatchScenario`; scenarios 6 and 7): author, approver and
   dispatcher each do only their part; a send to forty recipients survives a stop after hand-off and before
   recording with one uncertain delivery, which the dispatcher reconciles and nothing resends; a duplicate bounce
   report changes no count; the email carries the unsubscribe header and link.
@@ -869,7 +869,7 @@ Design §5 ExperimentDetail; MKT-EXPERIMENT; gate 3.
 - **Specs:** Mantle `test/marketing/Experiments` (samples and remainder disjoint and stable across a retry; no
   recipient gets two variants; a second winner release answers the first; a test send enters no result; a tie stays
   undecided).
-- **Usable when** (`acceptance/Marketing/MarketingExperimentScenario`; scenario 8): a two-variant send to a 20%
+- **Usable when** (`test/acceptance/Marketing/MarketingExperimentScenario`; scenario 8): a two-variant send to a 20%
   sample goes out, a retry reassigns no one, the dispatcher releases the chosen winner to the remainder once, and a
   recipient who unsubscribed in between is not sent.
 
@@ -908,7 +908,7 @@ gate 4 (M4).
   goal met ends it; a stopped enrollment does not resume; a wait across a daylight-saving gap lands on the next
   valid instant); `test/order/CartRecovery` gains the one-sender rule; BOSS `MarketingAutomations` (AutomationDetail's
   one qvt render).
-- **Usable when** (`acceptance/Marketing/MarketingAutomationScenario`; scenario 9): the welcome sequence is
+- **Usable when** (`test/acceptance/Marketing/MarketingAutomationScenario`; scenario 9): the welcome sequence is
   approved and activated, a new subscriber gets step one once though the event arrives twice, a pause holds a due
   step and resume sends it within the cap, an unsubscribe ends the enrollment, and a store set to the automation
   sender sends one cart recovery, not two.
@@ -959,7 +959,7 @@ survey invitation and results); MKT-FORMS, MKT-PUBLIC; stage M5.
   one qvt render; the builder's Marketing context checked on the context service, with no second render of the shared
   screens); CaseFeedback's, Customer Service's and People's specs, `test/party/FormDefinitions` among them, unchanged.
   Attack-Surface gains the two operations.
-- **Usable when** (`acceptance/Marketing/MarketingSurveyWalk` and mr-pass `acceptance/MarketingFormHttp`; scenarios
+- **Usable when** (`test/acceptance/Marketing/MarketingSurveyWalk` and mr-pass `test/acceptance/MarketingFormHttp`; scenarios
   11 (its form half) and 12): an author publishes a survey to a campaign's list, a recipient answers from the
   invitation once, an anonymous visitor answers the public form, a later change of an option leaves both responses
   reading as submitted, and the same form's case responses stay out of Marketing.
@@ -994,7 +994,7 @@ MKT-LEAD; SAL-CRM. Every part of this phase is a connection to Sales (§1).
   a job retry; a failed handoff keeps the response and retries into one lead; an unpublished field never reaches
   Sales; a capture grants no consent); BOSS `MarketingLeads` (LeadRules' one qvt render; the Leads mount refused
   without a Sales reader's permission); Sales' specs unchanged.
-- **Usable when** (`acceptance/Marketing/MarketingLeadScenario`; scenario 11): a visitor's lead form on the PASS
+- **Usable when** (`test/acceptance/Marketing/MarketingLeadScenario`; scenario 11): a visitor's lead form on the PASS
   site becomes one lead in Sales' queue with the campaign as its source though the form is posted twice; with Sales'
   intake failing the response is kept and the retry makes one lead; the visitor is on no list.
 
@@ -1031,7 +1031,7 @@ post); MKT-CONTENT, MKT-COLLAB, MKT-PUBLIC.
   Marketing author cannot edit a shop's); BOSS `MarketingContent` (BlogPostDetail's one qvt render); Commerce's
   page specs and Shop's page rendering unchanged; PASS
   `test/Marketing/MarketingPages` (a published page served with no store; an unpublished one not available).
-- **Usable when** (`acceptance/Marketing/MarketingContentWalk` and mr-pass `acceptance/MarketingPagesHttp`;
+- **Usable when** (`test/acceptance/Marketing/MarketingContentWalk` and mr-pass `test/acceptance/MarketingPagesHttp`;
   scenarios 10 (its page half) and 19): an author writes a post with text and one from a page, adds and removes a
   category, links it to a campaign and drafts a newsletter from it; a storeless landing page is published and a
   visitor subscribes from it; a private draft linked to a campaign is not public.
@@ -1067,7 +1067,7 @@ MKT-TRACKING, MKT-CONSENT; gate 5.
   `test/Marketing/MarketingTracking` (an event recorded through the two routes with a visitor key and no party; a
   request with a destination of its own refused; a client over its limit still redirected and not recorded).
   Attack-Surface gains the two routes.
-- **Usable when** (`acceptance/Marketing/MarketingTrackingScenario` and mr-pass `acceptance/MarketingTrackingHttp`):
+- **Usable when** (`test/acceptance/Marketing/MarketingTrackingScenario` and mr-pass `test/acceptance/MarketingTrackingHttp`):
   a campaign link's QR opens the landing page and counts one visit by visitor key, locally and through a remote
   frontend; a consenting recipient's click shows on the send and a refusing one's does not; Commerce's Home shows
   the store's visits.
@@ -1098,7 +1098,7 @@ Design §9 Events, EventDetail and RegistrationSetup, §13 Event; MKT-EVENT (its
   unpublished without a gateway; one occurrence's seats are not another's; another organization's event refused);
   BOSS `MarketingEvents` (RegistrationSetup's one qvt render); PASS `test/Marketing/MarketingEvents` (an unpublished
   or closed offer not available; no internal field in the answer).
-- **Usable when** (`acceptance/Marketing/MarketingEventSetupWalk`): `marketing.events` makes an event with a
+- **Usable when** (`test/acceptance/Marketing/MarketingEventSetupWalk`): `marketing.events` makes an event with a
   campaign, sets two ticket types and questions, publishes it, and the PASS Event page shows the offer; the
   calendar's own permissions still decide who edits the event.
 
@@ -1156,8 +1156,8 @@ Design §9 RegistrationSetup's order rules, Registrations and RegistrationDetail
   client's limit refused and holding no seat); BOSS
   `MarketingRegistrations` (RegistrationDetail's one qvt render). Attack-Surface gains the Event and registration
   operations and the entry credential.
-- **Usable when** (`acceptance/Marketing/MarketingRegistrationScenario` and mr-pass
-  `acceptance/MarketingRegisterHttp`; scenario 13): a visitor registers free for the webinar and gets the video
+- **Usable when** (`test/acceptance/Marketing/MarketingRegistrationScenario` and mr-pass
+  `test/acceptance/MarketingRegisterHttp`; scenario 13): a visitor registers free for the webinar and gets the video
   link; two visitors race for the workshop's last seat and one is waitlisted; a paid registration confirms on the
   gateway's result with tax from the organization's gateway and no store; a cancellation promotes the waitlisted
   attendee and its refund shows pending from Accounting; and for an organization whose Sales approval setting is
@@ -1181,7 +1181,7 @@ impl-admin P18, which is not built (P0).
 - **Specs:** Mantle `test/work/EventCheckIn` (a second scan answers the first; a cancelled, unconfirmed or
   wrong-event ticket refused; a substituted attendee's old credential refused; an override recorded with its
   reason).
-- **Usable when** (`acceptance/client/Marketing/MarketingCheckInWalk`, at 390 px; scenario 14): `marketing.events`
+- **Usable when** (`test/acceptance/client/Marketing/MarketingCheckInWalk`, at 390 px; scenario 14): `marketing.events`
   checks in an attendee by code and another by name on a phone without horizontal scrolling, a repeat shows the
   first time, a cancelled ticket is refused, and cancelling the event stops its pending reminders.
 
@@ -1208,7 +1208,7 @@ Design §7, §10 Customer360 and ContactDetail; MKT-CAMPAIGN (associations), MKT
   survives; a held registration refuses the merge or moves, as decided); BOSS `MarketingPromotions` (PromotionDetail's
   one qvt render in Marketing's context with the campaign link; a store of another organization not offered); the
   Commerce promotion specs unchanged.
-- **Usable when** (`acceptance/Marketing/MarketingPromotionsWalk`): an author with Commerce's promotion permission
+- **Usable when** (`test/acceptance/Marketing/MarketingPromotionsWalk`): an author with Commerce's promotion permission
   links a store promotion to a campaign and generates codes from Marketing; one without it sees the link read only;
   Customer360 shows a contact's sends and registrations and no order to a user without the Sales reader's right.
 
@@ -1256,7 +1256,7 @@ MKT-TRACKING (attribution), MKT-REPORT.
   failure named and the rest done); BOSS
   `MarketingReports` (CampaignPerformance's one qvt render; the catalog entries hidden without the report
   permission).
-- **Usable when** (`acceptance/Marketing/MarketingReportsScenario`; scenarios 15 and 18): the four reports of the
+- **Usable when** (`test/acceptance/Marketing/MarketingReportsScenario`; scenarios 15 and 18): the four reports of the
   demo campaign reconcile to its recipients, events and orders; an order from the campaign's link through a remote
   PASS is attributed once; a partial refund reduces attributed revenue once; an Insights reader opens
   CampaignPerformance from the catalog and a user without Marketing's report permission does not see it.
@@ -1281,7 +1281,7 @@ MKT-SHELL, MKT-SYNC, MKT-ASSIST; gate 7.
 - **Specs:** BOSS `MarketingShell` (a failing provider named and the rest answered; no address or token in any
   shell row; Calendar's one qvue render); Mantle `test/work/CalendarDav` gains the projected collection (a device
   write refused).
-- **Usable when** (`acceptance/client/Marketing/MarketingCalendarWalk`): the calendar shows a campaign's window, a
+- **Usable when** (`test/acceptance/client/Marketing/MarketingCalendarWalk`): the calendar shows a campaign's window, a
   scheduled send and an event; dragging the event moves it and the send cannot be dragged; a phone subscribed to the
   collection lists the same items read only; the palette finds a campaign and a send by name.
 
@@ -1310,7 +1310,7 @@ built (F19). SMS is in this build, last, after the first release's gate (§4).
 - **Specs:** Mantle `test/marketing/SmsSends` (no text without `PcpSms` on the topic; a STOP withdraws and
   suppresses once; an uncertain text not resent; no SMS choice without a ready profile; the provider answers no
   for a number with consent to another organization only), on the channel crate's test provider.
-- **Usable when** (`acceptance/Marketing/MarketingSmsScenario`; scenario 7's SMS half): a text send to consenting
+- **Usable when** (`test/acceptance/Marketing/MarketingSmsScenario`; scenario 7's SMS half): a text send to consenting
   members goes out with its segment estimate shown at approval, a member's STOP removes them from the next send,
   and an organization with no messaging number sees SMS not ready while its email sends work.
 

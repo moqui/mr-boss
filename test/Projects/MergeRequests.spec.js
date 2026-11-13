@@ -6,7 +6,7 @@
 // threads (a line comment, a reply, resolve and reopen), a review, reviewers added and removed, work items linked and unlinked,
 // the draft and close moves, and a branch made for a work item. WorkItemDetail's Development tab and Commons' TaskDetail are rendered
 // in WorkItemDetail.spec.js, and Home's reviews waiting in Billing.spec.js, on their one render. The usable-when walk of P3b is
-// acceptance/Projects/CodeReviewWalk.spec.js. Authorization stays on. The spec puts the demo's !1 back as it found it.
+// test/acceptance/Projects/CodeReviewWalk.spec.js. Authorization stays on. The spec puts the demo's !1 back as it found it.
 // Run: ./moq test mr-boss --spec MergeRequests
 const webroot = "component://webroot/screen/webroot.xml"
 

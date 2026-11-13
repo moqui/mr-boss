@@ -272,7 +272,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Admin/`, `acceptance/client/Admin/`), named in the phase; running
+  scenario are acceptance tests to write (`test/acceptance/Admin/`, `test/acceptance/client/Admin/`), named in the phase; running
   them is not part of Done.
 
 ## 3. Phases
@@ -390,7 +390,7 @@ permissions and seals), ADM-SHELL.
   - Framework: the conf tests for the new elements (a component's element adds to the lists and keeps every default;
     two components' elements both apply; a component that still sets the attribute replaces the defaults as before),
     a privileged-group check on an element-added group, and the three new framework seals.
-- **Usable when** (an acceptance test to write, `acceptance/Admin/AdminFoundationWalk`): the menu renders for each
+- **Usable when** (an acceptance test to write, `test/acceptance/Admin/AdminFoundationWalk`): the menu renders for each
   group; the delegated access administrator, holding `ADMIN_ACCESS_MANAGE` but not in `BOSS_ADMIN_ACCESS`, cannot add
   anyone to it through Tools or a direct entity call, and no one without `ADMIN_BACKUP_DOWNLOAD` can grant it;
   `admin.reader` opens Home but not System; a Projects client and a PASS public account are refused the root and every
@@ -465,7 +465,7 @@ permissions and seals), ADM-SHELL.
   `eca_tests` `a_group_and_a_permission_a_conf_adds_by_element_are_guarded_beside_the_defaults` (a runtime conf's elements
   through the EECAs) and the three seals in `sealed_permission_create_is_denied_without_the_permission`. No framework JS
   spec added, so the framework's budget is unchanged. Acceptance, written and not run:
-  `acceptance/Admin/AdminFoundationWalk` (3 features: every area per user; the delegate through Admin › System, Tools
+  `test/acceptance/Admin/AdminFoundationWalk` (3 features: every area per user; the delegate through Admin › System, Tools
   System, the entity-auto service and a direct entity call, and no Admin user granting `ADMIN_BACKUP_DOWNLOAD`; the reader
   and the refused Projects client and PASS account).
 - Tests run (Debug binary, `--nobuild`): AdminAccess 7 of 7; with CommerceAccess (15 of 15), CustomerServiceAccess (22 of
@@ -681,7 +681,7 @@ ADM-OPERATIONS (its readiness part), ADM-SETTINGS (the index), ADM-SHELL.
   here from AdminAccess). `AdminAccess` gains one feature (0.4 s), a BOSS user without Admin opening SettingsHome alone (its
   one render, html), and loses its Home render; its menus gain Settings; `customerservice.read` gets the index's context.
   `AdminSpecLib.outsiders` holds the warehouse manager and finance reader, outside `users`, which AdminFoundationWalk walks.
-  Acceptance, written and not run: `acceptance/Admin/AdminRegistriesWalk` (4 features, the "usable when" above).
+  Acceptance, written and not run: `test/acceptance/Admin/AdminRegistriesWalk` (4 features, the "usable when" above).
 - Tests run (release binary, `--nobuild`, this worktree's runtime): AdminRegistries 4 of 4, AdminAccess 7 of 7 (2.8 s),
   InsightsAccess 6 of 6, ProjectsAccess 8 of 8, AppOrganizationFilters passed. `moqui lint --screens`: 132 sites, as before,
   none in the Admin screens. Prettier clean on the new JavaScript. Health (qvt, tui, html), SettingsHome (qvt, tui) and Home
@@ -867,7 +867,7 @@ Design §5 Groups and GroupDetail; ADM-ACCESS (AccessServices, the administratio
   adds a Retail member to `BOSS_PURCHASING_BUYER` through GroupDetail's transition and ends it, refused a Services user and
   `BOSS_ADMIN_BACKUP` with its reason). `AdminAccess` (the new access rule): the Access area in the administrator's and ADMIN's menus and
   the `access` capability of `admin.access`, `admin.delegate` and the administrator. Acceptance, written and not run:
-  `acceptance/Admin/AdminGroupsWalk` (3 features, the "usable when").
+  `test/acceptance/Admin/AdminGroupsWalk` (3 features, the "usable when").
 - Tests run (Debug binary, `--nobuild`, unless noted): AdminAccessServices 6 of 6; the framework and tools server suites 275 of 275 (time
   over budget on Debug, below); AdminGroups, AdminAccess, AdminRegistries 13 of 13; InsightsAccess 6 of 6; ProjectsAccess and
   AppOrganizationFilters 15 of 15 on the main checkout's release binary with this runtime (F37); cargo moqui-core `service::eca`,
@@ -1062,7 +1062,7 @@ identity and session parts).
   `CommonsSettings` (one feature, 0.07 s: my other session signed out, another user's not), `test/Admin/AdminClientFixtures` and the
   golden walk `test/client/Admin/AdminUsersWalk` (3.1 s on Debug: find a user, end a membership, sign a session out), registered in
   `test/client/suite.js`. Cargo (moqui-core): `every_session_of_a_user_ends_and_a_disabled_account_signs_out`. Acceptance, written and not
-  run: `acceptance/Admin/AdminUsersUsable` (2 features, the "usable when").
+  run: `test/acceptance/Admin/AdminUsersUsable` (2 features, the "usable when").
 - Tests run (Debug, `--nobuild`, unless noted): AdminSessions, AdminAccessServices, RecentAuth, SipDevice 21 of 21; StaffIdentity,
   PartyServices, PartyAccounts 18 of 18; AdminGroups, AdminRegistries, AdminUsers, AdminAccess, AdminClientFixtures, InsightsAccess 22 of
   22; CommonsSettings 9 of 9; AdminUsersWalk 1 of 1; ProjectsAccess and AppOrganizationFilters 15 of 15 on the main checkout's release
@@ -1340,7 +1340,7 @@ Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invita
   BOSS `test/Admin/AdminInvitations` (2 features, 0.3 s: InviteStaff with no mail server and Invitations' copy-only link shown once;
   AcceptInvitation's qvt render of the account step under the route and the revoked token's page), `AdminAccess` (Invite users in
   quick create for the identity operator and the administrator, not the reader). Acceptance, written and not run:
-  `acceptance/Admin/AdminInvitationsUsable` (3 features, the "usable when").
+  `test/acceptance/Admin/AdminInvitationsUsable` (3 features, the "usable when").
 - Tests run (release binary, `--nobuild`): StaffInvitation, StaffIdentity, PartyServices 22 of 22 (mr-mantle 1.7 s); AdminInvitations,
   AdminUsers, AdminAccess, AdminGroups, ProjectsAccess 21 of 21 (mr-boss 8.0 s, AdminAccess's menu feature among them);
   `moqui test mr-boss --skills` 17 of 17; `moqui lint --screens` 132 flagged sites, as before, no TUI-text warning of P5's. Not run:
@@ -1544,7 +1544,7 @@ participant; ADM-LIFECYCLE (lifecycle).
   0.3 s: the operator's confirmation through UserDetail revokes at once and leaves the drive waiting; LifecycleDetail's one qvt
   render; TransferOwnership refuses a step naming another service and a new owner outside Retail, a Retail colleague takes the
   drive), `AdminAccess` (what an identity owns by the same scope: Services' refused, the reader refused). Acceptance, written and
-  not run: `acceptance/Admin/AdminLifecycleUsable` (2 features, the "usable when").
+  not run: `test/acceptance/Admin/AdminLifecycleUsable` (2 features, the "usable when").
 - Tests run (the main checkout's release binary on this worktree's runtime, `--nobuild`; no Rust changed): ResourceOwners,
   AdminSessions, AdminAccessServices 11 of 11; UserLifecycle, StaffIdentity, StaffInvitation, PartyServices, ContactBooks,
   CalendarServices 71 of 71; AdminLifecycle, AdminUsers, AdminAccess, AdminGroups, AdminInvitations, AdminRegistries,
@@ -1723,7 +1723,7 @@ Design §7 Organizations, OrganizationDetail and Constitution (its maps note wai
   configuration administrator; its organizations and palette Retail's, never Services', whose detail is not available; the reader opens
   neither; a contact change on Retail's child organization stored and on Services' refused), `AdminAccess` (the `organizations` capability:
   the configuration administrator, the administrator and ADMIN, no one else). Acceptance, written and not run:
-  `acceptance/Admin/AdminConstitutionUsable` (3 features, the "usable when").
+  `test/acceptance/Admin/AdminConstitutionUsable` (3 features, the "usable when").
 - Tests run (release binary, `--nobuild`, this worktree's runtime): InternalOrganizations, PartyServices, Constitution, StaffIdentity,
   StaffInvitation 33 of 33 (mr-mantle 3.5 s); AdminConstitution, AdminOrganizations, AdminAccess, AdminRegistries, AdminUsers, AdminGroups,
   ProjectsAccess 29 of 29; `moqui lint --screens` 132 flagged sites, as before. Organizations (qvt, tui), OrganizationDetail (tui; qvt and
@@ -1929,7 +1929,7 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
   screen; ReferenceData linking Products' units for ADMIN and not for the configuration administrator). `AdminRegistries`
   changed: the reader's index now holds `admin.referenceData`, and the Instance group Admin's three entries. Access: the
   screens fall under P7's `organizations` capability (AdminAccess unchanged); the holder and non-holder are in AdminSettings and
-  AdminConfiguration. Acceptance, written and not run: `acceptance/Admin/AdminSettingsUsable` (3 features, the "usable when").
+  AdminConfiguration. Acceptance, written and not run: `test/acceptance/Admin/AdminSettingsUsable` (3 features, the "usable when").
 - Tests run (release binary, `--nobuild`, this worktree's runtime): framework AdminConfiguration, AdminAccessServices, AdminSessions
   13 of 13; mr-boss AdminSettings, AdminAccess, AdminRegistries, AdminOrganizations, AdminConstitution, AdminUsers, AdminGroups,
   ProjectsAccess 34 of 35, the one failure AdminRegistries' two index expectations, then AdminRegistries and AdminSettings 8 of 8
@@ -2112,7 +2112,7 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
   same proposal named and not changed, the identity operator and the reader refused; RowRules' one qvt render with the rule's
   source; AccessReview's one html-print render, the sealed grant not in it, and another organization's member counted and not
   named). Access: the screens fall under P3's `access` area (`BOSS_ADM_ACCESS`; AdminAccess unchanged). Acceptance, written and
-  not run: `acceptance/Admin/AdminCapabilitiesUsable` (4 features, the "usable when").
+  not run: `test/acceptance/Admin/AdminCapabilitiesUsable` (4 features, the "usable when").
 - Tests run (release binary, `--nobuild`, this worktree's runtime): framework AdminAccessCapabilities, AdminAccessServices,
   AdminSessions 12 of 12 (0.4 s); mr-boss AdminCapabilities, AdminGroups, AdminAccess, AdminUsers, AdminInvitations, ProjectsAccess
   27 of 27; `moqui lint --screens` 132 flagged sites, as before, none in the new screens. Capabilities (qvt, tui, html; the list
@@ -2313,7 +2313,7 @@ ADM-CONNECTIONS, ADM-LIFECYCLE (the notice).
   IdentityProviderDetail's one qvt render each, the secret in neither). `AdminAccess` changed: the `security` capability for the
   three administrators and the administrator, and Security in the administrator's and ADMIN's menus. Cargo: `service::sso`
   (two new tests: linking, and the groups a sign-in gives and ends; the fixture links by verified email) and
-  `service::sign_in_policy`. Acceptance, written and not run: `acceptance/Admin/AdminSecurityUsable` (4 features, the "usable
+  `service::sign_in_policy`. Acceptance, written and not run: `test/acceptance/Admin/AdminSecurityUsable` (4 features, the "usable
   when"; its OIDC test reads a public discovery document, so it needs the network).
 - Tests run (the worktree's Debug binary and runtime): framework AdminIdentityProviders, AdminNewDevice, AdminConfiguration,
   AdminAccessServices, AdminAccessCapabilities, AdminSessions 20 of 20; mr-boss AdminSecurity, AdminAccess, AdminSettings,
@@ -2585,7 +2585,7 @@ Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail;
   holds Admin's two new entries. Cargo: `moqui-lib` `net::tests`, `moqui-mail`
   `a_disabled_server_and_an_internal_address_are_refused_before_a_connection`, `moqui-core`
   `a_disabled_printer_takes_only_its_connection_test`. Acceptance, written and not run:
-  `acceptance/Admin/AdminConnectionsUsable` (3 features, the "usable when", with the HTTP fixtures: no network).
+  `test/acceptance/Admin/AdminConnectionsUsable` (3 features, the "usable when", with the HTTP fixtures: no network).
 - Tests run (the worktree's Debug binary and runtime): framework AdminConnectionServices, AdminIdentityProviders,
   AdminConfiguration 10 of 10; mr-mantle GatewayConnections 2 of 2; mr-boss AdminRelays, AdminAccess, AdminRegistries,
   AdminSecurity, AdminSettings, ProjectsAccess 29 of 29 (AdminRegistries after its expectation changed); `cargo test` for
@@ -2861,7 +2861,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   `AdminAccess` changed: the operator's `protocols` capability. `AdminRegistries` changed: the Instance group's new entry.
   Cargo: `moqui-core` `service::protocol_admin::tests` (2), `moqui-mail`
   `a_failed_delivery_keeps_its_outcome_on_the_message`; `rust_services_tests`' list of registered services gains P12's two
-  and the two P10 left out (F172). Acceptance, written and not run: `acceptance/Admin/AdminProtocolsUsable` (2 features,
+  and the two P10 left out (F172). Acceptance, written and not run: `test/acceptance/Admin/AdminProtocolsUsable` (2 features,
   the "usable when"; mail captured, no network).
 - Tests run (the worktree's Debug binary and runtime): framework AdminProtocols, AdminMailOutcomes, AdminConfiguration,
   AdminConnectionServices, AdminIdentityProviders 16 of 16; basic-comms BasicCommsComposeRef, BasicCommsSync 21 of 21 (the
@@ -3353,7 +3353,7 @@ ADM-OPERATIONS.
   the batch of three with one ineligible, the settled unknown one and the handler through the transitions as the
   operator, the integration administrator and the reader; the operator refused Connections and MessageTypes).
   `AdminAccess` changed: the operator's `integrations` capability. `AdminRegistries` changed: the Instance group's new
-  entry. Acceptance, written and not run: `acceptance/Admin/AdminRecoveryUsable` (3 features, the "usable when", with
+  entry. Acceptance, written and not run: `test/acceptance/Admin/AdminRecoveryUsable` (3 features, the "usable when", with
   the HTTP fixtures: no network).
 - Tests run (the shared release binary, this phase's runtime): framework AdminRecovery, AdminMailOutcomes,
   AdminProtocols, AdminConnectionServices, AdminConfiguration 16 of 16; mr-mantle StoreChannels, DeliveryLedger 8 of 8;
@@ -3450,7 +3450,7 @@ ADM-OPERATIONS.
     wanted at all, or only an owner's (built: where a descriptor registers it; Commerce registers none); whether
     MessageTypeDetail should change file paths for a delegated administrator (built: yes, for a type its owner
     registered a handler for; the paths are on the type's remote file server); F184 (a send outcome on the message);
-  - `acceptance/Admin/AdminRecoveryUsable` was written and not run, as the brief asks (AGENTS.md would have a new
+  - `test/acceptance/Admin/AdminRecoveryUsable` was written and not run, as the brief asks (AGENTS.md would have a new
     acceptance test run once): it leans on the demo store's channel intake and on the operator's organization scope
     outside a screen, which no regression spec here proves, so run it when asked and expect to adjust it.
 
@@ -3637,7 +3637,7 @@ Design §10 Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail; ADM-
   one qvt render each; pause, resume, a run asked for, a default and a subscription through the transitions as the
   operator, the configuration administrator and the reader; the configuration administrator refused Jobs and Health).
   `AdminAccess` changed: the configuration administrator's `operations` capability. `AdminRegistries` changed: the
-  Instance group's new entry. Acceptance, written and not run: `acceptance/Admin/AdminJobsUsable` (3 features, the
+  Instance group's new entry. Acceptance, written and not run: `test/acceptance/Admin/AdminJobsUsable` (3 features, the
   "usable when"; its third needs the telemetry store).
 - Tests run (the shared release binary, this phase's runtime, the branches rebased on master's P12 follow-up): framework
   AdminJobs, AdminRecovery, AdminMailOutcomes, AdminConfiguration, AdminProtocols, AdminConnectionServices 20 of 20;
@@ -3737,7 +3737,7 @@ Design §10 Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail; ADM-
     next: Mantle's and the apps' jobs are read only until then); F215 (whether the reader should be shown tabs that
     answer "not available"); whether the configuration administrator should also read a topic's subscribers by name
     (built: no, counts only);
-  - `acceptance/Admin/AdminJobsUsable` was written and not run, as the brief asks: its second feature starts a failing job
+  - `test/acceptance/Admin/AdminJobsUsable` was written and not run, as the brief asks: its second feature starts a failing job
     by hand as an instance administrator and its third evaluates the copied alert over `otel_spans`, which no regression
     spec here proves, so run it when asked and expect to adjust it.
 
@@ -3954,7 +3954,7 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
   invite through the wizard's transitions, its refusals, `BOSS_USERS` always, a privileged group and ADMIN never; Imports'
   and ImportDetail's one qvt render; an owner's run with its place and no row, not shown to who may not read it).
   `AdminAccess` changed: the `data` capability and the two menus. `ProductsImport` changed in four lines (the mapping and
-  context services are the shared ones, F230). Acceptance, written and not run: `acceptance/Admin/AdminImportsUsable`
+  context services are the shared ones, F230). Acceptance, written and not run: `test/acceptance/Admin/AdminImportsUsable`
   (3 features, the "usable when"); `ProductsImportWalk` (three form ids) and `AppStructure` (the screen's name) edited,
   not run.
 - Tests run (the shared release binary, this phase's runtime): framework AdminDataTransfer, AdminConfiguration 7 of 7;
@@ -4260,7 +4260,7 @@ Design §11 Exports, DataExport and Backups; ADM-EXPORT.
   delivery as its id, state and counters with its definition never named, and the recipient's copy refused; one qvt
   render each of Exports, DataExport and Backups; the backup operator opening only Backups and the data operator told
   it is not available). `AdminAccess` changed: the backup operator's `data` capability. Acceptance, written and not
-  run: `acceptance/Admin/AdminExportsUsable` (3 features, the "usable when").
+  run: `test/acceptance/Admin/AdminExportsUsable` (3 features, the "usable when").
 - Tests run (the shared release binary, this phase's runtime): framework AdminBackups, AdminDataExport,
   AdminDataTransfer, AdminConfiguration, AdminJobs, AdminMailOutcomes, AdminRecovery 21 of 21; mr-mantle ContactBooks,
   StaffInvitationImport 24 of 24; mr-boss AdminExports, AdminAccess, ProjectsAccess, AdminImports, AdminSettings,
@@ -4562,7 +4562,7 @@ Design §12 AuditChanges and AccessLog, §16 audit evidence; ADM-AUDIT, ADM-REPO
   line or a line of another target, with the engine asked directly four ways to widen it, the telemetry dataset
   refused and the row filter the viewer's own; one html render each of AuditChanges and AccessLog). `AdminAccess`
   changed: the audit capability and the menus. Acceptance, written and not run:
-  `acceptance/Admin/AdminAuditUsable` (3 features, the "usable when").
+  `test/acceptance/Admin/AdminAuditUsable` (3 features, the "usable when").
 - Tests run (the shared release binary, this phase's runtime): framework AdminAuditChanges, AdminDataExport,
   AdminDataTransfer, AdminMailOutcomes, AdminSessions, AdminJobs, AdminRecovery, AdminConfiguration,
   AdminConnectionServices, AdminBackups, AdminAccessServices 35 of 35; mr-mantle IdentityAudit, StaffIdentity,
@@ -4879,7 +4879,7 @@ second release (§4).
     redeemed and the device refused Admin, Insights' other screens, its account's notifications and Playlists' own
     editing transition, and its admitted request decided as the display account. `AdminAccess` gains the rule's case
     (0.3 s): one holder, one non-holder, another organization's display account, a privileged bundle, Login as.
-  - Acceptance, written and not run: `acceptance/Admin/AdminDevicesUsable.spec.js` (the "usable when", with the audit
+  - Acceptance, written and not run: `test/acceptance/Admin/AdminDevicesUsable.spec.js` (the "usable when", with the audit
     reader's view of it).
 - Tests run: the specs above; framework `AdminSessions`, `PushDevice`, `AdminAccessServices`, `RecentAuth`,
   `AdminAuditChanges`; the framework's client `SecurityAuthn`, `SecurityAccess`, `SecurityScreens`, `SecurityRest`;
@@ -5093,11 +5093,11 @@ review: …"); Mantle and BOSS unchanged.
     its reason. Never: the environment, host facts, listeners, paths, users, fix links, refresh keys or diagnostics. The
     JSON is always redacted: who prepared it left out, an email address in any text written `[address]`. `Admin.js`
     `linkPaths` gains `Operations/SupportSummary`. A `get` verb: the client deny pattern is unchanged.
-  - Acceptance, written and not run (the lead runs the suite): `acceptance/Admin/AdminTui.spec.js` (1 feature: every
+  - Acceptance, written and not run (the lead runs the suite): `test/acceptance/Admin/AdminTui.spec.js` (1 feature: every
     Admin screen, 66 with the Data area's `Shared/DataImport` mount, in tui as admin.admin with authorization on: a TUI
-    document, no error node; System is Tools' and left out); `acceptance/Admin/AdminServerStatic.spec.js` (1 feature:
+    document, no error node; System is Tools' and left out); `test/acceptance/Admin/AdminServerStatic.spec.js` (1 feature:
     ServerStaticLib's full check of each, no verdict an error; none is marked server-static); and
-    `acceptance/Admin/AdminReviewWalk.spec.js` (4 features, design §15.3 as §8 sets it: each of the eleven Admin group
+    `test/acceptance/Admin/AdminReviewWalk.spec.js` (4 features, design §15.3 as §8 sets it: each of the eleven Admin group
     users (admin.reader to admin.backup and admin.delegate) is refused another organization's identity by URL,
     UserDetail's `storeAccount`, the palette, three drop-downs, Assist's `admin_find_users` (not exposed to MCP), direct
     services, a shared identity's account-wide change, another organization's OrganizationDetail and its member's contact
@@ -5262,7 +5262,7 @@ review: …"); Mantle and BOSS unchanged.
   `Array.from` of `get#AlertState`'s instances gave `[]` (so the template's "no instances" held vacuously), read now as
   plain rows. AdminProtocolsUsable expected call media off, but every test run merges basic-comms'
   `test/MoquiConf.xml`, which sets `rtc_media_port`, so where the build has rtc it is configured and not started in a
-  command-line run. Final: each spec alone and all 21 of `acceptance/Admin/` together (`--spec` with a comma list),
+  command-line run. Final: each spec alone and all 21 of `test/acceptance/Admin/` together (`--spec` with a comma list),
   61 of 61 features passed; framework AdminAccessServices 6 of 6. For the lead: several `--spec` flags run only the last;
   the `Array.from` behaviour of a service's list in `then` is worth a look in the testkit.
 

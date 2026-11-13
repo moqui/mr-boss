@@ -214,9 +214,9 @@ work is §7, the open questions §5.
   - for P18: the same for mr-pass, and lint clean for PASS;
   - its row and **Built** note here.
 
-  The phase's "usable when" and its §8 walkthrough are acceptance tests to write (`acceptance/Accounting/`,
-  `acceptance/client/Accounting/`), named in the phase; for P18 the remote pair on PASS's RemoteFixtures pattern and
-  the browser walk on ForumHttp's and RemoteHttp's, in mr-pass `acceptance/`. Running them is not part of Done.
+  The phase's "usable when" and its §8 walkthrough are acceptance tests to write (`test/acceptance/Accounting/`,
+  `test/acceptance/client/Accounting/`), named in the phase; for P18 the remote pair on PASS's RemoteFixtures pattern and
+  the browser walk on ForumHttp's and RemoteHttp's, in mr-pass `test/acceptance/`. Running them is not part of Done.
 
 ## 3. Phases
 
@@ -1572,7 +1572,7 @@ Designed, not in this build:
 | Access | `AccountingAccess` for each access rule a phase adds; P18 (customer token); P21 (the full walk, acceptance) |
 
 - **Walks.** `AccountingReceivablesWalk` is the app's one golden-path client walk in the regression suite; every other
-  walk, the 390 px checks among them, is an acceptance test in `acceptance/client/Accounting/`.
+  walk, the 390 px checks among them, is an acceptance test in `test/acceptance/client/Accounting/`.
 
 ### P0 verification — Oct 29, 2026
 

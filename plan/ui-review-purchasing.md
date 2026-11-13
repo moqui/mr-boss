@@ -1011,8 +1011,8 @@ actor table.
 This is a source inventory of available checks, not a report of new execution. Names omit `.spec.js`. There are
 **14 Purchasing server regression specs** (`test/Purchasing/`, with helpers `PurchasingSpecLib.js` and
 `PurchasingDropShipLib.js`), **one browser regression walk** and **18 server acceptance specs**
-(`acceptance/Purchasing/`). `PurchasingOrdersWalk` exists in both `test/client/Purchasing/` and
-`acceptance/Purchasing/`, so name the suite with any `--spec`. There is no `acceptance/client/Purchasing/`; PASS's
+(`test/acceptance/Purchasing/`). `PurchasingOrdersWalk` exists in both `test/client/Purchasing/` and
+`test/acceptance/Purchasing/`, so name the suite with any `--spec`. There is no `test/acceptance/client/Purchasing/`; PASS's
 supplier browser walks are in mr-pass.
 
 | Current coverage | Source / what it establishes when run | Activities / remaining review |
@@ -1042,7 +1042,7 @@ supplier browser walks are in mr-pass.
 | Mantle `test/order/` SupplierPortal | Published revision, external scope, repeated response, revocation and delivery report; PUR-28 |
 | Mantle acceptance `order/PurchaseApprovalBudgetWalk`, `party/PurchaseAgreementWalk` | Complete owner scenarios; run only on request |
 | PASS `test/Supplier/SupplierPages`, `test/Billing/Portals`, `test/client/PortalHttp` | Page/operation projection and portal baseline; inspect exact asserted branches before relying on them |
-| PASS `acceptance/SupplierPortalFixtures`, `acceptance/client/SupplierPortalHttp`, `RemoteHttp` | Public quote/acknowledgement flow, setup and the remote authority; local and remote outcomes are distinct |
+| PASS `test/acceptance/SupplierPortalFixtures`, `test/acceptance/client/SupplierPortalHttp`, `RemoteHttp` | Public quote/acknowledgement flow, setup and the remote authority; local and remote outcomes are distinct |
 | Warehouse/Manufacturing/Accounting rule and acceptance families | Owner checks for stock/quality, subcontract output, close and finance settlement; do not duplicate them in BOSS Purchasing |
 
 The implementation's verification table (impl §8) is provenance; some of its contexts predate the current suites.

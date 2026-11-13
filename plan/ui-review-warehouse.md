@@ -1026,13 +1026,13 @@ cover less than a full activity, and their fixture consumption can conflict.
 | `WarehouseReturns`, `WarehouseTransfers` | RMA quarantine/read-only settlement, supplier issue/ship and no Warehouse return authorization; transfer/custody/request context; WH-26–30 |
 | `WarehouseReports` | Dated stock/incomplete history, unit totals, valuation gate, choices/exports and Home cards; WH-01/32 |
 | `test/client/Warehouse/WarehouseReceivingWalk.spec.js` | The registered golden path opens a purchase receipt and reopens the same one. It does not complete tracked receipt, short finish or handheld review; WH-10 |
-| `acceptance/Warehouse/WarehouseAccessWalk.spec.js` | Standalone no-ProductStore receive-to-ship, app roots, two-organization route/output/search/file/notification/financial isolation; creates its data through WarehouseStandaloneLib; WH-35–36 |
-| `acceptance/Warehouse/WarehouseServerStatic.spec.js` | Full check of Warehouse XML and marked server-static correctness; source/render support, not observed browser usability |
-| `acceptance/Warehouse/WarehouseProductionFixtures.spec.js` | Creates and releases a run of `DEMO_1_1` with frozen lines and standard for client work; fixture setup is not an observed production journey |
+| `test/acceptance/Warehouse/WarehouseAccessWalk.spec.js` | Standalone no-ProductStore receive-to-ship, app roots, two-organization route/output/search/file/notification/financial isolation; creates its data through WarehouseStandaloneLib; WH-35–36 |
+| `test/acceptance/Warehouse/WarehouseServerStatic.spec.js` | Full check of Warehouse XML and marked server-static correctness; source/render support, not observed browser usability |
+| `test/acceptance/Warehouse/WarehouseProductionFixtures.spec.js` | Creates and releases a run of `DEMO_1_1` with frozen lines and standard for client work; fixture setup is not an observed production journey |
 
 The abbreviated server spec names in the table are under `test/Warehouse/`. `WarehouseSpecLib.js` and
-`WarehouseStandaloneLib.js` are helpers, not additional independent review proof. `acceptance/AppStructure.spec.js`
-and `acceptance/TuiRender.spec.js` load WarehouseSpecLib's route list: they are the acceptance sweeps; do not
+`WarehouseStandaloneLib.js` are helpers, not additional independent review proof. `test/acceptance/AppStructure.spec.js`
+and `test/acceptance/TuiRender.spec.js` load WarehouseSpecLib's route list: they are the acceptance sweeps; do not
 reintroduce them as regression screen walks. A test that names a screen can be checking only its service context or
 one rendered state.
 
@@ -1053,7 +1053,7 @@ one rendered state.
 | `WarehouseProductionWalk` | Run context, subcontract output/service acceptance and unused return; independent issue/output/quality/cost-close continuations remain WH-30–31 |
 | `WarehouseReportsWalk` | Dated stock, incomplete opening, unit totals/drill, valuation refusal and phone layout; financial-holder and exported-artifact branches remain WH-32 |
 
-These walk files are under `acceptance/client/Warehouse/`. `acceptance/client/suite.js` registers them, runs
+These walk files are under `test/acceptance/client/Warehouse/`. `test/acceptance/client/suite.js` registers them, runs
 WarehouseReceiptFinishWalk near the end because it receives into stock the other walks do not count on, and lists
 WarehouseProductionFixtures among the server fixture specs. `test/client/suite.js` registers WarehouseReceivingWalk
 separately. Several walks tolerate an HTTP 500 for an expected refusal (§6 source concerns). Inspect current setup

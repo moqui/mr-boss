@@ -678,12 +678,12 @@ spec names omit `.spec.js`. Inspect current assertions before extending coverage
 | mr-boss acceptance | AppStructure, ServerStatic, TuiRender | Supporting structure/render coverage; no new duplicate sweep and no usability claim |
 | mr-mantle regression | party/Consent, party/Contacts, party/ContactBooks, party/ContactAddresses, party/InboxThreads, party/InternalMessages, party/InternalLabels, party/RecordNotes, party/RecordVisibility, party/RecordLinks, party/ChatRecords; work/CalendarServices, work/CalendarChanges, work/CommonsToday, work/Dav; forum/Mailboxes | Business rules behind DC-04–10, DC-17, DC-18, DC-20 and DC-22; a rule fix and its test stay in Mantle |
 | basic-comms regression | BasicComms, BasicCommsInbox, BasicCommsComposeRef, BasicCommsFiles, BasicCommsSync, BasicCommsTexts, BasicCommsChat, BasicCommsChatChanges, BasicCommsBridges, BasicCommsEncrypted, BasicCommsCalls; client ShellSync and CryptoFlow | Shared Comms behavior; BOSS mount/extension outcomes require separate review evidence |
-| basic-comms acceptance, `acceptance/client/` | CallFlow, CallGuestFlow, EncryptedCallFlow, EncryptedChatFlow | Existing local media/guest/encryption journeys; prerequisites and actual mount must be checked |
+| basic-comms acceptance, `test/acceptance/client/` | CallFlow, CallGuestFlow, EncryptedCallFlow, EncryptedChatFlow | Existing local media/guest/encryption journeys; prerequisites and actual mount must be checked |
 | webroot regression, `test/client/` | WebrootVue.qvt, WebrootVue.qvt.shell, WebrootVue.qvt.layout, WebrootVue.qvt.records, WebrootVue.qvt.static, WebrootVue.qvt.views, WebrootVue.qvt.markdown, WebrootAssist, WebrootChat, WebrootTerminal, WebrootPublic.qvt, QvtKeys, Keys | Shared shell/control behavior; fixes belong in existing focused specs where applicable |
 | webroot regression, `test/` | QvtConfig | The shell restoring a saved dark/light/automatic choice and a forced or locked appearance policy taking precedence (DC-21 theme) |
-| webroot acceptance, `acceptance/client/` | ThemeLayout | Offline measured theme and geometry checks of shared components (`./moq accept` runs it with `--offline`); the place for a reusable contrast/geometry check found here |
+| webroot acceptance, `test/acceptance/client/` | ThemeLayout | Offline measured theme and geometry checks of shared components (`./moq accept` runs it with `--offline`); the place for a reusable contrast/geometry check found here |
 
-No Commons/Comms-specific browser journey files were present under BOSS `test/client/` or `acceptance/client/` at
+No Commons/Comms-specific browser journey files were present under BOSS `test/client/` or `test/acceptance/client/` at
 inventory time. Do not imply a BOSS golden path already exists from the presence of server specs or BasicComms walks.
 Adding a golden-path walk for each app is a remaining item in
 [impl-drawers-commons.md](impl-drawers-commons.md#9-addendum-nov-8-2026-remaining-items), outside this review.

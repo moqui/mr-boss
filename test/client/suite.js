@@ -1,4 +1,4 @@
-// Focused client regressions and one golden-path walk per app; other walks belong in acceptance/client.
+// Focused client regressions and one golden-path walk per app; other walks belong in test/acceptance/client.
 suite(
     [
         "ProjectsPlanningResponses",

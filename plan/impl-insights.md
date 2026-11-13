@@ -246,7 +246,7 @@ Design §1.1, §1.2 and §1.3's legacy screens; INS-01, INS-10 (the shell part).
     and engine artifacts (a reader cannot save a dataset definition; nobody but `ADMIN` reaches Tools' Dashboards), the
     menu and providers per group, the copied builder refused to the ordinary groups, and the refused raw entity
     transitions. A later phase adds a case only for an access rule it adds.
-- **Usable when** (an acceptance test to write, `acceptance/Insights/InsightsFoundationWalk`): the menu renders for each
+- **Usable when** (an acceptance test to write, `test/acceptance/Insights/InsightsFoundationWalk`): the menu renders for each
   group; `insights.reader` opens Insights but not the report builder; a Projects client and a PASS account are refused
   the root and every `ironstone.insights` service.
 
@@ -299,7 +299,7 @@ Design §1.1, §1.2 and §1.3's legacy screens; INS-01, INS-10 (the shell part).
   the author); the copied builder refused to the reader and its raw `createDataDocumentCondition` transition to the author,
   opened to the administrator). A throwaway probe screen under the root, not kept, confirmed F32's deny: from an Insights
   screen the reader and the administrator are refused `save#Definition` and the author saves. Acceptance, written and not
-  run: `acceptance/Insights/InsightsFoundationWalk` (3 features: every group's menu with each entry opened and the others
+  run: `test/acceptance/Insights/InsightsFoundationWalk` (3 features: every group's menu with each entry opened and the others
   refused; the reader's Home without the builder, its dataset screens and transitions; the client and the PASS account
   refused the root and `get#Context`).
 - Tests run (release binary, `--nobuild`, this worktree's runtime): InsightsAccess 6 of 6; AdminAccess 7, ProjectsAccess 8,
@@ -449,7 +449,7 @@ first-release framework need).
     `test/Insights/InsightsClientFixtures`, a server spec of the suite): the author opens a shared dashboard from Dashboards,
     saves a copy in DashboardEditor, adds a library panel, saves, opens the copy in Dashboard where the panel says not
     available; every URL under `/qapps/Insights` (F41 for why it is not Store operations).
-  - Acceptance, written and not run: `acceptance/client/Insights/InsightsDashboardsUsable` (in `acceptance/client/suite.js`,
+  - Acceptance, written and not run: `test/acceptance/client/Insights/InsightsDashboardsUsable` (in `test/acceptance/client/suite.js`,
     with InsightsClientFixtures): the "usable when" (Store operations copied, edited, saved and shared; not available, never
     zero; Tools unchanged for ADMIN; a two-dashboard playlist plays). Its copy of Store operations passes once P3 admits
     the sales datasets (F41).
@@ -659,7 +659,7 @@ index's freshness).
     refresh through Admin's registries, the author refused). `InsightsAccess` follows the areas (the capabilities `datasets` and
     `stewardship`; Datasets refused to a reader, DatasetDetail to the author and the administrator, opened to the steward; the
     administrator's engine deny checked from the copied Reports); `InsightsDashboards`' unreadable panel now says not admitted.
-  - Acceptance, written and not run: `acceptance/Insights/InsightsDatasetsUsable` (5 features, the "usable when");
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsDatasetsUsable` (5 features, the "usable when");
     AppStructure, TuiRender and InsightsFoundationWalk updated to the new screens and parameters, not run.
 - **Tests run** (Debug, `--nobuild`, this worktree): cargo `clippy -p moqui-report --all-targets -D warnings` clean, `cargo test -p
   moqui-report` 77 of 77, moqui-host `--test it report_` 9 of 9 (3 ignored); framework BusinessDatasets 5 of 5; tools 39 of 39 (tools
@@ -996,7 +996,7 @@ target; INS-02, INS-05.
   PanelDetail's transition), a missing and a zero target unavailable, PanelDetail's one qvt render; SaveAs private and shared, another
   group and a reader refused, SavedReports' one qvt render). `InsightsDashboards`' Dashboard render checks MeasureMeaning (its spec
   panel names `Sales.Orders`); `InsightsAccess` follows the menu (Reports and Saved reports for every user) and the legacy area
-  (ScheduledReports). Acceptance, written and not run: `acceptance/Insights/InsightsCatalogUsable` (3 features, `dependsOn`
+  (ScheduledReports). Acceptance, written and not run: `test/acceptance/Insights/InsightsCatalogUsable` (3 features, `dependsOn`
   InsightsDatasetsUsable: the service manager finds, pins and opens Service level compliance in Customer Service; the warehouse
   reader finds Stock at date and not the statements, SalesAnalysis once; the orders panel's meaning, and its count of a store's
   month agreeing with OnlineSales).
@@ -1081,7 +1081,7 @@ with Admin P7 (gate 1).
   with the `InsightsHome` preference and the first-use state.
 - **Specs:** BOSS `InsightsHome` (Home's one qvt render; a failing provider affects its card only; an unreadable one
   omitted).
-- **Usable when** (`acceptance/Insights/InsightsHomeUsable`; rewritten in the P5 review to what is registrable, F68):
+- **Usable when** (`test/acceptance/Insights/InsightsHomeUsable`; rewritten in the P5 review to what is registrable, F68):
   `insights.reader` opens Home and sees ORG_ZIZI_RETAIL's orders and order value by currency (invoiced revenue waits for
   an admitted invoice dataset, F67) and no count from an app they cannot read; a Warehouse user with a selected
   facility sees the receipts waiting there, late ones as overdue, as a count equal to the receipts list's own that opens
@@ -1172,7 +1172,7 @@ with Admin P7 (gate 1).
 
   `InsightsAccess` lost its Home feature, because Home's one render is now InsightsHome's.
 
-  Acceptance, written and not run: `acceptance/Insights/InsightsHomeUsable`, 4 features, `dependsOn` InsightsDatasetsUsable:
+  Acceptance, written and not run: `test/acceptance/Insights/InsightsHomeUsable`, 4 features, `dependsOn` InsightsDatasetsUsable:
   - the reader sees Retail's orders and order value by currency and no app's counts;
   - the Warehouse user's Receiving equals the receipts list's own count and opens it;
   - every administrator card opens its worklist;
@@ -1371,7 +1371,7 @@ INS-04 (drill).
     and a missing order alike, the order's own Approve refused; Analysis' one qvt render with the mixed-currency refusal, the
     grouped result, a reader, a foreign field and a foreign group refused, the saved panel; a business event's marker by
     organization and the write refused to an author). `InsightsAccess`: the `analysis` capability by group.
-  - Acceptance, written and not run: `acceptance/Insights/InsightsDrillUsable` (3 features, `dependsOn`
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsDrillUsable` (3 features, `dependsOn`
     InsightsDatasetsUsable: the "usable when").
 - **Tests run** (this worktree's Debug binary, `--nobuild`): framework ReportDrill, ReportAnnotations, BusinessDatasets and
   tools ReportMounts, DocumentExport 15 of 15 (framework 1.3 s of 12 s); webroot WebrootReport offline 49 of 49; Mantle
@@ -1678,7 +1678,7 @@ INS-06 (its first release), INS-11 (legacy schedules).
     menu (nine entries, every user's), `schedule` for every reading group, list#Schedules and check#ReportAudience by
     group; its copied-screen cases removed with the screen. `AdminLifecycle` (Admin's): a disable now has Insights' pause
     step.
-  - Acceptance, written and not run: `acceptance/Insights/InsightsDeliveryUsable` (4 features, `dependsOn`
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsDeliveryUsable` (4 features, `dependsOn`
     InsightsDatasetsUsable: the "usable when", with a leaving and a succeeding distributor made there). The sweeps
     `AppStructure` and `TuiRender` gain the new screens' entries; `InsightsFoundationWalk` walks the one menu.
 - **Tests run** (this worktree's Debug binary, `--nobuild`): framework ReportAudience, ReportDrill, ReportAnnotations,
@@ -1753,7 +1753,7 @@ INS-06 (its first release), INS-11 (legacy schedules).
     `create#Schedule`, `ScreenEntities.xml` four fields on ScreenScheduled, `ScreenServices.xml` the group block of
     `render#ScheduledScreen`; Insights.js (areas, linkPaths), Registry.js (one branch), Home.xml (one box);
   - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F96, one expectation) and design-admin §4.1
-    (one "As built" sentence); `acceptance/AppStructure.spec.js` and `TuiRender.spec.js` (the new screens' entries);
+    (one "As built" sentence); `test/acceptance/AppStructure.spec.js` and `TuiRender.spec.js` (the new screens' entries);
   - an existing instance loads ReportSetupData, MonitoringSecurityData and BossSetupData again (Monitoring.md
     "Upgrading"), and sets the `BOSS_INSIGHTS_REPORT` template's mail server and from address. From then on an owner-mode
     schedule over a business dataset sends each recipient their own message and only to owner-equivalent ones, and a
@@ -1955,7 +1955,7 @@ Design §8; INS-07 (its first release), INS-03.
     participant, a reader refused its services and as a new owner, the delete). `InsightsAccess`: the menu (ten entries),
     `get#AlertState` for a reader and `find#OwnedAlertRules` refused to the distributor. `AdminLifecycle` (Admin's): a disable
     now has a second pause step.
-  - Acceptance, written and not run: `acceptance/Insights/InsightsAlertsUsable` (4 features: the "usable when", with a
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsAlertsUsable` (4 features: the "usable when", with a
     breach made on a Retail case's clock and the rule deleted at the end). The sweeps `AppStructure` and `TuiRender` gain the
     new screens' entries; `InsightsFoundationWalk` walks the one menu.
 - **Tests run** (this worktree's Debug binary, `--nobuild`): framework BusinessAlerts, ReportAudience, ReportDrill,
@@ -2030,7 +2030,7 @@ Design §8; INS-07 (its first release), INS-03.
     before `preview#Report` and one sentence of `check#ReportAudience`; no framework seed file changes; Insights.js
     (`reportLinks`, `linkPaths`), Delivery.js (its exports), InsightsSpecLib (`readerMenu`);
   - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F112, one expectation) and design-admin §4.1
-    (one "As built" sentence in place of "Alert rules join with Insights P8"); `acceptance/AppStructure.spec.js` and
+    (one "As built" sentence in place of "Alert rules join with Insights P8"); `test/acceptance/AppStructure.spec.js` and
     `TuiRender.spec.js` (the new screens' entries);
   - an existing instance: the entity check adds the table and the field; load BossSetupData again and set the
     `BOSS_INSIGHTS_ALERT` template's mail server and from address. From then on a saved rule over a business dataset tells
@@ -2247,7 +2247,7 @@ Design §9; INS-08.
     foreign organization refused; a step's page by its title for one who reads it, none for an Insights reader who is not
     a BOSS user, to whom the mount is refused).
   - `InsightsAccess`: the menu (eleven entries), the keys, and the flow editor refused the engine's `copy#Definition`.
-  - Acceptance, written and not run: `acceptance/Insights/InsightsFlowMapsUsable` (6 features: the "usable when" through
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsFlowMapsUsable` (6 features: the "usable when" through
     the screens' transitions, the template's later version made by lowering the copy's recorded one, the copy removed at
     the end). `AppStructure` and `TuiRender` gain the new screens' entries.
 - **Tests run** (the shared release binary, `--nobuild`): InsightsFlowMaps, InsightsAccess, InsightsCatalog, InsightsHome,
@@ -2318,7 +2318,7 @@ Design §9; INS-08.
 - **For the lead:**
   - budget shares: mr-boss 1.8 s server;
   - merge: BossSetupData's P9 block and the FlowTarget entity in `entity/AdminEntities.xml` are each one append at the end
-    (Admin P12 may append to both: keep both); `acceptance/AppStructure.spec.js` and `acceptance/TuiRender.spec.js` gain
+    (Admin P12 may append to both: keep both); `test/acceptance/AppStructure.spec.js` and `test/acceptance/TuiRender.spec.js` gain
     entries after P8's; `test/Insights/InsightsSpecLib.js` (`readerMenu`) and `InsightsAccess` (the keys, one case);
     Registry.js, Insights.js and `screen/Insights.xml` are Insights' own;
   - not verified: the acceptance test (written, not run); Knowledge's component under the mount and the lanes at phone
@@ -2502,7 +2502,7 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
     refused; the author's panel saved, private, theirs); one render each of AnalyticsSettings (qvt, the administrator),
     DataReadiness (qvt, a reader) and AddToDashboard (html, a reader). It puts the organization's settings back.
   - `InsightsSpecLib` `readerMenu` gains Settings (InsightsAccess's menu feature follows).
-  - Acceptance, written and not run: `acceptance/Insights/InsightsSettingsUsable` (5 features, the "usable when", after
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsSettingsUsable` (5 features, the "usable when", after
     InsightsDatasetsUsable); AppStructure (four rows) and TuiRender (one parameter row), beside Insights P9's rows.
 - **Tests run** (the shared release binary, `--nobuild`, this phase's runtime): InsightsSettings, InsightsAccess,
   InsightsDelivery, InsightsAlerts, InsightsHome, InsightsFlowMaps, InsightsDatasets, InsightsCatalog, InsightsDashboards,
@@ -2569,7 +2569,7 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
 - For the lead:
   - budget share: mr-boss 2.2 s server;
   - merge: `data/BossSetupData.xml` and `entity/AdminEntities.xml` are one append each at the end;
-    `acceptance/AppStructure.spec.js` and `acceptance/TuiRender.spec.js` rows are beside Insights P9's (not at the end of the
+    `test/acceptance/AppStructure.spec.js` and `test/acceptance/TuiRender.spec.js` rows are beside Insights P9's (not at the end of the
     maps); `skill/aliases.json` and `test/skill-retrieval.json` are appended at their ends (the Admin track may append there
     too: keep both); `service/ironstone/admin/Registry.js` gains two lines in `present` (Admin's module);
     `plan/design-admin.md` §14.2's Insights row is edited (Admin's design);
@@ -2777,12 +2777,12 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
     clearing what is shown, its panels have no export, inspect or menu and no link out, a failure is retried at the next
     turn, and a 403 reloads the page.
   - cargo `user::device::tests` (+1 test): the plain page of each refusal, nothing of the instance, the text encoded.
-  - Acceptance, written and not run: `acceptance/Insights/InsightsWallDisplayUsable.spec.js` (the "usable when": the
+  - Acceptance, written and not run: `test/acceptance/Insights/InsightsWallDisplayUsable.spec.js` (the "usable when": the
     author's playlist over store checkouts by organization shared with the wall displays, the display account made in
     Users, the device registered with Playlists' values and its code read once in Devices, the wall playing Retail's
     numbers only with no one signed in and opening nothing else, Playlists listing it, the membership ended showing no
-    one's numbers, the revocation in Admin refusing its next request). `acceptance/AppStructure.spec.js` gains
-    WallDisplay's row; `acceptance/Admin/AdminDevicesUsable.spec.js` its two paths now `WallDisplay/data` (not run).
+    one's numbers, the revocation in Admin refusing its next request). `test/acceptance/AppStructure.spec.js` gains
+    WallDisplay's row; `test/acceptance/Admin/AdminDevicesUsable.spec.js` its two paths now `WallDisplay/data` (not run).
 - Tests run: the specs above; BOSS `InsightsDashboards`, `InsightsAccess`, `AdminAccess`, `AdminDevices`; framework
   `DeviceCredential`; cargo `-p moqui-core --lib user::device` (4) and `screen::` (459 passed), clippy of `moqui-core`
   (nothing in the files touched), rustfmt of them; `moqui lint --screens` (no parse failure; WallDisplay's and the root's
@@ -2827,7 +2827,7 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
   - Budgets (feature time): BOSS server +0.3 s (InsightsWallDisplay); framework client +0.01 s (one feature each in
     SecurityDevice and WebrootReport).
   - Merge: `BossSetupData.xml` (the P18 block's route group rows replaced, the P11 rows appended at the end);
-    `acceptance/AppStructure.spec.js` one row after AddToDashboard; mr-moqui `WebrootReport.js` and its page test,
+    `test/acceptance/AppStructure.spec.js` one row after AddToDashboard; mr-moqui `WebrootReport.js` and its page test,
     `Playlist.xml`, `screen/mod.rs` and `user/device.rs`, `Remaining-Work.md` (the device row), `Shared-Devices.md`.
     `test/client/suite.js` and `TuiRender.spec.js` unchanged.
   - An instance that loaded P18's seed keeps `BOSS_DEV_INS_PLAYLISTS` and its two members in a group no route group names
@@ -2944,16 +2944,16 @@ With Admin P19.
   mounts gave them nothing Commons does not, but the root's inheritable grant opened their writes to a user given Insights
   without Commons (F156).
 - **Acceptance** (written, not run; the lead runs the suite at the end of the build):
-  - `acceptance/Insights/InsightsTui.spec.js`: every Insights screen file and the ten record mounts (the tabbed ones by
+  - `test/acceptance/Insights/InsightsTui.spec.js`: every Insights screen file and the ten record mounts (the tabbed ones by
     their `InsightsRecord` subscreen) render in tui as a model document with no error node, as john.doe with authorization
     on, on the demo's records; a second feature checks three twins' data (the supplier flow's steps, the shipped alert rule,
-    Retail's settings). `acceptance/TuiRender.spec.js` no longer sweeps Insights (its Insights rows removed): one sweep per
+    Retail's settings). `test/acceptance/TuiRender.spec.js` no longer sweeps Insights (its Insights rows removed): one sweep per
     app per mode.
-  - `acceptance/Insights/InsightsServerStatic.spec.js`: ServerStaticLib's full check of every plain XML Insights screen (no
+  - `test/acceptance/Insights/InsightsServerStatic.spec.js`: ServerStaticLib's full check of every plain XML Insights screen (no
     Insights screen is marked server-static yet; none errors).
   - WallDisplay is in neither sweep: a device's bare page, not a shell screen, with no terminal twin; it is left to the
     regression InsightsWallDisplay and the acceptance InsightsWallDisplayUsable, and the review walk's last feature.
-  - `acceptance/Insights/InsightsReviewWalk.spec.js` (design §13.3, §8), `dependsOn` InsightsDatasetsUsable, nine features:
+  - `test/acceptance/Insights/InsightsReviewWalk.spec.js` (design §13.3, §8), `dependsOn` InsightsDatasetsUsable, nine features:
     rows (each group's Retail user and the Services reader through Explore's page and its value suggestions, the engine's
     direct query with a forged filter, a terms aggregate and the export, the administrator reading none); dashboards, an
     embed (`render#Dashboard` of the suite panel with forged variables), Home, the Home layout and the context for another
@@ -3038,7 +3038,7 @@ With Admin P19.
     engine's row is the recipient's own), so the export names the caller from their account.
 - **For the lead:**
   - Budgets: mr-boss server +0.1 s (InsightsCatalog's feature; the other assertions sit in features already timed).
-  - Merge: shared with Admin P19: `acceptance/TuiRender.spec.js` (the header, the app list, the feature title and the
+  - Merge: shared with Admin P19: `test/acceptance/TuiRender.spec.js` (the header, the app list, the feature title and the
     removed Insights rows), the mr-boss README (the Insights sentence of the paragraph Admin's sentence opens; "They are built
     in one order" left as it was), mr-moqui `plans/Remaining-Work.md` (the report engine row only), usl-inventory's
     `setup#UserOrganizationInfo` row (Admin may add its root to the same cell: keep both). Not touched: AppStructure,

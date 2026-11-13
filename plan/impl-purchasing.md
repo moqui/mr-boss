@@ -248,9 +248,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode (F16). The phase's "usable when" and
-  its §8 scenario are acceptance tests to write (`acceptance/Purchasing/`, `acceptance/client/Purchasing/`; for P16,
+  its §8 scenario are acceptance tests to write (`test/acceptance/Purchasing/`, `test/acceptance/client/Purchasing/`; for P16,
   the remote pair on PASS's RemoteFixtures pattern and a browser walk on ForumHttp's and RemoteHttp's in mr-pass
-  `acceptance/`), named in the phase; running them is not part of Done.
+  `test/acceptance/`), named in the phase; running them is not part of Done.
 
 ## 3. Phases
 
@@ -403,7 +403,7 @@ makes the PO's shipment, links lines by a stored link, moves the cost to COGS an
 - Specs: `test/Purchasing/PurchasingSpecLib.js` (ids, users, `shell`, `routeFixtures`) and `PurchasingAccess` (10: the
   context, the menu, providers and launcher per group, Home's one qvt render, the capabilities per group, supplier scope in choices and palette, the record check with the requester's own requests, a
   capability on a record, record links, the guarded areas, REST and bulk refused). Acceptance:
-  `acceptance/Purchasing/PurchasingFoundationWalk` (the usable-when: every area per group, the reader's and the other
+  `test/acceptance/Purchasing/PurchasingFoundationWalk` (the usable-when: every area per group, the reader's and the other
   organization's orders and suppliers, forged ids) and `AppStructure` renders Purchasing's built screens
   (PurchasingSpecLib.routeFixtures; the placeholder count is now 66, the floor stays 62).
 - Tests run: PurchasingShell, PurchasingAccess, ManufacturingAccess, ManufacturingSubcontracting, ProductsCatalog,
@@ -554,7 +554,7 @@ organization filters pass: every BOSS spec naming ZiddlemanInc or listing suppli
     Pending) and Halvorsen (`BOSS_PUR_SUP_BLOCKED`, blocked from Nov 1, 2026 for a quality hold), and their categories.
   - Specs: `PurchasingAccess` gains one feature (the supplier scope of the list, Supplier360 and the bulk changes, the
     settings' permissions, the product link; 11 features); `PurchasingSuppliers` (3: the list's profile columns and
-    finds, the duplicates in scope, Supplier360's one html render). Acceptance: `acceptance/Purchasing/PurchasingSuppliersWalk`
+    finds, the duplicates in scope, Supplier360's one html render). Acceptance: `test/acceptance/Purchasing/PurchasingSuppliersWalk`
     (the five usable-when items through the screens' transitions); `PurchasingSpecLib.routeFixtures` lists the P2 routes
     and shared mounts, and AppStructure's placeholder floor is 60 (63 left).
 - Tests run: PurchasePolicy, AccountingPayables, WarehouseReceiving, OrderProcureToPayBasicFlow, CrmMiscServices,
@@ -911,7 +911,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     revision.
   - `SupplierProfile.js`: a new Pending supplier's PurchaseSupplierApproval notice (F49), and `storeDecision`, the decided
     status written for `decide#SupplierApproval` (F65). `Budgets.js`: PURCHASE_APPROVE reserves and checks (F64).
-  - Specs: `test/order/PurchaseApprovals` (5 features, about 2.7 s); acceptance `acceptance/order/PurchaseApprovalBudgetWalk`
+  - Specs: `test/order/PurchaseApprovals` (5 features, about 2.7 s); acceptance `test/acceptance/order/PurchaseApprovalBudgetWalk`
     (2: Warn approves with the warning and reserves; a closed remainder releases).
 - BOSS:
   - `ironstone.purchasing.ApprovalServices` (`Approvals.js`): `find#PurchaseApprovalPolicies` (Settings area) and
@@ -929,7 +929,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   - Specs: `PurchasingApprovals` (2: ApprovalPolicies' one html render with the preview, Today); PurchasingAccess gains the
     approval policies' access feature (14); PurchasingOrders checks the approvals section, the approval and refuse of the
     placed order and Home's approval count; PurchasingSuppliers' render the Approval menu; `routeFixtures` lists Approvals
-    and Settings/ApprovalPolicies. Acceptance `acceptance/Purchasing/PurchasingApprovalsWalk` (5: the two steps, the inbox
+    and Settings/ApprovalPolicies. Acceptance `test/acceptance/Purchasing/PurchasingApprovalsWalk` (5: the two steps, the inbox
     and a superseded revision, a refusal, the bulk with one stale, the supplier's Stop and approval).
 - Tests run: Mantle PurchaseApprovals, PurchaseOrders, PurchasePolicy, OrderProcureToPayBasicFlow, AccountingBudgets,
   CrmMiscServices, OrderLifecycle, OrderBulk, WorkProjectRequests, PurchaseHoldPermission, AccountingPayables,
@@ -1076,7 +1076,7 @@ Purchasing's worklists and mounts over what Warehouse built (P7, P8): it posts n
     refused to a requester, Receipts' html render; ShipmentDetail's html render for the receiver and the buyer's progress
     only, another organization refused; the Inspections, InspectionTemplates and Supplier360 tab html renders);
     PurchasingAccess gains the receipt's scope and the receive permission on it (14 features). Acceptance
-    `acceptance/Purchasing/PurchasingReceivingWalk` (5, the usable-when items); `routeFixtures` lists the Receiving routes and
+    `test/acceptance/Purchasing/PurchasingReceivingWalk` (5, the usable-when items); `routeFixtures` lists the Receiving routes and
     mounts.
 - Tests run: Mantle PurchaseReceipts (2, pass); BOSS PurchasingReceiving, PurchasingAccess, PurchasingOrders,
   PurchasingSuppliers, PurchasingReplenishment, WarehouseInspections, WarehouseReceiving, WarehouseAccess, AccountingPayables,
@@ -1216,7 +1216,7 @@ Purchasing's mounts over Accounting's intake, holds and match (P6, P7), with the
     Home's count); PurchasingAccess gains the topic per group and a feature (a bill of another organization refused, the
     shared InvoiceMatch's html render for the match group and not for a buyer, the re-evaluation refused to a buyer); 14
     features. `PurchasingSpecLib.billFixture` (a Retail order from Ziddleman, 8 received, 7 accepted, the buyer's upload, AP's
-    line and the match operator's apply). Acceptance `acceptance/Purchasing/PurchasingBillsWalk` (6: the usable-when items
+    line and the match operator's apply). Acceptance `test/acceptance/Purchasing/PurchasingBillsWalk` (6: the usable-when items
     above); `routeFixtures` lists Bills/BillList, Bills/MatchExceptions and the two shared mounts (the Bills placeholder is
     gone).
 - Tests run: Mantle PurchaseBills, AccountingPayables, AccountingMatching, PurchaseOrders, OrderProcureToPayBasicFlow,
@@ -1434,7 +1434,7 @@ P7 ports it into mr-mantle and finishes it.
   - Specs: `test/Purchasing/PurchasingDropShipLib.js` (a customer order of Retail's at the drop-ship facility and ZIRET_WH,
     approved; the wait for the send's worker), `PurchasingDropShip` (2: the Drop-ship view; Supplier360's Drop-ship tab's
     html render for the administrator and the buyer), PurchasingAccess gains the drop-ship setup's case (holder,
-    non-holder, another organization's supplier; 17 features). Acceptance `acceptance/Purchasing/PurchasingDropShipWalk`
+    non-holder, another organization's supplier; 17 features). Acceptance `test/acceptance/Purchasing/PurchasingDropShipWalk`
     (5, the usable-when items, with OrderDetail's html renders of both orders).
 - Tests run: Mantle DropShip, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, AssetReservationMisc,
   AssetReservationMultipleThreads, ReturnToResponseBasicFlow, PurchaseOrders, PurchaseReceipts, PurchaseApprovals,
@@ -1600,7 +1600,7 @@ Checked and kept:
     SupplierReturns' views and filters with its one html render; ReturnDetail's eligible receipts and item, the
     authorization with the RMA, with its one html render; about 0.9 s); PurchasingAccess gains a supplier return's scope,
     its authorization for RETURN_AUTHORIZE only and its record link (17 features); `PurchasingSpecLib.returnFixture` and the
-    Returns routes and mount. Acceptance `acceptance/Purchasing/PurchasingReturnsWalk` (4, the usable-when items);
+    Returns routes and mount. Acceptance `test/acceptance/Purchasing/PurchasingReturnsWalk` (4, the usable-when items);
     AppStructure's placeholder floor 57.
 - Tests run: Mantle PurchaseReturns (2, pass); BOSS PurchasingReturns, PurchasingAccess, PurchasingOrders,
   PurchasingSuppliers, PurchasingBills, WarehouseReturns, WarehouseAccess, AccountingAccess (all pass); acceptance
@@ -1800,7 +1800,7 @@ Checked and kept:
   - Specs: `PurchasingRevisions` (2: Acknowledgements' views, Home's count and Today with its html render; OrderChanges' html
     render with a proposed cut and OrderDetail's revisions read by capability); PurchasingAccess gains a feature (the
     revisions and acknowledgement are the organization's, change and response the buyer's; 18 features). Acceptance
-    `acceptance/Purchasing/PurchasingRevisionsWalk` (7: the usable-when items); `routeFixtures` lists Orders/Acknowledgements
+    `test/acceptance/Purchasing/PurchasingRevisionsWalk` (7: the usable-when items); `routeFixtures` lists Orders/Acknowledgements
     and Orders/OrderChanges.
 - Tests run: Mantle PurchaseRevisions, PurchaseOrders, PurchaseApprovals, PurchasePolicy, PurchaseReceipts,
   OrderProcureToPayBasicFlow, WarehouseReceiving, AccountingBudgets, OrderLifecycle, OrderBulk, CrmMiscServices,
@@ -1989,7 +1989,7 @@ adjust#ExpectedReceipt's old callers. Fixes:
   - Specs: `PurchasingRequests` (4: the list's scope, views and html render; RequestDetail's html render for the approver;
     RequestSourcing's html render for the buyer with the Items link a buyer's only; Home's count and Today); PurchasingAccess
     gains the quick create per group, the `requestCreate` capability and a request feature (detail for its requester and
-    organization, sourcing the buyer's; 20 features). Acceptance `acceptance/Purchasing/PurchasingRequestsWalk` (7, the
+    organization, sourcing the buyer's; 20 features). Acceptance `test/acceptance/Purchasing/PurchasingRequestsWalk` (7, the
     usable-when items); PurchasingFoundationWalk's quick create; `routeFixtures` lists the Requests screens; AppStructure's
     placeholder floor 56.
 - Tests run: Mantle PurchaseRequests, OrderProcureToPayBasicFlow, CrmMiscServices, OrderLifecycle, OrderBulk,
@@ -2191,7 +2191,7 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
     html render with the reader's amounts withheld; the Expiring view and QuoteDetail's one html render, Publish price for a
     supplier-price editor only; Home's counts and Today); PurchasingAccess gains the RFQ quick create and `rfqCreate` and a
     feature (the RFQ's scope, its writes the buyer's, its record link to QuoteRequestDetail, left out of Commons; 22 features).
-    Acceptance `acceptance/Purchasing/PurchasingSourcingWalk` (5, the usable-when items through the screens' transitions);
+    Acceptance `test/acceptance/Purchasing/PurchasingSourcingWalk` (5, the usable-when items through the screens' transitions);
     PurchasingFoundationWalk's quick create; `routeFixtures` lists the Sourcing routes and NewQuoteRequest; AppStructure's
     placeholder floor 54.
 - Tests run: Mantle Sourcing (6), ProductPricePolicy, ProductEffectivePrices, ProductPriceLists, ProductCatalogChecks,
@@ -2373,7 +2373,7 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
   - Specs: `PurchasingSourcing` gains a feature (QuoteComparison's and Award's one html render, no award yet, a declined quote
     marked and out of Purchase orders' Closed view); PurchasingAccess gains a feature (the comparison for buyers and
     approvers, a reader refused; the close and award the buyer's; another organization refused); `routeFixtures` lists the two
-    routes. Acceptance `acceptance/Purchasing/PurchasingAwardWalk` (4, the usable-when items through the screens'
+    routes. Acceptance `test/acceptance/Purchasing/PurchasingAwardWalk` (4, the usable-when items through the screens'
     transitions).
 - Tests run: Mantle SourcingAwards (5), Sourcing, PurchaseApprovals, PurchaseRequests, PurchaseOrders,
   OrderProcureToPayBasicFlow, OrderLifecycle, OrderBulk, CrmMiscServices, WorkProjectRequests, SupplyPlanning,
@@ -2519,7 +2519,7 @@ price paths; the removed lines' record; compare's ranking, rates, units and pack
     `agreementId`, and `approve#`/`refuse#PurchaseSource` deciding an agreement's notice.
   - Specs `test/party/PurchaseAgreements.spec.js` (3 features: activation, PDF, template refusals; releases within caps and
     tolerance and a cancelled line's give-back; a changed cap's revision, pending release, history, as-of print and expiry)
-    and acceptance `acceptance/party/PurchaseAgreementWalk.spec.js` (4: the usable-when items Mantle-side, two releases at
+    and acceptance `test/acceptance/party/PurchaseAgreementWalk.spec.js` (4: the usable-when items Mantle-side, two releases at
     once through `parallel`).
 - BOSS:
   - `ironstone.purchasing.AgreementServices` (`Agreements.js`): `find#Agreements` (views Active, Expiring in 30 days,
@@ -2543,7 +2543,7 @@ price paths; the removed lines' record; compare's ranking, rates, units and pack
   - Specs: `PurchasingAgreements` (2: the list's views and withheld amounts with AgreementDetail's one html render; a release
     through AgreementDetail's transition at the agreement's price, in OrderDetail's Agreements; 0.8 s); PurchasingAccess gains
     a feature (the agreement's scope, change and release for the buyer, its record link; 21 features); `routeFixtures` lists
-    the two agreement routes. Acceptance `acceptance/Purchasing/PurchasingAgreementsWalk` (4: the usable-when items through
+    the two agreement routes. Acceptance `test/acceptance/Purchasing/PurchasingAgreementsWalk` (4: the usable-when items through
     the screens).
   - Tests run: Mantle PurchaseAgreements, PurchaseApprovals, PurchaseOrders, PurchaseRevisions, OrderProcureToPayBasicFlow,
     ContentRecords, CrmMiscServices (all pass); BOSS PurchasingAgreements, PurchasingAccess, PurchasingOrders,
@@ -2795,7 +2795,7 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
   request's drop-ship route through RequestSourcing (F125's missing spec) and a cancel ending the coverage; the plan's
   drop-ship route with NO_CUSTOMER_LINE and a pending order; the receipt's pegs, Reserve, PERMISSION_DENIED and NOT_PEGGED;
   held netting within the supplier's lead time). No BOSS regression spec (F154). Acceptance
-  `acceptance/Purchasing/PurchasingReplenishmentRoutesWalk` (3: a customer-order shortage converted to a purchase order keeps
+  `test/acceptance/Purchasing/PurchasingReplenishmentRoutesWalk` (3: a customer-order shortage converted to a purchase order keeps
   its sales line and its receipt reserves for it from ShipmentDetail; the drop-ship route from SupplyPlanning; under the
   request policy the request's demand, submitted and approved, is not suggested again).
 - Tests run: Mantle ReplenishmentRoutes (5), Replenishment (6), SupplyPlanning (11), ProductionSubcontract (8),
@@ -2971,7 +2971,7 @@ ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, Purchasi
   - Specs: `PurchasingPerformance` (3: Commitments counted once and withheld; Spend's measures apart and withheld, the
     tracker's payment withheld and shown; ScorecardDetail's qvt render and the scorecards' CSV guard); PurchasingAccess's P15
     feature (evaluate for the buyer only, an evaluation in its organization only, the statement for a finance reader only)
-    and its Home feature (spend summary, every counter counted). Acceptance `acceptance/Purchasing/PurchasingPerformanceWalk`
+    and its Home feature (spend summary, every counter counted). Acceptance `test/acceptance/Purchasing/PurchasingPerformanceWalk`
     (6, the usable-when) and AppStructure's route fixtures for the new screens (PurchasingSpecLib.routeFixtures).
 - Decisions:
   - The plan's two evaluation records are three: SupplierScorecardEvidence keeps the evidence rows (design ScoreEvidence),
@@ -3156,8 +3156,8 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
     SupersededRevision); the header's Supplier documents link for a signed-in user.
   - Specs: `test/Supplier/SupplierPages` (2: the three pages' one html render each, the superseded link and a bad one;
     the operations registered alike on both sides) over `test/Supplier/SupplierFixtures.js`; acceptance
-    `acceptance/SupplierPortalFixtures` (the walk's and the remote check's documents and a signed-in supplier contact),
-    `acceptance/client/SupplierPortalHttp` (3: the usable-when items in the browser at 390 px and on the desktop) and a
+    `test/acceptance/SupplierPortalFixtures` (the walk's and the remote check's documents and a signed-in supplier contact),
+    `test/acceptance/client/SupplierPortalHttp` (3: the usable-when items in the browser at 390 px and on the desktop) and a
     RemoteHttp feature (the quote with a file and the acknowledgement through the remote frontend, the superseded link).
 - BOSS:
   - Supplier360's Invite to the Supplier app (`template/PurchasingSupplierPortal.xml`, one transition-include and one
@@ -3279,17 +3279,17 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
 
 **Built Nov 4 (P17).**
 - **Terminal twins and server-static.** Purchasing has no `.qvue` screen, so its twins are its XML screens in tui, each
-  list's `render-mode` section included. `acceptance/TuiRender.spec.js` now renders every Purchasing screen and its shared
+  list's `render-mode` section included. `test/acceptance/TuiRender.spec.js` now renders every Purchasing screen and its shared
   mounts on their route fixture (PurchasingSpecLib) and checks each fixture's text in the twin; it fails a Purchasing route
   fixture that no screen renders, as for Warehouse and Manufacturing. No Purchasing screen lacked a usable twin (all pass,
-  with the fixtures' texts). `acceptance/Purchasing/PurchasingServerStatic.spec.js` (one per app per mode, on
+  with the fixtures' texts). `test/acceptance/Purchasing/PurchasingServerStatic.spec.js` (one per app per mode, on
   ServerStaticLib): the full static report of the 53 Purchasing XML screens on their route fixtures, the marked ones clean
   and rendering their static qvt page without an error (impl-manufacturing F147's check). Marked `server-static="qvt"`, the
   screens the report found clean: the three quick creates (NewPurchaseOrder, NewPurchaseRequest, NewQuoteRequest) and
   Products/ProductFind. The others keep a list's condition outside its form-list (the form-list-key rule) or request data
   in a text, as most Warehouse and Manufacturing screens do; ReturnAuthorization (a print) and PlanSchedule (a tab) are
   clean but left unmarked.
-- **Design §14.4 "unauthorized action and standalone use"**, `acceptance/Purchasing/PurchasingAccessWalk.spec.js` (7
+- **Design §14.4 "unauthorized action and standalone use"**, `test/acceptance/Purchasing/PurchasingAccessWalk.spec.js` (7
   features, about 60 s with its start), with artifact authorization on. Each side, Retail and Ziziwork Services, gets its
   own records marked with a secret text and an odd amount: a placed order with its expected receipt, a purchase request, an
   RFQ with a requested quote, an agreement, a bill, a supplier return and an organization-scoped supplier price, and Retail a

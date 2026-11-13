@@ -311,7 +311,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/People/`, `acceptance/client/People/`), named in the phase;
+  scenario are acceptance tests to write (`test/acceptance/People/`, `test/acceptance/client/People/`), named in the phase;
   running them is not part of Done.
 
 ## 3. Phases
@@ -420,7 +420,7 @@ permissions, scope), PE-18 (the root).
     Home's one qvt render. A later phase adds a case only for an access rule it adds.
   - Mantle `test/humanres/PeopleScope` (scope by organization, employment dates and reporting line; a supplied
     party outside scope refused by reason code).
-- **Usable when** (an acceptance test to write, `acceptance/People/PeopleFoundationWalk`): the menu renders for each
+- **Usable when** (an acceptance test to write, `test/acceptance/People/PeopleFoundationWalk`): the menu renders for each
   group; `people.hr` opens Home with ORG_ZIZI_RETAIL's counts and not ORG_ZIZI_SERVICES'; `people.employee` is
   refused the root; a Projects client and a PASS public account are refused the root and every `ironstone.people`
   service; Admin's Health shows People's setup check and SettingsHome People's entry, each only to a user who may
@@ -496,7 +496,7 @@ permissions, scope), PE-18 (the root).
   the HR officer). Mantle `test/humanres/PeopleScope` (4 features, 1.1 to 1.8 s: employers and units, another and a forged
   employer refused, an edit permission alone reading nothing; a person admitted by employment and its dates, the reporting line
   and self, refused by reason code otherwise; Home's distinct headcount against employments, joins, exits and due work; the
-  readiness contract and its refusals). Acceptance, written and not run: `acceptance/People/PeopleFoundationWalk` (4 features:
+  readiness contract and its refusals). Acceptance, written and not run: `test/acceptance/People/PeopleFoundationWalk` (4 features:
   every group's menu with each entry opened and the other refused; `people.hr`'s Home of Retail and not Services, the
   administrator's of Services, the manager's notice, `people.employee` refused; the client and the PASS account refused the
   root and every `ironstone.people` service; Admin's Health and settings index showing People's rows to `ADMIN` and not to the
@@ -642,7 +642,7 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
 - **Specs:** Mantle `test/humanres/PeopleDirectory` (a reader's answer holds no private contact, identity or pay
   field; self edits only the permitted fields; a second employer's HR sees its own employment only); BOSS
   `PeopleEmployees` (Employee360's one qvt render as HR; the directory export's columns).
-- **Usable when** (`acceptance/People/PeopleDirectoryUsable`; design §14.3 "Confidentiality across every path", its
+- **Usable when** (`test/acceptance/People/PeopleDirectoryUsable`; design §14.3 "Confidentiality across every path", its
   directory half): `people.reader` finds a colleague and sees work identity only, through the list, the palette, the
   export and a forged Employee360 link; `people.hr` corrects a home address; the employee corrects their own
   preferred name; Insights opens the Overview from a drill-down; Admin's UserDetail link opens Employee360 only for
@@ -712,7 +712,7 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
   employment's notes and files an HR officer's of its employer and not the reader's or another employer's, through the panels'
   record check; the People panels' files data opening the employment and refusing a Party), and its menus and keys now hold
   Employees and `g e` (PeopleSpecLib `staffMenu`, `adminMenu`). Acceptance, written and not run:
-  `acceptance/People/PeopleDirectoryUsable` (5 features: the reader through list, palette, export and a forged link with a
+  `test/acceptance/People/PeopleDirectoryUsable` (5 features: the reader through list, palette, export and a forged link with a
   private phone and passport never shown; HR corrects a home address by the transition; the employee's preferred name and not
   legal name in Commons; Insights' Overview from a drill with the return and its transition refused; UserDetail's and
   PersonDetail's link for ADMIN and not for the identity operator or another app's user).
@@ -859,7 +859,7 @@ Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
   units that are `OrgInternal` stay legal organizations (F12, §5 Q6); the two demo teams keep their members.
 - **Specs:** Mantle `test/humanres/PeopleOrganization` (a cycle refused; a reparent dated, the old row ended; a
   team membership changes no employment; a manager change dated and refused when cyclic).
-- **Usable when** (`acceptance/People/PeopleOrganizationUsable`): `people.hr` adds a department and a team, moves
+- **Usable when** (`test/acceptance/People/PeopleOrganizationUsable`): `people.hr` adds a department and a team, moves
   the department from a date and sees both parents by as-of date; changes a manager from next month; `people.reader`
   walks the chart one level at a time in the browser and the terminal and edits nothing.
 
@@ -927,7 +927,7 @@ Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
   `PeopleAccess` gains one feature (0.3 s: a unit's members and a reporting line, HR of Retail answered for what it asks with the
   parameters the reader is refused with `PERMISSION_DENIED`, Services' unit and employee refused to Retail's HR) and its keys and
   readiness expectations follow the demo (`ids.keys`; departments ready). Acceptance, written and not run:
-  `acceptance/People/PeopleOrganizationUsable` (3 features: HR adds a department and a team through `storeUnit`, moves the department
+  `test/acceptance/People/PeopleOrganizationUsable` (3 features: HR adds a department and a team through `storeUnit`, moves the department
   from next month and sees both parents by date; HR changes Rafael's manager from next month through `changeManager`; the reader walks
   the chart top, Greta, Hannah in qvt and tui with no change offered, and a forged change and unit refused).
 - Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleOrganization,
@@ -1076,7 +1076,7 @@ P3's units.
 - **Specs:** Mantle `test/humanres/PeoplePositions` (a department outside the employer refused; vacancy at a date;
   a band out of order refused; a grade's amounts absent without `PAYROLL_VIEW`); BOSS `PeoplePositions`
   (PositionDetail's one qvt render).
-- **Usable when** (`acceptance/People/PeoplePositionsUsable`): `people.hr` defines a job class, plans two seats in
+- **Usable when** (`test/acceptance/People/PeoplePositionsUsable`): `people.hr` defines a job class, plans two seats in
   a department and sees them vacant; `people.payroll` sets a grade band; `people.hr` sees the grade's name and no
   amounts.
 
@@ -1142,7 +1142,7 @@ P3's units.
   `PeopleAccess` gains one feature (0.5 s: a position's and a job class's change, HR of Retail answered for what it asks with the parameters
   the reader is refused with, Services' position refused to Retail's HR, a manager reading Store Operations' seat and not Merchandising's,
   a grade's change payroll's and refused to HR, payroll's answer with the band and HR's without) and its menu feature checks the Staffing
-  group (PeopleSpecLib `staffingMenu`, the menus and keys). Acceptance, written and not run: `acceptance/People/PeoplePositionsUsable`
+  group (PeopleSpecLib `staffingMenu`, the menus and keys). Acceptance, written and not run: `test/acceptance/People/PeoplePositionsUsable`
   (3 features: HR defines a class with a skill and plans two seats in Merchandising through the transitions and sees them vacant in the list,
   the seat in tui and the class; payroll sets a grade's band and a raise from next month through PayGrades and reads both, a band out of
   order refused; HR puts the grade on a seat and sees its name and no amount on PayGrades, the grade opened, PositionDetail, the service's
@@ -1289,7 +1289,7 @@ Design §12 ApprovalPolicies, Lookups, §13 Approvals, §5 PositionDetail's Requ
 - **Specs:** Mantle `test/humanres/PeopleApprovals` (routing order; self never an approver; no approver waits; a
   changed source invalidates the pending decision; a decision retried answers the first); BOSS `PeopleApprovals`
   (the mount lists only People's topics for the approver).
-- **Usable when** (`acceptance/People/PeopleApprovalsUsable`): `people.admin` sets a rule that a position needs the
+- **Usable when** (`test/acceptance/People/PeopleApprovalsUsable`): `people.admin` sets a rule that a position needs the
   department head; `people.hr` requests a seat's activation and cannot approve it; the head approves it from
   Approvals and from the notification tray; ResolvePreview explains the route.
 
@@ -1376,7 +1376,7 @@ Design §12 ApprovalPolicies, Lookups, §13 Approvals, §5 PositionDetail's Requ
   a rule's and a lookup's change, the administrator answered for what they ask with the parameters HR is refused with, a route read by
   Retail's HR and refused to the reader and for Services' position, a decision past the manager's permission and refused to the reader)
   and its menu feature checks Approvals, `g a` and Settings' tabs (PeopleSpecLib `staffMenu`, `adminMenu`, `settingsMenu`, `keys`,
-  `plannedPositionId`). Acceptance, written and not run: `acceptance/People/PeopleApprovalsUsable` (3 features: the administrator's rule
+  `plannedPositionId`). Acceptance, written and not run: `test/acceptance/People/PeopleApprovalsUsable` (3 features: the administrator's rule
   through Approval rules, the preview in html and tui and Hannah's own request waiting; HR's request of the seasonal seat through
   PositionDetail, HR's decision refused, the reader and HR with no notice, Hannah's approval from People's Approvals activating it and
   PositionDetail in tui; a second seat approved from the tray, Commons' `Panel/Notifications`, twice, one decision kept).
@@ -1559,7 +1559,7 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
   from its date; a separation leaves another employer's employment alone; a stale stamp refused). BOSS
   `PeopleHire` (HireEmployee's one qvt render). The golden walk `PeopleHireWalk` (find a person, hire, open
   Employee360, transfer).
-- **Usable when** (`acceptance/People/PeopleHireUsable`; design §14.3 "Hire, complete a legacy relationship and
+- **Usable when** (`test/acceptance/People/PeopleHireUsable`; design §14.3 "Hire, complete a legacy relationship and
   rehire" and "Transfer, manager change and separation", without tasks and access): `people.hr` hires the demo
   contractor, completes an orphan relationship without a second one, rehires a leaver, transfers an employee after
   approval, and separates one whose other employment stays.
@@ -1653,7 +1653,7 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
   department's members read only and Close unit. Client walk `test/client/People/PeopleHireWalk` (registered in `suite.js`; 8.9 s, two
   runs 8.9 to 9.1 s): the HR officer finds no one in the directory, hires a new person through the wizard into Store Operations under
   Hannah, lands on Employee360 with the department, and asks for the transfer to Merchandising, which waits for Hannah. Acceptance,
-  written and not run: `acceptance/People/PeopleHireUsable` (3 features: the contractor hired into the vacant seat beside her contractor
+  written and not run: `test/acceptance/People/PeopleHireUsable` (3 features: the contractor hired into the vacant seat beside her contractor
   relationship with a second Hire answering the first and no login made, the orphan completed, Walter rehired, an overlap refused; Tomas's
   transfer asked by HR, refused to HR's own decision, listed in Hannah's Approvals and on his record with Approve, approved from her
   notice and applied, a looping manager change refused; Priya separated from Retail after the administrator names Hannah the HR
@@ -1867,7 +1867,7 @@ EquipmentDetail, Employee360's AssignedEquipment; PE-02, PE-19 (the `employees` 
   BOSS `PeopleLifecycle` (a hire's SECA requests provisioning after commit and a failure leaves the hire; the
   import refuses a password column and a holder of `PEOPLE_HR_EDIT` without `PEOPLE_IMPORT`, and applies valid
   rows).
-- **Usable when** (`acceptance/People/PeopleLifecycleUsable`; design §14.3 "Separation and equipment" and "Pay
+- **Usable when** (`test/acceptance/People/PeopleLifecycleUsable`; design §14.3 "Separation and equipment" and "Pay
   rates and phones", its phone half; design-admin §15.3 "Hire and invitation", its People half): a hire starts its
   onboarding tasks and one invitation; the IT task shows Admin's outcome; the new employee's phone lists the
   onboarding task and completes it, and lists no offboarding task; a separation raises a return task per held
@@ -1962,7 +1962,7 @@ EquipmentDetail, Employee360's AssignedEquipment; PE-02, PE-19 (the `employees` 
   without `PEOPLE_IMPORT` and the reader, hiring two rows and naming the repeat; ChecklistTemplates', EquipmentDetail's and
   WorkItemDetail's People renders, one qvt each); `PeopleAccess` gains one feature (0.46 s: the checklist and equipment rules and the
   two Settings screens) and its menu, capability and Settings cases follow HR's opened Settings; PeopleEmployees' Employee360 render
-  checks Assigned equipment. Acceptance, written and not run: `acceptance/People/PeopleLifecycleUsable` (4 features).
+  checks Assigned equipment. Acceptance, written and not run: `test/acceptance/People/PeopleLifecycleUsable` (4 features).
 - Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle WorkProcess, UserProvisioning, PeopleChecklists,
   PeopleScheduledChanges, PeopleEmployment, PeopleOrganization, PeopleApprovals, PeoplePositions, PeopleScope, PeopleDirectory,
   HumanResServices, PayrollServices, PayrollAdjustments, UserLifecycle, StaffIdentity, StaffInvitation, StaffInvitationImport, Dav,
@@ -2169,7 +2169,7 @@ stage 1.
 - **Specs:** BOSS `PeopleSelfService` (the self group opens SelfService under Commons and is refused
   `People/Employees`; a supplied `partyId` changes nothing; the one qvt render); Mantle `PeopleScope` gains the
   manager's team case.
-- **Usable when** (`acceptance/People/PeopleSelfServiceUsable`): `people.employee`, with no People launcher, opens
+- **Usable when** (`test/acceptance/People/PeopleSelfServiceUsable`): `people.employee`, with no People launcher, opens
   SelfService from Commons Home, sees their employment and requests, and opens their own Employee360;
   `people.manager` sees their reports and waiting decisions in MyTeam and no one else's.
 
@@ -2240,7 +2240,7 @@ stage 1.
   feature (0.42 s: the employee opens SelfService under People, the one html render, and is refused Employees, My team and
   Approvals; My team the manager's, the html render, the reader refused), its context feature the employee's own context and its
   menu feature the manager's menu (`managerMenu`; `adminMenu` gains My team). Acceptance, written and not run:
-  `acceptance/People/PeopleSelfServiceUsable` (2 features); `PeopleFoundationWalk`'s manager Home check follows Home's new text.
+  `test/acceptance/People/PeopleSelfServiceUsable` (2 features); `PeopleFoundationWalk`'s manager Home check follows Home's new text.
 - Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleApprovals,
   PeopleChecklists, PeopleEmployment, PeopleScheduledChanges, PeopleOrganization, PeoplePositions, WorkProcess, UserProvisioning,
   HumanResServices, WorkMyTasks, WorkProjectItems, WorkProjectServices, CommonsToday, CalendarServices, Dav, RecordLinks,
@@ -2391,7 +2391,7 @@ Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCale
 - **Specs:** Mantle `test/humanres/PeopleSchedules` (overlapping intervals refused; a person with a schedule gets
   its hours and one without today's; a holiday of the schedule's category takes the day; a DST week's hours);
   Mantle's Work capacity specs unchanged.
-- **Usable when** (`acceptance/People/PeopleSchedulesUsable`): `people.hr` defines a four-day week in another zone,
+- **Usable when** (`test/acceptance/People/PeopleSchedulesUsable`): `people.hr` defines a four-day week in another zone,
   assigns it from a date, adds a holiday, and CapacityPreview and Projects' PersonDetail show the same hours.
 
 **Built Nov 11 (P9).** mr-mantle effe0fa8, mr-boss (branch `ppl/p9`).
@@ -2462,7 +2462,7 @@ Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCale
   schedule refused to Retail's HR, WorkingSchedules' one html render as HR, the reader refused the screen, the manager refused
   Holidays), its menu feature the HR, manager, reader and administrator menus and the Time group (`hrMenu`, `hrTimeMenu`,
   `managerTimeMenu`; `adminMenu` and `managerMenu` gain Time, `keys` `g w`) and its capability table `schedules`. Acceptance, written
-  and not run: `acceptance/People/PeopleSchedulesUsable` (2 features: people.hr's Berlin four-day week, calendar, holiday and
+  and not run: `test/acceptance/People/PeopleSchedulesUsable` (2 features: people.hr's Berlin four-day week, calendar, holiday and
   assignment through the screens' transitions; the preview and Projects' PersonDetail giving Rafael 40 h and 30 h for the same weeks
   from the schedule); `PeopleFoundationWalk` reads `ids.adminMenu`, which now has Time, unchanged as a file.
 - Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleSchedules, PeopleEmployment, PeopleScheduledChanges,
@@ -2632,7 +2632,7 @@ missing time"; PE-18, PE-23.
 - **Specs:** BOSS `PeopleTime` (a time approver without Projects opens Timesheets under People; Rates lists pay
   rates for `people.payroll` and none for `people.hr`); Mantle `test/humanres/LaborCostingRate` (the most specific
   rate; no rate is unpriced, never a pay rate; a production labor event priced from a `RaprCost` row).
-- **Usable when** (`acceptance/People/PeopleTimeUsable`; design §14.3 "Pay rates and phones", its rates half): an
+- **Usable when** (`test/acceptance/People/PeopleTimeUsable`; design §14.3 "Pay rates and phones", its rates half): an
   employee submits a week from People; their manager approves it there; `people.payroll` sets a pay rate that a
   Projects manager with `TIME_ENTRY_RATE` cannot see; a finance administrator sets a costing rate that People shows
   read only.
@@ -2703,7 +2703,7 @@ missing time"; PE-18, PE-23.
   the employee opens My time under People by the area's grant and is refused Payroll and Employees; HR refused Rates), its menu
   feature the payroll operator's menu and the Time group, its capabilities the `payroll` area, its context feature the
   employee's My time link; `PeopleSpecLib`'s menus and keys; `PeopleSelfService`'s SelfService render checks My time and Weeks to
-  submit, its My team render Last week and Remind missing time. Acceptance, written and not run: `acceptance/People/PeopleTimeUsable`
+  submit, its My team render Last week and Remind missing time. Acceptance, written and not run: `test/acceptance/People/PeopleTimeUsable`
   (3 features); `PeopleFoundationWalk` walks the admin menu, which now holds Time and Payroll.
 - Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle LaborCostingRate, ProductionShopFloor,
   HumanResServices, PayrollServices, PeopleChecklists, PeopleScope, PeopleDirectory, CommonsToday, WorkManualTimeBilling,
@@ -2884,7 +2884,7 @@ Design §7 (the model), LeavePolicies, LeavePolicyDetail, LeaveAllocations, Leav
   the Assistant for self scope only (`exposeMcp` N).
 - **Specs:** Mantle `test/humanres/LeaveLedger` (an allocation posts once per key; a duplicate period grant
   refused; accrual run twice posts once; a policy change keeps posted entries; a balance as of a date).
-- **Usable when** (`acceptance/People/PeopleLeavePoliciesUsable`; design §14.3 "Accrual and schedule changes"):
+- **Usable when** (`test/acceptance/People/PeopleLeavePoliciesUsable`; design §14.3 "Accrual and schedule changes"):
   `people.hr` defines an annual-leave policy with monthly accrual and a blocked week, assigns it, allocates to a
   department with one row refused and named, runs accrual twice, and reads each balance's movements.
 
@@ -2958,7 +2958,7 @@ Design §7 (the model), LeavePolicies, LeavePolicyDetail, LeaveAllocations, Leav
   refused to Retail's HR, LeavePolicyDetail's one html render as HR, the reader, manager and employee refused LeavePolicies, the
   manager's LeaveBalances html render, the employee's `get#MyBalances` under authorization and `get#Balances` refused them, the two
   choices with a selected value off the page and Services' policy not offered), its menu feature the Time group (`hrTimeMenu`,
-  `managerTimeMenu`) and keys (`g b`). Acceptance, written and not run: `acceptance/People/PeopleLeavePoliciesUsable` (4 features:
+  `managerTimeMenu`) and keys (`g b`). Acceptance, written and not run: `test/acceptance/People/PeopleLeavePoliciesUsable` (4 features:
   people.hr's policy with monthly accrual and a blocked week through LeavePolicies and LeavePolicyDetail, assigned to Tomas and Ines;
   five days allocated to Store Operations through Allocations, Rafael refused and named, a double submit posting nothing; the accrual
   run twice, six then none; each balance's movements on LeaveBalances, 9.5 days).
@@ -3135,7 +3135,7 @@ Design §7 LeaveRequests, LeaveRequestDetail, §13 TeamCalendar, Employee360's T
   `test/humanres/LeaveRequests` (two requests on one day; an approval that would overspend refused; cancel reverses
   once; a blocked day refused); BOSS `PeopleLeave` (LeaveRequestDetail's one qvt render; the calendar shows no
   reason).
-- **Usable when** (`acceptance/People/PeopleLeaveUsable`; design §14.3 "Partial-day leave and simultaneous
+- **Usable when** (`test/acceptance/People/PeopleLeaveUsable`; design §14.3 "Partial-day leave and simultaneous
   requests"): an employee requests a morning and an afternoon on one day from their phone; their manager approves
   from Approvals; the team calendar and Projects' capacity show the absence without its reason; cancelling restores
   the balance.
@@ -3220,7 +3220,7 @@ Design §7 LeaveRequests, LeaveRequestDetail, §13 TeamCalendar, Employee360's T
   and its agent render with "Not shared with AI" in place of the reason; the team calendar's events and Leave requests' list without
   the reason or type, and the employee told another's request is not available); PeopleAccess's menu and context features updated
   (the Time group's two new screens, the key `g l`, Request leave in quick create, the self-service context's leave links).
-  Acceptance, written and not run: `acceptance/People/PeopleLeaveUsable` (3 features: Tomas asks a morning and an afternoon of one
+  Acceptance, written and not run: `test/acceptance/People/PeopleLeaveUsable` (3 features: Tomas asks a morning and an afternoon of one
   day at phone width through the preview and Request leave; Hannah approves both from Approvals; the team calendar shows both without
   the reason or type and capacity takes the day; Tomas cancels the afternoon, Hannah approves, the half day back once).
 - Tests run (this worktree's Debug binary, `--debug --nobuild`, this phase's runtime): cargo tests of the framework's touched crates
@@ -3387,7 +3387,7 @@ Design §6 (attendance), Attendance, TimeImport, SelfService's Clock; PE-05 (wit
   §15), TimeImport, SelfService's Clock and quick create "Clock in" where the employment has clocking on.
 - **Specs:** Mantle `test/humanres/Attendance` (a duplicate source key ignored; a missing out-punch flagged; a
   correction keeps the raw punches; an overnight shift on its start day); BOSS `PeopleAttendance`.
-- **Usable when** (`acceptance/People/PeopleAttendanceUsable`; design §14.3 "Attendance, timesheets and DST", its
+- **Usable when** (`test/acceptance/People/PeopleAttendanceUsable`; design §14.3 "Attendance, timesheets and DST", its
   evidence half): an employee clocks in and out from SelfService; a missed punch is corrected and approved by the
   manager; a device file imported twice adds its rows once and names the bad one.
 
@@ -3470,7 +3470,7 @@ Design §6 (attendance), Attendance, TimeImport, SelfService's Clock; PE-05 (wit
   `record#Punch` with the same parameters; Time import opened by HR and refused to the reader, the manager and the employee, the
   reader refused `preview#Import` with the parameters HR is answered, Services' employer refused to Retail's HR) and its context
   feature the employee's Attendance and Clock links; PeopleSpecLib's Time menus and keys; PeopleSelfService's SelfService render
-  checks the clock and My attendance. Acceptance, written and not run: `acceptance/People/PeopleAttendanceUsable` (3 features: Tomas
+  checks the clock and My attendance. Acceptance, written and not run: `test/acceptance/People/PeopleAttendanceUsable` (3 features: Tomas
   clocks in and out from SelfService at phone width and his attendance shows the day; a door file has his in-punch of a past day with
   no out, his attendance names it, he asks a correction through Attendance and Hannah approves it from Approvals, the punch kept; a
   device file imported twice through Time import adds its rows once and names the bad one).
@@ -3640,7 +3640,7 @@ Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its rost
   ProductionSchedule answers the same, and Manufacturing's specs pass unchanged.
 - **Specs:** Mantle `test/humanres/ShiftRoster` (an overlap and a leave conflict refused; a published shift
   changes capacity once); BOSS `PeopleRoster` (the qvt render and the TUI twin, each for its own template).
-- **Usable when** (`acceptance/People/PeopleRosterUsable`): a manager rosters a week for their team, is refused a
+- **Usable when** (`test/acceptance/People/PeopleRosterUsable`): a manager rosters a week for their team, is refused a
   shift over approved leave, publishes, and the workers see the shifts in SelfService and on the team calendar; the
   terminal makes the same change.
 
@@ -3711,7 +3711,7 @@ Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its rost
   PeopleAccess gains one feature (0.30 s: ShiftRoster opened by the manager and HR, refused to the reader and the employee; Tomas's
   shift rostered by his manager, the reader refused `PERMISSION_DENIED` with the same parameters, Services' employee
   `RECORD_UNAVAILABLE` to Retail's HR; the employee's `get#MyShifts` by its own grant) and its menus and keys (`hrTimeMenu`,
-  `managerTimeMenu`, `g h`). Acceptance, written and not run: `acceptance/People/PeopleRosterUsable` (3 features: Tomas's Wednesday
+  `managerTimeMenu`, `g h`). Acceptance, written and not run: `test/acceptance/People/PeopleRosterUsable` (3 features: Tomas's Wednesday
   asked and approved; Hannah rosters his week through the timeline's transitions, a preview and Save shift each, the Wednesday refused
   `LEAVE_CONFLICT` and shaded without its reason; she publishes, Tomas's SelfService (under Commons) and the team calendar show the
   four shifts and he is told once; HR changes his Friday through ShiftRosterTui's Shift, preview and Save shift, and he is told).
@@ -3892,7 +3892,7 @@ Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDeta
 - **Specs:** Mantle `test/humanres/ExpenseClaims` (a claimant creates only their own; manager approval leaves
   InvoiceReceived; a claim reserved for one route refused the other; an advance's outstanding from delivered less
   applied); BOSS `PeopleExpenses`.
-- **Usable when** (`acceptance/People/PeopleExpensesUsable`; design §14.3 "Expense reimbursement and advances",
+- **Usable when** (`test/acceptance/People/PeopleExpensesUsable`; design §14.3 "Expense reimbursement and advances",
   its AP half): an employee photographs a receipt, submits; the manager approves; finance codes and approves it in
   ExpensePosting; an approved advance is paid by Accounting and applied to the claim, and People shows what is
   outstanding.
@@ -3971,7 +3971,7 @@ Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDeta
   Expense claims opened to the employee by the area's grant and refused another app's user; a claim read by its claimant and manager
   and refused to the reader with the same parameters; HR's claim for Retail's employee accepted and Services' refused; Payroll's
   InvoiceDetail refused to HR) and its context feature the employee's three expenses links; PeopleSpecLib's menus (Expenses) and keys
-  (`g x`). Acceptance, written and not run: `acceptance/People/PeopleExpensesUsable` (3 features: Tomas asks an advance on his phone,
+  (`g x`). Acceptance, written and not run: `test/acceptance/People/PeopleExpensesUsable` (3 features: Tomas asks an advance on his phone,
   Hannah approves it from her notice, finance pays it in Expense posting; he makes a claim, adds a hotel with its receipt and a taxi
   after Read receipt, submits; Hannah approves from her notice, finance sees it in Expense posting, approves it for payment and applies
   the advance, People shows 60 left and the advance settled).
@@ -4190,7 +4190,7 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
   People purpose refused a public publication; a holder of one purpose's permission refused another's form);
   BOSS `PeopleRecruiting` (the board's one qvt render; People's forms list holds no feedback form, read from the
   service); CaseFeedback's and Customer Service's survey specs unchanged.
-- **Usable when** (`acceptance/People/PeopleRecruitingUsable`): `people.admin` builds a scorecard form under
+- **Usable when** (`test/acceptance/People/PeopleRecruitingUsable`): `people.admin` builds a scorecard form under
   People's Forms while Customer Service's feedback forms work as before; a recruiter opens a seat, receives an
   application by mail with its resume, schedules a video interview, and two panel members score it without seeing
   each other's scorecards or another opening's candidates.
@@ -4275,7 +4275,7 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
   s: the applications of Retail's opening read by its recruiter, the HR officer refused with the same parameters, Services' opening
   refused to Retail's recruiter, an application refused to the HR officer; Forms the administrator's, the HR officer refused) and
   its menus and keys (`settingsMenu` Forms, `staffingMenu` Openings, Applicants, Interviews, `g n`, `g v`). Acceptance, written and
-  not run: `acceptance/People/PeopleRecruitingUsable` (3 features: people.admin builds and publishes a scorecard through Forms'
+  not run: `test/acceptance/People/PeopleRecruitingUsable` (3 features: people.admin builds and publishes a scorecard through Forms'
   transitions while Customer Service's FeedbackForms shows its feedback form and not the scorecard; the recruiter opens Retail's
   vacant seat with a tag and the scorecard, an application arrives by mail with its resume and shows on the board; a video
   interview with Hannah and Ines (a spec-local account), each submitting through ApplicantDetail, Ines reading only hers, the
@@ -4464,7 +4464,7 @@ Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
   accepted offer.
 - **Specs:** Mantle `test/humanres/Offers` (pay terms absent without the grant; an accepted offer hires once; a
   recruiter's offer grants no account or payroll right).
-- **Usable when** (`acceptance/People/PeopleOffersUsable`): a recruiter drafts an offer, HR approves, the candidate's
+- **Usable when** (`test/acceptance/People/PeopleOffersUsable`): a recruiter drafts an offer, HR approves, the candidate's
   acceptance is recorded, and HR hires from it; a second hire from the same offer is refused.
 
 **Built Nov 12 (P17).** mr-mantle b2b73796, mr-boss (branch `ppl/p17`).
@@ -4541,7 +4541,7 @@ Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
   offer, no pay), the draft discarded and no hire made, so Retail's vacant seat stays vacant). `PeopleAccess` gains one feature (0.34
   s: an offer read by Retail's recruiter and refused to the reader with the same parameters and to Retail's recruiter for Services'
   offer; the pay refused to the HR officer with the parameters payroll is answered; the employment letter print HR's, the reader
-  refused). Acceptance, written and not run: `acceptance/People/PeopleOffersUsable` (3 features: the recruiter's offer from
+  refused). Acceptance, written and not run: `test/acceptance/People/PeopleOffersUsable` (3 features: the recruiter's offer from
   ApplicantDetail, payroll's pay on OfferDetail, submit and the recruiter's own approval refused; HR's approval, the issue with the
   letter payroll's, the acceptance; the hire through Identity's Start from the offer and ConfirmHire's Hire, the second hire
   `OFFER_USED`, no account or salary, the application Hired; on a spec-local seat of Store Operations).
@@ -4716,7 +4716,7 @@ Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels)
 - **Specs:** Mantle `test/humanres/Qualifications` (an expired or unverified certificate fails a verified
   requirement; a self-declared skill does not satisfy one; the staffing answer holds no number or file); BOSS
   `PeopleSkills` (the matrix and its TUI twin).
-- **Usable when** (`acceptance/People/PeopleSkillsUsable`; design §14.3 "Qualifications and reviews", its first
+- **Usable when** (`test/acceptance/People/PeopleSkillsUsable`; design §14.3 "Qualifications and reviews", its first
   half): an employee submits a certificate, a verifier accepts it, the matrix shows the gap closed, and a staffing
   reader sees valid or expiring and nothing else.
 
@@ -4814,7 +4814,7 @@ Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels)
   Qualifications by the area's grant), its menu feature the Development group and the employee's context the new link (PeopleSpecLib:
   the menus, `developmentMenu`, `readerDevelopmentMenu`, the keys, the P18 ids); PeopleEmployees' Employee360 render checks Skills and
   reviews; Mantle PeopleApprovals' families list gains `QualificationType`. Acceptance, written and not run:
-  `acceptance/People/PeopleSkillsUsable` (3 features: Tomas submits his first aid certificate from Qualifications and his gap
+  `test/acceptance/People/PeopleSkillsUsable` (3 features: Tomas submits his first aid certificate from Qualifications and his gap
   stays, waiting; the learning administrator verifies it from Qualifications, Tomas refused his own, and the matrix shows it met; his
   manager reads its kind and validity without number or issuer, on the service and the page, and the directory reader's staffing
   check answers qualified with no number, issuer or title).
@@ -4993,7 +4993,7 @@ P18.
 - **Screens:** Training, TrainingDetail (Enrollment, Results with a response of a training-assessment form, the
   completion certificate); the Today source "training due".
 - **Specs:** Mantle `test/humanres/Training` (completion retried grants once; a failed assessment kept).
-- **Usable when** (`acceptance/People/PeopleTrainingUsable`): a session is scheduled, employees enroll, the trainer
+- **Usable when** (`test/acceptance/People/PeopleTrainingUsable`): a session is scheduled, employees enroll, the trainer
   records results, and those who passed hold the qualification with its expiry.
 
 **Built Nov 12 (P19).** mr-mantle ce41a51d, mr-boss (branch `ppl/p19`).
@@ -5081,7 +5081,7 @@ P18.
   development administrator and refused to the HR officer with the same parameters, an assessment accepted for the trainer and
   refused to the reader with the same parameters, Services' session refused to Retail's development administrator, the employee's
   Training by the area's own grant), its menu feature's Development group (PeopleSpecLib `developmentMenu`, `readerDevelopmentMenu`,
-  the P19 ids) and the employee's context links. Acceptance, written and not run: `acceptance/People/PeopleTrainingUsable` (4
+  the P19 ids) and the employee's context links. Acceptance, written and not run: `test/acceptance/People/PeopleTrainingUsable` (4
   features: the learning administrator schedules a fire warden session from Training trained by Hannah; Tomas asks for a place from
   Training, Hannah approves it on TrainingDetail, the learning administrator enrolls Rafael; after the session Hannah marks both
   attended, Tomas passes, Rafael fails and passes a second attempt; both hold the fire warden certificate, verified, about two years,
@@ -5364,7 +5364,7 @@ form) and P18.
   content host and the release PDF.
 - **Specs:** Mantle `test/humanres/Reviews` (private notes absent from the employee's answer before and after
   release; a new manager does not read the earlier manager's notes; a goal is in no task list).
-- **Usable when** (`acceptance/People/PeopleReviewsUsable`; design §14.3 "Qualifications and reviews", its second
+- **Usable when** (`test/acceptance/People/PeopleReviewsUsable`; design §14.3 "Qualifications and reviews", its second
   half): a cycle starts for a team, an employee and their manager assess, the review is released and acknowledged,
   and the manager's private notes appear in no export or Chatter.
 
@@ -5476,7 +5476,7 @@ form) and P18.
   parameters, Services refused to Retail's administrator; Review cycles opened by the administrator and refused to the HR officer and
   the employee; Reviews opened to the employee by the area's grant; the employee's self-service link) and its menu feature the
   Performance group (PeopleSpecLib: every menu gains Performance, `performanceMenu`, `developPerformanceMenu`, the key `g f`,
-  `reviewTemplateId`). Acceptance, written and not run: `acceptance/People/PeopleReviewsUsable` (4 features: the review administrator
+  `reviewTemplateId`). Acceptance, written and not run: `test/acceptance/People/PeopleReviewsUsable` (4 features: the review administrator
   adds a template asking for approval and starts Store Operations' cycle from Review cycles; Tomas submits his self assessment, Hannah
   keeps a private note, assesses him and finalizes; the HR officer approves on ReviewDetail, Hannah releases, Tomas reads and prints
   it, acknowledges it and agrees a goal from it; the note in none of Reviews' CSV, the review's Chatter panel, Tomas's timeline, the
@@ -6006,7 +6006,7 @@ Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends sta
 - **Specs:** Mantle `test/request/PeopleCases` (a manager, an HR officer without the case and a linked-task assignee
   each refused with a valid id; no triage notice, case profile or completion from work); BOSS `PeopleAccess` gains
   the case rule.
-- **Usable when** (`acceptance/People/PeopleCasesUsable`; design §14.3 "Confidentiality across every path", its case
+- **Usable when** (`test/acceptance/People/PeopleCasesUsable`; design §14.3 "Confidentiality across every path", its case
   half): an employee files a case; only the intake handler sees it, in the list, the palette, search, files and
   Assist; assigning a task to IT opens nothing of the case to its assignee.
 
@@ -6084,7 +6084,7 @@ Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends sta
   the manager, HR, the People administrator and ADMIN refused with the same parameters; no Commons list, access check or lookup
   holds it; RequestDetail's one qvt render as the handler inside the opt-out, and its html render as the employee, opened by their own
   grant; Grievances by its own grant, refused another app's user; the Employees group with Grievances). Acceptance, written and not run:
-  `acceptance/People/PeopleCasesUsable` (3 features: Tomas raises a concern from Grievances; only people.case sees it, through the
+  `test/acceptance/People/PeopleCasesUsable` (3 features: Tomas raises a concern from Grievances; only people.case sees it, through the
   list, the detail, its notes and files, and the manager, HR, the People administrator and ADMIN see nothing of it in Grievances,
   RequestDetail, the record rule, Commons' list and detail, the lookup and search, nor an agent's render of the handler's page; the
   handler asks IT for work, and IT reads the task and nothing of the case, the task out of their CalDAV and everyone else's reach).
@@ -6433,7 +6433,7 @@ PayGroups; PE-08, PE-09 (the evaluator), PE-12 (the registration).
 - **Specs:** framework `DecimalExpression` (exact decimals; an unknown name, function or anything outside the
   grammar refused); Mantle `test/humanres/PayConfiguration` (a cyclic or missing dependency blocks publish;
   overlapping published terms refused; a statistical component enters no total; no implicit currency or divisor).
-- **Usable when** (`acceptance/People/PeoplePayConfigurationUsable`; design §14.3 "Localization readiness", its
+- **Usable when** (`test/acceptance/People/PeoplePayConfigurationUsable`; design §14.3 "Localization readiness", its
   configuration half): `people.payroll` (with `PAYROLL_CONFIGURE`) builds a salary, an hourly and a deduction
   component with examples, composes a structure, previews gross to net, asks to publish each, which
   `people.payapprover` approves, and sets up a monthly group whose readiness says it is preview only.
@@ -6504,7 +6504,7 @@ PayGroups; PE-08, PE-09 (the evaluator), PE-12 (the registration).
   choices each with a selected value off the page); `PeopleAccess` gains a feature (0.5 s release: the People administrator stores
   a component of Retail and the payroll operator is refused with the same parameters; Retail's payroll reads Retail's component
   and is refused Services' as missing; the three list screens refused to the payroll operator and HR) and Settings' tabs in its menu
-  feature (PeopleSpecLib `settingsMenu`). Acceptance, written and not run: `acceptance/People/PeoplePayConfigurationUsable` (3
+  feature (PeopleSpecLib `settingsMenu`). Acceptance, written and not run: `test/acceptance/People/PeoplePayConfigurationUsable` (3
   features, through the Settings screens' transitions: a salary, an hourly and a deduction component with examples, published;
   the payroll operator refused publishing; a structure composed, previewed with the demonstration localization and published; a
   monthly group whose readiness is preview only, its periods prepared; the payroll operator refused the screens). The walk is
@@ -6677,7 +6677,7 @@ Design §8 PayAssignments, Employee360's Compensation; PE-08, PE-12 (profiles).
   `PeopleEmploymentChangeApproval`.
 - **Specs:** Mantle `test/humanres/PayAssignments` (overlapping primaries refused; a salary change dated, the old
   row ended; compensation absent for HR without the grant, with the same parameters).
-- **Usable when** (`acceptance/People/PeoplePayAssignmentsUsable`): `people.payroll` gives an employee a salary and
+- **Usable when** (`test/acceptance/People/PeoplePayAssignmentsUsable`): `people.payroll` gives an employee a salary and
   a structure from a date and sees the readiness clear; `people.hr` opens the same Employee360 with no Compensation
   region.
 
@@ -6761,7 +6761,7 @@ Design §8 PayAssignments, Employee360's Compensation; PE-08, PE-12 (profiles).
   context and absent from HR's with the same parameters; assigning payroll's and refused to HR with the same parameters; HR refused
   `get#Compensation`; Services' employee missing to Retail's payroll; the pay change refused to HR and previewed by payroll with the
   same parameters; PayAssignments payroll's and refused to HR); PeopleSpecLib's `payrollGroupMenu` gains PayAssignments; PeopleAccess's
-  readiness feature allows the payroll check. Acceptance, written and not run: `acceptance/People/PeoplePayAssignmentsUsable` (3
+  readiness feature allows the payroll check. Acceptance, written and not run: `test/acceptance/People/PeoplePayAssignmentsUsable` (3
   features, through the screens' transitions: the payroll operator sets Leon's first salary on Employee360, assigns him a structure
   and the monthly group on PayAssignments after a preview, saves his tax profile and reads him ready; HR's Employee360 with no
   Compensation and payroll's with it; a raise for Tomas waiting for Hannah, approved on his Employee360, the salary before ended).
@@ -6956,7 +6956,7 @@ Design §6 HoursForPay, §8 PayAdjustments, §8.1 (inputs); PE-09, PE-07 and PE-
   reopen under People.
 - **Specs:** Mantle `test/humanres/PayInputs` (preparing twice makes each input once; attendance and timesheet
   evidence pay an entitlement once; a time entry on a worker invoice is refused as a pay source, and the reverse).
-- **Usable when** (`acceptance/People/PeoplePayInputsUsable`; design §14.3 "Source lock and worker invoice
+- **Usable when** (`test/acceptance/People/PeoplePayInputsUsable`; design §14.3 "Source lock and worker invoice
   collision"): a period's approved weeks, leave and an approved bonus become inputs once; an unapproved week blocks
   its employee only; a worker invoice for a consumed entry is refused.
 
@@ -7045,7 +7045,7 @@ commits alone.
   Retail's payroll, an adjustment refused to HR for the permission and to payroll for the missing pay group with the same parameters, the
   manager's reconciliation, HoursForPay the payroll operator's and the manager's and both screens refused to HR); PeopleSpecLib's
   `managerTimeMenu` (Hours for pay) and `payrollGroupMenu` (Pay adjustments). Acceptance, written and not run:
-  `acceptance/People/PeoplePayInputsUsable` (3 features, through the screens' transitions: March's approved week and leave of Tomas
+  `test/acceptance/People/PeoplePayInputsUsable` (3 features, through the screens' transitions: March's approved week and leave of Tomas
   prepared once, Rafael's submitted week blocking him alone; a bonus made on Pay adjustments approved by the payroll approver from To
   decide, preparing again making nothing; a worker invoice for Tomas's paid entry refused and his week, once finalized, not reopened, with
   TimesheetDetail saying why).
@@ -7252,7 +7252,7 @@ Design §8.2 (steps 1–5), PayRuns, PayRunDetail (Population, Inputs, Calculate
 - **Specs:** Mantle `test/humanres/PayRuns` (one bad worker leaves the others calculated; a resumed run makes no
   second result; a mid-period salary change splits; the preparer cannot approve; a changed input invalidates the
   approval; a second regular run over consumed inputs refused).
-- **Usable when** (`acceptance/People/PeoplePayRunsUsable`; design §14.3 "Salary/rate change and mixed pay",
+- **Usable when** (`test/acceptance/People/PeoplePayRunsUsable`; design §14.3 "Salary/rate change and mixed pay",
   "Failure and restart", "Approval and concurrent finalization", its approval half): `people.payroll` runs the
   demo group's month with a salaried, an hourly and a piece-quantity worker and one with missing setup, fixes it
   and retries only that one; `people.payapprover` approves the exact totals.
@@ -7347,7 +7347,7 @@ Design §8.2 (steps 1–5), PayRuns, PayRunDetail (Population, Inputs, Calculate
   person and no amount); `PeopleAccessLater` gains the P25 case (0.48 s: the HR officer refused creating a run with the parameters the
   payroll operator then creates it with, Services' group missing to Retail's payroll, the runs read by the approver and refused to HR,
   PayRuns and PayRunDetail the payroll operator's and the approver's, both refused to HR). Acceptance, written:
-  `acceptance/People/PeoplePayRunsUsable` (2 features, through the screens' transitions: the payroll operator creates December's run of a
+  `test/acceptance/People/PeoplePayRunsUsable` (2 features, through the screens' transitions: the payroll operator creates December's run of a
   salaried, an hourly, an hourly-with-pieces employee and Leon with no salary, calculates it with Leon in SALARY_MISSING, sets his salary
   and calculates only him; asks for approval, is refused approving, and the payroll approver reads 7,490.00 gross and 7,340.20 net and
   approves; no invoice). Not run as acceptance; its features were checked once through a temporary copy in `test/` (deleted), which
@@ -7535,7 +7535,7 @@ Design §8.2 (corrections), Payslips, PayslipDetail, §15 (the payslip); PE-10, 
   the `people-payslip-explain` skill and prompt; `get#Payslip` exposed to the Assistant for own issued slips.
 - **Specs:** Mantle `test/humanres/Payslips` (self reads own issued slips only; a correction is a new linked slip
   and the original stays; an off-cycle slip on the same date keeps its own identity).
-- **Usable when** (`acceptance/People/PeoplePayslipsUsable`; design §14.3 "Regular, off-cycle and correction
+- **Usable when** (`test/acceptance/People/PeoplePayslipsUsable`; design §14.3 "Regular, off-cycle and correction
   runs"): a preview slip explains each line from its source; a correction run links to it with the net effect;
   the employee sees neither until a slip is issued.
 
@@ -7631,7 +7631,7 @@ Design §8.2 (corrections), Payslips, PayslipDetail, §15 (the payslip); PE-10, 
   missing to HR, Services' slip missing to Retail's payroll, the employee's own preview missing to them through `get#MyPayslip` and
   `find#Payslips` answering nothing else, Payslips and PayslipDetail refused to HR, MyPayslip opened to the employee and refused another
   app's user); PeopleAccess's self-service links gain `MyPayslip`; PeoplePayAssignments' `aiOptOut` check covers the payslip, its lines
-  and the legacy amounts. Acceptance, written and not run: `acceptance/People/PeoplePayslipsUsable` (3 features through the screens'
+  and the legacy amounts. Acceptance, written and not run: `test/acceptance/People/PeoplePayslipsUsable` (3 features through the screens'
   transitions: November's run of Tomas and Ines approved, its preview slips listed and explained, the employee seeing none; four late hours
   corrected through Correct pay, calculated, asked and approved on PayRunDetail, the correction slip 60.00 linked, the original 240.00
   staying, the net effect shown, the employee still seeing nothing; both made final as the acceptance fixture alone and issued through
@@ -7822,7 +7822,7 @@ Design §8.2 (steps 6–7), §8.3, §9 (the payroll route), PayRunDetail's Final
   an incomplete finalization releases nothing; a claim on the payroll route makes no second expense; the design's
   1,000 + 100 − 40 example delivers 1,060); BOSS `AccountingPayrollOrigin` (a finance user without `PAYROLL_VIEW`
   sees the aggregate and no payroll invoice, with the same parameters as one who does).
-- **Usable when** (`acceptance/People/PeoplePayHandoffUsable`; design §14.3 "Accounting and posting", "Payment and
+- **Usable when** (`test/acceptance/People/PeoplePayHandoffUsable`; design §14.3 "Accounting and posting", "Payment and
   bank changes", "Localization readiness"): the demo group's finalize is refused with its two reasons; under the
   acceptance test's own live fixture a run finalizes once, Accounting posts and pays it, and a general ledger
   reader cannot open a worker's payroll invoice.
@@ -7893,7 +7893,7 @@ Design §8.2 (steps 6–7), §8.3, §9 (the payroll route), PayRunDetail's Final
   and a "Payroll" row with the same totals for the first; the invoice and its person for the second). `PeopleAccessLater` gains the P27
   case (0.25 s: the HR officer refused finalizing with the parameters the payroll operator is answered `NOT_LIVE` with, Services' run
   missing to Retail's payroll, the settlement read by the payroll approver and refused to HR, an obligation's invoice refused to HR
-  and missing to Retail's payroll for Services'). Acceptance, written and not run: `acceptance/People/PeoplePayHandoffUsable` (3
+  and missing to Retail's payroll for Services'). Acceptance, written and not run: `test/acceptance/People/PeoplePayHandoffUsable` (3
   features, through PayRunDetail's transitions: the demonstration group's approved run shown and refused Finalize with its two reasons;
   under its own live fixture the payroll operator finalizes once, a second Finalize makes nothing; a spec-local payroll finance user
   approves and pays Ines's net pay, Settlement shows it posted, finance.gl cannot open it).
@@ -8126,7 +8126,7 @@ Design §8.4 (external processing, migration), PayrollExchange, §15; PE-19. End
 - **Specs:** Mantle `test/humanres/PayrollExchange` (a file replayed adds nothing; history makes no invoice; a
   group in external mode refuses native calculation; live external results refused without the projection; a bad
   row reported, the rest applied).
-- **Usable when** (`acceptance/People/PeoplePayrollExchangeUsable`; design §14.3 "History and provider exchange"):
+- **Usable when** (`test/acceptance/People/PeoplePayrollExchangeUsable`; design §14.3 "History and provider exchange"):
   `people.payroll` exports a period's approved inputs, imports last year's history with one unknown worker named,
   and Admin's Exports and Imports list both.
 
@@ -8196,7 +8196,7 @@ Design §8.4 (external processing, migration), PayrollExchange, §15; PE-19. End
   Retail's payroll; PayrollExchange's one html render with the unknown worker named; the HR officer refused the screen; Admin's Imports
   listing the run with People's place); PeopleAccess's payroll capabilities gain `import`; PeopleSpecLib's Payroll menu gains
   PayrollExchange; PeopleInsights checks Rafael's work permit absent from the dataset and a spec holder's work permit with no document.
-  Acceptance, written and not run: `acceptance/People/PeoplePayrollExchangeUsable` (3 features, through PayrollExchange's transitions:
+  Acceptance, written and not run: `test/acceptance/People/PeoplePayrollExchangeUsable` (3 features, through PayrollExchange's transitions:
   people.payroll exports Ines's approved hours of a Retail group in external processing with the file and manifest downloaded; imports last
   year's history with one unknown worker named, two records and no invoice; Admin's Exports and Imports list both).
 - Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): mr-mantle PayrollExchange, PayObligations, PayRuns,
@@ -8377,7 +8377,7 @@ Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, As
 - **Specs:** Mantle `test/humanres/PeopleReports` (headcount as of a date; a pay report refused without the
   grant); BOSS `PeopleInsights` (the registrations resolve; an Assist or MCP question on a People dataset is
   refused).
-- **Usable when** (`acceptance/People/PeopleReportsUsable`): `people.hr` runs headcount and turnover and exports
+- **Usable when** (`test/acceptance/People/PeopleReportsUsable`): `people.hr` runs headcount and turnover and exports
   it; an Insights reader with the People grant opens the dashboard and schedules the monthly report; an alert fires
   for a qualification expiring within thirty days.
 
@@ -8475,7 +8475,7 @@ P26–P28 (it waits on nothing in them), with P26 built beside it on `ppl/p26`.
     payroll and the administrator; Settings' Preferences), PeopleAccess's readiness feature (its two P1 checks kept, nine in all),
     Mantle PeopleScope's readiness feature (the same), InsightsHome's `registeredKeys` (three People keys), InsightsAlerts' templates (the
     People one).
-  - Acceptance, written and not run: `acceptance/People/PeopleReportsUsable` (3 features: people.hr's headcount and turnover for Retail
+  - Acceptance, written and not run: `test/acceptance/People/PeopleReportsUsable` (3 features: people.hr's headcount and turnover for Retail
     this year and its CSV, the totals the report's; people.analyst opens the People workforce dashboard and schedules it monthly for
     themselves, an Insights reader without the bundle reading none of it; the qualifications expiring template copied and activated tells
     its owner once when Rafael's first aid certificate is moved to expire in twenty days, and not at the next check; all put back).
@@ -8647,7 +8647,7 @@ Admin P18's device credential, built (F55); Insights P11's wall display is the p
   retry with the key records once; a punch outside a device's request refused); BOSS `PeopleKiosk` (a display
   account with the kiosk bundle registered and redeemed; as the device, the page and a punch by badge and PIN, and
   People's other screens, the `/qapps` shell and the directory refused by the route group; the page's one render).
-- **Usable when** (`acceptance/People/PeopleKioskUsable`): the identity operator makes a display account for
+- **Usable when** (`test/acceptance/People/PeopleKioskUsable`): the identity operator makes a display account for
   ORG_ZIZI_RETAIL with the kiosk bundle and the access administrator registers a tablet for the kiosk; two workers
   clock in by badge and PIN, and a worker of ORG_ZIZI_SERVICES is refused; the tablet opens nothing else; revoking it
   refuses its next request.
@@ -8715,7 +8715,7 @@ Admin P18's device credential, built (F55); Insights P11's wall display is the p
   Employee360, SelfService, Attendance, BadgePrint, `/qapps` and the directory's choices refused by the route group; the page's one
   tui render as HR, "Not a clocking device", and HR's punch refused). PeopleAccessLater gains the P30 feature (0.42 s); PeopleEmployees'
   Employee360 render checks the Clocking badge box and Issue badge. Acceptance, written and not run:
-  `acceptance/People/PeopleKioskUsable` (4 features: the display account made in Admin's Users and the tablet registered and its code
+  `test/acceptance/People/PeopleKioskUsable` (4 features: the display account made in Admin's Users and the tablet registered and its code
   read in Security › Devices; Tomas's and Ines's badges issued from Employee360 and printed once, Ines's clocking turned on, Kenji's
   issued at Services; as the tablet Tomas and Ines in, Kenji refused, a wrong PIN, nothing else of People, the shell, the app list or
   Commons; revoked in Admin, the next request refused).
@@ -8844,7 +8844,7 @@ and SharedDevices, 13 of 13; BOSS PeopleKiosk, PeopleAccessLater and AdminDevice
     still lets one proof through each few seconds; the number space (about 66 bits) and the per-badge lock are what protect,
     the pause is a brake;
   - the burst notice links nowhere: HR reads which device and how many, and the access administrator revokes the device in Admin;
-  - `acceptance/People/PeopleKioskUsable` was changed for the worker's own PIN (Tomas sets his on SelfService; Ines and Kenji, who have
+  - `test/acceptance/People/PeopleKioskUsable` was changed for the worker's own PIN (Tomas sets his on SelfService; Ines and Kenji, who have
     no account in the demo data, have theirs written as `set#MyKioskPin` writes them, Ines's badge first refused for having none) and,
     like the phase's version, was not run (the review brief runs no acceptance test);
   - the badge print is a GET whose render makes the number: a link another site gets an HR officer to open (the session cookie on a
@@ -8930,7 +8930,7 @@ merged.
   Admin reader (no Security area), a BOSS user without Admin, or another organization's device; `find#SharedDevices` by id
   answering the revoked device). PeopleEmployees' Employee360 render issues Tomas's badge first and checks the POST form with a
   session token and no BadgePrint link (the feature from about 0.3 s to 0.7 s, the badge script's first load).
-  PeopleAccessLater's P30 feature: the reader's POST of the print refused. Acceptance `acceptance/People/PeopleKioskUsable`
+  PeopleAccessLater's P30 feature: the reader's POST of the print refused. Acceptance `test/acceptance/People/PeopleKioskUsable`
   changed (prints by POST; the second print refused and the page saying when), not run.
 - Tests run (the shared release binary from the main checkout, `--release --nobuild`, this runtime): Mantle KioskIdentity and
   Attendance 14 of 14, KioskIdentity 8 of 8 again after formatting, and 14 of 14 again after the two later calls (BOSS
@@ -8964,7 +8964,7 @@ merged.
     the qualification's), `screen/Admin/Security/Devices.xml`, `screen/Shared/Employee360.xml` (the Clocking badge toolbar and the
     badge lines of the actions), `screen/People/Employees/BadgePrint.xml`, `test/People/PeopleKiosk.spec.js`,
     `test/People/PeopleEmployees.spec.js` (the first feature), `test/Admin/AdminDevices.spec.js` (a feature appended),
-    `acceptance/People/PeopleKioskUsable.spec.js`, `plan/design-people.md` (header, §4, §6, §15), `plan/design-admin.md` (§6),
+    `test/acceptance/People/PeopleKioskUsable.spec.js`, `plan/design-people.md` (header, §4, §6, §15), `plan/design-admin.md` (§6),
     `plan/usl-inventory.md`, `plan/ss-inventory.md`, this file (§4's two rows, this note); mr-mantle `entity/PeopleAttendanceEntities.xml`,
     `service/mantle/humanres/KioskIdentity.js`, `AttendanceServices.xml` (descriptions, `get#KioskBadge`'s parameters),
     `data/PeopleAttendanceSetupData.xml` (a topic after `PeopleKioskRefusals`), `test/humanres/KioskIdentity.spec.js` (a feature
@@ -9011,22 +9011,22 @@ merged.
     else `NONE`), `sweepScreens`, `commonsMounts`, `kioskTablet` (PeopleKiosk's display account and redeemed device) and
     `deviceRequest`; `users.financePayroll`.
   - Acceptance, written and not run (the user's call: the acceptance suite runs once after the full suites):
-    `acceptance/People/PeopleTui` (3 features: every People screen file, mount and mounted tab in tui as john.doe with authorization on,
+    `test/acceptance/People/PeopleTui` (3 features: every People screen file, mount and mounted tab in tui as john.doe with authorization on,
     a TUI document with no error node, the screens with no record of their kind logged; the four Commons mounts as people.employee; the
-    kiosk as Retail's registered tablet, its form and no "Not a clocking device"); `acceptance/People/PeopleServerStatic` (2 features:
+    kiosk as Retail's registered tablet, its form and no "Not a clocking device"); `test/acceptance/People/PeopleServerStatic` (2 features:
     ServerStaticLib's full check of every plain XML People screen, mount and tab, and of the Commons mounts as the employee; no error
-    verdict, the marked ones clean); `acceptance/People/PeopleReviewWalk` (8 features, "Confidentiality across every path": five secrets
+    verdict, the marked ones clean); `test/acceptance/People/PeopleReviewWalk` (8 features, "Confidentiality across every path": five secrets
     set in Retail (Tomas's salary, Ines's home phone and passport, a confidential case with a note and a file, a leave reason HR asks for
     Ines, an application), each user of every People group and finance.payroll given none that is not theirs by URL under People and
     Commons, the screens' services, direct calls and the REST entity paths, the payroll register, three transitions (refused, nothing
     changed), the employees import and the CSV exports, the palette, choices and universal search, Assist's two self-only tools and a
     reader's agent renders, the files and Chatter checks and every notice sent during the walk; the readers get theirs; the kiosk tablet
-    reaches none of it); `acceptance/People/PeopleNavigationWalk` (6 features, "Navigation and devices": each launcher People beside the
+    reaches none of it); `test/acceptance/People/PeopleNavigationWalk` (6 features, "Navigation and devices": each launcher People beside the
     employee's baseline, every entry of each user's menu at the root and in each group opens, an entry out of the menu refused or
     logged; Services' employee and seat "Not available" naming nothing; every People list of more than two shown fields with two phone
     columns; the six custom screens' terminal action paths for their roles; People's Commons mounts for the employee and the manager,
     no People screen for the employee; the kiosk tablet refused every menu entry, the shell, Commons and the menu data, a person told it
-    records nothing); `acceptance/client/People/PeoplePhoneWalk` (3 features at 390 px: the employee's SelfService, Leave requests and
+    records nothing); `test/acceptance/client/People/PeoplePhoneWalk` (3 features at 390 px: the employee's SelfService, Leave requests and
     Expense claims; the manager's My team, its rows' names and availability, and Approvals; HR's directory with names and Current; no
     sideways scroll).
   - Phone columns (design §1.1's mobile columns, Practices-App-Dev "Lists"), found by the navigation walk's check and added: the 18 People

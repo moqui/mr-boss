@@ -527,7 +527,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
   AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking, AccountingPeriodClose,
   AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns and setup in
   AccountingAccess); Projects' Billing and ClientBilling; the golden-path browser walk AccountingReceivablesWalk.
-- Acceptance suite (`acceptance/Accounting/`, `acceptance/client/Accounting/`), run when asked: AccountingAccessWalk,
+- Acceptance suite (`test/acceptance/Accounting/`, `test/acceptance/client/Accounting/`), run when asked: AccountingAccessWalk,
   AccountingServerStatic (the screens marked server-static), one screen sweep per mode, and the other browser walks,
   one live-client pass each: ledger, settings, settlement, payments, gateway, payables, matching, payment runs,
   banking, period close, tax, budgets, returns, valuation, collections, setup and currencies. No route fixtures.

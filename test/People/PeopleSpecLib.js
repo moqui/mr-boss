@@ -318,7 +318,7 @@ function shell(user, menuOnly = false, path = "Home", group = "People") {
     })
 }
 
-// ===== P31: the screen sweeps' helpers (acceptance/People/PeopleTui and PeopleServerStatic; the review walks' kiosk) =====
+// ===== P31: the screen sweeps' helpers (test/acceptance/People/PeopleTui and PeopleServerStatic; the review walks' kiosk) =====
 // The screens People's files mount from elsewhere, as [path under the People root, location]: a subscreens-item of a People file whose
 // location is not under screen/People (the Shared screens, Projects' time screens and Rates, Commons' Notifications and EventDetail)
 function mountedScreens() {

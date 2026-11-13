@@ -828,7 +828,7 @@ Helpers named only to explain a limitation, such as the unmodified due helper, a
 
 ### 11.2 Acceptance scenarios
 
-Each scenario is an acceptance test to write (`acceptance/Maintenance/`, `acceptance/client/Maintenance/`), named in the
+Each scenario is an acceptance test to write (`test/acceptance/Maintenance/`, `test/acceptance/client/Maintenance/`), named in the
 implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
 acceptance test, one per app per mode.
 

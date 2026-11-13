@@ -1431,7 +1431,7 @@ The inventories add **Designed in** mappings only. Framework forms are cited her
 
 ### 15.3 Acceptance scenarios
 
-Each scenario is an acceptance test to write (`acceptance/Admin/`, `acceptance/client/Admin/`), named in the
+Each scenario is an acceptance test to write (`test/acceptance/Admin/`, `test/acceptance/client/Admin/`), named in the
 implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
 acceptance test, one per app per mode.
 

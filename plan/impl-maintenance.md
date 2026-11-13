@@ -356,7 +356,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Maintenance/`, `acceptance/client/Maintenance/`), named in the
+  scenario are acceptance tests to write (`test/acceptance/Maintenance/`, `test/acceptance/client/Maintenance/`), named in the
   phase; running them is not part of Done.
 
 ## 3. Phases
@@ -506,7 +506,7 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
     permissions and capabilities, the menu and providers per group, the root refused to a requester and to a
     Projects client, `ironstone.maintenance` services refused without the root grant, Home's one qvt render. A later
     phase adds a case only for an access rule it adds.
-- **Usable when** (an acceptance test to write, `acceptance/Maintenance/MaintenanceFoundationWalk`): the menu
+- **Usable when** (an acceptance test to write, `test/acceptance/Maintenance/MaintenanceFoundationWalk`): the menu
   renders for each group with only its areas; `maint.requester` has no Maintenance launcher; Admin's Capabilities
   shows the Maintenance bundles and an access administrator grants the planner bundle to a custom group; SettingsHome
   lists Maintenance settings for `maint.admin` and not for `maint.reader`.
@@ -577,7 +577,7 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
     refused; the services refused without the root grant; Home's one qvt render as the planner and Settings' one html render as
     the administrator (the reader's a refusal); every Maintenance bundle carrying exactly its group's grants, the import
     permission the resource administrator's bundle alone, `maintenance.settings` the administrator's and not the reader's.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceFoundationWalk` (4 features: each group's menu with each
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceFoundationWalk` (4 features: each group's menu with each
     entry opened or refused; the requester, a client and a PASS account refused the root and every `ironstone.maintenance`
     service, no launcher for the requester; Capabilities showing the bundles and `admin.access` granting the planner bundle to a
     custom team whose member opens Maintenance as a planner; the settings index for `maint.admin` and not `maint.reader`).
@@ -741,7 +741,7 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
   refused; a custody change dated and the earlier row ended); BOSS `MaintenanceEquipment` (EquipmentDetail's one
   qvt render under Maintenance: no book value for the resource administrator, the Book pane for a finance reader;
   the facility tree's hidden ancestor unnamed).
-- **Usable when** (`acceptance/Maintenance/MaintenanceEquipmentWalk`): `maint.resources` registers a compressor
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceEquipmentWalk`): `maint.resources` registers a compressor
   under a room, records its hour meter, moves a room under another floor with the effect preview, changes a
   custodian from a date, and prints two asset tags; a scanned tag opens EquipmentDetail for a reader; the
   ORG_ZIZI_RETAIL planner sees none of it; Warehouse's and Manufacturing's EquipmentDetail are unchanged.
@@ -830,7 +830,7 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
     with the equipment held. `MaintenanceAccess` gains the equipment write (the resource administrator's, the planner refused,
     Retail's forklift refused) and the panels (Services' facility and compressor served, Retail's and a product refused), with the
     menu, keys and palette for P2 (9 features, 2.9 s).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceEquipmentWalk` (5 features: register a compressor in a
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceEquipmentWalk` (5 features: register a compressor in a
     room and record its hour meter, a lower reading refused; move a room under the other floor after its effect; change a custodian
     from a date, a later one refused, and print two tags; a scanned tag opens EquipmentDetail for the reader and Retail's planner sees
     none of it; Warehouse's and Manufacturing's EquipmentDetail with no Maintenance tab).
@@ -1096,7 +1096,7 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
   technician sees an assigned order and not a team total; Commons' task check answering not a task; Admin's
   offboarding listing a leaver's work order under Maintenance's participant and not Projects'); the golden walk
   `test/client/Maintenance/MaintenanceWorkOrdersWalk` (create, assign, start, log time, complete, close).
-- **Usable when** (`acceptance/client/Maintenance/MaintenanceCorrectiveWalk`; design §11.2 "Facility/equipment
+- **Usable when** (`test/acceptance/client/Maintenance/MaintenanceCorrectiveWalk`; design §11.2 "Facility/equipment
   identity", "Phones and CalDAV", "Device/access paths" in part): a planner creates a corrective order on the
   compressor and one on a room with no asset, assigns a technician, who starts it on a phone, logs time and
   completes it with an explicit finish; the supervisor closes it; Commons' Today cannot mark it done; Manufacturing's
@@ -1178,8 +1178,8 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
     technician and Retail refused) and the WorkEffort panel host, the P3 menu, key and Settings tab, and Home's new content (10
     features, 4.4 s).
   - Client `test/client/Maintenance/MaintenanceWorkOrdersWalk` (1 feature, 8.5 s), registered in `test/client/suite.js`.
-  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceCorrectiveWalk` (5 features, registered in
-    `acceptance/client/suite.js`).
+  - Acceptance, written and not run: `test/acceptance/client/Maintenance/MaintenanceCorrectiveWalk` (5 features, registered in
+    `test/acceptance/client/suite.js`).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceWorkOrders and MaintenanceManagedWork 10 of 10; with
   WorkProcess, PeopleChecklists, Dav, CommonsToday, ProductionOrders, WorkTimeEntries, WorkTimesheets, MaintenanceScope,
   MaintenanceResources, SupportWarranty, ProductionDowntime, WorkMyTasks and CalendarServices 97 features (one ProductionOrders failure,
@@ -1235,7 +1235,7 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
     (formatted whole), `Resources.js` (formatted whole), `data/BossSetupData.xml` (appended), `data/BossZMaintenanceDemoData.xml`,
     `screen/Shared/EquipmentDetail.xml` (tab indexes), `FacilityDetail.xml` (tabs), Commons' `TaskServices.xml`, `CommonsServices.xml`,
     `PaletteServices.xml`, Admin's `Lifecycle.js`, `test/Maintenance/MaintenanceSpecLib.js` (menus, keys, ids), `MaintenanceAccess.spec.js`,
-    `test/client/suite.js`, `acceptance/client/suite.js`, the inventories and design-maintenance;
+    `test/client/suite.js`, `test/acceptance/client/suite.js`, the inventories and design-maintenance;
   - the user's calls: the client budget (above); whether the identity operator should move maintenance assignments (a permission for
     the participant's transfer); built meanwhile: listing only for the operator, moving for a Maintenance planner or administrator.
 
@@ -1377,7 +1377,7 @@ Design §3 Requests and the RequestDetail mount row, §1.2 (quick create, `creat
   request with the sender as reporter and an unknown asset left for triage; `request#ProductionMaintenance` twice
   makes one root); BOSS `MaintenanceRequests` (RequestDetail's one qvt render under Maintenance: no cost and no
   other report for the requester).
-- **Usable when** (`acceptance/Maintenance/MaintenanceIntakeWalk`; design §11.2 "Request and customer repair", its
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceIntakeWalk`; design §11.2 "Request and customer repair", its
   request half): `maint.requester` reports a leaking compressor from Commons with a photo and follows it; a second
   person's report of the same fault is linked to the same order at triage; an operator's equipment-fault stop in
   Manufacturing appears in Requests and is adopted into one work order; the requester never sees the order's time.
@@ -1446,7 +1446,7 @@ Design §3 Requests and the RequestDetail mount row, §1.2 (quick create, `creat
     a problem in the requester's + menu and not the planner's, its one qvt render and a report through its transition.
     `MaintenanceAccess` gains the request rule (planner reads, technician and Retail refused, the request panel, Report a problem the
     requester's and not the planner's; +0.4 s) and the P4 menu and key (MaintenanceSpecLib).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceIntakeWalk` (4 features).
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceIntakeWalk` (4 features).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceIntake 7 of 7; with ProductionDowntime, RecordLinks,
   WorkProjectRequests, SupportChannels, SupportRelations, MaintenanceWorkOrders, MaintenanceManagedWork and MaintenanceScope 75 of 75
   (14.2 s); after Prettier MaintenanceIntake, ProductionDowntime and MaintenanceWorkOrders 21 of 21. mr-boss Requests, QuickCreate,
@@ -1643,7 +1643,7 @@ outage part), MT-10.
 - **Specs:** Mantle `test/work/MaintenanceOutages` (a second fault links the open outage; closing the production
   downtime restores nothing and `end#` does; a technician not on the work refused; a correction keeps the original
   interval; an overlapping order cannot restore).
-- **Usable when** (`acceptance/Maintenance/MaintenanceOutageWalk`; design §11.2 "Outages" and "Outage shared with
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceOutageWalk`; design §11.2 "Outages" and "Outage shared with
   Manufacturing"): an equipment-fault stop in Manufacturing shows once in Downtime with its production context; the
   work order completes with the compressor still down and a follow-up; the supervisor restores it from Downtime,
   and Manufacturing shows it available. **Gate 1.**
@@ -1700,7 +1700,7 @@ outage part), MT-10.
     WorkOrderDetail's Downtime tab's one; Home's count; Manufacturing's and Warehouse's equipment reads out of service until restored.
     `MaintenanceAccess` gains the outage rule (supervisor links, planner refused, Retail's forklift refused, a technician's restore
     refused; 0.15 s).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceOutageWalk` (4 features).
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceOutageWalk` (4 features).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceOutages, ProductionDowntime, ProductionShopFloor,
   ProductionOrders, ProductionReports, ProductionSchedule, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceScope,
   MaintenanceResources and WorkProcess 69 of 69, and after prettier MaintenanceOutages, ProductionDowntime and MaintenanceWorkOrders 19
@@ -1842,7 +1842,7 @@ seed files by name, BossManufacturingDemoData, BossZMaintenanceDemoData).
   Each new case was run against the code without its fix and failed (R1's reason check, R2, R3, R4, R5's outage guard).
   `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before; none new in the changed screens. Prettier clean on the
   changed JavaScript (MaintenanceWork.js keeps the P3 line the worker named). Not run: ./moq test-apps, the acceptance suite; the
-  changed `acceptance/Maintenance/MaintenanceOutageWalk` (AGENTS.md runs a changed acceptance test) is left to the lead, as the
+  changed `test/acceptance/Maintenance/MaintenanceOutageWalk` (AGENTS.md runs a changed acceptance test) is left to the lead, as the
   brief says.
 - For the lead:
   - budget share: mr-mantle about +0.4 s over the worker's (MaintenanceOutages 1.9 s → 2.3 s alone; ProductionOrders' added
@@ -1896,7 +1896,7 @@ Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedu
   time, a Tasks listing and `update#Task`, and a People checklist task still completed as a task), with People's
   `test/work/WorkProcess`, which holds the clone's own cases, passing unchanged; BOSS `MaintenanceProcedures`
   (ProcedureDetail's one qvt render: read only for a technician).
-- **Usable when** (`acceptance/Maintenance/MaintenanceProceduresWalk`; design §11.2 "Repeat a procedure",
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceProceduresWalk`; design §11.2 "Repeat a procedure",
   "Interrupted creation/retry", "Template isolation", "Publication and amendment" in its publication half): an
   author builds the compressor service, an approver publishes it from the approvals inbox, a planner creates two
   work orders from it, and editing the procedure afterwards changes neither.
@@ -1982,7 +1982,7 @@ Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedu
     retired one and a work order). `MaintenanceAccess` gains the procedure rule (author, approver and planner read; resource
     administrator, an unassigned technician and Retail refused; a work order no procedure; an author's change, a planner's and
     Retail's refused) and the P6 menus and key; `MaintenanceWorkOrders`' Work policy render checks the new field.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceProceduresWalk` (4 features: build on ProcedureDetail, publish
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceProceduresWalk` (4 features: build on ProcedureDetail, publish
     from Commons' approvals inbox, two work orders from NewWorkOrder with a resubmit, a later edit changing neither).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle WorkProcess, PeopleChecklists, MaintenanceWorkOrders,
   MaintenanceManagedWork, MaintenanceProcesses, WorkTimeEntries, MethodTemplates, ProductionShopFloor, WorkPlanToCashBasicFlow,
@@ -2155,7 +2155,7 @@ completed checklist); MT-04.
   predecessor refused through `record#ProcessStep` and through `set#TaskStatus`; independent leaves in progress
   together; deleting accepted evidence refused; an amendment invalidating an acceptance; a group complete only by
   its children).
-- **Usable when** (`acceptance/client/Maintenance/MaintenanceChecklistWalk`; design §11.2 "Nested and concurrent
+- **Usable when** (`test/acceptance/client/Maintenance/MaintenanceChecklistWalk`; design §11.2 "Nested and concurrent
   steps", "Evidence/checks", "Publication and amendment" in its amendment half): a technician works the compressor
   service on a phone, fails a pressure reading, attaches a photo and rechecks; the supervisor waives one allowed
   step with a reason and closes; the printed checklist shows the failure, the recheck and the waiver.
@@ -2236,7 +2236,7 @@ completed checklist); MT-04.
     available, its link). A spec-local technician with maint.tech2's groups works it and the work order is cancelled at the end, so the
     demo technicians' counts other specs read are unchanged. `MaintenanceAccess` gains the checklist rule (its technician reads, another
     technician NOT_ASSIGNED, Retail RECORD_UNAVAILABLE; a waiver refused to the technician, the supervisor passing the permission).
-  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceChecklistWalk` (5 features: the planner makes the
+  - Acceptance, written and not run: `test/acceptance/client/Maintenance/MaintenanceChecklistWalk` (5 features: the planner makes the
     service from the procedure and the supervisor approves it; the technician on a phone works the group, the oil change with a photo
     and the filter; the pressure fails and a recheck with a photo fails again; the supervisor amends the filter step to need a photo and
     the technician answers it again; the supervisor waives the pressure step, completes and closes; the checks and waiver stay and the
@@ -2420,7 +2420,7 @@ built (impl-people P3, P9, P12, P14, P18; P0).
 - **Specs:** Mantle `test/work/MaintenanceDispatch` (the expired qualification warns, and blocks under the policy;
   a person on leave ranks below a free one; team membership grants no permission; one refused order in a bulk
   assignment names itself and the rest go on).
-- **Usable when** (`acceptance/Maintenance/MaintenanceDispatchWalk`; design §11.2 "Labor cost and qualification",
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceDispatchWalk`; design §11.2 "Labor cost and qualification",
   its qualification half): the planner assigns the compressor service, sees the technician on leave ranked last and
   a warning on the expired qualification, and under the block policy cannot assign them. **Gate 2.**
 
@@ -2489,7 +2489,7 @@ built (impl-people P3, P9, P12, P14, P18; P0).
   MaintenanceSettings gains Teams' one qvt render (0.08 s); MaintenanceProcedures' Resources render checks the level; MaintenanceAccess
   one feature (0.15 s: the administrator stores defaults, the planner `PERMISSION_DENIED`, Retail's planner `RECORD_UNAVAILABLE`, Teams
   refused to the planner); MaintenanceSpecLib the P8 ids and Settings' menu with Teams; the client MaintenanceWorkOrdersWalk's option
-  match (a label now names hours and team). Acceptance, written and not run: `acceptance/Maintenance/MaintenanceDispatchWalk` (3
+  match (a label now names hours and team). Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceDispatchWalk` (3
   features: the compressor service made of the procedure for the team in the demo's week, Kenji first, Sofia expired, Owen last with 0
   h free, the requirement's level and certificate, no number or issuer; Sofia assigned with a warning, the administrator's Block, Sofia
   refused beside Kenji; Teams read only).
@@ -2674,7 +2674,7 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
   cost) and `test/ledger/MaintenanceExpenseRouting` (the issue posts to the mapped expense with its dimensions and
   not to WIP; no mapping is an exception and no posting; the return reverses the same dimensions; one operation
   posts once).
-- **Usable when** (`acceptance/Maintenance/MaintenancePartsWalk`; design §11.2 "Time and stock", "Financial
+- **Usable when** (`test/acceptance/Maintenance/MaintenancePartsWalk`; design §11.2 "Time and stock", "Financial
   routing"): the planner adds the suggested filter, a technician with the stock grant issues two and returns one,
   the work order shows one used, and Accounting's journal shows maintenance expense with the facility and cost
   centre; with the mapping removed the issue stops with the named exception.
@@ -2749,7 +2749,7 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
     Maintenance render (the technician's Issue, Return unused, History), InventoryAvailability under Maintenance (Services' warehouse,
     not Retail's), the compressor's suggestion and the charge's choices. `MaintenanceAccess` gains the issue rule (maint.tech issues;
     maint.tech2 and the planner refused PERMISSION_DENIED; Retail's stock in Services' warehouse OWNER_MISMATCH; 0.2 s).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePartsWalk` (4 features: create, charge and add suggested parts;
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenancePartsWalk` (4 features: create, charge and add suggested parts;
     issue two and return one through MaterialIssueReceipt's transition; the journal's expense with the room and cost centre and the
     return; the mapping ended in Posting defaults refusing the next issue by name, a new mapping letting it go).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle every ledger spec (19, Accounting's and Manufacturing's
@@ -2928,7 +2928,7 @@ Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetai
   `Maintenance` branch of the shared screen for the linked orders of the work.
 - **Specs:** Mantle `test/work/MaintenancePurchases` (completing the work completes no order item; the acceptance
   recorded once under its key; a planner without Purchasing's grant links and cannot place).
-- **Usable when** (`acceptance/Maintenance/MaintenancePurchaseWalk`): a planner requests a motor rewind from the
+- **Usable when** (`test/acceptance/Maintenance/MaintenancePurchaseWalk`): a planner requests a motor rewind from the
   work order, Purchasing sources it to a PO, the work order shows the PO line, and at completion the supervisor
   accepts the service with the technician's photo.
 
@@ -2995,7 +2995,7 @@ Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetai
     purchasing.services (the work order's name, no link into Maintenance). `MaintenanceAccess` gains the purchases rule (the planner
     reads, the resource administrator and Retail's planner refused, a technician asks for nothing, a planner links no unrequested
     line; 0.20 s) and MaintenanceSpecLib the P10 ids.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePurchaseWalk` (3 features: the planner requests the rewind from
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenancePurchaseWalk` (3 features: the planner requests the rewind from
     the tab; a walk-local approver and buyer of Services approve and source it, the tab, OrderDetail and Purchasing's RequestDetail show
     it; the supervisor, made a receiver for the walk, completes with the technician's photo, once).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenancePurchases, PurchaseRequests, Sourcing, SourcingAwards,
@@ -3158,7 +3158,7 @@ Design §3 WorkCosts, §8 MaintenanceCostReport, review Y2, "Charging a project"
   unpriced; root and step time not counted twice; two currencies not summed; an estimate and its bill counted once;
   a planner without the cost permission answered no amount; planned work over the cost threshold held for a
   supervisor, one with an unpriced part held too, and one under both thresholds approved on create).
-- **Usable when** (`acceptance/Maintenance/MaintenanceCostWalk`; design §11.2 "Labor cost and qualification", its
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceCostWalk`; design §11.2 "Labor cost and qualification", its
   cost half, and "Reports and scope" in part): `maint.cost` reads the compressor repair's parts, labor and outside
   service with their sources and no pay rate; the planner's WorkOrderDetail has no Costs tab; the project shows the
   repair.
@@ -3231,7 +3231,7 @@ built.
     `MaintenanceAccess` gains the cost rule (maint.cost reads; the planner and the supervisor PERMISSION_DENIED; Retail
     ORGANIZATION_DENIED; Costs and the report in the cost reader's tabs only, both refused to the planner; 0.39 s). WorkOrders' Work
     policy render checks the cost threshold's field (MaintenanceWorkOrders, one line).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceCostWalk` (4 features: the held motor resumed, both technicians
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceCostWalk` (4 features: the held motor resumed, both technicians
     assigned, charged to SUPP and started; a belt issued by maint.tech, maint.tech2's two hours approved, the rewind accepted by the
     supervisor; maint.cost's Costs tab, report and CSV with the belt at 42.00, labor 96.00 at the class's rate, the rewind 480.00 and
     no person's rate; the planner without the tab and refused it and the report; the support project's money showing the repair at
@@ -3409,7 +3409,7 @@ Design §3 (the customer repair context, the consent recheck), §12 (the interve
   impl-customer-service §7 left to this plan.
 - **Specs:** Mantle `test/request/WarrantyManagedRepair` (a claim's repair linked twice has one root; Start refused
   after consent is withdrawn; completing the work leaves the case open; the asset's owner unchanged).
-- **Usable when** (`acceptance/Maintenance/MaintenanceCustomerRepairWalk`; design §11.2 "Request and customer
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceCustomerRepairWalk`; design §11.2 "Request and customer
   repair", its repair half): an agent approves a warranty repair and links work; the technician executes it as a
   work order with a part; the agent is told when it finishes, sends the intervention report, and closes the case
   herself. **Gate 3.**
@@ -3479,7 +3479,7 @@ unchanged, no Rust built.
   - BOSS `MaintenanceAccess` (+1 feature, 1.6 s): the report stored by the repair's technician, not its agent (`PERMISSION_DENIED`) or
     Services' technician (`RECORD_UNAVAILABLE`); InterventionReport's one qvt render; the work order checked for the technician and the
     customer's unit refused (`RECORD_UNAVAILABLE`); the send the agent's (past the scope), not the technician's or Services' agent's.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceCustomerRepairWalk` (3 features, the usable-when in a
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceCustomerRepairWalk` (3 features, the usable-when in a
     spec-local organization).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle WarrantyManagedRepair, SupportWarranty, MaintenanceWorkOrders,
   MaintenanceMaterials, MaintenanceProcesses, MaintenanceManagedWork, MaintenanceIntake, MaintenanceCosts: 40 of 40 (16.6 s feature
@@ -3665,7 +3665,7 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
   `get#NextBusinessDay`, F64) moves the planned day and not the due date; a planned or
   cancelled maintenance and a synthetic threshold advance nothing; a stale meter answers unknown, not "not due"; a
   term change leaves earlier executions alone).
-- **Usable when** (`acceptance/Maintenance/MaintenancePlansWalk`; design §11.2 "PM chronology"): the planner
+- **Usable when** (`test/acceptance/Maintenance/MaintenancePlansWalk`; design §11.2 "PM chronology"): the planner
   activates the three plans; DueExplanation names the last accepted reading, the increment and the next threshold
   for the compressor, and "reading older than 30 days" for the stale one.
 
@@ -3738,7 +3738,7 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
     resource administrator, a technician and Retail refused; the planner makes a draft for the van, the reader is PERMISSION_DENIED and Retail's
     planner RECORD_UNAVAILABLE with the same parameters) and the P13 menus and key; `MaintenanceWorkOrders`' equipment Maintenance tab render
     checks the plans pane.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePlansWalk` (4 features: the planner activates the three plans from
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenancePlansWalk` (4 features: the planner activates the three plans from
     PlanDetail and a reader may not; DueExplanation's reading, increment and threshold for the compressor and "Reading older than 30 days" for the
     contactor check until the resource administrator records a reading; the room's due date; a term change needing its reason with the earlier
     term kept; a new van plan refused activation until it names a procedure).
@@ -3908,7 +3908,7 @@ PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
   order; one failing schedule in a batch named and the rest generated; a cancelled order counts as no completion; a
   coalesced catch-up records the covered occurrences and is not on time; a reopened order makes no second next
   job).
-- **Usable when** (`acceptance/Maintenance/MaintenancePreventiveWalk`; design §11.2 "PM concurrency and missed
+- **Usable when** (`test/acceptance/Maintenance/MaintenancePreventiveWalk`; design §11.2 "PM concurrency and missed
   work"): the planner generates this month's work for the three plans and sees the stale-meter plan blocked with
   "request a reading"; after two missed months on the room plan she coalesces them into one catch-up, and the
   compliance report shows two late obligations, not one compliant order. **Gate 4.**
@@ -3976,7 +3976,7 @@ PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
     render each. `MaintenanceAccess` gains the P14 rule (a planner generates, a reader PERMISSION_DENIED, Retail RECORD_UNAVAILABLE;
     compliance a reader's, not a technician's, Retail's none) and the Reports menu; its Home render now checks the preventive counters
     configured (no "Not configured" left for a reader of work).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePreventiveWalk` (2 features: the planner activates the demo plans
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenancePreventiveWalk` (2 features: the planner activates the demo plans
     still drafts and generates this month's work through Due maintenance's transition (the filter change made, the start counter blocked
     with "Request a reading", none failed, a second generation making nothing; a reader may not generate); a Room 102 plan two months
     behind, coalesced with a reason into one catch-up, approved, started and completed by the supervisor through WorkOrderDetail, and PM
@@ -4156,7 +4156,7 @@ the availability read).
   adjacent intervals accepted; a hidden event answered as busy with no title; a booking past the horizon and one
   over the maximum duration refused; a required approval with no approver blocks; an unmanaged room behaves as
   before; a new blackout flags the approved booking and cancels nothing).
-- **Usable when** (`acceptance/Maintenance/MaintenanceResourcePolicyWalk`; design §11.2 "Privacy and policy"):
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceResourcePolicyWalk`; design §11.2 "Privacy and policy"):
   `maint.resources` makes the room managed with an approver, plans a blackout and reviews the two bookings it
   touches; a Commons user booking the down compressor is refused with "out of service" and no other detail.
 
@@ -4229,7 +4229,7 @@ the availability read).
     render each, EquipmentDetail/Schedule's and FacilityDetail/Schedules' under Maintenance, the participant's booking approvals and their
     hand-over. `MaintenanceAccess` gains the policy and blackout case (the resource administrator's preview, the planner refused,
     Retail's facility refused, an approver reading only the room they approve; 0.26 s) and `adminMenu` gains Scheduling.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceResourcePolicyWalk` (4 features).
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceResourcePolicyWalk` (4 features).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingPolicy, MaintenanceOutages, CalendarServices,
   CalendarChanges, Dav, CommonsToday, ProductionSchedule, ProductionDowntime, ProductionShopFloor, ProductionOrders, ProductionReports,
   ProductionPolicy, ManufacturingServices, WorkCenters, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceScope,
@@ -4422,7 +4422,7 @@ approval kind; MT-07 (decisions), MT-01, MT-11.
   ResourceCalendar mount is Commons' Schedules, whose `.qvue` and terminal twin Commons' spec renders; it is
   rendered again here only if Maintenance's context adds a template section of its own, and then once for that
   section.
-- **Usable when** (`acceptance/client/Maintenance/MaintenanceBookingWalk`; design §11.2 "Booking concurrency"):
+- **Usable when** (`test/acceptance/client/Maintenance/MaintenanceBookingWalk`; design §11.2 "Booking concurrency"):
   two people request the managed room for overlapping times; `maint.booking` approves one from Commons' inbox on a
   phone and the other is answered a conflict; the organizer moves the approved meeting and it waits for approval
   again. **Gate 5.**
@@ -4497,7 +4497,7 @@ approval kind; MT-07 (decisions), MT-01, MT-11.
     vendor walkthrough Busy). ResourceCalendar's qvue is Commons' component, rendered by no regression spec (it has no qvt template of
     its own). `MaintenanceAccess` (+1 feature, 0.15 s): the approver lists the handover with canDecide; the planner refused the list and
     the decision; the approver refused a room they do not approve (NOT_APPROVER).
-  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceBookingWalk` (4 features: two overlapping asks, the
+  - Acceptance, written and not run: `test/acceptance/client/Maintenance/MaintenanceBookingWalk` (4 features: two overlapping asks, the
     second answered the conflict; the approval from Commons' inbox at 390 px and the organizer told; the organizer's move waiting again
     and approved from BookingRequests; the approver's ResourceCalendar with the booking Busy and the demo blackout).
 - Tests run (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceOutages,
@@ -4675,7 +4675,7 @@ Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exp
   and completed counts once; overdue is past due, not unscheduled; another organization's roots left out); BOSS
   `MaintenanceReports` (the catalog entries listed for a reader and the cost entry only for the cost reader; the
   datasets carry no amount).
-- **Usable when** (`acceptance/Maintenance/MaintenanceReportsWalk`; design §11.2 "Reports and scope"): the
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceReportsWalk`; design §11.2 "Reports and scope"): the
   supervisor reads this month's backlog by team and drills to the orders; Insights' catalog opens the same report
   with the same numbers; an overdue-PM alert copied from the template tells its subscribers once.
 
@@ -4740,7 +4740,7 @@ Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exp
     the Overview's (its three cards and the report link). `MaintenanceAccess` gains the P17 case (0.2 s: work status and the
     catalogue a reader's, a technician refused, Retail's planner refused Services' organization). Owner spec changed by the added
     rows only: InsightsHome's `registeredKeys` gained the three Maintenance keys.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceReportsWalk` (3 features: the supervisor's this month by team
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceReportsWalk` (3 features: the supervisor's this month by team
     and the drill to the team's backlog, as many rows as its count, a technician told "Maintenance view is required"; Insights'
     catalog lists work status and `get#ReportLink` opens the same route, whose report answers the same counts; the overdue-PM template
     copied and activated tells its owner once when the filter plan's generated obligation is moved past due, and nothing at the next
@@ -4917,7 +4917,7 @@ Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outco
   asset; a failing row does not stop the next; a baseline that decreases
   refused); BOSS `MaintenanceSettings` (a readiness finding named with its link and Admin's Health showing it; a
   policy change dated, the earlier row ended).
-- **Usable when** (`acceptance/Maintenance/MaintenanceSetupWalk`): `maint.admin` raises the planned-work threshold
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceSetupWalk`): `maint.admin` raises the planned-work threshold
   from next month and sees the missing costing rate in Readiness; `maint.resources` imports twelve pieces of
   equipment with starting meters, one row refused and downloadable, and Admin's Imports lists the run for a data
   operator who also holds the resource view permission.
@@ -4991,7 +4991,7 @@ Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outco
   - BOSS `MaintenanceAccess` (+1 feature, 0.3 s): the import mount (maint.resources runs; the planner reads and runs none; the requester
     refused), the import scopes (Retail's planner gets no Services), the readiness (the administrator's; the resource administrator refused).
     `MaintenanceSpecLib.settingsMenu` gains Lookups and Readiness; `MaintenanceWorkOrders`' Work policy render checks Starts.
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceSetupWalk` (3 features: maint.admin's threshold from next month and
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceSetupWalk` (3 features: maint.admin's threshold from next month and
     Readiness' costing rate; maint.resources' twelve rows, one refused and in the error file; Admin's Imports for a data operator with the
     resource view).
 - Tests run (release binary, `--nobuild`): mr-mantle MaintenanceImport, MaintenanceWorkOrders, MaintenanceProcesses, MaintenanceIntake,
@@ -5148,7 +5148,7 @@ Design §1.4 (Assist, Comms hooks, Sync, Meetings), §12 (the outputs not built 
   target with its owner route, as Projects' work item list is (BossSetupData.xml:4955-4957; F53).
 - **Specs:** BOSS `MaintenanceStack` (the call context names open work and no cost; a projected collection refuses a
   PUT; the skills resolve by their aliases, added to `test/skill-retrieval.json`).
-- **Usable when** (`acceptance/Maintenance/MaintenanceStackWalk`): Assist summarizes the compressor's history from
+- **Usable when** (`test/acceptance/Maintenance/MaintenanceStackWalk`): Assist summarizes the compressor's history from
   its page and drives Report a problem through the terminal UI; a phone's calendar shows next week's assigned work
   orders and cannot change them; a vendor joins a call from the invitation.
 
@@ -5246,7 +5246,7 @@ Design §1.4 (Assist, Comms hooks, Sync, Meetings), §12 (the outputs not built 
     providers' case (0.31 s: the planner's card and call context, not the resource administrator, Retail's planner or the requester;
     the Chat's Report a problem action for the requester, not customerservice.read); `MaintenanceWorkOrders`' existing header render
     checks Print work order, Add to calendar (.ics) and Add video call. The skills: `./moq test mr-boss --skills` recall@3 1.00 (36 of 36).
-  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceStackWalk` (5 features: the planner's chips and response
+  - Acceptance, written and not run: `test/acceptance/Maintenance/MaintenanceStackWalk` (5 features: the planner's chips and response
     actions, the compressor's Maintenance tab in tui and Log as note on it; Report a problem in tui from Commons and from a chat
     message through the Comms action, the message filed; maint.tech2's phone: My work orders next week, read only, a PUT 403 and the
     work order unchanged, the .ics; a video call about the oil service and the vendor's expert joining as a guest from the link
@@ -5421,16 +5421,16 @@ Written while P8 and P12 were in review, then extended after master was merged w
   `ironstone.admin.CapabilityServices` are gone); the menus per group from Maintenance.xml's `menu-include` and the Requests,
   Costs and Settings grants.
 - Acceptance tests (written, not run, as the lead asked):
-  - `acceptance/Maintenance/MaintenanceTui.spec.js`: every screen file under the root, every shared mount and each tab of a
+  - `test/acceptance/Maintenance/MaintenanceTui.spec.js`: every screen file under the root, every shared mount and each tab of a
     mount its menu shows (as john.doe), rendered in tui with no error node on the demo's records.
-  - `acceptance/Maintenance/MaintenanceServerStatic.spec.js`: ServerStaticLib's full check of the same set (plain XML only);
+  - `test/acceptance/Maintenance/MaintenanceServerStatic.spec.js`: ServerStaticLib's full check of the same set (plain XML only);
     the marked screens clean, no `error` verdict.
   - Both read MaintenanceSpecLib's new `mountedScreens()` (each Maintenance file's `subscreens-item` of a Shared location),
     `mountTabs(path, parameters)` (the mount's tabs from `menuData`) and `sweepParameters(path)` (the demo record of a screen or
     its nearest parent: the air handler's work order, the compressor, the Service Center, the filter plan, the AC-200 procedure
     and so on). A screen P8 or P12 adds under the root, or a tab they add to a mount, is swept with no change; a new record
     screen needs its entry in `sweepRecords` if it takes an id.
-  - `acceptance/Maintenance/MaintenanceAccessWalk.spec.js` (seven features): each group's user opens Maintenance and none of
+  - `test/acceptance/Maintenance/MaintenanceAccessWalk.spec.js` (seven features): each group's user opens Maintenance and none of
     thirteen other roots (john.doe opens them all, the control); each side's work order and report (Services' on the compressor,
     assigned to maint.tech for tomorrow; Retail's on the forklift, by maint.retail) never show to the other side on 36 routes
     (WorkOrderDetail and ten tabs, its print, MaterialIssueReceipt, the lists and their CSV, RequestDetail, EquipmentDetail and
@@ -5445,7 +5445,7 @@ Written while P8 and P12 were in review, then extended after master was merged w
     to all but their organizers in `get#FullCalendarData` and in ResourceCalendarTui; procedure authoring (store and step
     services, approve and retire for all but the approver, ProcedureDetail's two transitions) is refused to every group but the
     author, the draft unchanged.
-  - `acceptance/client/Maintenance/MaintenancePhoneWalk.spec.js` at 390 px: maint.tech's WorkOrderDetail and its Procedure,
+  - `test/acceptance/client/Maintenance/MaintenancePhoneWalk.spec.js` at 390 px: maint.tech's WorkOrderDetail and its Procedure,
     Time and Parts tabs; maint.requester's Report a problem, filed; maint.resources' van odometer reading from Meters; and
     maint.booking's approval in BookingRequests of a booking the planner asked for at 1280 (four weeks ahead, 09:00). Each page
     is checked not to scroll sideways.
@@ -5587,7 +5587,7 @@ was run (the lead's run follows); nothing in MaintenanceSpecLib changed, so no r
   the repo's `.prettierrc.json`) on the two changed specs: clean.
 - For the lead:
   - Budget share: none.
-  - Merge hot spots: `acceptance/Maintenance/MaintenanceFoundationWalk.spec.js` (the menu feature), this note.
+  - Merge hot spots: `test/acceptance/Maintenance/MaintenanceFoundationWalk.spec.js` (the menu feature), this note.
   - The user's call: F346, the custom group given the planner bundle in Admin and the BOSS_MAINTENANCE deny rows. Recommended: carry
     the denies with the bundles rather than the root user group, as Settings' own permission check (the areas' DENY rows on each
     Maintenance capability group but the administrator's, or the Settings, Requests and Costs subscreens' `menu-include` and an
@@ -5872,7 +5872,7 @@ paths under `mr-boss/`.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
-| F1 | P0: `screen/Maintenance/` has six flat placeholders (Home, WorkOrders, Equipment, Facilities, Scheduling, Settings); the root mounts only Chatter and RecordFiles and has no `<shell-providers>`. Its comment says the grant is commented out (screen/Maintenance.xml:15-17); in fact `BOSS_MAINTENANCE` (data/BossSetupData.xml:221-228) gives `ADMIN` and `BOSS_MAINTENANCE_ADMIN` `AUTHZT_ALWAYS` on the root, as design §1.1 says. `BOSS_MAINTENANCE_ADMIN` (:29) is the only Maintenance group; there is no `ironstone.maintenance` service, `test/Maintenance` or `acceptance/Maintenance` | P1 |
+| F1 | P0: `screen/Maintenance/` has six flat placeholders (Home, WorkOrders, Equipment, Facilities, Scheduling, Settings); the root mounts only Chatter and RecordFiles and has no `<shell-providers>`. Its comment says the grant is commented out (screen/Maintenance.xml:15-17); in fact `BOSS_MAINTENANCE` (data/BossSetupData.xml:221-228) gives `ADMIN` and `BOSS_MAINTENANCE_ADMIN` `AUTHZT_ALWAYS` on the root, as design §1.1 says. `BOSS_MAINTENANCE_ADMIN` (:29) is the only Maintenance group; there is no `ironstone.maintenance` service, `test/Maintenance` or `test/acceptance/Maintenance` | P1 |
 | F2 | P0: no entity filter covers WorkEffort, Asset or AssetMaintenance (impl-manufacturing F3, impl-customer-service F67), so `MANTLE_USER_ORG` scopes none of Maintenance's main records | §2: work rows through services |
 | F3 | P0: none of the design's proposed Mantle families exists (`service/mantle/work` and `service/mantle/product` hold no MaintenanceServices, ProcessServices, MaintenancePlanServices, MaintenanceResourceServices, MaintenanceExecutionServices, MaintenanceReportServices, MaintenanceSettingsServices or MaintenanceImportServices); `ResourceBookingServices` has one service, `record#ResourceUnavailability` (ResourceBookingServices.xml:21) | The phases; P5 extends the one |
 | F4 | P0: `WorkEffort.isTemplate` is described as a project kept as a template for `clone#Project` (entity/WorkEffortEntities.xml:192-193), and Manufacturing's routing and operation templates also set it (service/mantle/work/Routings.js:215, :287). `WepMaintenance` (:380), `WeatDependsOn` (:593), `WeatBasedOn` (:595) and `WeatClone` (:596) are seeded, as design §1.3 says | P6: a maintenance template is `WetTask`, `WepMaintenance` and has a process policy that guards execution; every template list filters on all three; the description made general |

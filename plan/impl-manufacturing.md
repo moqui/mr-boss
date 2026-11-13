@@ -201,7 +201,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Manufacturing/`, `acceptance/client/Manufacturing/`, the
+  scenario are acceptance tests to write (`test/acceptance/Manufacturing/`, `test/acceptance/client/Manufacturing/`, the
   handheld mounts at 390 px among them), named in the phase; running them is not part of Done.
 
 ## 3. Phases

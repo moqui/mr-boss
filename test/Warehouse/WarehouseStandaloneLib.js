@@ -1,5 +1,5 @@
 // The Warehouse access walk's organization and flow (impl-warehouse P18; design-warehouse §19, crosscut §6), for the
-// acceptance spec acceptance/Warehouse/WarehouseAccessWalk: BOSS_P18_ORG, an organization with no ProductStore, its facility, product,
+// acceptance spec test/acceptance/Warehouse/WarehouseAccessWalk: BOSS_P18_ORG, an organization with no ProductStore, its facility, product,
 // supplier and customer, and its Warehouse users of one capability each (spec users in the root group and one capability
 // group, agents of the organization); receive to ship by those users; and the routes that show its records. Its records carry
 // "P18 secret" in a text the screens show.

@@ -301,7 +301,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - its row and **Built** note here.
 
   No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
-  scenario are acceptance tests to write (`acceptance/Sales/`, `acceptance/client/Sales/`, and mr-pass `acceptance/`
+  scenario are acceptance tests to write (`test/acceptance/Sales/`, `test/acceptance/client/Sales/`, and mr-pass `test/acceptance/`
   for the PASS phases), named in the phase; running them is not part of Done.
 
 ## 3. Phases
@@ -440,7 +440,7 @@ and SalesAnalysis (kept reachable); SAL-ACCESS, SAL-SHELL.
     not found under `MANTLE_USER_ORG`; found by the administrator's active organization); `SalesReports` gains the
     `SALES_REPORT_VIEW` reader and its refusal for another organization. The existing `test/Sales/SalesReports` render
     stays the one html render of SalesAnalysis.
-- **Usable when** (an acceptance test to write, `acceptance/Sales/SalesFoundationWalk`): the menu renders for each
+- **Usable when** (an acceptance test to write, `test/acceptance/Sales/SalesFoundationWalk`): the menu renders for each
   group; `sales.reader` opens SalesSummary for ORG_ZIZI_RETAIL and is refused the other organization's; an access
   administrator assigns the Sales representative bundle from Admin; a Projects client and a PASS public account are
   refused the root and every `ironstone.sales` service.
@@ -479,7 +479,7 @@ TypesAndReasons; SAL-CRM (its settings part), SAL-ACCESS.
 - **Specs:** Mantle `test/sales/SalesPipelineSetup` (a stage in use retired only with a reassignment; a membership
   ended, never deleted; a source bound to one organization not offered to another; a setting refused without
   `SALES_CONFIGURE`); BOSS `SalesSettings` (Stages' one qvt render; the settings entry hidden without its permission).
-- **Usable when** (`acceptance/Sales/SalesSetupUsable`): `sales.admin` adds a stage, reorders the pipeline and retires
+- **Usable when** (`test/acceptance/Sales/SalesSetupUsable`): `sales.admin` adds a stage, reorders the pipeline and retires
   a stage; `sales.manager` adds a rep to a team from a date; Admin's Health names a pipeline without stages with its
   fix link, and Admin's settings index opens Sales' settings.
 
@@ -517,7 +517,7 @@ design §4 waits for the framework's Maps work, as Admin's did (§7).
   call refused; another organization's parent refused; a contact's relationship ended, the person kept; a merge
   across organizations refused, and one moving an opportunity's account); BOSS `SalesAccounts` (Customer360's one qvt
   render in the Sales context).
-- **Usable when** (`acceptance/Sales/SalesAccountsUsable`): `sales.rep` creates an account and a contact and finds a
+- **Usable when** (`test/acceptance/Sales/SalesAccountsUsable`): `sales.rep` creates an account and a contact and finds a
   shared account of the organization; a contact of two accounts shows each account's documents only under that
   account; `sales.manager` merges the duplicate pair and the survivor keeps both histories; a finance tab shows only
   for a finance reader.
@@ -559,8 +559,8 @@ Today); SAL-CRM, SAL-COLLAB. The opportunity import is P6; the Comms intake P5.
   cross-organization account refused); BOSS `SalesOpportunities` (OpportunityDetail's one qvt render and the board's
   one render with its ChangeStage dialog); the golden walk `SalesPipelineWalk` (a lead, qualified, moved a stage,
   closed won).
-- **Usable when** (design §14.3 scenarios 1 and 2; `acceptance/Sales/SalesPipelineScenarios`, and
-  `acceptance/client/Sales/SalesBoardWalk` for the board, the row action and the phone width): a rep creates a lead
+- **Usable when** (design §14.3 scenarios 1 and 2; `test/acceptance/Sales/SalesPipelineScenarios`, and
+  `test/acceptance/client/Sales/SalesBoardWalk` for the board, the row action and the phone width): a rep creates a lead
   with no account, finds an existing contact at qualification and keeps the one record with its activities and
   files; the same move through the board, the row action and the terminal gives the same result; ending a rep's
   team membership removes the team's deals from their list from that date (scenario 3).
@@ -602,7 +602,7 @@ Design §3 Leads (intake), §9 LeadSources' UtmSourceMap, §1.4 (Comms hooks, CX
   (the rep's accounts' contacts listed, another team's absent, a write refused); BOSS `SalesIntake` (a "Create lead"
   from a message keeps the message as its source). `docs/security/Attack-Surface.md` gains the lead and RFQ intake
   addresses (mail from anyone makes an intake record, never a party) and the projected address book.
-- **Usable when** (design §14.3 scenario 13, its mail and voicemail parts; `acceptance/Sales/SalesIntakeScenarios`):
+- **Usable when** (design §14.3 scenario 13, its mail and voicemail parts; `test/acceptance/Sales/SalesIntakeScenarios`):
   mail to the leads address and a voicemail's "Create lead" each make one lead in the named team's queue with the
   mapped source; the same message again makes none; a phone's address book shows the rep's account contacts read only.
 
@@ -650,7 +650,7 @@ funnel). Ends stage 1.
   the update strategy; a repeat under its key answers the first result) and `SalesPipelineDataset` (another
   organization's deals not in a reader's rows); BOSS `SalesHome` (Home's one qvt render; a counter equal to its
   list's count); `test/skill-retrieval.json` gains the Sales cases.
-- **Usable when** (`acceptance/Sales/SalesHomeUsable`; gate 1): Home's counters open the lists they count; a CSV of
+- **Usable when** (`test/acceptance/Sales/SalesHomeUsable`; gate 1): Home's counters open the lists they count; a CSV of
   five deals, one with an unknown stage, imports four and names the one; an offboarded rep's deals wait in Admin's
   lifecycle for a new owner; Assist qualifies a lead only after the user approves the step.
 
@@ -688,7 +688,7 @@ Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability
   on a line change; a store order's tax as before; no gateway, no tax and no error) and `SalesQuoteDrafts` (a cart and
   a recurring base not among quotes; a second customer refused; an override keeps its basis; a missing price blocks;
   a rep without the assignment refused); BOSS `SalesQuotes` (OrderDetail's one qvt render in the quote context).
-- **Usable when** (design §14.3 scenario 4, its price and tax half; `acceptance/Sales/SalesQuoteDraftUsable`): a rep
+- **Usable when** (design §14.3 scenario 4, its price and tax half; `test/acceptance/Sales/SalesQuoteDraftUsable`): a rep
   drafts a customer-priced quote with no ProductStore, sees the price Products explains and the tax of the seller's
   gateway change with each line, an unavailable price told apart from zero, and no cost; Projects', Accounting's,
   Purchasing's, Customer Service's and Commerce's order contexts read as before.
@@ -709,7 +709,7 @@ Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff
 - **Specs:** Mantle `test/order/SalesQuoteRequests` (one request for a message delivered twice; a quote from selected
   items with its links; the same key no second quote; an RqtQuote not triaged; a warranty source's diagnosis absent
   from the quote); BOSS `SalesQuoteRequests` (QuoteRequestDetail's one qvt render in the Sales context).
-- **Usable when** (`acceptance/Sales/SalesRfqUsable`): mail to the RFQ address becomes a request with its attachment;
+- **Usable when** (`test/acceptance/Sales/SalesRfqUsable`): mail to the RFQ address becomes a request with its attachment;
   a rep makes a quote from two of its three lines and a second quote later; a declined RFQ notifies the requester
   after the recipient preview; a warranty claim's chargeable lines become a quote Customer Service can read.
 
@@ -753,7 +753,7 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
   the seller's approval setting off a Sales warning stops `autoApprove#Order` and not a person's `approve#Order`;
   an organization with no policy auto-approves as before); BOSS `SalesApprovals` (the list's one render with a
   quote's row and no amount in its title).
-- **Usable when** (design §14.3 scenario 5, its approval half; `acceptance/Sales/SalesApprovalUsable`):
+- **Usable when** (design §14.3 scenario 5, its approval half; `test/acceptance/Sales/SalesApprovalUsable`):
   `sales.admin` publishes a discount rule; a rep's override waits for `sales.approver`, who approves it from
   Approvals; the rep cannot approve their own; a direct service call cannot propose the unapproved quote.
 
@@ -789,7 +789,7 @@ CX-DELIVERY (X8), X2, X3.
   and `SalesQuoteResponse` (two acceptances under one key and under two give one response and one order; a decline
   after it refused; an expired and a revoked issue refused; a credit-held acceptance is accepted and held; a decline
   cancels the quote with its reason); BOSS `SalesQuoteSend` (the send dialog's preview with the stored PDF's name).
-- **Usable when** (design §14.3 scenarios 6 and 7, the staff path; `acceptance/Sales/SalesQuoteScenarios`): a rep
+- **Usable when** (design §14.3 scenarios 6 and 7, the staff path; `test/acceptance/Sales/SalesQuoteScenarios`): a rep
   sends an approved quote to two recipients, retries the one that failed, records the customer's acceptance with
   their PO and sees one placed order, read only at the one OrderDetail route until P11 gives it its actions;
   revising the quote ends the old issue's authority and keeps its PDF.
@@ -850,7 +850,7 @@ CX-CREDIT, X1, X4.
   limit and approves the rest; another organization's hold not released) and
   `StorelessOrderConfirmation` (one confirmation for a placement; none for a store order; a second approve sends
   none); BOSS `SalesOrders` (OrderDetail's one qvt render in the order context; the Awaiting approval list).
-- **Usable when** (design §14.3 scenarios 4 and 7, their order halves; `acceptance/Sales/SalesOrderScenarios`): an
+- **Usable when** (design §14.3 scenarios 4 and 7, their order halves; `test/acceptance/Sales/SalesOrderScenarios`): an
   accepted net-terms quote waits in Awaiting approval and `sales.approver` approves it past the credit and Sales
   checks; a storeless order's placement sends one confirmation and its invoice carries the gateway's tax; a rep
   enters a direct order with no quote.
@@ -871,7 +871,7 @@ Design §5 QuoteTemplates and QuoteTemplateDetail, §19 item 2; SAL-TEMPLATE.
 - **Specs:** Mantle `test/order/SalesQuoteTemplates` (a quote from a template priced as of its own date; a published
   successor leaves the earlier quote's terms; a template never reserved, placed, counted as an order or offered as a
   quote); BOSS `SalesQuoteTemplates` (QuoteTemplateDetail's one qvt render).
-- **Usable when** (design §14.3 scenario 5, its template half; `acceptance/Sales/SalesTemplateUsable`): a manager
+- **Usable when** (design §14.3 scenario 5, its template half; `test/acceptance/Sales/SalesTemplateUsable`): a manager
   publishes a template, a rep starts a quote from it, the manager publishes a successor, and the first quote and its
   PDF are unchanged.
 
@@ -911,8 +911,8 @@ identity); SAL-PORTAL (its quote part), X6. Ends stage 2.
   double submit gives one response; above the threshold a bearer is refused and the signed-in contact admitted);
   mr-pass `test/Sales/SalesPortalAccess` (the pages' refusals read "not available"; the schema's and routes' copies
   agree); `docs/security/Attack-Surface.md` gains the five operations, the bearer write and the two scopes.
-- **Usable when** (design §14.3 scenarios 7 and 8; mr-pass `acceptance/SalesQuoteScenarios` and
-  `acceptance/client/SalesQuoteHttp`, locally and through a remote frontend; gate 2): a customer opens the mailed
+- **Usable when** (design §14.3 scenarios 7 and 8; mr-pass `test/acceptance/SalesQuoteScenarios` and
+  `test/acceptance/client/SalesQuoteHttp`, locally and through a remote frontend; gate 2): a customer opens the mailed
   link at 390 px, reads the offer and its PDF, accepts with a PO and sees the receipt; a second click shows the same
   receipt; an invited contact signs in and finds the quote under My account; no ID change or other capability shows
   another customer's quote.
@@ -943,7 +943,7 @@ Design §6 OrderChanges, OrderChangeDetail, ShipmentDetail and InvoiceDetail; SA
   quantity increase adds the line at the resolver's price; a stale order revision, an expired approval, an active
   pick and a finalized invoice each refused by name; another hold left in place; Customer Service's two kinds as
   before); BOSS `SalesOrderChanges` (OrderChangeDetail's one qvt render in the Sales context).
-- **Usable when** (design §14.3 scenario 9; `acceptance/Sales/SalesChangeScenarios`): a price change filed in Customer
+- **Usable when** (design §14.3 scenario 9; `test/acceptance/Sales/SalesChangeScenarios`): a price change filed in Customer
   Service is approved by `sales.approver` and applied by `sales.change`, the order's PDF and totals follow, and a
   change against a picked line waits with its conflict; a partly shipped and invoiced order's remaining quantities
   reconcile with its shipments and invoices.
@@ -973,7 +973,7 @@ scope), §19 item 5; SAL-AGREEMENT, SAL-COLLAB, PRD-PRICE.
   price not offered to a new quote and an earlier order unchanged; a renewal a new agreement linked to the old;
   another organization's agreement refused); `test/product/` the resolver's guard beside its price-list spec; BOSS
   `SalesAgreements` (AgreementDetail's one qvt render).
-- **Usable when** (design §14.3 scenarios 4 and 10, their agreement halves; `acceptance/Sales/SalesAgreementUsable`):
+- **Usable when** (design §14.3 scenarios 4 and 10, their agreement halves; `test/acceptance/Sales/SalesAgreementUsable`):
   an agreement manager activates an agreement with two negotiated prices, a rep's quote for that customer takes
   them and PriceExplain says why, and after the agreement is ended a new quote does not, while the earlier order
   keeps its price.
@@ -1001,7 +1001,7 @@ Design §7 RecurringOrders and Subscriptions, §13.1 (`create_RecurringOrders`);
   Shop base only dispatched; no payment copied); BOSS `SalesRecurrence` (RecurringOrders' one qvt render).
   Mantle's Subscriptions and Shop's subscription specs and BOSS `CommerceSubscriptions` pass unchanged; the move
   is written into design-commerce §6.
-- **Usable when** (design §14.3 scenario 10, its recurrence half; `acceptance/Sales/SalesRecurrenceScenarios`): an
+- **Usable when** (design §14.3 scenario 10, its recurrence half; `test/acceptance/Sales/SalesRecurrenceScenarios`): an
   agreement manager makes an approved order a monthly base, the job places next month's order once, a paused base
   skips its month, and Sales' Subscriptions shows a storeless subscription beside a store contract it can only follow
   up.
@@ -1022,8 +1022,8 @@ Design §10 CustomerOrders and CustomerOrder; SAL-PORTAL (SAL-R01).
 - **Specs:** Mantle `test/order/SalesPortal` gains the order cases (a bearer's one order; a contact's accounts only;
   a base and a draft absent; a store order's link still Shop's); mr-pass `SalesPortalAccess` gains the order pages;
   Attack-Surface gains the two operations.
-- **Usable when** (design §14.3 scenario 8, its order half; mr-pass `acceptance/SalesOrderScenarios` and
-  `acceptance/client/SalesOrderHttp`): a contact follows a direct order's shipment and opens its invoice in Billing;
+- **Usable when** (design §14.3 scenario 8, its order half; mr-pass `test/acceptance/SalesOrderScenarios` and
+  `test/acceptance/client/SalesOrderHttp`): a contact follows a direct order's shipment and opens its invoice in Billing;
   the confirmation's link shows that one order; the page offers no edit, cancel or payment.
 
 ### P18 — Forecast and targets
@@ -1042,7 +1042,7 @@ Design §8 Forecast and TargetAttainment, §9 Targets; SAL-FORECAST.
 - **Specs:** Mantle `test/sales/SalesForecasts` (the weighted amount equals its deals'; a deal with no date left out
   with its reason; a manual probability used; a parent's roll-up counts a deal once across a team change; a zero
   quota gives no percent; a second forecast for one key refused); BOSS `SalesForecast` (Forecast's one qvt render).
-- **Usable when** (design §14.3 scenario 11; `acceptance/Sales/SalesForecastScenarios`): a rep submits a forecast for
+- **Usable when** (design §14.3 scenario 11; `test/acceptance/Sales/SalesForecastScenarios`): a rep submits a forecast for
   the quarter beside the calculated pipeline, the manager's roll-up drills to the same deals, and attainment against
   a won-deal target never adds order or invoice amounts to it.
 
@@ -1074,7 +1074,7 @@ SAL-REPORT, SAL-ANALYTICS.
   entry at Sales' route, read by Sales' report readers and Accounting's; margin columns absent without cost read).
   The `test/Sales/SalesReports` render is the rebuilt screen's one html render; AccountingReporting passes with the
   mount.
-- **Usable when** (`acceptance/Sales/SalesReportsUsable`): `sales.reader` opens each report for their organization
+- **Usable when** (`test/acceptance/Sales/SalesReportsUsable`): `sales.reader` opens each report for their organization
   with its drill-down and export agreeing with the screen; Accounting's SalesAnalysis shows its finance columns over
   the same rows; a manager subscribes to the weekly digest and copies the stalled-deal alert so it fires.
 

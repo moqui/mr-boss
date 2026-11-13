@@ -3,7 +3,7 @@
 // grants' organization filters and what may not widen it, another organization's records refused like missing ones, a
 // write refused for its permission, the Mantle entry points and REST stock paths reached only through the screens (F3),
 // and the record links of a Warehouse-only user. Each area's lists and screens are checked by that area's spec; the walks
-// of every route and user are acceptance/Warehouse/WarehouseAccessWalk.
+// of every route and user are test/acceptance/Warehouse/WarehouseAccessWalk.
 const lib = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js")
 const {ids, asUser, refusal, invoke} = lib
 const access = "ironstone.warehouse.AccessServices."
