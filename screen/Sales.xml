@@ -36,9 +36,10 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.sales.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sales"/>
         <!-- the record panels serve Sales' own record hosts only (the People P2, Insights P12 and Maintenance P1 mount lesson): this
             root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to a user given
-            Sales without Commons. None yet: the account P3, the opportunity P4, the quote and order P7 and P11 and the agreement
-            P15 join with their checks (Sales.js recordKinds). A panel request with no record (a person search, an avatar) names
-            none. -->
+            Sales without Commons. P3: a party that is an account of the user's sales scope or a contact of one (Sales.js recordKinds
+            contact, as Customer360's Files and ContactDetail's Activity and Files show it); the opportunity P4, the quote and order
+            P7 and P11 and the agreement P15 join with their checks. A panel request with no record (a person search, an avatar)
+            names none. -->
         <script><![CDATA[
             const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
             const panelName = pathNames[pathNames.indexOf('Sales') + 1]
@@ -46,11 +47,18 @@ along with this software (see the LICENSE.md file). If not, see
             if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
                 let entityName = String(wanted)
                 try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
-                const panelHosts = {}
+                const panelHosts = {'mantle.party.Party': 'contact'}
                 if (!Object.hasOwn(panelHosts, entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+                panelRecordType = panelHosts[entityName]
             }
         ]]></script>
+        <!-- the check is a service-call of the read-only check#Record, as Maintenance's root does -->
+        <if condition="panelRecordType">
+            <service-call name="ironstone.sales.ContextServices.check#Record" out-map="panelRecord" ignore-error="true"
+                    in-map="{appRoot:'Sales', recordType:panelRecordType, recordId:ec.context.recordId || ''}"/>
+            <script>if (!ec.context.panelRecord?.recordId) throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are not available')</script>
+        </if>
         <set field="sharedLinks" from="sales.sharedLinks"/>
     </always-actions>
 
@@ -63,13 +71,23 @@ along with this software (see the LICENSE.md file). If not, see
             the manager and the reader); Mantle's SalesReportServices check the permission and the organization again -->
         <subscreens-item name="Reports" location="component://mr-boss/screen/Sales/Reports.xml" menu-index="7"
                 menu-include="ec.user.hasPermission('SALES_REPORT_VIEW')"/>
+        <!-- P3: Accounts (design §4), for a user who reads Sales (SALES_VIEW, SALES_TEAM_VIEW or SALES_REPORT_VIEW): Accounts,
+            Contacts, the shared Customer360 and ContactDetail, MergeAccounts for the manager and the administrator -->
+        <subscreens-item name="Accounts" location="component://mr-boss/screen/Sales/Accounts.xml" menu-index="3"
+                menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
     </subscreens>
 
     <!-- P1: the sales keymap (design §1.2). The palette source (P3, P4), quick create (P6), Today (P6), the Comms providers (P5,
         P6) and the notification topics (P9, P14) arrive with their records. -->
     <shell-providers>
+        <!-- P3: the palette's Sales records, accounts first (ironstone.sales.ContextServices.search#Records, Mantle's scoped find) -->
+        <palette-source group="Sales" label="Sales records" icon="sym_o_handshake"
+                service="ironstone.sales.ContextServices.search#Records" sequence="51"/>
         <keymap scope="sales">
             <key keys="g s" label="Sales home" screen="Sales/Home"/>
+            <!-- P3 -->
+            <key keys="g a" label="Accounts" screen="Sales/Accounts/Accounts"/>
+            <key keys="g c" label="Contacts" screen="Sales/Accounts/Contacts"/>
         </keymap>
     </shell-providers>
 

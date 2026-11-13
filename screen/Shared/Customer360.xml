@@ -26,7 +26,12 @@ along with this software (see the LICENSE.md file). If not, see
     Commerce (appRoot Commerce, mounted at Commerce/Customers/Customer360; crosscut §3.2, design-commerce §10, impl-commerce P8):
     a customer of the user's stores, read in always-actions (mantle.order.StoreOperationsServices.get#StoreCustomer), on one
     page (template/CommerceCustomer360.xml) with no tabs: its stores, PASS account state, addresses, masked payment methods,
-    orders, carts, cases and returns. -->
+    orders, carts, cases and returns.
+    Sales (appRoot Sales, mounted at Sales/Accounts/Customer360; crosscut §3.2 Sales row, design-sales §4, impl-sales P3): an
+    account of the user's sales scope, read in always-actions (mantle.sales.SalesWorkspaceServices.get#CustomerSales; a shared
+    account's documents only of the user's organizations), its header and key numbers (template/SalesCustomer360.xml) and its own
+    tabs, Overview, Contacts, Orders (an organization reader's), Invoices (a finance reader's) and Files; Opportunities, RFQs,
+    Quotes and Agreements join with their phases (P4, P8, P7, P15). The Accounting tabs are Accounting's alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Customer"
@@ -45,6 +50,14 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="customerFound" from="!!serviceCustomer?.customerFound"/>
             <set field="customerDetail" from="serviceCustomer?.customerDetail || {}"/>
         </if>
+        <!-- Sales (impl-sales P3): an account of the user's sales scope, which its tabs use -->
+        <if condition="appRoot == 'Sales'">
+            <service-call name="mantle.sales.SalesWorkspaceServices.get#CustomerSales" out-map="salesCustomer"
+                    in-map="{customerPartyId:customerPartyId}" transaction="force-cache" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="customerFound" from="!!salesCustomer?.customerFound"/>
+            <set field="customerDetail" from="salesCustomer?.customerDetail || {}"/>
+        </if>
         <!-- Commerce (impl-commerce P8): a customer of the user's stores, read only -->
         <if condition="appRoot == 'Commerce'">
             <service-call name="mantle.order.StoreOperationsServices.get#StoreCustomer" out-map="commerceCustomer"
@@ -60,6 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
     <subscreens default-item="Contact" always-use-full-path="true">
         <conditional-default condition="appRoot == 'CustomerService'" item="ServiceOverview"/>
+        <conditional-default condition="appRoot == 'Sales'" item="SalesOverview"/>
         <subscreens-item name="InsightsRecord" location="component://mr-boss/screen/Shared/InsightsRecord.xml" menu-include="false"/>
     </subscreens>
     <!-- Insights (appRoot Insights, mounted at Insights/Records/Customer360; design-insights §10, crosscut's Insights row, impl-insights
@@ -68,7 +82,7 @@ along with this software (see the LICENSE.md file). If not, see
         show it, the owners' screens of it that open to them, and the return to the report; no action. -->
     <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
-        <if condition="organizationPartyId &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce'">
+        <if condition="organizationPartyId &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'Sales'">
             <service-call name="ironstone.accounting.ReceivableServices.get#CustomerContext"
                     in-map="context"
                     out-map="context"
@@ -83,13 +97,14 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section-include name="CustomerServiceCustomer" location="component://mr-boss/template/CustomerServiceCustomer360.xml"/>
         <section-include name="CommerceCustomer" location="component://mr-boss/template/CommerceCustomer360.xml"/>
-        <section name="CustomerOrganizationPrompt" condition="!organizationPartyId &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce'">
+        <section-include name="SalesCustomer" location="component://mr-boss/template/SalesCustomer360.xml"/>
+        <section name="CustomerOrganizationPrompt" condition="!organizationPartyId &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'Sales'">
             <widgets>
                 <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
                 <label text="Choose an organization to see this customer." type="p"/>
             </widgets>
         </section>
-        <section name="CustomerMissing" condition="organizationPartyId &amp;&amp; !customerFound &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce'">
+        <section name="CustomerMissing" condition="organizationPartyId &amp;&amp; !customerFound &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'Sales'">
             <widgets>
                 <container-box type="warning">
                     <box-header title="Customer not available"/>
@@ -103,7 +118,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <section name="CustomerRecord" condition="customerFound &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce'">
+        <section name="CustomerRecord" condition="customerFound &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'Sales'">
             <widgets>
                 <context record-entity="mantle.party.Party"
                         record-id="${customerPartyId}"

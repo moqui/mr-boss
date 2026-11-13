@@ -3,12 +3,12 @@
 // capabilities from its permissions (an edit permission alone reading nothing), a representative of Retail refused Ziziwork Sales'
 // organization and Ziziwork Sales' representative Retail's with the same parameters, the ironstone.sales services refused without
 // the root grant and a write verb of the package denied a client (the client deny pattern), the record panels served for Sales'
-// own record hosts only (none yet), Home's one qvt render and SalesSummary's one html render (the reader's; a representative is
-// refused Reports), and Sales' rows in Admin's capability registry (each bundle carrying exactly its group's grants,
-// SALES_OWNER_CHANGE the identity operator's alone). One feature per rule, each case of it a line of its problems, with artifact
-// authorization enabled. Mantle's scope rules (the organization filters, the report reader's organizations) are Mantle's
+// own record hosts only (P3: an account or a contact of the scope), Home's one qvt render and SalesSummary's one html render (the
+// reader's; a representative is refused Reports), and Sales' rows in Admin's capability registry (each bundle carrying exactly its
+// group's grants, SALES_OWNER_CHANGE the identity operator's alone). One feature per rule, each case of it a line of its problems,
+// with artifact authorization enabled. Mantle's scope rules (the organization filters, the report reader's organizations) are Mantle's
 // SalesOrganizationScope and SalesReports. The access and isolation walk is the acceptance SalesFoundationWalk. A later phase adds
-// a case only for an access rule it adds.
+// a case only for an access rule it adds: P3 the account and contact record kinds and MergeAccounts.
 // Run: ./moq test mr-boss --spec SalesAccess
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell} = lib
@@ -174,7 +174,11 @@ const capabilityNames = [
     // the Reports area, a report reader's
     "reports",
     // the sales reports answer costs (report read or PRODUCT_COST_VIEW, borrowed; no Sales group holds either)
-    "reportCosts"
+    "reportCosts",
+    // P3: the merge of accounts (MergeAccounts' grant with SALES_ACCOUNT_EDIT and SALES_TEAM_MANAGE or SALES_CONFIGURE), and an
+    // account's invoices (ACCOUNTING_VIEW or RECEIVABLE_VIEW, borrowed; no Sales group holds either)
+    "mergeAccounts",
+    "financeRead"
 ]
 const edits = ["opportunityEdit", "accountEdit", "quoteEdit", "quoteSend", "orderEdit"]
 // design §1.1's table as P1 grants it (F43: approve and orderChange come with P9 and P14); every user in BOSS_SALES holds view
@@ -186,7 +190,8 @@ const capabilityUsers = [
             "anyRead",
             "teamRead",
             "reportRead",
-            "reports"
+            "reports",
+            "mergeAccounts"
         ])
     },
     {user: users.approver, granted: ["view", "orderApprove", "anyRead"]},
@@ -196,7 +201,7 @@ const capabilityUsers = [
     {
         user: users.admin,
         granted: capabilityNames.filter(
-            name => !["orderApprove", "orderChange", "approve", "ownerChange", "reportCosts"].includes(name)
+            name => !["orderApprove", "orderChange", "approve", "ownerChange", "reportCosts", "financeRead"].includes(name)
         )
     },
     {user: "sales.spec.editonly", granted: ["opportunityEdit"]},
@@ -310,8 +315,8 @@ feature("the ironstone.sales services are refused without the root grant, and a 
     }
 })
 
-// The record panels under the Sales root serve Sales' own record hosts only (none yet; P3 and P4 add the account and the
-// opportunity), and a panel request naming no record (as a person search does)
+// The record panels under the Sales root serve Sales' own record hosts only (P3: an account or a contact of the user's scope; P4
+// adds the opportunity), and a panel request naming no record (as a person search does)
 function panelRequest(path, parameters = {}) {
     const out = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render(path, parameters, "get")
     ec.message.clearErrors()
@@ -327,6 +332,15 @@ feature(
                 files: panelRequest("apps/Sales/RecordFiles/filesData", {
                     recordEntity: "mantle.party.Party",
                     recordId: ids.organizationId
+                }),
+                // P3: the representative's account's files, and not another organization's
+                account: panelRequest("apps/Sales/RecordFiles/filesData", {
+                    recordEntity: "mantle.party.Party",
+                    recordId: ids.accounts.wingtip
+                }),
+                otherAccount: panelRequest("apps/Sales/RecordFiles/filesData", {
+                    recordEntity: "mantle.party.Party",
+                    recordId: ids.accounts.fabrikam
                 }),
                 chatter: panelRequest("apps/Sales/Chatter/chatterData")
             }))
@@ -357,6 +371,50 @@ feature(
             unauthorized(repReports)
             panels.files.errors.includes("RECORD_PANEL_UNAVAILABLE")
             !panels.chatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
+            panels.account.errors == ""
+            panels.otherAccount.errors.includes("RECORD_PANEL_UNAVAILABLE")
+        }
+    }
+)
+
+// P3 (design §4): an account is its organization's (or shared), a contact seen through an account; MergeAccounts is a manager's
+feature(
+    "an account and a contact are the representative's organization's, refused another's; MergeAccounts opens to a manager only",
+    {
+        when() {
+            const problems = []
+            const expect = (label, message, refusalText) => {
+                if (refusalText ? !message.includes(refusalText) : message !== "")
+                    problems.push(`${label}: ${message || "accepted"}`)
+            }
+            const record = (recordType, recordId) => refusal(checkRecord, {recordType, recordId})
+            asUser(users.rep, () => {
+                expect("Wingtip Traders", record("account", ids.accounts.wingtip))
+                expect("Fabrikam Industrial", record("account", ids.accounts.fabrikam), "RECORD_UNAVAILABLE")
+                expect("Dana Morales", record("contact", ids.contacts.dana))
+                expect("Lee Chen", record("contact", ids.contacts.lee), "RECORD_UNAVAILABLE")
+                // an internal organization is no account
+                expect("Ziziwork Retail as an account", record("account", ids.organizationId), "RECORD_UNAVAILABLE")
+            })
+            asUser(users.otherRep, () => {
+                expect("Fabrikam Industrial (its representative)", record("account", ids.accounts.fabrikam))
+                expect(
+                    "Wingtip Traders (Ziziwork Sales' representative)",
+                    record("account", ids.accounts.wingtip),
+                    "RECORD_UNAVAILABLE"
+                )
+            })
+            const repMerge = screenRefusal(users.rep, "Accounts/MergeAccounts")
+            if (!unauthorized(repMerge)) problems.push(`a representative opens MergeAccounts: ${repMerge || "opened"}`)
+            const managerMerge = screenRefusal(users.manager, "Accounts/MergeAccounts")
+            if (managerMerge !== "") problems.push(`the manager is refused MergeAccounts: ${managerMerge}`)
+            const accountsMenu = shell(users.rep, true, "Accounts/Accounts", "Accounts").names
+            if (JSON.stringify(accountsMenu) !== JSON.stringify(ids.accountsMenu))
+                problems.push(`the Accounts menu: ${accountsMenu}`)
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
         }
     }
 )

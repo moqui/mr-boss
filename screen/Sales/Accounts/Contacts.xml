@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Accounts › Contacts (design-sales §4 Contacts; crosscut §3.1; style-guide §3.2 List; impl-sales P3, F68): Sales' own
+    list of the people who are current contacts of the accounts of the user's sales scope (Mantle's find#AccountContacts, scoped
+    and paged in the query), found by name or account, of one account or organization; a person of two accounts is a row for
+    each, and reading one account's contact gives nothing of the other's. Each row opens ContactDetail (the Commons contact record)
+    and its account's Customer360. New contact (create#Contact) and End (delete#Contact: the relationship ends, the person is
+    kept) for a holder of SALES_ACCOUNT_EDIT. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Contacts" default-menu-index="2">
+    <parameter name="text"/>
+    <parameter name="accountPartyId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <transition-include name="endContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.sales.SalesWorkspaceServices.find#AccountContacts" out-map="context" transaction="force-new"
+                    ignore-error="true" in-map="{text:text, accountPartyId:accountPartyId, organizationPartyId:organizationPartyId,
+                        pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+            <!-- an account the user may not see is a filter that matches nothing, not a failed page -->
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="contactList" from="contactList || []"/>
+        <set field="filtered" from="!!(text || accountPartyId || organizationPartyId)"/>
+    </actions>
+    <widgets>
+        <label text="You do not read contacts in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="ContactsRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Contacts" type="h5"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewContactDialog" button-text="New contact" title="New contact of an account"
+                                icon="sym_o_person_add" width="760" type="primary" condition="can.accountEdit">
+                            <form-single name="NewContact" transition="createContact">
+                                <field name="accountPartyId">
+                                    <default-field title="Account">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="firstName">
+                                    <default-field title="First name">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="lastName">
+                                    <default-field title="Last name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="relationshipName">
+                                    <default-field title="Title" tooltip="The contact's title at the account">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="emailAddress">
+                                    <default-field title="Email">
+                                        <text-line input-type="email"/>
+                                    </default-field>
+                                </field>
+                                <field name="contactNumber">
+                                    <default-field title="Phone">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Add contact"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="accountPartyId"/>
+                                    <field-row>
+                                        <field-ref name="firstName"/>
+                                        <field-ref name="lastName"/>
+                                    </field-row>
+                                    <field-ref name="relationshipName"/>
+                                    <field-row>
+                                        <field-ref name="emailAddress"/>
+                                        <field-ref name="contactNumber"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <form-list name="ContactList" list="contactList" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Name or account">
+                            <text-line size="20"/>
+                        </header-field>
+                    </field>
+                    <field name="accountPartyId">
+                        <header-field title="Account">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Account">
+                            <link url="${sharedLinks['Accounts/Customer360']}" text="${accountName}" link-type="anchor"
+                                    parameter-map="{customerPartyId:accountPartyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="name">
+                        <default-field title="Contact">
+                            <link url="${sharedLinks['Accounts/ContactDetail']}" text="${name}" link-type="anchor"
+                                    parameter-map="{partyId:partyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="titleText">
+                        <default-field title="Title">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="email">
+                        <default-field title="Email">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="phone">
+                        <default-field title="Phone">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="fromText">
+                        <default-field title="Since">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="rowActions" align="right">
+                        <default-field title="">
+                            <link url="endContact" link-type="hidden-form-link" text="End" icon="sym_o_link_off" btn-type="danger"
+                                    condition="can.accountEdit" confirmation="End ${name}'s contact with ${accountName}? The person is kept."
+                                    parameter-map="{partyRelationshipId:partyRelationshipId}"/>
+                        </default-field>
+                    </field>
+                    <columns>
+                        <column><field-ref name="name"/><field-ref name="titleText"/></column>
+                        <column><field-ref name="accountPartyId"/></column>
+                        <column><field-ref name="email"/></column>
+                        <column><field-ref name="phone"/></column>
+                        <column><field-ref name="fromText"/></column>
+                        <column><field-ref name="rowActions"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/><field-ref name="accountPartyId"/></column>
+                        <column><field-ref name="email"/><field-ref name="rowActions"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoContacts" condition="!contactList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No contacts match' : 'No contacts yet' + (can.accountEdit ? ' · Add one with New contact' : '')}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="customerPartyId"/>
     <parameter name="appRoot"/>
     <!-- Accounting's tab; Customer Service shows its own (impl-customer-service P3) -->
-    <condition><expression>appRoot != 'CustomerService'</expression></condition>
+    <condition><expression>appRoot != 'CustomerService' &amp;&amp; appRoot != 'Sales'</expression></condition>
     <actions>
         <!-- Customer360's actions read the customer when it renders with the tab -->
         <if condition="customerDetail == null &amp;&amp; organizationPartyId">

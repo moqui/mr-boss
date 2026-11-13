@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ContactDetail in Sales (design-sales §4 ContactDetail; crosscut §3.1 Sales row; impl-sales P3, F68): the Commons contact
+    record (template/ContactRecord.xml's ContactRecordSection and its transitions, as Customer Service's ContactDetail includes it)
+    for an account of the user's sales scope or a current contact of one (ironstone.sales.ContextServices check#Record, kind
+    contact); anyone else is "not available". Above it, Sales' own box: the accounts the person is a contact of in the user's
+    scope, with Add to an account (add#Contact) and End (delete#Contact) for a holder of SALES_ACCOUNT_EDIT. Identity and channels
+    are maintained under the record's own party checks (ContactServices.check#ContactAccess); consent is read only there, with the
+    link to Comms' Consent (template/ConsentRecord.xml), as Commons §16 gives Sales. Invite to Sales (P13) and New lead or
+    opportunity (P4) join with their phases. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Contact" default-menu-include="false">
+    <parameter name="partyId" required="true"/>
+    <parameter name="tab"/>
+    <parameter name="showExpired"/>
+    <transition-include name="contactUpdate" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactOrganization" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactInfoStore" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactInfoPurpose" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactRelationshipAdd" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactNote" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatarUpload" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatarRemove" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactFavorite" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactBooks" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactLink" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactDelete" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactExport" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatar" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactSearch" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactGeoRegions" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactBookGroups" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="consentRecord" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <transition-include name="consentListSet" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="addContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <transition-include name="endContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <actions>
+        <service-call name="ironstone.sales.ContextServices.check#Record" out-map="salesContact" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'contact', recordId:partyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="contactFound" from="!!salesContact?.recordId"/>
+        <if condition="contactFound">
+            <service-call name="mantle.sales.SalesWorkspaceServices.find#AccountContacts" out-map="accountsOut" transaction="force-new"
+                    ignore-error="true" in-map="{contactPartyId:partyId, pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="contactAccounts" from="accountsOut?.contactList || []"/>
+        <set field="isAccount" from="contactFound &amp;&amp; salesContact.detail == 'Account'"/>
+        <set field="can" from="sales.capabilities"/>
+        <set field="recordPartyId" from="partyId"/>
+        <set field="inSplit" from="false"/>
+        <set field="recordBase" from="'/qapps' + sharedLinks['Accounts/ContactDetail'].slice(1)"/>
+    </actions>
+    <widgets>
+        <section name="SalesContactMissing" condition="!contactFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Contact not available"/>
+                    <box-body>
+                        <label type="p" text="This contact is not available: it does not exist, or it is not an account or a contact of an
+                                account you may see."/>
+                        <link url="${sharedLinks['Accounts/Contacts']}" text="Back to contacts" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SalesContactFound" condition="contactFound">
+            <widgets>
+                <section name="SalesContactAccount" condition="isAccount">
+                    <widgets>
+                        <container style="q-mb-xs">
+                            <link url="${sharedLinks['Accounts/Customer360']}" link-type="anchor" text="${salesContact.label}"
+                                    icon="arrow_back" parameter-map="{customerPartyId:partyId}"/>
+                        </container>
+                    </widgets>
+                </section>
+                <section name="SalesContactAccounts" condition="!isAccount">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Accounts"/>
+                            <box-toolbar>
+                                <container-dialog id="AddToAccountDialog" button-text="Add to an account" icon="sym_o_add_link"
+                                        title="Add ${salesContact.label} to an account" condition="can.accountEdit">
+                                    <form-single name="AddToAccount" transition="addContact">
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="accountPartyId">
+                                            <default-field title="Account">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="relationshipName">
+                                            <default-field title="Title">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="">
+                                                <submit text="Add to the account"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="ContactAccounts" list="contactAccounts" skip-form="true" paginate="false">
+                                    <field name="accountName">
+                                        <default-field title="Account">
+                                            <link url="${sharedLinks['Accounts/Customer360']}" text="${accountName}" link-type="anchor"
+                                                    parameter-map="{customerPartyId:accountPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="titleText">
+                                        <default-field title="Title">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromText">
+                                        <default-field title="Since">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <link url="endContact" link-type="hidden-form-link" text="End" icon="sym_o_link_off"
+                                                    btn-type="danger" condition="can.accountEdit"
+                                                    confirmation="End the contact with ${accountName}? The person is kept."
+                                                    parameter-map="{partyRelationshipId:partyRelationshipId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="accountName"/><field-ref name="titleText"/></column>
+                                        <column><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section-include name="ContactRecordSection" location="component://mr-boss/template/ContactRecord.xml"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

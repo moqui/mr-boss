@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales branch (crosscut §3.2 Sales row; design-sales §4 Customer360; impl-sales P3): the section Shared/Customer360
+    includes when appRoot is Sales, over mantle.sales.SalesWorkspaceServices.get#CustomerSales (read in its always-actions): "not
+    available" for an account outside the user's sales scope; else the header with the account's name, kind, role and owner (a
+    shared account says so: only the user's organizations' documents show), New contact for an account editor, the contact record,
+    the account's contacts and, for a manager or administrator, its duplicates in More; the key numbers (contacts, and by the
+    user's rights open orders and open invoices, each linking to its tab), then the tabs. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="SalesCustomer" condition="appRoot == 'Sales'">
+            <widgets>
+                <section name="SalesCustomerMissing" condition="!customerFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Account not available"/>
+                            <box-body>
+                                <label type="p" text="The account does not exist, or it is not an account of your organizations."/>
+                                <link url="${sharedLinks['Accounts/Accounts']}" text="Back to accounts" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="SalesCustomerRecord" condition="customerFound">
+                    <actions>
+                        <set field="customer360Base" from="'/qapps' + sharedLinks['Accounts/Customer360'].slice(1)"/>
+                        <set field="accountQuery" from="'?customerPartyId=' + encodeURIComponent(customerPartyId)"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.party.Party" record-id="${customerPartyId}"
+                                title="${customerDetail.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${customerDetail.customerName}" type="h5"/>
+                                    <label text="${[customerDetail.kindText, customerDetail.roleText, customerDetail.pseudoId,
+                                            customerDetail.ownerText].filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                    <label text="A shared account: only your organizations' documents show." type="p"
+                                            style="text-caption m-muted q-mb-none" condition="customerDetail.shared"/>
+                                </container>
+                                <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                                    <link url="${customer360Base}/SalesContacts${accountQuery}&amp;_openDialog=NewAccountContactDialog"
+                                            url-type="plain" text="New contact" icon="sym_o_person_add" link-type="anchor-button"
+                                            btn-type="primary" condition="customerDetail.canEdit"/>
+                                    <button-menu text="More" icon="more_horiz">
+                                        <link url="${sharedLinks['Accounts/ContactDetail']}" text="Contact record"
+                                                parameter-map="{partyId:customerPartyId}"/>
+                                        <link url="${sharedLinks['Accounts/Contacts']}" text="Find contacts"
+                                                parameter-map="{accountPartyId:customerPartyId}"/>
+                                        <link url="${sharedLinks['Accounts/MergeAccounts']}" text="Duplicates"
+                                                condition="customerDetail.canMerge &amp;&amp; sales.capabilities.mergeAccounts"/>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <dashboard min-width="160">
+                            <number-card title="Contacts" value="${customerDetail.contactCount}" size="sm" icon="sym_o_contacts"
+                                    link="${sharedLinks['Accounts/Customer360']}/SalesContacts${accountQuery}"/>
+                            <number-card title="Open orders" value="${customerDetail.openOrderCount}" size="sm" icon="sym_o_receipt_long"
+                                    link="${sharedLinks['Accounts/Customer360']}/SalesOrders${accountQuery}" condition="customerDetail.ordersRead"/>
+                            <number-card title="Open invoices" value="${customerDetail.openInvoiceCount}" size="sm"
+                                    icon="sym_o_request_quote" link="${sharedLinks['Accounts/Customer360']}/SalesInvoices${accountQuery}"
+                                    condition="customerDetail.financeRead"/>
+                        </dashboard>
+                        <subscreens-panel id="SalesCustomerTabs" type="tab"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Accounts area of IronStone Sales (design-sales §4, §1.2; impl-sales P3): Accounts (AccountFind, AccountList, NewAccount,
+    NewPerson) and Contacts, Sales' own lists, in the menu; the shared Customer360 in Sales' context, ContactDetail (the Commons
+    contact record behind Sales' record check) and MergeAccounts with its Compare (the manager's and the administrator's,
+    BOSS_SAL_MERGE), hidden from the menu. Shown to a user who reads Sales (the root's menu condition); every read is Mantle's
+    scoped find (mantle.sales.SalesWorkspaceServices) and every write Mantle's guarded account service
+    (mantle.sales.AccountServices). Accounts is built for a second mount (impl-sales §2, F47): Marketing's root mounts it with its
+    own context and bulk action (impl-marketing P3). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Accounts" default-menu-index="3" menu-image="sym_o_storefront" menu-image-type="icon">
+    <subscreens default-item="Accounts" always-use-full-path="true">
+        <subscreens-item name="Customer360" location="component://mr-boss/screen/Shared/Customer360.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="SalesAccountsPanel" type="tab"/>
+    </widgets>
+</screen>

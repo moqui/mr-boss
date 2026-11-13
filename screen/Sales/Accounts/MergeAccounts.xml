@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Accounts › MergeAccounts (design-sales §4 MergeAccounts; crosscut §3.1 Sales row; X15; impl-sales P3, F45): Commons'
+    duplicate pairs (ironstone.commons.ContactServices.get#DuplicatePairs, the last duplicate scan's, among the parties the user's
+    filters let them see) narrowed to the pairs Mantle's merge guards let the user merge (mantle.party.DuplicateServices
+    check#PartyMerge: accounts of their organization and their contacts, one kind, one owner organization), grouped by reason. Each
+    pair opens MergeCompare (both side by side with the Sales documents each carries, then Merge through Commons' merge#Contacts and
+    Mantle's merge#Parties) or is marked Not a duplicate (Commons' mark#NotDuplicate). For a Sales manager or administrator
+    (BOSS_SAL_MERGE, and the capability mergeAccounts: SALES_ACCOUNT_EDIT with SALES_TEAM_MANAGE or SALES_CONFIGURE); there is no
+    Sales merge service, and no merge happens on similarity alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Duplicates" default-menu-include="false">
+    <parameter name="reason"/>
+    <transition name="notDuplicate">
+        <actions>
+            <service-call name="ironstone.commons.ContactServices.mark#NotDuplicate" in-map="{partyId:partyId, otherPartyId:otherPartyId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Marked as not duplicates</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.mergeAccounts">
+            <service-call name="ironstone.commons.ContactServices.get#DuplicatePairs" in-map="{reason:reason}" out-map="dupOut"
+                    transaction="force-new" ignore-error="true"/>
+            <script><![CDATA[
+                ec.message.clearErrors()
+                // the pairs Mantle's merge guards let the user merge one way or the other
+                const mergeable = (pair) => [[pair.partyId, pair.otherPartyId], [pair.otherPartyId, pair.partyId]].some(([to, from]) =>
+                    !!ec.service.sync().name('mantle.party.DuplicateServices.check#PartyMerge').parameters({toPartyId: to, fromPartyId: from}).call()?.allowed)
+                const pairs = Array.from(dupOut?.pairList || []).filter(mergeable)
+                reasonGroups = Array.from(dupOut?.reasonList || []).map((entry) => ({reason: entry.reason,
+                    title: entry.label + ' · ' + pairs.filter((pair) => pair.reason === entry.reason).length,
+                    pairList: pairs.filter((pair) => pair.reason === entry.reason)})).filter((group) => group.pairList.length)
+                pairCount = pairs.length
+            ]]></script>
+        </if>
+    </actions>
+    <widgets>
+        <section name="MergeNotAllowed" condition="!can.mergeAccounts">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Duplicates"/>
+                    <box-body>
+                        <label type="p" text="Sales managers and administrators review duplicate accounts."/>
+                        <link url="${sharedLinks['Accounts/Accounts']}" link-type="anchor" text="Back to accounts"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MergeAllowed" condition="can.mergeAccounts">
+            <widgets>
+                <container style="row items-center q-mb-sm">
+                    <label type="h5" text="Duplicate accounts" style="q-my-none"/>
+                    <container style="col"/>
+                    <link url="${sharedLinks['Accounts/Accounts']}" text="Accounts" icon="sym_o_storefront" style="q-ml-sm"/>
+                </container>
+                <label type="p" style="m-muted" text="Candidate pairs among your organizations' accounts and their contacts, from the last duplicate scan. Compare a pair to merge it, or mark it not a duplicate; nothing is merged on a similar name alone."/>
+                <form-single name="DuplicateFind" transition=".">
+                    <field name="reason">
+                        <default-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <option key="email" text="Same email"/>
+                                <option key="phone" text="Same phone"/>
+                                <option key="name" text="Same name"/>
+                                <option key="address" text="Same address"/>
+                                <option key="identification" text="Same identification"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="findButton">
+                        <default-field title="Find">
+                            <submit/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="reason"/>
+                            <field-ref name="findButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <section-iterate name="DuplicateReasonGroup" list="reasonGroups" entry="group">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${group.title}"/>
+                            <box-body-nopad>
+                                <form-list name="DuplicateAccounts" list="group.pairList" skip-form="true" paginate="false">
+                                    <field name="name">
+                                        <default-field title="Account or contact">
+                                            <link url="${sharedLinks['Accounts/ContactDetail']}" link-type="anchor" text="${name}"
+                                                    parameter-map="{partyId:partyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="otherName">
+                                        <default-field title="Possible duplicate">
+                                            <link url="${sharedLinks['Accounts/ContactDetail']}" link-type="anchor" text="${otherName}"
+                                                    parameter-map="{partyId:otherPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonText">
+                                        <default-field title="Why">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="detailText">
+                                        <default-field title="Matching">
+                                            <display style="text-caption"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container style="row no-wrap justify-end items-center q-gutter-x-xs">
+                                                <dynamic-dialog id="MergeCompareDialog_${partyId}_${otherPartyId}" button-text="Compare"
+                                                        icon="sym_o_compare" transition="../MergeCompare" width="900"
+                                                        title="Compare and merge" parameter-map="{partyId:partyId, otherPartyId:otherPartyId}"/>
+                                                <link url="notDuplicate" link-type="hidden-form-link" text="Not a duplicate"
+                                                        icon="sym_o_do_not_disturb_on" confirmation="Mark ${name} and ${otherName} as not duplicates?"
+                                                        parameter-map="{partyId:partyId, otherPartyId:otherPartyId}"/>
+                                            </container>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="otherName"/></column>
+                                        <column><field-ref name="reasonText"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <section name="NoDuplicatePairs" condition="!pairCount">
+                    <widgets>
+                        <label type="p" style="m-muted" text="${reason ? 'No pairs match' : 'No duplicate accounts found'}"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
