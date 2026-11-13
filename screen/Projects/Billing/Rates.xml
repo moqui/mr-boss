@@ -24,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     "Context passed", owner contract): mounted under People too (People/Payroll/Rates), where payroll reads and sets the employees'
     pay rates (Worker pay, PAYROLL_VIEW and PAYROLL_EDIT; check#RateAccess) and client billing is hidden without money; and a
     third chip, Labor costing, lists the labor costing rates (RaprCost) read only, which finance administration sets in
-    Accounting's Costing policies. -->
+    Accounting's Costing policies. Worker pay rates are opted out of AI (the user's call of Nov 12, 2026, PE-21): their column
+    (payAmountText), the edit's amount and Which rate's worker rate show an agent's render its placeholder. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Rates" default-menu-index="3" menu-image="sym_o_percent" menu-image-type="icon">
 
@@ -95,6 +96,10 @@ along with this software (see the LICENSE.md file). If not, see
                 showEnded: showEnded === 'Y'}).call() || {}
             ec.message.clearErrors()
             rateRows = Array.from(out.rowList || [])
+            // worker pay is opted out of AI (the user's call of Nov 12, 2026, PE-21): its rate is the list's payAmountText column, which an
+            // agent's render shows as its placeholder; client billing and labor costing keep amountText
+            workerPay = purpose === 'RaprVendor'
+            if (workerPay) rateRows = rateRows.map((row) => Object.assign({}, row, {payAmountText: row.amountText}))
             rateRowsCount = rateRows.length
             const counts = out.counts || {}
             const options = ec.service.sync().name('ironstone.projects.BillingServices.get#RateOptions').call() || {}
@@ -125,6 +130,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (whichAsked && rateAccess.client) {
                 whichAnswer = ec.service.sync().name('ironstone.projects.BillingServices.get#WhichRate').parameters({partyId: whichPartyId || null, workEffortId: whichWorkEffortId || null,
                     workTypeEnumId: whichWorkTypeEnumId || null, onDate: whichDate || null}).call()?.answer || null
+                // the worker's pay rate is opted out of AI (the user's call of Nov 12, 2026): an agent's render names none
+                if (whichAnswer?.worker && sri.isAgentRender())
+                    whichAnswer = Object.assign({}, whichAnswer, {worker: Object.assign({}, whichAnswer.worker, {text: 'Not shared with AI'})})
                 whichError = ec.message.hasError() ? ec.message.getErrorsString() : ''
                 ec.message.clearErrors()
                 const party = whichPartyId ? ec.entity.find('mantle.party.PartyDetail').condition('partyId', whichPartyId).disableAuthz().one() : null
@@ -254,8 +262,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${positionText}" type="div" style="text-caption m-muted" condition="positionText"/></default-field></field>
                     <field name="fromText"><default-field title="From"><label text="${fromText}" type="span" style="text-no-wrap"/></default-field></field>
                     <field name="thruText"><default-field title="Thru"><label text="${thruText}" type="span" style="text-no-wrap"/></default-field></field>
-                    <field name="amountText" align="right"><default-field title="Rate">
+                    <field name="amountText" align="right" hide="workerPay"><default-field title="Rate">
                         <label text="${amountText}" type="span" style="text-no-wrap text-weight-medium ${ended ? 'm-muted' : ''}"/></default-field></field>
+                    <field name="payAmountText" align="right" hide="!workerPay" ai-opt-out="true"><default-field title="Rate">
+                        <display/></default-field></field>
                     <field name="stateText"><default-field title="">
                         <label text="${stateText}" type="span" style="text-caption ${ended ? 'm-muted' : coming ? 'text-info' : 'text-positive'}"/></default-field></field>
                     <field name="actions" align="right"><default-field title="">
@@ -268,7 +278,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <label text="${projectName} · ${personName} · ${workTypeText}" type="span"/></default-field></field>
                                     <field name="fromDate" from="fromValue"><default-field title="From"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
                                     <field name="thruDate" from="thruValue"><default-field title="Thru (empty: open)"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
-                                    <field name="rateAmount" from="amountValue"><default-field title="Amount an hour"><text-line size="10" input-type="number"/></default-field></field>
+                                    <field name="rateAmount" from="amountValue" ai-opt-out="true"><default-field title="Amount an hour"><text-line size="10" input-type="number"/></default-field></field>
                                     <field name="scopeNote"><default-field title=""><label text="To change what the rate applies to, end it and add a new rate." type="p" style="text-caption m-muted"/></default-field></field>
                                     <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                                 </form-single>
@@ -280,7 +290,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="findButton"><header-field title="Find"><submit/></header-field></field>
 
                     <columns>
-                        <column><field-ref name="rateTypeText"/><field-ref name="amountText"/></column>
+                        <column><field-ref name="rateTypeText"/><field-ref name="amountText"/><field-ref name="payAmountText"/></column>
                         <column><field-ref name="projectName"/><field-ref name="personName"/></column>
                         <column><field-ref name="workTypeText"/></column>
                         <column><field-ref name="fromText"/><field-ref name="thruText"/></column>
@@ -288,7 +298,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </columns>
                     <columns type="mobile">
                         <column><field-ref name="projectName"/><field-ref name="personName"/><field-ref name="workTypeText"/></column>
-                        <column><field-ref name="amountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        <column><field-ref name="amountText"/><field-ref name="payAmountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
                     </columns>
                 </form-list>
                 <section name="NoRates" condition="!rateRows.length"><widgets>

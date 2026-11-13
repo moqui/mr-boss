@@ -25,7 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
     Staffing area); change#OfferState and the other services check again. P17 review (the user's call of Nov 12, 2026): the issued
     letter is emailed to the applicant once the issue commits (Mantle's send#OfferLetter); the Letter box says whether it went, to
     which address and why not, without the letter's content, and Send the letter again follows a failure. The candidate's signed
-    copy of a letter holding pay is payroll's, as the letter, and downloads as a file. -->
+    copy of a letter holding pay is payroll's, as the letter, and downloads as a file.
+    The amounts are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Offer" default-menu-include="false">
     <parameter name="employmentOfferId"/>
@@ -108,7 +109,9 @@ along with this software (see the LICENSE.md file). If not, see
         <script><![CDATA[
             const recruiter = Array.from(offer?.access || []).includes('recruiter')
             headerCaption = offer ? [offer.positionName, offer.openingTitle, offer.organizationName].filter(Boolean).join(' · ') : ''
-            const payShown = offer?.paySees ? (offer.payText || 'None') : offer?.hasPayTerms ? 'Set by payroll' : 'Not set by payroll yet'
+            // the offer's pay is opted out of AI (the user's call of Nov 12, 2026): an agent's render names none
+            const payShown = offer?.paySees ? (sri.isAgentRender() ? 'Not shared with AI' : offer.payText || 'None')
+                : offer?.hasPayTerms ? 'Set by payroll' : 'Not set by payroll yet'
             termRows = offer ? [['Position', offer.positionName], ['Department', offer.departmentName], ['Reports to', offer.managerName],
                 ['Work location', offer.facilityName], ['Working schedule', offer.scheduleName], ['Starts', offer.fromDateText],
                 ['Ends', offer.thruDateText || 'Open-ended'], ['Open until', offer.expireDateText], ['Pay', payShown],
@@ -306,7 +309,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <form-single name="OfferPay" transition="storePay" map="payValues">
                                         <field name="employmentOfferId"><default-field><hidden/></default-field></field>
                                         <field name="revision"><default-field><hidden/></default-field></field>
-                                        <field name="payAmount">
+                                        <field name="payAmount" ai-opt-out="true">
                                             <default-field title="Amount" tooltip="Empty for no pay terms"><text-line size="12" input-type="number"/></default-field>
                                         </field>
                                         <field name="currencyUomId">

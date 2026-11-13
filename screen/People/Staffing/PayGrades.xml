@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     editors) or shared by every employer (changed only with PEOPLE_ALL_ORGANIZATIONS); the service answers only the grades the
     user reads, each with whether the user may change it. A payroll editor (PAYROLL_VIEW and PAYROLL_EDIT) adds a grade of an
     employer (New pay grade, the one primary; shared with no employer, for a holder of PEOPLE_ALL_ORGANIZATIONS) and sets a new
-    band from a date (New band, on a grade they change), which ends the band before it and changes no salary. -->
+    band from a date (New band, on a grade they change), which ends the band before it and changes no salary.
+    The amounts are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay grades" default-menu-index="3" menu-image="sym_o_stairs" menu-image-type="icon">
     <parameter name="term"/>
@@ -119,9 +120,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </drop-down>
                             </default-field>
                         </field>
-                        <field name="minAmount"><default-field title="Minimum"><text-line size="12" input-type="number"/></default-field></field>
-                        <field name="amount"><default-field title="Reference"><text-line size="12" input-type="number"/></default-field></field>
-                        <field name="maxAmount"><default-field title="Maximum"><text-line size="12" input-type="number"/></default-field></field>
+                        <field name="minAmount" ai-opt-out="true"><default-field title="Minimum"><text-line size="12" input-type="number"/></default-field></field>
+                        <field name="amount" ai-opt-out="true"><default-field title="Reference"><text-line size="12" input-type="number"/></default-field></field>
+                        <field name="maxAmount" ai-opt-out="true"><default-field title="Maximum"><text-line size="12" input-type="number"/></default-field></field>
                         <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
                         <field name="submitButton"><default-field title="Create pay grade"><submit/></default-field></field>
                         <field-layout>
@@ -173,13 +174,13 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="ownerText"><default-field title="Employer"><display/></default-field></field>
                             <field name="comments"><default-field title="Comments"><display/></default-field></field>
                             <field name="frequencyText" hide="!amountsShown"><default-field title="Frequency"><display/></default-field></field>
-                            <field name="minAmount" align="right" hide="!amountsShown">
+                            <field name="minAmount" ai-opt-out="true" align="right" hide="!amountsShown">
                                 <default-field title="Minimum"><display currency-unit-field="currencyUomId"/></default-field>
                             </field>
-                            <field name="amount" align="right" hide="!amountsShown">
+                            <field name="amount" ai-opt-out="true" align="right" hide="!amountsShown">
                                 <default-field title="Reference"><display currency-unit-field="currencyUomId"/></default-field>
                             </field>
-                            <field name="maxAmount" align="right" hide="!amountsShown">
+                            <field name="maxAmount" ai-opt-out="true" align="right" hide="!amountsShown">
                                 <default-field title="Maximum"><display currency-unit-field="currencyUomId"/></default-field>
                             </field>
                             <field name="bandFromText" hide="!amountsShown"><default-field title="From"><display/></default-field></field>
@@ -217,9 +218,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                     </drop-down>
                                                 </default-field>
                                             </field>
-                                            <field name="minAmount"><default-field title="Minimum"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="amount"><default-field title="Reference"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="maxAmount"><default-field title="Maximum"><text-line size="12" input-type="number"/></default-field></field>
+                                            <field name="minAmount" ai-opt-out="true"><default-field title="Minimum"><text-line size="12" input-type="number"/></default-field></field>
+                                            <field name="amount" ai-opt-out="true"><default-field title="Reference"><text-line size="12" input-type="number"/></default-field></field>
+                                            <field name="maxAmount" ai-opt-out="true"><default-field title="Maximum"><text-line size="12" input-type="number"/></default-field></field>
                                             <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
                                             <field name="submitButton">
                                                 <default-field title="Set band"><submit confirmation="Set a new band of ${gradeName} from the date given?"/></default-field>
@@ -258,13 +259,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="fromDateText"><default-field title="From"><display/></default-field></field>
                                     <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
                                     <field name="frequencyText"><default-field title="Frequency"><display/></default-field></field>
-                                    <field name="minAmount" align="right">
+                                    <field name="minAmount" ai-opt-out="true" align="right">
                                         <default-field title="Minimum"><display currency-unit-field="currencyUomId"/></default-field>
                                     </field>
-                                    <field name="amount" align="right">
+                                    <field name="amount" ai-opt-out="true" align="right">
                                         <default-field title="Reference"><display currency-unit-field="currencyUomId"/></default-field>
                                     </field>
-                                    <field name="maxAmount" align="right">
+                                    <field name="maxAmount" ai-opt-out="true" align="right">
                                         <default-field title="Maximum"><display currency-unit-field="currencyUomId"/></default-field>
                                     </field>
                                     <field name="stateText">

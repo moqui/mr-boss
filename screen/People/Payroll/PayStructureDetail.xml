@@ -107,7 +107,10 @@ along with this software (see the LICENSE.md file). If not, see
             <script>previewError = ec.message.errorsString; ec.message.clearErrors()</script>
         </if>
         <script><![CDATA[
-            lines = Array.from(found?.lines || [])
+            // a line's fixed amount is opted out of AI (the user's call of Nov 12, 2026, PE-21): an agent's render names none
+            const agent = sri.isAgentRender()
+            lines = Array.from(found?.lines || []).map(row => agent && String(row.termText || '').startsWith('Fixed ')
+                ? Object.assign({}, row, {termText: 'Not shared with AI'}) : row)
             findings = Array.from(found?.findings || [])
             calculationText = Array.from(found?.calculationOrder || []).join(' → ')
             canEdit = !!structure?.canEdit
@@ -465,7 +468,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <label type="p" style="text-negative" condition="previewError" text="${previewError}"/>
                     </box-body>
                     <box-body-nopad>
-                        <section name="PreviewResult" condition="preview">
+                        <!-- the preview's amounts are opted out of AI, as a component's examples are (the user's call of Nov 12, 2026) -->
+                        <section name="PreviewResult" condition="preview" ai-opt-out="true">
                             <widgets>
                                 <label type="p" style="q-pa-sm text-weight-medium" text="${previewSummary}"/>
                                 <form-list name="Results" list="results" skip-form="true" paginate="false" condition="results.length">

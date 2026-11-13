@@ -219,7 +219,8 @@ along with this software (see the LICENSE.md file). If not, see
             changeRows = Array.from(changesFound?.changes || []).slice(0, 10).map(row => Object.assign({}, row, {
                 termsText: row.changeKindEnumId == 'EckSeparation'
                     ? [row.terminationType, row.terminationReason].filter(Boolean).join(' · ')
-                    : row.isPayChange ? (row.salaryText ? 'Salary ' + row.salaryText : 'A new salary')
+                    // a pay change's salary is opted out of AI (the user's call of Nov 12, 2026): an agent's render names none
+                    : row.isPayChange ? (row.salaryText && !sri.isAgentRender() ? 'Salary ' + row.salaryText : 'A new salary')
                     : row.changeKindEnumId == 'EckLeave' ? (row.returnDateText ? 'Returns ' + row.returnDateText : '')
                     : [row.departmentName, row.positionName, row.managerName ? 'manager ' + row.managerName : '', row.facilityName]
                         .filter(Boolean).join(' · '),
@@ -752,8 +753,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </section>
 
                 <!-- P23: Compensation, a payroll reader's of the opened employment's employer (design §4 Employee360's Compensation):
-                    its service answers nothing to anyone else, so this box shows only what payroll may read -->
-                <section name="Compensation" condition="compensation">
+                    its service answers nothing to anyone else, so this box shows only what payroll may read. Pay is opted out of AI (the
+                    user's call of Nov 12, 2026, PE-21): an agent's render shows its placeholder in place of the whole region -->
+                <section name="Compensation" condition="compensation" ai-opt-out="true">
                     <widgets>
                         <container-box>
                             <box-header title="Compensation"/>
