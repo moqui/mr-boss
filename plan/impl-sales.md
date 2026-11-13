@@ -1937,6 +1937,68 @@ unchanged, no Rust built. F111: a new record's organization defaults to the user
   `Manufacturing.js`, `Purchasing.js`), and the three access specs. Sales.js and Sales' ContextServices.xml are unchanged. The
   Accounting finding needs the user's call.
 
+**Review 2026-11-13 (follow-up org default).** Reviewed `fix/orgdefault` in mr-mantle and mr-boss against F111, P4's Review R1,
+§2 and the apps' scopes; no fix was needed, so the branch has no review commit.
+- Checked and sound:
+  - The rule never answers outside the scope it is given. The active organization comes first, as each app's screens already
+    did. Otherwise the answer is the scope's only one, or a `toPartyId` of the user's own current PrtAgent/PrtEmployee rows
+    with `toPartyId in` the scope's ids. Only when the ids are null (every organization: Maintenance's MAINTENANCE_ALL_ORGANIZATIONS)
+    is it an OrgInternal one, which that scope covers. The `partyId` fallback is the current user's own. Its disableAuthz read
+    is of the user's own relationships, and it only picks one id of the scope, so it widens nothing.
+  - Every app passes its own scope. Maintenance passes MaintenanceAccess' scope, People its employers, and Warehouse,
+    Manufacturing and Purchasing their members (`userOrgIds`). Warehouse Reports passes the members, MaintenanceProcedures
+    Mantle's maintenance scope, and Sales its own (`Sales.js` unchanged). People's self-service context answers null.
+    Warehouse's write owners (filterOrgIds kept to the members) can be narrower than its members only while an organization
+    is active, and then the active one answers first. Purchasing's administrator with an active non-member organization gets
+    that one, the same as its `ownerIds`.
+  - Every changed default is still only a form value, and its submit still checks the organization in the service.
+    storeProcess still runs `requireOrganization` after the new fallback. The equipment, facility, pool, template and People
+    stores are unchanged. InventoryValuation still goes through Mantle's ACCOUNTING_VIEW check, and the organization it
+    defaults to is one of the user's members.
+  - SalesAccess' `defaultOrganization` is a one-line delegation, the P4 rule moved unchanged: `isInternal` stays exported and
+    used, and the only new behaviour is the `ec.user` partyId fallback. P5 is now merged into master. Both repositories'
+    branches merge into master without conflict (`git merge-tree`); nothing was reconciled.
+  - The worker's judgment calls are right:
+    - Accounting's `organizationPartyId` (Accounting.xml) is the whole app's read filter, and none means every organization
+      allowed. Defaulting it to the user's own would quietly drop the rollup child from an accountant's lists and reports,
+      so leaving it is correct. A default for Accounting's own new-record forms is a separate, later choice.
+    - Insights' organization is a report's, not a new record's.
+    - "The scope's first" (Purchasing, Products, Commerce, CustomerService, Prices) always answers an organization of the
+      scope and is checked on submit. For a single-employer user it equals the rule's answer, because get#PartyInternalOrgIds
+      appends a member's rollup children after the member. It differs only for a user of two organizations of their own,
+      who gets one pre-chosen instead of an empty field. It is not a security matter; the inconsistency is below.
+- Fixed: none.
+- Provisional findings (for the lead to number):
+  - Low: Purchasing's get#SharedContext now answers `defaultOrganizationPartyId`, but only Shared InspectionTemplates reads it.
+    Purchasing's own New forms (NewPurchaseOrder, NewQuoteRequest, NewPurchaseRequest, PurchaseOrders, BillList, Quotes,
+    QuoteRequests, PurchaseRequests, AgreementList, SupplierList, MatchExceptions; Suppliers/Settings/Approvals.js) still take
+    "active, else the first". The first is the first row of an unordered PartyRelationship find that also counts PrtMember
+    rows, so for a user of several organizations it is not stable. When these move to the rule, put it ahead of the first,
+    as Sales' settings screens do; Products, Commerce and CustomerService the same.
+- Tests (release binary, `--nobuild`, this worktree's runtime):
+  - The new checks fail on the unfixed rule. With FacilityScope's `defaultOrganization` cut back to master's rule (active,
+    else only; restored after), each one fails on its own message:
+    - MaintenanceAccess: "Retail's planner's default organization: null of ORG_ZIZI_RETAIL,BOSS_WH_RETURNS".
+    - PeopleAccess: "the HR officer's default employer: null".
+    - WarehouseAccess: "warehouse.read's default organization: null of ORG_ZIZI_RETAIL,BOSS_WH_RETURNS".
+  - With the fix all three pass.
+  - MaintenanceAccess timing (28 features). Summed feature time, run alone:
+    - Load about 9.5: 14.0 s, and 15.43 s once (over budget). Its first feature took 0.67 to 0.72 s against master's 0.55 s.
+    - Load about 6: 9.9 and 9.8 s, against master's spec at 10.6 and 10.7 s on the same runtime.
+    - The added check is one context call (about 0.1 to 0.15 s). The overrun is the machine's load on a spec that is about
+      10 s alone, so the check stays where it is.
+  - mr-mantle SalesAccounts, SalesOpportunities, SalesPipelineSetup, MaintenanceProcesses, MaintenanceScope and
+    WarehouseFacilities: 44 of 44 (38 s).
+  - mr-boss WarehouseAccess, PeopleAccess, SalesAccounts, SalesOpportunities, WarehouseReports and WarehouseFacilities:
+    64 of 64 (38 s).
+  - Not run: ./moq test-apps, the acceptance suite, lint (no screen touched in review).
+- For the lead:
+  - Budget share: as the Follow-up note says, about +0.1 to 0.15 s for mr-boss in MaintenanceAccess. MaintenanceAccess
+    sits about 10 s alone, but crossed 15 s at load ≈ 9.5 with or without this check. Splitting it is worth considering
+    apart from this fix.
+  - Merge hot spots: as the Follow-up note says. sal/p5 is already in master and both repositories' branches merge cleanly.
+  - The user's call: Accounting's working-organization default (unchanged here).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or
