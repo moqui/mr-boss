@@ -325,7 +325,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F73) |
 | P1 Foundation | Mantle, BOSS | the Sales root and menu, Home's frame, Reports' two ported screens | built and reviewed Nov 13, merged |
 | P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | built and reviewed Nov 13, merged |
-| P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | — |
+| P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | built and reviewed Nov 13, merged |
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | — |
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | — |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | — |
@@ -971,7 +971,7 @@ P2 was built beside it on `sal/p2` (§1), so P3 reads no pipeline, team or sourc
 - Inventories: ss-inventory's Customer, Party and FinancialInfo rows with a `Sales/Accounts` path (39) name their Sales form or
   `—` with why; usl-inventory's AccountServices, DuplicateServices rows and an "Added in the Sales build" table.
 - Design edits: design-sales §4 "As built"; design-drawers-commons §6 (the merge guards as built, owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F91 to F97 in order:
   - Shared/Customer360's tab bar lists every app's tabs (Accounting's, Customer Service's, Sales') under each root: a subscreen's
     `<condition>` hides its content, not its menu item (crates/moqui-core/src/screen/menu.rs reads only `disable_when`), so Sales'
     Customer360 shows "Cases", "Credit" and the others empty, as Customer Service's shows Accounting's today; a tab's
@@ -1043,7 +1043,7 @@ now Home, Accounts, Reports, Settings, and SalesAccess.spec.js). P2's and P3's s
     forms; design-drawers-commons §6 records it. BOSS SalesAccounts' ContactDetail feature: sales.rep changes Dana Morales (a
     Retail contact) and is refused Lee Chen (Ziziwork Sales'), and the one render shows the edit dialog (failed on the unfixed
     code).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F98 to F102 in order:
   - R2's admission follows Commons' single `canEdit`, so a Sales account editor also gets the contact record's Organizations,
     Relationships, Notes and photo edits, and the contact of a shared (`_NA_`) account includes shared people such as Shop guest
     customers (a person with a user account is left out); add#Contact lets a rep make any person of the scope or shared a contact,
@@ -1835,6 +1835,18 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F88 | P2 (Review Nov 13): every configurer reads every lead source's name (get#SalesSetup lists the instance's sources, up to 500) and may offer any of them to an organization of theirs, and DUPLICATE_VALUE on a new name confirms another organization's source; the design makes sources shared, so kept; a source with no current binding (all ended) is renamed by any configurer | P2: as its Review note says |
 | F89 | P2 (Review Nov 13): store#SalesTeamMember's "works for the organization" is checked at the time of the call, not at the membership's start, so a person whose agency starts next month cannot be added from then, and an employment's end does not end the membership | P2: as its Review note says |
 | F90 | P2 (Review Nov 13): a new pipeline with a future fromDate and the default flag clears the organization's current default at once, leaving the shared one in effect until it starts | P2: as its Review note says |
+| F91 | P3 (Built Nov 13): Shared/Customer360's tab bar lists every app's tabs (Accounting's, Customer Service's, Sales') under each root: a subscreen's `<condition>` hides its content, not its menu item (crates/moqui-core/src/screen/menu.rs reads only `disable_when`), so Sales' Customer360 shows "Cases", "Credit" and the others empty, as Customer Service's shows Accounting's today; a tab's `menu-include` expression or a condition-aware menu is Customer360's owner's or the framework's fix | P3: as its Built note says |
+| F92 | P3 (Built Nov 13): ContactDetail's identity and channel edits are the Commons record's own (`check#ContactAccess`: a contact administrator or a personal contact's owner), so a representative reads a contact's details and cannot edit them, as Customer Service's agents; design §4 gives Sales "edit identity and channels": a Sales admission in `check#ContactAccess` (owner contract) or Sales forms of its own is the user's call | P3: as its Built note says |
+| F93 | P3 (Built Nov 13): Customer360's roles and classifications (F71 counted them covered in P3) are not built: an account's Customer or Prospect role is set when it is created; no role change, classification or later parent change (ss-inventory names each `—`) | P3: as its Built note says |
+| F94 | P3 (Built Nov 13): AccountList's next activity and active quotes, and Customer360's Activities, wait for P4's activity scope and P7's quotes; Customer360's Orders tab is an organization reader's (SALES_TEAM_VIEW) until P11 builds the representative's order scope | P3: as its Built note says |
+| F95 | P3 (Built Nov 13): the Mantle merge guards admit a caller that disabled authorization (Shop's claim, jobs, every spec that disables it) as before, and the contact administrator's merges now meet the kind, owner and dependency rules; the preview step and its stamp of design-drawers-commons §6 are not built | P3: as its Built note says |
+| F96 | P3 (Built Nov 13): the merged party's rows `moveAll` moves are read under the caller's entity filters (as before for orders and invoices), so under a filtered root a row of another organization stays with the merged party; the guards refuse the merge when such an opportunity or agreement exists, but not for other kinds | P3: as its Built note says |
+| F97 | P3 (Built Nov 13): `find#Accounts` orders a person after the organizations (a distinct find orders by its selected fields, not a name of either kind) | P3: as its Built note says |
+| F98 | P3 (Review Nov 13): R2's admission follows Commons' single `canEdit`, so a Sales account editor also gets the contact record's Organizations, Relationships, Notes and photo edits, and the contact of a shared (`_NA_`) account includes shared people such as Shop guest customers (a person with a user account is left out); add#Contact lets a rep make any person of the scope or shared a contact, and so editable. Narrowing to identity and channels needs a second flag in Commons' forms | P3: as its Review note says |
+| F99 | P3 (Review Nov 13): set#AccountManager and delete#Contact change existing rows without the revision read (§2 "Revisions and operations"); both are a single relationship's end and start, so a stale change is the last writer's | P3: as its Review note says |
+| F100 | P3 (Review Nov 13): SalesAccess `accountOf` treats a party with no `ownerPartyId` as shared, but find#Accounts and the Party filter (MANTLE_USER_ORG_9) leave such a party out; Party's default is `_NA_`, so only a row written without it differs | P3: as its Review note says |
+| F101 | P3 (Review Nov 13): find#Accounts lists Customer and Prospect roles, while `accountOf` also admits a party with the Account role alone | P3: as its Review note says |
+| F102 | P3 (Review Nov 13): mark#NotDuplicate asks the guard one way (partyId into otherPartyId), so a pair whose merge is refused that way for a dependency is refused "not a duplicate" to a Sales manager though the other way may be admitted | P3: as its Review note says |
 
 ## 7. Later
 
