@@ -16,7 +16,9 @@ const stageOf = salesOpportunityId =>
 
 feature("Opportunities' board shows the pipeline's stages and the rep's and team's deals; a card moves by its column's stage", {
     when() {
-        const board = asUser(users.rep, () => page("Pipeline/Opportunities", {organizationPartyId: ids.organizationId}))
+        // no organization asked: the board's columns are the pipeline of the one organization the rep works for (Retail, not its
+        // Returns Center rollup child, which the rep's scope also holds)
+        const board = asUser(users.rep, () => page("Pipeline/Opportunities"))
         const before = stageOf(deals.wingtipPlan)
         // the card's revision as the board's row carries it (Mantle's read, as the rep, its grant aside)
         const revision = asUser(users.rep, () =>

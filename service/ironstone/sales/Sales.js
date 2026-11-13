@@ -190,6 +190,9 @@ function sharedContext(p) {
         capabilities: userScope.capabilities,
         organizationPartyIds: ids,
         activeOrganizationPartyId: mantle.activeOrganizationPartyId || null,
+        // a new record's organization when none is chosen: the active one, the scope's only one, or the only one of it the user
+        // works for (a representative of Retail whose scope also holds Retail's rollup children; P4 review)
+        defaultOrganizationPartyId: salesAccess.defaultOrganization(mantle),
         allOrganizations: !!mantle.allOrganizations,
         organizationOptions: organizationOptions(ids, null, organizationOptionLimit),
         partyId: mantle.partyId || null,
@@ -430,12 +433,10 @@ const choiceSources = {
     }
 }
 // ===== P4: the deal's choices (impl-sales P4) =====
-// The organization a deal's choice is for: the one given (in the scope), else the active one, else the scope's only one.
+// The organization a deal's choice is for: the one given (in the scope), else the default one (SalesAccess.js defaultOrganization).
 function choiceOrganization(userScope, p) {
-    const given = p.organizationPartyId || userScope.mantle.activeOrganizationPartyId
-    if (given) return covers(userScope, given) ? given : null
-    const ids = organizationIds(userScope)
-    return ids.length === 1 ? ids[0] : null
+    if (p.organizationPartyId) return covers(userScope, p.organizationPartyId) ? p.organizationPartyId : null
+    return salesAccess.defaultOrganization(userScope.mantle)
 }
 const byTerm = (options, term) => {
     const lower = term.toLowerCase()

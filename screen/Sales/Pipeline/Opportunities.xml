@@ -73,8 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || salesPipelineId || opportunityStageId
                 || (statusId &amp;&amp; statusId != 'SalesOppOpen') || closeFrom || closeThru || accountPartyId || dataSourceId || marketingCampaignId)"/>
         <set field="emptyText" from="filtered ? 'No opportunity matches these filters.' : 'No open opportunities' + (canEdit ? ' · Create one with New opportunity.' : '.')"/>
-        <set field="newDefaults" from="{typeEnumId: 'SotOpportunity', organizationPartyId: sales.activeOrganizationPartyId ||
-                (sales.organizationPartyIds?.length == 1 ? sales.organizationPartyIds[0] : null)}"/>
+        <set field="newDefaults" from="{typeEnumId: 'SotOpportunity', organizationPartyId: sales.defaultOrganizationPartyId}"/>
         <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
                 {key:'won', text:'Won', icon:'sym_o_emoji_events', parameters:{statusId:'SalesOppWon'}},
                 {key:'lost', text:'Lost', icon:'sym_o_block', parameters:{statusId:'SalesOppLost'}}]"/>
@@ -187,7 +186,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <header-field title="Team">
                                     <drop-down allow-empty="true">
                                         <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:(organizationPartyId || sales.activeOrganizationPartyId)}"/>
+                                                parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:(organizationPartyId || sales.defaultOrganizationPartyId)}"/>
                                     </drop-down>
                                 </header-field>
                             </field>

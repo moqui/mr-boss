@@ -39,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="capabilities" type="Map"/>
             <parameter name="organizationPartyIds" type="List"/>
             <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="defaultOrganizationPartyId" type="String"><description>A new record's organization when none is chosen:
+                the active one, the scope's only one, or the only one of it the user works for (P4 review)</description></parameter>
             <parameter name="allOrganizations" type="Boolean"/>
             <parameter name="organizationOptions" type="List"><description>The organizations as {value, label}, by name, at most
                 100</description></parameter>
@@ -54,6 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="capabilities" from="shared.capabilities"/>
             <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
             <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="defaultOrganizationPartyId" from="shared.defaultOrganizationPartyId"/>
             <set field="allOrganizations" from="shared.allOrganizations"/>
             <set field="organizationOptions" from="shared.organizationOptions"/>
             <set field="partyId" from="shared.partyId"/>

@@ -64,8 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || (statusId &amp;&amp; statusId != 'SalesOppOpen')
                 || dataSourceId || marketingCampaignId)"/>
         <set field="emptyText" from="filtered ? 'No lead matches these filters.' : 'No open leads' + (canEdit ? ' · Capture one with New lead.' : '.')"/>
-        <set field="newLeadDefaults" from="{organizationPartyId: sales.activeOrganizationPartyId ||
-                (sales.organizationPartyIds?.length == 1 ? sales.organizationPartyIds[0] : null)}"/>
+        <set field="newLeadDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId}"/>
     </actions>
     <widgets>
         <label text="You do not read leads in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
@@ -154,7 +153,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <header-field title="Team">
                                     <drop-down allow-empty="true">
                                         <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:(organizationPartyId || sales.activeOrganizationPartyId)}"/>
+                                                parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:(organizationPartyId || sales.defaultOrganizationPartyId)}"/>
                                     </drop-down>
                                 </header-field>
                             </field>

@@ -1263,6 +1263,68 @@ Today); SAL-CRM, SAL-COLLAB. The opportunity import is P6; the Comms intake P5.
   - the user's call: none new; the shared reasons rule is built as the §4 row says, and the client budget may need the walk's
     7.6 s counted against Sales' 7 s client estimate.
 
+**Review Nov 13 (P4).** A fresh review of `sal/p4` (mr-mantle 587c6b0b, mr-boss 217b935f) against P4, §2, §4, design §3, §12.2 and
+design-drawers-commons §6.
+- Checked and sound: opportunityOf (an organization of the scope; a current owner or team row naming the caller or a team of theirs,
+  or SALES_TEAM_VIEW for the organization's; never across organizations) is the one rule on every path: find#Opportunities (the
+  assignment ids and the organizations in the query, so the page, the count and the totals by currency read the same rows),
+  get#Opportunity (missing and unseen alike, an unseen account unnamed), the palette (find#Opportunities), check#Record and the
+  record link (Sales.js recordLink, PaletteServices), get#RecordLinkInfo's `visible()` and RecordFiles' catalogCanChange
+  (check#OpportunityAccess), Chatter's title (no amount), WorkItemDetail's Sales context (Commons' task rule and a deal the user sees),
+  the choices (pipelines, stages, owners, sources and contacts of the organization, each selected value checked) and each batch item
+  (the verb's own checks). qualify#Lead runs in one transaction (create#Account, add#Contact and create#Contact joined to it), its
+  key's PostingOperation row written last, so a concurrent first try fails on the key and rolls back its account; the request hash
+  leaves out the revision, so a retry answers the first result. Every change of a deal names the revision (update, move, close,
+  reopen, qualify, store#OpportunityParty, store#Competitor, the batch keys); party rows are dated and ended. Marketing's mountRoots
+  row adds no right: get#SharedContext gives a Marketing-root caller the same capabilities and scope as under Sales, its
+  sharedLinks hold only Marketing/Leads and Marketing/Settings/LeadSources, so a lead there shows unlinked and every transition is
+  Mantle's guarded service; any other root is SALES_CONTEXT. The carry-overs: store#LostReason refuses a configurer of fewer than
+  every organization (ORGANIZATION_DENIED) and TypesAndReasons offers it on canEditReasons only; check#ContactAccess' canEditIdentity
+  admits a Sales editor only for a person owned by an organization of the scope (no `_NA_` person) who is a contact of an
+  account owned by one (no shared account), with canEdit (organizations, relationships, notes, photo, merge) the contact
+  administrator's as before, Commons' specs unchanged; set#AccountManager and delete#Contact refuse a stale revision and every
+  caller passes it (SalesOverview's Change and Take, ContactDetail, Contacts and Customer360's SalesContacts End, CrmMiscServices).
+  The specs test what they claim.
+- Fixed:
+  - R1 (usability, medium; the Built note's last finding). New lead, New opportunity and New account left Organization empty for
+    sales.rep, and the rep's board had no stage columns (so no empty column to drop a card on): the rep's scope is Retail and its
+    rollup child Ziziwork Returns Center (BossWarehouseDemoData's PrtOrgRollup; get#PartyOrganizationInfo gives a member's direct
+    rollup children), so "the scope's only one" found two. SalesAccess.js `defaultOrganization` (the active one, else the scope's
+    only one, else the only one of it the user works for as an agent or employee) is used by create#Opportunity, the board's
+    columns and accountOrganization (create#Account), and get#SharedContext answers it as `defaultOrganizationPartyId`, which
+    Opportunities', Leads' and Accounts' new-record defaults, their team filters and the deal choices read. Mantle
+    SalesOpportunities: a rollup child of A in the users' scope, a lead created with no organization is A's and the board has
+    columns; BOSS SalesOpportunities' board renders with no organization asked (both failed on the unfixed code). The walk no
+    longer chooses the organization and checks it is shown.
+  - R2 (revision, medium; the Built note's third finding). store#Competitor checked the deal's revision but did not advance it, so
+    two stale competitor or deal edits both went through. A deal's revision is now the latest stamp of the deal, its party rows and
+    its competitor rows (find#Opportunities reads the page's competitor rows once); Mantle SalesOpportunities: a move at the revision
+    read before a competitor's change is REVISION_CHANGED (failed on the unfixed code).
+  - R3 (scope, low). find#Opportunities' board columns read any pipeline asked by id, so another organization's pipeline gave its
+    stage names; a pipeline asked now gives its stages only when shared or of an organization of the scope.
+  - The totals' scope had no check: Mantle SalesOpportunities now gives two deals amounts and checks the rep's USD total counts their
+    own (100, one deal) and the manager's the organization's (1100, two).
+- Provisional findings (for the lead to number):
+  - apply#OpportunityBatch items carry the revision but no operation key (§2 names a batch item among the keyed operations): a
+    retried batch answers REVISION_CHANGED for the items the first try did, not their first result; no data is changed twice;
+  - Marketing's mountRoots row maps Leads and LeadSources only; impl-sales §4 (Nov 11) has Marketing mount Accounts too, so
+    impl-marketing P3 adds `Accounts/Accounts` (and Customer360 if it mounts it) to the row's paths;
+  - other apps default a new record's organization by "the scope's only one" too (Maintenance's Procedures, Equipment and
+    Facilities, Warehouse's PoolList and facility parts, People's Training and ReviewCycles, Shared InspectionTemplates), and
+    Sales' settings screens take the scope's first; a user whose organization has a rollup child meets the same empty field;
+  - create#OpportunityContent has no `allow-remote="false"` (it checks the caller itself, as the other content services do).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOpportunities 5 of 5 (1.6 s), with SalesLeadQualify,
+  SalesAccounts, SalesPipelineSetup, SalesOrganizationScope, CrmMiscServices and RecordVisibility, 41 of 41; mr-boss
+  SalesOpportunities 3 of 3, with SalesAccess, SalesAccounts, SalesSettings, Contacts and WorkItemDetail, 73 of 73; the R1 and R2
+  checks failed on the unfixed code. Client SalesPipelineWalk 1 of 1: 7.86 s before the fixes, 6.77, 6.75 and 6.81 s after (the
+  organization drop-down step gone; the golden path kept whole, nothing moved to SalesBoardWalk). `moqui lint --screens` (release):
+  no new flagged site. Prettier clean on the changed JavaScript. Not run: ./moq test-apps, the acceptance suite.
+- For the lead: budget share about +0.05 s mr-mantle (SalesOpportunities' added checks) and none in mr-boss server; the client walk
+  is now within the 7 s Sales client estimate (about 6.8 s). Merge hot spots as the Built note, with mr-mantle `SalesAccess.js`
+  (defaultOrganization beside accountOrganization, and the export), mr-boss `Sales.js` sharedContext and choiceOrganization,
+  `ContextServices.xml` get#SharedContext's out-parameters and `screen/Sales/Accounts/Accounts.xml`'s defaults. No user's call
+  needed.
+
 ### P5 — Lead intake, Comms hooks and account sync
 
 Design §3 Leads (intake), §9 LeadSources' UtmSourceMap, §1.4 (Comms hooks, CX-MAIL-INTAKE, CX-SYNC), §4 Contacts'
