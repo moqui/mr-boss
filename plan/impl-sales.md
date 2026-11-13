@@ -327,7 +327,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Pipeline setup | Mantle, BOSS | Settings, Stages, Teams, LeadSources, TypesAndReasons | built and reviewed Nov 13, merged |
 | P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | built and reviewed Nov 13, merged |
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | built and reviewed Nov 13, merged |
-| P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | — |
+| P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | built and reviewed Nov 13, merged |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | — |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | — |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
@@ -1465,7 +1465,7 @@ bundled_screens_are_precompiled` in the mr-moqui worktree (`CARGO_BUILD_JOBS=4`,
   golden `bundled_screens_are_precompiled` (Debug). `moqui lint --screens` (release): 141 flagged sites, as before, none in the new
   or changed screens. Prettier clean on the new JavaScript (BasicCommsInbox.spec.js was not clean before and is left so). Not run:
   ./moq test-apps, test-framework, the acceptance suite.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F113 to F119 in order:
   - a second `create-from` provider breaks Chat's createFrom, which takes the first result (and a mutation stops at the first
     refusal), so every app's kind lives in Comms' one provider `boss.records`; a kind-keyed dispatch in `call#Providers` (or a
     provider declaring its kinds) is the framework's fix;
@@ -1537,7 +1537,7 @@ design §1.4, §3, §4 and §9.
   - The Built note's BOSS checks did not cover a Sales user who cannot read the message: SalesIntake now has sales.rep3 (no access
     to the intake mailbox) refused on the mail with the same answer as a missing message and no intake, and sales.rep2 (not in the
     room) refused on the chat message before the rep makes the lead, nothing made.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F120 to F125 in order:
   - purge#LeadIntakes blanks the intake's submitted details, but the lead keeps its name (the mail's subject or the submitted
     organization), its description (the mail's text, which often carries the sender's phone and signature) and the mail filed on its
     conversation; whether the purge also blanks or closes an unqualified lead (design §3 "unverified intake records ... are purged")
@@ -2261,6 +2261,19 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F110 | P4 (Review Nov 13): Marketing's mountRoots row maps Leads and LeadSources only; impl-sales §4 (Nov 11) has Marketing mount Accounts too, so impl-marketing P3 adds `Accounts/Accounts` (and Customer360 if it mounts it) to the row's paths | P4: as its Review note says |
 | F111 | P4 (Review Nov 13): other apps default a new record's organization by "the scope's only one" too (Maintenance's Procedures, Equipment and Facilities, Warehouse's PoolList and facility parts, People's Training and ReviewCycles, Shared InspectionTemplates), and Sales' settings screens take the scope's first; a user whose organization has a rollup child meets the same empty field | P4: as its Review note says |
 | F112 | P4 (Review Nov 13): create#OpportunityContent has no `allow-remote="false"` (it checks the caller itself, as the other content services do) | P4: as its Review note says |
+| F113 | P5 (Built Nov 13): a second `create-from` provider breaks Chat's createFrom, which takes the first result (and a mutation stops at the first refusal), so every app's kind lives in Comms' one provider `boss.records`; a kind-keyed dispatch in `call#Providers` (or a provider declaring its kinds) is the framework's fix | P5: as its Built note says |
+| F114 | P5 (Built Nov 13): Customer Service's "Create a case" from a mail is a widgets-extend on MessageDetail (its F121); now that Mail renders message-actions it could move to the slot as Sales' Create lead did | P5: as its Built note says |
+| F115 | P5 (Built Nov 13): a Create lead or Create a case action (a transition with hook create-from, or none) is offered to every Comms user and refused on use to one without the app; an ext-action has no permission attribute, and only a screen target is left out by authorization | P5: as its Built note says |
+| F116 | P5 (Built Nov 13): Mantle's `call()` disables authorization, and store#LeadIntake treats a caller with authorization disabled as a vouching system caller (as merge#Parties' guards do, §4 Nov 13), so a BOSS screen or service must call it as the user, never through EntityLib's `call`; SalesComms.js does | P5: as its Built note says |
+| F117 | P5 (Built Nov 13): the intake's email verification (design §3 "earlier when the inquirer verifies the email") is only the caller's `verified` flag: Sales sends no verification mail, and a party is made only at qualification | P5: as its Built note says |
+| F118 | P5 (Built Nov 13): My accounts lists the contacts of accounts the rep manages or has a current deal of; a manager (SALES_TEAM_VIEW) gets the same personal list, not the organization's | P5: as its Built note says |
+| F119 | P5 (Built Nov 13): the call-actions slot's ext items come from the Call screen's path; Log call there has no caller's number or account preset (the call's parties are not read), the voicemail's is inbound with its transcript | P5: as its Built note says |
+| F120 | P5 (Review Nov 13): purge#LeadIntakes blanks the intake's submitted details, but the lead keeps its name (the mail's subject or the submitted organization), its description (the mail's text, which often carries the sender's phone and signature) and the mail filed on its conversation; whether the purge also blanks or closes an unqualified lead (design §3 "unverified intake records ... are purged") is the user's call | P5: as its Review note says |
+| F121 | P5 (Review Nov 13): createLead admits any rule owner who works for the team's organization, with no Sales permission (Maintenance's and Customer Service's rule), and a rule can be run on demand over a folder, so an employee files mail of their own mailbox into any team's queue of their organization; People's Recruiting also asks the owner to hold its edit permission. Requiring SALES_OPPORTUNITY_EDIT or SALES_CONFIGURE of the rule's owner is the user's call | P5: as its Review note says |
+| F122 | P5 (Review Nov 13): a mail's Message-ID is the sender's: a mail carrying another's Message-ID first takes that identity, and the later mail answers the first's lead (or SOURCE_TAKEN for another organization) and makes none | P5: as its Review note says |
+| F123 | P5 (Review Nov 13): TAG_TAKEN is instance-wide, so a configurer learns that another organization's team uses a plus tag | P5: as its Review note says |
+| F124 | P5 (Review Nov 13): with R1 a rep's inquiry from the email of another team's open lead makes a second open lead of the organization, which only the manager's duplicate review sees | P5: as its Review note says |
+| F125 | P5 (Review Nov 13): Marketing P13's capture job calls store#LeadIntake as the system, which trusts the organization, team and `verified` it is given: they must come from the publication and Marketing's own verification, never the submission | P5: as its Review note says |
 
 ## 7. Later
 
