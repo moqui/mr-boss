@@ -25,9 +25,10 @@ function check(found, parametersOf) {
     for (const [app, path, marked] of found) {
         let report
         try {
+            // from the apps root the app is mounted under, so a link from the app root (//Warehouse/...) resolves
             report = ec.screen.staticReport({
-                rootScreen: `${base}/${app}.xml`,
-                screenPath: path,
+                rootScreen: "component://webroot/screen/webroot/apps.xml",
+                screenPath: `${app}/${path}`,
                 parameters: parametersOf(app, path) || {}
             })
         } catch (err) {
@@ -36,13 +37,17 @@ function check(found, parametersOf) {
         ec.message.clearErrors()
         // the app roots' always-actions organization setup is on every screen: listed once in the summary, not per screen
         const orgSetup = report.violations.some(violation => violation.detail.includes("setup#UserOrganizationInfo"))
+        // a violation of no screen is the shell's (the theme footer the apps root writes in html), not the checked screen's
         const why = report.reasons.concat(
             report.violations
+                .filter(violation => violation.screen)
                 .filter(violation => !violation.detail.includes("setup#UserOrganizationInfo"))
                 .map(violation => `[${violation.kind}] ${violation.element} ${violation.detail}`)
         )
         if (orgSetup && why.length == 0) why.push("only the root's always-actions setup#UserOrganizationInfo")
-        rows.push({key: `${app}/${path}`, marked, verdict: report.verdict, why})
+        // only the shell's violations: the screen itself is clean
+        const shellOnly = report.verdict === "violations" && report.reasons.length == 0 && report.violations.every(violation => !violation.screen)
+        rows.push({key: `${app}/${path}`, marked, verdict: shellOnly ? "clean" : report.verdict, why})
     }
     ec.logger.warn(
         "Server-static report:\n" +

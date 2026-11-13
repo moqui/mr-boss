@@ -258,7 +258,7 @@ const linkPaths = [
 ]
 // The record screens with tabs: under Insights their one subscreen is InsightsRecord (Shared/InsightsRecord.xml), which the
 // links name, since a screen's default tab is chosen before the app's context is known.
-const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Product360", "Records/FacilityDetail"]
+const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Product360", "Records/FacilityDetail", "Records/EquipmentDetail"]
 // The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
 // (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
 // authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or

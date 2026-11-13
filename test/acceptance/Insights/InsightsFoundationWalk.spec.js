@@ -6,6 +6,8 @@
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 const {ids, users, asUser, refusal, shell} = lib
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
+// the menu's .qvue entries, which have no html render mode
+const qvueEntries = ["CalcGrid"]
 // every ironstone.insights service a screen calls, with parameters it accepts from a user who has Insights
 const insightsServices = [["ironstone.insights.ContextServices.get#Context", {}]]
 const groupUsers = [
@@ -28,7 +30,8 @@ feature("the menu renders for each group and each of its entries opens", {
                 problems.push(`${user}'s menu: ${found.status} ${found.names}`)
             for (const entry of ids.readerMenu) {
                 const expected = found.names.includes(entry)
-                const rendered = asUser(user, () => lib.page(entry, {}, "html"))
+                // a .qvue screen (CalcGrid: render-modes "vue,qvue,tui", no html) answers in qvue, as the shell loads it
+                const rendered = asUser(user, () => lib.page(entry, {}, qvueEntries.includes(entry) ? "qvue" : "html"))
                 if (opened(rendered) !== expected)
                     problems.push(`${user} ${expected ? "is refused" : "opens"} ${entry}: ${rendered.status} ${rendered.errors}`)
             }

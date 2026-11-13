@@ -42,7 +42,7 @@ const parameters = {
     "Records/WorkItemDetail": {workEffortId: "BOSS_DEMO_TASK_PLAN"},
     "Records/ShipmentDetail": {shipmentId: "BOSS_ACCT_NO_SHIPMENT"},
     "Records/FacilityDetail/InsightsRecord": {facilityId: "ZIRET_WH"},
-    "Records/EquipmentDetail": {assetId: "BOSS_ACCT_FA_VAN"},
+    "Records/EquipmentDetail/InsightsRecord": {assetId: "BOSS_ACCT_FA_VAN"},
     "Records/InvoiceDetail": {invoiceId: "BOSS_ACCT_INVOICE"}
 }
 

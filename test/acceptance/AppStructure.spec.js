@@ -355,7 +355,8 @@ const demoRecords = {
     "Projects/Projects/EstimatePrint": { parameters: { workEffortId: "ACME" }, text: "Open the printable estimate" },
     "Shared/OrderDetail/": { parameters: { orderId: "BOSS_DEMO_ACME_SO" }, text: "Customer portal, fixed fee" },
     "Shared/ShipmentDetail/": { parameters: { shipmentId: "BOSS_ACCT_NO_SHIPMENT" }, text: "not available in this app" },
-    "Shared/EquipmentDetail/": { parameters: { assetId: "BOSS_ACCT_FA_VAN" }, text: "not available in this app" },
+    // the record level itself, above the Maintenance tabs (a default Identity tab that shows nothing outside Maintenance)
+    "Shared/EquipmentDetail/": { parameters: { assetId: "BOSS_ACCT_FA_VAN", lastStandalone: "false" }, text: "not available in this app" },
     "Shared/ReturnDetail/": { parameters: { returnId: "BOSS_ACCT_RETURN" }, text: "not available in this app" },
     // Projects P6b: Time entries (All: the demo's support desk time John Doe manages, on SUPP-2 so the time the specs before this
     // one log does not push it past the first page), the entry dialog (a new entry), the time import wizard's steps (no import yet;

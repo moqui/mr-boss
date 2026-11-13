@@ -12,8 +12,8 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Insights context of a tabbed shared record screen (Customer360, Supplier360, Product360, FacilityDetail; design-insights
-    §10, impl-insights P6): the one subscreen such a screen shows when it is mounted under Insights/Records, in place of the
+<!-- The Insights context of a tabbed shared record screen (Customer360, Supplier360, Product360, FacilityDetail, EquipmentDetail;
+    design-insights §10, impl-insights P6): the one subscreen such a screen shows when it is mounted under Insights/Records, in place of the
     owners' tabs; Insights' links name it (Insights.js sharedLinks), since a default tab is chosen before the app is known. The parent sets insightsRecordType and
     insightsRecordId in its always-actions; the content is template/InsightsRecord.xml, read only. Under any other app it
     shows nothing. -->
