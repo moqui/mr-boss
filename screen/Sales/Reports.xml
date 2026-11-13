@@ -12,8 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Sales reports section: the Sales Summary and Sales Analysis screens moved from the first port; pipeline,
-    win/loss, target and commission reports come with design-sales.md. -->
+<!-- The Sales reports (design-sales §8; impl-sales P1, F2): SalesSummary over Mantle's guarded summaries (SalesReportServices,
+    which answer a holder of SALES_REPORT_VIEW for the organizations of their sales scope, costs withheld without
+    PRODUCT_COST_VIEW) and SalesAnalysis, both as ported in the first port and rebuilt in P19 with the report catalogue,
+    PipelineAnalysis, WinLoss and TargetAttainment. The area is a report reader's: BOSS_SAL_REPORTS denies the root user group
+    BOSS_SALES and opens it to the manager and the reader (data/BossSetupSalesData.xml), the administrator and ADMIN through their
+    ALWAYS on the root; the root's menu shows it to a holder of SALES_REPORT_VIEW only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="7" menu-image="sym_o_table_chart" menu-image-type="icon">
     <subscreens default-item="SalesSummary"/>

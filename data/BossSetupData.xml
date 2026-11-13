@@ -126,7 +126,8 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/><filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
 
-    <!-- App administrators have root access; business capabilities are still checked by domain services. -->
+    <!-- App administrators have root access; business capabilities are still checked by domain services. Sales' root user group,
+        its ironstone.sales service pattern and its areas are in data/BossSetupSalesData.xml (impl-sales P1). -->
     <artifactGroups artifactGroupId="BOSS_SALES" description="IronStone Sales App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Sales.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_SALES_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
@@ -457,34 +458,35 @@ along with this software (see the LICENSE.md file). If not, see
             artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to (admin and insights were added
             in Admin P1 and the two rows they took past 255 split, impl-admin F14: twelve rows; people in People P1, impl-people
             F26: the longest 244; maintenance in Maintenance P1, impl-maintenance F50: the add and record rows split, fifteen rows
-            here and Admin P6's transfer row below, the longest 238, so sales and marketing fit every row) -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book)#.*"
+            here and Admin P6's transfer row below, the longest 238, so sales and marketing fit every row; sales in Sales P1,
+            impl-sales F55: the longest 244) -->
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(bulk|cancel|change|claim|clockIn|clockOut)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(bulk|cancel|change|claim|clockIn|clockOut)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refresh|refuse|release)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refresh|refuse|release)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(remove|rename|reopen|replace|reply)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(remove|rename|reopen|replace|reply)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees)"
@@ -2668,8 +2670,8 @@ along with this software (see the LICENSE.md file). If not, see
         Warehouse, Manufacturing, Accounting, Projects, Insights and Admin), each with the permissions it carries (its
         UserGroupPermission rows above and in BossAccountingSetupData; kind view, edit, export or sensitive: costs, supplier prices,
         pay and credit) and, for an app's root user group, its launcher as an artifact binding with the root's filter sets. Left out:
-        the groups of the apps not built (Sales, Marketing; People's and Maintenance's are with their groups, People P1 and
-        Maintenance P1), the Projects
+        the groups of the apps not built (Marketing; People's, Maintenance's and Sales' are with their groups, People P1,
+        Maintenance P1 and Sales P1, data/BossSetupSalesData.xml), the Projects
         client contacts' BOSS_PROJECT_CLIENT
         (external users, given in Projects) and the service teams. The privileged groups are registered: the privileged-group EECA
         and AccessServices still refuse a non-member. A later phase or app adds its own rows; the registry describes and never
@@ -4090,7 +4092,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the client deny pattern (BOSS_PROJECTS_INTERNAL, impl-admin F14): P6's new write verb, transfer
         (ironstone.admin.LifecycleServices transfer#OwnedResource, transfer#Assignments) -->
     <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL">
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
     </artifactGroups>
 

@@ -12,10 +12,106 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Sales landing page (initial-design.md); design-sales.md designs it. -->
+<!-- Sales Home (design-sales §3 Home, §1.2; style-guide §3.1 Landing; impl-sales P1): HomeFilters (the organization, from those of
+    the user's sales scope, checked by ironstone.sales.ContextServices.check#Record and shown "not available" when refused), and
+    the frame of design §3's panels: SalesWork's counters (RFQs awaiting response, quotes to send, quotes expiring, orders blocked,
+    activities due), AssignedWork and MyPipeline, each shown "Not configured" until the opportunities, quotes and orders that
+    answer them exist (mantle.sales.SalesWorkspaceServices.get#SalesHome and find#Opportunities, P4 and P6), never zero; and the
+    shortcut to Reports for a report reader. A Sales user who reads nothing of Sales (an edit permission alone) is told what Home
+    holds. P6 adds the counts that open the scoped lists, the actions (New opportunity primary, New lead, quote and activity) and
+    the PipelineFunnel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.anyRead &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.sales.ContextServices.check#Record" out-map="organizationRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
+        <set field="scope" from="{organizationPartyId: organizationPartyId || null}"/>
+        <set field="scopeText" from="organizationRecord?.label || (sales.allOrganizations ? 'Every organization' : 'Your organizations')"/>
+        <!-- design §3's SalesWork counters, none answered until its records exist: each is not configured, never zero -->
+        <set field="counterRows" from="[
+                {counter: 'RFQs awaiting response', source: 'Requests for quote'},
+                {counter: 'Quotes to send', source: 'Quotes'},
+                {counter: 'Quotes expiring', source: 'Quotes'},
+                {counter: 'Orders blocked', source: 'Orders'},
+                {counter: 'My activities due', source: 'Activities'}
+            ].map(row =&gt; Object.assign(row, {state: 'Not configured'}))"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Sales landing page for reps and account managers." type="p"/>
+        <label text="Sales" type="h5"/>
+        <section name="NoRead" condition="!can.anyRead">
+            <widgets>
+                <label text="Home summarizes the sales work, pipeline and orders of your organizations. Nothing of it is open to you."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ReaderHome" condition="can.anyRead">
+            <widgets>
+                <form-single name="HomeFilters" transition="." map="scope">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:scope.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row>
+                    </field-layout>
+                </form-single>
+                <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationRefused"/>
+                <label text="${scopeText}" type="p" style="text-caption m-muted" condition="!organizationRefused"/>
+                <container-box>
+                    <box-header title="Sales work"/>
+                    <box-body>
+                        <label text="The counts open here as requests for quote, quotes, orders and activities are set up; until then none is configured, and none is shown as zero."
+                                type="p" style="text-caption m-muted"/>
+                        <form-list name="SalesWork" list="counterRows" skip-form="true" paginate="false">
+                            <field name="counter"><default-field title="Counter"><display/></default-field></field>
+                            <field name="state"><default-field title="State"><display/></default-field></field>
+                            <field name="source"><default-field title="Counted from"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="counter"/><field-ref name="source"/></column>
+                                <column><field-ref name="state"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Assigned to me"/>
+                    <box-body>
+                        <label text="Not configured: the opportunities, quotes and orders assigned to you show here once they are set up."
+                                type="p" style="m-muted"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="My pipeline"/>
+                    <box-body>
+                        <label text="Not configured: your open opportunities by stage show here once the pipeline is set up."
+                                type="p" style="m-muted"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Shortcuts" condition="can.reports">
+            <widgets>
+                <container-box>
+                    <box-header title="Shortcuts"/>
+                    <box-body>
+                        <label text="Read the sales of your organizations: orders, invoices, top products and customer classes." type="p"/>
+                        <link url="${sharedLinks['Reports/SalesSummary']}" text="Sales summary" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_table_chart"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

@@ -1476,4 +1476,112 @@ along with this software (see the LICENSE.md file). If not, see
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_ADMIN" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_ADMIN" userId="BOSS_MNT_ADMIN" fromDate="0"/>
+    <!-- Sales (impl-sales P1): a user per group of design-sales §1.1, each in BOSS_USERS, none in ADMIN, each an agent of Ziziwork
+        Retail (the organization whose orders the Sales demo keeps) but sales.rep3, a representative of Ziziwork Sales only, the
+        second demo organization and the storeless seller (impl-sales F72), for the isolation checks, and sales.manager2 and
+        sales.admin, of both. The ordinary users are in the root user group BOSS_SALES and their capability group; sales.admin is
+        in BOSS_SALES_ADMIN alone. P2 puts the representatives in two teams of Retail and sales.rep3 in one of Ziziwork Sales. -->
+    <mantle.party.Party partyId="BOSS_SAL_REP" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_REP" firstName="Sales" lastName="Representative"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_REP_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_REP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_REP" username="sales.rep"
+            userFullName="Sales Representative" partyId="BOSS_SAL_REP"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_REP" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_REP" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_REP" userId="BOSS_SAL_REP" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_REP2" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_REP2" firstName="Sales" lastName="Second representative"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_REP2_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_REP2" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_REP2" username="sales.rep2"
+            userFullName="Sales Second representative" partyId="BOSS_SAL_REP2"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_REP2" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_REP2" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_REP" userId="BOSS_SAL_REP2" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_MANAGER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_MANAGER" firstName="Sales" lastName="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_MANAGER" username="sales.manager"
+            userFullName="Sales Manager" partyId="BOSS_SAL_MANAGER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_MANAGER" userId="BOSS_SAL_MANAGER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_APPROVER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_APPROVER" firstName="Sales" lastName="Approver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_APPROVER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_APPROVER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_APPROVER" username="sales.approver"
+            userFullName="Sales Approver" partyId="BOSS_SAL_APPROVER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_APPROVER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_APPROVER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_APPROVE" userId="BOSS_SAL_APPROVER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_CHANGE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_CHANGE" firstName="Sales" lastName="Change operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_CHANGE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_CHANGE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_CHANGE" username="sales.change"
+            userFullName="Sales Change operator" partyId="BOSS_SAL_CHANGE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_CHANGE" userId="BOSS_SAL_CHANGE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_AGREEMENT" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_AGREEMENT" firstName="Sales" lastName="Agreement keeper"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_AGREEMENT_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_AGREEMENT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_AGREEMENT" username="sales.agreement"
+            userFullName="Sales Agreement keeper" partyId="BOSS_SAL_AGREEMENT"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_AGREEMENT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_AGREEMENT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_AGREEMENT" userId="BOSS_SAL_AGREEMENT" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_READER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_READER" firstName="Sales" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_READER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_READER" username="sales.reader"
+            userFullName="Sales Reader" partyId="BOSS_SAL_READER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_READ" userId="BOSS_SAL_READER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_REP3" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_REP3" firstName="Sales" lastName="Representative of Ziziwork Sales"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_REP3_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_REP3" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_REP3" username="sales.rep3"
+            userFullName="Sales Representative of Ziziwork Sales" partyId="BOSS_SAL_REP3"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_REP3" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_REP3" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_REP" userId="BOSS_SAL_REP3" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_MANAGER2" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_MANAGER2" firstName="Sales" lastName="Manager of both"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_MANAGER2_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_MANAGER2" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_MANAGER2_ORG2" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_MANAGER2" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_MANAGER2" username="sales.manager2"
+            userFullName="Sales Manager of both" partyId="BOSS_SAL_MANAGER2"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_MANAGER2" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_SAL_MANAGER2" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_MANAGER" userId="BOSS_SAL_MANAGER2" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_SAL_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_SAL_ADMIN" firstName="Sales" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_ADMIN_ORG2" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_SAL_ADMIN" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_SAL_ADMIN" username="sales.admin"
+            userFullName="Sales Administrator" partyId="BOSS_SAL_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_SAL_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_ADMIN" userId="BOSS_SAL_ADMIN" fromDate="0"/>
 </entity-facade-xml>

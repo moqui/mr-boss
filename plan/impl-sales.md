@@ -463,6 +463,117 @@ and SalesAnalysis (kept reachable); SAL-ACCESS, SAL-SHELL.
   administrator assigns the Sales representative bundle from Admin; a Projects client and a PASS public account are
   refused the root and every `ironstone.sales` service.
 
+**Built Nov 13 (P1).** mr-mantle and mr-boss on branch `sal/p1` (hashes in the worker's reply); mr-moqui unchanged, no Rust
+built.
+- Checked first (the code over the plan): F1 (the root grant live for `ADMIN` and `BOSS_SALES_ADMIN`, ALWAYS with
+  `MANTLE_ACTIVE_ORG`; the root's comment said otherwise), F2 (SalesSummary's four summaries refused without `ACCOUNTING_VIEW`;
+  SalesAnalysis reading `OrderItemSalesSummary` with four dead links), F25 and F55 (the fifteen deny rows, the longest 238), F43
+  and F54, Maintenance P1's Built and Review notes (the root's panel restriction R2, the area gates of F346) and its root,
+  Maintenance.js and MaintenanceAccess.js as the pattern; `SalesAnalysis.js organizations` (the store-scoped path of Commerce
+  P11) as the place of the reader rule. The code over the plan: the plan names no Mantle scope module for P1, but the report
+  reader's organizations and the app's context both need the user's sales organizations, so P1 builds
+  `mantle/sales/SalesAccess.js`, which P3 and P4 extend with the account and assignment scope.
+- Mantle:
+  - `data/MantleSetupData.xml`: the nineteen `SALES_*` permissions of design §1.1 with `SALES_OWNER_CHANGE`, each granted to
+    `ADMIN`; the filter rows `MANTLE_USER_ORG_SOPP`, `_SFC`, `_AGR` and their `MANTLE_ACTIVE_ORG_*` twins (SalesOpportunity,
+    SalesForecast and Agreement by `organizationPartyId`).
+  - `entity/SalesEntities.xml`: `SalesOpportunity.organizationPartyId`, audit-logged, with its Organization relationship.
+  - `service/mantle/sales/SalesAccess.js` (no service; tables `permissions` and `reads` for later phases): `capabilities()`
+    (each permission; the reads `anyRead` of `SALES_VIEW`, `SALES_TEAM_VIEW` or `SALES_REPORT_VIEW`, `teamRead`, `reportRead`;
+    an edit permission alone reads nothing), `scope()` (the caller's own organizations, the active one when it is theirs; every
+    one for a system administrator only; none without a read), `covers`, `requireCapability`, `requireOrganization`
+    (`ORGANIZATION_DENIED`) and `reportOrganizations` (named ones in the scope, else the scope's; `costWithheld` without
+    `PRODUCT_COST_VIEW`).
+  - `SalesAnalysis.js organizations`: a holder of `SALES_REPORT_VIEW` without report read, not answered as a store-scoped
+    reader, is answered through `reportOrganizations`; `get#InvoicesByCustomerClass` now withholds its costs as the other three
+    do (it had no store path, so no answer it gave changes); the four descriptions say so. `ACCOUNTING_VIEW`'s and
+    `COMMERCE_VIEW`'s answers are unchanged.
+- BOSS:
+  - `data/BossSetupSalesData.xml` (new, F55): the root user group `BOSS_SALES` and `_REP`, `_MANAGER`, `_APPROVE`, `_CHANGE`,
+    `_AGREEMENT`, `_READ`; on the `BOSS_SALES` artifact group (a second element) the `ironstone\.sales\..*` pattern and
+    `BOSS_SALES_ROOT` (ALLOW, `MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`); `BOSS_SAL_REPORTS` (Reports denied to the root user
+    group, ALWAYS for the manager and the reader); design §1.1's grants but the four of F43 (`BOSS_SALES` `SALES_VIEW`, the
+    approver `SALES_ORDER_APPROVE`, the change operator nothing more until P14; the manager's `SALES_IMPORT`), the
+    administrator's (below); `SALES_OWNER_CHANGE` to `BOSS_ADMIN_IDENTITY` alone, in its bundle; eight capability bundles
+    (1500-1570, the launcher's artifact with the root's filter sets). `data/BossSetupData.xml`: `sales` in all fifteen deny rows
+    (the longest 244, none split), the registry comment and the `BOSS_SALES` group's comment.
+  - `ironstone.sales.ContextServices` (`get#SharedContext`, `check#Record`, `get#Choices`, `search#Records`) over
+    `service/ironstone/sales/Sales.js` (tables `mountRoots`, `areas`, `recordKinds`, `choiceSources`, `searchFinds`,
+    `linkPaths`): the root grant read from the user's own groups (as Maintenance.js); a root other than `Sales` refused
+    (`SALES_CONTEXT`; Marketing's joins `mountRoots` with P4); record kind organization; choices organizations; no palette source
+    yet; capability `reports` (the area's grant and `SALES_REPORT_VIEW`, F346's lesson) and `reportCosts` (report read or
+    `PRODUCT_COST_VIEW`, borrowed). `template/SalesParts.xml` holds `choices`.
+  - Screens: the root (`get#SharedContext` in always-actions; the Chatter and RecordFiles panels of Sales' own record hosts only,
+    none yet, Maintenance R2's restriction; `<shell-providers>` with the `sales` keymap, `g s`; the stale comment replaced, F1;
+    Reports' `menu-include` `SALES_REPORT_VIEW`); Home's frame (HomeFilters with the organization checked by `check#Record`;
+    SalesWork's five counters, AssignedWork and MyPipeline Not configured; the report reader's Sales summary shortcut; a user who
+    reads nothing told so). The six placeholders removed. Reports: SalesSummary as ported over the guarded summaries, its cost
+    columns, chart series and panel left out where the services withhold costs (`reportCosts`), its margin no longer 100 % on a
+    withheld cost; SalesAnalysis keeps its route, loses its four dead transitions and links (names shown instead) and hides its
+    cost and margin columns without `reportCosts`; menu titles in sentence case.
+  - Demo: BossUsersDemoData's `sales.rep`, `.rep2`, `.manager`, `.approver`, `.change`, `.agreement`, `.reader` (agents of
+    Retail), `sales.rep3` (ORG_ZIZI_SALES only), `sales.manager2` (both, a manager) and `sales.admin` (both,
+    `BOSS_SALES_ADMIN` alone), each in `BOSS_USERS`, none in `ADMIN`.
+- Specs:
+  - Mantle `test/sales/SalesOrganizationScope` (3 features, 0.3 s): an ordinary grant (`MANTLE_USER_ORG`) finds its
+    organization's opportunity, forecast and agreement only; an administrator's (`MANTLE_ACTIVE_ORG`) every organization's,
+    then the active one's; SalesAccess's reader organizations, refusal of another's and an edit permission reading none.
+    `SalesReports` gains one feature (0.3 s): a `SALES_REPORT_VIEW` reader's four summaries of their organization equal to a
+    report reader's naming it, costs null, another organization `ORGANIZATION_DENIED`, a user with neither `ACCESS_DENIED`.
+  - mr-boss `test/Sales/SalesSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`, `screenRefusal`, `hit`,
+    `shell`); `SalesAccess` (7 features, 2.7 s feature time, the slowest 1.0 s): the context and its refusals; the menu, keys and
+    launcher per group; each group's capabilities exactly (a custom group with the root grant and `SALES_OPPORTUNITY_EDIT` alone
+    reading no organization, record or choice, and told so on Home); Retail's and Ziziwork Sales' representatives refused each
+    other's organization with the same parameters, a capability named refused; the services refused without the root grant and
+    a write verb of the package denied a client and admitted for a representative; Home's one qvt render, SalesSummary's one
+    html render (the reader's, no cost column), Reports refused a representative, a Party's panel refused under the root; the
+    bundles exactly their groups' grants, `SALES_IMPORT` the manager's and administrator's, `SALES_OWNER_CHANGE` the identity
+    operator's alone. `SalesReports` (SalesAnalysis's one html render, ADMIN's, with the margin columns) unchanged in substance.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesFoundationWalk` (4 features: each group's menu with each entry
+    opened or refused; `sales.reader`'s SalesSummary for Retail and the refusal for Ziziwork Sales; `admin.access` granting the
+    representative and launcher bundles to a custom team whose member opens Sales as a representative; a client and a PASS
+    account refused the root and every `ironstone.sales` service, a representative not).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOrganizationScope, SalesReports and
+  SalesReportStoreScope 11 of 11; PurchaseAgreements, SupportWarranty, Sourcing, ContentRecords, ProductPriceLists, OrderChanges,
+  CalcGridSales, StaffIdentity, InternalOrganizations, RecordVisibility and AccountingStatements 73 of 73 (the filter rows and
+  the seeded permissions). mr-boss SalesAccess and SalesReports 8 of 8; ProjectsAccess (the deny rows), AppOrganizationFilters,
+  AdminCapabilities, AdminRegistries, AdminAccess, AdminLifecycle, AdminUsers, AdminOrganizations, AdminGroups, PeopleAccess,
+  MaintenanceAccess, InsightsAccess, CommerceAccess, ManufacturingAccess, PurchasingAgreements, PurchasingAccess,
+  CustomerServiceAccess and CustomerServiceWarranty with them: 170 of 170, before the cost columns change, which only Sales'
+  specs read. `moqui lint --screens` (release binary): 141 flagged sites, as the main checkout, none in the Sales screens.
+  Prettier clean on the new JavaScript (SalesAnalysis.js and SalesReports.spec.js were not clean before and are left so). Not
+  run: ./moq test-apps, the acceptance suite.
+- Inventories: ss-inventory's SalesSummary and SalesAnalysis rows and usl-inventory's four summaries name the Sales paths as
+  ported; `run#SalesAnalysis` stays P19's.
+- Design edits: design-sales §1.1 (as built: the scope module, the grants, the administrator, Reports, the panels) and §3 Home
+  (the frame as built); design-accounting §16.2's report adapters (owner contract: the Sales reader, the answer to
+  impl-accounting §5's question).
+- Findings (provisional, numbered by the lead):
+  - `BOSS_SALES_ADMIN`'s grants are not in design §1.1 ("SALES_CONFIGURE plus explicit Sales view/edit capabilities"): P1 gives
+    it `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and
+    `SALES_CUSTOMER_INVITE` among them) and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE` or
+    `SALES_OWNER_CHANGE`; Maintenance's administrator got every app permission by the user's call (impl-maintenance P1 review);
+  - Sales has no all-organizations permission: the administrator's root carries `MANTLE_ACTIVE_ORG`, so its entity reads see every
+    organization with none active, but SalesAccess and the services answer its own organizations only (the demo administrator
+    works both); Maintenance added `MAINTENANCE_ALL_ORGANIZATIONS` by the user's call for the same gap;
+  - SalesAnalysis as ported still reads `OrderItemSalesSummary` itself, with the cost in its select, under the reader's
+    organization filter and no service check; P1 hides its cost and margin columns for a reader without cost rights, and P19's
+    rebuild over `run#SalesAnalysis` closes the read;
+  - SalesSummary's Vendors, Stores and Customers drop-downs are the ported ones (`searchPartyList`, an unscoped store list under
+    the root's filter), not Sales' `choices`; P19 replaces them;
+  - `BOSS_SALES_CHANGE` holds only `BOSS_SALES`' view until P14 grants its two permissions (F43), so its bundle carries none and a
+    change operator's Sales is Home alone.
+- For the lead:
+  - budget share: mr-mantle about 0.6 s (SalesOrganizationScope 0.3 s, SalesReports' new feature 0.3 s); mr-boss server about
+    2.7 s (SalesAccess); no client spec;
+  - merge hot spots: mr-boss `data/BossSetupData.xml` (all fifteen deny rows; the registry comment near Admin P3's bundles; the
+    `BOSS_SALES` group's comment), `data/BossUsersDemoData.xml` (appended), `data/BossSetupSalesData.xml` (new; P2 and later
+    append), `screen/Sales.xml`, `plan/design-sales.md` §1.1 and §3, `plan/design-accounting.md` §16.2, the inventories' Sales
+    rows; mr-mantle `data/MantleSetupData.xml` (the permissions after the warranty rows, the filter sets),
+    `entity/SalesEntities.xml`, `service/mantle/sales/SalesAnalysis.js` and `SalesReportServices.xml`;
+  - the user's calls: the administrator's grants and whether Sales gets an all-organizations permission (the first two
+    findings); built meanwhile as above. impl-accounting §5's Sales row is answered by this phase and can be closed there.
+
 ### P2 — Pipeline setup: stages, teams, sources and reasons
 
 Design §9 Settings, Stages, Teams, LeadSources (the source list and its organization binding; the UTM map is P5) and

@@ -1,5 +1,7 @@
 // Sales reports (screen/Sales/Reports): the order analysis's average, margin and margin percent are decimal arithmetic in its
-// form-list fields, evaluated on each row; one html render over the demo orders of every date shows them.
+// form-list fields, evaluated on each row; one html render over the demo orders of every date shows them, to a holder of report
+// read (ADMIN), who is shown the cost and margin columns a Sales report reader without PRODUCT_COST_VIEW is not (impl-sales P1;
+// the reader's side is SalesAccess's render of SalesSummary).
 // Run: ./moq test mr-boss --spec SalesReports
 const webroot = "component://webroot/screen/webroot.xml"
 
