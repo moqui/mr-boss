@@ -145,6 +145,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
                             <field name="payBasisText"><default-field title="Pay basis"><display/></default-field></field>
                             <field name="componentCount" align="right"><default-field title="Components"><display/></default-field></field>
+                            <field name="assignmentCount" align="right"><default-field title="Assigned" tooltip="Pay assignments in effect"><display/></default-field></field>
                             <field name="fromDateText"><default-field title="From"><display/></default-field></field>
                             <field name="stateText">
                                 <default-field title="State">

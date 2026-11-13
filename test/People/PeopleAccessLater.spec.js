@@ -55,6 +55,10 @@
 // the payroll operator and approved by the payroll approver (the operator and HR refused the decision), and the pay configuration
 // screens under Payroll opened to the payroll operator and refused to the HR officer (the Payroll group is PeopleAccess's menu
 // feature).
+// P23: Employee360's Compensation in the context's answer for the payroll operator and absent for the HR officer with the same
+// parameters; a pay structure assigned by the payroll operator (a preview) and refused to the HR officer with the same parameters;
+// Services' employee's compensation missing to Retail's payroll; PayAssignments the payroll operator's (the HR officer refused the
+// screen); a pay change asked by the payroll operator and refused to the HR officer with the same parameters.
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -1078,6 +1082,101 @@ feature(
                     payrollDecides: "PERMISSION_DENIED",
                     hrDecides: "PERMISSION_DENIED",
                     approverDecides: "accepted"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "pay assignments: Compensation answered to the payroll operator and absent for HR with the same parameters; assigning payroll's; Services' employee missing to Retail's payroll; the screen payroll's",
+    {
+        when() {
+            const P = "mantle.humanres.PayrollSetupServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            // Retail's published structure and pay group, made as data (configuration is P22's)
+            const structureId = "PPL_SPEC_ACC23_S"
+            const groupId = "PPL_SPEC_ACC23_G"
+            system(() => {
+                call("create#mantle.humanres.payroll.PayrollStructure", {
+                    payrollStructureId: structureId,
+                    organizationPartyId: ids.organizationId,
+                    structureName: "Access spec structure",
+                    currencyUomId: "USD",
+                    payBasisEnumId: "PpbHourly",
+                    statusId: "PtsPublished",
+                    fromDate: 0
+                })
+                call("create#mantle.humanres.payroll.PayrollGroup", {
+                    payrollGroupId: groupId,
+                    organizationPartyId: ids.organizationId,
+                    groupName: "Access spec group",
+                    currencyUomId: "USD",
+                    timePeriodTypeId: "PayrollMonth",
+                    firstPeriodFromDate: "2026-01-01",
+                    periodsPerYear: 12,
+                    payDateOffsetDays: 0,
+                    prorationEnumId: "PprCalendarDays",
+                    timeBasisEnumId: "PtbSchedule",
+                    liveEnabled: "N",
+                    fromDate: 0
+                })
+            })
+            const context = user =>
+                asUser(user, () =>
+                    invoke("ironstone.people.ContextServices.get#Employee360Context", {
+                        appRoot: "People",
+                        partyId: ids.employeePartyId,
+                        partyRelationshipId: ids.employmentId
+                    })
+                )
+            const payroll = context(users.payroll)
+            const hr = context(users.hr)
+            if (!Array.from(payroll.regions || []).includes("compensation") || !payroll.record?.compensation)
+                problems.push("the payroll operator reads no Compensation")
+            if (Array.from(hr.regions || []).includes("compensation") || Object.hasOwn(hr.record || {}, "compensation"))
+                problems.push("the HR officer reads Compensation")
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            const assign = {
+                partyRelationshipIds: ids.employmentId,
+                payrollStructureId: structureId,
+                payrollGroupId: groupId,
+                preview: true
+            }
+            const payRevision = payroll.record?.compensation?.payRevision
+            const payChange = {
+                partyRelationshipId: ids.employmentId,
+                changeKind: "pay",
+                salaryAmount: "2500",
+                salaryCurrencyUomId: "USD",
+                salaryPeriodTypeId: "PayrollMonth",
+                reason: "Access spec",
+                expectedRevision: payRevision
+            }
+            const codes = {
+                payrollAssigns: as(users.payroll, P + "assign#PayStructure", assign),
+                hrAssigns: as(users.hr, P + "assign#PayStructure", assign),
+                hrReads: as(users.hr, P + "get#Compensation", {partyId: ids.employeePartyId}),
+                payrollReadsServices: as(users.payroll, P + "get#Compensation", {partyId: ids.otherEmployeePartyId}),
+                hrAsksPayChange: as(users.hr, "mantle.humanres.PeopleServices.preview#EmploymentChange", payChange),
+                payrollPreviewsPayChange: as(users.payroll, "mantle.humanres.PeopleServices.preview#EmploymentChange", payChange)
+            }
+            const opened = screenRefusal(users.payroll, "Payroll/PayAssignments")
+            if (opened) problems.push(`the payroll operator's PayAssignments: ${opened}`)
+            const refusedScreen = screenRefusal(users.hr, "Payroll/PayAssignments")
+            if (!unauthorized(refusedScreen)) problems.push(`${users.hr} opens PayAssignments: ${refusedScreen || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    payrollAssigns: "accepted",
+                    hrAssigns: "PERMISSION_DENIED",
+                    hrReads: "PERMISSION_DENIED",
+                    payrollReadsServices: "RECORD_UNAVAILABLE",
+                    hrAsksPayChange: "PERMISSION_DENIED",
+                    payrollPreviewsPayChange: "accepted"
                 }
             problems.join("\n") == ""
         }

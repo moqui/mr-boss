@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     P7: the onboarding checklists that start (a note of the preview) and the optional account request ("Request an account": Admin's
     lifecycle is asked, after the hire commits, for an invitation with BOSS_USERS and BOSS_PEOPLE_SELF; nobody gets a login merely to
     be paid, the user's call). P17: a hire from an accepted offer consumes it, once (its finding says so; a second hire from it is
-    refused), and takes the offer's working schedule; the offer asks for no account and records no pay. -->
+    refused), and takes the offer's working schedule; the offer asks for no account. P23 review: the offer's approved pay becomes the
+    employment's first salary (Mantle records it; the finding names no amount). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Confirm" default-menu-index="3" menu-image="sym_o_task_alt" menu-image-type="icon">
 

@@ -44,7 +44,13 @@ along with this software (see the LICENSE.md file). If not, see
     second half of SkillsAndReviews; mantle.humanres.ReviewServices.find#Reviews by partyId: the reviews the user reads as the person,
     the reviewer or development, each with its cycle, period, state and, once released, its result, the overall rating; never an
     assessment, a feedback or a note), each opening ReviewDetail.
-    Compensation (P23) and TimeAndLeave (P12) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
+    P23, under People: Compensation, a payroll reader's of the opened employment's employer and absent from the context's answer for
+    anyone else, HR included (mantle.humanres.PayrollSetupServices.get#Compensation through get#Employee360Context): the salary in
+    effect and its history, the pay rates in effect, the pay assignments, the benefits, the pay changes waiting and the readiness;
+    Set salary or Change salary for a payroll editor (a pay change, apply#EmploymentChange's kind pay: it waits for approval, the
+    employer's payroll approvers by default, the first salary too; the user's calls of Nov 12, 2026), and links to Pay assignments
+    and Rates. A pay change in Employment changes shows
+    its salary only to payroll and its approver. TimeAndLeave (P12) joins with its phase. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
     <parameter name="partyId"/>
@@ -72,6 +78,22 @@ along with this software (see the LICENSE.md file). If not, see
                         decision:(decision || 'approve'), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${decided.applied ? 'Approved and applied' :
                 decision == 'refuse' ? 'Refused' : 'Approved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+
+    <!-- P23: a pay change asked by a payroll editor (Mantle checks the caller, the salary's terms and the salary revision read): it
+        waits for approval (P23 review: the first salary too) -->
+    <transition name="changePay">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.apply#EmploymentChange" out-map="payChanged"
+                    in-map="{partyRelationshipId:partyRelationshipId, changeKind:'pay', effectiveDate:(effectiveDate || null),
+                        salaryAmount:(salaryAmount || null), salaryCurrencyUomId:(salaryCurrencyUomId || null),
+                        salaryPeriodTypeId:(salaryPeriodTypeId || null), payGradeId:(payGradeId || null), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${payChanged.applied ? 'Salary set' : 'Pay change asked: ' +
+                (payChanged.waitingText || 'waiting for approval')}</message></if>
         </actions>
         <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
@@ -154,7 +176,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <if condition="recordFound &amp;&amp; employee?.showsEquipment">
             <service-call name="mantle.humanres.PeopleServices.get#AssignedEquipment" out-map="equipmentFound" transaction="force-new"
-                    ignore-error="true" in-map="{partyId:partyId}"/>
+                    ignore-error="true" in-map="{partyId:partyId, checkOnly:true}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <!-- Maintenance (impl-maintenance P2, F62): the equipment the person holds that the user's maintenance scope reads -->
@@ -197,6 +219,7 @@ along with this software (see the LICENSE.md file). If not, see
             changeRows = Array.from(changesFound?.changes || []).slice(0, 10).map(row => Object.assign({}, row, {
                 termsText: row.changeKindEnumId == 'EckSeparation'
                     ? [row.terminationType, row.terminationReason].filter(Boolean).join(' · ')
+                    : row.isPayChange ? (row.salaryText ? 'Salary ' + row.salaryText : 'A new salary')
                     : row.changeKindEnumId == 'EckLeave' ? (row.returnDateText ? 'Returns ' + row.returnDateText : '')
                     : [row.departmentName, row.positionName, row.managerName ? 'manager ' + row.managerName : '', row.facilityName]
                         .filter(Boolean).join(' · '),
@@ -223,6 +246,30 @@ along with this software (see the LICENSE.md file). If not, see
             resumeTypeOptions = [{key: 'RltExperience', text: 'Experience'}, {key: 'RltEducation', text: 'Education'}, {key: 'RltOther', text: 'Other'}]
             qualificationsUrl = sharedLinks?.['Development/Qualifications'] || null
             skillsMatrixUrl = sharedLinks?.['Development/SkillsMatrix'] || null
+            // P23: the opened employment's compensation, a payroll reader's (absent from the context's answer otherwise)
+            compensation = regions.includes('compensation') ? record.compensation || null : null
+            canChangePay = !!employee?.canChangePay && !!compensation?.canEdit
+            salaryRows = Array.from(compensation?.salaries || [])
+            payAssignmentRows = Array.from(compensation?.assignments || [])
+            payBenefitRows = Array.from(compensation?.benefits || [])
+            payChangeRows = Array.from(compensation?.payChanges || [])
+            compensationFacts = compensation ? [
+                ['Salary', compensation.currentSalary?.salaryText || 'None in effect'],
+                ['Pay grade', compensation.currentSalary?.payGradeName],
+                ['Pay rate', Array.from(compensation.rates || []).map(row => row.rateText).join(', ')],
+                ['Pay assignment', compensation.primary ? compensation.primary.structureName + ' · ' + compensation.primary.groupName +
+                    ' (' + compensation.primary.stateText + ')' : 'None'],
+                ['Benefits', payBenefitRows.filter(row => row.state != 'ended').map(row => row.benefitText).join(', ')],
+                ['Tax profile', compensation.profile ? (compensation.profile.hasProfile ? compensation.profile.localizationName + ', from ' +
+                    compensation.profile.fromDateText : 'None for ' + compensation.profile.localizationName) : ''],
+                ['Readiness', compensation.readiness?.message]
+            ].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+            payChangeValues = compensation ? {partyId, partyRelationshipId: compensation.partyRelationshipId,
+                expectedRevision: compensation.payRevision, salaryCurrencyUomId: compensation.currentSalary?.currencyUomId || null,
+                salaryPeriodTypeId: compensation.currentSalary?.timePeriodTypeId || null, payGradeId: compensation.currentSalary?.payGradeId || null,
+                operationKey: ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + (compensation.partyRelationshipId || '')} : {}
+            payAssignmentsUrl = sharedLinks?.['Payroll/PayAssignments'] || null
+            ratesUrl = sharedLinks?.['Payroll/Rates'] || null
             canChangeEmployment = !!employee?.canChangeEmployment && !!record.partyRelationshipId && opened?.state != 'ended'
             changeEmploymentId = record.partyRelationshipId || null
             identificationRows = Array.from(personal.identifications || [])
@@ -700,6 +747,108 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                             </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P23: Compensation, a payroll reader's of the opened employment's employer (design §4 Employee360's Compensation):
+                    its service answers nothing to anyone else, so this box shows only what payroll may read -->
+                <section name="Compensation" condition="compensation">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Compensation"/>
+                            <box-toolbar>
+                                <container-dialog id="ChangePayDialog" button-text="${compensation.currentSalary ? 'Change salary' : 'Set salary'}"
+                                        icon="sym_o_payments" width="620" title="${compensation.currentSalary ? 'Change the salary' : 'Set the salary'} of ${overview.personName}"
+                                        condition="canChangePay">
+                                    <label type="p" text="${compensation.salaries.length ? 'A pay change from a date: it waits for approval (a payroll approver by default), then the salary in effect ends on that date.' : 'The first salary of this employment, from a date: it waits for approval (a payroll approver by default).'}"/>
+                                    <form-single name="ChangePay" transition="changePay" map="payChangeValues">
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="salaryAmount"><default-field title="Salary"><text-line size="12" input-type="number"/></default-field></field>
+                                        <field name="salaryCurrencyUomId">
+                                            <default-field title="Currency">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                            <order-by field-name="description"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="salaryPeriodTypeId">
+                                            <default-field title="Per">
+                                                <drop-down allow-empty="true">
+                                                    <option key="PayrollYear" text="Year"/>
+                                                    <option key="PayrollMonth" text="Month"/>
+                                                    <option key="PayrollSemiMonth" text="Half month"/>
+                                                    <option key="PayrollBiWeek" text="Two weeks"/>
+                                                    <option key="PayrollWeek" text="Week"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="payGradeId">
+                                            <default-field title="Pay grade">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payGrades', choiceOrganizationPartyId:compensation.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="effectiveDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Ask for the pay change">
+                                                <submit confirmation="Ask for the pay change of ${overview.personName}?"/></default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-row><field-ref name="salaryAmount"/><field-ref name="salaryCurrencyUomId"/></field-row>
+                                            <field-row><field-ref name="salaryPeriodTypeId"/><field-ref name="payGradeId"/></field-row>
+                                            <field-row><field-ref name="effectiveDate"/><field-ref name="reason"/></field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${payAssignmentsUrl}" text="Pay assignments" icon="sym_o_assignment_ind" link-type="anchor-button" btn-type="default"
+                                        parameter-map="{partyRelationshipId:compensation.partyRelationshipId}" condition="payAssignmentsUrl"/>
+                                <link url="${ratesUrl}" text="Rates" icon="sym_o_price_change" link-type="anchor-button" btn-type="default" condition="ratesUrl"/>
+                            </box-toolbar>
+                            <box-body>
+                                <form-list name="CompensationFacts" list="compensationFacts" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title=""><display/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                </form-list>
+                                <form-list name="PayChangesWaiting" list="payChangeRows" skip-form="true" paginate="false" condition="payChangeRows.length">
+                                    <field name="effectiveDateText"><default-field title="Pay change from"><display/></default-field></field>
+                                    <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="SalaryHistory" list="salaryRows" skip-form="true" paginate="false" condition="salaryRows.length">
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
+                                    <field name="payGradeName"><default-field title="Pay grade"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromDateText"/><field-ref name="salaryText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="PayAssignmentRows" list="payAssignmentRows" skip-form="true" paginate="false" condition="payAssignmentRows.length">
+                                    <field name="structureName"><default-field title="Pay structure"><display/></default-field></field>
+                                    <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="structureName"/><field-ref name="fromDateText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
                         </container-box>
                     </widgets>
                 </section>

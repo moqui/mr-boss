@@ -6675,6 +6675,267 @@ Design §8 PayAssignments, Employee360's Compensation; PE-08, PE-12 (profiles).
   a structure from a date and sees the readiness clear; `people.hr` opens the same Employee360 with no Compensation
   region.
 
+**Built Nov 12 (P23).** mr-mantle and mr-boss (this commit), branch `ppl/p23`.
+- Checked first (the code over the plan): F4 (`create#EmploymentSalary` checked no permission, warned outside the band and ended no
+  row), F33 (Employment's and Employee's US tax fields; P23 writes neither), P4's grades (an owner employer or shared), P6's
+  EmploymentChange (kinds, `approvalKinds`, `supersedeWaiting` of every waiting change, the request bound to the employment's revision),
+  P22's PayrollConfiguration.js (structures and lines, `valuesOf`, `groupReadiness`; no line eligibility, no assignment count, the
+  `periodsPerYear` input convention) and its review (PAYROLL_CONFIGURE, `PakPayrollConfig`), follow-up 1 (every approval notice
+  direct-only), People.js `readinessChecks` (two checks, PEOPLE_CONFIGURE), Employees.js `employee360` (ids shown to HR and the person
+  only), BOSS `employee360Apps`, Mantle's `EmploymentBenefit`/`BenefitType` (a cost with no currency) and `PaymentMethod`/`BankAccount`.
+- Mantle (`entity/PeoplePayrollEntities.xml`, appended; `HumanResourcesEntities.xml`):
+  - `PayrollAssignment` (an employment's structure and pay group from a date, primary or secondary, its own input values and the
+    elective lines it takes; ended, audited, never deleted), `PayrollTaxProfile` (an employment's values of a localization's declared
+    fields from a date, JSON, never a country's columns), `PayrollLocalizationField` (a localization's profile fields, seeded for the
+    demonstration alone: a required synthetic levy region and an optional exemption, neither changing an amount),
+    `PayrollStructureComponent.eligibilityEnumId` (`PleAll`, `PleElected`), and `EmploymentChange`'s pay fields (`salaryAmount`,
+    `salaryCurrencyUomId`, `salaryPeriodTypeId`, `payGradeId`) with the kind `EckPayChange`.
+  - `PayrollSetupServices` over a new module `PayrollAssignments.js`: `find#Assignments` (the employments current on a date at the
+    employers in scope with their primary assignment in effect or next, salary and pay rate references and readiness: `NO_ASSIGNMENT`,
+    `STRUCTURE_NOT_IN_EFFECT`, `GROUP_ENDED`, `SALARY_MISSING`, `RATE_MISSING`, `CURRENCY_MISMATCH`, `PROFILE_MISSING`,
+    `PROFILE_INCOMPLETE`, else ready; filters by employer, group, structure and readiness; an employment's history),
+    `assign#PayStructure` (one primary per employment and date across every group, `PRIMARY_OVERLAP`, or the one in effect ended on the
+    date with `replaceCurrent` and a reason; a secondary beside another structure; the structure and group of one employer in scope,
+    one currency, the structure published and in effect then, the group not ended; inputs the structure's components declare,
+    `INPUT_UNKNOWN`, never a component code, `INPUT_INVALID`, P22's shadowing finding; elections of elective lines; a batch of at most
+    500 with a preview, each in its own transaction under the employment's lock, a refusal named and the rest going on; an operation
+    key; an end at the revision, never in the past; no salary or rate changed), `store#PayrollProfile` (the profile of a registered
+    localization from a date at its revision, its declared fields alone, `FIELD_UNKNOWN`, `FIELD_REQUIRED`, `VALUE_INVALID`, the one in
+    effect ended, a later one refused; or a benefit added, `BENEFIT_EXISTS`, `PERCENT_INVALID`, or ended) and `get#Compensation` (an
+    employment's salaries, rates in effect, assignments, benefits, tax profile with its declared fields, bank accounts masked, pay changes
+    waiting, readiness, `canEdit` and `payRevision`). Read with PAYROLL_VIEW, changed with PAYROLL_VIEW and PAYROLL_EDIT; another
+    employer's record is a missing one. Ending a structure or a group still used by an assignment from that date is refused
+    (`STILL_ASSIGNED`); `find#Structures` counts each structure's assignments in effect; `store#StructureComponent` takes a line's
+    eligibility (a copy keeps it).
+  - `create#EmploymentSalary` extended (F4): PAYROLL_EDIT first (before the band's warnings, so a refused caller reads no band), an
+    employer outside a payroll reader's scope a missing employment, and the salary in effect ended on the new one's date
+    (`writeSalary`); a salary from the same moment (`SALARY_EXISTS`) or a later one set already (`SALARY_SCHEDULED`) refused. Its callers'
+    specs (HumanResServices, PayrollServices, PayrollAdjustments) pass unchanged.
+  - The pay change (Employment.js; the user's call of Nov 11, 2026): `apply#EmploymentChange` with `changeKind` pay, a payroll editor's
+    (not HR's) at the salary revision `get#Compensation` answers: amount, currency, frequency and an optional grade checked
+    (`checkPayTerms`, a note outside the grade's band), the date inside the employment; it waits on `PeopleEmploymentChangeApproval`
+    (`PakEmploymentChange`, the manager by default) unless it sets the employment's first salary, applied at once; the last approval
+    writes the salary through `writeSalary`. Its request is bound to the change and the salary rows (Approvals.js `revision`), so a
+    transfer neither supersedes nor invalidates it; it supersedes only a waiting pay change, and only a separation supersedes it. Its
+    salary is shown by `find#EmploymentChanges` to a payroll reader of the employer and the step's approver; HR without PAYROLL_VIEW
+    does not see a pay change. The notice's subject is "a pay change": no person, no amount (lock-screen safe), direct-only as every
+    approval notice.
+  - Employees.js: the region `compensation` for a payroll reader of the opened employment's employer (and its id shown to them),
+    `capabilities.changePay` for a payroll editor. People.js: the readiness check `people.payroll` (no pay group, `NO_PAY_GROUP`, fixed on
+    PayGroups; employees with no pay assignment counted, `PAY_ASSIGNMENT_MISSING`, fixed on PayAssignments; never an amount), each check
+    able to name its own fix place.
+- BOSS:
+  - `People/Payroll/PayAssignments` (menu 3, before Rates; payroll's area `BOSS_PPL_PAYROLL`): FindAssignments, AssignmentList (person,
+    employer, structure, group, assignment, salary, pay rate, the readiness chip with its tui text; phone columns), Assign pay (the one
+    primary: employer, employees, structure, group, dates, kind, elected lines, inputs, replace with a reason, preview), an employment
+    opened: its assignments with End, Tax and benefits (Edit tax profile, the localization's declared fields in up to four slots;
+    Add benefit, a benefit's End; the bank accounts as masked references with Accounting's note).
+  - Employee360 (`screen/Shared/Employee360.xml`): Compensation under People, from `get#Employee360Context`'s `record.compensation`
+    (People.js `employee360Apps`: People's row alone; `get#Compensation` called only when Mantle admits the region), with Set salary or
+    Change salary (`changePay`, the pay change) and links to Pay assignments and Rates; a pay change's row in Employment changes shows
+    its salary to whom Mantle answers it.
+  - PayStructureDetail (Applies to: a line's eligibility on Add component and Edit, and a column), PayStructures (Assigned);
+    People.js `linkPaths` (`Payroll/PayAssignments`), the choices `payEmployments`, `payStructures`, `payElections` and `benefitTypes` (a
+    payroll reader's, never an amount; `get#Choices` takes `payrollStructureId`, PeopleParts' choices passes `choicePayrollStructureId`);
+    Admin.js's route keys `peoplePayAssignments` and `peoplePayGroups` (the payroll check's fix places); People's settings entry text.
+  - Pay stays in its lane: nothing enters the shared context but the route, the palette and Chatter are untouched, the only notice is
+    the approval's (no amount, no person), and no dataset or report is added.
+- Specs: Mantle `test/humanres/PayAssignments` (4 features, 2.6 s release feature time: overlapping primaries refused and the one in
+  effect replaced with a reason, a secondary beside the same structure refused, preview writing nothing, HR and a payroll reader
+  refused, another employer's employment, group, currency, an unpublished structure, unknown and shadowing inputs, an election, a date
+  before the employment, a batch going on past a refusal, a structure in use not ended; a salary dated and the row in effect ended,
+  same-dated and earlier-than-scheduled refused, HR and another employer's payroll refused; a pay change waiting for the manager, its
+  notice naming no one and no amount, HR refused it and not shown it, payroll and the approver shown its salary, applied on approval,
+  a first salary set at once; Compensation answered to payroll and absent for HR with the same parameters, another employer's payroll
+  and an unknown person refused, the profile's unknown, missing, wrong-kind and stale values refused, HR refused, benefits added,
+  overlapping and out-of-range refused, ended, the readiness clear, the legacy tax fields untouched); PeopleScope's readiness feature
+  counts the payroll check. BOSS `test/People/PeoplePayAssignments` (3 features, 0.6 s: PayAssignments' one html render as the payroll
+  operator with an employment opened; Employee360's context, Compensation under People and none under Commons; the four choices,
+  each with a selected value off the page); `PeopleAccessLater` gains the P23 case (0.45 s: Compensation in the payroll operator's
+  context and absent from HR's with the same parameters; assigning payroll's and refused to HR with the same parameters; HR refused
+  `get#Compensation`; Services' employee missing to Retail's payroll; the pay change refused to HR and previewed by payroll with the
+  same parameters; PayAssignments payroll's and refused to HR); PeopleSpecLib's `payrollGroupMenu` gains PayAssignments; PeopleAccess's
+  readiness feature allows the payroll check. Acceptance, written and not run: `acceptance/People/PeoplePayAssignmentsUsable` (3
+  features, through the screens' transitions: the payroll operator sets Leon's first salary on Employee360, assigns him a structure
+  and the monthly group on PayAssignments after a preview, saves his tax profile and reads him ready; HR's Employee360 with no
+  Compensation and payroll's with it; a raise for Tomas waiting for Hannah, approved on his Employee360, the salary before ended).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): Mantle's 25 humanres specs, 143 of 143 (mr-mantle
+  66.4 s feature time; PayAssignments 2.6 s); BOSS PeoplePayAssignments, PeopleAccessLater, PeopleAccess, PeopleEmployees,
+  PeoplePayConfiguration, PeopleHire, PeopleLifecycle, PeopleApprovals, PeoplePositions, PeopleSelfService and AdminRegistries, 63 of
+  63 (mr-boss 22.0 s). A one-off html, qvt and tui render of PayAssignments, Employee360 (payroll's, with Compensation; HR's without),
+  PayStructureDetail and PayStructures and a post to each new transition (changePay's first salary and raise, assignPay's preview and
+  assignment, storeProfile, storeBenefit and its end, endAssignment), not kept, found nothing to fix. `moqui lint --screens` (release):
+  137 flagged sites as on master, none in the changed screens, no TUI-text finding in them. Prettier clean on the new and changed
+  JavaScript (BOSS People.js keeps two hunks of other phases Prettier would rewrite). Not run: test-apps, test-framework, the
+  acceptance suite.
+- Inventories: usl-inventory's HumanRes `create#EmploymentSalary` row and the People Added rows (`find#Assignments`,
+  `assign#PayStructure`, `store#PayrollProfile`, `get#Compensation`, the pay change); ss-inventory notes no baseline form maps to
+  PayAssignments or Compensation.
+- Design edits: design-people (header; §1.2 Payroll's menu; §4 Employee360 as built, EmploymentChange's pay change; §8 PayStructures,
+  PayStructureDetail's eligibility, PayAssignments as built; §12's topic row).
+- Findings (provisional, numbered by the lead):
+  - A pay change's approver (the person's manager by default) reads its new salary (only that, on the change they decide), as an
+    expense approver reads the claim's total (§4, Nov 12): design §1.1 gives managers no implicit compensation. Whether the manager
+    should read it, or a pay change's default route should be the employer's payroll approvers (PAYROLL_APPROVE, as `PakPayrollConfig`'s)
+    with the manager's step only by a rule, is the user's call.
+  - An employment's first salary is set at once by a payroll editor, without approval (nothing to change yet); every later salary is a
+    pay change. A hire from an offer still records no pay (P17), so the offer's approved pay and the first salary are entered apart.
+    The user's call whether a first salary waits for approval too.
+  - `create#EmploymentSalary` called directly (PAYROLL_EDIT; imports, other apps) writes a later salary without the pay change's
+    approval; People's screens use only the pay change. Whether the service should refuse a change of a salary in effect without an
+    approved change is the user's call (its existing callers set first salaries).
+  - An applied salary row from a later date cannot be withdrawn: a pay change dated before it is refused (`SALARY_SCHEDULED`); there is
+    no withdraw of a pay change (P7's withdraw is for assignments). A later phase (P24 or P26's corrections) may add one.
+  - A line's eligibility is built as elective lines (`PleElected`, chosen per assignment); a condition-based eligibility (a department,
+    a job class, a formula condition) is not built, and P25's calculation is the first reader of either.
+  - The demonstration localization's profile fields change no amount (`calculate#Demonstration` reads no profile); P25 passes the
+    profile to `calculate#Localization`, whose interface takes it already.
+  - `EmploymentBenefit.cost` has no currency (Mantle's entity): the cost shows as a bare number; a currency field would be a Mantle
+    entity change.
+  - People's payroll readiness check is the People administrator's (`people.setup` needs PEOPLE_CONFIGURE); the payroll operator reads
+    each employment's readiness on PayAssignments, not the employer's check.
+  - A payroll reader now sees the employment ids on Employee360's Overview (Mantle shows them to payroll as to HR) so Compensation opens
+    the right employment; dates stay HR's.
+  - Employee360 under People calls `get#AssignedEquipment` for every viewer, which logs RECORD_UNAVAILABLE for a viewer who is not the
+    person or HR (the payroll operator, a manager) on each render (P7's; not changed).
+  - P22's Mantle PayConfiguration failed its first three runs here at different features (an approved publish then missing, a term
+    overlap) and passed four runs since, with and without P23's changes (the same code passed on its own between the failures): a
+    time- or load-dependent spec, not reproduced; worth a look.
+- For the lead:
+  - budget share: mr-mantle PayAssignments about 2.6 s release; mr-boss PeoplePayAssignments about 0.6 s and PeopleAccessLater's P23
+    case 0.45 s, release;
+  - merge hot spots: mr-mantle `Employment.js` (the pay change: `changeKinds`, `approvalKinds`, `changeScope`, `supersedeWaiting`,
+    `applyChange`, `planChange`, `previewEmploymentChange`, `applyEmploymentChange`, `findEmploymentChanges`, `changeRow`),
+    `Approvals.js` (`PakEmploymentChange`'s revision and describe), `People.js` (`readinessChecks`, `readiness`'s fixRoute; follow-up 3
+    touches People.js too), `Employees.js` (`employee360`), `PayrollConfiguration.js` (eligibility, `assignmentCounts`, `checkUnassigned`,
+    the export), `entity/PeoplePayrollEntities.xml` and `HumanResourcesEntities.xml` (EmploymentChange), `PayrollSetupServices.xml`
+    (appended), `PeopleServices.xml`, `EmploymentServices.xml`, `test/humanres/PeopleScope.spec.js`; mr-boss
+    `service/ironstone/people/People.js` (`linkPaths`' end, the choices before `payrollLocalizations`, `employee360Apps`, `employee360`),
+    `ContextServices.xml`, `template/PeopleParts.xml` (choices), `screen/Shared/Employee360.xml`, `screen/People/Payroll.xml`,
+    PayStructureDetail and PayStructures, `service/ironstone/admin/Admin.js` (route keys), `data/BossSetupData.xml` (the settings entry's
+    text), PeopleSpecLib (`payrollGroupMenu`), PeopleAccess (the readiness feature), PeopleAccessLater (header, the appended feature),
+    design-people (header, §1.2, §4, §8, §12), usl-inventory and ss-inventory, this note;
+  - for the user's call: the pay change's approver and what they read, a first salary without approval, and `create#EmploymentSalary`
+    called directly (the first three findings).
+
+**Review Nov 12 (P23).** A fresh review of `git diff master...ppl/p23` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §1.1, §4 Employee360 and EmploymentChange, §8 PayAssignments and §8.1, compensation's lane first (every path a payroll
+amount could take), then payroll's employer scope, the pay change's approval, the salary writer's callers, one primary per
+employment and date, the tax profile's fields and the bank references; the user's three calls of Nov 12 built and recorded in §4;
+fixes committed apart per repository ("People P23 review: …"). Both branches were first rebased onto master after People
+follow-up 3 (contractors on teams, `UnitEmployers.js`, rooms for sessions and interviews, capacity less training, the agency-end
+membership rule), the Maintenance follow-ups and their findings commits: cleanly in both, no conflict (People.js
+`readinessChecks`, Employment.js, Approvals.js, the entity files, PeopleServices.xml, PayrollSetupServices.xml, BOSS People.js,
+Employee360.xml, PeopleSpecLib, PeopleAccess and PeopleAccessLater, the plan files all merged by git); PayAssignments,
+PayConfiguration, PeopleScope and PeopleEmployment (22 of 22) and PeoplePayAssignments, PeopleAccess and PeopleAccessLater (32 of
+32) passed on the rebase before any change. The phase commits are now mr-mantle defb0788 and mr-boss 1b4989a6. Tested on the
+shared release binary (`--release --nobuild`, this phase's runtime).
+- Checked and found sound:
+  - Compensation's lane: Mantle's `get#Employee360` admits the region `compensation` only to a payroll reader (PAYROLL_VIEW, staff)
+    of the opened employment's employer, and BOSS `employee360Apps` keeps it in People's row alone (Commons, Insights and Maintenance
+    have none), so `get#Compensation` is never called for anyone else and the context's answer has no `record.compensation`; the
+    palette, record lookup, search, Chatter and RecordFiles read nothing of pay (no P23 change there); the only notice is the
+    approval's ("a pay change", no person, no amount, direct-only); no dataset, report or export is added beyond the payroll
+    reader's own PayAssignments list; an agent's render renders as its user, so it shows Compensation only to a payroll reader.
+    A pay change's salary is in `find#EmploymentChanges` only for a payroll reader of the employer and the approver of its step;
+    nothing reads an `EmploymentChange`'s salary fields elsewhere (checklists, letters, provisioning and Admin's lifecycle act on a
+    hire, transfer or separation only).
+  - Payroll's scope by employer: every PayrollAssignments.js service reads `people.scopeOf()`'s employers (a payroll reader's own
+    organizations, PAYROLL_VIEW being a staff read), another employer's employment, structure, group or assignment is a missing one,
+    and a supplied employment, structure or group is checked against it; the BOSS choices (`payEmployments`, `payStructures`,
+    `payElections`, `benefitTypes`) are a payroll reader's of an employer in scope and name no amount.
+  - One primary per employment and date across every group (`checkAssignable`, rechecked under the employment's lock in each
+    item's own transaction), a replacement ended on its date with a reason, a secondary beside another structure only; a structure
+    or group still assigned is not ended; the assignment and profile are ended, never deleted; operation keys and revisions on
+    assignments and profiles.
+  - Tax profile fields: `store#PayrollProfile` keeps only the fields the localization declares (`FIELD_UNKNOWN`, `FIELD_REQUIRED`,
+    `VALUE_INVALID` by kind); Employment's and Employee's US tax fields are neither read nor written. Bank details: only a masked
+    reference (`•••• last four`) of the person's bank payment methods is read; nothing here writes a payment method.
+  - `create#EmploymentSalary`'s existing callers (HumanResServices, PayrollServices, PayrollAdjustments, PeoplePositions' own row)
+    set first salaries as john.doe (ADMIN); Marble's screens have no salary form (no `EmploymentSalary` in mr-marble), so nothing
+    there changes.
+- Fixed:
+  - R1 (the user's call of Nov 12, 2026; high): a pay change waited for the person's manager by default, and the manager read its
+    new salary, against design §1.1 (no implicit compensation for managers). It is now an approval of its own kind, `PakPayChange`
+    (Approvals.js; seeded in PeoplePayrollSetupData), on the same `PeopleEmploymentChangeApproval` topic: with no rule the employer's
+    payroll approvers decide (staff holding PAYROLL_APPROVE with PAYROLL_VIEW; basis "No rule: a payroll approver decides"), an
+    employer's rule of the kind may route a step to the manager (who then reads that change's salary alone), never who asked or the
+    person; bound to the change and the salary rows (the revision moved from `PakEmploymentChange`, whose rules no longer route a
+    pay change). Employment.js reads each change's kind (`kindOfChange`) for its request, summary, supersession and decision; a
+    working schedule's `keepWaiting` leaves pay changes out; a withdrawn change supersedes only its own lane. BOSS `decisionUrl`
+    opens a pay change on Employee360; Employee360's dialog says who decides. The preview's route of a pay change is read through
+    the module (`previewRoute`): `resolve#Approvers` needs an HR or configure reader and refused the payroll editor, marking the
+    preview's transaction (it was hidden while the first salary was set at once), and the preview now names the salary revision.
+    Spec PayAssignments (the notice to the payroll approvers alone, not the manager or the asker; the manager NOT_APPROVER and
+    reading nothing; a payroll editor who approves refused their own request, SELF_APPROVAL; a rule to the manager, who then reads
+    that change's salary, not an applied one, and is refused `get#Compensation`; the preview routed at the salary revision).
+  - R2 (the user's call of Nov 12, 2026): an employment's first salary was set at once without approval; it now waits like any pay
+    change. A hire from an accepted offer whose pay was approved with it (`payAmount` and currency on an offer with `approvedDate`)
+    records that pay as the first salary from the first day (`hireEmployee`, `writeSalary`; ConfirmHire's finding `OFFER_PAY`
+    names no amount, so HR reads none). Specs Offers (the hire's salary is the offer's 52,000 USD; the finding without pay) and
+    PayAssignments (Cy's first salary waiting, then applied on approval); BOSS PeoplePayAssignments' and PeopleAccessLater's
+    payroll preview passes again.
+  - R3 (the user's call of Nov 12, 2026; medium): `create#EmploymentSalary` let a payroll editor change a salary in place without
+    the pay change's approval, and a caller with PAYROLL_EDIT alone (no PAYROLL_VIEW, no employer) write any employer's salary.
+    It now sets a first salary only, at a payroll reader's employer (`RECORD_UNAVAILABLE` otherwise); a later one is
+    `PAY_CHANGE_REQUIRED`; a holder of the new `PAYROLL_REPAIR` (MantleSetupData, ADMIN's alone, no BOSS group) sets one at any
+    employer for data repair with comments as its reason (`REASON_REQUIRED`), kept as the audit log's change reason. Spec
+    PayAssignments (the editor reading no employer, the raise refused, the repair with and without a reason, its audit row).
+  - R4 (medium): `PayrollAssignment.thruDate`, `PayrollTaxProfile.thruDate` and (new) `EmploymentSalary.thruDate` were audited
+    with `enable-audit-log="update"`, which skips a field's first non-null value, so ending an open row (the only change these
+    rows take) was never audited and its reason was lost. They are audited from their first value now (`true`). Spec PayAssignments
+    (the replaced assignment's end audited with "New terms"; the repaired salary's end with its reason).
+  - R5 (minor): adding or ending a benefit named no revision (§2). `store#PayrollProfile`'s benefit path is at the benefits'
+    revision (`get#Compensation`'s `benefitRevision`, `REVISION_CHANGED`); PayAssignments' Add benefit and End pass it. Spec
+    PayAssignments (a stale revision refused).
+  - R6 (minor, finding 10 of the Built note): Employee360 called `get#AssignedEquipment` for every viewer, which logged
+    RECORD_UNAVAILABLE at ERROR for a payroll operator or a manager on each render. It takes `checkOnly` (as P2's review did for
+    `get#Employee360`): a person the caller may not read answers `equipmentList` null, and Employee360 passes it. Spec
+    PeopleChecklists (checkOnly answers none, no error).
+  - The acceptance walks follow the calls, written and not run (the brief runs none): PeoplePayAssignmentsUsable (Leon's first
+    salary approved by the payroll approver; Tomas's raise read and approved by the payroll approver while his manager reads
+    nothing of it) and PeopleOffersUsable (the hire's salary from the offer).
+- Provisional findings (for the lead to number):
+  - P22's PayConfiguration flake (the Built note's last finding) failed once in five runs here, not fixed: in "a structure
+    previews gross to net", HOURS is published and approved (`hoursPublished` ""), its line added, and a moment later
+    `publish#Structure` refuses `COMPONENT_NOT_PUBLISHED: HOURS has no published term on <today, the same minute>`. The draft
+    term's date is the store's `nowTimestamp` and the publication keeps it, so the term should be in effect at the structure's
+    date; `ec.user.nowTimestamp` was checked equal to the wall clock in a spec, the entities are `cache="never"`, and nothing in the
+    feature depends on another spec. Not a P23 change (the four other runs passed, with and without this review's changes). Worth a
+    look at how the approval's publication is read back by the next transaction (the term's dates as stored and read, or a
+    read of the term list kept across transactions).
+  - `enable-audit-log="update"` on a `thruDate` skips the end of an open row everywhere it is used (§2's audited ends): People's
+    schedules, leave, checklists, recruiting and P22's payroll configuration, and Maintenance's, Accounting's and Facility's dated
+    rows (about 30 entities in mr-mantle). R4 fixed P23's three; the others need the same change, or the framework could treat a
+    `thruDate`'s first value as a change.
+  - `create#EmploymentSalary` still sets a first salary without approval for a payroll editor calling it directly (call 3 refuses
+    only a change of a salary in place); People's screens set a first salary only through the pay change. Imports and other apps may
+    call it; whether a first salary there should need approval too is the user's call.
+  - PayAssignments' tax profile form has four field slots; a localization declaring more would lose an optional fifth value on save
+    (`store#PayrollProfile` keeps only the values given). Only the demonstration (two fields) is installed.
+  - Pay is not opted out of AI (`ai-opt-out`): an Assist session of a payroll reader can read Compensation and PayAssignments'
+    salaries, as their own browser does. PE-21 names grievance text, review notes, leave reasons and scorecards; whether pay joins
+    them is the user's call.
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): mr-mantle PayAssignments, PayConfiguration,
+  PeopleScope, PeopleEmployment, PeopleApprovals, Offers, PeopleChecklists, HumanResServices, PayrollServices, PayrollAdjustments,
+  PeoplePositions and Recruiting, 82 of 82 on the first full run and 81 of 82 on the last (PayConfiguration's flake above;
+  it passed beside PayAssignments twice between) (PayAssignments 4 features, about 3.6 s); mr-boss PeoplePayAssignments, PeopleAccess,
+  PeopleAccessLater, PeopleEmployees, PeopleHire, PeopleOffers, PeopleApprovals, PeopleLifecycle, PeoplePayConfiguration and
+  PeopleSelfService, 55 of 55 (mr-boss 19.5 s feature time; PeoplePayAssignments 0.5 s, PeopleAccessLater's P23 case 0.4 s);
+  `moqui lint --screens` (release): 137 flagged sites as on master, none in the changed screens. Prettier clean on the changed
+  JavaScript. Not run: test-apps, test-framework, the acceptance suite (PeoplePayAssignmentsUsable and PeopleOffersUsable changed
+  and not run). `./moq run lint` rebuilt the shared release binary from master once (same source) before the binary was run directly.
+- For the lead:
+  - budget share: mr-mantle PayAssignments about 3.6 s release (2.6 s before; the approvals and the repair add calls);
+    mr-boss unchanged;
+  - merge hot spots: mr-mantle `Approvals.js` (`PakEmploymentChange`, the new `PakPayChange`, `basisTexts`), `Employment.js`
+    (`kindOfChange`, `decideEmploymentChange`, `waitsFor`, `planHire`, `hireEmployee`, the preview's route, `withdrawEmploymentChange`,
+    the schedule's `keepWaiting`), `PayrollAssignments.js` (`salaryAccess`, `writeSalary`, `storeBenefit`), `Checklists.js`,
+    `MantleSetupData.xml`, `PeoplePayrollSetupData.xml`, `HumanResourcesEntities.xml`, `PeoplePayrollEntities.xml`, the services'
+    descriptions; mr-boss `People.js` (`decisionUrl`), Employee360, PayAssignments, ConfirmHire, the two acceptance walks,
+    design-people (header, §1.1, §4, §5 HireEmployee, §12), usl-inventory, this note and §4;
+  - the user's three calls of Nov 12 are in §4 and built (R1 to R3); the acceptance walks changed with them want a run.
+
 ### P24 — Pay inputs and hours for pay
 
 Design §6 HoursForPay, §8 PayAdjustments, §8.1 (inputs); PE-09, PE-07 and PE-05 (their pay inputs).
@@ -6962,6 +7223,9 @@ the owner's design.
 | Nov 12, 2026 | People builds its side of impl-maintenance F356, F357 and F360 now: a training session and an interview take a meeting room through Maintenance's resource booking (a bookable room, booked as the system by People's services after their own check; free text stays for a place off site), refused on a clash or a blackout, moved and cancelled with their event; the booking services refuse every user on an application's event (its own services book, move and cancel for it), Commons' room calendar offers no Cancel there, and a clash found as the system is named Busy. `get#PartyCapacity` takes a person's training sessions off (as the trainer, or holding a place enrolled or completed), counted once with leave, shifts and holidays | The user's call on F393 (built in follow-up 3: Mantle `EventRooms.js`, Training.js, Recruiting.js, ResourceServices, ResourcePolicy.js; BOSS Training, TrainingDetail, ApplicantDetail, Commons' ScheduleServices; Training, Recruiting, PeopleTraining) |
 | Nov 12, 2026 | Timesheets' expected hours still include training: a training session is worked time. Only availability for dispatch and staffing subtracts a person's training sessions; `TimesheetServices.get#WeekDays` (its capacity read) does not drop by them | The user's call on follow-up 3's finding (built in its review, R1: `get#PartyCapacity` `lessTraining`, passed by `find#StaffingCandidates` outside a window; Maintenance's dispatch window subtracts `sessionHours`; Mantle Training) |
 | Nov 12, 2026 | Ending a contractor's agency (`PrtAgent`) with the employer ends their team memberships and leads there on its date, as a separation does for an employee, unless they still work there; failure tolerant per membership | The user's call on follow-up 3's finding (built in its review, R3: the `AgentEndsMemberships` EECA and `OrganizationServices.end#AgentMemberships`; Mantle PeopleOrganization) |
+| Nov 12, 2026 | A pay change waits for the employer's payroll approvers by default (staff of the employer holding PAYROLL_APPROVE with PAYROLL_VIEW), not the manager: it is an approval of its own kind, `PakPayChange`, on the `PeopleEmploymentChangeApproval` topic, so its rules are its own; an employer's rule of the kind may route a step to the manager (or another approver with PEOPLE_REQUEST_APPROVE), who then reads the new salary of that change alone; never the payroll editor who asked, nor the person | The user's call on P23's finding (design §1.1 gives managers no compensation access; built in P23's review, R1: Approvals.js `PakPayChange`, Employment.js `kindOfChange`; Mantle PayAssignments; design-people §1.1, §4 EmploymentChange, §12) |
+| Nov 12, 2026 | An employment's first salary needs approval like any pay change, unless it comes from an accepted offer whose pay was approved with the offer (P17): the hire from that offer records the offer's pay as the first salary from the first day at once | The user's call on P23's finding (built in P23's review, R2: Employment.js `waitsFor`, `hireEmployee`'s `offerPay`, ConfirmHire's `OFFER_PAY` finding naming no amount; Mantle Offers and PayAssignments; design-people §4, §5 HireEmployee) |
+| Nov 12, 2026 | `create#EmploymentSalary` sets only an employment's first salary (PAYROLL_EDIT, at a payroll reader's employer); a salary in place changes only through the approved pay change (`PAY_CHANGE_REQUIRED`); a holder of `PAYROLL_REPAIR`, which Mantle grants to ADMIN alone, still sets one for data repair, at any employer, with a reason kept in the audit log | The user's call on P23's finding (built in P23's review, R3: PayrollAssignments.js `salaryAccess`, MantleSetupData's `PAYROLL_REPAIR`, `EmploymentSalary.thruDate` audited; the existing callers set first salaries as ADMIN and pass unchanged; Mantle PayAssignments) |
 
 ## 5. Open questions
 

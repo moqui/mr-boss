@@ -23,7 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
     (moved here from Settings by its review, the user's call of Nov 12, 2026): payroll configuration, Pay components, Pay structures
     and Pay groups (menu 6 to 8; PayComponentDetail and PayStructureDetail out of the menu), screens of this directory, read with
     PAYROLL_VIEW and changed with PAYROLL_EDIT and PAYROLL_CONFIGURE (Mantle's PayrollSetupServices check them), published on a
-    payroll approver's approval. Pay runs, payslips, pay assignments, pay adjustments and the payroll exchange join with P23 to P28. -->
+    payroll approver's approval. P23: Pay assignments (menu 3, before Rates), screen of this directory: employments put on a
+    structure and a pay group, their tax profiles and benefits, read with PAYROLL_VIEW and changed with PAYROLL_EDIT (Mantle's
+    PayrollSetupServices check them). Pay runs, payslips, pay adjustments and the payroll exchange join with P24 to P28. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="Rates">
