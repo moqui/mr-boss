@@ -29,9 +29,9 @@ evidence of this review's outcomes.
 - [Products design](design-products.md), [implementation](impl-products.md) and [research](research-products.md):
   intended workflows, delivered functionality, prior findings and deferrals.
 - [Projects review](ui-review-projects.md), [drawers, Commons and Comms review](ui-review-drawers-commons.md),
-  [framework UI review guide](../../../../docs/dev/UI-Review.md) and
-  [framework review](../../../../plans/archive/UI-Refinement.md): activity/evidence method and established refinements.
-- [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
+  [framework UI review guide](../../../../../docs/dev/UI-Review.md) and
+  [framework review](../../../../../plans/archive/UI-Refinement.md): activity/evidence method and established refinements.
+- [Application practices](../../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md), [Products implementation notes](../docs/ProductsImplementation.md) and
   [shared catalog screens](../docs/ProductsSharedScreens.md). The last two contain historical statements that must be
   reconciled with current sources, especially the now-built neighboring app contexts.
@@ -82,7 +82,7 @@ catalog, production stock, external publication, financial posting or printer de
 
 ### Environment and fixtures
 
-For later execution, follow the [review guide](../../../../docs/dev/UI-Review.md), repository building/testing skills
+For later execution, follow the [review guide](../../../../../docs/dev/UI-Review.md), repository building/testing skills
 and application practices. Use an isolated runtime and fresh disposable database with individually linked Mantle
 and BOSS components. The guide's framework-only bootstrap leaves `component/` empty and is insufficient on its own.
 Copy mutable configuration; keep database, uploaded content, generated PDFs/labels and import resources separate
@@ -792,7 +792,7 @@ phone or terminal walks in acceptance. Do not recreate ProductsShots or add scre
 
 ### Verification rules for later refinements
 
-- Read the [testing skill](../../../../.agents/skills/testing/SKILL.md) before writing/running tests. Commands run
+- Read the [testing skill](../../../../../.agents/skills/testing/SKILL.md) before writing/running tests. Commands run
   from the mr-moqui root. Use affected regression specs on a suitable binary, for example
   `./moq test mr-boss --spec ProductsCatalog --nobuild`; client specs run through Moqui, not Node:
   `./moq test-client mr-boss --serve --spec ProductsWalk --nobuild`.

@@ -4,7 +4,7 @@ Oct 18, 2026
 
 Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-crosscut.md).
 
-**Paths (Nov 12, 2026).** The Tools `System/` screen paths cited below are the Oct 18 baseline that was read, and they are left as they were. The administration screens among them are now System's areas (Access, Security, Settings, Operations, Data, Audit, Integrations, Protocols), and several of the files cited are gone: see mr-moqui [plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md).
+**Paths (Nov 12, 2026).** The Tools `System/` screen paths cited below are the Oct 18 baseline that was read, and they are left as they were. The administration screens among them are now System's areas (Access, Security, Settings, Operations, Data, Audit, Integrations, Protocols), and several of the files cited are gone: see mr-moqui [plans/archive/Admin-Screens-Down.md](../../../../../plans/archive/Admin-Screens-Down.md).
 
 Deeper research pass on the **IronStone Commerce** app — the initial-design sections **Stores & channels**, **Merchandising (categories, product content, SEO)**, **Online orders & carts**, **Channel and marketplace integrations** and **Shipping, payment & tax settings** — cataloguing every relevant screen/page found in the reference apps. Commerce's audience runs online stores, so Commerce would include these reused screens (crosscut §3–§4), each with a store context: **Customer 360** (store account, carts, online orders); **Product 360** (merchandising, store categories, SEO); **Order detail** and the order list (online orders, channel filters); **promotions, coupons** (store promotions and checkout); **carriers, ship methods** and **payment, shipping & tax settings** (checkout shipping options and rates, payment gateways and tax per store); **prices** (per-store prices); and **inventory availability** (store availability). Companion to [3p-app-reference.md](3p-app-reference.md) and the sibling passes [research-products.md](research-products.md), [research-sales.md](research-sales.md), [research-marketing.md](research-marketing.md), [research-warehouse.md](research-warehouse.md) and [research-accounting.md](research-accounting.md).
 
@@ -36,7 +36,7 @@ are design decisions; Commerce/Shop implementation remains future.
 | **metasfresh** | `3p_other/metasfresh` | `backend/de.metas.<module>/…`, connector services `misc/services/camel/…` |
 | **ridgecrest** | `3p_moqui/ridgecrest` | `screen/…`, `service/…`, `entity/…`, `data/…` — storefront `screen/rcherbals/`, PopRestStore overlays `screen/{popdynamic,popstatic,poptemplate}/`, admin `screen/rcadmin/` |
 | **coarchy** | `3p_moqui/coarchy` | `screen/…`, `service/…` — self-serve credits checkout in `screen/settings/settingsinternal/` |
-| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/service/mantle/…`, `base-component/tools/screen/…` |
+| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/service/mantle/…`, `components/base/tools/screen/…` |
 
 **Not used here.** Checked and found no storefront, store/channel or commerce-integration UI: Carbon (B2B ERP; no storefront, channel or shop connector in `apps/erp/app/modules/`), Akaunting (customer portal for invoice payment only, catalogued in research-accounting.md), Moqui Sales (rep-side order entry; its `screen/Sales/Order/FindOrder.xml` includes `OrderOpen` carts by default, noted for research-sales.md), WorkManagement, WeCreate, resistmanagement, ServiceJobMonitor. Not in any checkout: Frappe `webshop` and `ecommerce_integrations` (ERPNext points to them, §8), Odoo Enterprise marketplace connectors.
 
@@ -237,7 +237,7 @@ The baseline has a complete store data model and back-office store screens, but 
 | Gateways | Payment and shipping gateway configs (find/edit), reached from the store screen | `component/mr-marble/screen/SimpleScreens/Gateway/Payment/{FindPaymentGateway,EditPaymentGateway}.xml`, `component/mr-marble/screen/SimpleScreens/Gateway/Shipping/{FindShippingGateway,EditShippingGateway}.xml` |
 | Catalog | Products (edit, prices with a **Store** column, categories, associations, content list/detail/compare), categories (edit with **URL slug** generation, products, content), features, feature groups, search | `component/mr-marble/screen/SimpleScreens/Catalog/Product/{EditProduct,EditPrices,EditCategories,Content}.xml`, `component/mr-marble/screen/SimpleScreens/Catalog/Category/{EditCategory,EditProducts,Content}.xml` |
 | Find Order | Order list with store and sales-channel fields; default status filter excludes `OrderOpen` "to exclude shopping cart orders" | `component/mr-marble/screen/SimpleScreens/Order/FindOrder.xml`, `component/mr-marble/screen/SimpleScreens/Order/OrderDetail.xml` |
-| System messages | Message remotes, types and messages (integration plumbing, Admin) | `base-component/tools/screen/System/SystemMessage.xml`, `base-component/tools/screen/System/SystemMessage/{Message,Remote,Type}.xml` |
+| System messages | Message remotes, types and messages (integration plumbing, Admin) | `components/base/tools/screen/System/SystemMessage.xml`, `components/base/tools/screen/System/SystemMessage/{Message,Remote,Type}.xml` |
 
 ### Data model available
 
@@ -354,7 +354,7 @@ ordinary order lists excluding carts, and deferred POS terminals.
 
 ### Checkout path quirks
 
-- PopRestStore, which ridgecrest overlays, is not in the convention's checkouts; a copy is at `/home/jonesde/work/moquiwork/moqui/runtime/component/PopRestStore` (screens in `/home/jonesde/work/moquiwork/moqui/runtime/component/PopRestStore/screen/store/`, services in `/home/jonesde/work/moquiwork/moqui/runtime/component/PopRestStore/service/popstore/`).
+- PopRestStore, which ridgecrest overlays, is not in the convention's checkouts; a copy is at `/home/jonesde/work/moquiwork/moqui/runtime/components/addon/PopRestStore` (screens in `/home/jonesde/work/moquiwork/moqui/runtime/components/addon/PopRestStore/screen/store/`, services in `/home/jonesde/work/moquiwork/moqui/runtime/components/addon/PopRestStore/service/popstore/`).
 - ridgecrest keeps both storefronts in one component: `rcherbals` (FTL, store `RCHERBALS`, mount `/rch`) and `popdynamic`/`popstatic`/`poptemplate` (PopRestStore, store `RCHERBALS_POP`); several `rcadmin` screens are Vue (a .vuet template plus a .js file) and render only in the js/vuet modes.
 - Odoo's frontend views for eCommerce are split: dashboard JS in `website_sale/static/src/js/dashboard/` and list/kanban view classes in `website_sale/static/src/views/`.
 - ERPNext's portal menu is in `erpnext/hooks.py` (`standard_portal_menu_items`); `erpnext/portal/sidebar/portal/portal.json` is an empty Sidebar record.

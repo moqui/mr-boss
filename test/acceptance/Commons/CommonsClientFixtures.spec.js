@@ -274,7 +274,7 @@ feature("Wave 7 moderation review fixtures", {
     when() {
         // PASS must be linked before this feature; the matching runtime host allowlist is configured separately.
         if (!ec.resource.getLocationReference("component://mr-pass/component.xml")?.getExists())
-            throw new Error("Wave 7 moderation fixtures need mr-pass linked into runtime/component")
+            throw new Error("Wave 7 moderation fixtures need mr-pass linked into runtime/components/addon")
         const S = "mantle.public.SiteServices.", F = "mantle.forum.ForumServices.", B = "ironstone.comms.ModerationServices."
         const siteName = "UIReview Wave7 moderation", categoryName = "UIReview Wave7 held questions"
         const actors = [

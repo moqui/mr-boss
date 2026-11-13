@@ -32,7 +32,7 @@ dependency on BOSS.
 [screen inventory](ss-inventory.md) and [service inventory](usl-inventory.md).
 Decisions marked X, Z or L cite §3 of the suite-app review (see above).
 The [shared ground rules](impl-drawers-commons.md#4-ground-rules) and
-[application practices](../../../../docs/dev/Practices-App-Dev.md) govern ownership,
+[application practices](../../../../../docs/dev/Practices-App-Dev.md) govern ownership,
 permissions, dated associations, audit history, XML screens and service implementation.
 
 **Sections:** [1 shell](#1-shell) · [2 screens](#2-screens) ·

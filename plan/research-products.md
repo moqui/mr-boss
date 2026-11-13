@@ -22,7 +22,7 @@ Deeper research pass on the **IronStone Products** app, covering the six section
 | **metasfresh** | `3p_other/metasfresh` | `frontend/src/…`, `backend/de.metas.<module>/…` (product, pricing, UOM engines inside `backend/de.metas.business/`) |
 | **Akaunting** | `3p_other/akaunting` | `resources/views/…`, `app/…` |
 | **Ever Gauzy** | `3p_other/ever-co/ever-gauzy` | `apps/gauzy/src/app/pages/…`, `packages/…` (domain in `packages/core/src/lib/`, catalog plugin `packages/plugins/catalog/`) |
-| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-marble/screen/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/service/mantle/…`, `base-component/framework/entity/…` |
+| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-marble/screen/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/service/mantle/…`, `components/base/framework/entity/…` |
 
 **Not used here:** checked and found no product-catalog UI in Twenty, Zimbra, Nextcloud, Signal, OpenProject, Redmine, Ever Teams, and the Frappe apps other than ERPNext (CRM, Helpdesk, HR, Insights, LMS, Wiki, Gameplan, suite, Central). Dolibarr community modules only map incoming e-invoice vendor references onto products (`einvoicing/product_mapping.php`, stored as supplier prices), which is Purchasing/Accounting material. Of the Moqui components, ridgecrest has storefront product pages only (Commerce); resistmanagement only mounts the SimpleScreens `Catalog.xml` tree (`3p_moqui/resistmanagement/screen/resistadmin.xml`), the same screens as the Moqui baseline; Sales, WorkManagement, WeCreate, coarchy and ServiceJobMonitor have no product screens.
 
@@ -796,7 +796,7 @@ Not present: supplier price list per supplier (Supplier screens `Supplier/{FindS
 | `ProductGlAppl`, `ProductCalculatedInfo`, `ProductReview`, `ProductParameter*`, `ProductSubscriptionResource` | GL overrides; ordered/viewed/rating counters; reviews (Pending/Approved/Deleted); order-time personalization parameters; subscription resources | same |
 | `ProductFacility`, `ProductFacilityLocation` | Per-facility minimum stock, reorder quantity, days to ship; preferred locations | `component/mr-mantle/entity/FacilityEntities.xml` |
 | `ProductStoreCategory`, `ProductStoreProduct`, `ProductStorePromotion`, `ProductStorePromoCode` | Store records (Commerce) and promotions (Marketing) | `component/mr-mantle/entity/ProductStoreEntities.xml` |
-| `moqui.basic.Uom`, `UomConversion`, `UomDimensionType` | Typed units with dated conversions (factor, offset) | `base-component/framework/entity/BasicEntities.xml` |
+| `moqui.basic.Uom`, `UomConversion`, `UomDimensionType` | Typed units with dated conversions (factor, offset) | `components/base/framework/entity/BasicEntities.xml` |
 
 ### Services (mr-mantle)
 

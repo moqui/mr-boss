@@ -63,8 +63,8 @@ first. Manufacturing is built after all three and before Purchasing (§4), so th
   [usl-inventory.md](usl-inventory.md).
 - mr-moqui: `plans/Remaining-Work.md` and `docs/Build-Test.md`.
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -75,11 +75,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`)
-  - `runtime/component/mr-mantle`
-  - `runtime/component/mr-boss`
+  - `mr-moqui` (`crates/`, `runtime/components/base`)
+  - `runtime/components/addon/mr-mantle`
+  - `runtime/components/addon/mr-boss`
 
-  `runtime/component/mr-marble` is read only, for the baseline `SimpleScreens/Manufacturing/Run` screens and the
+  `runtime/components/addon/mr-marble` is read only, for the baseline `SimpleScreens/Manufacturing/Run` screens and the
   Catalog association forms that design §10.2 maps.
 - **Scope.**
   - Every `parity` and `new` row of design §2, and the §12 needs they use: M1–M8, M10 and M11. M9 (batches) is
@@ -2642,7 +2642,7 @@ Design §9; the reporting part of M10.
     a read over its cap is now a named partition (`cappedList`), the report incomplete.
   - (Low, fixed; framework issue recorded) F141 investigated: `hide` works for the table header, cells, csv, xlsx and
     tui, but with `select-columns="true"` the column chooser lists every field, a hidden one under "Do Not Display" with
-    its title: `runtime/base-component/framework/template/screen/ScreenHtml.js` `allFields` (about line 2029, used by
+    its title: `runtime/components/base/framework/template/screen/ScreenHtml.js` `allFields` (about line 2029, used by
     `columnsDialog` about line 1164) and `ScreenQvt.js` `allFields` (about line 2600, `m-form-column-config` about line
     1460) do not filter on the field's `hide`, as `shown` does; the tui chooser the same. The values never show. Not
     changed here (mr-moqui). P6's ProductionCosts tab (no select-columns) does not leak: its spec now checks a reader's

@@ -118,8 +118,8 @@ Customer Service built on the way (F3). Maintenance is built on what is there (a
   [usl-inventory.md](usl-inventory.md).
 - mr-moqui: `plans/Remaining-Work.md` (the device credential, the wasm host's login flow and tab lock).
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`, and baseline paths under `runtime/component/mr-marble/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`, and baseline paths under `runtime/components/addon/mr-marble/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -130,23 +130,23 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`): nothing is planned beyond what a phase finds missing. The one
+  - `mr-moqui` (`crates/`, `runtime/components/base`): nothing is planned beyond what a phase finds missing. The one
     known gap is an audio capture input (F38), which the plan does not build. The projected collection kind of
     `get#DavCollections` is Mantle's and People's (impl-people P12).
-  - `runtime/component/mr-mantle`: the maintenance work order, the process policies, checks and evidence, the
+  - `runtime/components/addon/mr-mantle`: the maintenance work order, the process policies, checks and evidence, the
     schedules and occurrences, the booking policy and the extended unavailability, their services
     (`mantle.work.MaintenanceServices`, `ProcessServices`, `MaintenancePlanServices`, `ResourceBookingServices`,
     `MaintenanceExecutionServices`, `MaintenanceReportServices`, `MaintenanceSettingsServices`,
     `mantle.product.MaintenanceResourceServices` and `MaintenanceImportServices`), the permissions, status flows,
     lookups and topics, the managed-work refusals in the task and work-effort services, the changes to
     `EventServices` and the CalDAV services, and Accounting's maintenance expense routing (AC-24).
-  - `runtime/component/mr-boss`: the Maintenance app, `ironstone.maintenance` (AccessServices, ContextServices,
+  - `runtime/components/addon/mr-boss`: the Maintenance app, `ironstone.maintenance` (AccessServices, ContextServices,
     HomeServices, MaterialServices and the screens' reads), the Maintenance contexts of the shared screens, the
     registrations in Admin's and Insights' registries, Maintenance's `report/` and `skill/` files, and the owner
     contracts with Manufacturing, Warehouse, Customer Service, Purchasing, Accounting, Projects, Commons, Admin and
     People named in the phases.
 
-  `runtime/component/mr-marble` is read only, for the baseline Asset, AssetMaintenance and Facility forms that
+  `runtime/components/addon/mr-marble` is read only, for the baseline Asset, AssetMaintenance and Facility forms that
   ss-inventory maps (F42). mr-pass is not changed.
 - **Scope.**
   - Every `parity` and `new` row of design §2 and the §13 needs they use, MT-01 to MT-12, MT-15 and MT-16, as
@@ -5643,7 +5643,7 @@ backup follow-ups pulled in, on a release binary built from that mr-moqui.
   left to impl-people's lead (F353). The suites' totals are over budget (mr-mantle 648.7 s of 441 s, mr-boss 356.1 s of 291 s,
   client 77.8 s of 66 s, mr-marble's client 9.1 s of 9 s): Maintenance's share is raised; the rest is People's phases since its
   last raise and a loaded machine (People's own suites ran beside this one), for People's lead to measure.
-- `./moq test-framework` not run: Maintenance changed nothing under `crates/`, `runtime/base-component` or `dev-component`
+- `./moq test-framework` not run: Maintenance changed nothing under `crates/`, `runtime/components/base` or `components/dev`
   (mr-moqui's only Maintenance change is `plans/Remaining-Work.md`).
 
 - After the last pull (origin's People P17, P19, P20, P21, follow-up 1 and the Commons calendar follow-up, and the framework's

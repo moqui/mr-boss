@@ -85,8 +85,8 @@ identity, invitation or lifecycle services (F3, F4, F11). Admin is built on what
 - mr-moqui: `plans/Remaining-Work.md` ("IronStone framework asks": the `org.moqui.admin.*` families, the device
   credential, the agent screens) and `docs/Build-Test.md`.
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -97,21 +97,21 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`): the `org.moqui.admin` service families (identity guards and
+  - `mr-moqui` (`crates/`, `runtime/components/base`): the `org.moqui.admin` service families (identity guards and
     sessions, access, configuration and connections, operations, data transfer, backups, audit, devices), the
     InstancePreference, transfer and registry records, the session refresh check (F4), the `authz` elements by which a
     component adds to the seal lists (F5, §4), the framework seals of `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE`
     and `ADMIN_BACKUP_DOWNLOAD` (§4), the owner-change services of drives and shared mail accounts (F31) and the
     device credential (CX-DEVICE);
-  - `runtime/component/mr-mantle`: `mantle.party.IdentityServices` with `UserInvitation` and `UserLifecycleOperation`,
+  - `runtime/components/addon/mr-mantle`: `mantle.party.IdentityServices` with `UserInvitation` and `UserLifecycleOperation`,
     the staff invitation template, the organization services, the owner-change services of calendars and contact
     books (F31), and the gateway connection adapters;
-  - `runtime/component/mr-boss`: the Admin app, AcceptInvitation, Shared/DataImport, `ironstone.admin`
+  - `runtime/components/addon/mr-boss`: the Admin app, AcceptInvitation, Shared/DataImport, `ironstone.admin`
     (ContextServices, RegistryServices, LifecycleServices) and its registry entities (F32), the registrations of the
     built apps, Admin's `report/` and `skill/` files. Since Nov 11 the readiness, refresh and settings registry
     records and the generic screens are the framework's (§9).
 
-  `runtime/component/mr-marble` is read only, for the baseline Gateway, Vendor and Party/EditParty forms that
+  `runtime/components/addon/mr-marble` is read only, for the baseline Gateway, Vendor and Party/EditParty forms that
   ss-inventory maps. mr-pass is not changed: the PASS Account privacy page is later (§7).
 - **Scope.**
   - Every `parity` and `new` row of design §2 and the §17 needs they use, A1 and A2 of design §17.3, as changed by §6,
@@ -261,7 +261,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - impl-drawers-commons §4 "Done" (as impl-projects §2 applies it):
     - cargo tests for the touched crates, with goldens reviewed;
     - the regression tests for the rules the phase adds passing: the framework's in
-      `runtime/base-component/framework/test` (or the tools component's, for a Tools screen), Mantle's in mr-mantle,
+      `runtime/components/base/framework/test` (or the tools component's, for a Tools screen), Mantle's in mr-mantle,
       BOSS's in mr-boss;
     - `./moq test-framework` for a phase that touches `crates/` or a base component, and `./moq test-apps`, each suite
       within its budget, raised by the phase's measured share with the user's agreement (§4);
@@ -511,7 +511,7 @@ permissions and seals), ADM-SHELL.
 - For the lead:
   - the framework budget needs no change; mr-boss's share is AdminAccess's 3.3 s;
   - ProjectsAccess on a release binary (F37) before the merge, and F38 for the framework;
-  - the demo component's lock-down (`runtime/dev-component/demo`) ends some of `ADMIN`'s sealed permissions on the demo
+  - the demo component's lock-down (`runtime/components/dev/demo`) ends some of `ADMIN`'s sealed permissions on the demo
     server; whether it ends `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD` too is the
     framework's call (Demo.spec.js lists the ended ones);
   - P4 repoints Projects' Settings link (F36); Insights P1 needs no deny-pattern change (F14 done).
@@ -5602,11 +5602,11 @@ Designed, not in this build:
 ## 9. Screens moved to the framework (Nov 11, 2026)
 
 After gate 5 the screens of Admin that have no business model in them moved to the framework's System app
-(`runtime/base-component/tools/screen/System/`), with the old raw System screens folded in as parts for the instance
+(`runtime/components/base/tools/screen/System/`), with the old raw System screens folded in as parts for the instance
 administrator, and Admin shows them under its own root. The plan and the record of each phase, with its findings and
-tests, are mr-moqui's [plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md) (Track A, phases A0 to
+tests, are mr-moqui's [plans/archive/Admin-Screens-Down.md](../../../../../plans/archive/Admin-Screens-Down.md) (Track A, phases A0 to
 A6). How an app mounts the screens is in the tools component's
-[README](../../../../runtime/base-component/tools/README.md#mounting-the-administration-screens), and what each Admin
+[README](../../../../../runtime/components/base/tools/README.md#mounting-the-administration-screens), and what each Admin
 screen is now in [design-admin §1.4](design-admin.md#14-screens-that-are-the-frameworks). The phase entries of §3 are
 left as the record of the build as it was; this section says where what they name is now.
 

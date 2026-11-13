@@ -15,7 +15,7 @@ summary, and the settings index ([design](plan/design-admin.md), [impl-admin](pl
 with no business model in them (groups, sign-in policy, settings, connections, mail, jobs, health, data transfer, audit)
 are the framework's System screens, shown under Admin's root with what Admin adds for an organization
 ([design-admin §1.4](plan/design-admin.md#14-screens-that-are-the-frameworks); mr-moqui
-[plans/archive/Admin-Screens-Down.md](../../../plans/archive/Admin-Screens-Down.md)).
+[plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md)).
 
 Insights (`screen/Insights/`) is built:
 dashboards and Explore over admitted datasets, the report catalog and metrics, Home's attention board, analysis and drill with
@@ -53,7 +53,7 @@ UI review and refinement plans use `plan/ui-review-*.md`, starting with
 refinement criteria, findings and verification. The [document guide](plan/design-doc-guide.md#ui-review-and-refinement-phase)
 defines the convention.
 
-Tests are in two suites ([Build-Test](../../../docs/Build-Test.md)). The regression suite, `test/` and `test/client/`,
+Tests are in two suites ([Build-Test](../../../../docs/Build-Test.md)). The regression suite, `test/` and `test/client/`,
 checks rules and one golden-path client walk per app, within the budget in `test/budget`: run the specs you touch with
 `./moq test mr-boss --spec <name>` while working, and `./moq test-apps` before a commit. The acceptance suite,
 `test/acceptance/` and `test/acceptance/client/`, holds the scenario, access and isolation walks and one screen sweep per app

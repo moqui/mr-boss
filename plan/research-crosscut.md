@@ -20,7 +20,7 @@ what each app's version emphasizes; they do not assign an owning app.
 Inputs: [initial-design.md](initial-design.md) (its **Decided** table is fixed),
 [3p-app-reference.md](3p-app-reference.md), [ss-inventory.md](ss-inventory.md),
 [usl-inventory.md](usl-inventory.md), and the Mantle entity definitions in
-`runtime/component/mr-mantle/entity/`.
+`runtime/components/addon/mr-mantle/entity/`.
 
 Sections: [1 paths](#1-path-conventions) · [2 file skeleton](#2-research-file-skeleton) ·
 [3 reused screens](#3-reused-screens) · [4 overlapping functions](#4-overlapping-functions) ·
@@ -69,7 +69,7 @@ and `mr-moqui-base/…` below).
 | **OpenProject** | `3p_other/openproject` | `app/…`, `modules/<module>/…`, `frontend/src/app/features/…` |
 | **Redmine** | `3p_other/redmine` | `app/{views,controllers,models}/…` |
 | **Moqui components** (Sales, WorkManagement, WeCreate, coarchy, resistmanagement, ServiceJobMonitor, ridgecrest) | `3p_moqui/<component>` | `screen/…`, `service/…`, `entity/…` |
-| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-marble/screen/{MyAccount,BasicHandheld}/…` (siblings of `SimpleScreens/`, not under it), `component/mr-marble/screen/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/{service/mantle,entity}/…` (`entity/` holds view entities and EECAs), `base-component/tools/screen/…`, `base-component/framework/entity/…`, `component/mr-boss/screen/…` |
+| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-marble/screen/{MyAccount,BasicHandheld}/…` (siblings of `SimpleScreens/`, not under it), `component/mr-marble/screen/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/{service/mantle,entity}/…` (`entity/` holds view entities and EECAs), `components/base/tools/screen/…`, `components/base/framework/entity/…`, `component/mr-boss/screen/…` |
 
 Notes that trip people up:
 
@@ -186,7 +186,7 @@ The notes give the verified Mantle basis.
 
 ## 5. Mantle basis for recurring records
 
-Verified against `runtime/component/mr-mantle/entity/` on Oct 18, 2026. Research files
+Verified against `runtime/components/addon/mr-mantle/entity/` on Oct 18, 2026. Research files
 cite these names exactly; a claim that "Mantle has no X" must be checked against this list
 and the entity files. Several entity definitions in those files are inside XML comments and
 do not exist at runtime: check that an entity is not commented out before citing it.

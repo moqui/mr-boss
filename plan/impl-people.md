@@ -107,8 +107,8 @@ payroll services (F3–F6, F32). People is built on what is there (as found in t
 - mr-moqui: `plans/Remaining-Work.md` ("IronStone framework asks": the per-field AI switch, the decimal evaluator,
   the device credential).
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -119,22 +119,22 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`): the per-field AI opt-out (PE-21, P12) and the decimal
+  - `mr-moqui` (`crates/`, `runtime/components/base`): the per-field AI opt-out (PE-21, P12) and the decimal
     evaluator `org.moqui.impl.ExpressionServices` (PE-09, P22), and nothing of People's own: its rows in the
     framework's registries are seeded by Mantle and BOSS. The device credential is Admin P18's, not this plan's;
-  - `runtime/component/mr-mantle`: the `mantle.humanres` service families of design §16.2 and their records, the
+  - `runtime/components/addon/mr-mantle`: the `mantle.humanres` service families of design §16.2 and their records, the
     `PEOPLE_*` permissions and `PAYROLL_APPROVE`, the People notification topics, People's transfer targets
     (`moqui.server.TransferTarget` rows), the extensions of `mantle.work` (capacity, working days, the template
     process and its two policy records, the CalDAV collections), `mantle.request` (the confidential case type),
     `mantle.account` (the claim on `create#ProjectExpenseInvoice`, the payroll source checks) and `mantle.party`
     (the provisioning kind of the lifecycle operation, the HR content hosts, the form definition services under the
     survey builder);
-  - `runtime/component/mr-boss`: the People app, `Shared/Employee360` and `Shared/PeopleSelfService`,
+  - `runtime/components/addon/mr-boss`: the People app, `Shared/Employee360` and `Shared/PeopleSelfService`,
     `ironstone.people` (ContextServices and the screens' presentation), the tx-commit SECA, People's `report/` and
     `skill/` files, its capability bundles and its registrations in Admin's and Insights' registries, and the
     owner-contract changes in the built apps (§2).
 
-  `runtime/component/mr-marble` is read only, for the baseline HumanRes, Party and MyAccount/Expense forms that
+  `runtime/components/addon/mr-marble` is read only, for the baseline HumanRes, Party and MyAccount/Expense forms that
   ss-inventory maps. mr-pass is not changed: the careers page is later (§7).
 - **Scope.**
   - Every `parity` and `new` row of design §2 and the §16 needs they use, as changed by §6. The `later` rows
@@ -296,7 +296,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     - cargo tests for the touched crates, with goldens reviewed (P12 and P22 only);
     - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle (`test/humanres/`, passing
       under `./moq test mr-mantle` alone), BOSS's in mr-boss (`test/People/`), the framework's in
-      `runtime/base-component/framework/test`;
+      `runtime/components/base/framework/test`;
     - `./moq test-apps`, and `./moq test-framework` for P12 and P22, each suite within its budget; a budget is
       raised by the phase's measured share, up to the plan's estimate for the suite, which the user approved (§4);
       a raise beyond the estimate needs the user's agreement again, and until it is given a phase that would pass
@@ -7420,7 +7420,7 @@ PayAssignments, WorkManualTimeBilling and AccountingReceivables 47 of 47, BOSS P
 moved again (follow-ups 2 and 4) and both branches were rebased once more before this note: mr-boss conflicted in the same three
 places (follow-up 4's badge notice link, header paragraph and §4 rows kept, P25's after them), mr-mantle replayed cleanly. The
 restricted import columns are a framework change: mr-moqui gains branch `ppl/p25` (worktree `.claude/worktrees/ppl-p25/mr-moqui`), and
-this phase's runtime's `base-component` now links to it. Tested on the shared release binary (`--release --nobuild`, this phase's
+this phase's runtime's `components/base` now links to it. Tested on the shared release binary (`--release --nobuild`, this phase's
 runtime).
 - Checked and found sound:
   - Units: each employment in its own transaction under its row lock, a failure recorded in a transaction of its own with its code,
@@ -9359,7 +9359,7 @@ the owner's design.
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
 which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20. Follow-up 3's F407 to F418 (Nov 12, 2026) are in its note after the Maintenance merge review.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes. P22's F395 to F406 (Nov 12, 2026) are in its Built and Review notes. P23's F419 to F434 (Nov 12, 2026) are in its Built and Review notes. P24's F435 to F454 (Nov 12, 2026) are in its Built and Review notes. P30's F455 to F468 (Nov 12, 2026) are in its Built and Review notes.Follow-up 4's F469 to F475 (Nov 12, 2026) are in its note after P30. Follow-up 2's F476 to F479 (Nov 12, 2026, numbered after follow-up 4's) are in its note after P20.  P25's F480 to F496 (Nov 12, 2026) are in its Built and Review notes. P26's F497 to F515 (Nov 12, 2026) are in its Built and Review notes. P29's F516 to F530 (Nov 12, 2026) are in its Built and Review notes. P27's F531 to F550 (Nov 12, 2026) are in its Built and Review notes. P28's F551 to F567 (Nov 12, 2026) are in its Built and Review notes.P31's F568 to F576 (Nov 13, 2026) are in its Built and Review notes. Mantle paths are
-under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
+under `runtime/components/addon/mr-mantle/`, BOSS paths under `runtime/components/addon/mr-boss/`.
 
 | # | Finding | Resolution |
 | --- | --- | --- |

@@ -46,8 +46,8 @@ Warehouse was built after both (§4), so these were there to extend:
 - Inventories: [ss-inventory.md](ss-inventory.md) and [usl-inventory.md](usl-inventory.md).
 - mr-moqui: `plans/Remaining-Work.md` and `docs/Build-Test.md`.
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -58,11 +58,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`)
-  - `runtime/component/mr-mantle`
-  - `runtime/component/mr-boss`
+  - `mr-moqui` (`crates/`, `runtime/components/base`)
+  - `runtime/components/addon/mr-mantle`
+  - `runtime/components/addon/mr-boss`
 
-  `runtime/component/mr-marble` is read only, for the baseline Asset, Facility, Shipment, Shipping, Return and
+  `runtime/components/addon/mr-marble` is read only, for the baseline Asset, Facility, Shipment, Shipping, Return and
   BasicHandheld screens that design §15.1 maps.
 - **Scope.**
   - Every `parity` and `new` row of design §2, and the §17 needs they use, except SupplyPlanning and WH-PLAN, which
@@ -1503,8 +1503,8 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
 
 ### P0 verification — Oct 31, 2026
 
-The remaining P0 checks, F35–F46. Mantle paths are under `runtime/component/mr-mantle/`, BOSS paths under
-`runtime/component/mr-boss/`.
+The remaining P0 checks, F35–F46. Mantle paths are under `runtime/components/addon/mr-mantle/`, BOSS paths under
+`runtime/components/addon/mr-boss/`.
 
 - **Checked:** the empty organization list (F35); REST and baseline writes (F36); a transfer's receipt totals (F37);
   quarantine and reservations (F38, F39); scrap posting (F40); kit cost (F41); Today sources (F42); open work on a

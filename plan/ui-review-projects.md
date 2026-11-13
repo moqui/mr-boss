@@ -29,9 +29,9 @@ establish this pass's coverage. The planning-only records below remain historica
 
 - [Projects design](design-projects.md), [implementation](impl-projects.md) and [research](research-projects.md):
   intended workflows, delivered phases, findings and historical deferrals.
-- [Prior UI review](ui-review-drawers-commons.md), [framework UI review guide](../../../../docs/dev/UI-Review.md)
-  and [framework review](../../../../plans/archive/UI-Refinement.md): activity/evidence method and established refinements.
-- [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
+- [Prior UI review](ui-review-drawers-commons.md), [framework UI review guide](../../../../../docs/dev/UI-Review.md)
+  and [framework review](../../../../../plans/archive/UI-Refinement.md): activity/evidence method and established refinements.
+- [Application practices](../../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md) and [Commons design](design-drawers-commons.md): archetypes, shared records,
   calendar, knowledge, Chatter, approvals, files and shell contracts.
 - Current `screen/Projects.xml`, `screen/Projects/`, mounted `screen/Shared/` and `screen/Commons/` screens,
@@ -40,7 +40,7 @@ establish this pass's coverage. The planning-only records below remain historica
   the demo accounts themselves in mr-mantle `data/ZbaOrganizationDemoData.xml` and webroot
   `data/WebrootSecurityDemoData.xml`. Current mounts and capabilities take precedence over historical tables when
   deciding what can be exercised.
-- [Git hosting](../../../../docs/interfaces/Git-Hosting.md), [revision management](../../../../docs/data/Revision-Management.md)
+- [Git hosting](../../../../../docs/interfaces/Git-Hosting.md), [revision management](../../../../../docs/data/Revision-Management.md)
   and the existing Projects specs: local code fixtures, resource storage, rule boundaries and available checks.
 
 Use the existing research as a comparison lens: OpenProject for planning and capacity, Redmine for compact queries
@@ -80,7 +80,7 @@ or shared-fix retest. Real customer mail, production repositories and financial 
 
 ### Environment and fixtures
 
-Follow the [review guide](../../../../docs/dev/UI-Review.md) and repository building/testing skills. Use an isolated
+Follow the [review guide](../../../../../docs/dev/UI-Review.md) and repository building/testing skills. Use an isolated
 runtime and fresh disposable database. The guide's framework-only bootstrap leaves `component/` empty; Projects
 also needs `mr-mantle` and `mr-boss` linked individually. Copy mutable configuration and keep database, uploads,
 wiki resources, Git storage and scratch repositories separate from working data. A different HTTP port alone is not
@@ -734,7 +734,7 @@ walk for Projects and place additional complete journeys, phone/access walks and
 
 ### Verification rules for later refinements
 
-- Read the [testing skill](../../../../.agents/skills/testing/SKILL.md) before writing/running tests. Commands run
+- Read the [testing skill](../../../../../.agents/skills/testing/SKILL.md) before writing/running tests. Commands run
   from the mr-moqui root. Use affected regression specs while working, for example
   `./moq test mr-boss --spec WorkItemDetail --nobuild` or
   `./moq test mr-mantle --spec WorkProjectItems --nobuild`, with a suitable existing binary. Client specs run through

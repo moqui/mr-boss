@@ -33,8 +33,8 @@ does not authorize construction of absent features; acceptance runs follow §5.
   [Manufacturing](ui-review-manufacturing.md) and [Customer Service](ui-review-customer-service.md);
   [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
   [drawers, Commons and Comms review](ui-review-drawers-commons.md),
-  [framework UI review guide](../../../../docs/dev/UI-Review.md),
-  [application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md) and
+  [framework UI review guide](../../../../../docs/dev/UI-Review.md),
+  [application practices](../../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md) and
   [crosscut design](design-crosscut.md).
 - Current `screen/Purchasing.xml`, `screen/Purchasing/`, mounted `screen/Shared/` definitions and their descendants,
   `template/Purchasing*.xml` (21 files), `service/ironstone/purchasing/` (`Purchasing.js` maps permissions and area
@@ -85,10 +85,10 @@ external outcomes.
 
 ## 2. Review method and refinement criteria
 
-The generic method is the [UI review guide](../../../../docs/dev/UI-Review.md):
-[preparing an isolated review](../../../../docs/dev/UI-Review.md#prepare-an-isolated-review), activities and coverage,
-[judging the result](../../../../docs/dev/UI-Review.md#judge-the-result) (viewports, themes, keyboard, contrast,
-terminal) and [recording, fixing and verifying](../../../../docs/dev/UI-Review.md#record-fix-and-verify). Products
+The generic method is the [UI review guide](../../../../../docs/dev/UI-Review.md):
+[preparing an isolated review](../../../../../docs/dev/UI-Review.md#prepare-an-isolated-review), activities and coverage,
+[judging the result](../../../../../docs/dev/UI-Review.md#judge-the-result) (viewports, themes, keyboard, contrast,
+terminal) and [recording, fixing and verifying](../../../../../docs/dev/UI-Review.md#record-fix-and-verify). Products
 shows it executed: its [§2](ui-review-products.md#2-review-method-and-refinement-criteria) and
 [execution setup dispositions](ui-review-products.md#execution-setup-dispositions). This section keeps only what is
 specific to Purchasing.
@@ -278,7 +278,7 @@ need not stop independent internal activities but stays unresolved in the ledger
 
 ### Review and refinement phases
 
-Execution runs as the guide's [two separate passes](../../../../docs/dev/UI-Review.md#record-fix-and-verify)
+Execution runs as the guide's [two separate passes](../../../../../docs/dev/UI-Review.md#record-fix-and-verify)
 (user decision, 2026-11-11):
 
 1. **Review pass.** Concurrent review agents under one coordinating agent execute every activity in the waves above
@@ -1052,9 +1052,9 @@ activity, and a rendered source sweep never proves visible navigation or output 
 ### Verification rules for later refinements
 
 These rules govern the refinement pass, and the commit rule applies in both; the review pass corrects nothing and
-commits no source (§2). The suite rules are the [testing skill](../../../../.agents/skills/testing/SKILL.md) and
-[Build-Test](../../../../docs/Build-Test.md#the-two-suites) with [rendering screens in
-tests](../../../../docs/Build-Test.md#rendering-screens-in-tests). Purchasing specifics:
+commits no source (§2). The suite rules are the [testing skill](../../../../../.agents/skills/testing/SKILL.md) and
+[Build-Test](../../../../../docs/Build-Test.md#the-two-suites) with [rendering screens in
+tests](../../../../../docs/Build-Test.md#rendering-screens-in-tests). Purchasing specifics:
 
 - **While working.** From the mr-moqui root on a built binary: `./moq test mr-boss --spec PurchasingRevisions
   --nobuild`, the owning Mantle spec when its rule changes, and the golden path
@@ -1130,7 +1130,7 @@ research and document review do not advance this ledger; record actual modes and
 
 No runtime/UI defect has been established by this planning work. The review pass records findings with Owner /
 correction / retest empty; the refinement pass fills them in. Number later findings **PUR-UI-001** onward with the
-guide's fields and severities ([record, fix and verify](../../../../docs/dev/UI-Review.md#record-fix-and-verify)): P1
+guide's fields and severities ([record, fix and verify](../../../../../docs/dev/UI-Review.md#record-fix-and-verify)): P1
 blocks work or makes essential information unusable, P2 causes substantial friction or misleading presentation, P3 is
 a localized refinement. Distinguish observed failures, source suspicions and design judgments. Data corruption or
 unauthorized disclosure takes priority regardless of appearance.

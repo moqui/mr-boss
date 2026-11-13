@@ -32,9 +32,9 @@ establish live review outcomes.
   [Manufacturing](ui-review-manufacturing.md) and [Purchasing](ui-review-purchasing.md);
   [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
   [drawers, Commons and Comms review](ui-review-drawers-commons.md),
-  [framework UI review guide](../../../../docs/dev/UI-Review.md) and
-  [framework review](../../../../plans/archive/UI-Refinement.md).
-- [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
+  [framework UI review guide](../../../../../docs/dev/UI-Review.md) and
+  [framework review](../../../../../plans/archive/UI-Refinement.md).
+- [Application practices](../../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md), and the current Warehouse, Accounting, Products, Purchasing, Commerce,
   Projects, Commons and PASS contracts at the bounded handoffs below. Sales is not built (its plan,
   [impl-sales](impl-sales.md), has not started; `screen/Sales/` holds placeholders).
@@ -86,10 +86,10 @@ disposable local records and captured or synthetic integrations.
 
 ## 2. Review method and refinement criteria
 
-The generic method is the [UI review guide](../../../../docs/dev/UI-Review.md):
-[preparing an isolated review](../../../../docs/dev/UI-Review.md#prepare-an-isolated-review), activities and coverage,
-[judging the result](../../../../docs/dev/UI-Review.md#judge-the-result) (viewports, themes, keyboard, contrast,
-terminal) and [recording, fixing and verifying](../../../../docs/dev/UI-Review.md#record-fix-and-verify). Products
+The generic method is the [UI review guide](../../../../../docs/dev/UI-Review.md):
+[preparing an isolated review](../../../../../docs/dev/UI-Review.md#prepare-an-isolated-review), activities and coverage,
+[judging the result](../../../../../docs/dev/UI-Review.md#judge-the-result) (viewports, themes, keyboard, contrast,
+terminal) and [recording, fixing and verifying](../../../../../docs/dev/UI-Review.md#record-fix-and-verify). Products
 shows it executed: its [§2](ui-review-products.md#2-review-method-and-refinement-criteria) and
 [execution setup dispositions](ui-review-products.md#execution-setup-dispositions). This section keeps only what is
 specific to Customer Service.
@@ -241,7 +241,7 @@ independent failed batch member.
 
 ### Area criteria
 
-Apply the guide's [judgment criteria](../../../../docs/dev/UI-Review.md#judge-the-result) (1920×1080 light/dark,
+Apply the guide's [judgment criteria](../../../../../docs/dev/UI-Review.md#judge-the-result) (1920×1080 light/dark,
 1280px, 390px, keyboard, contrast; actual TUI; bounded Standard `/apps` check). Customer Service adds:
 
 - **Audience is the first thing to read.** Internal note, customer reply, public forum response, saved-reply
@@ -295,7 +295,7 @@ does not authorize feature construction.
 
 ### Review and refinement phases
 
-Execution runs as the guide's [two separate passes](../../../../docs/dev/UI-Review.md#record-fix-and-verify)
+Execution runs as the guide's [two separate passes](../../../../../docs/dev/UI-Review.md#record-fix-and-verify)
 (user decision, 2026-11-11):
 
 1. **Review pass.** Concurrent review agents under one coordinating agent execute every activity in the waves above
@@ -1142,9 +1142,9 @@ walks as browser coverage or add a second regression golden path to fill the gap
 ### Verification rules for later refinements
 
 These rules govern the refinement pass, and the commit rule applies in both; the review pass corrects nothing and
-commits no source (§2). The suite rules are the [testing skill](../../../../.agents/skills/testing/SKILL.md) and
-[Build-Test](../../../../docs/Build-Test.md#the-two-suites) with [rendering screens in
-tests](../../../../docs/Build-Test.md#rendering-screens-in-tests). Customer Service specifics:
+commits no source (§2). The suite rules are the [testing skill](../../../../../.agents/skills/testing/SKILL.md) and
+[Build-Test](../../../../../docs/Build-Test.md#the-two-suites) with [rendering screens in
+tests](../../../../../docs/Build-Test.md#rendering-screens-in-tests). Customer Service specifics:
 
 - **While working.** From the mr-moqui root on a built binary: `./moq test mr-boss --spec CustomerServiceReturns
   --nobuild`, the owning Mantle rule spec when its rule changes, and the golden path
@@ -1226,7 +1226,7 @@ research and document review do not advance this ledger; record actual modes and
 
 No runtime/UI defect has been established by this planning work. The review pass records findings with Owner /
 correction / retest empty; the refinement pass fills them in. Number later findings **CS-UI-001** onward with the
-guide's fields and severities ([record, fix and verify](../../../../docs/dev/UI-Review.md#record-fix-and-verify)): P1
+guide's fields and severities ([record, fix and verify](../../../../../docs/dev/UI-Review.md#record-fix-and-verify)): P1
 blocks work or makes essential information unusable, P2 causes substantial friction or misleading presentation, P3 is
 a localized refinement. Distinguish observed failures, source suspicions and design judgments. A private-data,
 authority or transaction-integrity failure takes priority regardless of visual quality.

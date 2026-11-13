@@ -72,7 +72,7 @@ screen, dialog, hidden helper and custom render variant to an activity or suppor
 unmounted design surfaces in a separate reconciliation table. Begin coverage as pending; source inspection, available
 tests and previous implementation results do not establish a completed user journey.
 
-Follow the framework's [UI review guide](../../../../docs/dev/UI-Review.md) and application/testing practices.
+Follow the framework's [UI review guide](../../../../../docs/dev/UI-Review.md) and application/testing practices.
 Review through the consuming app's mount, put shared fixes in their owning component, and link changes in decided
 behavior back to the design and implementation records. Keep app-specific findings in the review file and reusable
 patterns in the shared guide. A review plan does not authorize building missing features or running acceptance suites.

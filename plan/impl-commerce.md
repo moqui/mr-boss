@@ -81,8 +81,8 @@ code, §6):
   [usl-inventory.md](usl-inventory.md) (41 rows), which carry the design's **Designed in** paths.
 - mr-moqui: `plans/Remaining-Work.md` and `docs/Build-Test.md`.
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`, PASS paths under `runtime/component/mr-pass/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`, PASS paths under `runtime/components/addon/mr-pass/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -93,16 +93,16 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`): the theme preview's isolated origin (P5); Shop's renderer work
+  - `mr-moqui` (`crates/`, `runtime/components/base`): the theme preview's isolated origin (P5); Shop's renderer work
     is in impl-shop;
-  - `runtime/component/mr-mantle`: the store, merchandising, operations, promotion, theme and page, channel and
+  - `runtime/components/addon/mr-mantle`: the store, merchandising, operations, promotion, theme and page, channel and
     subscription services and records;
-  - `runtime/component/mr-boss`: the Commerce app;
-  - `runtime/component/mr-pass`: Shop, under impl-shop, and the Shop pieces of Commerce's P5 (the preview host), P9
+  - `runtime/components/addon/mr-boss`: the Commerce app;
+  - `runtime/components/addon/mr-pass`: Shop, under impl-shop, and the Shop pieces of Commerce's P5 (the preview host), P9
     (ProductDetail's reviews and their images), P10 (the route redeeming a recovery link) and P14 (the Shop-site feed
     destination).
 
-  `runtime/component/mr-marble` is read only, for the baseline ProductStore, promotion and promo code screens that
+  `runtime/components/addon/mr-marble` is read only, for the baseline ProductStore, promotion and promo code screens that
   ss-inventory maps (SimpleScreens `ProductStore/`).
 - **Scope.**
   - Every `parity` and `new` row of design §2, and the §14 needs they use, as changed by §6 (F5, F6).
@@ -460,10 +460,10 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
     BOSS_COM_DIGITAL out.
 - Findings (provisional):
   - **F57** The shared binaries (`target/debug/moqui` and `target/release/moqui`) are older than the mr-moqui
-    `runtime/base-component` they run on: they lack `UserSecurityChecks.assertDocumentExpression` (4f8997c0), so every
+    `runtime/components/base` they run on: they lack `UserSecurityChecks.assertDocumentExpression` (4f8997c0), so every
     data file with a DataDocument field (the framework's ResourceEntities, Mantle's documents, BossSetupData's drive
     rows) fails to load, BossUsersDemoData with them, and every BOSS spec fails at sign-in (CustomerServiceAccess: 22 of
-    22 on the com-p1 runtime). The tests above ran on a scratch runtime whose `base-component` and `dev-component` are
+    22 on the com-p1 runtime). The tests above ran on a scratch runtime whose `components/base` and `components/dev` are
     mr-moqui 1916b57f's, the newest tree the binary matches, with the com-p1 components. A rebuilt binary is needed
     before `./moq test-apps`, the budget measure and a re-run on the com-p1 runtime.
   - **F58** Mantle has no store email templates (the PopRestStore ones were not ported), so the demo's five
@@ -3417,7 +3417,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F54 | P0: a second host of a site already routes (two `<public-site>` entries with one `site-id`; `getSiteInfo` accepts any PublicSiteHost, Forum.js:2693-2698), but a host has no kind, so a preview host would serve the live site's mounts, accounts and checkout | P5: `PublicSiteHost.hostKindEnumId` (live, preview); on a preview host Pass.xml sends `frame-ancestors` the configured BOSS origins, noindex and no-store, refuses every route but the preview render and needs the preview capability (in the URL, never a cookie); `pageUrl`, `sitesFor` and readiness skip preview hosts; previews are served by the authority's runtime |
 | F55 | P0: the framework adds `X-Frame-Options: sameorigin` to every screen response lacking one (factory.rs:96, web/mod.rs:1929), and the desktop shell's CSP has `frame-src 'none'` (moqui-client assets.rs:37) | Framework (built by the framework worker for P5): X-Frame-Options left out when the response's CSP has `frame-ancestors`; the desktop shell allows configured preview origins |
 | F56 | P0: ZZW_RETAIL's `/popc/content/` URL is read by CustomerArticle and also by Send to customer's `get#ArticlePublicLink` (Knowledge.js:416-444, made absolute on the BOSS webroot, asserted by CustomerServiceKnowledge.spec.js:121), the INTERNAL_PUBLIC_SPACE guard (:190), SpaceDetail and Marble's wiki links; `/pcontact` is a dead alias | Shop P3 moves `publicPageUrl` and `publicAttachmentUrl` to the Shop site's absolute page route (better, `publicLink` through `PublicApps.pageUrl`), drops `/pcontact` and updates the spec |
-| F57 | P1: the shared binaries were older than base-component (no `UserSecurityChecks.assertDocumentExpression`, mr-moqui 4f8997c0), so data files with DataDocument fields failed to load and every BOSS spec failed at sign-in | The lead rebuilt `target/release/moqui` (Nov 5, from mr-moqui fff2e5f6); P1's specs rerun on it |
+| F57 | P1: the shared binaries were older than components/base (no `UserSecurityChecks.assertDocumentExpression`, mr-moqui 4f8997c0), so data files with DataDocument fields failed to load and every BOSS spec failed at sign-in | The lead rebuilt `target/release/moqui` (Nov 5, from mr-moqui fff2e5f6); P1's specs rerun on it |
 | F58 | P1: Mantle has no store email templates (the PopRestStore ones were not ported) | The demo binds POPC_DEFAULT's five automatic types to one demo template on the local sink; real templates come with Shop's notices |
 | F59 | P1: under §4's rule, a member whose last StoreStaff row ends, or whose only row starts in the future, works every store of their organizations | Kept as §4 decides, noted and left for now (the user's call, §4); the alternative: anyone with any StoreStaff row stays limited, to nothing when none is current |
 | F60 | P2: on a fresh runtime load with mr-moqui d9bcc20d's binary, Customer Service's Support demo step failed once (a held transaction-cache write cancelled, then a duplicate `form_inv_key`), so `dana@joesdist.example.com` had no login; it passed on the rerun | Fixed Nov 6 (two app races, which TX-Cache P5's held worker logins made more frequent): `create#Invitation` locks the case before its find-then-insert (mr-mantle), and the Customer Service Support and Feedback demo loads no longer log john.doe in and out inside the data file's transaction, whose UserAccount row lock each step's own login waited on until its deadline (mr-boss); 20 of 20 fresh loads clean. A framework alternative (login and logout flags written in their own transaction) is the user's call |

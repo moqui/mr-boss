@@ -777,7 +777,7 @@ Candidate screens for project managers and services staff, from the findings abo
 
 ### Data-model findings
 
-Mantle records that fit (names verified in `mr-moqui-base/runtime/component/mr-mantle/entity/`):
+Mantle records that fit (names verified in `mr-moqui-base/runtime/components/addon/mr-mantle/entity/`):
 
 - **Projects, milestones, releases and work items** fit `WorkEffort` with `WetProject`, `WetMilestone`, `WetRelease`, `WetTask`; hierarchy by `parentWorkEffortId` / `rootWorkEffortId`; milestone and release membership by `WorkEffortAssoc` `WeatMilestone` / `WeatRelease`. The earlier sketch's "milestones are their own entity" does not match Mantle: a milestone is a `WetMilestone` work effort, its deadline is `estimatedCompletionDate`, reached is `WeComplete` plus `actualCompletionDate`.
 - **Status and board columns**: `statusId` with a per-project `statusFlowId`; board columns could be a view action over status, assignee, milestone or parent, with no second stage field.

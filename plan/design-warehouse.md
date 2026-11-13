@@ -14,9 +14,9 @@ shared records and authorized actions it mounts locally.
 [design-drawers-commons.md](design-drawers-commons.md); [design-projects.md](design-projects.md);
 [ss-inventory.md](ss-inventory.md) and [usl-inventory.md](usl-inventory.md).
 
-**Source paths.** Moqui baseline paths below are relative to `runtime/component/mr-marble/screen/SimpleScreens/`,
-except `BasicHandheld/…`, which is under `runtime/component/mr-marble/screen/`. Mantle paths are
-relative to `runtime/component/mr-mantle/`. Third-party paths resolve under `~/work/moquiwork/3p_other/`
+**Source paths.** Moqui baseline paths below are relative to `runtime/components/addon/mr-marble/screen/SimpleScreens/`,
+except `BasicHandheld/…`, which is under `runtime/components/addon/mr-marble/screen/`. Mantle paths are
+relative to `runtime/components/addon/mr-mantle/`. Third-party paths resolve under `~/work/moquiwork/3p_other/`
 using the research prefix table: Odoo under `odoo/`, ERPNext under `frappe/erpnext/`, Carbon under `carbon/`.
 ridgecrest is not under `3p_other/`: its paths resolve under `~/work/moquiwork/ridgecrest/`.
 The research's old `/home` checkout prefix is not required. References describe behavior; no third-party

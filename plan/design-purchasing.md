@@ -29,8 +29,8 @@ All additions explicitly marked proposed are documentation, not implemented APIs
 [17 decided](#17-decided) · [18 open](#18-open)
 
 **Source convention.** Baseline paths are relative to
-`runtime/component/mr-marble/screen/SimpleScreens/`; Mantle paths are relative to
-`runtime/component/mr-mantle/`. Third-party references start at
+`runtime/components/addon/mr-marble/screen/SimpleScreens/`; Mantle paths are relative to
+`runtime/components/addon/mr-mantle/`. Third-party references start at
 `~/work/moquiwork/3p_other/`. Source files were inspected locally; third-party behavior is a
 reference pattern, not an assumption about BOSS availability.
 

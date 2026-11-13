@@ -30,8 +30,8 @@ was performed for this document. Documentation completion does not authorize acc
 - [Shop design](../../mr-pass/plan/design-shop.md), [implementation](../../mr-pass/plan/impl-shop.md),
   PASS `README.md`, its deployment documentation and current site/authority contracts. Use the companion review for
   public page details rather than importing the BOSS shell into Shop.
-- [Application practices](../../../../docs/dev/Practices-App-Dev.md),
-  [UI review guide](../../../../docs/dev/UI-Review.md), [building/testing rules](../../../../docs/Build-Test.md),
+- [Application practices](../../../../../docs/dev/Practices-App-Dev.md),
+  [UI review guide](../../../../../docs/dev/UI-Review.md), [building/testing rules](../../../../../docs/Build-Test.md),
   repository README hierarchy and `.agents/skills/building/SKILL.md` / `.agents/skills/testing/SKILL.md`.
 - [Warehouse](ui-review-warehouse.md), [Customer Service](ui-review-customer-service.md), Accounting and Products reviews
   for bounded ownership handoffs; the Commons/drawers review for existing evidence and communication widgets.

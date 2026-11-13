@@ -1391,20 +1391,20 @@ Concrete local references inspected:
 
 | File under `~/work/moquiwork/3p_other` | Pattern taken |
 | --- | --- |
-| [Odoo mrp_bom_views.xml](../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_bom_views.xml) | BOM quantity/UOM, consuming operation, components, operations and byproducts in one method. |
-| [Odoo mrp_production_views.xml](../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_production_views.xml) | Manufacturing-order list, quantity/progress and scrap controls. |
-| [Odoo mrp_workorder_views.xml](../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_workorder_views.xml) | Operation states, quantities, resource scheduling and expected/actual duration. |
-| [Odoo mrp_workcenter_views.xml](../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_workcenter_views.xml) | Product capacity and performance/OEE resource views. |
-| [Odoo production split](../../../../../3p_other/odoo/odoo/addons/mrp/wizard/mrp_production_split.py) and [backorder](../../../../../3p_other/odoo/odoo/addons/mrp/wizard/mrp_production_backorder.py) | Explicit partial/split/backorder intent rather than changing targets silently. |
-| [ERPNext job_card.json](../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/job_card/job_card.json) | One operation per job card, time logs, completed/pending/process-loss reconciliation and quality links. |
-| [ERPNext downtime_entry.json](../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/downtime_entry/downtime_entry.json) | Reason-coded start/end downtime, distinct from work time. |
-| [ERPNext production_plan.json](../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/production_plan/production_plan.json) and [master schedule](../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/master_production_schedule/master_production_schedule.json) | Material demand, planned supply and explicit higher-level schedule documents. |
-| [Carbon MES JobOperation.tsx](../../../../../3p_other/carbon/apps/mes/app/components/JobOperation/JobOperation.tsx) | Focused operation execution, instructions, machine/person work and quantity transactions. |
-| [Carbon JobEstimatesVsActuals.tsx](../../../../../3p_other/carbon/apps/erp/app/modules/production/ui/Jobs/JobEstimatesVsActuals.tsx) | Cost/time comparison with component detail rather than one unexplained variance total. |
-| [Carbon quality.models.ts](../../../../../3p_other/carbon/apps/erp/app/modules/quality/quality.models.ts) | Gauge/certificate validity, calibration attempts, issue actions and risk fields inform later quality extensions. |
-| [ERPNext subcontracting order](../../../../../3p_other/frappe/erpnext/erpnext/subcontracting/doctype/subcontracting_order/subcontracting_order.json) and [receipt](../../../../../3p_other/frappe/erpnext/erpnext/subcontracting/doctype/subcontracting_receipt/subcontracting_receipt.json) | Purchased work and supplied material/output evidence remain distinct. |
-| [Carbon run-schedule.ts](../../../../../3p_other/carbon/packages/planning/src/scheduling/run-schedule.ts) | Separate finite scheduling with released operation/batch constraints; informs later proposal/apply design. |
-| [Dolibarr mo_production.php](../../../../../3p_other/dolibarr/htdocs/mrp/mo_production.php) | Explicit material consume/output produce page and cancellation consequences; simple no-routing work remains first class. |
+| [Odoo mrp_bom_views.xml](../../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_bom_views.xml) | BOM quantity/UOM, consuming operation, components, operations and byproducts in one method. |
+| [Odoo mrp_production_views.xml](../../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_production_views.xml) | Manufacturing-order list, quantity/progress and scrap controls. |
+| [Odoo mrp_workorder_views.xml](../../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_workorder_views.xml) | Operation states, quantities, resource scheduling and expected/actual duration. |
+| [Odoo mrp_workcenter_views.xml](../../../../../../3p_other/odoo/odoo/addons/mrp/views/mrp_workcenter_views.xml) | Product capacity and performance/OEE resource views. |
+| [Odoo production split](../../../../../../3p_other/odoo/odoo/addons/mrp/wizard/mrp_production_split.py) and [backorder](../../../../../../3p_other/odoo/odoo/addons/mrp/wizard/mrp_production_backorder.py) | Explicit partial/split/backorder intent rather than changing targets silently. |
+| [ERPNext job_card.json](../../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/job_card/job_card.json) | One operation per job card, time logs, completed/pending/process-loss reconciliation and quality links. |
+| [ERPNext downtime_entry.json](../../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/downtime_entry/downtime_entry.json) | Reason-coded start/end downtime, distinct from work time. |
+| [ERPNext production_plan.json](../../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/production_plan/production_plan.json) and [master schedule](../../../../../../3p_other/frappe/erpnext/erpnext/manufacturing/doctype/master_production_schedule/master_production_schedule.json) | Material demand, planned supply and explicit higher-level schedule documents. |
+| [Carbon MES JobOperation.tsx](../../../../../../3p_other/carbon/apps/mes/app/components/JobOperation/JobOperation.tsx) | Focused operation execution, instructions, machine/person work and quantity transactions. |
+| [Carbon JobEstimatesVsActuals.tsx](../../../../../../3p_other/carbon/apps/erp/app/modules/production/ui/Jobs/JobEstimatesVsActuals.tsx) | Cost/time comparison with component detail rather than one unexplained variance total. |
+| [Carbon quality.models.ts](../../../../../../3p_other/carbon/apps/erp/app/modules/quality/quality.models.ts) | Gauge/certificate validity, calibration attempts, issue actions and risk fields inform later quality extensions. |
+| [ERPNext subcontracting order](../../../../../../3p_other/frappe/erpnext/erpnext/subcontracting/doctype/subcontracting_order/subcontracting_order.json) and [receipt](../../../../../../3p_other/frappe/erpnext/erpnext/subcontracting/doctype/subcontracting_receipt/subcontracting_receipt.json) | Purchased work and supplied material/output evidence remain distinct. |
+| [Carbon run-schedule.ts](../../../../../../3p_other/carbon/packages/planning/src/scheduling/run-schedule.ts) | Separate finite scheduling with released operation/batch constraints; informs later proposal/apply design. |
+| [Dolibarr mo_production.php](../../../../../../3p_other/dolibarr/htdocs/mrp/mo_production.php) | Explicit material consume/output produce page and cancellation consequences; simple no-routing work remains first class. |
 
 ## 11. Documents and outputs
 

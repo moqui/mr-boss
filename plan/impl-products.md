@@ -40,11 +40,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui-base` (`crates/`, `runtime/base-component`)
-  - `runtime/component/mr-mantle`
-  - `runtime/component/mr-boss`
+  - `mr-moqui-base` (`crates/`, `runtime/components/base`)
+  - `runtime/components/addon/mr-mantle`
+  - `runtime/components/addon/mr-boss`
 
-  `runtime/component/mr-marble` is read only, for the baseline Catalog screens that ss-inventory maps.
+  `runtime/components/addon/mr-marble` is read only, for the baseline Catalog screens that ss-inventory maps.
 - **Scope.**
   - Every `parity` and `new` row of design §2, and the §14 needs they use.
   - The parts of other apps' needs that Products depends on (§4):
@@ -216,7 +216,7 @@ P1 validation evidence:
 - XML checks for new paths and service lint pass; BOSS screen lint is clean. Existing component-wide schema warnings
   are outside the Products paths. A pre-existing unused-parentheses Rust warning remains in archive_host.rs.
 - Core Rust: 2,104 passed, 3 ignored; two unrelated locale-catalog tests fail because this checkout has no
-  `runtime/component/mr-l10n/data/es`/`zh`. All 30 runtime tests, including real-allocation cache pressure and OOM recovery, pass.
+  `runtime/components/addon/mr-l10n/data/es`/`zh`. All 30 runtime tests, including real-allocation cache pressure and OOM recovery, pass.
 - The framework prerequisite reclaims compiled caches at heap pressure before entering a script, keeps the existing
   hard limit, preserves live values, and does not replay scripts. Heap accounting is checked periodically to avoid walking
   the heap for every field expression.

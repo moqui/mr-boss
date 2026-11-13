@@ -82,8 +82,8 @@ Purchasing is built after Manufacturing and before Customer Service (§4), so th
   design §14.5 **Designed in** paths.
 - mr-moqui: `plans/Remaining-Work.md` and `docs/Build-Test.md`.
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`, PASS paths under `runtime/component/mr-pass/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`, PASS paths under `runtime/components/addon/mr-pass/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -94,13 +94,13 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/`, `runtime/base-component`)
-  - `runtime/component/mr-mantle`
-  - `runtime/component/mr-boss`, the internal app
-  - `runtime/component/mr-pass`, the supplier pages in its Supplier app (P16; §4)
+  - `mr-moqui` (`crates/`, `runtime/components/base`)
+  - `runtime/components/addon/mr-mantle`
+  - `runtime/components/addon/mr-boss`, the internal app
+  - `runtime/components/addon/mr-pass`, the supplier pages in its Supplier app (P16; §4)
 
   Design §16 needs no new framework widget, and the supplier links are pages of PASS's Supplier app taking their
-  tokens (impl-accounting P18), so no phase plans framework work; P0 confirms it. `runtime/component/mr-marble` is read
+  tokens (impl-accounting P18), so no phase plans framework work; P0 confirms it. `runtime/components/addon/mr-marble` is read
   only, for the baseline Supplier, Party, Request, Order, Agreement, Facility, Shipment, Return and Invoice screens
   that design §14.3 maps.
 - **Scope.**
@@ -3042,7 +3042,7 @@ withheld as null and "Withheld", never zero; Commitments' stage arithmetic again
 - **R6** (low) Scorecards' result and score filters picked a supplier's latest matching evaluation, so an older low score
   stood in for a newer one; the filters now apply to the latest evaluation of each supplier (or to every one, view all).
 - **R7** (low) ProcurementTracker's supplier filter left a request's rows of other suppliers in; it applies to them too.
-- For the lead (F177, framework, unchanged): `runtime/base-component/framework/template/screen/ScreenCsv.js` lines 29-35,
+- For the lead (F177, framework, unchanged): `runtime/components/base/framework/template/screen/ScreenCsv.js` lines 29-35,
   the csv render mode's `$csv`, only quotes a value holding a comma, quote or LF (`/[,"\n]/`, not CR) and never prefixes
   text starting `=`, `+`, `-`, `@`, tab or CR, so a form-list CSV export carries a supplier's `=...` name as a formula. The
   XLSX export is not affected: `crates/moqui-core/src/screen/xlsx.rs` writes text with `write_string_with_format` (lines
@@ -3512,7 +3512,7 @@ is written there too.
 | F34 | P0: no buying-policy or approval-gate flag exists, nor PurchasePolicy; PartyAcctgPreference has no purchase flag. impl-accounting §4 puts the gate on the buying policy's dated rows on ProductionPolicy's pattern (dated, empty inherits, off by default). The Accounting demo places and approves POs directly for BOSS_ACCT_ORG and ORG_ZIZI_RETAIL | P2's PurchasePolicy carries the gate flag (off by default) before P3 reads it; the demo sets it only after its direct calls; ORG_ZIZI_RETAIL stays off |
 | F35 | P0: the quote statuses on a purchase part: no reservation (only Placed/Approved, and none for a non-internal vendor with no store), no store emails, auto-approval only on Placed, totals recomputed in every status, `handle#OrderMajorChange` only with a store; Requested and Proposed are editable; the EDI ack SECA fires on Cancelled and Rejected; Proposed → Placed fires the Placed SECAs | P11/P12 need no Mantle change for the statuses; Place from Quote meets P3's gate; P12 accepts or conditions the EDI ack on Cancel Quote |
 | F36 | P0: audit-log coverage, refining F18: OrderHeader logs status and processing status, not `orderRevision`; OrderItem logs product, required date, quantity, unit amount, standard cost and price keys and `costCenterId`, not unit, cancelled quantity or description; OrderPart its status, parties, facility, carrier, method, address and priority, not the reference, estimated dates, validity or terms; Request, RequestItem and Requirement only status; Agreement status, other party and dates; AgreementItem quantity. `get#OrderDisplayInfo` reads the header status history and items' quantity and unit amount; no OrderPart field and no as-of reconstruction | P3 logs `orderRevision`, unit and cancelled quantity; P9 OrderPart's reference, dates and terms and adds the as-of reader; P10 RequestItem's; P11 validity and terms; P13 the agreement's; each widens the display services' lists |
-| F37 | P0: the drop-ship branch is local, in /Users/jonesde/work/moquiwork/moqui/runtime/component/mantle-usl and mantle-udm (`origin/dropship-moqui`, Aug–Oct 2024 there): `Facility.dropShipRemoteId`, FcTpDropShip, the CustomerShipFrom and VendorShipTo roles (CustomerShipTo exists in mr-mantle); the `send#DropShipPurchaseOrderPart` interface, `create#DropShipPurchaseOrder` (run in OrderApprovedReserveAssets after `reserve#AssetsForOrder`, Approved only) and `finalize#DropShipPurchaseOrder`; `pack#ShipmentItemSource` returns the package. Create clones the header with `parentOrderId`, makes the PO part (vendor the facility owner, customer the seller, a CustomerShipTo party), copies contact mechs, content, notes and work efforts, places, approves and calls the remote | P7 ports these |
+| F37 | P0: the drop-ship branch is local, in /Users/jonesde/work/moquiwork/moqui/runtime/components/addon/mantle-usl and mantle-udm (`origin/dropship-moqui`, Aug–Oct 2024 there): `Facility.dropShipRemoteId`, FcTpDropShip, the CustomerShipFrom and VendorShipTo roles (CustomerShipTo exists in mr-mantle); the `send#DropShipPurchaseOrderPart` interface, `create#DropShipPurchaseOrder` (run in OrderApprovedReserveAssets after `reserve#AssetsForOrder`, Approved only) and `finalize#DropShipPurchaseOrder`; `pack#ShipmentItemSource` returns the package. Create clones the header with `parentOrderId`, makes the PO part (vendor the facility owner, customer the seller, a CustomerShipTo party), copies contact mechs, content, notes and work efforts, places, approves and calls the remote | P7 ports these |
 | F38 | P0: the branch makes no PO shipment; finalize expects the integration's ShipmentItemSource per PO line, ships it, never receives it; the sales side filters ShipmentItemSource by the PO's item and part seq ids, which the clone resequences | P7 makes the PO's ShpTpPurchase shipment at finalize, maps PO lines to sales lines by a stored link, not by product or seq id, and fixes the part id |
 | F39 | P0: where drop-ship cost lands: the shell asset (no stock) has no acquire cost, so the sales issuance posts nothing; a supplier-owned asset posts nothing for the seller; the supplier bill debits Unreceived Inventory, and since the PO is never received the cost never reaches COGS | P7 moves the PO line's cost from Unreceived Inventory to COGS on the drop-ship delivery or its match (or bills drop-ship lines to a COGS item type) |
 | F40 | P0: `create#DropShipPurchaseOrder` runs inside the sales order's Approved SECA transaction and approves the PO; with the gate on that would refuse and roll back the sales approval | P7 stops the drop-ship PO at Placed for `decide#PurchaseApproval` when the flag is on, approves as the branch does when off, and sends only after approval |

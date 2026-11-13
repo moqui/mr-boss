@@ -25,8 +25,8 @@ design follows the build, and its Designed-in mappings in the inventories are ad
 [usl-inventory.md](usl-inventory.md), and current Mantle and SimpleScreens source.
 
 **Source paths.** `Accounting/...`, `Party/...` and `Asset/...` baseline references mean
-`runtime/component/mr-marble/screen/SimpleScreens/` paths; inventory rows use their basename.
-Mantle source is `runtime/component/mr-mantle/{entity,service/mantle}/`. Third-party paths are
+`runtime/components/addon/mr-marble/screen/SimpleScreens/` paths; inventory rows use their basename.
+Mantle source is `runtime/components/addon/mr-mantle/{entity,service/mantle}/`. Third-party paths are
 relative to the named checkout beneath `~/work/moquiwork/3p_other`: Odoo uses the bundle root
 (`odoo/addons/...`), Carbon `carbon/`, ERPNext `frappe/erpnext/`, Akaunting `akaunting/`,
 Dolibarr `dolibarr/`. Research records additional references; this design cites the chosen

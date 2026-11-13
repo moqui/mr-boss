@@ -102,9 +102,9 @@ unguarded account services and the sales report services, and no opportunity, qu
   design §14.2 traces the baseline forms.
 - mr-moqui: `plans/Remaining-Work.md` (its IronStone row on Sales/Reports is stale, F2).
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`, PASS paths under `runtime/component/mr-pass/`, baseline paths under
-`runtime/component/mr-marble/screen/SimpleScreens/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`, PASS paths under `runtime/components/addon/mr-pass/`, baseline paths under
+`runtime/components/addon/mr-marble/screen/SimpleScreens/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -115,7 +115,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `runtime/component/mr-mantle`: the Sales business services, `mantle.sales.OpportunityServices`,
+  - `runtime/components/addon/mr-mantle`: the Sales business services, `mantle.sales.OpportunityServices`,
     `SalesWorkspaceServices` and `ForecastServices`, `mantle.order.SalesQuoteServices` and `SalesPortalServices`,
     `mantle.party.SalesAgreementServices`, the commercial kinds of `mantle.order.OrderChangeServices`; their records
     (SalesPipeline, SalesLeadIntake, the lead-source map, SalesOpportunityContent, SalesPolicy, SalesApprovalPolicy,
@@ -123,15 +123,15 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     and SalesForecast; the X1 storeless tax and the sales direction of `approve#Order`; the `SALES_*` permissions and
     the organization filter rows; ExternalAccess's `sales` app kind and quote scopes; the pipeline dataset; the PASS
     authority's copies of the Sales operations;
-  - `runtime/component/mr-boss`: the Sales app, `ironstone.sales.ContextServices`, the Sales contexts of the shared
+  - `runtime/components/addon/mr-boss`: the Sales app, `ironstone.sales.ContextServices`, the Sales contexts of the shared
     screens, `Shared/AgreementDetail` and `Shared/Subscriptions`, Sales' registrations with Admin and Insights (its
     branch of Shared/DataImport's mount and its owner routes among them, F44), its `report/` and `skill/` files;
-  - `runtime/component/mr-pass`: the PASS Sales app, `screen/Sales.xml` and its pages, its operations in the schema and
+  - `runtime/components/addon/mr-pass`: the PASS Sales app, `screen/Sales.xml` and its pages, its operations in the schema and
     route lists, its mount in the test runtime (P13, P17);
-  - `mr-moqui` (`crates/`, `runtime/base-component`): nothing is planned. A framework change found needed is a finding
+  - `mr-moqui` (`crates/`, `runtime/components/base`): nothing is planned. A framework change found needed is a finding
     first; `docs/security/Attack-Surface.md` gains the PASS Sales operations and `plans/Remaining-Work.md` Sales' row.
 
-  `runtime/component/mr-marble` is read only, for the baseline Customer, Party, Order, Request and PartyAgreements
+  `runtime/components/addon/mr-marble` is read only, for the baseline Customer, Party, Order, Request and PartyAgreements
   forms that ss-inventory maps.
 - **Scope.**
   - Every `parity` and `new` row of design §2 and the §17 needs they use, as changed by §6, PASS Sales among them. The

@@ -65,7 +65,7 @@ table row is relative to the directory named earlier in the same cell or row.
 | **AureusERP** | `3p_other/aureuserp` | `plugins/webkul/<plugin>/src/Filament/…` (widgets in `Filament/Widgets/` or `Filament/Admin/Widgets/`); `plugins/webkul/analytics/` is a record model only |
 | **OpenProject** | `3p_other/openproject` | `modules/<module>/…` (`modules/{grids,overviews,my_page,reporting}/`), `frontend/src/app/…` |
 | **coarchy**, **ServiceJobMonitor** | `3p_moqui/<component>` | `screen/…` |
-| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/…`, `component/mr-marble/screen/SimpleScreens/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/service/mantle/…`, `base-component/tools/screen/…`, `base-component/framework/{entity,service,data}/…`, `component/mr-boss/screen/…` |
+| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/…`, `component/mr-marble/screen/SimpleScreens/…`, `component/mr-mantle/entity/…`, `component/mr-mantle/service/mantle/…`, `components/base/tools/screen/…`, `components/base/framework/{entity,service,data}/…`, `component/mr-boss/screen/…` |
 
 **Not used here** (checked, nothing beyond what other files cover): Zimbra and Nextcloud have
 no BI screens (Nextcloud's `server/apps/dashboard/` widget board is the personal start page,
@@ -233,7 +233,7 @@ screen without the sidebar.
 | Dolibarr | **Custom reports** | Pick object type; measures (count/sum/avg of fields), X axis, group-by; table and graph modes; also embeddable as a tab on an object | `htdocs/core/customreports.php` (`search_measures`, `search_xaxis`, `search_groupby`, `search_graph`) |
 | Akaunting | Custom report from report class | Name, class (Income, Expense, Income vs Expense, Profit & Loss, Tax, Discount), description, class-specific fields: date field/range, basis (cash/accrual), period (monthly/quarterly/yearly), group, filters (category, account, contact, item, tax, warehouse, currency) | `resources/views/common/reports/{create,edit,index}.blade.php`, `app/Abstracts/Report.php` (strip/display/filter sections), `app/Reports/*.php` |
 | ERPNext | Financial Report Template | Row-based custom financial statements (account categories, formulas) feeding Custom Financial Statement report | `erpnext/accounts/doctype/{financial_report_template,financial_report_row,account_category}/`, `erpnext/accounts/report/custom_financial_statement/` |
-| Moqui baseline | SimpleReport / Data Views | See §16: DataDocument-based "Edit and Report Builder" (fields with an optional min/max/sum/avg/count/count-distinct function, conditions) and DbViewEntity data views | `component/mr-marble/screen/SimpleScreens/SimpleReport/`, `base-component/tools/screen/Tools/Data/Views/` |
+| Moqui baseline | SimpleReport / Data Views | See §16: DataDocument-based "Edit and Report Builder" (fields with an optional min/max/sum/avg/count/count-distinct function, conditions) and DbViewEntity data views | `component/mr-marble/screen/SimpleScreens/SimpleReport/`, `components/base/tools/screen/Tools/Data/Views/` |
 
 ---
 
@@ -285,7 +285,7 @@ code; the find-screen view modes themselves are not in that plan.
 | Carbon | Report views & pins | Named pivot configs, Private or Company visibility; pinned reports on the hub | `apps/erp/app/modules/accounting/accounting.models.ts` (`reportViewValidator`, `reportPinValidator`, `reportViewVisibilities`), `apps/erp/app/routes/x+/reports+/views.$viewId.delete.tsx` |
 | OpenProject | Saved cost reports | Save / Save as a cost report query, private or public | `modules/reporting/lib/widget/controls/{save,save_as}.rb` |
 | Twenty | Views | Saved views per object (table/kanban/calendar), filters, sorts, visible fields, group-by; views feed dashboard widgets (VIEW, RECORD_TABLE) | `packages/twenty-front/src/modules/views/` |
-| Moqui baseline | Saved finds | `form-list saved-finds="true"` stores column sets and parameters as `FormListFind` per user/group; `FormConfig` per user | `base-component/framework/entity/ScreenEntities.xml` (`FormListFind*`, `FormConfig*`) |
+| Moqui baseline | Saved finds | `form-list saved-finds="true"` stores column sets and parameters as `FormListFind` per user/group; `FormConfig` per user | `components/base/framework/entity/ScreenEntities.xml` (`FormListFind*`, `FormConfig*`) |
 
 ---
 
@@ -297,7 +297,7 @@ code; the find-screen view modes themselves are not in that plan.
 | Frappe Insights | **Alerts** | On a query: frequency Hourly/Daily/Weekly/Monthly/Cron, condition (builder or custom code), Markdown message with field tokens, channel **Email/Telegram/Webhook** (versioned payload, token header, row cap), runs with the permissions of whoever enabled it; last/next execution | `insights/insights/doctype/insights_alert/`, `frontend/src2/query/components/{AlertSetupDialog,QueryAlerts,QueryAlertsDialog}.vue`, `frontend/src2/query/alert.ts`; ADR `docs/adr/outbound-http-to-user-chosen-urls.md` |
 | Odoo | **Digest emails** | Periodic KPI email (daily/weekly/monthly/quarterly) to selected users; KPIs are Boolean fields, each with a compute method in code, contributed by modules: Revenue, All Sales, eCommerce Sales, POS Sales, New Leads, Opportunities Won, New Employees, Open Tasks, Deliveries, Receipts, Visitors, Tracked Page Views, Livechat conversations / % of happiness / time to answer, event registrations and attendees, survey participants, Connected Users, Messages Sent; subscribe/unsubscribe; tips | `odoo/addons/digest/models/digest.py`, `odoo/addons/digest/views/{digest_views,digest_templates}.xml`, `odoo/addons/digest/data/ir_cron_data.xml`; KPI fields in `odoo/addons/{account,crm,event,hr_recruitment,im_livechat,point_of_sale,sale_management,stock,survey,website,website_sale,website_slides}/models/digest.py` and `odoo/addons/project/models/digest_digest.py` |
 | metasfresh | KPI staleness | `KPI_AllowedStaledTimeInSec` cache; websocket push of dashboard updates | `backend/de.metas.ui.web.base/src/main/java/de/metas/ui/web/dashboard/websocket/` |
-| Moqui baseline | **ScreenScheduled** | Scheduled render of a report screen (with a saved find) by cron to CSV (default), xlsx or PDF (`xsl-fo`), email to a user or user group via `EmailTemplate`, or save to a resource location; skip if no results. A ServiceJob runs `render#ScheduledScreens` every 15 minutes | `base-component/framework/entity/ScreenEntities.xml` (`ScreenScheduled`, `ScreenScheduledLock`), `base-component/framework/service/org/moqui/impl/ScreenServices.xml` (`render#ScheduledScreens`, `render#ScheduledScreen`), `base-component/framework/data/MoquiSetupData.xml` (`render_ScheduledScreens_frequent`) |
+| Moqui baseline | **ScreenScheduled** | Scheduled render of a report screen (with a saved find) by cron to CSV (default), xlsx or PDF (`xsl-fo`), email to a user or user group via `EmailTemplate`, or save to a resource location; skip if no results. A ServiceJob runs `render#ScheduledScreens` every 15 minutes | `components/base/framework/entity/ScreenEntities.xml` (`ScreenScheduled`, `ScreenScheduledLock`), `components/base/framework/service/org/moqui/impl/ScreenServices.xml` (`render#ScheduledScreens`, `render#ScheduledScreen`), `components/base/framework/data/MoquiSetupData.xml` (`render_ScheduledScreens_frequent`) |
 | ServiceJobMonitor | Monitor bounds & alerts | Watches ServiceJob results against bounds (`ServiceJobMonitorBounds`); alerts with notified parties and issue URLs; charts | `screen/MonitorAdmin/{Alerts,Charts,Monitor}.xml`, `entity/` |
 
 ---
@@ -325,7 +325,7 @@ code; the find-screen view modes themselves are not in that plan.
 | Frappe Insights | Settings | Auto-execute, query result limit/expiry, subquery, permissions toggle, allow download + max export rows, fiscal year start, week start, max execution time, Telegram token, allowed embed origins | `insights/insights/doctype/insights_settings/`, `frontend/src2/settings/{GeneralSettings,PermissionsSettings,UsersSettings}.vue` |
 | metasfresh | KPI definition | SQL from/where/group-and-order, details where clause, source table, Elasticsearch index/query/time range, apply security settings | `backend/de.metas.ui.web.base/src/main/java-gen/de/metas/ui/web/base/model/{I_WEBUI_KPI,I_WEBUI_KPI_Field}.java` |
 | Odoo | Reporting models | Analysis = SQL views registered as read-only models (see §6); spreadsheet data sources reference models + domains | `odoo/addons/*/report/*_report.py`, `odoo/addons/spreadsheet/` |
-| Moqui baseline | Data documents, data views, OLAP tables | `DataDocument` (primary entity + field paths with optional aggregate function + conditions + links, per user group), queryable as a dynamic view entity `DataDocument.<id>`; `DbViewEntity` (user-built joins and aliases with functions); `moqui.olap.DateDayDimension` and `CurrencyDimension` exist but nothing populates or reads them. The Mantle `*Dimension` entities (`ProductDimension`, `PartyDimension`, `MarketSegmentDimension`, …) are measurement values (size, weight, counts with a UOM), not analytics dimensions | `base-component/framework/entity/{EntityEntities,OlapEntities}.xml`, `component/mr-marble/screen/SimpleScreens/SimpleReport/ViewReport.xml` |
+| Moqui baseline | Data documents, data views, OLAP tables | `DataDocument` (primary entity + field paths with optional aggregate function + conditions + links, per user group), queryable as a dynamic view entity `DataDocument.<id>`; `DbViewEntity` (user-built joins and aliases with functions); `moqui.olap.DateDayDimension` and `CurrencyDimension` exist but nothing populates or reads them. The Mantle `*Dimension` entities (`ProductDimension`, `PartyDimension`, `MarketSegmentDimension`, …) are measurement values (size, weight, counts with a UOM), not analytics dimensions | `components/base/framework/entity/{EntityEntities,OlapEntities}.xml`, `component/mr-marble/screen/SimpleScreens/SimpleReport/ViewReport.xml` |
 
 ---
 
@@ -338,7 +338,7 @@ code; the find-screen view modes themselves are not in that plan.
 | Odoo | Dashboard groups/users/companies; record rules apply to pivots | `odoo/addons/spreadsheet_dashboard/models/spreadsheet_dashboard.py` |
 | Carbon | `requirePermissions(view: "accounting")` on reports; report view Private/Company | `apps/erp/app/routes/x+/reports+/*.tsx` |
 | metasfresh | KPI permissions provider + "apply security settings" | `backend/de.metas.ui.web.base/src/main/java/de/metas/ui/web/kpi/data/KPIPermissionsProvider.java` |
-| Moqui baseline | `DataDocumentUserGroup`; artifact authz on screens; `EntityFilterSet` row filters | `base-component/framework/entity/{EntityEntities,SecurityEntities}.xml` |
+| Moqui baseline | `DataDocumentUserGroup`; artifact authz on screens; `EntityFilterSet` row filters | `components/base/framework/entity/{EntityEntities,SecurityEntities}.xml` |
 
 ---
 
@@ -409,9 +409,9 @@ paths are relative to `mr-moqui-base/runtime`.
 | Other module dashboards | Link pages for HumanRes, Asset, Manufacturing, Catalog, Shipping | `component/mr-marble/screen/SimpleScreens/{HumanRes,Asset,Manufacturing,Catalog,Shipping}/dashboard.xml` |
 | Budget report, project progress | Single-purpose reports | `component/mr-marble/screen/SimpleScreens/Accounting/Budget/BudgetReport.xml`, `component/mr-marble/screen/SimpleScreens/Project/ProjectProgressReport.xml` |
 | **SimpleReport** (Edit and Report Builder) | Find/create a report = `DataDocument` (name, primary entity, user group); edit field paths with optional function (min, max, sum, avg, count, count-distinct, upper, lower) and conditions; view as a dynamic form-list over the `DataDocument.<id>` view with CSV/XLSX export and saved finds; quick view | `component/mr-marble/screen/SimpleScreens/SimpleReport/{FindReport,EditReport,EditReport/FieldList,ViewReport,QuickViewReport}.xml` |
-| Tools Data Views | Build a `DbViewEntity` (member entities, aliases with functions, key maps) and view results | `base-component/tools/screen/Tools/Data/Views/{FindDbView,EditDbView,ViewDbView}.xml` |
-| System Data Documents | Edit/search/export data documents; feed index | `base-component/tools/screen/System/DataDocument/{Edit,Search,Index,ViewDocument}.xml`, export in `base-component/tools/screen/Tools/Data/Export.xml` |
-| System usage stats | Artifact hit summary and bins, visits (tools screens, also in Admin) | `base-component/tools/screen/System/{ArtifactHitSummary,ArtifactHitBins,Visit}.xml` |
+| Tools Data Views | Build a `DbViewEntity` (member entities, aliases with functions, key maps) and view results | `components/base/tools/screen/Tools/Data/Views/{FindDbView,EditDbView,ViewDbView}.xml` |
+| System Data Documents | Edit/search/export data documents; feed index | `components/base/tools/screen/System/DataDocument/{Edit,Search,Index,ViewDocument}.xml`, export in `components/base/tools/screen/Tools/Data/Export.xml` |
+| System usage stats | Artifact hit summary and bins, visits (tools screens, also in Admin) | `components/base/tools/screen/System/{ArtifactHitSummary,ArtifactHitBins,Visit}.xml` |
 | Scheduled finds (My Account) | The user's scheduled report renders: screen path + saved find, cron (with picker and description), render mode, email template/subject, save-to location, no-results skip, from/thru | `component/mr-marble/screen/MyAccount/User/{ScheduledFinds.xml,ScheduledFinds/EditScheduledFind.xml}` (copied to `component/mr-boss/screen/Base/User/ScheduledFinds/`) |
 | IronStone BOSS today | The BOSS root screen mounts QuickSearch, Search, QuickLookup and **SalesSummary**; copies of SalesAnalysis and SimpleReport are in the component but not mounted yet | `component/mr-boss/screen/boss.xml`, `component/mr-boss/screen/{Reports,SimpleReport}/` |
 
@@ -419,16 +419,16 @@ paths are relative to `mr-moqui-base/runtime`.
 
 | Entity | What it gives Insights | Key files |
 | --- | --- | --- |
-| `moqui.entity.document.DataDocument` (+ `DataDocumentField` with `functionName`, `DataDocumentCondition`, `DataDocumentRelAlias`, `DataDocumentLink`, `DataDocumentUserGroup`) | A named, permissioned dataset over a primary entity with relationship paths and aggregate functions; links per document | `base-component/framework/entity/EntityEntities.xml` |
+| `moqui.entity.document.DataDocument` (+ `DataDocumentField` with `functionName`, `DataDocumentCondition`, `DataDocumentRelAlias`, `DataDocumentLink`, `DataDocumentUserGroup`) | A named, permissioned dataset over a primary entity with relationship paths and aggregate functions; links per document | `components/base/framework/entity/EntityEntities.xml` |
 | `moqui.entity.feed.DataFeed`, `DataFeedDocument` | Push of changed documents to a service (search index, document notifications) | same |
 | `moqui.entity.view.DbViewEntity` (+ Member, Alias with `functionName`, KeyMap) | User-defined joins and aliases | same |
-| `moqui.screen.form.FormListFind` (+ Field, User, UserDefault, UserGroup), `FormConfig` (+ Field, User, UserGroup) | Saved finds (columns, parameters, sort) per user or group | `base-component/framework/entity/ScreenEntities.xml` |
+| `moqui.screen.form.FormListFind` (+ Field, User, UserDefault, UserGroup), `FormConfig` (+ Field, User, UserGroup) | Saved finds (columns, parameters, sort) per user or group | `components/base/framework/entity/ScreenEntities.xml` |
 | `moqui.screen.ScreenScheduled`, `ScreenScheduledLock` | Scheduled report renders to email (user or user group) or a resource location | same |
-| `moqui.security.user.NotificationTopic`, `NotificationMessage` (+ `NotificationTopicUser`, `NotificationMessageUser`) | Topic-based notifications for alerts | `base-component/framework/entity/SecurityEntities.xml` |
+| `moqui.security.user.NotificationTopic`, `NotificationMessage` (+ `NotificationTopicUser`, `NotificationMessageUser`) | Topic-based notifications for alerts | `components/base/framework/entity/SecurityEntities.xml` |
 | `moqui.security.EntityFilterSet`, `EntityFilter` | Row-level filters that apply to a viewer's queries | same |
-| `moqui.basic.email.EmailTemplate` | Email layout for scheduled reports and digests | `base-component/framework/entity/BasicEntities.xml` |
-| `moqui.olap.DateDayDimension`, `CurrencyDimension` | Date and currency dimension tables; defined, never populated or read | `base-component/framework/entity/OlapEntities.xml` |
-| `moqui.server.ArtifactHit`, `ArtifactHitBin`, `Visit` | Usage stats (retention settings are in Admin) | `base-component/framework/entity/ServerEntities.xml` |
+| `moqui.basic.email.EmailTemplate` | Email layout for scheduled reports and digests | `components/base/framework/entity/BasicEntities.xml` |
+| `moqui.olap.DateDayDimension`, `CurrencyDimension` | Date and currency dimension tables; defined, never populated or read | `components/base/framework/entity/OlapEntities.xml` |
+| `moqui.server.ArtifactHit`, `ArtifactHitBin`, `Visit` | Usage stats (retention settings are in Admin) | `components/base/framework/entity/ServerEntities.xml` |
 | Mantle flow-map counts: `OrderPart` (`statusId`), `Request` (and view `RequestAndParty`), `Shipment`, `Invoice`, `Payment`, `ReturnHeader` | The records whose status counts a live flow map shows per step | `component/mr-mantle/entity/{OrderEntities,RequestEntities,ShipmentEntities,AccountingAccountEntities}.xml`, `component/mr-mantle/entity/RequestViewEntities.xml` |
 
 Missing: any dashboard, widget, widget placement, KPI/number-card definition, alert or flow-map
@@ -441,10 +441,10 @@ not part of it (see
 
 | Service | Purpose | Key files |
 | --- | --- | --- |
-| `org.moqui.impl.EntityServices.{create,update,clone}#DataDocument`, `{create,update}#DataDocumentField`, `create#DbViewEntity` | Report builder writes (used by SimpleReport) | `base-component/framework/service/org/moqui/impl/EntityServices.xml` |
+| `org.moqui.impl.EntityServices.{create,update,clone}#DataDocument`, `{create,update}#DataDocumentField`, `create#DbViewEntity` | Report builder writes (used by SimpleReport) | `components/base/framework/service/org/moqui/impl/EntityServices.xml` |
 | `org.moqui.impl.EntityServices.send#DataDocumentNotifications` | DataFeed receiver: a `NotificationMessage` per changed document to the users named in it (change-triggered, not threshold) | same |
-| `org.moqui.search.SearchServices.{index,search}#DataDocuments` | Index and search documents | `base-component/framework/service/org/moqui/search/SearchServices.xml` |
-| `org.moqui.impl.ScreenServices.render#ScheduledScreens`, `render#ScheduledScreen` | Run due `ScreenScheduled` rows (CSV, xlsx, PDF) and email or save them; ServiceJob `render_ScheduledScreens_frequent` every 15 minutes | `base-component/framework/service/org/moqui/impl/ScreenServices.xml`, `base-component/framework/data/MoquiSetupData.xml` |
+| `org.moqui.search.SearchServices.{index,search}#DataDocuments` | Index and search documents | `components/base/framework/service/org/moqui/search/SearchServices.xml` |
+| `org.moqui.impl.ScreenServices.render#ScheduledScreens`, `render#ScheduledScreen` | Run due `ScreenScheduled` rows (CSV, xlsx, PDF) and email or save them; ServiceJob `render_ScheduledScreens_frequent` every 15 minutes | `components/base/framework/service/org/moqui/impl/ScreenServices.xml`, `components/base/framework/data/MoquiSetupData.xml` |
 | `mantle.sales.SalesReportServices.get#SalesOrderSummary`, `get#SalesInvoiceSummary`, `get#SalesTopProduct`, `get#InvoicesByCustomerClass` | Sales KPIs and chart data | `component/mr-mantle/service/mantle/sales/SalesReportServices.xml` |
 | `mantle.ledger.LedgerReportServices.run#{IncomeStatement,BalanceSheet,CashFlowStatement,RetainedEarningsStatement,FinancialRatios,PostedAmountSummary}`, `get#PeriodSeriesSummary`, `get#AccountLedgerInfo` | Financial statements and period series (the report pages are in Accounting) | `component/mr-mantle/service/mantle/ledger/LedgerReportServices.xml` |
 | `mantle.other.BudgetReportServices.run#BudgetExpenseReport`, `run#BudgetExpenseDetailReport` | Budget vs actual | `component/mr-mantle/service/mantle/other/BudgetReportServices.xml` |

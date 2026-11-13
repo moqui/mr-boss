@@ -2,7 +2,7 @@
 
 Per-service inventory of the mr-mantle component, for tracking service-level feature parity in IronStone BOSS.
 
-- Source: `runtime/component/mr-mantle/service/` (current working tree).
+- Source: `runtime/components/addon/mr-mantle/service/` (current working tree).
 - Service: every `<service>` element in the service definition XML files under `service/mantle/` (including `GeneralServices.xml`).
 - Test services (`PaymentTestServices.xml`, `OrderTestServices.xml`), service ECAs (`*.secas.xml`), and the REST API definition (`mantle.rest.xml`) are excluded.
 - The **Designed in** column is filled when a design file is reviewed with the IronStone screen path(s) whose form summaries call the service (blank when no screen calls it); the **Implemented in** column is filled during implementation with the screens that call it. See [design-doc-guide.md](design-doc-guide.md) §9.

@@ -57,7 +57,7 @@ and drawers in more depth than style-guide §2, because the Assist port in mr-mo
 [initial-design.md](initial-design.md) (its **Decided** table is fixed),
 [style-guide.md](style-guide.md) §2–§8,
 [ss-inventory.md](ss-inventory.md), [usl-inventory.md](usl-inventory.md), the Mantle entities in
-`mr-mantle/entity/`, the framework entities in `base-component/framework/entity/`, the
+`mr-mantle/entity/`, the framework entities in `components/base/framework/entity/`, the
 Java Assist panel (`moqui/runtime/.../webroot/js/assist/`) and its tools
 (`moqui/framework/.../impl/llm/tools/`), and mr-moqui's `plans/Remaining-Work.md`.
 
@@ -350,7 +350,7 @@ card.
 
 ### 2.2 Comms
 
-Oct 30, 2026: the mail, chat and call screens move to the framework component `runtime/base-component/basic-comms`
+Oct 30, 2026: the mail, chat and call screens move to the framework component `runtime/components/base/basic-comms`
 (the `BasicComms` app), and this app mounts them and adds its parts (the Internal account and mailboxes, record links,
 Consent, Moderation, Chatter) by `screen-extend`, providers, declared actions and panel slots (mr-moqui
 `plans/archive/Comms-Framework.md` §3). The launcher shows this app, not BasicComms. What follows is the BOSS app as designed before that move. The plan names which screens move, split or stay.
@@ -1582,7 +1582,7 @@ records who saved each version and the page's moves. Until the editor lands, the
 
 ## 12. Comms Home, Inbox and email
 
-> Built (Nov 12, 2026): Home, Inbox, Compose and MessageDetail (with the Internal account, mailboxes, filing and the Home boxes as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> Built (Nov 12, 2026): Home, Inbox, Compose and MessageDetail (with the Internal account, mailboxes, filing and the Home boxes as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/components/base/basic-comms`, which this app
 > mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
 > kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
 > app's `screen/Comms.xml` and `screen-extend/basic-comms`.
@@ -1831,7 +1831,7 @@ that today's Mailbox implementation already performs them.
 
 ## 13. Chat
 
-> Built (Nov 12, 2026): Chat, its tray panel and the chat settings (with record rooms, filing and Create from as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> Built (Nov 12, 2026): Chat, its tray panel and the chat settings (with record rooms, filing and Create from as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/components/base/basic-comms`, which this app
 > mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
 > kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
 > app's `screen/Comms.xml` and `screen-extend/basic-comms`.
@@ -1901,7 +1901,7 @@ answered, and the two stay separate stores.
 
 ## 14. Calls
 
-> Built (Nov 12, 2026): Calls, Call, the Dialer, Voicemail and Recordings (with the meetings, the screen pop and who may be called as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> Built (Nov 12, 2026): Calls, Call, the Dialer, Voicemail and Recordings (with the meetings, the screen pop and who may be called as IronStone's providers) are BasicComms' screens in mr-moqui `runtime/components/base/basic-comms`, which this app
 > mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
 > kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
 > app's `screen/Comms.xml` and `screen-extend/basic-comms`.
@@ -2203,7 +2203,7 @@ capability. Person-level data needs audience-view separately. This is the durabl
 trace, not the personal Inbox/Outbox; it reads the one Comms delivery ledger above filtered to the
 campaign's sends, and the ledger's retry and reconciliation rules are authoritative.
 
-> Built (Nov 12, 2026): MailAccounts, Identities, Rules, OutOfOffice, TextBlocks, ChatSettings and CallSettings (Settings under Comms) are BasicComms' screens in mr-moqui `runtime/base-component/basic-comms`, which this app
+> Built (Nov 12, 2026): MailAccounts, Identities, Rules, OutOfOffice, TextBlocks, ChatSettings and CallSettings (Settings under Comms) are BasicComms' screens in mr-moqui `runtime/components/base/basic-comms`, which this app
 > mounts as Comms; the screens as built are mr-moqui `docs/tools/Comms.md`. What follows is the design they were built from,
 > kept as its record; what IronStone adds is in mr-moqui `docs/tools/Comms.md` ("For app authors") and this
 > app's `screen/Comms.xml` and `screen-extend/basic-comms`.

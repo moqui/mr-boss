@@ -48,7 +48,7 @@ named earlier in the same cell or row.
 | **Nextcloud** | `3p_other/nextcloud` | `<app>/src/…` (Collectives: `collectives/src/`) |
 | **Redmine** | `3p_other/redmine` | `app/{views,controllers,models}/…` |
 | **Moqui Sales**, **Moqui WorkManagement** | `3p_moqui/{Sales,WorkManagement}` | `screen/…` (XML screens with paired QVue components) |
-| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-marble/screen/MyAccount/…`, `component/mr-marble/screen/…`, `component/mr-mantle/{entity,data}/…`, `component/mr-mantle/service/mantle/…`, `component/mr-mantle/entity/…`, `base-component/framework/{entity,service}/…`, `component/mr-boss/screen/…` |
+| **Moqui baseline** | `mr-moqui-base/runtime` | `component/mr-marble/screen/SimpleScreens/…`, `component/mr-marble/screen/MyAccount/…`, `component/mr-marble/screen/…`, `component/mr-mantle/{entity,data}/…`, `component/mr-mantle/service/mantle/…`, `component/mr-mantle/entity/…`, `components/base/framework/{entity,service}/…`, `component/mr-boss/screen/…` |
 
 Not used here: Signal ships nothing relevant. Zimbra's admin `helpdesk/` folder
 (`zm-admin-console/WebRoot/js/zimbraAdmin/helpdesk/`) is the admin console's help view,
@@ -966,8 +966,8 @@ Paths are under `component/mr-marble/screen/SimpleScreens/` unless they start wi
 | `ProductStore` return settings | Return postal address for labels (`returnPostalContactMechId`), store setting `PsstGetReturnLabels`, store email types `PsetReturnAccepted`, `PsetReturnCompleted`, `PsetReturnCancelled`; no return window or self-service switch | `component/mr-mantle/entity/ProductStoreEntities.xml` |
 | Order status `OrderBeingChanged` | Orders can be put into Being Changed for edits and placed again | same |
 | `AssetSummaryView`, `ProductFacility` | On hand / available by product and facility | `component/mr-mantle/entity/ProductAssetViewEntities.xml`, `component/mr-mantle/entity/FacilityEntities.xml` |
-| `moqui.resource.wiki.WikiPage`; data documents `MantleWikiPage`, `MantleRequest` | KB pages and requests indexed for full-text search | `base-component/framework/entity/ResourceEntities.xml`, `component/mr-mantle/data/{MantleDocumentData,MantleDocumentWorkData}.xml` |
-| `moqui.screen.form.DbForm`, `FormResponse` | Survey forms and responses; a response records only `userId` and date, no link to a case | `base-component/framework/entity/ScreenEntities.xml` |
+| `moqui.resource.wiki.WikiPage`; data documents `MantleWikiPage`, `MantleRequest` | KB pages and requests indexed for full-text search | `components/base/framework/entity/ResourceEntities.xml`, `component/mr-mantle/data/{MantleDocumentData,MantleDocumentWorkData}.xml` |
+| `moqui.screen.form.DbForm`, `FormResponse` | Survey forms and responses; a response records only `userId` and date, no link to a case | `components/base/framework/entity/ScreenEntities.xml` |
 | Holidays | `WorkEffort` events with purpose `WepHoliday` in categories `HolidayUsaFed`, `HolidayUsaBank`; no working-hours entity | `component/mr-mantle/entity/WorkEffortEntities.xml`, `component/mr-mantle/data/HolidayUsaData.xml` |
 
 **Missing for Customer Service:** SLA policy and targets; first-response and resolution
@@ -993,7 +993,7 @@ return side: authorization expiration, assignee, notes, restock fee, disposition
 | `get#AvailableInventory`, `get#AvailableForOrder`, `get#AvailableInventoryMulti` (available to promise by product, facility or store); `check#AvailableInventory` on order items | Availability lookup | `component/mr-mantle/service/mantle/product/AssetServices.xml`, `component/mr-mantle/service/mantle/order/OrderServices.xml` |
 | `get#InventoryProjectedInfo` | Projected inventory from asset, order item and production documents in the search index; no screen uses it yet | `component/mr-mantle/service/mantle/product/InventoryReportServices.xml` |
 | `find#PartyCommunicationEvents`, `create#Message`, `reply#CommunicationEvent` | Party message history and replies | `component/mr-mantle/service/mantle/party/CommunicationServices.xml` |
-| `org.moqui.resource.WikiServices` (`get#UserWikiSpaces`, `get#UserSpaceWikiPageSimpleList`, `get#PublishedWikiPageText`, …) | Article lookup for case links | `base-component/framework/service/org/moqui/resource/WikiServices.xml` |
+| `org.moqui.resource.WikiServices` (`get#UserWikiSpaces`, `get#UserSpaceWikiPageSimpleList`, `get#PublishedWikiPageText`, …) | Article lookup for case links | `components/base/framework/service/org/moqui/resource/WikiServices.xml` |
 
 No service creates or appends a case from inbound email or chat; that is the Comms
 receive path (initial-design).

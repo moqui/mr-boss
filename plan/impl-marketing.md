@@ -101,8 +101,8 @@ service family (F3–F8, F31, F33). Marketing is built on what is there (as foun
 - mr-moqui: `plans/Remaining-Work.md` ("IronStone framework asks") and `plans/archive/Comms-Framework.md` §7.4 (C1 and C4-SMS
   as built).
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`, PASS paths under `runtime/component/mr-pass/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`, PASS paths under `runtime/components/addon/mr-pass/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -113,12 +113,12 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/moqui-mail`, `runtime/base-component`): a subject and a bounce address given to one
+  - `mr-moqui` (`crates/moqui-mail`, `runtime/components/base`): a subject and a bounce address given to one
     `send#EmailTemplate` call (F17) and the ARF reader beside the DSN reader (F18). Nothing else in code: the
     framework's mail, SMS, forms, wiki, web-script and transfer pieces are used as built, and no framework file names
     a Mantle service. `docs/security/Attack-Surface.md` gains PASS Marketing's operations and the tracking routes,
     and `plans/Remaining-Work.md` Marketing's row.
-  - `runtime/component/mr-mantle`: `mantle.marketing` (CampaignServices, AudienceServices, SegmentServices,
+  - `runtime/components/addon/mr-mantle`: `mantle.marketing` (CampaignServices, AudienceServices, SegmentServices,
     CampaignSendServices, AutomationServices, MarketingContentServices, TrackingServices, MarketingFormServices,
     MarketingReportServices, MarketingWorkspaceServices, MarketingPortalServices) and its entities;
     `mantle.work.EventRegistrationServices`; Comms' additions to `mantle.party.MessageServices` (templates, sending
@@ -126,15 +126,15 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     organization scope of `ContactListServices` and `ConsentServices`; the `marketing` PASS app in the registry and
     the authority's operations; the storeless mount of the site page services; the seed rows of the Mantle services'
     registrations (import target, jobs, topics, recovery, delivery sources).
-  - `runtime/component/mr-boss`: the Marketing app, `ironstone.marketing.ContextServices`, Marketing's context on
+  - `runtime/components/addon/mr-boss`: the Marketing app, `ironstone.marketing.ContextServices`, Marketing's context on
     the shared screens it mounts, `Shared/CampaignDelivery`, `Shared/MessageTemplates`, `MessageTemplateDetail`,
     `SendingProfiles` and `Suppressions`, the bulk action on Sales' Leads and Accounts, Marketing's rows in Admin's
     and Insights' registries, and its `report/` and `skill/` files.
-  - `runtime/component/mr-pass`: the Marketing app (`screen/Marketing.xml` and its pages), its operations in the
+  - `runtime/components/addon/mr-pass`: the Marketing app (`screen/Marketing.xml` and its pages), its operations in the
     facade's schema, Marketing's context on Account's Email preferences page, the tracking redirect and pixel web
     scripts (P15, F55), its mount in the test runtime, and `docs/Deployment.md`'s Marketing section.
 
-  `runtime/component/mr-marble` is read only, for the baseline ProductStore/Promotion, Survey, Wiki and Calendar
+  `runtime/components/addon/mr-marble` is read only, for the baseline ProductStore/Promotion, Survey, Wiki and Calendar
   forms that ss-inventory maps.
 - **Scope.**
   - Every `parity` and `new` row of design §2, BOSS and PASS, and the §19 needs they use, as changed by §6. Design
@@ -354,7 +354,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     - cargo tests for the touched crates, with goldens reviewed;
     - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle (`test/marketing/`,
       `test/party/`, `test/work/`), BOSS's in mr-boss (`test/Marketing/`), PASS's in mr-pass (`test/Marketing/`), the
-      framework's in `runtime/base-component/framework/test`;
+      framework's in `runtime/components/base/framework/test`;
     - `./moq test-apps`, and `./moq test-framework` for a phase that touches `crates/` or a base component, each
       suite within its budget, raised by the phase's measured share up to the plan's estimate for the suite, which
       the user approved (§4), a raise beyond the estimate needing the user's agreement again, and no spec over 15

@@ -81,8 +81,8 @@ found in the code, §6):
   paths.
 - mr-moqui: `plans/Remaining-Work.md` ("IronStone framework asks": the report engine row) and `docs/Build-Test.md`.
 
-Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
-`runtime/component/mr-mantle/`.
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/components/base/`), Mantle paths under
+`runtime/components/addon/mr-mantle/`.
 
 Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
 [4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
@@ -93,19 +93,19 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ## 1. Scope and order
 
 - **Repositories.** Each is its own git repo:
-  - `mr-moqui` (`crates/moqui-report`, `crates/moqui-tui`, `runtime/base-component`): the Dashboards screens mountable
+  - `mr-moqui` (`crates/moqui-report`, `crates/moqui-tui`, `runtime/components/base`): the Dashboards screens mountable
     under an app root (INS-04), dataset admission and its row-filter parameters (INS-03), owner-equivalent delivery
     with occurrences and recipient deliveries and the ownership services (INS-06), owner-equivalent business alerts
     (INS-07), drill resolution and the business annotation source; since Nov 11, 2026 also the generic screens
     themselves, in Dashboards (§9);
-  - `runtime/component/mr-mantle`: the organization row filter, the row filters of its shipped datasets, an inventory
+  - `runtime/components/addon/mr-mantle`: the organization row filter, the row filters of its shipped datasets, an inventory
     dataset, and the post-commit annotations of its owners' events;
-  - `runtime/component/mr-boss`: the Insights app, `ironstone.insights` (ContextServices, RegistryServices,
+  - `runtime/components/addon/mr-boss`: the Insights app, `ironstone.insights` (ContextServices, RegistryServices,
     FlowMapServices), the catalog, metric, attention and flow-target registrations of the built apps, the Insights
     context on the shared record screens, Insights' `report/` and `skill/` files. Its wrappers of the framework's
     screens and what its services keep are in §9.
 
-  `runtime/component/mr-marble` is read only, for the SimpleReport and MyAccount scheduled-find forms ss-inventory maps.
+  `runtime/components/addon/mr-marble` is read only, for the SimpleReport and MyAccount scheduled-find forms ss-inventory maps.
 - **Scope.**
   - Every `parity` and `new` row of design §2 and the §15 needs they use, as changed by §6, with the first release's
     delivery of design §7.1 and §8.1 (personal, and owner-equivalent groups as separate messages), except what waits
@@ -3404,12 +3404,12 @@ Designed, not in this build:
 ## 9. Screens moved to the framework (Nov 11, 2026)
 
 After both apps were built, the screens with no business model in them moved from Insights into the framework's
-Dashboards app (mr-moqui `runtime/base-component/tools/screen/Dashboards/`), and Insights shows them under its root. The
+Dashboards app (mr-moqui `runtime/components/base/tools/screen/Dashboards/`), and Insights shows them under its root. The
 plan, the record of each phase with its findings, and the tables of where each deleted service's work went are mr-moqui
-[plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md) (Track I, I0 to I4; A6 for the registries); how a
+[plans/archive/Admin-Screens-Down.md](../../../../../plans/archive/Admin-Screens-Down.md) (Track I, I0 to I4; A6 for the registries); how a
 screen is shown under another root is in mr-moqui
-[docs/tools/Monitoring.md](../../../../docs/tools/Monitoring.md#mounting-the-report-screens) and the
-[tools README](../../../../runtime/base-component/tools/README.md). [design-insights.md](design-insights.md) §4.2 has
+[docs/tools/Monitoring.md](../../../../../docs/tools/Monitoring.md#mounting-the-report-screens) and the
+[tools README](../../../../../runtime/components/base/tools/README.md). [design-insights.md](design-insights.md) §4.2 has
 the screens as they are now. The phase entries of §3 are left as they were written; this section is for a reader who
 follows one and looks for what it names.
 
