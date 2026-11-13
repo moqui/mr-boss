@@ -5603,4 +5603,24 @@ along with this software (see the LICENSE.md file). If not, see
         the Payroll area is the payroll groups', the approver's included -->
     <moqui.security.user.NotificationTopic topic="PeoplePayrollConfigApproval"
             linkTemplate="/qapps/People/Payroll/${payrollStructureId ? 'PayStructureDetail?payrollStructureId=' + payrollStructureId : 'PayComponentDetail?payrollComponentId=' + payrollComponentId}"/>
+    <!-- impl-people P24 (design-people §6 HoursForPay, §8 PayAdjustments, §12 ApprovalPolicies): Hours for pay under Time & leave,
+        payroll's (the payroll operator and approver) and the managers' (their reports' hours, read only; Mantle's
+        PayrollInputServices get#Reconciliation answers a manager their reports alone and never an amount), denied to the root user
+        group and to self-service as the working schedules are; Pay adjustments is under Payroll's grant (BOSS_PPL_PAYROLL). A pay
+        adjustment to approve (Mantle's PeoplePayAdjustmentApproval) opens Pay adjustments' To decide, where its approver (a payroll
+        approver who neither made nor changed it) decides. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_HOURS_FOR_PAY" description="People hours for pay">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/HoursForPay.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_PAYROLL" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_APPROVER" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeoplePayAdjustmentApproval" linkTemplate="/qapps/People/Payroll/PayAdjustments?show=decide"/>
 </entity-facade-xml>

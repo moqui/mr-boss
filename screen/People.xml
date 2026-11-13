@@ -202,6 +202,9 @@ along with this software (see the LICENSE.md file). If not, see
             step given, returned or a review released (PeopleReviewUpdate: a sentence, never a rating, an answer or a note) -->
         <notification-topic topic="PeopleReviewStep"/>
         <notification-topic topic="PeopleReviewUpdate"/>
+        <!-- P24: a pay adjustment to approve (PeoplePayAdjustmentApproval; PayrollInputServices approve#Adjustment and
+            refuse#Adjustment), a title naming no person and no amount -->
+        <notification-topic topic="PeoplePayAdjustmentApproval"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

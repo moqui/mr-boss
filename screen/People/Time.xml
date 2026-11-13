@@ -39,7 +39,10 @@ along with this software (see the LICENSE.md file). If not, see
     quick create, the user's own clock) and HR's Time import out of the menu (BOSS_PPL_TIME_IMPORT). P14 adds the Shift roster (menu
     12, with its terminal twin ShiftRosterTui and its print ShiftRosterPrint out of the menu), HR's and the managers' with the working
     schedules (BOSS_PPL_SCHEDULES), whose services (ScheduleServices get#Roster, store#Shift and publish#Shifts) let a manager roster
-    their reports and an HR editor their employers' employees. Hours for pay joins with P24. -->
+    their reports and an HR editor their employers' employees. P24 adds Hours for pay (menu 13), payroll's and the managers'
+    (BOSS_PPL_HOURS_FOR_PAY: denied to the root user group and to self-service), whose services (PayrollInputServices
+    get#Reconciliation, prepare#Inputs and store#Adjustment) let payroll reconcile and prepare a pay group's period and a manager read
+    their reports' hours, never an amount. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time &amp; leave" default-menu-index="7" menu-image="sym_o_schedule" menu-image-type="icon">
     <subscreens default-item="Timesheets">

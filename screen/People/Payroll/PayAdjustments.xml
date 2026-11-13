@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Pay adjustments (design-people §8 PayAdjustments; style-guide §3.2 List; impl-people P24): the reasoned pay
+    inputs payroll makes, from mantle.humanres.PayrollInputServices.find#Adjustments: an amount of an earning or deduction component
+    (one-off, or recurring one dated input a prepared period), a recovery of an employee advance, the hours of a day resolved on
+    Hours for pay, a correction of a finalized input; each with its employee, component, date and period, amount or quantity,
+    source, state and approval. Adjustments (find by employer, state, To decide, name); Adjustment (New adjustment, the one
+    primary, a payroll editor's: store#Adjustment); a waiting adjustment's Edit and any live one's Withdraw (with a reason), a
+    finalized one's Correct (a linked difference); ApproveAdjustment (Approve and Refuse on a row, Approve selected on To decide:
+    decide#Adjustment, a payroll approver's who neither made nor changed it). Under Payroll, payroll's area (BOSS_PPL_PAYROLL);
+    amounts only to a payroll reader (PAYROLL_VIEW), which Mantle checks with every read and change. Approving changes no money. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay adjustments" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="show"/>
+    <parameter name="term"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new adjustment, waiting for a payroll approver -->
+    <transition name="storeAdjustment">
+        <actions>
+            <service-call name="mantle.humanres.PayrollInputServices.store#Adjustment" out-map="stored"
+                    in-map="{partyRelationshipId:(partyRelationshipId || null), inputTypeEnumId:(inputTypeEnumId || null),
+                        payrollComponentId:(payrollComponentId || null), employeeAdvanceId:(inputTypeEnumId == 'PitAdvanceRecovery' ? employeeAdvanceId || null : null),
+                        inputDate:(inputDate || null),
+                        amount:(correctionOfInputId ? (differenceOf == 'amount' ? difference || null : null) : amount || null),
+                        quantity:(correctionOfInputId ? (differenceOf == 'quantity' ? difference || null : null) : null), recurThruDate:(recurThruDate || null),
+                        correctionOfInputId:(correctionOfInputId || null), reason:(reason || null), evidence:(evidence || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${stored.inputCount > 1 ? stored.inputCount + ' adjustments made' : 'Adjustment made'}; it waits for a payroll approver</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <!-- a waiting adjustment changed, or a live one withdrawn, at its revision -->
+    <transition name="changeAdjustment">
+        <actions>
+            <service-call name="mantle.humanres.PayrollInputServices.store#Adjustment"
+                    in-map="{payrollInputId:payrollInputId, expectedRevision:(expectedRevision || null), void:(withdraw == 'true'),
+                        amount:(amount || null), quantity:(quantity || null), reason:(reason || null), evidence:(evidence || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${withdraw == 'true' ? 'Adjustment withdrawn' : 'Adjustment changed; it waits for approval again'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- an adjustment approved or refused (with a reason) by its approver -->
+    <transition name="decideAdjustment">
+        <actions>
+            <service-call name="mantle.humanres.PayrollInputServices.decide#Adjustment"
+                    in-map="{payrollInputId:payrollInputId, decision:decision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'refuse' ? 'Adjustment refused' : 'Adjustment approved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="show"/></default-response>
+        <error-response url="."><parameter name="show"/></error-response>
+    </transition>
+    <!-- the selected adjustments approved, each on its own -->
+    <transition name="approveSelected">
+        <actions>
+            <script><![CDATA[
+                const inputIds = Array.from(new Set(String(selectedIds || '').split(',').map(id => id.trim()).filter(id => id)))
+                let approved = 0
+                const refused = []
+                const decided = new Set()
+                for (const inputId of inputIds) {
+                    const input = ec.entity.find('mantle.humanres.payroll.PayrollInput').condition('payrollInputId', inputId).disableAuthz().one()
+                    const leadId = input?.seriesInputId || inputId
+                    if (decided.has(leadId)) continue
+                    decided.add(leadId)
+                    ec.message.pushErrors()
+                    try {
+                        ec.service.sync().name('mantle.humanres.PayrollInputServices.decide#Adjustment')
+                            .parameters({payrollInputId: leadId, decision: 'approve'}).requireNewTransaction(true).call()
+                        if (ec.message.hasError()) refused.push(ec.message.getErrorsString())
+                        else approved++
+                    } catch (error) {
+                        refused.push(String(error.message || error))
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                }
+                ec.message.addMessage(approved + (approved === 1 ? ' adjustment approved' : ' adjustments approved') +
+                    (refused.length ? '; not approved: ' + refused.join('; ') : ''), refused.length ? 'warning' : 'success')
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="show"/></default-response>
+        <error-response url="."><parameter name="show"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollInputServices.find#Adjustments" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), statusId:(statusId || null), show:(show || null),
+                    term:(term || null), pageIndex:(pageIndex || 0)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            adjustmentsFound = !!found?.adjustments
+            canEdit = !!found?.canEdit
+            showing = show || ''
+            stateColors = {PinProposed: 'primary', PinApproved: 'positive', PinRefused: 'negative', PinVoided: 'grey-8', PinFinalized: 'teal-8'}
+            adjustmentRows = Array.from(found?.adjustments || [])
+            adjustmentsCount = found?.adjustmentsCount || 0
+            adjustmentsPageIndex = found?.adjustmentsPageIndex || 0
+            adjustmentsPageSize = found?.adjustmentsPageSize || 20
+            adjustmentsPageMaxIndex = found?.adjustmentsPageMaxIndex || 0
+            adjustmentsPageRangeLow = found?.adjustmentsPageRangeLow || 0
+            adjustmentsPageRangeHigh = found?.adjustmentsPageRangeHigh || 0
+            findValues = {organizationPartyId: organizationPartyId || null, statusId: statusId || null, show: show || null, term: term || null}
+            hoursUrl = sharedLinks?.['Time/HoursForPay'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Pay adjustments" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewAdjustmentDialog" button-text="New adjustment" icon="sym_o_add" type="primary" width="720"
+                        title="New pay adjustment" condition="canEdit">
+                    <label type="p" text="An amount of an earning or a deduction for an employee, or the recovery of an advance they were paid, in their pay group's currency. It waits for a payroll approver who did not make it. A recurring one is one adjustment a pay period through its end."/>
+                    <form-single name="NewAdjustment" transition="storeAdjustment" map="{organizationPartyId:organizationPartyId, inputTypeEnumId:'PitAdjustment'}">
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="partyRelationshipId">
+                            <default-field title="Employee">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payEmployments'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="inputTypeEnumId">
+                            <default-field title="Kind">
+                                <drop-down>
+                                    <option key="PitAdjustment" text="An earning or a deduction"/>
+                                    <option key="PitAdvanceRecovery" text="Recover an advance"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="payrollComponentId">
+                            <default-field title="Pay component">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payComponents'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="employeeAdvanceId">
+                            <default-field title="Advance" tooltip="For a recovery: the employee's advance">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payAdvances'}">
+                                        <depends-on field="partyRelationshipId" parameter="choicePartyRelationshipId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="inputDate"><default-field title="Date" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                        <field name="amount"><default-field title="Amount"><text-line size="10" input-type="number"/></default-field></field>
+                        <field name="recurThruDate">
+                            <default-field title="Recurs through" tooltip="Empty for once; else one adjustment each pay period through this date">
+                                <date-time type="date"/></default-field>
+                        </field>
+                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                        <field name="evidence"><default-field title="Evidence" tooltip="What it rests on"><text-line size="50"/></default-field></field>
+                        <field name="submitButton"><default-field title="Make adjustment"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="organizationPartyId"/><field-ref name="partyRelationshipId"/></field-row>
+                            <field-row><field-ref name="inputTypeEnumId"/><field-ref name="payrollComponentId"/></field-row>
+                            <field-row><field-ref name="employeeAdvanceId"/><field-ref name="inputDate"/></field-row>
+                            <field-row><field-ref name="amount"/><field-ref name="recurThruDate"/></field-row>
+                            <field-ref name="reason"/>
+                            <field-ref name="evidence"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <link url="${hoursUrl}" url-type="plain" text="Hours for pay" icon="sym_o_more_time" link-type="anchor-button" condition="hoursUrl"/>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!adjustmentsFound">
+            <widgets>
+                <label text="Pay adjustments are open to payroll. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Adjustments" condition="adjustmentsFound">
+            <widgets>
+                <form-single name="FindAdjustments" transition="." map="findValues">
+                    <field name="show">
+                        <default-field title="Show">
+                            <drop-down allow-empty="true"><option key="decide" text="To decide"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="PinProposed" text="Waiting for approval"/>
+                                <option key="PinApproved" text="Approved"/>
+                                <option key="PinRefused" text="Refused"/>
+                                <option key="PinVoided" text="Voided"/>
+                                <option key="PinFinalized" text="Finalized"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="term"><default-field title="Name"><text-find size="16" hide-options="true"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="show"/><field-ref name="organizationPartyId"/><field-ref name="statusId"/>
+                            <field-ref name="term"/><field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="AdjustmentList" list="adjustmentRows" skip-form="true" paginate="true" condition="adjustmentRows.length">
+                            <row-selection id-field="payrollInputId" parameter="selectedIds" list-mode="true" condition="showing == 'decide'">
+                                <action><form-single name="ApproveSelected" transition="approveSelected">
+                                    <field name="show" from="'decide'"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve selected"><submit icon="sym_o_done_all"
+                                            confirmation="Approve the selected adjustments?"/></default-field></field>
+                                </form-single></action>
+                            </row-selection>
+                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                            <field name="typeText"><default-field title="Kind"><display text="${componentText ? typeText + ': ' + componentText : typeText}"/></default-field></field>
+                            <field name="inputDateText"><default-field title="Date"><display/></default-field></field>
+                            <field name="seriesText"><default-field title="Recurs"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display text="${amountText || quantityText}"/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="approvalText"><default-field title="Approval"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="decideAdjustment" link-type="hidden-form" btn-type="primary" text="Approve" icon="sym_o_task_alt"
+                                            parameter-map="{payrollInputId:leadInputId, decision:'approve', show:showing}" condition="canDecide"/>
+                                    <container-dialog id="RefuseAdjustment_${payrollInputId}" button-text="Refuse" icon="sym_o_block" width="480"
+                                            title="Refuse the adjustment of ${personName}" condition="canDecide">
+                                        <form-single name="RefuseAdjustment" transition="decideAdjustment"
+                                                map="{payrollInputId:leadInputId, decision:'refuse', show:showing}">
+                                            <field name="payrollInputId"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden/></default-field></field>
+                                            <field name="show"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <button-menu text="More" icon="more_horiz" condition="canChange || canWithdraw || canCorrect">
+                                        <container-dialog id="EditAdjustment_${payrollInputId}" button-text="Edit" icon="sym_o_edit" width="520"
+                                                title="Edit the adjustment of ${personName}" condition="canChange">
+                                            <form-single name="EditAdjustment" transition="changeAdjustment"
+                                                    map="{payrollInputId:payrollInputId, expectedRevision:revision, amount:amount, reason:reason, evidence:evidence}">
+                                                <field name="payrollInputId"><default-field><hidden/></default-field></field>
+                                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                <field name="amount"><conditional-field condition="amount != null" title="Amount"><text-line size="10" input-type="number"/></conditional-field>
+                                                    <default-field><ignored/></default-field></field>
+                                                <field name="quantity"><conditional-field condition="amount == null" title="Hours or pieces"><text-line size="8" input-type="number"/></conditional-field>
+                                                    <default-field><ignored/></default-field></field>
+                                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                <field name="evidence"><default-field title="Evidence"><text-line size="50"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Save and ask again"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="WithdrawAdjustment_${payrollInputId}" button-text="Withdraw" icon="sym_o_cancel" width="480"
+                                                title="Withdraw the adjustment of ${personName}" condition="canWithdraw">
+                                            <form-single name="WithdrawAdjustment" transition="changeAdjustment"
+                                                    map="{payrollInputId:payrollInputId, expectedRevision:revision, withdraw:'true'}">
+                                                <field name="payrollInputId"><default-field><hidden/></default-field></field>
+                                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                <field name="withdraw"><default-field><hidden/></default-field></field>
+                                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                <field name="submitButton">
+                                                    <default-field title="Withdraw"><submit type="danger" confirmation="Withdraw the adjustment of ${personName}${seriesText ? ' and the rest of its recurrence' : ''}?"/></default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="CorrectAdjustment_${payrollInputId}" button-text="Correct" icon="sym_o_difference" width="520"
+                                                title="Correct a finalized adjustment of ${personName}" condition="canCorrect">
+                                            <label type="p" text="A finalized input is never changed: the correction is a new adjustment of the difference, linked to it."/>
+                                            <form-single name="CorrectAdjustment" transition="storeAdjustment"
+                                                    map="{partyRelationshipId:partyRelationshipId, correctionOfInputId:payrollInputId, payrollComponentId:payrollComponentId,
+                                                        inputTypeEnumId:inputTypeEnumId, differenceOf:(amount != null ? 'amount' : 'quantity')}">
+                                                <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                <field name="correctionOfInputId"><default-field><hidden/></default-field></field>
+                                                <field name="payrollComponentId"><default-field><hidden/></default-field></field>
+                                                <field name="inputTypeEnumId"><default-field><hidden/></default-field></field>
+                                                <field name="inputDate"><default-field title="Date" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                <field name="differenceOf"><default-field><hidden/></default-field></field>
+                                                <field name="difference"><default-field title="Difference" tooltip="Negative to pay less"><text-line size="10" input-type="number"/></default-field></field>
+                                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Make correction"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </button-menu>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="typeText"/></column>
+                                <column><field-ref name="amountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!adjustmentRows.length"
+                                text="${showing == 'decide' ? 'No adjustment waits for your decision.' : 'No adjustment matches.' + (canEdit ? ' New adjustment pays an earning or a deduction once or each period.' : '')}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

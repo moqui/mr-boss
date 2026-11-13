@@ -59,6 +59,10 @@
 // parameters; a pay structure assigned by the payroll operator (a preview) and refused to the HR officer with the same parameters;
 // Services' employee's compensation missing to Retail's payroll; PayAssignments the payroll operator's (the HR officer refused the
 // screen); a pay change asked by the payroll operator and refused to the HR officer with the same parameters.
+// P24: a pay group's period prepared by the payroll operator (a preview) and refused to the HR officer with the same parameters;
+// an adjustment payroll's (refused for the permission to the HR officer, payroll past it with the same parameters); Services'
+// group missing to Retail's payroll; Hours for pay the payroll operator's and the manager's (the HR officer refused the screen),
+// Pay adjustments payroll's (the HR officer refused the screen).
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -1177,6 +1181,97 @@ feature(
                     payrollReadsServices: "RECORD_UNAVAILABLE",
                     hrAsksPayChange: "PERMISSION_DENIED",
                     payrollPreviewsPayChange: "accepted"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P24: preparing pay inputs and adjusting pay are payroll's: the HR officer refused with the same parameters, Services' group missing to Retail's payroll; Hours for pay payroll's and the managers', Pay adjustments payroll's",
+    {
+        when() {
+            const S = "mantle.humanres.PayrollInputServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            // a Retail group and a Services group with a period each, as data: configuration is P22's
+            const group = (payrollGroupId, organizationPartyId) =>
+                system(() => {
+                    call("create#mantle.humanres.payroll.PayrollGroup", {
+                        payrollGroupId,
+                        organizationPartyId,
+                        groupName: payrollGroupId,
+                        currencyUomId: "USD",
+                        timePeriodTypeId: "PayrollMonth",
+                        firstPeriodFromDate: "2026-02-01",
+                        periodsPerYear: 12,
+                        payDateOffsetDays: 0,
+                        prorationEnumId: "PprCalendarDays",
+                        timeBasisEnumId: "PtbTimesheets",
+                        payrollLocalizationId: "PlzDemonstration",
+                        liveEnabled: "N",
+                        fromDate: 0
+                    })
+                    const existing = ec.entity
+                        .find("mantle.party.time.TimePeriod")
+                        .condition({partyId: organizationPartyId, timePeriodTypeId: "PayrollMonth", fromDate: "2026-02-01"})
+                        .one()
+                    const timePeriodId = existing
+                        ? existing.timePeriodId
+                        : call("mantle.party.TimeServices.create#TimePeriod", {
+                              partyId: organizationPartyId,
+                              timePeriodTypeId: "PayrollMonth",
+                              fromDate: "2026-02-01",
+                              thruDate: "2026-02-28"
+                          }).timePeriodId
+                    call("create#mantle.humanres.payroll.PayrollGroupPeriod", {
+                        payrollGroupId,
+                        timePeriodId,
+                        payDate: "2026-02-28"
+                    })
+                    return {payrollGroupId, timePeriodId}
+                })
+            const retail = group("PPL_SPEC_PAL_G", ids.organizationId)
+            const services = group("PPL_SPEC_PAL_GS", ids.otherOrganizationId)
+            const preview = Object.assign({preview: true}, retail)
+            // the same adjustment for both: payroll passes the permission and is refused for the employment's missing pay group
+            const adjustment = {
+                partyRelationshipId: ids.employmentId,
+                payrollComponentId: "NO_SUCH_COMPONENT",
+                inputDate: "2026-02-10",
+                amount: "10",
+                reason: "Access spec"
+            }
+            const codes = {
+                payrollPrepares: as(users.payroll, S + "prepare#Inputs", preview),
+                hrPrepares: as(users.hr, S + "prepare#Inputs", preview),
+                payrollServices: as(users.payroll, S + "prepare#Inputs", Object.assign({preview: true}, services)),
+                payrollAdjusts: as(users.payroll, S + "store#Adjustment", adjustment),
+                hrAdjusts: as(users.hr, S + "store#Adjustment", adjustment),
+                managerReconciles: as(users.manager, S + "get#Reconciliation", retail),
+                hrReconciles: as(users.hr, S + "get#Reconciliation", retail)
+            }
+            const problems = []
+            for (const user of [users.payroll, users.manager]) {
+                const opened = screenRefusal(user, "Time/HoursForPay")
+                if (opened) problems.push(`${user}'s HoursForPay: ${opened}`)
+            }
+            for (const path of ["Time/HoursForPay", "Payroll/PayAdjustments"]) {
+                const refusedScreen = screenRefusal(users.hr, path)
+                if (!unauthorized(refusedScreen)) problems.push(`${users.hr} opens ${path}: ${refusedScreen || "opened"}`)
+            }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    payrollPrepares: "accepted",
+                    hrPrepares: "PERMISSION_DENIED",
+                    payrollServices: "RECORD_UNAVAILABLE",
+                    payrollAdjusts: "NO_PAY_GROUP",
+                    hrAdjusts: "PERMISSION_DENIED",
+                    managerReconciles: "accepted",
+                    hrReconciles: "PERMISSION_DENIED"
                 }
             problems.join("\n") == ""
         }

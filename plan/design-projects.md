@@ -1781,6 +1781,17 @@ under People; a line manager's missing list and My team take only the reports wh
 timesheet, which TimeSettings offers as a check box); the labor costing rows of Rates are those of the user's
 organizations and the shared ones.
 
+**As built for People's payroll (Nov 12, 2026; impl-people P24, F44, owner contract).** Time an employee's pay input
+consumed (`mantle.humanres.PayrollInputServices`, `PayrollInputSource`) is payroll's: a worker invoice
+(`mantle.account.InvoiceServices.create#TimeEntryInvoiceItems` with `RaprVendor`, and the approved-time billing's worker
+direction) refuses such an entry when it names it (`PAY_SOURCE_CONSUMED`) and leaves it out when it finds it by the other
+parameters, as an entry already on a worker invoice is; payroll refuses an entry on a worker invoice as a pay source. A week
+an entry of which a finalized pay input paid is not reopened (`get#TimesheetAccess` `payrollPaid`, `reopen#Timesheet`: "it
+stays approved"; TimesheetDetail says why), and its entries are neither changed nor removed (`PAY_FINALIZED`); reopening a
+week, or changing an entry's hours, rates, pieces, day, person or week, voids a pay input not finalized that consumed it, so
+payroll prepares it again (a payroll approval of what it read no longer stands). Customer billing (`TimeEntry.invoiceId`) is
+unaffected.
+
 ### MyTime
 
 - **Layout:** list as `.qvue`, the week of one person (me; a manager may open someone else's). A header: the week

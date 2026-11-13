@@ -6954,6 +6954,154 @@ Design §6 HoursForPay, §8 PayAdjustments, §8.1 (inputs); PE-09, PE-07 and PE-
   collision"): a period's approved weeks, leave and an approved bonus become inputs once; an unapproved week blocks
   its employee only; a worker invoice for a consumed entry is refused.
 
+**Built Nov 12 (P24).** mr-mantle 5044f4e7, mr-boss (this commit), branch `ppl/p24`, made on `ppl/p23` (P23's two commits, then in review): P24's
+pay groups' employments are P23's `PayrollAssignment`, which master did not have yet; a rebase onto master after P23 merges replays P24's
+commits alone.
+- Checked first (the code over the plan): F44 (TimeEntry `vendorHourRate`, `pieceCount` and `vendorInvoiceId`; `approve#` and
+  `reopen#Timesheet`, reopen already refused for an invoiced week), the worker-invoice writers (InvoiceServices
+  `create#TimeEntryInvoiceItems` with `RaprVendor`, reached from `create#ProjectInvoiceItems`, the project vendor invoice and
+  Accounting's approved-time billing, `ApprovedTimeBilling.js`, which names its entries), `store#TimeEntry` (an employee's vendor rates
+  PAYROLL_EDIT's, P10; the week's lock leaves rates changeable) and `delete#TimeEntry`; P10's rates and `get#CostingRate` (not a pay
+  rate; not read here); P11–P12's leave (a type's paid meaning is the policy's `isPaid`, F194; `Leave.js chargedDays` the hours a day
+  charges from the schedule, a standard 8-hour weekday without one; approved and cancellation-asked requests still approved); P13's
+  AttendanceDay (one an employment and day, `workedMinutes` the approved correction's else the punches', the flags and states; "what
+  counts as approved attendance for pay is P24's"); P15's claims (`reserve#ClaimSettlement`'s payroll route, a payroll editor's, while
+  the invoice is received; `advanceMoney`'s outstanding) and the deferred recovery by payroll deduction; P22's `PayrollGroup`
+  (`timeBasisEnumId`: timesheets, attendance or the working schedule; `workweekTimeZone`; periods through `PayrollGroupPeriod`, the
+  `TimePeriod` thru day inclusive); P23's `PayrollAssignment` (one primary per employment and date; its group); Approvals.js
+  (`PakPayrollConfig`'s default candidates, `decidePermissions`, `requiredPermissions` and `selfPartyIds`; every notice direct-only).
+- Mantle (`entity/PeoplePayrollEntities.xml`, appended block; `data/PeoplePayInputSetupData.xml`, new):
+  - `PayrollInput` (an employment's input for a group's period: its kind, `PayrollInputType`: worked hours, paid and unpaid leave,
+    pieces, an expense reimbursement, an adjustment or an advance recovery, each of time naming the formula input it supplies,
+    `workedHours`, `paidLeaveHours`, `unpaidLeaveHours`, `pieces`, `reimbursement`, as the enumeration's code; the day; a quantity with
+    its unit, TF_hr or OTH_ea, or an amount with its currency; the source's own rate as evidence; the `PayrollInput` status proposed,
+    approved, refused, voided or finalized, with its flow; the entitlement key, unique while live, `activeEntitlementKey`; an
+    adjustment's reason, evidence, series and the finalized input it corrects; who made and changed it) and `PayrollInputSource` (each
+    source record consumed: a time entry's hours or pieces, an attendance day, a leave request's day, a claim, the advance a recovery
+    takes; its part, its fingerprint when prepared, its key, unique while live, `activeSourceKey`). `PakPayAdjustment` and the
+    `PeoplePayAdjustmentApproval` topic (approve and refuse services, a title naming "a pay adjustment", the employer and the step).
+  - `mantle.humanres.PayrollInputServices` over a new module `PayInputs.js`: `get#Reconciliation` (a payroll reader's of the group's
+    employer, or a manager's for their live reports: per employment the hours scheduled, present, submitted, approved and payable by the
+    basis, leave paid and unpaid, pieces, a claim count, the other stream's difference beyond a quarter hour, what preparing would make or
+    void, the state and the problems and notes; an employment's days, timesheets, attendance to resolve, leave and inputs; no amount);
+    `prepare#Inputs` (preview a payroll reader's, preparing a payroll editor's; each employment of the group's period, or some, in its own
+    transaction under its lock: the worked day from the basis's stream alone, an entry's pieces on any basis, each working day of approved
+    leave, an approved claim reserved for payroll in the group's currency; an input kept when its sources are as they were, voided and made
+    again when they changed or no longer pay, a finalized one noted; a cutoff leaves an entitlement not yet prepared whose sources changed
+    after it; `WEEK_NOT_APPROVED` (timesheet basis), `ATTENDANCE_UNRESOLVED` (attendance basis), `WORKER_INVOICED`, `EMPLOYMENT_AMBIGUOUS`,
+    `CLAIM_CONFLICT` and `SOURCE_CONSUMED` block that employment alone; `GROUP_ENDED`, `PERIOD_UNAVAILABLE`), `store#Adjustment` (an earning
+    or deduction amount of a component with a published term on the date in the group's currency, recurring one input a prepared period
+    through its end, at most 24; an advance's recovery through a deduction, never past the outstanding less the live recoveries; a day's
+    hours or pieces payroll resolves, a worked day's entitlement; a correction of a finalized input, a negative difference allowed; the date's
+    prepared period of the primary group, `NO_PAY_GROUP`, `PERIOD_NOT_PREPARED`, `ENTITLEMENT_PAID`, `AMOUNT_OVER_OUTSTANDING`,
+    `KIND_INVALID`, `CURRENCY_MISMATCH`, `RECURRENCE_INVALID`, `CORRECTION_INVALID`; a waiting one changed at its revision and asked for again,
+    a live one withdrawn with a reason; an operation key), `find#Adjustments` (a payroll reader's, To decide, the series' place, the approval,
+    what the caller may do), `decide#Adjustment` and the topic's `approve#Adjustment` and `refuse#Adjustment` (record#Decision: the last
+    approval approves the series, a refusal refuses it and frees the entitlement), and the source guards `check#SourceUse` and
+    `release#Sources` (`PAY_FINALIZED` for a finalized input's source; an input not finalized voided). Approvals.js: the kind
+    `PakPayAdjustment` (the employer's payroll approvers by default, PAYROLL_APPROVE with PAYROLL_VIEW to decide, never who made or changed
+    it, nor the person; bound to every input of the series; the notice names no person and no amount) and the basis text
+    `defaultPayrollApprover`. Leave.js exports `chargedDays`, Expense.js `advanceMoney`.
+  - Owner contracts (design-projects §8 "As built for People's payroll"): InvoiceServices `create#TimeEntryInvoiceItems` (RaprVendor) refuses
+    a consumed entry it is named (`PAY_SOURCE_CONSUMED`) and leaves out one it finds, and ApprovedTimeBilling's worker direction leaves them
+    out; TimesheetServices `get#TimesheetAccess` answers `payrollPaid` (an entry a finalized input paid: no reopen) and `get#PartyWeek`
+    passes it, `reopen#Timesheet` refuses it ("Payroll has paid this week") and voids the inputs not finalized of a reopened week;
+    TimeServices `store#TimeEntry` refuses a finalized input's entry (`PAY_FINALIZED`) and voids an input not finalized when the entry's
+    hours, rates, pieces, day, person or week change, `delete#TimeEntry` the same; ExpenseServices' payroll reservation released frees the
+    claim's input (Expense.js).
+- BOSS:
+  - `People/Time/HoursForPay` (menu 13; `BOSS_PPL_HOURS_FOR_PAY`: ALWAYS the payroll operator, the payroll approver and the managers, DENY
+    the root user group and self-service): the group and period chosen, the state counts, Reconciliation (phone columns, the state chip
+    with its tui text), an employment opened (its days, timesheets linked to TimesheetDetail, leave linked to LeaveRequestDetail, Resolve
+    attendance, its inputs), Prepare inputs (the one primary, payroll's, previewed first) and Resolve a day (payroll's).
+  - `People/Payroll/PayAdjustments` (menu 4, Payroll's grant): FindAdjustments, AdjustmentList (the kind and component, date, recurrence,
+    amount, source, reason, state chip, approval; Approve and Refuse on a row, Approve selected on To decide; More: Edit, Withdraw,
+    Correct), New adjustment (the one primary, payroll's).
+  - TimesheetDetail (Projects' screen, owner contract): "Paid by payroll: this week stays approved" where a finalized input paid it.
+  - People.js: `linkPaths` `Time/HoursForPay` and `Payroll/PayAdjustments`; the choices `hoursGroups`, `payPeriods` and `payAdvances`
+    (`get#Choices` takes `payrollGroupId` and `partyRelationshipId`, PeopleParts' choices passes `choicePayrollGroupId` and
+    `choicePartyRelationshipId`); `decisionUrl` for `PakPayAdjustment`. The topic on People's root and in Approvals' list, its link in
+    BossSetupData (Pay adjustments' To decide).
+  - Pay stays in its lane: the reconciliation carries no amount (a manager reads it), amounts only in Pay adjustments (PAYROLL_VIEW), the
+    notice names neither person nor amount, nothing enters the shell context, palette, Chatter or a dataset.
+- Specs: Mantle `test/humanres/PayInputs` (5 features, 1.6 s release feature time: preparing twice makes each input once, the preview
+  writing nothing, an unapproved week and a worker-invoiced entry blocking their employees alone, HR, a payroll reader and another
+  employer's payroll refused, paid and unpaid leave, pieces and a payroll claim, the reconciliation with no amount and the manager's
+  report alone; the attendance basis blocking an unresolved day, a resolution approved then paying it, the timesheet stream not consumed,
+  a second payment of a day `ENTITLEMENT_PAID`; a worker invoice naming a consumed entry `PAY_SOURCE_CONSUMED` and leaving out those it
+  finds; a rate change voiding the day's input and preparing it again, a finalized input refusing the change, the removal and the week's
+  reopening; an adjustment recurring two periods, one notice with no person and no amount, its maker `SELF_APPROVAL`, HR refused, approved,
+  a refusal needing its reason and freeing its entitlement, a recovery past the outstanding and through an earning refused, another
+  employer's payroll and an unprepared period refused). BOSS `test/People/PeoplePayInputs` (2 features, 0.6 s: HoursForPay's one html
+  render as the payroll operator with Ines's employment opened after her period was prepared; PayAdjustments' one html render as the payroll
+  approver on To decide; the three choices, each with a selected value off the page, the manager's groups and none for HR);
+  `PeopleAccessLater` gains the P24 case (0.43 s: preparing payroll's and HR refused with the same parameters, Services' group missing to
+  Retail's payroll, an adjustment refused to HR for the permission and to payroll for the missing pay group with the same parameters, the
+  manager's reconciliation, HoursForPay the payroll operator's and the manager's and both screens refused to HR); PeopleSpecLib's
+  `managerTimeMenu` (Hours for pay) and `payrollGroupMenu` (Pay adjustments). Acceptance, written and not run:
+  `acceptance/People/PeoplePayInputsUsable` (3 features, through the screens' transitions: March's approved week and leave of Tomas
+  prepared once, Rafael's submitted week blocking him alone; a bonus made on Pay adjustments approved by the payroll approver from To
+  decide, preparing again making nothing; a worker invoice for Tomas's paid entry refused and his week, once finalized, not reopened, with
+  TimesheetDetail saying why).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): Mantle PayInputs 5 of 5 (1.6 s), and ExpenseClaims,
+  AccountingProjectCost, AccountingReceivables, ProcessChecks, ProductionShopFloor, TimeImports, WorkManualTimeBilling,
+  WorkManualTimeRates, WorkPlanToCashBasicFlow, WorkProjectBilling, WorkProjectMilestones, WorkProjectReports, WorkProjectServices,
+  WorkTimeEntries, WorkTimesheets, PayAssignments, PayConfiguration, PeopleApprovals, LeaveRequests, PayrollServices, PayrollAdjustments
+  and HumanResServices with their dependencies, 225 of 225 (mr-mantle 38.2 s of features); BOSS PeoplePayInputs, PeopleAccessLater and
+  PeopleAccess 32 of 32, and PeopleTime, PeoplePayAssignments, PeoplePayConfiguration, PeopleApprovals, PeopleSelfService, PeopleAttendance,
+  PeopleExpenses, Billing, TimeEntries, ProjectsAccess, AccountingAccess, TodayPanel, Notifications and AdminRegistries with their
+  dependencies, 113 of 113 (mr-boss 38.3 s). A one-off qvt, tui and html render of HoursForPay (the payroll operator with an employment
+  opened, the manager, none chosen; HR refused) and PayAdjustments (the payroll operator; the approver on To decide) and a post to each new
+  transition (resolveInput, prepareInputs, storeAdjustment, changeAdjustment's edit and withdraw, approveSelected), not kept, found nothing
+  to fix. `moqui lint --screens` (release): 137 flagged sites as on master, none in the changed screens, no TUI-text finding in them.
+  Prettier clean on the new JavaScript and the P24 hunks (People.js keeps two hunks of other phases Prettier would rewrite). Not run:
+  test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's People Added rows (the eight PayrollInputServices); ss-inventory notes no baseline form maps to HoursForPay
+  or PayAdjustments.
+- Design edits: design-people (header; §1.2 the two menus; §6 HoursForPay and §8 PayAdjustments as built; §12's topic row);
+  design-projects §8 "As built for People's payroll" (the owner contract).
+- Findings (provisional, numbered by the lead):
+  - The branch is made on `ppl/p23` (still in review): P24's group membership is P23's `PayrollAssignment`. The reviewer rebases onto master
+    once P23 merges; P23's review changes to `PayrollAssignment`, `PayrollConfiguration.js` or `Approvals.js` may need P24 to follow.
+  - An input's day is a calendar day in the group's workweek zone, else the session's (a time entry counts on the day it starts); P13's
+    attendance day is its own (the schedule's zone). A group with no workweek zone prepared by users in different zones could place an
+    entry near midnight on another day; P29's settings or the group's required zone would settle it.
+  - "Approved attendance for pay" is decided here: a corrected day, or a past day recorded with no flag; today's day is not final yet.
+  - An unapproved week, unresolved attendance and the other blocks stop the whole employment (no input of it is prepared), not only the
+    affected days; payroll's Resolve a day unblocks a day. Leave waiting for approval is only noted.
+  - Pieces are paid from approved weeks whatever the group's basis, so an attendance-basis employee with pieces needs approved timesheets
+    for them (their hours are not paid from the timesheet).
+  - A claim reserved for payroll goes into the first period prepared after its reservation, whichever period that is; P27's payroll route
+    may want it tied to a run or a period.
+  - Leave and attendance changes after preparation (a cancelled leave, an attendance correction approved) are seen as stale at the next
+    reconciliation or preparation, not voided at once as a reopened week or a rate change is; and only time entries, weeks and claims refuse
+    a change once finalized (`PAY_FINALIZED`): a leave cancellation or an attendance correction after finalization is not refused yet (P26's
+    corrections and P27's finalization).
+  - `TimeServices.resetAndGet#TimeEntryRates` (Projects' bulk rate reset) changes the rates of entries with no invoice, payroll-consumed ones
+    included: an input not finalized is seen as stale at the next preparation, a finalized one is not protected there yet.
+  - A recurring adjustment's later inputs are dated at each period's first day, and the periods must be prepared through the recurrence
+    end (`PERIOD_NOT_PREPARED`); a recurrence beyond the prepared periods is not kept as a rule.
+  - Adjustment quantities: an amount for a component, a quantity only for a resolved day of time; a component adjustment by quantity (a
+    rate times a count) is not built.
+  - The worked-hours input carries the source's rate only when the day's entries share one; P25's calculation splits by rate from the
+    sources, or reads RateAmount.
+  - Garnishments and mandated deductions (design §8 PayAdjustments) are not built: they wait on a localization.
+  - A voided adjustment keeps its approval's last state in the list (Approved, for one withdrawn after approval).
+- For the lead:
+  - budget share: mr-mantle PayInputs about 1.6 s release; mr-boss PeoplePayInputs about 0.6 s and PeopleAccessLater's P24 case 0.43 s,
+    release; the client walk unchanged;
+  - merge hot spots: mr-mantle `entity/PeoplePayrollEntities.xml` (appended after P23's block), `Approvals.js` (`PAY_INPUT`, the kind after
+    `PakPayrollConfig`, `basisTexts`), `Leave.js` and `Expense.js` (their exports; Expense.js's release branch), `TimesheetServices.xml`
+    (`get#TimesheetAccess`, `reopen#Timesheet`, `get#PartyWeek`'s access), `TimeServices.xml` (`store#` and `delete#TimeEntry`),
+    `InvoiceServices.xml` (`create#TimeEntryInvoiceItems`), `ApprovedTimeBilling.js`; mr-boss `service/ironstone/people/People.js`
+    (`linkPaths`' end after P23's, the choices before `payrollLocalizations`, `decisionUrl`), `ContextServices.xml` (`get#Choices`),
+    `template/PeopleParts.xml`, `screen/People.xml` (the topic), `Approvals.xml`, `Time.xml` and `Payroll.xml` (comments),
+    `screen/Projects/Time/TimesheetDetail.xml`, `data/BossSetupData.xml` (appended block), PeopleSpecLib (`managerTimeMenu`,
+    `payrollGroupMenu`), PeopleAccessLater (header, the appended feature), design-people (header, §1.2, §6, §8, §12), design-projects §8,
+    usl-inventory and ss-inventory, this note;
+  - P23 first: this branch carries P23's commits; P23's review lands before P24 merges;
+  - nothing waits on the user's call; the findings above are for P25–P27 and P29.
+
 ### P25 — Pay runs
 
 Design §8.2 (steps 1–5), PayRuns, PayRunDetail (Population, Inputs, CalculateAndReview, Approval); PE-10.

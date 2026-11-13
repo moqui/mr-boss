@@ -113,7 +113,9 @@ along with this software (see the LICENSE.md file). If not, see
             name; never an amount) and payrollLocalizations (P22: the registered localizations); payEmployments, payStructures,
             payElections and benefitTypes (P23: a payroll reader's: organizationPartyId's current employments by the person's name,
             its structures published and not ended, the elective lines of payrollStructureId, and the benefit types; never an
-            amount). Refuses a user without People and an unknown choice.</description>
+            amount); hoursGroups, payPeriods and payAdvances (P24: the pay groups a payroll reader's employers have, or the groups a
+            manager's reports are paid in now; payrollGroupId's prepared periods, newest first; partyRelationshipId's approved
+            employee advances for a payroll reader, never an amount). Refuses a user without People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
@@ -123,6 +125,8 @@ along with this software (see the LICENSE.md file). If not, see
                 are offered</description></parameter>
             <parameter name="departmentPartyId"><description>positions: the department whose seats are offered</description></parameter>
             <parameter name="payrollStructureId"><description>payElections: the structure whose elective lines are offered (P23)</description></parameter>
+            <parameter name="payrollGroupId"><description>payPeriods: the pay group whose periods are offered (P24)</description></parameter>
+            <parameter name="partyRelationshipId"><description>payAdvances: the employment whose advances are offered (P24)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
