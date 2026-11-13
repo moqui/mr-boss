@@ -23,6 +23,10 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the cost and margin columns for a holder of PRODUCT_COST_VIEW or report read only (design §8 SalesAnalysis); this ported
             screen reads the summary view itself until P19 rebuilds it over the guarded run#SalesAnalysis (impl-sales P1, F2) -->
         <set field="costShown" from="!!sales.capabilities.reportCosts"/>
+        <!-- nor sorted by cost for one who may not see it (its order would rank the hidden costs); the find skips totalCost's
+            search parameters for everyone (skip-fields), as no header filters on it and a range on it would test hidden costs -->
+        <if condition="!costShown &amp;&amp; orderByField &amp;&amp; String(orderByField).includes('totalCost')">
+            <set field="orderByField" from="null"/></if>
 
         <set field="orderStatusList" from="['OrderPlaced', 'OrderProcessing', 'OrderApproved', 'OrderSent', 'OrderCompleted', 'OrderHold']"/>
         <entity-find entity-name="moqui.basic.EnumGroupMember" list="productItemTypeEgms" cache="true">
@@ -33,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
         <form-list name="SalesAnalysis" list="summaryList" skip-form="true" header-dialog="true" select-columns="true"
                 saved-finds="true" show-csv-button="true" show-xlsx-button="true" show-all-button="true">
             <entity-find entity-name="mantle.order.OrderItemSalesSummary" list="summaryList" use-clone="true">
-                <search-form-inputs default-order-by="vendorPartyId,pseudoId">
+                <search-form-inputs default-order-by="vendorPartyId,pseudoId" skip-fields="totalCost">
                     <default-parameters placedDate_poffset="0" placedDate_period="month"/></search-form-inputs>
                 <econdition field-name="vendorRoleTypeId" value="OrgInternal"/>
                 <econdition field-name="orderStatusId" operator="in" from="orderStatusList"/>

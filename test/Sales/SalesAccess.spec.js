@@ -88,6 +88,19 @@ feature("a Sales user gets their context; another root, another app's user, a cl
             !both.organizationPartyIds.includes(ids.otherOrganizationId)
         )
             problems.push(`the manager of both's organizations: ${both.organizationPartyIds}`)
+        if (both.allOrganizations) problems.push("the manager of both reads every organization")
+        // the administrator (SALES_ALL_ORGANIZATIONS, the user's call of Nov 13): every internal organization, one they do not
+        // work for (Accounting's demo company) among them
+        const admin = asUser(users.admin, () => invoke(context, {}))
+        if (!admin.allOrganizations || !admin.organizationPartyIds.includes("BOSS_ACCT_ORG"))
+            problems.push(`the administrator's organizations: ${admin.allOrganizations} ${admin.organizationPartyIds}`)
+        const adminRecord = asUser(users.admin, () =>
+            refusal(checkRecord, {recordType: "organization", recordId: "BOSS_ACCT_ORG"})
+        )
+        if (adminRecord) problems.push(`the administrator is refused another organization: ${adminRecord}`)
+        const repRecord = asUser(users.rep, () => refusal(checkRecord, {recordType: "organization", recordId: "BOSS_ACCT_ORG"}))
+        if (!repRecord.includes("RECORD_UNAVAILABLE"))
+            problems.push(`the representative reads another organization: ${repRecord || "given"}`)
         const otherRoot = asUser(users.rep, () => refusal(context, {appRoot: "Warehouse"}))
         if (!otherRoot.includes("SALES_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
         for (const user of [users.otherApp, users.client, users.pass]) {
@@ -152,6 +165,8 @@ const capabilityNames = [
     "import",
     "configure",
     "ownerChange",
+    // every organization's scope (SALES_ALL_ORGANIZATIONS, the administrator's by the user's call; no read by itself)
+    "allOrganizations",
     // the reads, from view permissions only
     "anyRead",
     "teamRead",

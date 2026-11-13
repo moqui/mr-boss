@@ -574,6 +574,59 @@ built.
   - the user's calls: the administrator's grants and whether Sales gets an all-organizations permission (the first two
     findings); built meanwhile as above. impl-accounting §5's Sales row is answered by this phase and can be closed there.
 
+**Review Nov 13 (P1).** A fresh review of `sal/p1` (mr-mantle 1d7e2093, mr-boss 469cda25) against P1, §2, §4 and design §1.1,
+§1.2, §3 and §8.
+- Checked and sound: the twenty `SALES_*` permissions each granted to `ADMIN`; the X12 rows (`SOPP`, `SFC`, `AGR` in both sets) on the
+  pattern of their sets' other organization rows, Agreement's demo and service-created rows all carrying `organizationPartyId`
+  (Purchasing's, Customer Service's, the price agreements), `AgreementAndTerm` aliasing it, no PASS root under `MANTLE_USER_ORG`;
+  `SalesOpportunity.organizationPartyId` audited with its relationship; SalesAccess.js (capabilities from permissions only through
+  `access.has`, so a Projects client holds none; an edit alone reads nothing; the own organizations as Maintenance's; refusals by
+  reason code; `reportOrganizations` `_NA_` for an empty scope) as the module P3 and P4 extend; SalesAnalysis.js's new reader branch
+  (after the store-scoped one, so a Commerce reader naming stores is answered as before, and `ACCOUNTING_VIEW` unchanged; costs
+  withheld on the four summaries, every cost field: total, percent, the invoice summary's moving average); Sales.js (root grant read
+  from the user's own rows, a root other than Sales refused, Reports needing its grant and `reportRead`, `reportCosts` borrowed,
+  record and choice refusals one answer); the root's record-panel restriction (no host yet); the fifteen client deny rows (all name
+  `sales`, the longest 244, the read verbs `get`, `check` and `search` of ContextServices outside them); the groups, the area deny,
+  the grants without the four of F43, `SALES_OWNER_CHANGE` to the identity group alone as §4 says; the eight bundles equal to their
+  grants; the demo users; Home's frame (Not configured, never zero); SalesSummary's cost columns, series and panel left out with
+  `reportCosts`, and its margin null on a withheld cost.
+- Fixed:
+  - R1 (confidentiality, medium). SalesAnalysis as ported hid its cost and margin columns but its find still took `totalCost` from
+    the request: `totalCost_from` (a having condition on the aggregate) let a reader without cost rights test each line's hidden
+    cost, and `orderByField=totalCost` ranked the lines by it. The find now skips `totalCost` (`skip-fields`; no header filters on
+    it), and a reader without `reportCosts` is not sorted by it. Checked that the qvt data and the csv export carry no cost value.
+    SalesReports' new csv feature (the administrator, no cost rights, searching and sorting by cost) fails without the change.
+  - R2 (confidentiality, low). `get#SalesTopProduct` and `get#InvoicesByCustomerClass` took an `orderByField` naming the cost
+    (`productCostTotal`), ranking the top products or classes by a cost they withhold, for the Sales reader as for Commerce's store
+    reader before it; a reader whose costs are withheld is now ordered by the default. No spec: the test runtime's summaries gave
+    the same order either way, so a check would not fail without the change.
+  - R3 (the user's call (b), Nov 13). `SALES_ALL_ORGANIZATIONS`, seeded in MantleSetupData and granted to `ADMIN`, and in
+    BossSetupSalesData to `BOSS_SALES_ADMIN` alone, in its bundle (CpkEdit, as Maintenance's): SalesAccess's `scope()` makes the
+    organizations every one for a system administrator or a holder, which reads nothing by itself (capability `allOrganizations`).
+    Before it the administrator's root read every organization through `MANTLE_ACTIVE_ORG` while the services answered its own
+    (SalesAnalysis listed Accounting's demo company's and Ziziwork Services' lines to `sales.admin`); they now agree.
+    SalesOrganizationScope: a holder of A alone reads B, the permission alone nothing; SalesAccess: the administrator's context is
+    every organization and its record check admits Accounting's demo company, which the representative is refused, the manager of
+    both organizations is not every organization's, and the capability list carries `allOrganizations` for ADMIN and the
+    administrator only. (a) kept as built. Both are §4 rows and in design §1.1.
+- Provisional findings (for the lead to number):
+  - the ported SalesAnalysis still shows a non-cost reader "Total Cost" in its sort choices (they now sort by nothing) and its Show SQL
+    dialog; P19's rebuild over `run#SalesAnalysis` removes both;
+  - `SALES_OWNER_CHANGE` goes to `BOSS_ADMIN_IDENTITY` only, where every other owner change (drive, mail, calendar, contact book,
+    report, People's approvals) is also `BOSS_ADMIN_ADMIN`'s; §4's row says "Admin's identity group alone", so it is kept; P6 may ask
+    whether the Admin administrator should hold it too;
+  - SalesSummary's top products and customer classes are called without the chosen vendors (as ported), so they answer the whole
+    scope while the order and invoice summaries answer the chosen organizations; P19's rebuild.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOrganizationScope 3 of 3 (0.4 s), SalesReports 5
+  of 5 (0.6 s), SalesReportStoreScope 3 of 3; mr-boss SalesAccess 7 of 7 (2.9 s), SalesReports 2 of 2 (0.4 s; the new feature
+  failed on the unfixed screen), AdminCapabilities 4 of 4. `moqui lint --screens` (release binary): nothing flagged in SalesAnalysis.
+  Not run: ./moq test-apps, the acceptance suite.
+- For the lead: budget share about +0.1 s mr-boss (SalesReports' csv feature, 0.08 s), mantle unchanged in substance; merge hot spots
+  as the Built note, with mr-mantle `data/MantleSetupData.xml` (the new permission after `SALES_OWNER_CHANGE`),
+  `SalesReportServices.xml` (two order guards), mr-boss `data/BossSetupSalesData.xml` (the administrator's grant and bundle row),
+  `screen/Sales/Reports/SalesAnalysis.xml`, `plan/design-sales.md` §1.1 and the two §4 rows; the user's calls (a) and (b) are
+  recorded in §4, and impl-accounting §5's Sales row can be closed as the Built note says.
+
 ### P2 — Pipeline setup: stages, teams, sources and reasons
 
 Design §9 Settings, Stages, Teams, LeadSources (the source list and its organization binding; the UTM map is P5) and
@@ -1299,6 +1352,8 @@ the owner's design.
 | Nov 13, 2026 | §5 Q12 answered as recommended: with a seller's approval setting on, Projects' estimate approval places the estimate's sales orders and leaves them in Awaiting approval for a holder of `SALES_ORDER_APPROVE`, as every other sales order of that seller; with the setting off it approves them as today (P11) | The user's call; F61 |
 | Nov 13, 2026 | The permission changes of P0 are confirmed: `PEOPLE_DIRECTORY_VIEW` for `BOSS_SALES_MANAGER` and `BOSS_SALES_ADMIN` (P2, F53), and the new `SALES_OWNER_CHANGE`, held by Admin's identity group alone, for Sales' lifecycle participant (P1, P6; F54) | The user's call |
 | Nov 13, 2026 | "Create lead" and "Create RFQ" on a mail message are built, not left for later: P5 makes basic-comms' Mail render the `message-actions` slot (a framework change in mr-moqui's `runtime/components/base`, P5 working in an mr-moqui worktree too), and P8 adds the RFQ action | The user's call; F64 had moved them to §7 |
+| Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
+| Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
 
 ## 5. Open questions
 
