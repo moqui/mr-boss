@@ -90,6 +90,9 @@
 // intake set by the People administrator and refused to the HR officer with the same parameters; the clocking default set by the HR
 // officer and refused to the directory reader with the same parameters, Services' refused to Retail's HR; Preferences the People
 // administrator's (the HR officer refused the screen).
+// P31 (the lead's call of Nov 13, 2026): PAYROLL_VIEW alone is no People read: Accounting's payroll finance (a spec-local account of
+// BOSS_ACCOUNTING_PAYROLL, an agent of Retail) is refused Tomas's employee record, the directory and his compensation, with the
+// parameters the payroll operator, who holds PEOPLE_DIRECTORY_VIEW beside it, is answered with.
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -104,6 +107,9 @@ const teamOnly = "PPL_SPEC_TEAM_ONLY"
 const hrOnly = "PPL_SPEC_HR_ONLY"
 // P26: the payslip case's group, made in its feature
 const state26 = {}
+// P31: a spec-local payroll finance user of Accounting (BOSS_ACCOUNTING_PAYROLL: PAYROLL_VIEW with the finance permissions), an agent
+// of Retail, so the rule is met at an employer that has employees (finance.payroll is Accounting's organization's agent)
+const financePayroll = "PPL_SPEC_FIN_PAYROLL"
 
 spec({
     setupSpec() {
@@ -145,6 +151,24 @@ spec({
             })
             for (const userGroupId of ["BOSS_USERS", "BOSS_PEOPLE", hrOnly])
                 call("create#moqui.security.UserGroupMember", {userId: hrOnly, userGroupId, fromDate: 0})
+            call("create#mantle.party.Party", {partyId: financePayroll, partyTypeEnumId: "PtyPerson"})
+            call("create#mantle.party.Person", {partyId: financePayroll, firstName: "People spec", lastName: "Payroll finance"})
+            call("create#mantle.party.PartyRelationship", {
+                relationshipTypeEnumId: "PrtAgent",
+                fromPartyId: financePayroll,
+                toPartyId: ids.organizationId,
+                toRoleTypeId: "OrgInternal",
+                fromDate: 0
+            })
+            call("create#moqui.security.UserAccount", {
+                userId: financePayroll,
+                username: "people.spec.financepayroll",
+                partyId: financePayroll,
+                currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                passwordHashType: "SHA"
+            })
+            for (const userGroupId of ["BOSS_USERS", "BOSS_ACCOUNTING", "BOSS_ACCOUNTING_PAYROLL"])
+                call("create#moqui.security.UserGroupMember", {userId: financePayroll, userGroupId, fromDate: 0})
         })
     },
     cleanupSpec() {
@@ -154,7 +178,7 @@ spec({
         system(() =>
             ec.entity
                 .find("moqui.security.UserGroupMember")
-                .condition("userId", "in", [teamOnly, hrOnly])
+                .condition("userId", "in", [teamOnly, hrOnly, financePayroll])
                 .updateAll({thruDate: ec.user.nowTimestamp})
         )
         ec.artifactExecution.enableAuthz()
@@ -1862,6 +1886,45 @@ feature(
             unauthorized(hrScreen)
             run.targetId == "payrollExchange" && run.ownerApp == "People" && run.ownerRoute == "peoplePayrollExchange"
             run.errorCount == 1 && run.ownerParameters.payrollExchangeBatchId == run.runId
+        }
+    }
+)
+
+feature(
+    "P31: PAYROLL_VIEW alone reads no People employee: payroll finance is refused Tomas's record, the directory and his compensation, with the parameters the payroll operator is answered with",
+    {
+        when() {
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            const finance = "people.spec.financepayroll"
+            const reads = user => ({
+                employee: as(user, "mantle.humanres.PeopleServices.get#Employee360", {partyId: ids.employeePartyId}),
+                compensation: as(user, "mantle.humanres.PayrollSetupServices.get#Compensation", {partyId: ids.employeePartyId}),
+                directory: asUser(user, () =>
+                    system(() => {
+                        ec.message.pushErrors()
+                        try {
+                            const found = ec.service
+                                .sync()
+                                .name("mantle.humanres.PeopleServices.find#Employees")
+                                .parameters({organizationPartyId: ids.organizationId})
+                                .call()
+                            return ec.message.hasError()
+                                ? code(ec.message.getErrorsString())
+                                : Array.from(found?.employees || []).length
+                        } finally {
+                            ec.message.clearErrors()
+                            ec.message.popErrors()
+                        }
+                    })
+                )
+            })
+            return {finance: reads(finance), payroll: reads(users.payroll)}
+        },
+        then({finance, payroll}) {
+            finance.employee == "RECORD_UNAVAILABLE" && finance.compensation == "RECORD_UNAVAILABLE"
+            finance.directory == "ORGANIZATION_DENIED"
+            payroll.employee == "accepted" && payroll.compensation == "accepted" && payroll.directory > 0
         }
     }
 )

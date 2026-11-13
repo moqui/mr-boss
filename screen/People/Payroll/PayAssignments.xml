@@ -445,6 +445,10 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="fieldLabel"><default-field title="Field"><display/></default-field></field>
                                             <field name="valueText"><default-field title="Value"><display/></default-field></field>
                                             <field name="requiredText"><default-field title=""><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fieldLabel"/><field-ref name="valueText"/></column>
+                                                <column><field-ref name="requiredText"/></column>
+                                            </columns>
                                         </form-list>
                                     </widgets>
                                 </section>

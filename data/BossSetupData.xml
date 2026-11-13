@@ -5097,7 +5097,9 @@ along with this software (see the LICENSE.md file). If not, see
         user's call, impl-people §4, Nov 11, 2026). P14: PEOPLE_ROSTER_EDIT, saving and publishing shifts, to the manager and the HR
         officer, each in their own scope (the user's call, impl-people §4, Nov 12, 2026). P22 review: PAYROLL_CONFIGURE, changing
         payroll configuration (pay components, structures, groups and localizations) in place of PEOPLE_CONFIGURE there, to the payroll
-        operator and the People administrator (the user's call, impl-people §4, Nov 12, 2026). -->
+        operator and the People administrator (the user's call, impl-people §4, Nov 12, 2026). P31: PAYROLL_VIEW is no People read by
+        itself, so the payroll operator and approver hold PEOPLE_DIRECTORY_VIEW for the employees they pay (the lead's call,
+        impl-people §4, Nov 13, 2026). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" fromDate="0"/>
@@ -5110,11 +5112,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_ROSTER_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_CONFIGURE" fromDate="0"/>
     <!-- P28: the payroll operator imports payroll history and a processor's results (the payroll exchange), People's import permission -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PEOPLE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_VIEW" fromDate="0"/>
@@ -5153,11 +5157,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL" appName="People" description="Payroll operator" scopeDependency="organization, employment" sequenceNum="1170"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_CONFIGURE" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PEOPLE_IMPORT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" appName="People" description="Payroll approver" scopeDependency="organization, employment" sequenceNum="1180"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_DEVELOP" appName="People" description="Learning and review administrator" scopeDependency="organization, review participation" sequenceNum="1190"/>

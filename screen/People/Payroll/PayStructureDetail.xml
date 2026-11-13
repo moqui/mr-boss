@@ -283,12 +283,20 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="stepText"><default-field title="Step"><display/></default-field></field>
                                     <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
                                     <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
                                 </form-list>
                                 <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false" condition="approval.decisions?.length">
                                     <field name="decidedByName"><default-field title="By"><display/></default-field></field>
                                     <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
                                     <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
                                     <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                                    </columns>
                                 </form-list>
                             </box-body>
                         </container-box>

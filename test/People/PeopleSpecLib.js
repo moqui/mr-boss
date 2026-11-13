@@ -1,6 +1,7 @@
 // Helpers the People specs share: the demo ids (data/BossPeopleDemoData.xml, data/BossUsersDemoData.xml), the demo users by
 // group, a block run as a user with artifact authorization on, a call's refusal message, a People page render and the shell's menu
-// and providers. Later phases add their ids and users here.
+// and providers. Later phases add their ids and users here. P31 adds the acceptance sweeps' and review walks' helpers at the end (the
+// mounts, their tabs and records, a kiosk tablet), which no regression spec calls.
 const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
@@ -218,6 +219,9 @@ const users = {
     client: "sheldon.acme",
     pass: "dana@joesdist.example.com",
     otherApp: "customerservice.read",
+    // P27 review: Accounting's payroll finance (BOSS_ACCOUNTING_PAYROLL, PAYROLL_VIEW), an agent of Accounting's demo organization;
+    // P31 review: it reads nothing of People (PAYROLL_VIEW alone is no People read)
+    financePayroll: "finance.payroll",
     system: "john.doe"
 }
 
@@ -314,4 +318,217 @@ function shell(user, menuOnly = false, path = "Home", group = "People") {
     })
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell})
+// ===== P31: the screen sweeps' helpers (acceptance/People/PeopleTui and PeopleServerStatic; the review walks' kiosk) =====
+// The screens People's files mount from elsewhere, as [path under the People root, location]: a subscreens-item of a People file whose
+// location is not under screen/People (the Shared screens, Projects' time screens and Rates, Commons' Notifications and EventDetail)
+function mountedScreens() {
+    const files = []
+    ec.resource.getLocationReference("component://mr-boss/screen/People.xml").walkChildTree(files, null)
+    const found = []
+    for (const file of files) {
+        if (!file.location.endsWith(".xml")) continue
+        const parent = file.path === "People" ? "" : file.path.substring("People/".length) + "/"
+        const text = String(ec.resource.getLocationReference(file.location).getText())
+        const item = /<subscreens-item name="([^"]+)" location="(component:\/\/mr-boss\/screen\/(?!People\/)[^"]+\.xml)"/g
+        for (let match = item.exec(text); match; match = item.exec(text)) found.push([parent + match[1], match[2]])
+    }
+    return found
+}
+// The tabs of a mounted screen that the current user's menu shows under People (a shared screen's tabs of another app's context are
+// not offered there), as paths under the root; none when its menu names none
+function mountTabs(path, parameters = {}) {
+    const name = path.substring(path.lastIndexOf("/") + 1)
+    const query = Object.entries(parameters)
+        .map(([key, value]) => key + "=" + encodeURIComponent(value))
+        .join("&")
+    const menu = ec.screen
+        .makeTest()
+        .rootScreen("component://webroot/screen/webroot.xml")
+        .render("menuData/apps/People/" + path + (query ? "?" + query : ""), {}, null)
+    ec.message.clearErrors()
+    if (menu.status != 200) return []
+    const level = JSON.parse(menu.output)
+        .filter(level => level.name === name)
+        .pop()
+    return (level?.subscreens || []).filter(item => item.menuInclude).map(item => path + "/" + item.name)
+}
+// The record a swept screen opens on: the demo's fixed ids, else the first record of its kind (made by the demo or by the specs that
+// ran before; "NONE" when there is none, which renders the screen's own "not available" state, a render too). Read once per spec.
+let sweepRecordsMade = null
+function sweepRecords() {
+    if (sweepRecordsMade) return sweepRecordsMade
+    const first = (entity, field, conditions = {}) =>
+        system(
+            () =>
+                Array.from(ec.entity.find(entity).condition(conditions).selectField(field).orderBy(field).limit(1).list())[0]?.[
+                    field
+                ] || "NONE"
+        )
+    const org = {organizationPartyId: ids.organizationId}
+    const employment = {recordEntity: "mantle.humanres.employment.Employment", recordId: ids.employmentId}
+    const applicationId = first("mantle.humanres.employment.EmploymentApplication", "employmentApplicationId")
+    const claimId = first("mantle.humanres.expense.ExpenseClaim", "invoiceId")
+    const offerId = first("mantle.humanres.recruitment.EmploymentOffer", "employmentOfferId")
+    const reviewId = first("mantle.humanres.ability.PerformanceReview", "performanceReviewId")
+    const timesheetId = first("mantle.work.time.Timesheet", "timesheetId")
+    sweepRecordsMade = {
+        Home: org,
+        Chatter: employment,
+        RecordFiles: employment,
+        // the Assist answers' response actions open on an application (Log as note) and from any page (Send as message)
+        LogNote: {entityName: "mantle.humanres.employment.EmploymentApplication", recordId: applicationId},
+        SendMessage: {entityName: "mantle.humanres.employment.EmploymentApplication", recordId: applicationId},
+        "Employees/List": org,
+        "Employees/Employee360": {partyId: ids.employeePartyId, partyRelationshipId: ids.employmentId},
+        "Employees/EquipmentDetail": {assetId: ids.laptopAssetId},
+        "Employees/RequestDetail": {requestId: first("mantle.request.Request", "requestId", {requestTypeEnumId: "RqtHrCase"})},
+        "Employees/EmploymentChange": {partyRelationshipId: ids.employmentId},
+        "Employees/EmploymentLetter": {
+            employmentChangeId: first("mantle.humanres.employment.EmploymentChange", "employmentChangeId")
+        },
+        "Employees/BadgePrint": {kioskBadgeId: first("mantle.humanres.attendance.KioskBadge", "kioskBadgeId")},
+        "Employees/ChecklistTemplates": {organizationPartyId: ids.organizationId, workEffortId: ids.onboardingId},
+        "Employees/OrgStructure": {organizationPartyId: ids.organizationId, unitPartyId: ids.departmentId},
+        "Employees/OrgChart": org,
+        "Staffing/Positions": org,
+        "Staffing/PositionDetail": {emplPositionId: ids.positionId},
+        "Staffing/JobClassDetail": {emplPositionClassId: ids.jobClassId},
+        "Staffing/PayGrades": {payGradeId: ids.payGradeId},
+        "Staffing/Openings": org,
+        "Staffing/ApplicantDetail": {employmentApplicationId: applicationId},
+        "Staffing/OfferDetail": {employmentOfferId: offerId},
+        "Staffing/OfferLetter": {employmentOfferId: offerId},
+        "Time/LeavePolicyDetail": {leavePolicyId: ids.leavePolicyId},
+        "Time/LeaveRequestDetail": {leaveRequestId: first("mantle.humanres.leave.LeaveRequest", "leaveRequestId")},
+        "Time/LeaveBalances": org,
+        "Time/WorkingScheduleDetail": {workingScheduleId: ids.scheduleId},
+        "Time/HolidayCalendars": {holidayCategoryId: ids.holidayCalendarId},
+        "Time/ShiftRoster": org,
+        "Time/ShiftRosterTui": org,
+        "Time/ShiftRosterPrint": org,
+        "Time/TimesheetDetail": {timesheetId},
+        "Time/TimesheetPrint": {timesheetId},
+        "Time/TimeImport": {attendanceImportId: first("mantle.humanres.attendance.AttendanceImport", "attendanceImportId")},
+        "Payroll/PayComponentDetail": {
+            payrollComponentId: first("mantle.humanres.payroll.PayrollComponent", "payrollComponentId")
+        },
+        "Payroll/PayStructureDetail": {
+            payrollStructureId: first("mantle.humanres.payroll.PayrollStructure", "payrollStructureId")
+        },
+        "Payroll/PayRunDetail": {payrollRunId: first("mantle.humanres.payroll.PayrollRun", "payrollRunId")},
+        "Payroll/PayslipDetail": {payslipId: first("mantle.humanres.payroll.Payslip", "payslipId")},
+        "Payroll/PayrollExchange": {
+            payrollExchangeBatchId: first("mantle.humanres.payroll.PayrollExchangeBatch", "payrollExchangeBatchId")
+        },
+        "Payroll/PayRecovery": org,
+        "Payroll/InvoiceDetail": {invoiceId: claimId},
+        "Expenses/ExpenseClaimDetail": {invoiceId: claimId},
+        "Expenses/ExpenseClaimPrint": {invoiceId: claimId},
+        "Development/SkillsMatrix": org,
+        "Development/SkillsMatrixTui": org,
+        "Development/TrainingDetail": {workEffortId: first("mantle.humanres.ability.PersonTraining", "workEffortId")},
+        "Development/TrainingCertificate": {
+            personTrainingId: first("mantle.humanres.ability.PersonTraining", "personTrainingId")
+        },
+        "Performance/ReviewDetail": {performanceReviewId: reviewId},
+        "Performance/ReviewRelease": {performanceReviewId: reviewId},
+        "Settings/SettingsHome": org,
+        "Settings/ApprovalPolicies": org,
+        "Settings/Preferences": org,
+        "Tasks/WorkItemDetail": {workEffortId: ids.onboardingId}
+    }
+    return sweepRecordsMade
+}
+// The parameters of a swept screen: the entry of the screen or its nearest parent (a tab takes its record's)
+function sweepParameters(path) {
+    const records = sweepRecords()
+    const key = Object.keys(records)
+        .filter(key => path === key || path.startsWith(key + "/"))
+        .sort((a, b) => b.length - a.length)[0]
+    return key ? records[key] : {}
+}
+// The paths under the People root to sweep: its own screen files, then each screen its files mount from elsewhere and the tabs of it
+// that People's menu shows the current user
+function sweepScreens() {
+    const files = []
+    ec.resource.getLocationReference("component://mr-boss/screen/People.xml").walkChildTree(files, null)
+    const own = files
+        .filter(file => file.path !== "People" && file.location.endsWith(".xml"))
+        .map(file => file.path.substring("People/".length))
+    const mounts = []
+    for (const [path] of mountedScreens()) {
+        if (!mounts.includes(path)) mounts.push(path)
+        for (const tab of mountTabs(path, sweepParameters(path))) if (!mounts.includes(tab)) mounts.push(tab)
+    }
+    return own.concat(mounts.filter(path => !own.includes(path)))
+}
+// People's shared screens under Commons' root, as the self-service employee opens them, each with its parameters
+const commonsMounts = {
+    "People/SelfService": {},
+    "People/MyPayslip": {},
+    "People/MyInterview": {},
+    "People/Employee360": {partyId: ids.employeePartyId}
+}
+// A tablet for Retail's clocking kiosk (impl-people P30, PeopleKiosk's setup): a display account of Retail holding the kiosk bundle
+// alone, made once, and a device registered for the PEOPLE_CLOCKING route group and redeemed; its cookie value and device id. Run as
+// an identity and access administrator (john.doe); revoke it with revoke#SharedDevice when done.
+function kioskTablet(name) {
+    const username = "display." + name.toLowerCase().replace(/[^a-z0-9]+/g, ".")
+    const account = () => system(() => ec.entity.find("moqui.security.UserAccount").condition("username", username).one())
+    if (!account())
+        invoke("mantle.party.IdentityServices.create#DisplayAccount", {
+            displayName: name,
+            username,
+            organizationPartyId: ids.organizationId,
+            bundleGroupIdList: ["BOSS_PEOPLE_KIOSK"]
+        })
+    const displayUserId = account()?.userId
+    const registered = invoke("mantle.party.IdentityServices.register#SharedDevice", {
+        deviceName: name + " " + ec.l10n.format(ec.user.nowTimestamp, "HHmmssSSS"),
+        routeGroupId: "PEOPLE_CLOCKING",
+        displayUserId,
+        issueCode: false
+    })
+    const code = invoke("mantle.party.IdentityServices.reveal#SharedDeviceCode", {deviceId: registered.deviceId}).registrationCode
+    const redeemed = ec.screen
+        .makeTest()
+        .rootScreen("component://webroot/screen/webroot.xml")
+        .render("Device/redeem", {code}, "post")
+    const cookie = String(redeemed.header("Set-Cookie") || "")
+        .split(";")[0]
+        .replace("moqui.device=", "")
+    ec.message.clearErrors()
+    return {cookie, deviceId: registered.deviceId, displayUserId}
+}
+// A request of a browser at the web root, as the device when a cookie is given (whoever is signed in on this thread), in a render
+// mode: its status, output and errors
+function deviceRequest(path, parameters, cookie, mode, method) {
+    let test = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml")
+    if (mode) test = test.renderMode(mode)
+    if (cookie) test = test.header("cookie", "moqui.device=" + cookie)
+    const out = test.render(path, parameters || {}, method || "get")
+    const errors = Array.from(out.errorMessages || []).join("\n")
+    ec.message.clearAll()
+    return {status: out.status, output: String(out.output || ""), errors}
+}
+
+;({
+    ids,
+    users,
+    asUser,
+    system,
+    refusal,
+    invoke,
+    page,
+    screenRefusal,
+    hit,
+    shell,
+    mountedScreens,
+    mountTabs,
+    sweepRecords,
+    sweepParameters,
+    sweepScreens,
+    commonsMounts,
+    kioskTablet,
+    deviceRequest
+})

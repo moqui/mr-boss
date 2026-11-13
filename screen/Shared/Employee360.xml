@@ -959,6 +959,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="effectiveDateText"><default-field title="Pay change from"><display/></default-field></field>
                                     <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
                                     <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="effectiveDateText"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="salaryText"/></column>
+                                    </columns>
                                 </form-list>
                                 <form-list name="SalaryHistory" list="salaryRows" skip-form="true" paginate="false" condition="salaryRows.length">
                                     <field name="fromDateText"><default-field title="From"><display/></default-field></field>
