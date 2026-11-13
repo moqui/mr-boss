@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Settings › Teams (design-sales §9 Teams: SalesTeams, TeamMembers; style-guide §3.9 Settings; impl-sales P2, F53): the
+    sales teams of an organization, each an Organization party with the SalesTeam role and dated (store#SalesTeam), with its
+    manager and members; a chosen team's dated membership, a representative or its manager joining from a date (now or later) and
+    leaving, never deleted (store#SalesTeamMember). TeamMembers' lookup offers the people who work for the organization, labelled
+    with their work identity for a reader of People's directory (Sales.js teamMembers: find#Employees, PEOPLE_DIRECTORY_VIEW, the
+    manager's and the administrator's); a member opens their Employee360 under People for a People user and under Commons
+    otherwise, for a viewer People's scope admits (ironstone.people.ContextServices.get#Employee360Link); Sales mounts no
+    Employee360. Membership changes access prospectively and rewrites no attribution; it grants no permission. The Sales
+    administrator's (SALES_CONFIGURE) and the manager's (SALES_TEAM_MANAGE), which Mantle checks with the organization. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Teams" default-menu-index="3"
+        default-menu-include="ec.user.hasPermission('SALES_CONFIGURE') || ec.user.hasPermission('SALES_TEAM_MANAGE')">
+    <parameter name="organizationPartyId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="includeEnded"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition name="storeTeam">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#SalesTeam" out-map="stored"
+                    in-map="{teamPartyId:(teamPartyId || null), organizationPartyId:(organizationPartyId || null), teamName:(teamName ?? null),
+                        managerPartyId:(managerPartyId || null), fromDate:(fromDate || null), end:(endTeam == 'Y'),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="teamPartyId" from="stored.teamPartyId"/>
+                <message type="success">${endTeam == 'Y' ? 'Team ended' : 'Team saved'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="teamPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/><parameter name="teamPartyId"/></error-response>
+    </transition>
+    <transition name="storeMember">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#SalesTeamMember"
+                    in-map="{teamPartyId:teamPartyId, partyId:(partyId || null), roleTypeId:(roleTypeId || null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), partyRelationshipId:(partyRelationshipId || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${partyRelationshipId ? 'Membership ended' : 'Member added'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="teamPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/><parameter name="teamPartyId"/></error-response>
+    </transition>
+    <always-actions>
+        <script>if(!(sales.capabilities.configure || sales.capabilities.teamManage))throw new Error('PERMISSION_DENIED: Sales teams are kept by the Sales administrator and the sales managers')</script>
+    </always-actions>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="organizationPartyId" from="organizationPartyId || sales.activeOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.sales.OpportunityServices.get#SalesSetup" out-map="setup" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId, includeEnded:(includeEnded == 'Y')}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="setupFound" from="!!setup?.organizationPartyId"/>
+        <set field="teamList" from="(setup?.teams || []).map(row =&gt; Object.assign({}, row, {managerText: row.managerNames || 'None'}))"/>
+        <set field="team" from="teamPartyId ? teamList.find(row =&gt; row.teamPartyId == teamPartyId) || null : null"/>
+        <!-- a member's employee record, for a viewer People's scope admits (People.js employee360Link): the link adds no right -->
+        <script><![CDATA[
+            memberList = (team?.members || []).map(row => {
+                let link = {}
+                ec.message.pushErrors()
+                try {
+                    link = ec.service.sync().name('ironstone.people.ContextServices.get#Employee360Link').parameters({partyId: row.partyId}).call() || {}
+                } catch (error) {
+                    link = {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                return Object.assign({}, row, {employeeUrl: link.url || null, canEnd: !row.ended && !team.ended})
+            })
+        ]]></script>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId, includeEnded: includeEnded || null}"/>
+        <set field="newTeam" from="{organizationPartyId: organizationPartyId}"/>
+        <set field="newMember" from="{organizationPartyId: organizationPartyId, teamPartyId: team?.teamPartyId, roleTypeId: 'SalesRepresentative'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Teams" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="A team's members see its opportunities. Joining and leaving take effect from their dates; past work keeps who did it."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="NewTeamDialog" button-text="New team" icon="sym_o_add" type="primary" width="560"
+                        title="New sales team" condition="setupFound">
+                    <form-single name="NewTeam" transition="storeTeam" map="newTeam">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="teamName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="managerPartyId">
+                            <default-field title="Manager">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'teamMembers', organizationPartyId:newTeam.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time/></default-field></field>
+                        <field name="submitButton"><default-field title="Create team"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="TeamsFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="includeEnded"><default-field title=" "><check><option key="Y" text="Include ended"/></check></default-field></field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="includeEnded"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="!setupFound"
+                text="This organization is not available to you, or its teams cannot be read just now."/>
+        <container-box condition="setupFound">
+            <box-header title="Sales teams"/>
+            <box-body-nopad>
+                <form-list name="SalesTeams" list="teamList" skip-form="true" paginate="false">
+                    <field name="teamName">
+                        <default-field title="Team">
+                            <link url="." text="${teamName}" link-type="anchor"
+                                    parameter-map="{organizationPartyId:organizationPartyId, teamPartyId:teamPartyId, includeEnded:includeEnded}"/>
+                        </default-field>
+                    </field>
+                    <field name="managerText"><default-field title="Manager"><display/></default-field></field>
+                    <field name="memberCount" align="right"><default-field title="Members"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="EditTeam_${teamPartyId}" button-text="Rename" icon="sym_o_edit" type="default" width="520"
+                                    title="Rename ${teamName}" condition="!ended">
+                                <form-single name="EditTeam" transition="storeTeam"
+                                        map="{organizationPartyId:organizationPartyId, teamPartyId:teamPartyId, expectedRevision:revision, teamName:teamName}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="teamName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="EndTeam_${teamPartyId}" button-text="End" icon="sym_o_event_busy" type="default" width="520"
+                                    title="End ${teamName}" condition="!ended">
+                                <label type="p" text="Its memberships end with it; its members keep the work they did."/>
+                                <form-single name="EndTeam" transition="storeTeam"
+                                        map="{organizationPartyId:organizationPartyId, teamPartyId:teamPartyId, expectedRevision:revision, endTeam:'Y'}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="endTeam"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title="End team"><submit type="danger" confirmation="End ${teamName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="teamName"/><field-ref name="managerText"/></column>
+                        <column><field-ref name="memberCount"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No sales team yet: create one." type="p" style="m-muted q-pa-sm" condition="!teamList.length"/>
+            </box-body-nopad>
+        </container-box>
+        <container-box condition="team">
+            <box-header title="${team?.teamName}: members"/>
+            <box-toolbar>
+                <container-dialog id="AddMemberDialog" button-text="Add member" icon="sym_o_person_add" type="default" width="560"
+                        title="Add a member to ${team?.teamName}" condition="team &amp;&amp; !team.ended">
+                    <form-single name="AddMember" transition="storeMember" map="newMember">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                        <field name="partyId">
+                            <default-field title="Person" tooltip="Someone who works for the organization">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'teamMembers', organizationPartyId:newMember.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="roleTypeId">
+                            <default-field title="As">
+                                <radio><option key="SalesRepresentative" text="Representative"/><option key="Manager" text="Manager"/></radio>
+                            </default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time/></default-field></field>
+                        <field name="thruDate"><default-field title="Until" tooltip="Empty: open"><date-time/></default-field></field>
+                        <field name="submitButton"><default-field title="Add member"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <form-list name="TeamMembers" list="memberList" skip-form="true" paginate="false">
+                    <field name="personName">
+                        <default-field title="Person">
+                            <link url="${employeeUrl}" url-type="plain" text="${personName}" link-type="anchor" condition="employeeUrl"/>
+                            <label text="${personName}" type="span" condition="!employeeUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="roleText"><default-field title="As"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Until"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="EndMember_${partyRelationshipId}" button-text="End" icon="sym_o_person_remove" type="default" width="520"
+                                    title="End ${personName}'s membership" condition="canEnd">
+                                <form-single name="EndMember" transition="storeMember"
+                                        map="{organizationPartyId:organizationPartyId, teamPartyId:team.teamPartyId, partyRelationshipId:partyRelationshipId,
+                                            expectedRevision:revision}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="thruDate"><default-field title="Ends" tooltip="Empty: now"><date-time/></default-field></field>
+                                    <field name="submitButton"><default-field title="End membership"><submit type="danger" confirmation="End this membership?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="personName"/><field-ref name="roleText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No member: add the first." type="p" style="m-muted q-pa-sm" condition="!memberList.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

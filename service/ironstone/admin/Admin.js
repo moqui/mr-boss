@@ -398,6 +398,11 @@ const settingsRoutes = {
     peopleLeavePolicies: {url: "/qapps/People/Time/LeavePolicies", plain: true},
     peoplePreferences: {url: "/qapps/People/Settings/Preferences", plain: true},
     maintenanceSettings: {url: "/qapps/Maintenance/Settings", plain: true},
+    // Sales P2: its settings landing (sales.settings) and its setup readiness's places (sales.readiness)
+    salesSettings: {url: "/qapps/Sales/Settings", plain: true},
+    salesStages: {url: "/qapps/Sales/Settings/Stages", idParameter: "salesPipelineId", plain: true},
+    salesTeams: {url: "/qapps/Sales/Settings/Teams", plain: true},
+    salesLeadSources: {url: "/qapps/Sales/Settings/LeadSources", plain: true},
     voice: {url: "/qapps/system/Voice", plain: true},
     toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
 }

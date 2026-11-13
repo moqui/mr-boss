@@ -667,6 +667,118 @@ TypesAndReasons; SAL-CRM (its settings part), SAL-ACCESS.
   a stage; `sales.manager` adds a rep to a team from a date; Admin's Health names a pipeline without stages with its
   fix link, and Admin's settings index opens Sales' settings.
 
+**Built Nov 13 (P2).** mr-mantle and mr-boss on branch `sal/p2` (hashes in the worker's reply); mr-moqui unchanged, no Rust
+built.
+- Checked first (the code over the plan): P1's Built and Review notes and F74–F81; SalesEntities.xml (SalesOpportunityStage with
+  four fields, no status on SalesOpportunity, F4); SalesData.xml (the LEAD_SOURCE types, no DataSource row); the framework's
+  DataSource and People's `Enumeration.thruDate`; Maintenance's settings (MaintenanceSettings.js, its Settings screens, its
+  readiness row and ALL_USERS grant) and Customer Service's service teams (an owned OrgTeam party, PrtServiceTeam) as the
+  patterns; People's UnitEmployers.js and Organization.js (a PrtOrgRollup unit is People's, so a sales team takes no rollup and no
+  OrgTeam role); `find#Employees` and People.js `employee360Link` (F53); Admin.js `mountRoutes`. The code over the plan:
+  - the retirement rule needs a deal's outcome, which P4 was to add, so P2 adds `SalesOpportunity.statusId` (audit-logged) with
+    the outcome seed; P4 builds the lifecycle;
+  - a team's "effective interval" and organization are a dated `PrtSalesTeamOf` row (team to organization) beside its
+    `ownerPartyId`, and its manager is a `Manager` membership, since PartyRole has no dates;
+  - the seeded default pipeline has no organization: it is the instance's shared pipeline, every organization's default until
+    it sets its own, changed only by a reader of every organization;
+  - the screens read through one more service than the design names, `get#SalesSetup` (the settings with ended rows, open-deal
+    counts and edit flags);
+  - the seed is split by kind: fixed values in a new `data/SalesCrmSeedData.xml` (type seed, named to load before SalesData.xml,
+    which loads by file name), editable initial setup appended to `data/SalesData.xml` (seed-initial);
+  - the demo is `data/BossZSalesDemoData.xml`, not `BossSalesDemoData.xml`: its teams name BossUsersDemoData's users, so it loads
+    after them, as BossZMaintenanceDemoData does.
+- Mantle:
+  - `entity/SalesEntities.xml`: SalesPipeline (organization or none, name, description, team, default flag, dates, `thruDate`
+    audited); SalesOpportunityStage's `salesPipelineId`, `foldFlag` and dates; SalesLeadSourceBinding (source, organization,
+    dates); `SalesOpportunity.statusId`, audited.
+  - `data/SalesCrmSeedData.xml` (seed): SalesOpportunityType `SotLead`, `SotOpportunity`; the outcome status type
+    `SalesOpportunity` (`SalesOppOpen`, `SalesOppWon`, `SalesOppLost`, with Reopen); the SalesLostReason and SalesRecurringPlan
+    types; RoleType `SalesTeam`; PartyRelationshipType `PrtSalesTeamOf`, `PrtSalesTeamMember`; get#SalesReadiness for ALL_USERS
+    (it checks itself), as Maintenance's. `data/SalesData.xml` (seed-initial): the shared pipeline `SalesDefault` with Qualified
+    (10 %), Discovery (25), Proposal (50) and Negotiation (75); six lost reasons; four recurring plans (enumCode months). LeadStatus
+    left as is.
+  - `service/mantle/sales/OpportunityServices.xml` (new) over `SalesSettings.js`: `store#Pipeline`, `store#Stage` (move up or down,
+    retire with reassignment of open deals, closed deals kept), `store#SalesTeam`, `store#SalesTeamMember` (a person who works for
+    the organization, now or later, once at a time, ended never deleted), `store#LeadSource` (new and offered, offer and end per
+    organization, rename only within the scope: `SOURCE_SHARED`), `store#LostReason`, `get#SalesOptions` (any reader),
+    `get#SalesSetup`. Configuration needs `SALES_CONFIGURE`, teams `SALES_CONFIGURE` or `SALES_TEAM_MANAGE`, each with the
+    organization in the caller's scope; another organization's record answers RECORD_UNAVAILABLE; existing rows are written with
+    the revision read (REVISION_CHANGED). `service/mantle/sales/SalesWorkspaceServices.xml` (new): `get#SalesReadiness` (default
+    pipeline, stages, a staffed team, a source offered; fix routes `salesStages` with the pipeline, `salesTeams`,
+    `salesLeadSources`).
+  - `SalesAccess.js`, a P2 block: `teamRelationships`, `teamOrganization`, `memberTeams` (a person's current teams, for P4's scope).
+- BOSS:
+  - `data/BossSetupSalesData.xml`, a P2 block at the end: `BOSS_SAL_SETTINGS` (the root user group denied, the manager ALWAYS);
+    `PEOPLE_DIRECTORY_VIEW` for `BOSS_SALES_MANAGER` and `BOSS_SALES_ADMIN`, in their bundles (F53, §4); the readiness provider
+    `sales.readiness` and the settings entry `sales.settings` (viewPermission `SALES_CONFIGURE`). Two P1 comments point to it.
+  - `service/ironstone/admin/Admin.js` (owner contract): `salesSettings`, `salesStages` (idParameter `salesPipelineId`),
+    `salesTeams`, `salesLeadSources`. design-admin §14's Sales row says so.
+  - `Sales.js`: the area `settings` (its grant and `SALES_CONFIGURE` or `SALES_TEAM_MANAGE`; `areaReads` takes a function); the
+    choices `teams` and `teamMembers` (the organization's agents and employees by party, labelled with their job title from
+    `find#Employees` for a holder of `PEOPLE_DIRECTORY_VIEW`); the Settings paths in `sharedLinks`. `get#Choices` and
+    SalesParts' `choices` pass `organizationPartyId`.
+  - Screens: `Sales.xml`'s Settings item; `Sales/Settings.xml` (the tabs, a manager landing on Teams) with Readiness
+    (SalesReadiness), Stages (PipelineDefinition, PipelineStages: Up, Down, Edit, Retire with the stage the open deals move to),
+    Teams (SalesTeams, TeamMembers: Add member from a date, End, Employee360 links through `get#Employee360Link`), LeadSources
+    (Sources: New, Offer, Stop offering, Rename; links only to itself, reads the mounting root's `sales`) and TypesAndReasons
+    (SalesTypes read only, LossReasons: Add, Edit, End).
+  - Demo `data/BossZSalesDemoData.xml` (P2 block): Retail East (sales.manager, sales.rep, sales.rep2's membership ended Jul 1),
+    Retail West (sales.rep2 from Jul 1, managed by sales.manager2), Ziziwork Sales Direct (sales.rep3, sales.manager2); West's
+    pipeline "West key accounts" with four stages; four lead sources, the trade fair offered to Retail alone and the calls to
+    Ziziwork Sales alone.
+- Specs:
+  - Mantle `test/sales/SalesPipelineSetup` (5 features, 1.9 s feature time alone, 6.1 s on a loaded machine): a stage in use
+    retired only with a reassignment that moves the open deals and leaves the won one, the move up, a stale revision refused, the
+    pipeline's end refused while in use; a membership ended never deleted, a member of another organization and a back-dated one
+    refused, the team's end ending the later membership; a source offered to A and not B, the rename refused while it is offered
+    to B; the settings refused without `SALES_CONFIGURE`, the shared pipeline and another organization's refused; readiness.
+  - mr-boss `test/Sales/SalesSettings` (3 features, 1.1 s alone): the Settings tabs per group, Stages refused a manager, Teams a
+    representative and the reader, Admin's index listing `sales.settings` for the administrator only; TeamMembers' lookup;
+    Stages' one qvt render and Teams' one html render. `SalesAccess`: the managers', administrator's and ADMIN's menus gain
+    Settings, the capability `settings` (`SalesSpecLib` ids `managerMenu`, `settingsMenu`).
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesSetupUsable` (3 features: sales.admin adds Pilot to West's
+    pipeline, moves it up and retires Trial with its open deal moved, through Stages' transitions; sales.manager adds sales.rep to
+    West from next week through Teams' and is refused Stages; Admin's Health names an empty pipeline of Ziziwork Sales with
+    `salesStages` and its id, and Admin's settings index shows Sales settings). `SalesFoundationWalk`'s menus updated for
+    Settings.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPipelineSetup 5 of 5, SalesOrganizationScope,
+  SalesReports, SalesReportStoreScope, PeopleDirectory and InternalOrganizations 20 of 20; mr-boss SalesSettings 3 of 3,
+  SalesAccess 7 of 7, SalesReports, AdminRegistries, AdminSettings, AdminCapabilities, PeopleAccess, PeopleAccessLater,
+  MaintenanceAccess, ProjectsAccess, AdminAccess and AppOrganizationFilters, all passing. Every Settings screen rendered in qvt
+  and html for the administrator without error (a one-off check, not kept). `moqui lint --screens` (release binary): 141 flagged
+  sites, as before, none in Sales. Prettier clean on the new and changed JavaScript. Not run: ./moq test-apps, the acceptance
+  suite.
+- Inventories: no ss-inventory or usl-inventory row names a Sales settings path or these services (the baseline has no pipeline
+  setup), so nothing to fill.
+- Design edits: design-sales §9 Settings, Stages, Teams, LeadSources and TypesAndReasons (as built); design-admin §14's Sales
+  row (owner contract).
+- Findings (provisional, numbered by the lead):
+  - P4 owns the opportunity lifecycle but P2 adds `SalesOpportunity.statusId` for the retirement rule; P4 builds on it (and adds
+    the pipeline, lost reason and the other fields of SAL-CRM);
+  - the readiness's team and source checks are warnings and the default pipeline always passes while the shared `SalesDefault`
+    is in effect, so an organization that never configured Sales reads "ready" there; a stricter rule (an organization's own
+    default) would be a later call;
+  - TeamMembers' lookup probes `find#Employees`, which logs an ERROR when People's scope refuses the organization (a manager of
+    an organization People does not cover for them); the labels fall back to names, but the log is noise;
+  - a lead source offered to an organization outside the administrator's scope cannot be renamed by them (`SOURCE_SHARED`), so a
+    source shared by two organizations is renamed only by an administrator of both (the demo's `sales.admin`);
+  - LeadSources reads `sales` from its mounting root, but `Sales.js mountRoots` holds only Sales until P4 adds Marketing's root,
+    so Marketing's mount (impl-marketing P13) needs that row too.
+- For the lead:
+  - budget share: mr-mantle about 2 s (SalesPipelineSetup); mr-boss server about 1.2 s (SalesSettings 1.1 s, SalesAccess's
+    menu cases unchanged in time); no client spec;
+  - merge hot spots (P3 is built beside this): mr-mantle `entity/SalesEntities.xml` (SalesOpportunity's `statusId`, the new
+    entities after SalesOpportunityStage), `service/mantle/sales/SalesAccess.js` (a P2 block before the export and the export
+    object), `service/mantle/sales/SalesWorkspaceServices.xml` (new here, P3 adds `find#Accounts` and `get#CustomerSales` to the
+    same new file: an add/add merge), `data/SalesData.xml` (appended); mr-boss `data/BossSetupSalesData.xml` (a P2 block at the
+    end and two P1 comments), `data/BossZSalesDemoData.xml` (new, a P2 block; P3's customers may want the same file),
+    `service/ironstone/sales/Sales.js` (areas, areaReads, linkPaths, choiceSources with a P2 block, the scope's area loop),
+    `service/ironstone/sales/ContextServices.xml` (get#Choices' parameter), `template/SalesParts.xml`, `screen/Sales.xml` (the
+    Settings item), `service/ironstone/admin/Admin.js`, `test/Sales/SalesSpecLib.js` and `SalesAccess.spec.js` (menus,
+    capabilities), `test/acceptance/Sales/SalesFoundationWalk.spec.js`, `plan/design-sales.md` §9, `plan/design-admin.md` §14;
+    MantleSetupData and BossUsersDemoData are not touched;
+  - nothing needs the user's call; the findings above are for the review.
+
 ### P3 — Accounts and contacts
 
 Design §4 Accounts, Contacts, Customer360, ContactDetail and MergeAccounts; SAL-ACCOUNTS, SAL-ACCESS. The maps note of

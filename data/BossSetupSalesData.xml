@@ -43,8 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Sales areas for their capability groups only (impl-sales §2, P1; impl-commerce F45's pattern): each denies the root user
         group BOSS_SALES and allows its groups, with the root's filter sets; the administrator and ADMIN open every area through
-        their ALWAYS on the root. The phase that builds an area adds its group here (Settings P2, Approvals P9, Changes P14,
-        Agreements P15). P1: Reports (design §8), the manager's and the reader's, who hold SALES_REPORT_VIEW; the root's menu
+        their ALWAYS on the root. The phase that builds an area adds its group here (Settings P2, below; Approvals P9, Changes
+        P14, Agreements P15). P1: Reports (design §8), the manager's and the reader's, who hold SALES_REPORT_VIEW; the root's menu
         shows it to a holder of that permission only, so a custom group given Sales in Admin, which this deny does not reach, is
         shown no report area its services refuse (impl-maintenance F346's lesson). -->
     <artifactGroups artifactGroupId="BOSS_SAL_REPORTS" description="Sales reports">
@@ -70,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
         SALES_ORDER_CHANGE and ORDER_CHANGE_HOLD_RELEASE to the commercial change operator in P14, so the operator holds only the
         root group's view until then. No Sales group holds an approval and the administrator neither, nor a price, cost, credit,
         finance, stock or deployment permission; People's PEOPLE_DIRECTORY_VIEW for the manager and the administrator is P2's
-        (F53). -->
+        (F53, below). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_SALES" userPermissionId="SALES_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_REP" userPermissionId="SALES_OPPORTUNITY_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_REP" userPermissionId="SALES_ACCOUNT_EDIT" fromDate="0"/>
@@ -170,4 +170,40 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_READ" userPermissionId="SALES_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_READ" userPermissionId="SALES_TEAM_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_READ" userPermissionId="SALES_REPORT_VIEW" capabilityKindEnumId="CpkView"/>
+
+    <!-- ===== Sales P2: pipeline setup (impl-sales P2, F53; design-sales §9, §1.1) ===== -->
+    <!-- Settings (design §9): the administrator's (SALES_CONFIGURE; through its ALWAYS on the root, as ADMIN's) and, for Teams alone,
+        the manager's (SALES_TEAM_MANAGE); denied to the root user group. The screens gate each tab by permission, as the menu
+        does, so a custom group given Sales in Admin, which this deny does not reach, opens only what its permissions give
+        (impl-maintenance F346's lesson); Mantle's setup services check the permission and the organization again. -->
+    <artifactGroups artifactGroupId="BOSS_SAL_SETTINGS" description="Sales settings">
+        <artifacts artifactName="component://mr-boss/screen/Sales/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SAL_SETTINGS_DENY" userGroupId="BOSS_SALES" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_SAL_SETTINGS_MANAGER" userGroupId="BOSS_SALES_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- People's PEOPLE_DIRECTORY_VIEW for the manager and the administrator (F53, the user's call of Nov 13): TeamMembers' lookup
+        labels the organization's employees with their work identity (mantle.humanres.PeopleServices.find#Employees answers only a
+        People reader), and a member's Employee360 link opens for them, as Maintenance's planners hold it. In their bundles. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_MANAGER" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_MANAGER" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <!-- Sales' registrations with Admin (owner contract, impl-sales P2; design-admin §14's Sales row): the setup readiness, called
+        as the viewer (Mantle's get#SalesReadiness checks SALES_CONFIGURE and the organization; every user may call it,
+        mr-mantle data/SalesCrmSeedData.xml), and the settings landing. Their places are keys of Admin's mount (Admin.js
+        mountRoutes: salesSettings, salesStages, salesTeams, salesLeadSources). -->
+    <moqui.server.ReadinessProvider providerKey="sales.readiness" version="1" ownerApp="Sales" title="Sales setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.sales.SalesWorkspaceServices.get#SalesReadiness" scopeParameters="organizationPartyId"
+            requiredPermission="SALES_CONFIGURE" fixRoute="salesSettings" sequenceNum="170"/>
+    <moqui.server.SettingsEntry settingsKey="sales.settings" version="1" ownerApp="Sales" title="Sales settings"
+            description="Pipelines and stages, sales teams, lead sources, and types and reasons" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" destinationRoute="salesSettings"
+            screenLocation="component://mr-boss/screen/Sales/Settings.xml" viewPermission="SALES_CONFIGURE"
+            configuredBy="Sales administrator" providerKey="sales.readiness" sequenceNum="80"/>
+    <!-- ===== end of Sales P2 ===== -->
 </entity-facade-xml>

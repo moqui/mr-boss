@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Sales demo (impl-sales P2 onward): its records, which each phase adds in a block of its own with what it builds; named to
+    load after BossUsersDemoData.xml, whose Sales users the teams name. -->
+<entity-facade-xml type="demo">
+    <!-- ===== Sales P2 (design-sales §9): teams, a second pipeline and lead sources ===== -->
+    <!-- Two teams of Ziziwork Retail: East, managed by sales.manager with sales.rep, and sales.rep2's earlier membership ended there;
+        West, with sales.rep2 and managed by sales.manager2 (who works for both organizations); and Ziziwork Sales' Direct team with
+        sales.rep3, also managed by sales.manager2. -->
+    <mantle.party.Party partyId="BOSS_SAL_TEAM_EAST" pseudoId="SALEAST" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_SAL_TEAM_EAST" organizationName="Retail East"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_TEAM_EAST" roleTypeId="SalesTeam"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TEAM_EAST_OF" relationshipTypeEnumId="PrtSalesTeamOf"
+            fromPartyId="BOSS_SAL_TEAM_EAST" fromRoleTypeId="SalesTeam" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_SAL_TEAM_WEST" pseudoId="SALWEST" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_SAL_TEAM_WEST" organizationName="Retail West"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_TEAM_WEST" roleTypeId="SalesTeam"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TEAM_WEST_OF" relationshipTypeEnumId="PrtSalesTeamOf"
+            fromPartyId="BOSS_SAL_TEAM_WEST" fromRoleTypeId="SalesTeam" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_SAL_TEAM_DIRECT" pseudoId="SALDIRECT" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SALES"/>
+    <mantle.party.Organization partyId="BOSS_SAL_TEAM_DIRECT" organizationName="Ziziwork Sales Direct"/>
+    <mantle.party.PartyRole partyId="BOSS_SAL_TEAM_DIRECT" roleTypeId="SalesTeam"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TEAM_DIRECT_OF" relationshipTypeEnumId="PrtSalesTeamOf"
+            fromPartyId="BOSS_SAL_TEAM_DIRECT" fromRoleTypeId="SalesTeam" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_EAST_MGR" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_MANAGER" fromRoleTypeId="Manager" toPartyId="BOSS_SAL_TEAM_EAST" toRoleTypeId="SalesTeam"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_EAST_REP" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_REP" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_TEAM_EAST" toRoleTypeId="SalesTeam"
+            fromDate="2026-01-01 00:00:00"/>
+    <!-- the ended membership: sales.rep2 moved from East to West on Jul 1 -->
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_EAST_REP2" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_REP2" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_TEAM_EAST" toRoleTypeId="SalesTeam"
+            fromDate="2026-01-01 00:00:00" thruDate="2026-07-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_WEST_REP2" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_REP2" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_TEAM_WEST" toRoleTypeId="SalesTeam"
+            fromDate="2026-07-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_WEST_MGR" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_MANAGER2" fromRoleTypeId="Manager" toPartyId="BOSS_SAL_TEAM_WEST" toRoleTypeId="SalesTeam"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_DIRECT_REP3" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_REP3" fromRoleTypeId="SalesRepresentative" toPartyId="BOSS_SAL_TEAM_DIRECT" toRoleTypeId="SalesTeam"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_DIRECT_MGR" relationshipTypeEnumId="PrtSalesTeamMember"
+            fromPartyId="BOSS_SAL_MANAGER2" fromRoleTypeId="Manager" toPartyId="BOSS_SAL_TEAM_DIRECT" toRoleTypeId="SalesTeam"
+            fromDate="2026-01-01 00:00:00"/>
+    <!-- West's own pipeline for its key accounts; Retail's default stays the shared one (data/SalesData.xml in mr-mantle) -->
+    <mantle.sales.opportunity.SalesPipeline salesPipelineId="BOSS_SAL_PL_WEST" organizationPartyId="ORG_ZIZI_RETAIL"
+            pipelineName="West key accounts" teamPartyId="BOSS_SAL_TEAM_WEST" defaultFlag="N" fromDate="2026-01-01 00:00:00"
+            description="Longer cycles for the West team's key accounts"/>
+    <mantle.sales.opportunity.SalesOpportunityStage opportunityStageId="BOSS_SAL_PL_WEST_QUAL" salesPipelineId="BOSS_SAL_PL_WEST"
+            description="Qualified" defaultProbability="10" sequenceNum="10" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesOpportunityStage opportunityStageId="BOSS_SAL_PL_WEST_DEMO" salesPipelineId="BOSS_SAL_PL_WEST"
+            description="Demonstration" defaultProbability="30" sequenceNum="20" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesOpportunityStage opportunityStageId="BOSS_SAL_PL_WEST_TRIAL" salesPipelineId="BOSS_SAL_PL_WEST"
+            description="Trial" defaultProbability="50" sequenceNum="30" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesOpportunityStage opportunityStageId="BOSS_SAL_PL_WEST_CONTRACT" salesPipelineId="BOSS_SAL_PL_WEST"
+            description="Contract" defaultProbability="80" sequenceNum="40" foldFlag="N" fromDate="2026-01-01 00:00:00"/>
+    <!-- Lead sources: the website and partners offered to both organizations, the trade fair to Retail alone, cold calls to Ziziwork
+        Sales alone -->
+    <moqui.basic.DataSource dataSourceId="BOSS_SAL_SRC_WEB" dataSourceTypeEnumId="WEB_SITE" description="Website enquiry"/>
+    <moqui.basic.DataSource dataSourceId="BOSS_SAL_SRC_PARTNER" dataSourceTypeEnumId="PARTNER" description="Partner referral"/>
+    <moqui.basic.DataSource dataSourceId="BOSS_SAL_SRC_FAIR" dataSourceTypeEnumId="TRADE_SHOW" description="Retail trade fair"/>
+    <moqui.basic.DataSource dataSourceId="BOSS_SAL_SRC_CALLS" dataSourceTypeEnumId="COLD_CALL" description="Outbound calls"/>
+    <mantle.sales.opportunity.SalesLeadSourceBinding dataSourceId="BOSS_SAL_SRC_WEB" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesLeadSourceBinding dataSourceId="BOSS_SAL_SRC_WEB" organizationPartyId="ORG_ZIZI_SALES" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesLeadSourceBinding dataSourceId="BOSS_SAL_SRC_PARTNER" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesLeadSourceBinding dataSourceId="BOSS_SAL_SRC_PARTNER" organizationPartyId="ORG_ZIZI_SALES" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesLeadSourceBinding dataSourceId="BOSS_SAL_SRC_FAIR" organizationPartyId="ORG_ZIZI_RETAIL" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesLeadSourceBinding dataSourceId="BOSS_SAL_SRC_CALLS" organizationPartyId="ORG_ZIZI_SALES" fromDate="2026-01-01 00:00:00"/>
+    <!-- ===== end of Sales P2 ===== -->
+</entity-facade-xml>

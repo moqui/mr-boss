@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Settings › Stages (design-sales §9 Stages: PipelineDefinition, PipelineStages; style-guide §3.9 Settings; impl-sales P2):
+    the pipelines an organization is offered, its own and the instance's shared one (the seeded default, changed only by an
+    administrator of every organization), each with its name, team, default flag and effective interval
+    (mantle.sales.OpportunityServices.store#Pipeline); a chosen pipeline's stages in order, each with its default probability, fold
+    flag and open deals, moved up or down or numbered, renamed, and retired: a stage that holds open deals is retired only with
+    the stage they move to (store#Stage, which moves them and leaves closed deals). Nothing is deleted. SALES_CONFIGURE, which
+    Mantle checks with the organization. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Stages" default-menu-index="2"
+        default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
+    <parameter name="organizationPartyId"/>
+    <parameter name="salesPipelineId"/>
+    <parameter name="includeEnded"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition name="storePipeline">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#Pipeline" out-map="stored"
+                    in-map="{salesPipelineId:(salesPipelineId || null), organizationPartyId:(organizationPartyId || null),
+                        pipelineName:(pipelineName ?? null), description:(description ?? null),
+                        teamPartyId:(salesPipelineId ? (teamPartyId || '') : (teamPartyId || null)),
+                        defaultFlag:(defaultFlag ?? (salesPipelineId ? null : 'N')), end:(endPipeline == 'Y'),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="salesPipelineId" from="stored.salesPipelineId"/>
+                <message type="success">${endPipeline == 'Y' ? 'Pipeline ended' : 'Pipeline saved'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="salesPipelineId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/><parameter name="salesPipelineId"/></error-response>
+    </transition>
+    <transition name="storeStage">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#Stage" out-map="stored"
+                    in-map="{opportunityStageId:(opportunityStageId || null), salesPipelineId:(salesPipelineId || null),
+                        description:(description ?? null), defaultProbability:(defaultProbability ?? null), sequenceNum:(sequenceNum ?? null),
+                        foldFlag:(opportunityStageId ? (foldFlag ?? null) : (foldFlag || 'N')), move:(move || null),
+                        retire:(retireStage == 'Y'), reassignStageId:(reassignStageId || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${retireStage == 'Y' ? 'Stage retired' + (stored.moved ? ', ' + stored.moved + ' open deals moved' : '') : move ? 'Stage moved' : 'Stage saved'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="salesPipelineId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/><parameter name="salesPipelineId"/></error-response>
+    </transition>
+    <always-actions>
+        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales settings are the Sales administrator\'s')</script>
+    </always-actions>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="organizationPartyId" from="organizationPartyId || sales.activeOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <if condition="can.configure &amp;&amp; organizationPartyId">
+            <service-call name="mantle.sales.OpportunityServices.get#SalesSetup" out-map="setup" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId, includeEnded:(includeEnded == 'Y')}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="setupFound" from="!!setup?.organizationPartyId"/>
+        <set field="pipelineList" from="(setup?.pipelines || []).map(row =&gt; Object.assign({}, row, {
+                teamText: row.teamName || 'Every team', ownerText: row.shared ? 'Shared by every organization' : row.organizationName,
+                defaultText: row.isDefault ? 'Default' : '', stageCount: row.stages.filter(stage =&gt; !stage.ended).length}))"/>
+        <set field="pipeline" from="pipelineList.find(row =&gt; row.salesPipelineId == salesPipelineId)
+                || pipelineList.find(row =&gt; row.salesPipelineId == setup?.defaultPipelineId) || pipelineList[0] || null"/>
+        <set field="salesPipelineId" from="pipeline?.salesPipelineId || null"/>
+        <set field="stageList" from="(pipeline?.stages || []).map(row =&gt; Object.assign({}, row, {
+                probabilityText: row.defaultProbability == null ? '' : row.defaultProbability + ' %', foldText: row.folded ? 'Folded' : '',
+                canEdit: !!pipeline.canEdit &amp;&amp; !row.ended}))"/>
+        <set field="currentStages" from="stageList.filter(row =&gt; !row.ended)"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId, includeEnded: includeEnded || null}"/>
+        <set field="newPipeline" from="{organizationPartyId: organizationPartyId}"/>
+        <set field="newStage" from="{organizationPartyId: organizationPartyId, salesPipelineId: salesPipelineId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Pipelines and stages" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="A deal moves through its pipeline's stages; Won and Lost are outcomes, not stages. A stage in use is retired with its open deals moved, never deleted."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="NewPipelineDialog" button-text="New pipeline" icon="sym_o_add" type="primary" width="560"
+                        title="New pipeline" condition="setupFound">
+                    <form-single name="NewPipeline" transition="storePipeline" map="newPipeline">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="pipelineName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="teamPartyId">
+                            <default-field title="Team" tooltip="Empty: every team of the organization">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'teams', organizationPartyId:newPipeline.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="defaultFlag"><default-field title=" "><check><option key="Y" text="The organization's default"/></check></default-field></field>
+                        <field name="description"><default-field title="Description"><text-area rows="2" cols="50"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create pipeline"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="StagesFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="includeEnded"><default-field title=" "><check><option key="Y" text="Include ended and retired"/></check></default-field></field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="includeEnded"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="!setupFound"
+                text="This organization is not available to you, or its settings cannot be read just now."/>
+
+        <container-box condition="setupFound">
+            <box-header title="Pipelines"/>
+            <box-body-nopad>
+                <form-list name="PipelineDefinition" list="pipelineList" skip-form="true" paginate="false">
+                    <field name="pipelineName">
+                        <default-field title="Pipeline">
+                            <link url="." text="${pipelineName}" link-type="anchor"
+                                    parameter-map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId, includeEnded:includeEnded}"/>
+                        </default-field>
+                    </field>
+                    <field name="ownerText"><default-field title="Organization"><display/></default-field></field>
+                    <field name="teamText"><default-field title="Team"><display/></default-field></field>
+                    <field name="defaultText"><default-field title="Default"><display/></default-field></field>
+                    <field name="stageCount" align="right"><default-field title="Stages"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="EditPipeline_${salesPipelineId}" button-text="Edit" icon="sym_o_edit" type="default" width="560"
+                                    title="Edit ${pipelineName}" condition="canEdit">
+                                <form-single name="EditPipeline" transition="storePipeline"
+                                        map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId, expectedRevision:revision,
+                                            pipelineName:pipelineName, description:description, teamPartyId:teamPartyId, defaultFlag:(isDefault ? 'Y' : 'N')}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="salesPipelineId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="pipelineName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="teamPartyId" hide="shared">
+                                        <default-field title="Team" tooltip="Empty: every team">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'teams', organizationPartyId:organizationPartyId, selected:teamPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="defaultFlag">
+                                        <default-field title="Default"><radio><option key="Y" text="The default"/><option key="N" text="Not the default"/></radio></default-field>
+                                    </field>
+                                    <field name="description"><default-field title="Description"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="EndPipeline_${salesPipelineId}" button-text="End" icon="sym_o_event_busy" type="default" width="520"
+                                    title="End ${pipelineName}" condition="canEdit">
+                                <label type="p" text="A pipeline is ended once no open deal is on its stages; its history stays."/>
+                                <form-single name="EndPipeline" transition="storePipeline"
+                                        map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId, expectedRevision:revision, endPipeline:'Y'}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="salesPipelineId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="endPipeline"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title="End pipeline"><submit type="danger" confirmation="End ${pipelineName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="pipelineName"/><field-ref name="teamText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No pipeline is offered to this organization: create one." type="p" style="m-muted q-pa-sm" condition="!pipelineList.length"/>
+            </box-body-nopad>
+        </container-box>
+
+        <container-box condition="pipeline">
+            <box-header title="${pipeline?.pipelineName}: stages"/>
+            <box-toolbar>
+                <container-dialog id="NewStageDialog" button-text="Add stage" icon="sym_o_add" type="default" width="520"
+                        title="Add a stage to ${pipeline?.pipelineName}" condition="pipeline?.canEdit">
+                    <form-single name="NewStage" transition="storeStage" map="newStage">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="salesPipelineId"><default-field><hidden/></default-field></field>
+                        <field name="description"><default-field title="Name"><text-line size="30"/></default-field></field>
+                        <field name="defaultProbability"><default-field title="Default probability %"><text-line size="5" input-type="number"/></default-field></field>
+                        <field name="sequenceNum"><default-field title="Order" tooltip="Empty: last"><text-line size="5" input-type="number"/></default-field></field>
+                        <field name="foldFlag"><default-field title=" "><check><option key="Y" text="Fold on the board"/></check></default-field></field>
+                        <field name="submitButton"><default-field title="Add stage"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <label type="p" style="text-caption m-muted q-px-sm" condition="pipeline?.shared &amp;&amp; !pipeline?.canEdit"
+                        text="The shared pipeline is changed by an administrator of every organization; create a pipeline of your own to change its stages."/>
+                <form-list name="PipelineStages" list="stageList" skip-form="true" paginate="false">
+                    <field name="sequenceNum" align="right"><default-field title="Order"><display/></default-field></field>
+                    <field name="description"><default-field title="Stage"><display/></default-field></field>
+                    <field name="probabilityText" align="right"><default-field title="Default probability"><display/></default-field></field>
+                    <field name="foldText"><default-field title="Board"><display/></default-field></field>
+                    <field name="openCount" align="right"><default-field title="Open deals"><display format="#,##0"/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="storeStage" text="Up" icon="sym_o_arrow_upward" link-type="hidden-form" btn-type="default" condition="canEdit"
+                                    parameter-map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId,
+                                        opportunityStageId:opportunityStageId, expectedRevision:revision, move:'up'}"/>
+                            <link url="storeStage" text="Down" icon="sym_o_arrow_downward" link-type="hidden-form" btn-type="default" condition="canEdit"
+                                    parameter-map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId,
+                                        opportunityStageId:opportunityStageId, expectedRevision:revision, move:'down'}"/>
+                            <container-dialog id="EditStage_${opportunityStageId}" button-text="Edit" icon="sym_o_edit" type="default" width="520"
+                                    title="Edit ${description}" condition="canEdit">
+                                <form-single name="EditStage" transition="storeStage"
+                                        map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId, opportunityStageId:opportunityStageId,
+                                            expectedRevision:revision, description:description, defaultProbability:defaultProbability,
+                                            sequenceNum:sequenceNum, foldFlag:(folded ? 'Y' : 'N')}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="salesPipelineId"><default-field><hidden/></default-field></field>
+                                    <field name="opportunityStageId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="description"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                    <field name="defaultProbability"><default-field title="Default probability %"><text-line size="5" input-type="number"/></default-field></field>
+                                    <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
+                                    <field name="foldFlag"><default-field title="Board"><radio><option key="N" text="Open"/><option key="Y" text="Folded"/></radio></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RetireStage_${opportunityStageId}" button-text="Retire" icon="sym_o_event_busy" type="default" width="560"
+                                    title="Retire ${description}" condition="canEdit">
+                                <label type="p" text="${openCount ? description + ' holds ' + openCount + ' open deals: choose the stage they move to. Closed deals keep it.' : 'No open deal is on ' + description + '. Closed deals keep it.'}"/>
+                                <form-single name="RetireStage" transition="storeStage"
+                                        map="{organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId, opportunityStageId:opportunityStageId,
+                                            expectedRevision:revision, retireStage:'Y'}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="salesPipelineId"><default-field><hidden/></default-field></field>
+                                    <field name="opportunityStageId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="retireStage"><default-field><hidden/></default-field></field>
+                                    <field name="reassignStageId">
+                                        <default-field title="Move open deals to">
+                                            <drop-down allow-empty="true">
+                                                <list-options list="currentStages.filter(stage =&gt; stage.opportunityStageId !== opportunityStageId)"
+                                                        key="${opportunityStageId}" text="${description}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Retire stage"><submit type="danger" confirmation="Retire ${description}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="probabilityText"/></column>
+                        <column><field-ref name="openCount"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="This pipeline has no stages: add the first." type="p" style="m-muted q-pa-sm" condition="!stageList.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
