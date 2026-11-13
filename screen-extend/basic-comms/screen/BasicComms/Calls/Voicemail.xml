@@ -30,6 +30,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Maintenance P19: Commons' Report a problem mounted here, so its action below is a dialog of this screen -->
     <subscreens>
         <subscreens-item name="ReportProblem" location="component://mr-boss/screen/Commons/ReportProblem.xml" menu-include="false"/>
+        <!-- Sales P5: Log call on opportunity, for a Sales user (BOSS_SAL_LOG_CALL) -->
+        <subscreens-item name="SalesLogCall" location="component://mr-boss/screen/Sales/Pipeline/LogCall.xml" menu-include="false"/>
     </subscreens>
     <ext-action name="boss.createCase" slot="voicemail-actions" sequence="20" label="Create a case" icon="sym_o_support_agent" transition="createCase">
         <parameter name="voicemailId"/>
@@ -37,6 +39,23 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Maintenance P19 (the user's call of Nov 12): Report a problem prefilled with the voicemail's transcript (Commons' ReportProblem
         mounted here, for a user who may report; the audio stays in Comms) -->
     <ext-action name="maintenance.reportProblem" slot="voicemail-actions" sequence="30" label="Report a problem" icon="sym_o_report_problem" screen="ReportProblem">
+        <parameter name="voicemailId"/>
+    </ext-action>
+    <!-- Sales P5 (design-sales §1.4 Comms hooks, §3 Leads): Create lead from the voicemail (its transcript, never its audio, the
+        caller's number as submitted; ironstone.sales.ContextServices.create#LeadFromMessage), refused for a user without Sales; and
+        Log call on opportunity (Sales' LogCall dialog mounted here, for a Sales user: BOSS_SAL_LOG_CALL) -->
+    <transition name="createLead">
+        <actions><script><![CDATA[
+            const made = ec.service.sync().name('ironstone.sales.ContextServices.create#LeadFromMessage').parameters({voicemailId: voicemailId || ''}).call() || {}
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {recordEntityName: made.recordEntityName, recordId: made.recordId, url: made.url,
+                messageInfos: [{type: 'success', message: made.message, link: made.url, linkText: ec.l10n.localize('Open')}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <ext-action name="sales.createLead" slot="voicemail-actions" sequence="40" label="Create lead" icon="sym_o_person_add" transition="createLead">
+        <parameter name="voicemailId"/>
+    </ext-action>
+    <ext-action name="sales.logCall" slot="voicemail-actions" sequence="50" label="Log call on opportunity" icon="sym_o_call_log" screen="SalesLogCall">
         <parameter name="voicemailId"/>
     </ext-action>
 </screen-extend>

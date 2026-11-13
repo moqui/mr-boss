@@ -2182,6 +2182,21 @@ remain historical; these rows add no implementation claim.
 | sales/OpportunityServices | check#OpportunityAccess | Shared/Chatter; Shared/RecordFiles | get#RecordLinkInfo's opportunity host; Shared/RecordFiles (who adds a deal's files) |
 | sales/OpportunityServices | create#OpportunityContent | Shared/RecordFiles | Sales/Pipeline/OpportunityDetail (Files, through Shared/RecordFiles) |
 
+### Added in the Sales build: lead intake, Comms hooks and account sync (P5, Nov 13, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| sales/OpportunityServices | store#LeadIntake | Sales/Pipeline/Leads (intake); PASS:Marketing/SubmitForm (Marketing's lead rules) | create#LeadFromEmail (the mail rule); ironstone.sales.ContextServices.create#LeadFromMessage (Comms' Create lead on a mail, internal or chat message, Calls/Voicemail's Create lead); Marketing's capture job (impl-marketing P13) |
+| sales/OpportunityServices | create#LeadFromEmail | — (mail rules) | the mail rules' Make a sales lead (EmailRuleAction ErActCreateLead), a team's plus tag (no screen) |
+| sales/OpportunityServices | store#LeadSourceMapping | Sales/Settings/LeadSources | Sales/Settings/LeadSources (UtmSourceMap: Map a source, End) |
+| sales/OpportunityServices | find#LeadSourceMappings | Sales/Settings/LeadSources | Sales/Settings/LeadSources (UtmSourceMap) |
+| sales/OpportunityServices | store#TeamIntake | Sales/Settings (the intake address) | Sales/Settings/LeadSources (Mail intake: Set) |
+| sales/OpportunityServices | find#TeamIntakes | Sales/Settings (the intake address) | Sales/Settings/LeadSources (Mail intake) |
+| sales/OpportunityServices | log#OpportunityCall | Comms call and voicemail actions | Sales/Pipeline/LogCall (mounted as SalesLogCall under Comms/Calls/Call and Comms/Calls/Voicemail) |
+| sales/OpportunityServices | purge#LeadIntakes | — (job) | ServiceJob purge_SalesLeadIntakes (no screen) |
+| sales/SalesWorkspaceServices | get#AccountContactProjection | Sales/Accounts/Contacts (My accounts) | the projected CardDAV address book projected-SalesMyAccounts (mantle.party.ContactDavServices; no screen) |
+| party/ContactDavServices | get#ProjectionObjects | — (CardDAV) | get#DavCollections and get#DavObjects for projected-{projectionId} (no screen) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section

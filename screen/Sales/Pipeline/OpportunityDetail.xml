@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     Competitors, Activities (the linked tasks, each opening WorkItemDetail; Schedule activity), Quotes and orders (the linked documents
     an organization reader sees, until the quote and order scopes, P7 and P11), Conversation (Chatter) and Files (RecordFiles), the
     opportunity being a Chatter and files host (get#RecordLinkInfo, F69). Every change is Mantle's guarded service at the revision
-    read; a stage move is not a closure. An account the user may not see is unnamed. -->
+    read; a stage move is not a closure. An account the user may not see is unnamed. P5: Inquiries, the intakes that made or
+    joined a lead (what the inquirer submitted, until purged), which QualifyLead's new account and contact start from. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Opportunity" default-menu-include="false">
     <parameter name="salesOpportunityId" required="true"/>
@@ -52,6 +53,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="competitorList" from="detail?.competitors || []"/>
         <set field="activityList" from="detail?.activities || []"/>
         <set field="orderList" from="detail?.orders || []"/>
+        <!-- P5: what came in for the lead (its intakes), and the first one's submitted details as QualifyLead's new account and contact -->
+        <set field="intakeList" from="detail?.intakes || []"/>
+        <set field="firstIntake" from="intakeList.find(row =&gt; !row.purged) || {}"/>
+        <set field="intakeNames" from="String(firstIntake.submittedName || '').trim().split(/\s+/)"/>
         <set field="canEdit" from="!!detail?.canEdit"/>
         <set field="customer360Path" from="sharedLinks['Accounts/Customer360'] || null"/>
         <set field="workItemPath" from="sharedLinks['Pipeline/WorkItemDetail'] || null"/>
@@ -62,7 +67,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="editValues" from="Object.assign({}, deal, {expectedRevision: deal.revision,
                 estimatedCloseDate: deal.estimatedCloseDate ? ec.l10n.format(deal.estimatedCloseDate, 'yyyy-MM-dd') : null})"/>
         <set field="qualifyValues" from="{salesOpportunityId:salesOpportunityId, expectedRevision:deal.revision, organizationPartyId:deal.organizationPartyId,
-                accountPartyId:deal.accountPartyId, salesPipelineId:deal.salesPipelineId}"/>
+                accountPartyId:deal.accountPartyId, salesPipelineId:deal.salesPipelineId,
+                accountName:(deal.accountPartyId ? null : firstIntake.submittedOrganization || null),
+                contactFirstName:(intakeNames.length &gt; 1 ? intakeNames.slice(0, -1).join(' ') : intakeNames[0] || null),
+                contactLastName:(intakeNames.length &gt; 1 ? intakeNames[intakeNames.length - 1] : null),
+                contactEmail:(firstIntake.submittedEmail || null)}"/>
         <set field="dealRef" from="{salesOpportunityId:salesOpportunityId, expectedRevision:deal.revision}"/>
         <set field="stageValues" from="{salesOpportunityId:salesOpportunityId, expectedRevision:deal.revision, opportunityStageId:deal.opportunityStageId}"/>
         <set field="activityValues" from="{salesOpportunityId:salesOpportunityId}"/>
@@ -407,6 +416,32 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-box>
                     </row-col>
                 </container-row>
+                <!-- P5: the inquiries that made or joined the lead (store#LeadIntake): what the inquirer submitted, kept here and not as a
+                    party until qualifying (QualifyLead starts from it), blank once purged; a second one from the same email joined it -->
+                <section name="Inquiries" condition="intakeList.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Inquiries"/>
+                            <box-body-nopad>
+                                <form-list name="IntakeList" list="intakeList" skip-form="true" paginate="false">
+                                    <field name="kindText"><default-field title="Came by"><display/></default-field></field>
+                                    <field name="receivedText"><default-field title="Received"><display/></default-field></field>
+                                    <field name="submittedName"><default-field title="Name"><display/></default-field></field>
+                                    <field name="submittedOrganization"><default-field title="Organization"><display/></default-field></field>
+                                    <field name="submittedEmail"><default-field title="Email"><display/></default-field></field>
+                                    <field name="submittedPhone"><default-field title="Phone"><display/></default-field></field>
+                                    <field name="utmText"><default-field title="Link"><display/></default-field></field>
+                                    <field name="stateText" from="purged ? 'Purged ' + purgedText : (duplicate ? 'Joined this lead' : (verified ? 'Verified' : 'Unverified'))">
+                                        <default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="submittedName"/><field-ref name="submittedEmail"/></column>
+                                        <column><field-ref name="kindText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container-row>
                     <row-col md="6">
                         <container-box>

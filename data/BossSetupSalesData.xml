@@ -224,4 +224,25 @@ along with this software (see the LICENSE.md file). If not, see
             screenLocation="component://mr-boss/screen/Sales/Settings.xml" viewPermission="SALES_CONFIGURE"
             configuredBy="Sales administrator" providerKey="sales.readiness" sequenceNum="80"/>
     <!-- ===== end of Sales P2 ===== -->
+
+    <!-- ===== Sales P5: Comms hooks (impl-sales P5, F64; design-sales §1.4) ===== -->
+    <!-- Log call on opportunity, mounted under Comms' Calls/Call and Calls/Voicemail (screen-extend/basic-comms): denied to BOSS_USERS,
+        so Comms offers it to no one else, always for the Sales root user group and the administrator. Its services
+        (ironstone.sales.ContextServices get#DealOptions and log#Call) are BOSS_SALES' already, and Mantle's log#OpportunityCall
+        checks SALES_OPPORTUNITY_EDIT and the deal again. Create lead needs no screen: its services are BOSS_SALES' alone, so Comms'
+        create-from provider refuses it to any other user. -->
+    <artifactGroups artifactGroupId="BOSS_SAL_LOG_CALL" description="Sales: log a call on a deal (Comms)">
+        <artifacts artifactName="component://mr-boss/screen/Sales/Pipeline/LogCall.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SAL_LOG_CALL_DENY" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_SAL_LOG_CALL_SALES" userGroupId="BOSS_SALES" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_SAL_LOG_CALL_ADMIN" userGroupId="BOSS_SALES_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- ===== end of Sales P5 ===== -->
 </entity-facade-xml>

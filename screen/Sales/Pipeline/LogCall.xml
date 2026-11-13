@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Log call on opportunity (design-sales §1.4 Comms hooks; impl-sales P5, F64): from Comms' call (Calls/Call's call-actions slot,
+    callSessionId) or a voicemail (Calls/Voicemail's voicemail-actions, voicemailId), mounted under each by screen-extend/basic-comms,
+    for a Sales user only (the BOSS_SAL_LOG_CALL artifact group: denied to BOSS_USERS, always for BOSS_SALES and the administrator).
+    The deal is one the user sees and edits (ironstone.sales.ContextServices get#DealOptions, Mantle's find#Opportunities as the
+    user); log#Call hands it to Mantle's log#OpportunityCall, which checks the deal again; a voicemail's call is inbound, at its time
+    and length, with its transcript as the summary unless one is written. The transition answers JSON, so the dialog closes, with a
+    link to the deal. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Log call on opportunity" default-menu-include="false" server-static="qvt">
+    <parameter name="voicemailId"/>
+    <parameter name="callSessionId"/>
+    <transition name="deals" read-only="true">
+        <actions>
+            <service-call name="ironstone.sales.ContextServices.get#DealOptions" out-map="found" in-map="{term:(term || null)}"/>
+            <script>ec.web.sendJsonResponse(ec.message.hasError() ? [] : (found.options || []))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="logCall">
+        <actions>
+            <script><![CDATA[
+                const out = ec.service.sync().name('ironstone.sales.ContextServices.log#Call').parameters({salesOpportunityId: salesOpportunityId || '',
+                    summary: summary || null, direction: direction || null, durationMinutes: durationMinutes || null,
+                    voicemailId: voicemailId || null, callSessionId: callSessionId || null}).call() || {}
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : {communicationEventId: out.communicationEventId, url: out.url,
+                    messageInfos: [{type: 'success', link: out.url, linkText: ec.l10n.localize('Open'), message: out.message}]})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <set field="callValues" from="{voicemailId:voicemailId, callSessionId:callSessionId, direction:(voicemailId ? 'in' : 'out')}"/>
+    </actions>
+    <widgets>
+        <label text="From the voicemail: an inbound call, its transcript the summary unless you write one." type="p"
+                style="text-caption m-muted" condition="voicemailId"/>
+        <form-single name="LogCall" transition="logCall" map="callValues" focus-field="salesOpportunityId">
+            <field name="voicemailId"><default-field><hidden/></default-field></field>
+            <field name="callSessionId"><default-field><hidden/></default-field></field>
+            <field name="salesOpportunityId">
+                <default-field title="Lead or opportunity">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="deals" server-search="true" min-length="0"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="direction">
+                <conditional-field condition="voicemailId"><hidden/></conditional-field>
+                <default-field title="Call">
+                    <radio><option key="out" text="I called"/><option key="in" text="They called"/></radio>
+                </default-field>
+            </field>
+            <field name="durationMinutes">
+                <conditional-field condition="voicemailId"><ignored/></conditional-field>
+                <default-field title="Minutes"><text-line size="5" input-type="number"/></default-field>
+            </field>
+            <field name="summary"><default-field title="What it was about"><text-area rows="3" cols="50"/></default-field></field>
+            <field name="submitButton"><default-field title="Log call"><submit/></default-field></field>
+        </form-single>
+    </widgets>
+</screen>

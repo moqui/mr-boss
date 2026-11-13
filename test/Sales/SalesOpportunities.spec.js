@@ -2,8 +2,9 @@
 // stage columns, empty ones too, the representative's and their team's deals and not another team's, the totals and the row's
 // Change stage dialog), its board move by a column's stage name (moveCard), OpportunityDetail's one qvt render (the record header,
 // people, competitors, activities, Conversation and Files) and its "Not available" for another team's rep, and Leads' one html
-// render (the leads of the rep's team queue, the Qualify dialog). The rules are Mantle's SalesOpportunities and SalesLeadQualify;
-// the access rule is SalesAccess'. Demo data: data/BossZSalesDemoData.xml (P4 block).
+// render (the leads of the rep's team queue, the Qualify dialog; P5: the intake columns of the demo mail inquiry). The rules are
+// Mantle's SalesOpportunities and SalesLeadQualify; the access rule is SalesAccess'. Demo data: data/BossZSalesDemoData.xml (P4 and
+// P5 blocks).
 // Run: ./moq test mr-boss --spec SalesOpportunities
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, page} = lib
@@ -98,5 +99,9 @@ feature("Leads lists the rep's leads and their team's queue, not another team's;
         !leads.output.includes("Wingtip stores refit")
         leads.output.includes("QualifyLead_" + deals.fairLead)
         leads.output.includes("Retail trade fair")
+        // P5: the demo inquiry the intake mailbox's rule took, in East's queue, with its intake columns
+        leads.output.includes("Shelving for three stores")
+        leads.output.includes("Came by")
+        leads.output.includes("Unverified")
     }
 })

@@ -1371,6 +1371,199 @@ Design §3 Leads (intake), §9 LeadSources' UtmSourceMap, §1.4 (Comms hooks, CX
   mail to the leads address and a voicemail's "Create lead" each make one lead in the named team's queue with the
   mapped source; the same message again makes none; a phone's address book shows the rep's account contacts read only.
 
+**Built Nov 13 (P5).** mr-moqui, mr-mantle and mr-boss on branch `sal/p5` (hashes in the worker's reply). The framework change is
+basic-comms' Mail and its docs; base component files are read from disk by the release binary (`crates/moqui-embedded` packs only
+the framework and tools components and a webroot stub, and basic-comms is neither), so the server needed no rebuild and every spec
+ran on the shared release binary with `--nobuild`; the desktop client's precompiled copy of Mail.qvue
+(`crates/moqui-desktop/shell/js/bundled-screens.js`) was regenerated with a Debug `UPDATE_GOLDEN=1 cargo test -p moqui-core --lib
+bundled_screens_are_precompiled` in the mr-moqui worktree (`CARGO_BUILD_JOBS=4`, 4 m 21 s), no `.rs` file changed.
+- Checked first (the code over the plan): P1–P4's Built and Review notes and F74–F112; how Comms consumes the hooks (F64):
+  `call#Providers` (crates/moqui-core/src/service/shell.rs) answers a mutation with every provider's result in sequence order and
+  Chat's createFrom takes the first, so a second `create-from` provider on the Sales root would answer (or refuse) every kind;
+  Customer Service's case and People's claim and application kinds are kinds of Comms' one provider `boss.records`
+  (ChatServices.create#FromChat), and Sales' lead is one too; Mail's own `createFrom` is the QuickCreate prefill through the
+  inbox-source, so the slot's actions post a new `createRecord`; `contact-card` keeps the first card with a party or link, Comms'
+  own party card first; People's CalendarProjection (impl-people P12) is the pattern of the projected address book; Maintenance's
+  mail action and plus tag (MaintenanceIntake.js `intakeTeam`); EntityLib's PostingOperation keys check the user, which Marketing's
+  job and an operator's reprocess of one capture would not share, so the intake keeps its own key. The code over the plan:
+  - "Create lead" on a chat or mail message and a voicemail makes the lead at once (the user its owner, on their only team; the
+    message filed on it; the same message again answers the same lead) and answers its link, rather than opening NewLead prefilled:
+    create-from answers a record, as the case and task kinds do;
+  - "Log call on opportunity" is a dialog (Sales/Pipeline/LogCall) over a new Mantle `log#OpportunityCall` (a Phone communication
+    event filed on the deal); "the intake address shown in Settings" is LeadSources' Mail intake box over new `store#TeamIntake` and
+    `find#TeamIntakes` (the team's plus tag and default source as PartySettings), so P2's store#SalesTeam is unchanged;
+  - "My accounts" is the accounts the rep manages or has a deal of (assigned now to them or their team), not every account of the
+    scope, which for a shared or large organization would be the whole book.
+- mr-moqui (framework, basic-comms):
+  - `screen/BasicComms/Inbox/Mail.qvue`: `m-ext-actions slot="message-actions"` in the thread's More menu (its last message) and each
+    message's, item `{store, emailMessageId, communicationEventId}`, `@done` reloading the thread; `Mail.xml`: the `createRecord`
+    transition (the message's ids and the action's kind to the `create-from` providers, as Chat's createFrom; "Nothing here makes
+    records from messages" with none); `service/org/moqui/comms/ProviderInterfaces.xml` create#From takes `communicationEventId`.
+  - `crates/moqui-desktop/shell/js/bundled-screens.js` regenerated (the golden).
+  - Docs: `docs/tools/Comms.md` (the hook table's create-from row and Mail's slot and item beside Chat's and Voicemail's);
+    `docs/security/Attack-Surface.md` (the lead intake address under Mail, the RFQ address named for P8; projected address books
+    under DAV). The schema's slot list (`xml-screen-3.xsd` ext-item-attributes) and Qvt-Client's example already name
+    `message-actions`, so no other doc needed the slot named.
+- Mantle:
+  - `entity/SalesEntities.xml`: SalesLeadIntake (unique source identity and operation key; indexes by lead and by organization and
+    email) and SalesLeadSourceMap (dated, the source audit-logged); `entity/PartyEntities.xml`: ContactProjection.
+  - `data/SalesIntakeData.xml` (new, seed): SalesLeadIntakeSource and SalesLeadIntakeOutcome, ErActCreateLead (`createLead`), the
+    PartySettingTypes SalesIntakePlusTag and SalesIntakeSource, the ContactProjection SalesMyAccounts, the ServiceJob
+    purge_SalesLeadIntakes (nightly) with its JobRegistration (SALES_CONFIGURE) and retentionDays parameter.
+  - `service/mantle/sales/SalesIntake.js` (new) and OpportunityServices: `store#LeadIntake`, `create#LeadFromEmail`,
+    `store#LeadSourceMapping`, `find#LeadSourceMappings`, `store#TeamIntake`, `find#TeamIntakes`, `log#OpportunityCall`,
+    `purge#LeadIntakes`; SalesWorkspaceServices `get#AccountContactProjection`. find#Opportunities' rows gain intakeKindText,
+    receivedText, verificationText and intakeCount, get#Opportunity `intakes`.
+  - `party/ContactDavServices.xml`: `define#ProjectionOwner`, `get#ProjectionObjects`, projected collections in get#DavCollections and
+    get#DavObjects, PUT and DELETE on one 403; get#ContactObjectTags takes a projection's partyIdList.
+  - The contract Marketing P13 builds to: `store#LeadIntake` with organizationPartyId, sourceKind formResponse and sourceId (the
+    response), operationKey (the capture's), teamPartyId (the queue), utmSource and utmMedium, marketingCampaignId, trackingCodeId
+    (its campaign when none is given), defaultDataSourceId, the published submitted fields and verified; called by its job with no
+    user or authorization disabled; a repeated key answers the first result (alreadyApplied) whoever runs it, another request under
+    it OPERATION_KEY_CONFLICT; a duplicate answers duplicate true and the lead it joined (Marketing's "Sales' review item").
+- BOSS:
+  - `service/ironstone/sales/SalesComms.js` (new) and ContextServices: `create#LeadFromMessage` (mail, internal, chat or voicemail, read
+    as the user may read it; Mantle's intake as the user), `lookup#Records` (record-lookup: a deal's info and card, never its amount,
+    search, links), `get#CallContext` (the caller's accounts' open deals the user sees), `get#ContactCard` (an inquirer with no party
+    as their open lead's card), `get#DealOptions` and `log#Call`.
+  - `screen/Sales.xml`: record-lookup (sequence -5, before Comms'), call-context, contact-card (sequence 50, after Comms').
+    `service/ironstone/comms/ChatServices.xml` create#FromChat: kind lead (chat, mail or internal message); chatRoomId and eventSeq
+    no longer required, checked for the chat kinds.
+  - `screen-extend/basic-comms`: Inbox/Mail `sales.createLead` (message-actions, createRecord, hook create-from); Chat
+    `sales.createLead` (chat-message-actions); Calls/Voicemail the `createLead` transition, `sales.createLead` and `sales.logCall`;
+    Calls/Call (new) `sales.logCall` (call-actions). `screen/Sales/Pipeline/LogCall.xml` (new; BOSS_SAL_LOG_CALL in
+    BossSetupSalesData: denied to BOSS_USERS, always for BOSS_SALES and BOSS_SALES_ADMIN).
+  - Screens: LeadSources' Tracked links (UtmSourceMap) and Mail intake boxes; LeadList's Came by, Received and Verification columns;
+    OpportunityDetail's Inquiries box, and QualifyLead's new account and contact from the first inquiry.
+  - Demo (`data/BossZSalesDemoData.xml`, a P5 block): Retail's intake mailbox sales@retail.example (sales.manager's, read by the reps)
+    with its createLead rule, East's tag `leads` and source, West's `west`, two UTM mappings, and Northwind's inquiry made into a lead
+    by the rule's service.
+- Specs:
+  - Mantle `test/sales/SalesLeadIntake` (new, 3 features, 1.4 s serial, up to 5.3 s on a loaded machine): a mail delivered twice
+    (two rows of one Message-ID) makes one lead in the plus-tag team's queue with the team's source, read by the team's rep and not
+    another team's or organization's, a rule of a user of another organization files nothing, the message filed on the lead, its
+    inquiry on get#Opportunity; a call logged by the rep and refused to another team's; the UTM map (source and medium over source,
+    an unmapped pair the default, MAPPING_EXISTS, a non-configurer refused), a repeated key answering the first result and another
+    request under it refused, a tracking code's campaign and tracking row, the same email joining its lead, a reader without the edit
+    permission and another organization's editor refused, a staff entry owned by the rep; a team's tag (TAG_TAKEN, set, a rep
+    refused); the purge (an unverified unqualified intake blanked, a qualified and a verified one kept, a retry still one lead).
+    `test/party/ProjectedAddressBook` (new, 1 feature, 0.34 s): My accounts read only with the managed account's and the team deal's
+    account's contacts, not another team's; PUT and DELETE 403; a user without Sales has no such collection.
+  - mr-boss `test/Sales/SalesIntake` (new, 3 features, 1.0 s): Create lead in Mail's ext items and posted through createRecord
+    (the rep's lead, the message filed, once; another app's user refused); the record-lookup card and the contact card of the
+    inquirer; Log call in a voicemail's and a call's actions for the rep only; LeadSources' one qvt render (Tracked links, Mail
+    intake); Create lead on a chat message. `SalesOpportunities`' Leads render checks the demo inquiry and the intake columns.
+  - basic-comms `BasicCommsInbox` gains one feature (0.03 s): Mail.qvue renders the slot in both menus with the message's ids, a
+    user no app answers create-from for is told so by createRecord, and an app's action on the slot is in Mail's ext items.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesIntakeScenarios` (scenario 13: the mail rule's lead in East's queue
+    with its source, the same mail again none; a voicemail's Create lead once; My accounts read only).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesLeadIntake 3 of 3, ProjectedAddressBook 1 of 1,
+  with SalesOpportunities, SalesLeadQualify, ContactBooks, SalesPipelineSetup and SalesAccounts 46 of 46, and RecordLinks and
+  CrmMiscServices 30 of 30 with the two new; mr-boss SalesIntake 3 of 3, with SalesAccess, SalesOpportunities, SalesSettings,
+  SalesAccounts, Chat, Inbox, CommsHome, ChatPanel, CustomerServiceChannels, CustomerServiceAccess, MaintenanceAccess,
+  PeopleExpenses, PeopleRecruiting and ProjectsAccess 133 of 133; basic-comms BasicCommsInbox and BasicCommsChat 11 of 11; the
+  golden `bundled_screens_are_precompiled` (Debug). `moqui lint --screens` (release): 141 flagged sites, as before, none in the new
+  or changed screens. Prettier clean on the new JavaScript (BasicCommsInbox.spec.js was not clean before and is left so). Not run:
+  ./moq test-apps, test-framework, the acceptance suite.
+- Findings (provisional, numbered by the lead):
+  - a second `create-from` provider breaks Chat's createFrom, which takes the first result (and a mutation stops at the first
+    refusal), so every app's kind lives in Comms' one provider `boss.records`; a kind-keyed dispatch in `call#Providers` (or a
+    provider declaring its kinds) is the framework's fix;
+  - Customer Service's "Create a case" from a mail is a widgets-extend on MessageDetail (its F121); now that Mail renders
+    message-actions it could move to the slot as Sales' Create lead did;
+  - a Create lead or Create a case action (a transition with hook create-from, or none) is offered to every Comms user and refused
+    on use to one without the app; an ext-action has no permission attribute, and only a screen target is left out by authorization;
+  - Mantle's `call()` disables authorization, and store#LeadIntake treats a caller with authorization disabled as a vouching system
+    caller (as merge#Parties' guards do, §4 Nov 13), so a BOSS screen or service must call it as the user, never through EntityLib's
+    `call`; SalesComms.js does;
+  - the intake's email verification (design §3 "earlier when the inquirer verifies the email") is only the caller's `verified` flag:
+    Sales sends no verification mail, and a party is made only at qualification;
+  - My accounts lists the contacts of accounts the rep manages or has a current deal of; a manager (SALES_TEAM_VIEW) gets the same
+    personal list, not the organization's;
+  - the call-actions slot's ext items come from the Call screen's path; Log call there has no caller's number or account preset (the
+    call's parties are not read), the voicemail's is inbound with its transcript.
+- For the lead:
+  - budget share: mr-mantle about 1.8 s (SalesLeadIntake 1.4 s, ProjectedAddressBook 0.34 s); mr-boss server about 1.0 s (SalesIntake);
+    basic-comms about 0.03 s (its budget 8 s, now about 1.0 s for the two specs run); no client change;
+  - merge hot spots: mr-moqui `runtime/components/base/basic-comms/screen/BasicComms/Inbox/Mail.qvue`, `Mail.xml`,
+    `crates/moqui-desktop/shell/js/bundled-screens.js` (regenerate after any merge touching a bundled screen), `docs/tools/Comms.md`,
+    `docs/security/Attack-Surface.md`; mr-mantle `entity/SalesEntities.xml` (appended), `entity/PartyEntities.xml` (ContactProjection
+    before ContactBook), `OpportunityServices.xml` (appended), `SalesOpportunities.js` (the intake reads),
+    `SalesWorkspaceServices.xml` (appended), `party/ContactDavServices.xml`; mr-boss `screen/Sales.xml` (shell-providers),
+    `service/ironstone/sales/ContextServices.xml` (appended), `service/ironstone/comms/ChatServices.xml` (create#FromChat),
+    `screen-extend/basic-comms/screen/BasicComms/{Chat,Calls/Voicemail,Inbox/Mail}.xml`, `screen/Sales/Pipeline/{Leads,
+    OpportunityDetail}.xml`, `screen/Sales/Settings/LeadSources.xml`, `data/BossSetupSalesData.xml` and `data/BossZSalesDemoData.xml`
+    (P5 blocks at the end), `test/Sales/SalesOpportunities.spec.js`, `plan/usl-inventory.md`, `plan/design-sales.md` §1.4, §3, §4, §9.
+    Marketing's track touches Leads.xml and LeadSources.xml (its mounts) next; P8 adds Create RFQ to the Mail screen-extend;
+  - the user's call: none needed; the intake contract is built to impl-marketing §1's list.
+
+**Review Nov 13 (P5).** A fresh review of `sal/p5` (mr-moqui e8bb55e1, mr-mantle 0556cc8c, mr-boss 9098e9a8) against P5, §2, §4,
+design §1.4, §3, §4 and §9.
+- Checked and sound: store#LeadIntake is `allow-remote="false"`, has no AgentToolExposure, REST or PASS path, and its one caller with
+  authorization disabled is create#LeadFromEmail, which fixes every parameter from the stored message and the team (the rule's owner
+  must work for the team's organization, Maintenance's and Customer Service's rule); EntityLib's `call()` reaches it from nowhere
+  else, and Comms' providers run with authorization required (shell.rs call#Providers), so SalesComms.js calls it as the user and a
+  caller that lost its user would fail TEAM_REQUIRED rather than act as the system. A user caller needs SALES_OPPORTUNITY_EDIT and
+  the organization in their scope (another organization's ORGANIZATION_DENIED, in the spec). Create lead reads the message as the
+  user before anything is written: a mail through get#Thread (the user's readable accounts; mail of no account is not found), an
+  internal message through get#InternalThread, a chat message through findOrCreate#ChatCommunicationEvent (room read, not
+  encrypted), a voicemail through get#Voicemail (the user's own); missing and unreadable answer alike. The offered transitions
+  (Mail's createRecord and Chat's createFrom with hook create-from, Voicemail's createLead) refuse a user without Sales
+  (SALES_UNAVAILABLE) and create nothing; Log call is a screen action under BOSS_SAL_LOG_CALL, so only a Sales user is offered it,
+  and log#OpportunityCall checks the deal again. The framework change: Mail's two `m-ext-actions` (the thread's last message and
+  each message) and `createRecord` follow Chat's createFrom (call#Providers, mutation, the first result with a record, "Nothing here
+  makes records from messages"); create#From only gains `communicationEventId`; Mail's own createFrom (QuickCreate), Chat's
+  createFrom and Customer Service's MessageDetail widgets-extend and voicemail createCase are unchanged; create#FromChat's other
+  kinds still need a chat message. My accounts: the owner service is called as the user, its cards are the visible contacts of the
+  accounts the user manages or has a deal of, `projected-` collections refuse PUT and DELETE (403) before any book check, and no
+  ContactBook row is written. Revisions: the source map is ended at its revision; a team intake's PartySettings carry none (as
+  P2's team settings). The specs test what they claim.
+- Fixed:
+  - R1 (confidentiality, medium; the lead's question). A user caller of store#LeadIntake was answered the first result of an
+    operation key or a source identity whoever's lead it was, and the duplicate policy filed their inquiry on another team's open
+    lead with the same email: a rep learned the id of a lead they cannot open (and, by SOURCE_TAKEN, that another organization had
+    the message), and their inquiry left their sight. A user now gets a repeat's result only for a lead they see, else
+    INTAKE_TAKEN naming no lead or organization, and joins only an open lead they see (otherwise their own lead is made); a system
+    caller (the mail rule, Marketing's job) is unchanged. Mantle SalesLeadIntake: West's rep repeating the East rep's entry and an
+    East form response is INTAKE_TAKEN without the lead's id, and the same email as East's lead makes a lead of West's (failed on
+    the unfixed code).
+  - R2 (failure tolerance, low). purge#LeadIntakes caught a row's failure but left its error in the message frame, so every later
+    row failed too and the run's transaction rolled back; each row is now its own transaction and error frame (EntityLib `probe`).
+    create#LeadFromEmail's filing of the message on the lead had the same flaw (the lead would roll back with the rule's failure);
+    it now has an error frame of its own. No spec induces a row failure.
+  - R3 (scope, low). My accounts took the account of any deal still assigned to the user, so a deal left in an organization they no
+    longer sell for brought its shared (`_NA_`) account's shared contacts; only a deal of an organization of the scope counts now.
+    Mantle ProjectedAddressBook: such a deal's shared contact is absent (failed on the unfixed code).
+  - The Built note's BOSS checks did not cover a Sales user who cannot read the message: SalesIntake now has sales.rep3 (no access
+    to the intake mailbox) refused on the mail with the same answer as a missing message and no intake, and sales.rep2 (not in the
+    room) refused on the chat message before the rep makes the lead, nothing made.
+- Provisional findings (for the lead to number):
+  - purge#LeadIntakes blanks the intake's submitted details, but the lead keeps its name (the mail's subject or the submitted
+    organization), its description (the mail's text, which often carries the sender's phone and signature) and the mail filed on its
+    conversation; whether the purge also blanks or closes an unqualified lead (design §3 "unverified intake records ... are purged")
+    is the user's call;
+  - createLead admits any rule owner who works for the team's organization, with no Sales permission (Maintenance's and Customer
+    Service's rule), and a rule can be run on demand over a folder, so an employee files mail of their own mailbox into any team's
+    queue of their organization; People's Recruiting also asks the owner to hold its edit permission. Requiring
+    SALES_OPPORTUNITY_EDIT or SALES_CONFIGURE of the rule's owner is the user's call;
+  - a mail's Message-ID is the sender's: a mail carrying another's Message-ID first takes that identity, and the later mail answers
+    the first's lead (or SOURCE_TAKEN for another organization) and makes none;
+  - TAG_TAKEN is instance-wide, so a configurer learns that another organization's team uses a plus tag;
+  - with R1 a rep's inquiry from the email of another team's open lead makes a second open lead of the organization, which only the
+    manager's duplicate review sees;
+  - Marketing P13's capture job calls store#LeadIntake as the system, which trusts the organization, team and `verified` it is given:
+    they must come from the publication and Marketing's own verification, never the submission.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesLeadIntake and ProjectedAddressBook 4 of 4 (about
+  2.4 s serial; SalesLeadIntake about 1.9 s, ProjectedAddressBook about 0.5 s), with SalesOpportunities, SalesLeadQualify,
+  ContactBooks, CrmMiscServices and RecordLinks 55 of 55; mr-boss SalesIntake 3 of 3 (about 1.3 s), with SalesOpportunities,
+  SalesAccess, Chat, Inbox, CustomerServiceChannels and ChatPanel 51 of 51; basic-comms BasicCommsInbox and BasicCommsChat 11 of 11.
+  The R1 and R3 checks failed on the unfixed code. Prettier clean on the changed JavaScript. No screen or Rust changed, so no lint
+  or golden. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- For the lead: budget share about +0.5 s mr-mantle (SalesLeadIntake's West calls, ProjectedAddressBook's second organization) and
+  +0.3 s mr-boss server (SalesIntake's refusals) over the Built note's. Merge hot spots as the Built note, with mr-mantle
+  `SalesIntake.js` (openLeadOf, replayOf, purge, the projection's deal filter). The user's calls: the purge's reach (the lead's name,
+  description and filed mail) and the createLead rule owner's permission, above.
+
 ### P6 — Home, shell, Assist and the pipeline dataset
 
 Design §3 Home, §12.2 QuickCreate and Palette, §1.4 (CX-ASSIST, CX-OPS-REPORTS' dataset and funnel), §3

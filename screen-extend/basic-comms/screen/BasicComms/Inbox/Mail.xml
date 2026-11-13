@@ -103,4 +103,13 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
     </transition>
 
+    <!-- Sales P5 (impl-sales §4 Nov 13, F64; design-sales §1.4, §3 Leads): Create lead on a mail or internal message, in the slot
+        BasicComms' Mail renders in each message's More menus (message-actions), through Mail's createRecord transition and the
+        create-from provider boss.records (Comms.xml; ChatServices.create#FromChat kind lead, ironstone.sales.ContextServices
+        create#LeadFromMessage): the sender's inquiry as a lead of the user's, the message filed on it as its source; refused for a
+        user without Sales (its services are BOSS_SALES' alone). P8 adds Create RFQ here. -->
+    <ext-action name="sales.createLead" slot="message-actions" sequence="40" label="Create lead" icon="sym_o_person_add"
+            transition="createRecord" hook="create-from">
+        <parameter name="emailMessageId"/><parameter name="communicationEventId"/><parameter name="kind" value="lead"/>
+    </ext-action>
 </screen-extend>
