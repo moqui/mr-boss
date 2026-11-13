@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <actions>
         <set field="can" from="sales.capabilities"/>
-        <set field="organizationPartyId" from="organizationPartyId || sales.activeOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
         <if condition="organizationPartyId">
             <service-call name="mantle.sales.OpportunityServices.get#SalesSetup" out-map="setup" transaction="force-new"
                     ignore-error="true" in-map="{organizationPartyId:organizationPartyId, includeEnded:(includeEnded == 'Y')}"/>

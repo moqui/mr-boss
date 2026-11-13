@@ -66,7 +66,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null,
                 departmentPartyId: departmentPartyId || null, emplPositionClassId: emplPositionClassId || null, statusId: statusId || null,
                 vacancy: vacancy || null, includeEnded: includeEnded || null, asOfDate: asOfDate || null}"/>
-        <set field="newPosition" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+        <set field="newPosition" from="{organizationPartyId: organizationPartyId || people.defaultOrganizationPartyId || null,
                 departmentPartyId: departmentPartyId || null, emplPositionClassId: emplPositionClassId || null}"/>
         <set field="stateColors" from="{planned: 'primary', active: 'positive', inactive: 'grey-8', future: 'primary', ended: 'grey-8'}"/>
         <set field="vacancyColors" from="{vacant: 'warning', filled: 'positive'}"/>

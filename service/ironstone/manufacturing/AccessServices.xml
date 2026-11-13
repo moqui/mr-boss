@@ -39,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="capabilities" type="Map"/>
             <parameter name="organizationPartyIds" type="List"/>
             <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="defaultOrganizationPartyId" type="String"><description>A new record's organization when none is
+                chosen: the active one, the only one, or the user's own (FacilityScope.js defaultOrganization)</description></parameter>
             <parameter name="allPlants" type="Boolean"/>
             <parameter name="plantCount" type="Long"/>
             <parameter name="plantId" type="String"/>
@@ -54,6 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="capabilities" from="shared.capabilities"/>
             <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
             <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="defaultOrganizationPartyId" from="shared.defaultOrganizationPartyId"/>
             <set field="allPlants" from="shared.allPlants"/>
             <set field="plantCount" from="shared.plantCount"/>
             <set field="plantId" from="shared.plantId"/>

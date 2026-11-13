@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="filtered" from="!!(term || organizationPartyId || statusId || includeClosed == 'Y')"/>
         <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null, statusId: statusId || null,
                 includeClosed: includeClosed || null}"/>
-        <set field="newOpening" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+        <set field="newOpening" from="{organizationPartyId: organizationPartyId || people.defaultOrganizationPartyId || null,
                 ownerPartyId: people.partyId || null, action: 'open'}"/>
         <set field="pipelineLink" from="sharedLinks['Staffing/ApplicantPipeline']"/>
     </actions>

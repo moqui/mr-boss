@@ -89,7 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
                 .orderBy(['sequenceNum', 'description']).disableAuthz().list()).map(row => ({key: row.enumId, text: row.description || row.enumId}))
             stateColors = {scheduled: 'primary', running: 'warning', ended: 'grey-8', cancelled: 'negative'}
             findValues = {show: showing, trainingClassId: trainingClassId || null}
-            newCourse = {organizationPartyId: people?.organizationPartyIds?.length == 1 ? people.organizationPartyIds[0] : null}
+            newCourse = {organizationPartyId: people?.defaultOrganizationPartyId || null}
             emptyText = showing == 'mine' ? 'You hold no training place yet. Upcoming lists the sessions you may ask for.'
                 : showing == 'training' ? 'You train no session.'
                 : showing == 'past' ? 'No past session.'

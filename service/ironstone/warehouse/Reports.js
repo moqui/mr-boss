@@ -114,8 +114,9 @@ function operationsHistory(p) {
 }
 
 // InventoryValuation's Warehouse branch: the organization valued (the chosen facility's owner, else the chosen or active
-// organization of the user's, else their only one) and whether the user reads values (financial read). Values are never
-// read here: the screen calls Mantle's run#InventoryValuation, which refuses a user without ACCOUNTING_VIEW.
+// organization of the user's, else their only one or their own, FacilityScope.js defaultOrganization) and whether the user
+// reads values (financial read). Values are never read here: the screen calls Mantle's run#InventoryValuation, which refuses
+// a user without ACCOUNTING_VIEW.
 function valuationScope(p) {
     const {userScope, facility} = reportScope(p)
     const organizations = userScope.organizationPartyIds || []
@@ -123,7 +124,12 @@ function valuationScope(p) {
     if (!facility && organizationPartyId && !userScope.unrestricted && !organizations.includes(organizationPartyId))
         denied("ORGANIZATION_UNAVAILABLE", "Organization " + organizationPartyId + " is not available")
     if (!organizationPartyId)
-        organizationPartyId = userScope.activeOrganizationPartyId || (organizations.length === 1 ? organizations[0] : null)
+        organizationPartyId = ec.resource
+            .script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
+            .defaultOrganization({
+                activeOrganizationPartyId: userScope.activeOrganizationPartyId,
+                organizationPartyIds: organizations
+            })
     const names = lib.partyNames(organizations.concat(organizationPartyId ? [organizationPartyId] : []))
     return {
         financialRead: !!userScope.capabilities.financialRead,

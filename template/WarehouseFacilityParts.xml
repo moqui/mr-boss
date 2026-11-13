@@ -47,8 +47,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- for a facility administrator: canEdit in the including screen's context -->
         <section name="NewFacility" condition="canEdit">
             <actions>
-                <set field="newFacilityDefaults" from="{ownerPartyId: warehouse.activeOrganizationPartyId ||
-                        (warehouse.organizationPartyIds?.length == 1 ? warehouse.organizationPartyIds[0] : null),
+                <set field="newFacilityDefaults" from="{ownerPartyId: warehouse.defaultOrganizationPartyId || null,
                         facilityTypeEnumId: 'FcTpWarehouse'}"/>
             </actions>
             <widgets>

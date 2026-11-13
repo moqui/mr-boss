@@ -300,6 +300,7 @@ function sharedContext(p) {
             capabilities: {read: false, self: true},
             organizationPartyIds: [],
             activeOrganizationPartyId: null,
+            defaultOrganizationPartyId: null,
             allOrganizations: false,
             organizationOptions: [],
             unitPartyIds: [],
@@ -339,6 +340,14 @@ function sharedContext(p) {
         capabilities: userScope.capabilities,
         organizationPartyIds: employerIds(userScope),
         activeOrganizationPartyId: people.activeOrganizationPartyId || null,
+        // a new record's organization: the active, the only, or the user's own employer (impl-sales F111)
+        defaultOrganizationPartyId: ec.resource
+            .script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
+            .defaultOrganization({
+                activeOrganizationPartyId: people.activeOrganizationPartyId,
+                organizationPartyIds: employerIds(userScope),
+                partyId: people.partyId
+            }),
         allOrganizations: !!people.allOrganizations,
         organizationOptions: organizationOptions(employerIds(userScope), null, organizationOptionLimit),
         unitPartyIds: Array.from(people.unitPartyIds || []),

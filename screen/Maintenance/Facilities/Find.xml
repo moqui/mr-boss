@@ -47,8 +47,7 @@ along with this software (see the LICENSE.md file). If not, see
                         bookable:(bookable == 'Y'), minCapacity:minCapacity, featureEnumId:featureEnumId, pageIndex:pageIndex}"/>
         </if>
         <set field="facilityList" from="facilityList || []"/>
-        <set field="newFacilityDefaults" from="{ownerPartyId: maintenance.activeOrganizationPartyId ||
-                (maintenance.organizationPartyIds?.length == 1 ? maintenance.organizationPartyIds[0] : null),
+        <set field="newFacilityDefaults" from="{ownerPartyId: maintenance.defaultOrganizationPartyId || null,
                 facilityTypeEnumId: 'FcTpBuilding'}"/>
     </actions>
     <widgets>

@@ -59,8 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
                         custodianPartyId:custodianPartyId, warranty:warranty, pageIndex:pageIndex}"/>
         </if>
         <set field="equipmentList" from="equipmentList || []"/>
-        <set field="newEquipmentDefaults" from="{ownerPartyId: maintenance.activeOrganizationPartyId ||
-                (maintenance.organizationPartyIds?.length == 1 ? maintenance.organizationPartyIds[0] : null),
+        <set field="newEquipmentDefaults" from="{ownerPartyId: maintenance.defaultOrganizationPartyId || null,
                 assetTypeEnumId: 'AstTpEquipment', facilityId: facilityId || null}"/>
     </actions>
     <widgets>

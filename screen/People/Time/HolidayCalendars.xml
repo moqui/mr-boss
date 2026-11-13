@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
             selectedCalendar = calendars.find(row => row.holidayCategoryId === holidayCategoryId) || null
             editableCalendars = calendars.filter(row => row.canEdit)
             yearValues = {holidayCategoryId: holidayCategoryId || null, year: yearText}
-            newCalendar = {organizationPartyId: people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null}
+            newCalendar = {organizationPartyId: people.defaultOrganizationPartyId || null}
             newHoliday = {holidayCategoryId: selectedCalendar?.canEdit ? selectedCalendar.holidayCategoryId : (editableCalendars[0]?.holidayCategoryId || null)}
             calendarOptions = editableCalendars.map(row => ({key: row.holidayCategoryId, text: row.calendarName + ' (' + row.organizationName + ')'}))
         ]]></script>

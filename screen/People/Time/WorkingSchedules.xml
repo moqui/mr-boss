@@ -55,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="showAssigned" from="!!can.hrView"/>
         <set field="filtered" from="!!(term || organizationPartyId || includeEnded == 'Y')"/>
         <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null, includeEnded: includeEnded || null}"/>
-        <set field="newSchedule" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+        <set field="newSchedule" from="{organizationPartyId: organizationPartyId || people.defaultOrganizationPartyId || null,
                 timeZone: ec.user.timeZone || null}"/>
         <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
     </actions>

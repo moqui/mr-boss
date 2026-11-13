@@ -199,6 +199,18 @@ feature(
                 planner.allOrganizations
             )
                 problems.push(`the planner's context: ${JSON.stringify(planner)}`)
+            // a new record's organization is the user's own: the planner's Services, and Retail for Retail's planner, whose scope also
+            // holds Retail's rollup child, the returns center (impl-sales F111)
+            if (planner.defaultOrganizationPartyId !== ids.organizationId)
+                problems.push(`the planner's default organization: ${planner.defaultOrganizationPartyId}`)
+            const retail = asUser(users.retailPlanner, () => invoke(context, {}))
+            if (
+                !retail.organizationPartyIds.includes("BOSS_WH_RETURNS") ||
+                retail.defaultOrganizationPartyId !== ids.otherOrganizationId
+            )
+                problems.push(
+                    `Retail's planner's default organization: ${retail.defaultOrganizationPartyId} of ${retail.organizationPartyIds}`
+                )
             // the administrator works every organization (MAINTENANCE_ALL_ORGANIZATIONS, the user's call)
             const admin = asUser(users.admin, () => invoke(context, {}))
             if (!admin.allOrganizations || !admin.organizationPartyIds.includes(ids.otherOrganizationId))

@@ -265,6 +265,10 @@ function sharedContext(p) {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,
         activeOrganizationPartyId: userScope.activeOrganizationPartyId,
+        // a new record's organization: the active, the only, or the user's own (impl-sales F111)
+        defaultOrganizationPartyId: ec.resource
+            .script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
+            .defaultOrganization(userScope),
         allFacilities: !userScope.facilityOwnerIds,
         facilityCount: facilityFind(userScope).count(),
         facilityId: facility?.facilityId || null,
