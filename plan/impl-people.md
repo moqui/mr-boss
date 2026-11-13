@@ -7533,6 +7533,160 @@ Design §8.2 (corrections), Payslips, PayslipDetail, §15 (the payslip); PE-10, 
   runs"): a preview slip explains each line from its source; a correction run links to it with the net effect;
   the employee sees neither until a slip is issued.
 
+**Built Nov 12 (P26).** mr-mantle 3981cf87, mr-boss (this commit), branch `ppl/p26`.
+- Checked first (the code over the plan): P25's PayrollRuns.js (the units and results, `factsOf` and `fingerprintsOf` for a whole run,
+  `takenInputs` failing a unit whose inputs another live run took, `reopenForChange`, `decideRun`, `cancel#Run`, `KIND_NOT_AVAILABLE` for
+  off-cycle and correction), the entities (PayrollRun's `activeRunKey`, PayrollRunEmployment's totals and `sourceRevision`, PayrollRunResult
+  without its rule), Approvals.js `PakPayrollRun` (`selfPartyIds`: the preparers alone), PayInputs.js (`groupMembers` by date and in order
+  since P25's R1, but `prepare#Inputs` asking its default 500 and ignoring `truncated`), Letters.js (an issued document rendered once and
+  stored), P11's `get#MyBalances` tool and P17's My letters (the self-scope service and F28's grants), P20's review content host and
+  `get#RecordLinkInfo`, the legacy `EmploymentPayHistory` (keyed by employment and pay date; no demo rows, F71) and how the framework treats
+  `ai-opt-out` (an agent's render and the data tool's entity reads; a service tool's answer is the service's own).
+- Mantle (`entity/PeoplePayrollEntities.xml`, appended block; `data/PeoplePayslipSetupData.xml`, new):
+  - `Payslip` (one a run's employment, `PAYSLIP_UNIT` unique: the employer, employment, person, group, period, pay date, currency, the run's
+    kind, `correctsPayslipId`, the `Payslip` status flow Preview, Withdrawn (and back), Final (P27's), Issued; `isPreview`; the seven totals
+    and split `ai-opt-out`; `sourceRevision`; the stored statement's location, type and name), `PayslipItem` (a line: component, term,
+    code, name, kind or localization party, amount, `previousAmount` on a correction, `payslipVisible` from its term, explanation; amounts
+    and explanation `ai-opt-out`), `PayslipContent` (the payslip content host, payroll's, a `ConfidentialRecordType` row), `PayrollRun`
+    gains `correctsPayslipId` and `correctionReason`, `PayrollRunResult` `previousAmount` and `payrollComponentTermId`; the legacy
+    `EmploymentPayHistory` and `EmploymentPayDetail` amounts `ai-opt-out`. The `PayslipIssued` topic (direct only, a title naming the
+    employer and the period).
+  - `mantle.humanres.PayrollResultServices` over a new module `PayrollResults.js`: `find#Payslips` (a payroll reader's of the employers in
+    scope, filtered by employer, group, person, employment, run, period, state, kind, corrections or historical, with the legacy rows by
+    their own key; for anyone without PAYROLL_VIEW, or with mine, the caller's own issued slips alone), `get#Payslip` (a payroll reader's,
+    or the person's own issued slip without the lines its term keeps off the payslip: header, lines by group with rule and explanation,
+    totals, year to date derived on read, the correction chain with the net effect, inputs with sources, the stored file, canIssue,
+    canCorrect; a legacy record by `legacyKey`, as recorded), `get#MyPayslip` (self only, issued only, the latest when none named),
+    `issue#Payslip` (a final slip: `PREVIEW_ONLY`, `NOT_FINAL`; rendered once as the person reads it, PDF or html-print stored, the person's
+    accounts told direct only; a repeat answers the first), `check#PayslipAccess`, `create#PayslipContent`, `save#PayslipContentFile`.
+    `makeSlips` (an approved run's calculated units as preview slips, made again in place when approved again, a final or issued one
+    never touched, an excluded unit's withdrawn; a live group's none: P27's), `withdrawSlips`, `paidBefore` (what an original and its
+    standing corrections paid). Year to date: the person's final and issued slips of the employer in the slip's currency and year (the
+    employer's FiscalYear holding the pay date, else the calendar year) up to its pay date, by line, this slip added; nothing stored.
+  - PayrollRuns.js: `create#Run` takes an off-cycle run (no `activeRunKey`; its population the employments with an approved adjustment no
+    run took, or those named; `NOTHING_TO_PAY`) and refuses a correction (`KIND_NOT_AVAILABLE`: made from its slip); `INPUTS_CONSUMED` is
+    a live regular run's alone. `create#Correction` (PayrollRunServices, new): a correction run of the slip's original (one open at a time,
+    `CORRECTION_EXISTS`; `SLIP_WITHDRAWN`, `REASON_REQUIRED`, `NOT_IN_GROUP`; the original's pay date unless given; an operation key).
+    `syncPopulation` keeps an off-cycle or correction run's population as made. `takenInputs`: a correction counts the inputs its original
+    and its corrections took as its own, an off-cycle run takes adjustments alone, and inputs another live run took are skipped, not a
+    failure. `computeEmployment`'s tail is `finishEmployment` (adjustments, rounding, localization, totals), shared by `computeOffCycle`;
+    `correctionOf` pays the change line by line (`NO_CHANGE`, `ORIGINAL_WITHDRAWN`; a line no longer paid recovered whole; a negative change
+    allowed, to recover); the fingerprint covers a correction's base slips. `decideRun` makes the slips on approval; `reopenForChange`
+    withdraws an approved run's preview slips; `get#Run` answers the correction's original and reason and the run's slip count; `unitHolds`
+    for a slip's reader.
+  - Carry-overs of P25's review (findings 490, 491 and 493 as numbered there): `prepare#Inputs` takes every employment of the period
+    (`groupMembers` by date, in employment order, 10,000 at most) and refuses more (`POPULATION_TOO_LARGE`) instead of preparing the first
+    500 in silence; `PakPayrollRun`'s `selfPartyIds` add the people whose pay the run holds (its units not excluded), so a payroll approver
+    employed in the group neither is asked nor decides (`SELF_APPROVAL`); `calculate#Run` on an approved run with nothing to calculate
+    answers at once and keeps its approval and slips (selecting it still takes the approval back, which is how an approved run is
+    cancelled).
+  - `CommunicationServices.get#RecordLinkInfo`: the payslip content host (`Payslip`, `PayslipContent` through `check#PayslipAccess`,
+    payroll's alone).
+- BOSS:
+  - `People/Payroll/Payslips` (menu 2): FindPayslips (group, period, state, kind, Corrections, Historical pay records), SlipList (the person
+    linking PayslipDetail or a legacy record by key, period, pay date, kind or "Correction of", gross and net `ai-opt-out`, the state chip
+    with its tui text, corrections, group, employer; phone columns).
+  - `People/Payroll/PayslipDetail` (out of the menu): the record header (state chip; links to its run, the original, a correction in
+    progress), Issue statement (the primary for a final slip, confirming the person), Download statement, Correct pay (what changed, a pay
+    date, a note; opening the correction run in PayRunDetail; the primary unless the slip can be issued); Pay breakdown, Year to date,
+    Original and corrections with the net effect, Inputs paid (each `ai-opt-out`); Files (the payslip host, payroll's).
+  - `Shared/PeopleMyPayslip.xml` at `People/MyPayslip` and `Commons/People/MyPayslip`: the person's own issued slip (`get#MyPayslip`), its
+    lines, totals, year to date, issued corrections, inputs, Download statement (the primary); SelfService's My payslips (shown when they
+    have any; `find#Payslips` with mine; net `ai-opt-out`). `BOSS_PPL_PAYSLIP_SELF` (the screen, its download and the two services,
+    non-inheritable, for `BOSS_PEOPLE_SELF`); the `PayslipIssued` link (`Commons/People/MyPayslip`); the topic and the prompt "Explain this
+    payslip" on People's and Commons' roots (owner contract, design-drawers-commons); `skill/people-payslip-explain.md`, the alias row and
+    three skill-retrieval cases; the tool `people_my_payslip` (`get#MyPayslip`, `exposeAssistant` Y, `exposeMcp` N).
+  - PayRuns' New pay run takes the kind (Regular, Off-cycle); PayRunDetail's header links the run's payslips and a correction's original,
+    with its reason. People.js `linkPaths` (`Payroll/Payslips`, `Payroll/PayslipDetail`, `MyPayslip`) and the self-service context's
+    `MyPayslip`; People.xml's record panel admits a payslip's files (no notes: they would reach the person once issued); RecordFilesServices
+    registers the payslip host; PeopleSpecLib's `payrollGroupMenu` gains Payslips second.
+- The Assistant's tool and pay's AI opt-out (for the user's call): `people_my_payslip` returns the person's own amounts to their own
+  Assistant session. The opt-out (the user's call of Nov 12, 2026) keeps pay out of every screen's agent render and the generic data tool,
+  where a model reads other people's pay; this explicit self-only read (the caller's own issued slips alone, whatever their payroll
+  rights, never MCP) is the design's own "Explain this payslip" (§1.4), which cannot work without the numbers. If the user prefers, the
+  tool can answer the lines, rules and explanations' structure without amounts (a `get#MyPayslip` flag); design §1.1 "Pay and AI" says so.
+- Specs: Mantle `test/humanres/Payslips` (4 features, 2.7 s release feature time: an approved run's three preview slips, the levy and the
+  hidden employer fund in the employer cost, payroll's alone (the employee finds none and is refused the slip), `PREVIEW_ONLY`, another
+  employer refused, the payroll approver employed in the group neither notified nor deciding (`SELF_APPROVAL`), calculating the approved
+  run again keeping its approval and slips, no invoice; an off-cycle run of the same pay date paying a late bonus alone on its own slip
+  (300.00, net 294.00), the regular run's approval still holding, a second off-cycle `NOTHING_TO_PAY`; a correction of the original after a
+  salary fix (`REASON_REQUIRED`, HR `PERMISSION_DENIED`, another employer `RECORD_UNAVAILABLE`, `CORRECTION_EXISTS`), its slip linked with
+  SALARY 1,000.00 (5,000.00 before, 6,000.00 now) and net 980.00, the bonus paid off-cycle no part of it, the original unchanged, the
+  chain of two and the net effect 5,880.00; the original made final as data and issued (HR refused, a repeat repeated, the file stored,
+  the notice to the employee's account alone without amount), the employee's own issued slip alone (not the off-cycle or correction
+  previews, another person's party ignored), the hidden line out of their view and in the totals, the year to date "this slip included",
+  `get#MyPayslip` the latest without a file location, another employee and a payroll reader with self-service of their own refused it,
+  the legacy record listed and opened by its key and refused to the employee, no legacy row recalculated); PayRuns' first feature now
+  checks a correction kind refused. BOSS `test/People/PeoplePayslips` (3 features, 0.18 s: PayslipDetail's one html render as the payroll
+  operator on Hannah's preview, explained, its rule, the line kept off the payslip marked, year to date, Correct pay and no Issue or
+  Download; Payslips' one html render as the payroll approver with the preview and the issued slip; MyPayslip's one html render under
+  Commons as people.employee, his issued slip and Download statement, not the fund, Correct pay or Issue); `PeopleAccessLater` gains the
+  P26 case (0.62 s: HR refused a correction with the parameters the payroll operator then corrects with, the slip read by the approver and
+  missing to HR, Services' slip missing to Retail's payroll, the employee's own preview missing to them through `get#MyPayslip` and
+  `find#Payslips` answering nothing else, Payslips and PayslipDetail refused to HR, MyPayslip opened to the employee and refused another
+  app's user); PeopleAccess's self-service links gain `MyPayslip`; PeoplePayAssignments' `aiOptOut` check covers the payslip, its lines
+  and the legacy amounts. Acceptance, written and not run: `acceptance/People/PeoplePayslipsUsable` (3 features through the screens'
+  transitions: November's run of Tomas and Ines approved, its preview slips listed and explained, the employee seeing none; four late hours
+  corrected through Correct pay, calculated, asked and approved on PayRunDetail, the correction slip 60.00 linked, the original 240.00
+  staying, the net effect shown, the employee still seeing nothing; both made final as the acceptance fixture alone and issued through
+  PayslipDetail, the employee told without amount, My payslips on SelfService and the correction read with its net effect; no invoice).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): mr-mantle Payslips, PayRuns, PayInputs,
+  PeopleApprovals, PayAssignments, PayConfiguration, PayrollServices and HumanResServices 50 of 50 (19.1 s of features), then after
+  Prettier Payslips, PayRuns, PayInputs, PeopleApprovals, RecordNotes, Qualifications and Reviews 43 of 43 (17.5 s); mr-boss PeoplePayslips,
+  PeopleAccess, PeopleAccessLater, PeoplePayRuns, PeoplePayAssignments, PeopleSelfService, PeoplePayInputs, PeoplePayConfiguration,
+  AccountingIssuedFiles, MaintenanceStack and InsightsSettings 72 of 73, then PeopleAccess with its self-service links 16 of 16 (6.7 s);
+  `moqui test mr-boss --skills` 39 of 39. A one-off qvt and tui render (not kept) of PayslipDetail (a preview and an issued slip),
+  Payslips, PayRuns, MyPayslip and SelfService with an issued slip: 12 renders, all 200 with no error, My payslips shown. `moqui lint
+  --screens` (release): 139 flagged sites, none in the new or changed screens. Prettier clean on the new and changed JavaScript (BOSS
+  People.js keeps other phases' hunks Prettier would rewrite). Not run: test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's People Added rows (`create#Correction`, the six PayrollResultServices) and its heading; ss-inventory notes no
+  baseline form maps to Payslips, PayslipDetail or MyPayslip.
+- Design edits: design-people (header; §1.1 "Pay and AI" with the tool's exception; §1.2; §1.4's Assist and topics rows; §3 SelfService's
+  My payslips; §8 PayRuns' off-cycle kind, Payslips and PayslipDetail as built; §8.2's corrections; §12's `PayrollRunApproval` row; §15's
+  payslip row); design-drawers-commons (header; SelfService's My payslips and MyPayslip, Commons' root declarations).
+- Findings (provisional, numbered by the lead):
+  - No path in this build makes a final slip: `issue#Payslip`, My payslips, MyPayslip and the tool are exercised only on a slip made final
+    as data (the Mantle and BOSS specs, the acceptance fixture). P27's finalization sets `PssFinal` and `isPreview` N on its run's slips
+    (`makeSlips` makes none for a live group) and decides whether issuing is part of finalizing.
+  - A preview slip whose sources changed after its run was approved stays a preview, shown "changed since its run was approved", until the
+    run is selected or calculated again (which withdraws it); a correction may be made of it meanwhile.
+  - A correction of an employment the group no longer pays in the period is refused (`NOT_IN_GROUP`): a backdated separation cannot correct
+    the period's pay to nothing this way, and a negative correction (a recovery) is a preview slip with a negative net, with no recovery
+    obligation until P27 (design §8.1: negative net needs a recovery process).
+  - An off-cycle run pays adjustments alone (inputs to a component); time, pieces and reimbursements approved after the regular run are paid
+    by a correction of the regular slip. The localization runs once over each run's own lines, so an off-cycle slip's levy ignores the
+    period's regular pay (a real localization with thresholds needs the period's accumulators).
+  - An input approved after the regular run was approved still makes its approval no longer hold (P25's finding) until an off-cycle or a
+    correction run takes it; the regular run then holds again.
+  - Year to date uses the employer's `FiscalYear` period, else the calendar year: no statutory period without a localization; it is by
+    person and employer (a rehire keeps it), not by employment.
+  - Inputs another live run took are now skipped by a run's calculation, where P25 failed the employee with `INPUTS_CONSUMED`.
+  - `get#Reconciliation` still reads at most 500 employments of a group and says nothing of the rest (preparation now takes them all); and
+    `POPULATION_TOO_LARGE` for a preparation is not covered by a spec (the population needed is over the 15 s bound).
+  - If every payroll approver of the employer is paid by the run, it waits with no approver (the kind's default route; an alternate needs a
+    rule).
+  - The person does not see their legacy pay history (payroll's alone, by its key): §5 Q8 says read only and historical, not whose.
+  - `get#MyPayslip`'s `forTool` is the model's to fill: without it the tool's answer names the stored statement's location (a content path,
+    not its content).
+  - A payslip takes no notes (they would reach the person once issued) and its files are payroll's alone; the person never sees them.
+  - Issuing renders the statement through the PDF engine, about a second on the release binary (the Mantle feature's 1.3 s).
+- For the lead:
+  - budget share: mr-mantle Payslips about 2.7 s release (new), PayRuns unchanged; mr-boss PeoplePayslips about 0.2 s (its setup a run of two
+    employees), PeopleAccessLater's P26 case 0.62 s, PeopleAccess and PeoplePayAssignments unchanged;
+  - merge hot spots: P29 (in parallel) also touches mr-boss `service/ironstone/people/People.js` (P26: `linkPaths`' end, the self-service
+    context's `MyPayslip` after `SelfService`), `screen/People.xml` (the header comment's end, the subscreens' `MyPayslip`, the shell
+    providers' end), `data/BossSetupData.xml` (P26's block appended at the end), `test/People/PeopleSpecLib.js` (`payrollGroupMenu`),
+    `test/People/PeopleAccessLater.spec.js` (header line, the `state26` constant after `hrOnly`, the appended feature); otherwise mr-mantle
+    `entity/PeoplePayrollEntities.xml` (appended block; PayrollRun and PayrollRunResult fields), `PayrollRuns.js` (`createRun`,
+    `syncPopulation`, `factsOf`, `takenInputs`, `computeEmployment` and `finishEmployment`, `calculateUnit`, `calculateRun`, `decideRun`,
+    `createCorrection`, the exports), `Approvals.js` (`PakPayrollRun.selfPartyIds`), `PayInputs.js` (`prepareInputs`),
+    `CommunicationServices.xml`, `HumanResourcesEntities.xml`, `PayRuns.spec.js`; mr-boss `screen/Commons.xml`, `Commons/People.xml`,
+    `Shared/PeopleSelfService.xml`, `People/Payroll.xml`, `PayRuns.xml`, `PayRunDetail.xml`, `shared/RecordFilesServices.xml`,
+    `test/People/PeopleAccess.spec.js`, `PeoplePayAssignments.spec.js`, `skill/aliases.json`, `test/skill-retrieval.json`, design-people
+    (header, §1.1, §1.2, §1.4, §3, §8, §8.2, §12, §15), design-drawers-commons, usl-inventory and ss-inventory;
+  - for the user's call: whether the self-only Assistant tool returns the person's own amounts (built so); whether the person sees their
+    legacy pay history; the recovery path for a negative correction and a backdated separation (P27 or later).
+
 ### P27 — Accounting handoff and settlement
 
 Design §8.2 (steps 6–7), §8.3, §9 (the payroll route), PayRunDetail's Finalize and Settlement, §13 InvoiceDetail

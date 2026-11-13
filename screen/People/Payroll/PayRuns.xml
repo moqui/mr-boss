@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     apart, settlement with P27), filtered by group and state, or Needs attention (an employee in error or pending, returned by the
     approver, an approval that no longer holds); NewRun (the one primary, a payroll editor's: create#Run, a group's prepared period,
     its pay date and source cutoff, a regular run; a period whose inputs another run took, or with a regular run already, is
-    refused), which opens the run's PayRunDetail. Payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and write. Amounts are
+    refused; P26: or an off-cycle run, paying the period's approved adjustments no run took), which opens the run's PayRunDetail. Payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and write. Amounts are
     opted out of AI. Creating and calculating a run make no invoice or payment. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay runs" default-menu-index="1" menu-image="sym_o_payments" menu-image-type="icon">
@@ -30,8 +30,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="createRun">
         <actions>
             <service-call name="mantle.humanres.PayrollRunServices.create#Run" out-map="created"
-                    in-map="{payrollGroupId:payrollGroupId, timePeriodId:timePeriodId, payDate:(payDate || null),
-                        cutoffDate:(cutoffDate || null), description:(description || null)}"/>
+                    in-map="{payrollGroupId:payrollGroupId, timePeriodId:timePeriodId, runKindEnumId:(runKindEnumId || null),
+                        payDate:(payDate || null), cutoffDate:(cutoffDate || null), description:(description || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Pay run created with ${created.selectedCount} employees</message></if>
         </actions>
         <conditional-response url="../PayRunDetail" condition="!ec.message.hasError()">
@@ -65,7 +65,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewRunDialog" button-text="New pay run" icon="sym_o_add" type="primary" width="560"
                         title="New pay run" condition="canCreate">
-                    <label type="p" text="A regular run of a pay group for one of its prepared periods. Its employees are selected at once; you then check their inputs, calculate and send it for approval. Nothing is paid or posted."/>
+                    <label type="p" text="A run of a pay group for one of its prepared periods: the regular run pays the period; an off-cycle run pays only the period's approved adjustments no run has taken, on any pay date. Its employees are selected at once; you then check their inputs, calculate and send it for approval. A correction is made from its payslip. Nothing is paid or posted."/>
                     <form-single name="NewRun" transition="createRun">
                         <field name="payrollGroupId">
                             <default-field title="Pay group">
@@ -83,6 +83,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 </drop-down>
                             </default-field>
                         </field>
+                        <field name="runKindEnumId">
+                            <default-field title="Kind">
+                                <drop-down allow-empty="false">
+                                    <option key="PrkRegular" text="Regular"/>
+                                    <option key="PrkOffCycle" text="Off-cycle"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
                         <field name="payDate"><default-field title="Pay date" tooltip="The period's pay date when empty"><date-time type="date"/></default-field></field>
                         <field name="cutoffDate">
                             <default-field title="Source cutoff" tooltip="Time and leave approved after this wait for the next run; none when empty">
@@ -92,7 +100,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="submitButton"><default-field title="Create pay run"><submit/></default-field></field>
                         <field-layout>
                             <field-row><field-ref name="payrollGroupId"/><field-ref name="timePeriodId"/></field-row>
-                            <field-row><field-ref name="payDate"/><field-ref name="cutoffDate"/></field-row>
+                            <field-row><field-ref name="runKindEnumId"/><field-ref name="payDate"/></field-row>
+                            <field-ref name="cutoffDate"/>
                             <field-ref name="description"/>
                             <field-ref name="submitButton"/>
                         </field-layout>

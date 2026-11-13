@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- My payslip (design-people §3 SelfService, §8 PayslipDetail for the person, §15 the payslip; impl-people P26): the user's own issued
+    payslip, opened from SelfService's My payslips and the PayslipIssued notice, one definition mounted beside SelfService at
+    People/MyPayslip and Commons/People/MyPayslip (out of both menus). From mantle.humanres.PayrollResultServices.get#MyPayslip, which
+    takes no party and admits the caller's own issued slip alone (never a preview, a slip not issued or another person's, whatever
+    their payroll rights): the employer, period and pay date, the lines the payslip shows by group with how each was worked out, the
+    totals, the year to date, its issued corrections with the net effect and the inputs it paid; Download statement gives the
+    statement as it was issued, never rendered again. "Explain this payslip" (the people-payslip-explain skill) answers from the same
+    service, the user's own. Amounts are opted out of AI on the page. A self-service employee opens it by its own grant
+    (BOSS_PPL_PAYSLIP_SELF, non-inheritable, data/BossSetupData.xml). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="My payslip" default-menu-include="false" menu-image="sym_o_receipt_long" menu-image-type="icon">
+    <parameter name="payslipId"/>
+
+    <!-- the statement as it was issued (Mantle admits the caller's own issued slip alone) -->
+    <transition name="myStatement" read-only="true">
+        <parameter name="payslipId"/>
+        <actions>
+            <service-call name="mantle.humanres.PayrollResultServices.get#MyPayslip" out-map="slipFound" in-map="{payslipId:payslipId}"/>
+            <!-- the file is read as Mantle admitted it: the self-service grant does not reach the content store -->
+            <script>if (!ec.message.hasError()) {
+                if (!slipFound.file) ec.message.addError('RECORD_UNAVAILABLE: This payslip has no statement')
+                else {
+                    const was = ec.artifactExecution.disableAuthz()
+                    try { ec.web.sendResourceResponse(slipFound.file.location, true, slipFound.file.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
+                }
+            }</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="payslipId"/></error-response>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.humanres.PayrollResultServices.get#MyPayslip" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{payslipId:(payslipId || null)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            slip = found?.payslip || null
+            recordFound = !!slip
+            itemRows = Array.from(found?.items || [])
+            totalsText = found?.totalsText || {}
+            yearToDate = found?.yearToDate || null
+            ytdRows = Array.from(yearToDate?.lines || [])
+            corrections = found?.corrections || {}
+            chainRows = Array.from(corrections.chain || [])
+            inputRows = Array.from(found?.inputs || [])
+            hasFile = !!found?.file
+            correction = !!slip?.correctsPayslipId
+            captionText = slip ? [slip.organizationName, 'period ' + slip.periodText, 'pay date ' + slip.payDateText, slip.kindText]
+                .filter(Boolean).join(' · ') : ''
+        ]]></script>
+    </actions>
+
+    <widgets>
+        <section name="MyPayslipMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This payslip is not available to you: you see your own payslips once your employer issues them."/>
+                        <link url="../SelfService" text="Back to self-service" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MyPayslipRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${correction ? 'Pay correction' : 'Payslip'} for ${slip.periodText}" type="h5"/>
+                            <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="myStatement" text="Download statement" link-type="anchor-button" btn-type="primary" icon="sym_o_download"
+                                    target-window="_blank" parameter-map="{payslipId:slip.payslipId}" condition="hasFile"/>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row q-gutter-md">
+                            <link url="../SelfService" text="Self-service" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <label text="Issued ${slip.issuedDateText}" type="span" style="text-caption" condition="slip.issuedDateText"/>
+                        </container>
+                    </container>
+                </container>
+                <label type="p" style="text-caption" condition="correction"
+                        text="This corrects an earlier payslip${slip.correctionReason ? ': ' + slip.correctionReason : ''}. Its lines are the change from what was paid."/>
+
+                <section name="MyPayBreakdown" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Your pay"/>
+                            <box-body-nopad>
+                                <form-list name="MySlipLines" list="itemRows" skip-form="true" paginate="false" condition="itemRows.length">
+                                    <field name="groupText"><default-field title="Group"><display/></default-field></field>
+                                    <field name="itemName"><default-field title="Line"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="${correction ? 'Change' : 'Amount'}"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="How"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="itemName"/><field-ref name="groupText"/></column>
+                                        <column><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-px-md q-pt-sm text-caption"
+                                        text="Gross ${totalsText.gross} · deductions ${totalsText.deductions} · localization ${totalsText.localEmployee} · net ${totalsText.net} · cost to your employer ${totalsText.employerCost}"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="MyYearToDate" condition="yearToDate" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Year to date"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-px-md q-pt-sm text-caption" text="${yearToDate.basisText}. Gross ${yearToDate.grossText}, net ${yearToDate.netText}."/>
+                                <form-list name="MyYearToDateLines" list="ytdRows" skip-form="true" paginate="false" condition="ytdRows.length">
+                                    <field name="itemName"><default-field title="Line"><display/></default-field></field>
+                                    <field name="yearToDateText" align="right"><default-field title="Year to date"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="MyCorrections" condition="corrections.hasCorrections || correction" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Original and corrections"/>
+                            <box-body-nopad>
+                                <form-list name="MyChainList" list="chainRows" skip-form="true" paginate="false">
+                                    <field name="payDateText">
+                                        <conditional-field condition="current" title="Pay date"><display text="${payDateText} (this one)"/></conditional-field>
+                                        <default-field title="Pay date"><link url="." text="${payDateText}" link-type="anchor" parameter-map="{payslipId:payslipId}"/></default-field>
+                                    </field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="netText" align="right"><default-field title="Net"><display/></default-field></field>
+                                    <field name="reason"><default-field title="What changed"><display/></default-field></field>
+                                </form-list>
+                                <label type="p" style="q-pa-md text-weight-medium" text="Net effect: ${corrections.netEffectText}"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="MyInputs" condition="inputRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="What was paid from"/>
+                            <box-body-nopad>
+                                <form-list name="MyInputList" list="inputRows" skip-form="true" paginate="false">
+                                    <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="typeText"><default-field title="Input"><display/></default-field></field>
+                                    <field name="quantityText" align="right" ai-opt-out="true"><default-field title="Quantity or amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="typeText"/><field-ref name="inputDateText"/></column>
+                                        <column><field-ref name="quantityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

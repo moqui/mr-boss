@@ -25,7 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
     approver's who neither selected nor calculated it, approve#Run and return#Run, confirming the count and net). Finalize and
     Settlement are P27's. Cancel run (P25 review): a run not approved cancelled with its reason, cancel#Run, its inputs released and the
     period free to run again. Amounts are opted out of AI, the approval's confirmation naming no net in an agent's render. Nothing here
-    makes an invoice or a payment. -->
+    makes an invoice or a payment. P26: an approved run's payslips linked from its header (preview slips in this build), a correction
+    run's original slip and reason, and an off-cycle run's adjustments. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay run" default-menu-include="false">
     <parameter name="payrollRunId"/>
@@ -154,6 +155,9 @@ along with this software (see the LICENSE.md file). If not, see
             hoursUrl = sharedLinks?.['Time/HoursForPay'] || null
             adjustmentsUrl = sharedLinks?.['Payroll/PayAdjustments'] || null
             runsUrl = sharedLinks?.['Payroll/PayRuns'] || '../PayRuns'
+            // P26: the run's payslips (made when it is approved) and a correction run's original slip
+            payslipsUrl = sharedLinks?.['Payroll/Payslips'] || '../Payslips'
+            payslipDetailUrl = sharedLinks?.['Payroll/PayslipDetail'] || '../PayslipDetail'
             // the net is opted out of AI (P25 review): an agent's render of the confirmation names the count alone
             netConfirm = 'Approve ' + (counts.calculated || 0) + ' employees' + (sri.isAgentRender() ? '' : ', net ' + (totalsText.net || '')) +
                 (counts.excluded ? ', ' + counts.excluded + ' excluded' : '') + '?'
@@ -192,6 +196,11 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md row q-gutter-md">
                             <link url="${runsUrl}" url-type="plain" text="Pay runs" link-type="anchor" icon="sym_o_arrow_back"/>
                             <label text="${runInfo.readinessText}" type="span" style="text-caption"/>
+                            <!-- P26: the run's payslips, once approved, and a correction run's original slip -->
+                            <link url="${payslipsUrl}" url-type="plain" text="Payslips (${runInfo.payslipCount})" link-type="anchor"
+                                    icon="sym_o_receipt_long" parameter-map="{payrollRunId:payrollRunId}" condition="runInfo.payslipCount"/>
+                            <link url="${payslipDetailUrl}" url-type="plain" text="Corrects payslip ${runInfo.correctsPayslipId}" link-type="anchor"
+                                    icon="sym_o_edit_note" parameter-map="{payslipId:runInfo.correctsPayslipId}" condition="runInfo.correctsPayslipId"/>
                         </container>
                         <container style="col-12 col-md-auto">
                             <container-dialog id="CancelRunDialog" button-text="Cancel run" icon="sym_o_cancel" width="480"
@@ -207,6 +216,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                 </container>
 
+                <label type="p" style="text-caption" condition="runInfo.correctsPayslipId"
+                        text="A correction of payslip ${runInfo.correctsPayslipId}: ${runInfo.correctionReason}. Its slip pays the change from what was paid; the original stays."/>
                 <!-- the steps and their progress; the step is in the URL -->
                 <container style="row q-gutter-sm q-my-sm">
                     <section-iterate name="StepLinks" list="stepList" entry="stepItem">

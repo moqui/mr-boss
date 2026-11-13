@@ -102,7 +102,17 @@ const ids = {
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms"],
     // P10: Rates; P22 (its review's call of Nov 12, 2026): payroll configuration's components, structures and groups, payroll's;
     // P23: pay assignments, before Rates; P24: pay adjustments, after them
-    payrollGroupMenu: ["PayRuns", "PayAssignments", "PayAdjustments", "Rates", "PayComponents", "PayStructures", "PayGroups"],
+    // P25: pay runs first; P26: payslips after them
+    payrollGroupMenu: [
+        "PayRuns",
+        "Payslips",
+        "PayAssignments",
+        "PayAdjustments",
+        "Rates",
+        "PayComponents",
+        "PayStructures",
+        "PayGroups"
+    ],
     // P21: Grievances, every People user's
     employeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings

@@ -75,7 +75,10 @@ along with this software (see the LICENSE.md file). If not, see
                     'partyQualificationContentId', 'QualificationContentType'],
                 // People's review content host (impl-people P20, PE-01): a review's files, never on the Party
                 'mantle.humanres.ability.PerformanceReview': ['mantle.humanres.ReviewServices.create#ReviewContent',
-                    'performanceReviewContentId', 'PerformanceReviewContentType']}
+                    'performanceReviewContentId', 'PerformanceReviewContentType'],
+                // People's payslip content host (impl-people P26, PE-01): payroll's files of a payslip, never on the Party
+                'mantle.humanres.payroll.Payslip': ['mantle.humanres.PayrollResultServices.create#PayslipContent',
+                    'payslipContentId', 'PayslipContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
@@ -154,6 +157,12 @@ along with this software (see the LICENSE.md file). If not, see
             if (info.recordEntityName === 'mantle.humanres.ability.PerformanceReview') {
                 const access = ec.service.sync().name('mantle.humanres.ReviewServices.check#ReviewAccess')
                     .parameters({performanceReviewId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
+            }
+            // P26: a payslip's files: payroll editors of its employer add them (Mantle's check#PayslipAccess)
+            if (info.recordEntityName === 'mantle.humanres.payroll.Payslip') {
+                const access = ec.service.sync().name('mantle.humanres.PayrollResultServices.check#PayslipAccess')
+                    .parameters({payslipId:info.recordId}).disableAuthz().call()
                 contentType.catalogCanChange = !!access?.canEdit
             }
             // P21: a confidential case's files: its people add them while it is open, nobody else (Mantle's check#PeopleCaseAccess)

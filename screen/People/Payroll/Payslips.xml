@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Payslips (design-people §8 Payslips; style-guide §3.2 List; impl-people P26): the payslips of the employers in
+    the user's payroll scope from mantle.humanres.PayrollResultServices.find#Payslips: Slips (each its person, employer, group,
+    period, pay date, run kind, state chip, gross and net, the slip it corrects and its corrections), filtered by group, period, state
+    and kind, or Corrections and Historical (the legacy pay history, labelled historical and opened by its own key, never
+    recalculated). In this build every pay group is in preview mode: an approved run's slips are previews, payroll's alone and
+    never issued. Each opens PayslipDetail. Payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read. Amounts are opted out of AI;
+    the person's own issued slips are SelfService's (MyPayslip), not this list. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payslips" default-menu-index="2" menu-image="sym_o_receipt_long" menu-image-type="icon">
+    <parameter name="payrollGroupId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="payrollRunId"/>
+    <parameter name="statusId"/>
+    <parameter name="runKindEnumId"/>
+    <parameter name="show"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <actions>
+        <service-call name="mantle.humanres.PayrollResultServices.find#Payslips" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{payrollGroupId:(payrollGroupId || null), timePeriodId:(timePeriodId || null), payrollRunId:(payrollRunId || null),
+                    statusId:(statusId || null), runKindEnumId:(runKindEnumId || null), show:(show || null), pageIndex:(pageIndex || 0)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            slipRows = Array.from(found?.payslips || [])
+            payslipsCount = found?.payslipsCount || 0
+            payslipsPageIndex = found?.payslipsPageIndex || 0
+            payslipsPageSize = found?.payslipsPageSize || 20
+            payslipsPageMaxIndex = found?.payslipsPageMaxIndex || 0
+            payslipsPageRangeLow = found?.payslipsPageRangeLow || 0
+            payslipsPageRangeHigh = found?.payslipsPageRangeHigh || 0
+            stateColors = {preview: 'primary', withdrawn: 'grey-8', final: 'orange-9', issued: 'positive', historical: 'grey-8'}
+            findValues = {payrollGroupId: payrollGroupId || null, timePeriodId: timePeriodId || null, statusId: statusId || null,
+                runKindEnumId: runKindEnumId || null, show: show || null}
+            detailUrl = sharedLinks?.['Payroll/PayslipDetail'] || '../PayslipDetail'
+            runsUrl = sharedLinks?.['Payroll/PayRuns'] || '../PayRuns'
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Payslips" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${runsUrl}" url-type="plain" text="Pay runs" link-type="anchor-button" icon="sym_o_payments"/>
+            </container>
+        </container>
+        <label type="p" style="text-caption m-muted" text="An approved pay run's results are its payslips. While a pay group is in preview mode its slips are previews: payroll's alone, never issued and never paid."/>
+        <form-single name="FindPayslips" transition="." map="findValues">
+            <field name="payrollGroupId">
+                <default-field title="Pay group">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'hoursGroups', selected:findValues.payrollGroupId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'payPeriods', selected:findValues.timePeriodId}">
+                            <depends-on field="payrollGroupId" parameter="choicePayrollGroupId"/>
+                        </dynamic-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="PssPreview" text="Preview"/>
+                        <option key="PssFinal" text="Final"/>
+                        <option key="PssIssued" text="Issued"/>
+                        <option key="PssWithdrawn" text="Withdrawn"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="runKindEnumId">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true">
+                        <option key="PrkRegular" text="Regular"/>
+                        <option key="PrkOffCycle" text="Off-cycle"/>
+                        <option key="PrkCorrection" text="Correction"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="show">
+                <default-field title="Show">
+                    <drop-down allow-empty="true">
+                        <option key="corrections" text="Corrections"/>
+                        <option key="historical" text="Historical pay records"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="payrollGroupId"/><field-ref name="timePeriodId"/><field-ref name="statusId"/>
+                    <field-ref name="runKindEnumId"/><field-ref name="show"/><field-ref name="submitButton"/></field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SlipList" list="slipRows" skip-form="true" paginate="true" condition="slipRows.length">
+                    <field name="personName">
+                        <conditional-field condition="historical" title="Employee">
+                            <link url="${detailUrl}" url-type="plain" text="${personName}" link-type="anchor" parameter-map="{legacyKey:legacyKey}"/>
+                        </conditional-field>
+                        <default-field title="Employee">
+                            <link url="${detailUrl}" url-type="plain" text="${personName}" link-type="anchor" parameter-map="{payslipId:payslipId}"/>
+                        </default-field>
+                    </field>
+                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                    <field name="kindText">
+                        <conditional-field condition="correctsPayslipId" title="Kind"><display text="Correction of ${correctsPayslipId}"/></conditional-field>
+                        <default-field title="Kind"><display/></default-field>
+                    </field>
+                    <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                    <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="correctionCount" align="right">
+                        <default-field title="Corrections"><display text="${correctionCount || ''}"/></default-field>
+                    </field>
+                    <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="personName"/><field-ref name="payDateText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="netText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!slipRows.length"
+                        text="No payslip matches. A pay run's slips are made when the run is approved: open Pay runs."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

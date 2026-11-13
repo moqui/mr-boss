@@ -118,13 +118,13 @@ feature(
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
             // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances; P18: their
-            // qualifications; P19: training, a session and a certificate)
+            // qualifications; P19: training, a session and a certificate; P26: their own payslip)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
                 Object.keys(employee.sharedLinks || {}).join() !==
-                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
+                    "SelfService,MyPayslip,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
                         "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications," +
                         "Development/Training,Development/TrainingDetail,Development/TrainingCertificate" ||
                 employee.organizationPartyIds?.length ||

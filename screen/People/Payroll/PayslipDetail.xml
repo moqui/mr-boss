@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Payslip (design-people §8 PayslipDetail, §8.2 corrections, §15 the payslip; style-guide §3.3 Detail;
+    impl-people P26): one pay result from mantle.humanres.PayrollResultServices.get#Payslip (a payroll reader's of its employer): the
+    record header (the person, period, pay date, kind, employer and state: a preview slip is payroll's alone and never issued; one
+    whose sources changed since its run was approved says so), PayBreakdown (the lines by group, each its amount, its rule and how it
+    was worked out; on a correction the change with what was paid before and now; the totals; the year to date derived from final and
+    issued pay; the inputs its run took with their sources), the correction chain (the original and its corrections with the net
+    effect, each opened here), StatementOutput (Issue statement, a final slip's, issue#Payslip: rendered once, stored and the person
+    told with no amount; Download statement once issued) and CorrectPay (Correct pay, create#Correction: a correction run of its own
+    with the reason and a pay date, opened in PayRunDetail; the original stays). With legacyKey, a legacy pay record as it was
+    recorded, never recalculated. The slip's files (its content host, payroll's alone). Amounts are opted out of AI. Nothing here makes
+    an invoice or a payment. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payslip" default-menu-include="false">
+    <parameter name="payslipId"/>
+    <parameter name="legacyKey"/>
+    <!-- StatementOutput: a final slip issued once (Mantle refuses a preview) -->
+    <transition name="issuePayslip">
+        <actions>
+            <service-call name="mantle.humanres.PayrollResultServices.issue#Payslip" out-map="issued" in-map="{payslipId:payslipId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Payslip issued ${issued.issuedDateText}; the employee is told it is available</message></if>
+        </actions>
+        <default-response url="."><parameter name="payslipId"/></default-response>
+        <error-response url="."><parameter name="payslipId"/></error-response>
+    </transition>
+    <!-- the stored statement, as it was issued (Mantle admits a payroll reader of the employer) -->
+    <transition name="statementFile" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.PayrollResultServices.get#Payslip" out-map="slipFound" in-map="{payslipId:payslipId}"/>
+            <script>if (!ec.message.hasError()) {
+                if (!slipFound.file) ec.message.addError('RECORD_UNAVAILABLE: This payslip has no issued statement')
+                else {
+                    const was = ec.artifactExecution.disableAuthz()
+                    try { ec.web.sendResourceResponse(slipFound.file.location, true, slipFound.file.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
+                }
+            }</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="payslipId"/></error-response>
+    </transition>
+    <!-- CorrectPay: a correction run of its own, opened in PayRunDetail to calculate and ask for approval -->
+    <transition name="createCorrection">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.create#Correction" out-map="corrected"
+                    in-map="{payslipId:payslipId, reason:(reason || null), payDate:(payDate || null), description:(description || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Correction run made: calculate it and ask for approval</message></if>
+        </actions>
+        <conditional-response url="../PayRunDetail" condition="!ec.message.hasError()">
+            <parameter name="payrollRunId" from="corrected.payrollRunId"/>
+            <parameter name="step" value="review"/>
+        </conditional-response>
+        <default-response url="."><parameter name="payslipId"/></default-response>
+        <error-response url="."><parameter name="payslipId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollResultServices.get#Payslip" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{payslipId:(payslipId || null), legacyKey:(legacyKey || null)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            slip = found?.payslip || null
+            recordFound = !!slip
+            historical = !!slip?.historical
+            itemRows = Array.from(found?.items || [])
+            totalsText = found?.totalsText || {}
+            yearToDate = found?.yearToDate || null
+            ytdRows = Array.from(yearToDate?.lines || [])
+            corrections = found?.corrections || {}
+            chainRows = Array.from(corrections.chain || [])
+            inputRows = Array.from(found?.inputs || [])
+            canIssue = !!found?.canIssue
+            canCorrect = !!found?.canCorrect
+            openCorrectionRunId = found?.openCorrectionRunId || null
+            hasFile = !!found?.file
+            correction = !!slip?.correctsPayslipId
+            stateColors = {preview: 'primary', withdrawn: 'grey-8', final: 'orange-9', issued: 'positive', stale: 'negative', historical: 'grey-8'}
+            headerCaption = slip ? [slip.periodText ? 'period ' + slip.periodText : '', 'pay date ' + slip.payDateText, slip.kindText,
+                slip.organizationName, slip.currencyUomId].filter(Boolean).join(' · ') : ''
+            listUrl = sharedLinks?.['Payroll/Payslips'] || '../Payslips'
+            runUrl = sharedLinks?.['Payroll/PayRunDetail'] || '../PayRunDetail'
+            correctValues = {payslipId: slip?.payslipId || payslipId, payDate: null}
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="PayslipMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This payslip is not available to you."/>
+                        <link url="${listUrl}" url-type="plain" text="Back to payslips" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="PayslipRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${historical ? 'Pay record' : (correction ? 'Correction payslip' : 'Payslip')} ${slip.personName}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[slip.state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(slip.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: slip.stateText})}]]></text>
+                                <text type="html">${slip.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${listUrl}" url-type="plain" text="Payslips" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <link url="${runUrl}" url-type="plain" text="Its pay run" link-type="anchor" icon="sym_o_payments"
+                                    parameter-map="{payrollRunId:slip.payrollRunId, step:'approval'}" condition="slip.payrollRunId"/>
+                            <link url="." text="The original slip" link-type="anchor" icon="sym_o_receipt_long"
+                                    parameter-map="{payslipId:slip.correctsPayslipId}" condition="correction"/>
+                            <link url="${runUrl}" url-type="plain" text="Correction in progress" link-type="anchor" icon="sym_o_edit_note"
+                                    parameter-map="{payrollRunId:openCorrectionRunId, step:'review'}" condition="openCorrectionRunId"/>
+                        </container>
+                        <container style="col-12 col-md-auto row q-gutter-sm m-record-actions">
+                            <container-dialog id="IssueDialog" button-text="Issue statement" icon="sym_o_send" type="primary" width="520"
+                                    title="Issue this payslip" condition="canIssue">
+                                <label type="p" text="The statement is rendered once now, as ${slip.personName} reads it, and kept: it is never rendered again. ${slip.personName} is told it is available, with no amount in the notice."/>
+                                <form-single name="IssuePayslip" transition="issuePayslip" map="{payslipId:slip.payslipId}">
+                                    <field name="payslipId"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title="Issue statement"><submit confirmation="Issue the payslip of ${slip.personName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="statementFile" text="Download statement" link-type="anchor-button" icon="sym_o_download"
+                                    target-window="_blank" parameter-map="{payslipId:slip.payslipId}" condition="hasFile"/>
+                            <container-dialog id="CorrectDialog" button-text="Correct pay" icon="sym_o_edit_note" width="560"
+                                    title="Correct this pay" condition="canCorrect" type="${canIssue ? 'default' : 'primary'}">
+                                <label type="p" text="A correction is a pay run of its own: it recalculates ${slip.personName}'s pay for the period as the sources and rules are now and pays the change on a new slip linked to this one, which stays as it is. Nothing is paid or posted until a payroll approver approves it."/>
+                                <form-single name="CorrectPay" transition="createCorrection" map="correctValues">
+                                    <field name="payslipId"><default-field><hidden/></default-field></field>
+                                    <field name="reason">
+                                        <default-field title="What changed" tooltip="The source or rule the correction follows: a salary recorded wrong, hours approved late">
+                                            <text-area rows="2"/></default-field>
+                                    </field>
+                                    <field name="payDate"><default-field title="Pay date" tooltip="The original's pay date when empty"><date-time type="date"/></default-field></field>
+                                    <field name="description"><default-field title="Note"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Make correction run"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+
+                <label type="p" style="text-caption m-muted" condition="slip.isPreview"
+                        text="A preview slip shows what the approved run would pay. Its pay group is in preview mode: it is never issued to the employee and makes no payment."/>
+                <label type="p" style="text-caption m-muted" condition="historical"
+                        text="A pay record kept from before People's payroll: shown as it was recorded, by its own key, and never recalculated."/>
+                <label type="p" style="text-caption" condition="correction"
+                        text="This slip corrects payslip ${slip.correctsPayslipId}${slip.correctionReason ? ': ' + slip.correctionReason : ''}. Its lines are the change; the original stays as it was."/>
+
+                <!-- PayBreakdown: the lines, totals and how each was worked out -->
+                <section name="PayBreakdown" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Pay breakdown"/>
+                            <box-body-nopad>
+                                <form-list name="SlipLines" list="itemRows" skip-form="true" paginate="false" condition="itemRows.length">
+                                    <field name="groupText"><default-field title="Group"><display/></default-field></field>
+                                    <field name="itemName">
+                                        <conditional-field condition="hiddenFromPerson" title="Line">
+                                            <display text="${itemName} (not on the employee's payslip)"/></conditional-field>
+                                        <default-field title="Line"><display/></default-field>
+                                    </field>
+                                    <field name="amountText" align="right"><default-field title="${correction ? 'Change' : 'Amount'}"><display/></default-field></field>
+                                    <field name="previousText" align="right" hide="!correction"><default-field title="Paid before"><display/></default-field></field>
+                                    <field name="nowText" align="right" hide="!correction"><default-field title="Now"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="How"><display/></default-field></field>
+                                    <field name="ruleText"><default-field title="Rule"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="itemName"/><field-ref name="groupText"/></column>
+                                        <column><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!itemRows.length" text="This slip has no lines."/>
+                                <label type="p" style="q-px-md q-pt-sm text-caption" condition="!historical"
+                                        text="Gross ${totalsText.gross} · deductions ${totalsText.deductions} · localization ${totalsText.localEmployee} · net ${totalsText.net} · employer contributions ${totalsText.contributions} and localization ${totalsText.localEmployer} · employer cost ${totalsText.employerCost}"/>
+                                <label type="p" style="q-px-md q-pt-sm text-caption" condition="historical"
+                                        text="Gross ${totalsText.gross} · net ${totalsText.net} · taxable ${totalsText.taxable} · taxable year to date as recorded ${totalsText.taxableYearToDate}"/>
+                                <label type="p" style="q-px-md text-caption m-muted" condition="slip.splitText" text="Period: ${slip.splitText}"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="YearToDate" condition="yearToDate" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Year to date"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-px-md q-pt-sm text-caption" text="${yearToDate.basisText}. Gross ${yearToDate.grossText}, net ${yearToDate.netText}."/>
+                                <form-list name="YearToDateLines" list="ytdRows" skip-form="true" paginate="false" condition="ytdRows.length">
+                                    <field name="itemName"><default-field title="Line"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="yearToDateText" align="right"><default-field title="Year to date"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the original and its corrections, with the net effect of those standing -->
+                <section name="CorrectionChain" condition="corrections.hasCorrections || correction" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Original and corrections"/>
+                            <box-body-nopad>
+                                <form-list name="ChainList" list="chainRows" skip-form="true" paginate="false">
+                                    <field name="payslipId">
+                                        <conditional-field condition="current" title="Payslip"><display text="${payslipId} (this one)"/></conditional-field>
+                                        <default-field title="Payslip"><link url="." text="${payslipId}" link-type="anchor" parameter-map="{payslipId:payslipId}"/></default-field>
+                                    </field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="netText" align="right"><default-field title="Net"><display/></default-field></field>
+                                    <field name="reason"><default-field title="What changed"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="payslipId"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="netText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md text-weight-medium" text="Net effect: ${corrections.netEffectText} (the original ${corrections.originalNetText} and its corrections)"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="InputsTaken" condition="inputRows.length" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Inputs paid"/>
+                            <box-body-nopad>
+                                <form-list name="InputList" list="inputRows" skip-form="true" paginate="false">
+                                    <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="typeText"><default-field title="Input"><display/></default-field></field>
+                                    <field name="quantityText" align="right"><default-field title="Quantity or amount"><display/></default-field></field>
+                                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="typeText"/><field-ref name="inputDateText"/></column>
+                                        <column><field-ref name="quantityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the slip's files (its own content host, PE-01): payroll's alone -->
+                <section name="PayslipFiles" condition="!historical">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <label text="Kept with the slip for payroll; never shown to the employee." type="p" style="text-caption m-muted"/>
+                                <record-files id="PayslipFiles" record-entity="mantle.humanres.payroll.Payslip" record-id="${slip.payslipId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

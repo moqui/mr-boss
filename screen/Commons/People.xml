@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     the corrections they may make themselves. P8 mounts SelfService (Shared/PeopleSelfService.xml: the user's own employment,
     requests, People tasks and emergency contacts), linked from Commons Home's People card and Today. P16 review: MyInterview
     (Shared/PeopleMyInterview.xml), an interview panel member's own interview and scorecard, opened from SelfService's My
-    interviews. Nothing here needs the People root grant: what shows is what mantle.humanres.PeopleServices and RecruitingServices
+    interviews. P26: MyPayslip (Shared/PeopleMyPayslip.xml), the user's own issued payslip. Nothing here needs the People root grant: what shows is what mantle.humanres.PeopleServices and RecruitingServices
     admit. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" default-menu-include="false" menu-image="sym_o_badge" menu-image-type="icon">
@@ -30,6 +30,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P16 review (the user's call of Nov 12, 2026): an interview panel member's own interview and scorecard, opened from
             SelfService's My interviews, the definition People mounts at People/MyInterview -->
         <subscreens-item name="MyInterview" location="component://mr-boss/screen/Shared/PeopleMyInterview.xml" menu-include="false"/>
+        <!-- P26: the user's own issued payslip, opened from SelfService's My payslips and the PayslipIssued notice, the definition
+            People mounts at People/MyPayslip -->
+        <subscreens-item name="MyPayslip" location="component://mr-boss/screen/Shared/PeopleMyPayslip.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-active/>
