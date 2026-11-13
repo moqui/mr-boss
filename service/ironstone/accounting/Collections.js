@@ -38,6 +38,9 @@ function work(parameters) {
         .condition("statusId", "in", OPEN_INVOICE_STATUSES)
         .condition("unpaidTotal", "greater", toDecimal(0))
         .condition("dueDate", "less", startOf(today()))
+    // People P27 review (AC-23): a receivable from a person a pay run made is a reader of payroll's (its payrollOrigin mark)
+    const payrollHidden = ec.resource.script("component://mr-mantle/service/mantle/account/PayrollOrigin.js").invoiceCondition()
+    if (payrollHidden) query = query.condition(payrollHidden)
     if (parameters.customerPartyId) query = query.condition("toPartyId", parameters.customerPartyId)
     const groups = array(
         query
@@ -452,6 +455,11 @@ const sources = {
             .find("mantle.account.invoice.Invoice", {fromPartyId: org, toPartyId: parameters.partyId})
             .condition("statusId", "in", OPEN_INVOICE_STATUSES)
             .condition("unpaidTotal", "greater", toDecimal(0))
+        // People P27 review (AC-23): a payroll-origin receivable is a reader of payroll's
+        const payrollHidden = ec.resource
+            .script("component://mr-mantle/service/mantle/account/PayrollOrigin.js")
+            .invoiceCondition()
+        if (payrollHidden) query = query.condition(payrollHidden)
         const term = String(parameters.term || "").trim()
         if (term)
             query = query.condition(ec.entity.conditionFactory.makeCondition("invoiceId", "like", "%" + term + "%").ignoreCase())

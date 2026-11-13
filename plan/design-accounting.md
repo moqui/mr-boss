@@ -1,5 +1,8 @@
 # IronStone BOSS — Accounting design
 
+Nov 13, 2026 — impl-people P27 review: AC-23's payroll-origin mark (`payrollOrigin` on Invoice, Payment and AcctgTrans, kept by entity ECA rules: a payment made by hand and applied to a payroll invoice is hidden too) and the projection on the remaining finance paths (ExpensePosting's review paragraph); the Payroll finance group (`BOSS_ACCOUNTING_PAYROLL`, the user's call of Nov 13, 2026); payroll's posting mappings for an existing database (`migrate#PayrollOrigin`).
+Nov 12, 2026 — AC-23 built by impl-people P27, as an owner contract (ExpensePosting's payroll-origin paragraph): the payroll-origin projection in Mantle (`mantle/account/PayrollOrigin.js` over People's `PayrollObligation`) behind the bills, invoices, payments, journal and entry reads, the invoice workflow, the payables aging, payment runs and universal search; approval, finalizing and payment of a payroll obligation's invoice wait for its run's completed finalization; a payment run pays a payroll invoice as `PtPayrollPayment` from the person's payroll account and leaves a payroll payee that is no person to its own channel.
+
 Nov 12, 2026 — AC-24 built by impl-maintenance P9, as an owner contract (PostingDefaults' "Maintenance expense routing", §18): `mantle.ledger.config.MaintenanceCostPolicy` edited as the Maintenance expense mapping kind, and the issuance and return routing in AssetAutoPostServices for managed maintenance work only.
 Nov 12, 2026 — impl-people P15 as built (owner contract): ExpensePosting lists an employee's expense claim once its business approval is done, finance's approval refuses one before it or reserved for payroll, and the Employee advances tab pays and applies advances (§5 ExpensePosting).
 Nov 11, 2026 — the decisions of the People, Maintenance and Sales plans written in: People builds AC-23 (impl-people P27), with external payroll processing gated on it, and Maintenance builds AC-24 (impl-maintenance P9); `RaprCost` is the one labor costing purpose; a seller's SalesPolicy approval setting stops the automatic approval of its sales orders, and the credit warning stays as built and blocks auto-approval, as every pre-approval warning does (§1.4, OrderDetail, §19; impl-sales §4); the invoiced revenue metric is the registered `Accounting.InvoicedRevenue` (AC-12, §19)
@@ -853,6 +856,48 @@ gets no more than the screen shows. People payroll finalize stays off until AC-2
 acceptance passes ([People §8.3](design-people.md#83-accounting-and-confidentiality)). People's plan
 builds AC-23 (impl-people P27), as an owner contract, and external payroll processing, whose results
 create the same payroll invoices, is gated on it as finalize is (Nov 11, 2026).
+
+**As built (impl-people P27; Nov 12, 2026).** A payroll-origin document is an invoice a `PayrollObligation` made (net pay,
+a payee's amounts, a receivable from a person who left; an expense claim a run settles stays an ordinary bill), a payment of
+type `PtPayrollPayment`, and a transaction of either. Without `PAYROLL_VIEW` (`PayrollOrigin.js canRead`) they are left out:
+`AccountingPolicy.js query` (the invoices, bills and payments kinds by condition, through `InvoiceFinance`'s obligation join;
+journals and entries through the new `AcctgTransFinance` and `AcctgTransAndEntryFinance` views, a locked read checked on its
+row), so the lists, palette search and record reads behind Bills, Invoices, Payments, JournalEntries, TransactionEntries and
+AccountDetail; `InvoiceWorkflowLib.js invoice` (BillDetail, InvoiceDetail and every invoice read or operation: missing,
+`INVOICE_UNAVAILABLE`); `find#Payables` (Bills, ExpensePosting) and `find#Receivables`; `PaymentWorkflow.js paymentQuery`
+(Payments, PaymentDetail); universal search (a payroll ledger hit dropped); the payables and receivables aging, where they are one
+"Payroll" row a currency, so the totals reconcile; payment runs, which select payroll bills only for a reader of payroll, refuse
+paying them to anyone else (`PAYROLL_VIEW_REQUIRED`), and show a reader without it one masked "Payroll" amount
+(PaymentRunDetail's Payroll card). Approval, finalizing and paying an obligation's invoice wait for its run's completed
+finalization (`InvoiceWorkflow.js issue`: `PAYROLL_NOT_FINALIZED`), and a claim on the payroll route is approved for payment once
+a finalized run settles it. A payment run (F69) takes a payment's type from its bills' invoice type, as `create#InvoicePayment`
+does (`PtPayrollPayment` for net pay, posted through new DefaultSettings mappings: payroll payable applied, payables unapplied),
+pays a payroll payee from its `PmpPayroll` account first, and leaves a payroll payee's invoice (the localization authority's
+`InvoiceTax`) out of an ACH run (`PrxPayeeChannel`: a PPD file pays people). Not covered: the Customer360 and Supplier360 finance
+panes beyond these services, CSV and print exports of other screens, the GL and partner ledger reports' line detail (aggregates
+by account carry no person), and a payment applied to a payroll invoice that is not of the payroll type.
+
+**Review (impl-people P27 review; Nov 13, 2026).** The projection reads one mark: `payrollOrigin` "Y" on Invoice (set by the
+finalization on the invoices it makes), Payment and AcctgTrans (entity ECA rules, `entity/PayrollOrigin.eecas.xml`: a
+`PtPayrollPayment`, a payment applied to a marked invoice or to or from a marked payment, whatever its type, with its transactions
+made before; a transaction of a marked invoice or payment), never taken off; `PayrollOrigin.js` gives each read its condition by the
+view's alias, so no read joins People. Covered besides the as-built list: the GeneralLedger report's lines (one masked "Payroll"
+line an account, the balances reconciling), PartnerLedger (one "Payroll" party), InvoiceReconciliation's exception rows, Customer360's
+and Supplier360's finance (payments, summaries, statements of account, `get#ReceivableStatementInfo`), receivable statements and their
+email, dunning previews, Collections' work list and choices, settlement open items and a payment's linked records, an invoice's
+payments and ledger rows, bank reconciliation candidates, Purchasing's bills, bill detail, spend and supplier statement, Bills'
+exceptions, and universal search's counts (the page's for a user without PAYROLL_VIEW once payroll-origin documents exist). The
+Payroll finance group (`BOSS_ACCOUNTING_PAYROLL`, "Payroll finance": payables, payments, invoice approval and hold, payment-run
+approval and PAYROLL_VIEW; demo `finance.payroll`; the user's call of Nov 13, 2026) is the one finance group that reads payroll; a
+payment run's approver needs no PAYROLL_VIEW (a masked amount) and never approves their own run. A leaver's receivable (an
+`InvoicePayroll` from the organization) posts to accounts receivable; `migrate#PayrollOrigin` (a seed load,
+`data/ZaaGlAccountsUpdateData.xml`) adds the receivable and `PtPayrollPayment` mappings to DefaultSettings and each organization
+with its own where missing, and marks payroll payments made before the mark. Not covered, by design: the legacy REST entity
+endpoints and display services (no BOSS screen reaches them; REST entity authorization), sales summaries over `MantleSalesInvoice`
+(aggregates by interval or class), 1099 statements (vendor bills), order- and project-scoped invoice reads (a payroll invoice has
+neither), draft journal batches (payroll never posts a draft batch) and credit exposure (no per-document output; a leaver's
+receivable counts). No Insights finance dataset is registered, so none needs the projection; one added later reads the mark. A job
+with no user (a scheduled dunning) leaves payroll receivables out.
 
 ### LandedCosts
 

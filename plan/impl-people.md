@@ -7821,6 +7821,289 @@ Design §8.2 (steps 6–7), §8.3, §9 (the payroll route), PayRunDetail's Final
   acceptance test's own live fixture a run finalizes once, Accounting posts and pays it, and a general ledger
   reader cannot open a worker's payroll invoice.
 
+**Built Nov 12 (P27).** mr-mantle 821eabe3, mr-boss (this commit), branch `ppl/p27`.
+- Checked first (the code over the plan): P25's PayrollRuns.js (the run's statuses through `PrnFinalizing` and `PrnFinalized` seeded,
+  `runRevision`, `unitHolds`, `takenInputs` counting only approved inputs, `NOT_IN_GROUP` from `syncPopulation`), P26's PayrollResults.js
+  (`makeSlips` makes none for a live group: "P27 must set them to final itself"), P22's `groupReadiness` (`liveAllowed` never true) and
+  `store#Group` (`LIVE_NOT_AVAILABLE` always), P24's PayInputs.js (a claim's reimbursement input of the claim's total, an advance's
+  recovery through a deduction, `advanceLeft`), P15's Expense.js (`financeApproval`'s `CLAIM_RESERVED`, `payrollReserved` in
+  PaymentRuns.js, `advanceMoney`), the legacy payroll invoice's shape (InvoicePayroll from the employee, deductions as negative lines on
+  liability accounts), Mantle's posting mappings (InvoicePayroll and InvoiceTax post, InvoicePayrollOther has no transaction type,
+  `PtPayrollPayment` no PaymentTypeGlAccount), F69's PaymentRuns.js (`PtInvoicePayment`, the newest bank account), and Accounting's read
+  paths: AccountingPolicy.js `query` and `record` (the kinds behind the lists, palette and record reads), InvoiceWorkflowLib.js `invoice`,
+  Payables.js, PaymentWorkflow.js `paymentQuery`, Aging.js, UniversalSearchServices. No view over a locked read: moqui-db writes
+  `FOR UPDATE` for a whole view, so a transaction kind keeps its entity for a locked read.
+- Mantle:
+  - `entity/PeoplePayrollObligationEntities.xml` (new): `PayrollObligation` (a unique key, its kind `PayrollObligationKind`: net pay,
+    payee, expense claim settled, receivable; run, slip, employment, person, employer, payee, currency, the invoice, unique, and the
+    amount `ai-opt-out`), `PayrollRecovery` (keyed by the correction slip; the amount, the route `PayrollRecoveryRoute`, the recovery
+    component, the receivable), `PayrollRun` gains `finalizedDate`, `finalizedByUserId`, `finalizeMessage`, `PayrollRunEmployment`
+    `finalizedDate`, `PayrollGroup` the localization binding (`localizationPayeePartyId`, its liability and expense accounts, audited);
+    the input type `PitOverpaymentRecovery`, the Payslip transitions Preview and Withdrawn to Final, the PartySetting types
+    `PayrollRecoveryComponent` and `PayrollRecoveryCap`.
+  - `PayrollRunServices` over a new module `PayrollObligations.js`: `finalize#Run`, `get#Settlement` and `get#Obligation` (Payroll's
+    InvoiceDetail); `liveReasons`, `requireLive` and `requireProjection` exported for P28's live external results. As design §8.2's
+    as-built paragraph says: `NOT_LIVE` with each reason (the demonstration group: `PREVIEW_ONLY`, `LIVE_NOT_ENABLED`),
+    `APPROVAL_NO_LONGER_HOLDS`, `ACCOUNT_MAPPING_MISSING`, each employee in its own transaction (slip final, inputs finalized, its net pay
+    invoice, its claims linked, an overpayment's recovery; `REIMBURSEMENT_MISMATCH`, `RECONCILE_FAILED`, `RECOVERY_SETUP_MISSING`,
+    `SOURCE_CHANGED` leave it pending), then the payee bucket (`InvoiceTax` from the localization payee), then the release (payables
+    received) and Finalized; a retry finishes the rest by the obligations' keys.
+  - PayrollRuns.js: `get#Run` answers the live reasons, the finalize message and `canFinalize`; a correction of an employment ended by
+    the period's last day is kept and pays nothing now (`endedBy`, `nothingPaid`; `NOT_IN_GROUP` lifted for it); a correction counts the
+    finalized inputs of its base runs; an off-cycle run never takes an overpayment recovery; the pay facts mark a reimbursement line.
+    PayrollResults.js: `finalSlip` (and `writeSlip`, `makeSlips` refactored onto it), `get#Payslip`'s `settlement` (payroll's: the
+    slip's obligations and recovery). PayrollConfiguration.js: `groupReadiness` allows live pay for a real localization covering today
+    once the projection is in place (`LIVE_AVAILABLE`, `LIVE`); `store#Group` takes `liveEnabled` only then and the binding
+    (`PAYEE_INVALID`, `ACCOUNT_INVALID`). PayInputs.js: `planOf` plans the overpayment recovery inputs; `advanceLeft` leaves out
+    finalized recoveries. PayrollLocalization.js: the demonstration levy leaves out a reimbursement. Expense.js: `advanceMoney` counts
+    finalized recoveries; `financeApproval` and `payrollReserved` let a claim a finalized run settled be approved and paid.
+  - Accounting's owner contracts (AC-23, F69; design-accounting ExpensePosting's as-built paragraph): `mantle/account/PayrollOrigin.js`
+    (new); AccountingPolicy.js `query`/`record`, `InvoiceFinance`'s obligation join, the `AcctgTransFinance` and
+    `AcctgTransAndEntryFinance` views, InvoiceWorkflowLib.js `invoice`, InvoiceWorkflow.js `issue` (`PAYROLL_NOT_FINALIZED`) and
+    `receivableQuery`, Payables.js, PaymentWorkflow.js `paymentQuery`, Aging.js (one "Payroll" row), UniversalSearchServices (payroll
+    ledger hits), PaymentRuns.js (payroll bills a payroll reader's, `PAYROLL_VIEW_REQUIRED`, the payment type from the invoice type,
+    `PmpPayroll` first, `PrxPayeeChannel` for an ACH run, the run detail's masked payroll amount); `ZaaGlAccountsInstallData.xml`'s
+    `PtPayrollPayment` mappings.
+- BOSS:
+  - `People/Payroll/PayRunDetail`: 5 Finalize and 6 Settlement (design §8 PayRunDetail's as-built paragraph); PayslipDetail's
+    Settlement box; PayGroups' localization binding and Live pay (and its facts); People.js `payrollPayees` choice (ContextServices'
+    description); `Shared/InvoiceDetail` and `template/PeopleInvoiceDetail.xml`'s payroll branch (`get#Obligation`).
+  - Accounting (owner contract): PaymentRunDetail's Payroll card for a reader without PAYROLL_VIEW (`ironstone.accounting` PaymentRuns.js
+    `payrollMaskedText`).
+- Specs: Mantle `test/humanres/PayObligations` (4 features, stepwise, 2.3 s release feature time: 0.45, 0.49, 0.59, 0.79: the demonstration
+  group's approved run refused `NOT_LIVE` with `PREVIEW_ONLY` and `LIVE_NOT_ENABLED`, its slips staying previews, `store#Group` refusing
+  it live and accepting the spec's live group; the claim `CLAIM_RESERVED` before, a first finalization pending on a lost payee with the
+  net pay invoice incoming and its approval `PAYROLL_NOT_FINALIZED`, the retry finalized, a third repeated with no new obligation, HR
+  refused; Emp's net pay invoice 1,000.00 of two lines (salary 1,020.41 on the wage expense, the levy -20.41 withheld), the claim linked
+  with no second invoice of it, the authority's 60.61, slips final, inputs finalized; a finance user without PAYROLL_VIEW not finding the
+  net pay where the claim is listed and refused its approval `INVOICE_UNAVAILABLE`, one with it finding it, the claim approved, the 40
+  advance applied (60 left), the settlement's wage net 1,000, due 60, instruction 1,060, an ACH run selecting both from Emp's payroll
+  account, the authority `PrxPayeeChannel`, the reader without the grant seeing one masked amount, executed as one `PtPayrollPayment`
+  of 1,060.00; Emp's correction to 6,000 a year pending `RECOVERY_SETUP_MISSING`, then with the employer's settings 510.00 to recover
+  on the payroll route, the next period's input of the 300 cap, its net pay 190.00 and the slip's 300 recovered and 210 left; Left's
+  employment ended before the period, his correction no longer `NOT_IN_GROUP`, a receivable of 980.00 from him). BOSS
+  `test/Accounting/AccountingPayrollOrigin` (1 feature, 0.13–0.25 s: finance.ap without PAYROLL_VIEW and a spec-local finance user with
+  it, the same calls: the bills list, the palette, the bill's read and the payables aging; the payroll invoice missing, `INVOICE_UNAVAILABLE`
+  and a "Payroll" row with the same totals for the first; the invoice and its person for the second). `PeopleAccessLater` gains the P27
+  case (0.25 s: the HR officer refused finalizing with the parameters the payroll operator is answered `NOT_LIVE` with, Services' run
+  missing to Retail's payroll, the settlement read by the payroll approver and refused to HR, an obligation's invoice refused to HR
+  and missing to Retail's payroll for Services'). Acceptance, written and not run: `acceptance/People/PeoplePayHandoffUsable` (3
+  features, through PayRunDetail's transitions: the demonstration group's approved run shown and refused Finalize with its two reasons;
+  under its own live fixture the payroll operator finalizes once, a second Finalize makes nothing; a spec-local payroll finance user
+  approves and pays Ines's net pay, Settlement shows it posted, finance.gl cannot open it).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): mr-mantle PayObligations, PayRuns, Payslips,
+  PayInputs, PayConfiguration, PayAssignments, ExpenseClaims, PeopleApprovals, HumanResServices, PayrollServices, PayrollAdjustments,
+  WorkPlanToCashBasicFlow and the Accounting specs the owner contracts touch (AccountingPayables, AccountingPaymentRuns,
+  AccountingPaymentRunControls, AccountingRecurringAging, AccountingPaymentLifecycle, AccountingControls, AccountingReports,
+  AccountingReceivables, AccountingActivities, FinancialReports, AccountingPaymentCorrections, LedgerMaintenance, AccountingPeriodClose,
+  AccountingSetup, AccountingBookDates, AccountingCredit, AccountingCustomerFinance, AccountingSettlement, MantleSearch,
+  UniversalSearch) with their fixtures, 346 of 346 in 37 specs (56.4 s of features); mr-boss AccountingPayrollOrigin, PeopleAccessLater,
+  PeopleAccess, PeoplePayRuns, PeoplePayslips, PeopleExpenses, PeoplePayConfiguration, PeoplePayInputs, PeoplePayAssignments,
+  PeopleSelfService, AccountingPayables, AccountingPaymentRuns, AccountingAccess, AccountingReporting, AccountingPayments,
+  AccountingReceivables, AccountingSettlement, PurchasingBills, CustomerServiceOrders, WarehouseShipping and Billing, 150 of 150 in 21
+  specs (46.4 s), and AccountingPayrollOrigin with the Accounting specs after it (the payroll invoice it posts in the demo organization),
+  51 of 51. A one-off qvt, tui and html render (not kept) of PayRunDetail's Finalize and Settlement, PayslipDetail with its settlement,
+  Payroll's InvoiceDetail with an obligation and PayGroups with a group opened: all 200 with no error. `moqui lint --screens` (release):
+  139 flagged sites as before, none in the changed screens. Prettier clean on the new JavaScript and on the changed files that were
+  clean on master (PaymentWorkflow.js and BOSS People.js keep other hunks Prettier would rewrite). Not run: test-apps, test-framework,
+  the acceptance suite.
+- Inventories: usl-inventory's People rows (`finalize#Run`, `get#Settlement`, `get#Obligation`); ss-inventory's P27 note (no baseline
+  form maps to them).
+- Design edits: design-people (header; §8.2's as-built paragraph; §8 PayRunDetail's, with PayslipDetail's and PayGroups'; §9's payroll
+  route; §13 InvoiceDetail); design-accounting (header; ExpensePosting's AC-23 as built).
+- Findings (provisional, numbered by the lead):
+  - No BOSS group holds PAYROLL_VIEW with a finance permission, so outside ADMIN no one approves, pays or reads a payroll-origin invoice in
+    Accounting (the specs and the walk make a spec-local payroll finance user); a payroll finance group (or PAYROLL_VIEW for a finance
+    group) is the user's call.
+  - The employer's recovery settings (`PayrollRecoveryComponent`, `PayrollRecoveryCap`) are PartySettings with no screen yet (P29's
+    PeoplePreferences is the natural place); without the component a negative correction of an employee still employed stays pending
+    (`RECOVERY_SETUP_MISSING`). The cap is an amount a period, not a share of the net; a recovery larger than a period's net blocks that
+    employee (`NEGATIVE_NET`) until payroll lowers the cap.
+  - Third-party payees are the localization's alone (the group's binding): a component has no payee, so a withheld deduction stays on its
+    liability account and an employer contribution is not posted at all at finalization (its accounts kept for when payees exist).
+  - A negative correction posts nothing when it is finalized: on the payroll route the recovery deductions post to the recovery
+    component's liability account (set to the wage expense, or an overpayments account, the employer's choice); on the receivable route
+    the receivable reverses each line on its own account.
+  - `PtPayrollPayment` had no posting mapping, so a payroll payment run could not post: DefaultSettings gains two
+    `PaymentTypeGlAccount` rows in install data; an existing database needs them added. `InvoicePayrollOther` has no transaction type
+    either, so the payee bucket is an `InvoiceTax`.
+  - The projection marks payments by type: a payment applied to a payroll invoice that is not `PtPayrollPayment` (made by hand) is not
+    masked. Not covered: the Customer360 and Supplier360 panes' own reads, other screens' CSV and print exports, the GL and partner
+    ledger reports' line detail (their account aggregates carry no person).
+  - An employee whose sources change while their run is finalizing is left pending (`SOURCE_CHANGED`) with no way to finish (a finalizing
+    run is not recalculated or excluded from); and changing the group (its payee or accounts) after approval takes the approval back,
+    the group being in each employee's fingerprint.
+  - Expense posting's queue lists accounts payable claims alone, so a claim a finalized run settled is approved from Bills and
+    BillDetail, not from that queue.
+  - Finalization makes slips final, not issued: issuing statements stays PayslipDetail's step (P26).
+  - The demonstration levy no longer levies a reimbursement line (the pay fact's `reimbursement`), which changes a preview with a
+    reimbursement component (none in the demo data).
+  - A claim's reimbursement input is the claim's total; an advance applied after finalization lowers what is due (Settlement's
+    reimbursement due), while the slip shows the claim's total.
+  - BOSS has no live localization; the acceptance walk makes its own.
+- For the lead:
+  - budget share: mr-mantle PayObligations about 2.3 s release (new); mr-boss AccountingPayrollOrigin about 0.25 s (new) and
+    PeopleAccessLater's P27 case 0.25 s; the client walk unchanged;
+  - merge hot spots (P29 runs beside this): mr-boss `service/ironstone/people/People.js` (the `payrollPayees` choice before
+    `function choices`), `ContextServices.xml` (`get#Choices`' description's end), `test/People/PeopleAccessLater.spec.js` (a header
+    paragraph before "Run:", the appended feature), `plan/usl-inventory.md` (after P26's last People row), `ss-inventory.md`,
+    design-people's header, design-accounting's header; otherwise mr-boss `screen/People/Payroll/PayRunDetail.xml`,
+    `PayslipDetail.xml`, `PayGroups.xml`, `screen/Shared/InvoiceDetail.xml`, `template/PeopleInvoiceDetail.xml`,
+    `screen/Accounting/Payables/PaymentRunDetail.xml`, `service/ironstone/accounting/PaymentRuns.js`; mr-mantle `PayrollRuns.js`,
+    `PayrollResults.js`, `PayrollConfiguration.js`, `PayInputs.js`, `Expense.js`, `PaymentRuns.js`, `InvoiceWorkflow.js`,
+    `InvoiceWorkflowLib.js`, `AccountingPolicy.js`, `Aging.js`, `Payables.js`, `PaymentWorkflow.js`, `UniversalSearchServices.xml`,
+    `InvoiceWorkflowEntities.xml`, `AccountingLedgerViewEntities.xml`, `AccountingPaymentRunEntities.xml`, `ZaaGlAccountsInstallData.xml`,
+    `PayrollRunServices.xml`, `PayrollSetupServices.xml`, `PayrollResultServices.xml`, `PayrollLocalizationServices.xml`;
+  - P28: `PayrollObligations.js` exports `requireLive` and `requireProjection` for its live external results, and its results can make
+    slips final through `PayrollResults.js finalSlip` and obligations through the same keys;
+  - for the user's call: a payroll finance group in Accounting (the first finding); where the recovery settings are set (the second);
+    whether components get payees; whether finalizing should also issue the statements.
+
+**Review Nov 13 (P27).** A fresh review of `git diff master...ppl/p27` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design-people §8.2 steps 6 and 7, §8.3, §9 and §13, and design-accounting AC-23 and ExpensePosting, finance first: finalization's
+integrity, the payroll route, recovery and receivables, then AC-23 on every finance path; the user's four calls of Nov 13 built and
+recorded in §4; fixes committed apart per repository ("People P27 review: …"). Both repositories were first rebased onto master
+(P29's merge): mr-mantle replayed cleanly; mr-boss conflicted in design-people's header (both kept, P27's first) and
+PeopleAccessLater.spec.js (P29's and P27's header paragraphs and features both kept), People.js, ContextServices.xml, the
+inventories and impl-people merged on their own; PayObligations, Payslips, PayRuns, PayInputs, ExpenseClaims, the Accounting
+payables, payment run, receivables, activities, controls, aging and search specs (140 of 140) and AccountingPayrollOrigin and
+PeopleAccessLater (20 of 20) passed on the rebased code. Tested on the shared release binary (`--release --nobuild`, this phase's
+runtime).
+- Checked and found sound:
+  - Access: `finalize#Run` needs PAYROLL_VIEW and PAYROLL_EDIT, `get#Settlement` and `get#Obligation` PAYROLL_VIEW, each of the run's
+    or obligation's employer in the People scope; another employer's run or invoice is `RECORD_UNAVAILABLE`, as a missing one; no
+    party, employment or invoice is taken from the caller.
+  - Each employee in its own transaction under the employment's lock, its sources re-checked (`unitHolds`, `SOURCE_CHANGED`);
+    obligations keyed (unique `obligationKey`, unique `invoiceId`), so a retry or a second caller makes nothing twice (an invoice is
+    made in the transaction of its obligation); the approval re-checked against the run's revision and every account mapped before
+    anything is made; a group that is not live (each reason) or without the projection refused on every attempt; nothing released
+    until every employee and payee bucket is made (release and Finalized together), and Accounting's guard (`approvalCheck` in
+    `issue`, the payment run) refuses approving, finalizing or paying an obligation's invoice before.
+  - The payroll route: the claim's own invoice linked (`CLAIM:`), the reimbursement line left out of the net pay invoice and checked
+    against the claims taken (`REIMBURSEMENT_MISMATCH`), so the claim's expense posts once (the spec counts Emp's invoices: 3); a
+    payment run pays the claim and the net pay in one `PtPayrollPayment` from the payroll account.
+  - Recovery keyed by the correction slip (unique), a leaver's as a receivable whose lines reverse the slip's, the others as capped
+    inputs on regular runs never taken by an off-cycle run; recovered amounts read from finalized inputs or the receivable's
+    payments.
+  - Accounting's existing behavior and specs unchanged for a holder and wherever no payroll-origin document exists.
+- Fixed:
+  - R1 (high): a finalization could be left unfinishable. The move to Finalizing was written in the service's own transaction while
+    each employee's transaction committed its final slip, finalized inputs and invoices; a rollback after them (the 600 s timeout of
+    a large run, a failed release) put the run back to Approved, and its revision, which counts the employments' states, no longer
+    matched the approval: every retry was `APPROVAL_NO_LONGER_HOLDS`, with final slips and draft invoices never released. Every step
+    now commits in a transaction of its own (the service holds none: `begin`, each employee, each payee bucket, `end` with the release
+    and Finalized under the run's lock, then the statements); a retry or a second caller finishes the rest. Spec PayObligations (a
+    finalization whose caller's transaction rolls back leaves the run Finalizing and the retry goes on; the unfixed code left it
+    Approved and refused the retry).
+  - R2 (high, AC-23): a payment made by hand and applied to a payroll invoice was not hidden (the projection knew payments by type
+    alone), nor its ledger lines. The projection now reads a mark, `payrollOrigin` "Y" on Invoice (the finalization's invoices),
+    Payment and AcctgTrans, kept by entity ECA rules (`entity/PayrollOrigin.eecas.xml`: a `PtPayrollPayment`, a payment applied to a
+    marked invoice or to or from a marked payment, with the payment's transactions made before; a transaction of a marked invoice or
+    payment), never taken off; every read conditions on it by the view's alias, so no read joins People (the obligation joins of
+    `InvoiceFinance` and the two transaction views are gone, and a locked transaction read needs no check of its own). Spec
+    AccountingPayrollOrigin (a `PtInvoicePayment` made by hand on a payroll invoice: marked with its transactions, missing to a reader
+    without PAYROLL_VIEW in the payments list and as a record with the code of a missing payment, its journals absent; listed for a
+    holder).
+  - R3 (high, AC-23): the paths the Built note left uncovered, and others it did not list, showed payroll-origin documents per person.
+    Covered: the GeneralLedger report's lines (one masked "Payroll" line an account; its balances reconcile) and PartnerLedger (one
+    "Payroll" party) in `FinanceReports.js`, InvoiceReconciliation's exception rows; Customer360's finance (`get#CustomerFinance`'s
+    payments and summaries, `get#ReceivableStatementInfo`), Supplier360's (`get#SupplierFinance`'s payments, `supplierSummary`);
+    receivable statements and their email (`get#Statements`), dunning previews, BOSS Collections' work list and choices; settlement
+    open items and a payment's linked records (`PaymentWorkflow.js query`); an invoice's payments and ledger rows
+    (`get#InvoiceFinanceDetail`); bank reconciliation candidates; BOSS Purchasing's bills, bill detail, spend and supplier statement,
+    Bills' exceptions; universal search's counts (the page's for a user without PAYROLL_VIEW once payroll-origin documents exist,
+    so the index never counts their matches). Spec AccountingPayrollOrigin (the GeneralLedger report has no line of the payment,
+    a masked line and the holder's debit and credit sums; the PartnerLedger has no employee party, a "Payroll" party and the holder's
+    closing sum). Left, by design (design-accounting ExpensePosting's review paragraph): the legacy REST entity endpoints and display
+    services, `MantleSalesInvoice` sales summaries, 1099 statements, order- and project-scoped invoice reads, draft journal batches,
+    credit exposure; no Insights finance dataset is registered.
+  - R4 (medium): a leaver's receivable could never post. It is an `InvoicePayroll` from the employer, and InvoicePayroll had a payable
+    transaction type alone, so Accounting's finalizing of it failed ("no accounting transaction type"). DefaultSettings gains the
+    receivable side (`AttPayrollInvoice`, accounts receivable). Spec PayObligations (Left's 980.00 finalized: posted, 980.00 on
+    accounts receivable, the transaction marked; the unfixed code refused it).
+  - R5 (medium): `PtPayrollPayment`'s mappings were install data alone, so an existing database could not post a payroll payment.
+    `mantle.account.PayrollOriginServices.migrate#PayrollOrigin`, run on every seed load (`data/ZaaGlAccountsUpdateData.xml`, as P10's
+    migrations), adds `PtPayrollPayment`'s payable mappings (the organization's InvoicePayroll payable, its PtInvoicePayment unapplied
+    account) and InvoicePayroll's receivable mapping to DefaultSettings and each organization with its own, where missing, each
+    organization on its own (failure tolerant), and marks the payroll payments made before the mark. Spec PayObligations (the
+    employer's three mappings removed, the data update puts them back before the payment run posts).
+  - R6 (the user's call of Nov 13, 2026): the Payroll finance group (`BOSS_ACCOUNTING_PAYROLL`, "Payroll finance", bundle 795, demo
+    `finance.payroll`; §4). Spec AccountingPayrollOrigin (finance.ap answered as for a missing invoice: not listed,
+    `INVOICE_UNAVAILABLE` on read and approve; `finance.payroll` approves it and makes a check run that `finance.approve` approves and
+    `finance.payroll` executes: one `PtPayrollPayment` of 800.00, marked, not in finance.ap's payments; the bills, palette, invoice
+    and aging checks now with `finance.payroll` in place of the spec-local user).
+  - R7 (the user's call of Nov 13, 2026): Overpayment recovery (People › Payroll › PayRecovery, menu 9 beside Pay groups) over
+    `get#RecoverySettings` and `store#RecoverySettings` (PAYROLL_VIEW, PAYROLL_EDIT and PAYROLL_CONFIGURE at the revision read;
+    `COMPONENT_INVALID`, `CAP_INVALID`, `REVISION_CHANGED`); the cap an amount or a percentage of net pay (`PayrollRecoveryCapPercent`:
+    of the wage net on the employee's latest finalized regular run). Specs PayObligations (30% set by the configurer: the operator,
+    both kinds and a stale revision refused; the next run recovers 300.00 of the 1,000.00 wage net) and PeopleAccessLater
+    (PayRecovery opens for the payroll operator and is refused to the HR officer, whose `get#RecoverySettings` is refused);
+    PeopleSpecLib's Payroll menu gains PayRecovery after PayGroups (PeopleAccess).
+  - R8 (the user's call of Nov 13, 2026): component payees. `PayrollComponentTerm.payeePartyId` (`store#Component`;
+    `PAYEE_NOT_FOR_KIND`, `PAYEE_INVALID`; PayComponentDetail's term form and facts); the payee buckets are one invoice for each payee
+    and liability account (`PAYEE:<run>:<payee>:<liability>`, each in its own transaction): withheld amounts on the liability account,
+    employer amounts on their expense account (so an employer contribution posts with the run's invoices), the localization's an
+    `InvoiceTax`, any other an `InvoicePayroll`; a contribution with no payee is `ACCOUNT_MAPPING_MISSING`. Spec PayObligations (a
+    50.00 pension deduction and a 30.00 employer contribution to a fund: net pay 930.00, the authority's 30.00 and the fund's 80.00,
+    its lines 50.00 on the liability and 30.00 on the wage expense; approved, it posts both and 80.00 owed; a payee for an earning
+    refused).
+  - R9 (the user's call of Nov 13, 2026): finalizing issues each final slip's statement once the run is Finalized (`issue#Payslip`:
+    the stored PDF and the direct-only notice), each in its own transaction, counted (`issuedCount`, `issueFailedCount`) and left
+    final when it fails; a Finalize again issues any left; PayRunDetail's message says so. Spec PayObligations (two statements issued,
+    the slips Issued with their stored content; the repeat issues none).
+- Provisional findings (for the lead to number):
+  - A Finalizing run's retry re-checks each employee's sources, the group's live state and the projection, not the run's approval as a
+    whole; an employee whose sources changed stays `SOURCE_CHANGED` with no way to finish (the Built note's finding stands).
+  - The recovery cap as a percentage reads the employee's latest finalized regular wage net, not the period's own (a period's net is
+    known only after its inputs are prepared); with no such run yet the period's recovery is uncapped, and a recovery larger than a
+    period's net still blocks it (`NEGATIVE_NET`).
+  - An employer contribution posts when Accounting approves its payee's invoice, as every finalization invoice does (People makes no
+    ledger entry, design §8.3); a contribution component with no payee now blocks finalizing its run.
+  - The mark is never taken off: a payment unapplied from a payroll invoice stays hidden; a payment made by hand to a person shows until
+    it is applied to a payroll invoice.
+  - A job with no user (a scheduled dunning) now leaves payroll receivables out; universal search's finance counts are the page's for
+    a user without PAYROLL_VIEW once any payroll-origin document exists.
+  - Issuing renders a PDF per slip inside `finalize#Run` (about 0.4 s a slip here), so a large run's finalization takes that much
+    longer; each step's own transaction keeps it from rolling back.
+  - The Payroll finance group may approve another user's payment run (PAYMENT_RUN_APPROVE; its own is refused).
+  - The Built note's other findings stand (the expense posting queue; a claim's reimbursement input of the claim's total; the
+    demonstration levy without a reimbursement line; BOSS with no live localization).
+- Tests run (release, this phase's runtime): after the rebase, as above; after the fixes, mr-mantle PayObligations 5 of 5 (4.6 s of
+  features: 0.48, 1.45, 0.68, 1.46, 0.45; the R1, R4, R5, R7, R8 and R9 checks fail on the unfixed code), with Payslips, PayRuns,
+  PayInputs, PayConfiguration, PayAssignments, ExpenseClaims, PayrollServices, PayrollAdjustments, HumanResServices, PeopleApprovals
+  and the Accounting specs (AccountingPayables, AccountingPaymentRuns, AccountingPaymentRunControls, AccountingReceivables,
+  AccountingRecurringAging, AccountingActivities, AccountingControls, AccountingReports, FinancialReports, AccountingSettlement,
+  AccountingPaymentLifecycle, AccountingSetup, AccountingCustomerFinance, AccountingBankReconciliation, AccountingCollections,
+  DunningRenewalExclusion, MantleSearch, UniversalSearch) 305 of 305 in 32 specs (77.2 s, features 51.2 s); mr-boss AccountingPayrollOrigin 3 of 3 (0.14, 0.23, 0.35 s; the
+  R2 and R3 checks fail on the unfixed code), with PeopleAccessLater, PeopleAccess, PeoplePayConfiguration, PeoplePayRuns,
+  PeoplePayslips, PeopleExpenses, AccountingPayables, AccountingPaymentRuns, AccountingReceivables, AccountingReporting,
+  AccountingPayments, AccountingSettlement, AccountingCollections, AccountingAccess and PurchasingBills 131 of 131 in 16 specs
+  (67.1 s, features 43.0 s; PeopleAccess once its expected Payroll menu had PayRecovery, 16 of 16); PurchasingPerformance
+  and PurchasingSuppliers 94 of 94 with the Accounting specs above in the R3 work. A one-off qvt, tui and html render (not kept) of
+  PayRecovery and of PayComponentDetail with a deduction's draft: all 200 with no error, the payee field shown. `moqui lint --screens`
+  (release): 139 flagged sites as before, none in the changed screens. Prettier clean on the changed JavaScript that was clean
+  (PaymentWorkflow.js and FinanceReports.js were not on master). Not run: test-apps, test-framework, the acceptance suite
+  (PeoplePayHandoffUsable, written by the phase, is unchanged but for what the review changes: its walk's finalization now issues
+  statements and its spec-local payroll finance user could be `finance.payroll`).
+- For the lead:
+  - budget share: mr-mantle PayObligations about 4.6 s release (the Built note's 2.3 s, plus the statements' PDFs, the pension
+    feature and the review's checks); mr-boss AccountingPayrollOrigin about 0.7 s (the Built note's 0.25 s) and PeopleAccessLater's
+    P27 case about 0.4 s;
+  - merge hot spots beside the Built note's: mr-mantle `PayrollOrigin.js` (rewritten), `PayrollObligations.js` (`finalizeRun`,
+    `begin`, `end`, `lineRole`, `payeeBuckets`, `issueStatements`, the recovery settings), `PayrollConfiguration.js` (`termRow`,
+    `checkTerm`), `FinanceReports.js`, `PaymentWorkflow.js`, `InvoiceServices.xml`, `CustomerFinanceServices.xml`,
+    `CollectionServices.xml`, `Collections.js`, `BankReconciliation.js`, `Payables.js`, `SupplierServices.xml`,
+    `UniversalSearchServices.xml`, `AccountingPolicy.js`, the view files, `ZaaGlAccountsInstallData.xml`, the new
+    `ZaaGlAccountsUpdateData.xml`, `PayrollOrigin.eecas.xml` and `PayrollOriginServices.xml`; mr-boss `BossAccountingSetupData.xml`,
+    `BossAccountingUsersDemoData.xml`, `BossSetupData.xml` (the Accounting bundles), `GeneralLedger.xml`, `PayComponentDetail.xml`,
+    `PayRunDetail.xml`, the new `PayRecovery.xml`, `test/People/PeopleSpecLib.js` (the Payroll menu), Purchasing's `Bills.js`, `Purchasing.js`, `Reports.js`, Accounting's `Collections.js`
+    and `Payables.js`, design-people's and design-accounting's headers, §4's last four rows;
+  - `./moq run lint --screens` built the release binary from the main checkout (the run task builds; `--nobuild` is not its
+    option) before the lint ran on it; nothing else was built;
+  - the user's calls of Nov 13, 2026 are recorded in §4 and built (R6 to R9); the percentage cap's reading (the latest finalized
+    regular wage net) and "employer contributions post at finalization" read as posting with the run's payee invoices are the
+    review's, for the user to confirm.
+
 ### P28 — Payroll exchange
 
 Design §8.4 (external processing, migration), PayrollExchange, §15; PE-19. Ends stage 4.
@@ -8604,6 +8887,10 @@ the owner's design.
 | Nov 12, 2026 | The Insights data steward (`BOSS_INSIGHTS_DATA`) also stewards the People datasets, admission and the index refresh, without reading their rows unless they hold People's Insights bundle | The user's call on P29's second finding; built in P29's review: the datasets' update artifact alone (`BOSS_PPL_DATASETS_INSIGHTS_DATA`, AUTHZA_UPDATE; an authorization's action is matched exactly, so no view) and no `DataDocumentUserGroup` row; spec PeopleInsights |
 | Nov 12, 2026 | People's Reports stays hidden from managers: a manager reads no report | The user's call on P29's third finding, as built (`BOSS_PPL_REPORTS` denies the root user group) |
 | Nov 12, 2026 | Ending an employment updates or removes its holder's qualification documents: the employer leaves the document, and a holder with no current employment has none; a revocation updates the document's verification, and an expiry is the document's own end date | The user's call on P29's finding that a person with no current employment kept their qualification document until a rebuild; built in P29's review (`BossPeopleQualification` carries each employment's end and its manual data service, `ironstone.people.InsightsServices.get#QualificationDocumentData`, keeps those not ended and leaves out a holder with none); spec PeopleInsights |
+| Nov 13, 2026 | A new Accounting group, Payroll finance (`BOSS_ACCOUNTING_PAYROLL`): Accounting's payables and payment-run permissions plus PAYROLL_VIEW, for the finance people who approve and pay payroll invoices; a capability bundle row and a demo user; the existing finance groups stay without PAYROLL_VIEW | The user's call on P27's first finding (built in P27's review: BOSS `BossAccountingSetupData.xml` PAYABLE_VIEW and EDIT, PAYMENT_VIEW and EDIT, INVOICE_APPROVE, INVOICE_HOLD, PAYMENT_RUN_APPROVE and PAYROLL_VIEW, the Payables, Payments and Approvals screens; bundle 795; demo `finance.payroll`; spec AccountingPayrollOrigin) |
+| Nov 13, 2026 | The overpayment recovery settings (the recovery deduction and the cap) get a screen in the Payroll area beside Pay groups, for PAYROLL_CONFIGURE holders; the cap is an amount or a percentage of net pay | The user's call on P27's second finding (built in P27's review: People › Payroll › Overpayment recovery, Mantle `get#RecoverySettings` and `store#RecoverySettings`; the percentage is of the employee's wage net on their latest finalized regular run, the net known when a period's recovery input is prepared; design-people §8.2) |
+| Nov 13, 2026 | Pay components get their own payees: a component term may name a payee; finalization makes one draft invoice per payee and liability (deductions withheld, employer contributions, the localization's amounts); employer contributions post at finalization | The user's call on P27's third finding (built in P27's review: `PayrollComponentTerm.payeePartyId`; an employer contribution is a line of its payee's invoice on its expense account, so it posts with the run's invoices when Accounting approves them; a contribution with no payee is `ACCOUNT_MAPPING_MISSING`; spec PayObligations' pension feature) |
+| Nov 13, 2026 | Finalizing a run also issues each final slip's statement after its finalization completes (the stored PDF, the direct-only notice), failure tolerant per slip | The user's call on P27's finding that finalization made slips final, not issued (built in P27's review: `finalize#Run` issues them through `issue#Payslip` once the run is Finalized, each in its own transaction; a Finalize again issues any left) |
 
 ## 5. Open questions
 

@@ -32,6 +32,18 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="INVOICE_HOLD" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="INVOICE_MATCH" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="SUPPLIER_TERMS_EDIT" fromDate="0"/>
+    <!-- People P27 review (the user's call of Nov 13, 2026): payroll finance approves and pays payroll invoices; Accounting's payables
+        and payment-run permissions with PAYROLL_VIEW, so it reads the payroll-origin documents (AC-23,
+        mantle/account/PayrollOrigin.js) no other finance group does. It makes no pay: People's payroll groups do. -->
+    <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_PAYROLL" description="Payroll finance"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYABLE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYABLE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_HOLD" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_RUN_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_MATCH" description="Bill matching"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="INVOICE_MATCH" fromDate="0"/>
     <!-- a match operator reads the bills it matches -->
@@ -220,6 +232,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- treasury pays the bills: payment runs, the payables workbench; it reads them with PAYABLE_VIEW -->
         <authz artifactAuthzId="BOSS_ACCT_Payables_TREASURY" userGroupId="BOSS_ACCOUNTING_TREASURY"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Payables_PAYROLL" userGroupId="BOSS_ACCOUNTING_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_PAYMENTS">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Payments.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
@@ -231,6 +245,8 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Payments_AP" userGroupId="BOSS_ACCOUNTING_AP" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_READ_PAYMENTS_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_READ_PAYMENTS_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Payments_PAYROLL" userGroupId="BOSS_ACCOUNTING_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_BANKING">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Banking.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
@@ -347,6 +363,8 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Approvals_AP" userGroupId="BOSS_ACCOUNTING_AP" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Approvals_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Approvals_PAYROLL" userGroupId="BOSS_ACCOUNTING_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="BillApproval"

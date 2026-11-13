@@ -3039,6 +3039,16 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="INVOICE_HOLD" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="INVOICE_MATCH" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="SUPPLIER_TERMS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <!-- People P27 review: payroll finance, the one finance bundle with PAYROLL_VIEW (payroll-origin invoices and payments) -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_PAYROLL" appName="Accounting" description="Payroll finance" scopeDependency="organization" sequenceNum="795"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_HOLD" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_RUN_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_MATCH" appName="Accounting" description="Bill matching" scopeDependency="organization" sequenceNum="800"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="INVOICE_MATCH" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>

@@ -88,6 +88,10 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="acctgTransId">
+                        <!-- People P27 review (AC-23): an account's payroll-origin lines, folded for a reader without PAYROLL_VIEW -->
+                        <conditional-field condition="!acctgTransId" title="Entry">
+                            <display text="${description || ''}"/>
+                        </conditional-field>
                         <default-field title="Entry">
                             <link url="//Accounting/GeneralLedger/JournalEntryDetail"
                                     text="${acctgTransId}"

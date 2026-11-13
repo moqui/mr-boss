@@ -631,6 +631,10 @@ function spend(p, only = null) {
         .condition("statusId", "not-in", ["InvoiceCancelled"])
         .condition("invoiceDate", "greater-equals", new Date(period.from))
         .condition("invoiceDate", "less-than", new Date(period.thru))
+    // People P27 review (AC-23): a payroll-origin bill (a person's net pay, its payrollOrigin mark) is no supplier spend for a
+    // user without PAYROLL_VIEW
+    const payrollHidden = ec.resource.script("component://mr-mantle/service/mantle/account/PayrollOrigin.js").invoiceCondition()
+    if (payrollHidden) billQuery = billQuery.condition(payrollHidden)
     if (!blank(p.supplierPartyId)) billQuery = billQuery.condition("fromPartyId", String(p.supplierPartyId))
     const bills = Array.from(billQuery.limit(readCap + 1).list())
     if (bills.length > readCap) omitted.push("Only " + readCap + " bills of the period are counted as billed.")
@@ -663,7 +667,7 @@ function spend(p, only = null) {
             const invoiceIds = unique(applications.map(row => row.invoiceId))
             const paidBills = {}
             for (const ids of chunks(invoiceIds))
-                for (const bill of find(INVOICE)
+                for (const bill of (payrollHidden ? find(INVOICE).condition(payrollHidden) : find(INVOICE))
                     .condition("invoiceId", "in", ids)
                     .condition("toPartyId", "in", scope.organizationPartyIds)
                     .condition("fromPartyId", "not-in", internal)
@@ -1423,6 +1427,9 @@ function statement(p) {
         .condition("statusId", "not-in", ["InvoiceCancelled", "InvoiceIncoming"])
         .condition("invoiceDate", "less-than", new Date(period.thru))
     if (!blank(p.currencyUomId)) billQuery = billQuery.condition("currencyUomId", String(p.currencyUomId))
+    // People P27 review (AC-23): payroll-origin bills and payments (their payrollOrigin mark) for a reader of payroll alone
+    const origin = ec.resource.script("component://mr-mantle/service/mantle/account/PayrollOrigin.js")
+    if (origin.invoiceCondition()) billQuery = billQuery.condition(origin.invoiceCondition())
     const bills = Array.from(
         billQuery
             .orderBy("invoiceDate")
@@ -1435,6 +1442,7 @@ function statement(p) {
         .condition("statusId", "in", ["PmntDelivered", "PmntConfirmed"])
         .condition("effectiveDate", "less-than", new Date(period.thru))
     if (!blank(p.currencyUomId)) paymentQuery = paymentQuery.condition("amountUomId", String(p.currencyUomId))
+    if (origin.paymentCondition()) paymentQuery = paymentQuery.condition(origin.paymentCondition())
     const payments = Array.from(
         paymentQuery
             .orderBy("effectiveDate")

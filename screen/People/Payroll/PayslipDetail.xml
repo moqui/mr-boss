@@ -91,6 +91,11 @@ along with this software (see the LICENSE.md file). If not, see
             listUrl = sharedLinks?.['Payroll/Payslips'] || '../Payslips'
             runUrl = sharedLinks?.['Payroll/PayRunDetail'] || '../PayRunDetail'
             correctValues = {payslipId: slip?.payslipId || payslipId, payDate: null}
+            // P27: the obligations the slip's finalization made and an overpayment it is recovering, with what remains
+            settlement = found?.settlement || null
+            slipObligationRows = Array.from(settlement?.obligations || [])
+            slipRecovery = settlement?.recovery || null
+            invoiceDetailUrl = sharedLinks?.['Payroll/InvoiceDetail'] || '../InvoiceDetail'
         ]]></script>
     </actions>
     <widgets>
@@ -261,6 +266,35 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                             </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P27: what the slip's finalization made (its net pay invoice, the claims it settled) and an overpayment it recovers, with
+                    what remains (the user's call of Nov 12, 2026) -->
+                <section name="SlipSettlement" condition="slipObligationRows.length || slipRecovery" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Settlement"/>
+                            <box-body>
+                                <label type="p" condition="slipRecovery"
+                                        text="Overpaid ${slipRecovery?.amountText}: ${slipRecovery?.routeText}. Recovered ${slipRecovery?.recoveredText}, ${slipRecovery?.remainingText} left."/>
+                                <form-list name="SlipObligations" list="slipObligationRows" skip-form="true" paginate="false"
+                                        condition="slipObligationRows.length">
+                                    <field name="kindText"><default-field title="Obligation"><display/></default-field></field>
+                                    <field name="invoiceId">
+                                        <default-field title="Invoice">
+                                            <link url="${invoiceDetailUrl}" url-type="plain" text="${invoiceId}" link-type="anchor"
+                                                    parameter-map="{invoiceId:invoiceId}" condition="invoiceId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="kindText"/><field-ref name="invoiceId"/></column>
+                                        <column><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
                         </container-box>
                     </widgets>
                 </section>

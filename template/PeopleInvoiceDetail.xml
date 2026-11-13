@@ -18,18 +18,21 @@ along with this software (see the LICENSE.md file). If not, see
     impl-people §4, Nov 12, 2026: PAYROLL_VIEW alone reads no claim; mantle.humanres.ExpenseServices.get#Claim; another invoice,
     or a reader without it, is not available), read and reconcile only: the header, the claim's lines, the settlement (the route and its
     reservation, applied and unpaid, the payments applied: an advance or a reimbursement) and the claim it belongs to. Financial
-    edits and approval stay Accounting's. Payroll-origin invoices join with P27. -->
+    edits and approval stay Accounting's. P27 (design §13 InvoiceDetail's payroll branch): an invoice a pay run's obligation names,
+    for a payroll reader of the employer (PAYROLL_VIEW; mantle.humanres.PayrollRunServices.get#Obligation): the obligation (net pay,
+    a payee's amounts, a receivable from a person who left, a claim a run settled) with its run and payslip, the invoice's state and
+    posting, its lines with their accounts and the payments applied; amounts opted out of AI. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
         <section name="PeopleInvoice" condition="peopleRoot">
             <widgets>
-                <section name="PeopleInvoiceMissing" condition="!peopleClaim">
+                <section name="PeopleInvoiceMissing" condition="!peopleClaim &amp;&amp; !peopleObligation">
                     <widgets>
                         <container-box type="warning">
                             <box-header title="Not available"/>
                             <box-body>
-                                <label type="p" text="Invoice ${invoiceId} is not available: it is no expense claim of an employer whose expenses you manage."/>
+                                <label type="p" text="Invoice ${invoiceId} is not available: it is no expense claim of an employer whose expenses you manage, nor a pay obligation of an employer whose payroll you read."/>
                                 <link url="${sharedLinks['Payroll/Rates']}" url-type="plain" link-type="anchor" text="Back to payroll"/>
                             </box-body>
                         </container-box>
@@ -88,6 +91,65 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                             </box-body-nopad>
                         </container-box>
+                    </widgets>
+                </section>
+                <section name="PeopleObligationFound" condition="!peopleClaim &amp;&amp; peopleObligation">
+                    <widgets>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${peopleObligation.obligation.kindText} invoice ${invoiceId}" type="h5"/>
+                                    <label type="p" style="text-caption m-muted q-mb-none"
+                                            text="${[peopleObligation.obligation.personName || peopleObligation.obligation.payeeName, peopleObligation.obligation.periodText, peopleObligation.invoice?.invoiceDateText].filter(Boolean).join(' · ')}"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${peopleObligation.invoice?.statusText || ''} · ${peopleObligation.invoice?.postedText || ''}" type="span"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-sm m-record-actions">
+                                <link url="${sharedLinks['Payroll/PayRunDetail']}" url-type="plain" text="Open the pay run"
+                                        link-type="anchor-button" icon="sym_o_payments"
+                                        parameter-map="{payrollRunId:peopleObligation.obligation.payrollRunId, step:'settlement'}"/>
+                                <link url="${sharedLinks['Payroll/PayslipDetail']}" url-type="plain" text="Open the payslip"
+                                        link-type="anchor-button" icon="sym_o_receipt_long" condition="peopleObligation.obligation.payslipId"
+                                        parameter-map="{payslipId:peopleObligation.obligation.payslipId}"/>
+                            </container>
+                        </container>
+                        <section name="PeopleObligationAmounts" ai-opt-out="true">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Settlement"/>
+                                    <box-body>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="From ${peopleObligation.invoice?.fromName} to ${peopleObligation.invoice?.toName}, due ${peopleObligation.invoice?.dueDateText}. Accounting approves, posts and pays it."/>
+                                        <dashboard min-width="120">
+                                            <number-card title="Total" value="${peopleObligation.invoice?.totalText}" icon="sym_o_receipt_long" size="sm"/>
+                                            <number-card title="Unpaid" value="${peopleObligation.invoice?.unpaidText}" icon="sym_o_pending" size="sm"/>
+                                        </dashboard>
+                                        <form-list name="PeopleObligationPayments" list="peopleObligation.payments" skip-form="true" paginate="false"
+                                                condition="peopleObligation.payments.length">
+                                            <field name="appliedText"><default-field title="Applied"><display/></default-field></field>
+                                            <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                        </form-list>
+                                    </box-body>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Lines"/>
+                                    <box-body-nopad>
+                                        <form-list name="PeopleObligationLines" list="peopleObligation.lines" skip-form="true" paginate="false">
+                                            <field name="description"><default-field title="Line"><display/></default-field></field>
+                                            <field name="accountText"><default-field title="Account"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="description"/><field-ref name="accountText"/></column>
+                                                <column><field-ref name="amountText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                     </widgets>
                 </section>
             </widgets>

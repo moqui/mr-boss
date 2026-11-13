@@ -76,6 +76,11 @@
 // approver and missing to the HR officer; Services' slip missing to Retail's payroll; the employee's own preview slip missing to
 // them through get#MyPayslip, and find#Payslips answering them nothing but their own issued slips; Payslips and PayslipDetail refused
 // to the HR officer; MyPayslip opened to the employee by its own grant (BOSS_PPL_PAYSLIP_SELF) and refused another app's user.
+// P27: a pay run finalized by the payroll operator alone (the HR officer refused with the same parameters, the operator past the
+// permission to the group's own refusal: the demonstration group is not live), Services' run missing to Retail's payroll; its
+// settlement read by the payroll approver and refused to the HR officer; a pay obligation's invoice in Payroll's InvoiceDetail
+// (get#Obligation) a payroll reader's of its employer, refused to the HR officer and missing to Retail's payroll for Services'.
+// P27 review: Overpayment recovery (PayRecovery) payroll's, its settings refused to the HR officer (the user's call of Nov 13, 2026).
 // P29: the payroll register run by the payroll operator and refused to the HR officer with the same parameters, Services' headcount
 // refused to Retail's HR; Reports opened to HR and payroll and refused to the directory reader and the manager; the confidential case
 // intake set by the People administrator and refused to the HR officer with the same parameters; the clocking default set by the HR
@@ -1696,6 +1701,86 @@ feature(
                     hrServicesClocking: "ORGANIZATION_DENIED"
                 }
             problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P27: finalizing a pay run is payroll's: the HR officer refused with the parameters the payroll operator is answered with, Services' run missing to Retail's payroll; the settlement and an obligation's invoice payroll's",
+    {
+        when() {
+            const R = "mantle.humanres.PayrollRunServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            // P26's approved run of Retail's spec group (its regular run); Services' run, a payroll obligation of it and its invoice,
+            // as data: only their employer matters here
+            const runId = system(
+                () =>
+                    ec.entity
+                        .find("mantle.humanres.payroll.PayrollRun")
+                        .condition({payrollGroupId: state26.group.payrollGroupId, runKindEnumId: "PrkRegular"})
+                        .one()?.payrollRunId
+            )
+            system(() => {
+                call("create#mantle.humanres.payroll.PayrollRun", {
+                    payrollRunId: "PPL_SPEC_PAL_RUN_SVC",
+                    organizationPartyId: ids.otherOrganizationId,
+                    currencyUomId: "USD",
+                    runKindEnumId: "PrkRegular",
+                    statusId: "PrnApproved"
+                })
+                call("create#mantle.account.invoice.Invoice", {
+                    invoiceId: "PPL_SPEC_PAL_INV_SVC",
+                    invoiceTypeEnumId: "InvoicePayroll",
+                    fromPartyId: ids.otherEmployeePartyId,
+                    toPartyId: ids.otherOrganizationId,
+                    statusId: "InvoiceIncoming",
+                    currencyUomId: "USD"
+                })
+                call("create#mantle.humanres.payroll.PayrollObligation", {
+                    obligationKey: "NET:PPL_SPEC_PAL_SVC",
+                    obligationKindEnumId: "PokNetPay",
+                    payrollRunId: "PPL_SPEC_PAL_RUN_SVC",
+                    organizationPartyId: ids.otherOrganizationId,
+                    partyId: ids.otherEmployeePartyId,
+                    payeePartyId: ids.otherEmployeePartyId,
+                    currencyUomId: "USD",
+                    invoiceId: "PPL_SPEC_PAL_INV_SVC",
+                    amount: "100"
+                })
+            })
+            const finalize = {payrollRunId: runId}
+            return {
+                codes: {
+                    hrFinalizes: as(users.hr, R + "finalize#Run", finalize),
+                    payrollFinalizes: as(users.payroll, R + "finalize#Run", finalize),
+                    payrollServices: as(users.payroll, R + "finalize#Run", {payrollRunId: "PPL_SPEC_PAL_RUN_SVC"}),
+                    approverSettlement: as(users.payApprover, R + "get#Settlement", finalize),
+                    hrSettlement: as(users.hr, R + "get#Settlement", finalize),
+                    hrObligation: as(users.hr, R + "get#Obligation", {invoiceId: "PPL_SPEC_PAL_INV_SVC"}),
+                    payrollObligationServices: as(users.payroll, R + "get#Obligation", {invoiceId: "PPL_SPEC_PAL_INV_SVC"}),
+                    hrRecovery: as(users.hr, "mantle.humanres.PayrollSetupServices.get#RecoverySettings", {})
+                },
+                // P27 review: the recovery settings' screen beside Pay groups, payroll's (people.payroll configures)
+                payrollRecoveryScreen: screenRefusal(users.payroll, "Payroll/PayRecovery", {}),
+                hrRecoveryScreen: screenRefusal(users.hr, "Payroll/PayRecovery", {})
+            }
+        },
+        then({codes, payrollRecoveryScreen, hrRecoveryScreen}) {
+            payrollRecoveryScreen == ""
+            unauthorized(hrRecoveryScreen)
+            codes ==
+                {
+                    hrFinalizes: "PERMISSION_DENIED",
+                    // past the permission, to the group's own refusal (the demonstration localization is never live)
+                    payrollFinalizes: "NOT_LIVE",
+                    payrollServices: "RECORD_UNAVAILABLE",
+                    approverSettlement: "accepted",
+                    hrSettlement: "PERMISSION_DENIED",
+                    hrObligation: "PERMISSION_DENIED",
+                    payrollObligationServices: "RECORD_UNAVAILABLE",
+                    hrRecovery: "PERMISSION_DENIED"
+                }
         }
     }
 )

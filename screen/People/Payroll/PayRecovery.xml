@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Overpayment recovery (impl-people P27 review, the user's call of Nov 13, 2026; design-people §8.2): each
+    employer's overpayment recovery settings from mantle.humanres.PayrollSetupServices.get#RecoverySettings (a payroll reader's): the
+    deduction a negative correction is recovered through on the next regular runs, and the most recovered a period, an amount or a
+    percentage of net pay (the employee's wage net on their latest finalized regular run). A configuration holder (PAYROLL_EDIT and
+    PAYROLL_CONFIGURE, which Mantle checks) changes them at the revision read (store#RecoverySettings; audited). Beside Pay groups,
+    payroll's area. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overpayment recovery" default-menu-index="9">
+    <parameter name="organizationPartyId"/>
+    <transition name="storeSettings">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#RecoverySettings"
+                    in-map="{organizationPartyId:organizationPartyId, expectedRevision:(expectedRevision || null),
+                        payrollComponentId:(payrollComponentId ?? ''), capAmount:(capKind == 'amount' ? (capAmount ?? '') : ''),
+                        capPercent:(capKind == 'percent' ? (capPercent ?? '') : '')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Recovery settings saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollSetupServices.get#RecoverySettings" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            settingsFound = !!found?.employers
+            canEdit = !!found?.canEdit
+            employerRows = Array.from(found?.employers || [])
+            opened = employerRows.find(row => row.organizationPartyId == organizationPartyId) ||
+                (employerRows.length == 1 ? employerRows[0] : null)
+            deductionOptions = opened ? Array.from(opened.deductions || []) : []
+            settingsValues = opened ? {organizationPartyId: opened.organizationPartyId, expectedRevision: opened.revision,
+                payrollComponentId: opened.payrollComponentId, capKind: opened.capPercent != null ? 'percent' : (opened.capAmount != null ? 'amount' : 'none'),
+                capAmount: opened.capAmount, capPercent: opened.capPercent} : {}
+        ]]></script>
+    </actions>
+    <widgets>
+        <label text="Overpayment recovery" type="h5"/>
+        <section name="NotOpen" condition="!settingsFound">
+            <widgets>
+                <label text="The overpayment recovery settings are open to payroll. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Settings" condition="settingsFound">
+            <widgets>
+                <label text="A correction that pays less than was paid is recovered on the employee's next regular runs through this deduction, at most the cap a period; from someone who has left, as a receivable."
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Employers" list="employerRows" skip-form="true" paginate="false" condition="employerRows.length">
+                            <field name="organizationName">
+                                <default-field title="Employer">
+                                    <link url="." text="${organizationName}" link-type="anchor" parameter-map="{organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="componentText"><default-field title="Recovery deduction"><display text="${componentText || 'Not set'}"/></default-field></field>
+                            <field name="capText"><default-field title="Most a period"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="organizationName"/><field-ref name="capText"/></column>
+                                <column><field-ref name="componentText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!employerRows.length" text="No employer is in your payroll scope."/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="OpenedEmployer" condition="opened">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${opened.organizationName}"/>
+                            <box-body>
+                                <label type="p" condition="!canEdit" style="m-muted"
+                                        text="Recovery deduction: ${opened.componentText || 'Not set'}. Most a period: ${opened.capText}."/>
+                                <form-single name="EditSettings" transition="storeSettings" map="settingsValues" condition="canEdit">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="payrollComponentId">
+                                        <default-field title="Recovery deduction"
+                                                tooltip="One of the employer's deductions: its liability account is where a recovered amount posts">
+                                            <drop-down allow-empty="true"><list-options list="deductionOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="capKind">
+                                        <default-field title="Most a period">
+                                            <radio>
+                                                <option key="none" text="No cap: the whole rest"/>
+                                                <option key="amount" text="An amount"/>
+                                                <option key="percent" text="A percentage of net pay"/>
+                                            </radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="capAmount">
+                                        <default-field title="Amount" tooltip="In the pay group's currency"><text-line size="10" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="capPercent">
+                                        <default-field title="Percentage" tooltip="Of the employee's net pay on their latest finalized regular run, above 0 and at most 100">
+                                            <text-line size="6" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-ref name="payrollComponentId"/>
+                                        <field-ref name="capKind"/>
+                                        <field-row><field-ref name="capAmount"/><field-ref name="capPercent"/></field-row>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
