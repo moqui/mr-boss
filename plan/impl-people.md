@@ -7392,6 +7392,122 @@ Admin P18's device credential, built (F55); Insights P11's wall display is the p
   clock in by badge and PIN, and a worker of ORG_ZIZI_SERVICES is refused; the tablet opens nothing else; revoking it
   refuses its next request.
 
+**Built Nov 12 (P30).** mr-mantle and mr-boss (this commit), branch `ppl/p30`.
+- Checked first (the code over the plan): Admin P18's credential (framework `user/device.rs`, `Shared-Devices.md`:
+  `UserSecurityChecks.currentDevice()` answers `{deviceId, routeGroupId}` only in a valid device's request; a route group's
+  non-inheritable screen member admits its render alone, its transitions, the implicit `scanResolve` too, only as members; nothing
+  signs a display account in, so a spec cannot call a service as one outside a device's request), Mantle's `SharedDevices.js`
+  (`create#DisplayAccount`'s grant proposal), Insights P11's WallDisplay (the bare page, the island, the root's skip) and its review,
+  P13's `Attendance.js` (`recordPunch`, `clockState`, `isClockingOn`, the self punch's operation key) and its review (the employer's
+  default with per-employment exceptions), the framework's `scan-input` (`scanResolve` takes `scanForm`, `scanField`, `scanText`;
+  `auto-submit`, `scan-id-field`), the transition response (`save_error_parameters` keeps every failed input but a name containing
+  "password" for the next request; a JSON answer echoes `currentParameters` but the credential names), `ec.user.hashPassword`,
+  `passwordsMatch`, `singleUseCodeHash`, `randomCode` (at most 9 digits) and `ec.resource.barcodeSvg`. P0's open point, answered:
+  Admin's delegation rule (framework `Access.js` `delegable`, `proposalBundles`) refuses a bundle only for a delegable permission the
+  actor lacks, a privileged group or a sealed permission; `PEOPLE_KIOSK_PUNCH` is none of these, so the access administrator assigns
+  `BOSS_PEOPLE_KIOSK` with `ADMIN_ACCESS_MANAGE` alone, the identity operator proposes it in `create#DisplayAccount`, and
+  `register#Device` accepts its display account (PeopleAccessLater's P30 feature checks the first two, PeopleKiosk the third).
+- Mantle:
+  - `entity/PeopleAttendanceEntities.xml`: `KioskBadge` (an employment's badge: the number's single-use hash, unique, empty until
+    printed; the PIN's argon2 hash; issued, printed, revoked with who and why; the wrong PINs since the last right one, locked until,
+    last used and at which device) and `KioskAttempt` (a refused proof at a device: when, why, the badge read); `AttendancePunch`
+    gains `deviceId` and `kioskBadgeId`;
+  - `KioskIdentity.js` (new) and five of the six services appended to `AttendanceServices.xml`: `issue#KioskBadge` (an HR editor of the
+    employer, a current employment, `PIN_INVALID`; the badge before it revoked), `print#KioskBadge` (the issuer, within 15 minutes,
+    once: the 20-digit number made then, written only while unprinted; its Code 128 SVG, the number in groups of four, the person and
+    employer; `NOT_ISSUER`, `PRINT_EXPIRED`, `PRINTED`, `BADGE_REVOKED`), `revoke#KioskBadge`, `get#KioskBadge` (an HR reader: the
+    latest badge's state, never its number or PIN), `resolve#KioskBadge` (the scan resolver: the text answered as "Badge read",
+    nothing looked up, only in a device's request), and the proof `identify` (in order: `DEVICE_REQUIRED`, `PERMISSION_DENIED`,
+    `KIOSK_LIMITED` at 20 refusals of the device in 10 minutes, `BADGE_UNKNOWN`, `BADGE_REVOKED`, `PIN_LIMITED`, `PIN_WRONG` with the
+    fifth in a row locking the badge 15 minutes, `EMPLOYMENT_ENDED`, `ORGANIZATION_DENIED` against the display account's
+    `get#PartyInternalOrgIds`; each refusal a `KioskAttempt` in its own transaction, a right PIN clearing the count the same way);
+  - `Attendance.js` `recordKioskPunch` for `record#KioskPunch`: the badge's employment, `CLOCKING_OFF` by `isClockingOn`, the
+    direction asked or the other of the worker's state (`ALREADY_IN`, `NOT_IN`), the event key `kiosk:<device>:<key>` answering the
+    first punch for the same worker (`OPERATION_KEY_USED` for another's), the punch at the device's site, source Clocking kiosk,
+    the device's name as its source system; `recordPunch` takes a facility, device and badge; answers the worker's name and time;
+  - `data/MantleSetupData.xml`: `PEOPLE_KIOSK_PUNCH`, granted to `ADMIN`.
+- BOSS:
+  - `screen/People/Time/ClockingKiosk.xml` (new, hidden, standalone, `density="handheld"`): html a bare page (the qvt client's files,
+    the screen as an island, a style for large notices, a script that empties a half-typed form after a minute and reloads the page
+    after half an hour idle), qvt and tui IdentifyAndClock (the employer, Badge as `scan-input` with `auto-submit` off and the scan id
+    as `operationKey`, PIN as a password field named `password`, Action, Clock in or out); a person off a device sees "Not a clocking
+    device". The punch transition calls `record#KioskPunch` as a probe and answers its refusal as a danger message, never an error,
+    so neither the number nor the PIN is kept in the browser's session; the screen loads again empty;
+  - `screen/People.xml`: no `get#SharedContext` for a device's request (Insights' pattern); `screen/People/Employees/BadgePrint.xml`
+    (new, html-print: the badge card, the number made at that render; another mode links to it); `screen/Shared/Employee360.xml`:
+    Clocking badge under People for an HR editor of the opened employment (`canChangeEmployment`), Issue badge (the PIN field named
+    `newPassword`, for the same reason), Print badge, Revoke badge, `issueBadge` and `revokeBadge`;
+  - `data/BossSetupData.xml` (the P30 block appended): the route group `PEOPLE_CLOCKING` (owner People, no parameter, homePath
+    `/apps/People/Time/ClockingKiosk`, a week idle, a year) over `BOSS_DEV_PPL_CLOCKING` (the page, `punch`, `scanResolve`, by name,
+    not inheritable); `BOSS_PEOPLE_KIOSK` with `PEOPLE_KIOSK_PUNCH` and `BOSS_PPL_KIOSK` (the same three and the two services,
+    ALLOW, `MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`), a registered bundle with no delegable permission; BadgePrint in
+    `BOSS_PPL_EMPLOYMENT` (HR's, as the letters' print).
+- Specs (release feature time): Mantle `test/humanres/KioskIdentity` (5 features, 1.2 s: 0.66, 0.18, 0.06, 0.13, 0.22; a spec-local
+  display account, route group over its own `test/humanres/KioskSpecScreen.xml` and a device redeemed: issue refused to another
+  employer and for a short PIN, the print refused to another HR officer and a second time, only hashes kept; the instance
+  administrator and HR refused outside a device, at the device Ana in as the display account with the punch's device, badge and
+  source, an unknown number, Ben of B, Cleo with clocking off and Ana in again refused; a retry with the key answered once and Bob
+  refused it; four wrong PINs, the fifth locking, the right one then refused, six attempts counted; a revoked badge refused, a new
+  one working, the device's twentieth refusal refusing the right proof). BOSS `test/People/PeopleKiosk` (3 features, 0.3 to 0.6 s:
+  BadgePrint's one html-print render as HR; a display account with the kiosk bundle registered and redeemed; as the tablet the bare
+  page's one html render and the island's one qvt render, a scan resolved naming no one, a wrong PIN and in, its retry as the island
+  posts it (the JSON answer reloading `/apps/People/Time/ClockingKiosk`, no PIN in it), out, and People's Home, the directory,
+  Employee360, SelfService, Attendance, BadgePrint, `/qapps` and the directory's choices refused by the route group; the page's one
+  tui render as HR, "Not a clocking device", and HR's punch refused). PeopleAccessLater gains the P30 feature (0.42 s); PeopleEmployees'
+  Employee360 render checks the Clocking badge box and Issue badge. Acceptance, written and not run:
+  `acceptance/People/PeopleKioskUsable` (4 features: the display account made in Admin's Users and the tablet registered and its code
+  read in Security › Devices; Tomas's and Ines's badges issued from Employee360 and printed once, Ines's clocking turned on, Kenji's
+  issued at Services; as the tablet Tomas and Ines in, Kenji refused, a wrong PIN, nothing else of People, the shell, the app list or
+  Commons; revoked in Admin, the next request refused).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): Mantle KioskIdentity, Attendance, SharedDevices
+  and PeopleScope 18 of 18 (5.1 s), then KioskIdentity and Attendance 11 of 11 after formatting; BOSS PeopleKiosk, PeopleAccess,
+  PeopleAttendance, PeopleTime, PeopleSelfService, AdminDevices and PeopleEmployees 39 of 39 (11.0 s), PeopleAccessLater 14 of 14
+  (7.7 s), then PeopleKiosk and PeopleAccessLater 17 of 17 after formatting. `moqui lint --screens`: no parse failure; the new
+  flags are the `static-class` notes of `UserSecurityChecks` and `WebUtilities` (People.xml's root, ClockingKiosk's script), as
+  Insights' and Maintenance's roots and WallDisplay have. Prettier clean on the new and changed JavaScript. Not run: `./moq
+  test-apps`, the acceptance suite, a real browser.
+- Inventories: usl-inventory's People Added rows (the six kiosk services); ss-inventory's P30 note (no
+  baseline form). Design edits: design-people (header; §1.4 Devices; §4 Employee360 as built; §6 ClockingKiosk as built; §15 Badge),
+  design-admin (§6 Devices as built: People's clocking kiosk; §14's shared-device registration row), design-crosscut (CX-DEVICE's
+  need row; the device-credential remainder row).
+- Findings (provisional, numbered by the lead):
+  - a badge's number is printed once and kept only as its hash: a print that fails (a jammed printer, a closed window) needs a new
+    badge, which revokes the unprinted one; there is no reprint;
+  - HR sets the worker's PIN when issuing the badge (agreed with the worker); the worker cannot change it themselves, and HR knows it;
+    a self-service "change my PIN" (the person's own badge, with the old PIN) is not built;
+  - the device-wide limit (20 refused proofs in 10 minutes) lets someone at an unattended kiosk make it refuse everyone for up to ten
+    minutes by scanning bad numbers; the per-badge lock protects a PIN, the device limit the number space; `KioskAttempt` rows are
+    kept with no retention;
+  - a kiosk punch of an employment with no working schedule counts on the day in the display account's time zone (its user
+    preference, else the server's), as a self punch counts in the user's: a kiosk's display account should be given the site's zone;
+  - the scan resolver looks nothing up, so a typo in a typed number is told only at the punch (`BADGE_UNKNOWN`) and the worker types
+    it again;
+  - a refusal of the punch is a danger message on a 200 answer, not an error response (an error response would keep the badge's
+    number in the device browser's session for the next request, the framework's `save_error_parameters` keeping every input but a
+    name containing "password"), and the PIN fields are named `password` and `newPassword` so the JSON answer's `currentParameters`
+    leaves them out; the badge's number is still echoed there, to the browser that posted it;
+  - `BOSS_PEOPLE_KIOSK` held by a person opens the kiosk page and holds `PEOPLE_KIOSK_PUNCH`, which records nothing outside a
+    registered device's request; as with `BOSS_INSIGHTS_DISPLAY`, no bundle field says "display accounts only";
+  - `KioskIdentity.js` exports `deviceOfRequest`, `identify` and `refuse`, so Maintenance's TechnicianKiosk and the Manufacturing
+    shop floor can prove a worker the same way; `deviceOfRequest` asks `PEOPLE_KIOSK_PUNCH`, which another kiosk would replace with
+    its own permission;
+  - mr-moqui `docs/security/Shared-Devices.md` still says "later a kiosk"; a line naming People's clocking kiosk is the framework's to
+    add (not in this phase's repositories).
+- For the lead:
+  - budget share: mr-mantle about 1.2 s (KioskIdentity); mr-boss about 1.0 s (PeopleKiosk 0.3 to 0.6 s, PeopleAccessLater's P30
+    feature 0.42 s, PeopleEmployees' checks on its one render); the client walk unchanged;
+  - merge hot spots (P24 touches the first five): mr-boss `data/BossSetupData.xml` (the P30 block appended at the end),
+    `screen/People.xml` (the header comment's last sentence and the root's always-actions), `test/People/PeopleAccessLater.spec.js`
+    (the header's P30 paragraph before "Run:", the feature appended at the end), `plan/usl-inventory.md` (rows after the
+    AttendanceServices block; the Added header's "P1 to P23" left for the lead), `plan/design-people.md` (a header line first,
+    §1.4, §4 Employee360, §6, §15); mr-boss `screen/Shared/Employee360.xml` (header, two transitions after `employmentLetter`, the
+    badge read before the changes, the section before Compensation), `plan/ss-inventory.md`, `design-admin.md`, `design-crosscut.md`;
+    mr-mantle `entity/PeopleAttendanceEntities.xml` (two fields and two entities appended), `AttendanceServices.xml` (appended),
+    `Attendance.js` (`recordPunch`, the kiosk block before `myClock`, the operations table), `data/MantleSetupData.xml` (after
+    `PEOPLE_IMPORT`);
+  - nothing waits on the user; the findings' first three (no reprint, HR-set PIN, the device-wide limit) are design choices the user
+    may want to revisit.
+
 ### P31 — Finish
 
 - The tui and server-static screen sweeps of People, one acceptance test per mode (each screen's twin is built in

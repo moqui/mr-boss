@@ -59,6 +59,8 @@ feature(
             rendered.output.includes("Skills and reviews")
             rendered.output.includes("Self-declared")
             rendered.output.includes("No resume line yet.") && rendered.output.includes("Add resume line")
+            // P30: the clocking badge, HR's: its box and Issue badge (whether PeopleKiosk issued Tomas's first or not)
+            rendered.output.includes("Clocking badge") && rendered.output.includes("Issue a clocking badge to Tomas Lindqvist")
         }
     }
 )

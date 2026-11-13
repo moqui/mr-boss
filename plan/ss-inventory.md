@@ -60,6 +60,10 @@ are new records (`AttendancePunch`, design-people §14.2 "Attendance punch captu
 Projects' work-time clock (a time entry on a work item), which stays blank as before (impl-projects §7); their Implemented in is in
 usl-inventory's People rows.
 
+**People P30 (Nov 12, 2026):** no baseline form is mapped to ClockingKiosk, Employee360's Clocking badge or BadgePrint: kiosk
+identity (badges, PINs and the kiosk punch) is new (design-people §14.2, PE-05); their Implemented in is in usl-inventory's People
+rows.
+
 **People P17 (Nov 12, 2026):** no baseline form is mapped to OfferDetail, its letter or an employment change's lifecycle letter: the
 baseline HumanRes screens have no offer (design-people §5, §14.2); their Implemented in is in usl-inventory's People rows.
 

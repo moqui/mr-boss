@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Time › Clocking kiosk (design-people §6 ClockingKiosk, §1.4 Devices, CX-DEVICE; impl-people P30, F55): the page a
+    registered clocking device opens, the homePath of the PEOPLE_CLOCKING route group (data/BossSetupData.xml), which admits this
+    screen's render and its punch and scanResolve transitions and nothing else. A page of its own rather than the /qapps shell, which
+    a device may not load (impl-admin F285), as Insights' WallDisplay is: standalone and hidden from the menu, its html mode a bare
+    document that loads the qvt client's files and mounts this screen's qvt render as an island (WebrootPublic.qvt.js), with no
+    navigation, menu or account; its qvt and tui renders are the form IdentifyAndClock itself.
+    The device's requests run as its display account (a UserAccount nothing signs in, a member of the employer it serves, in
+    BOSS_PEOPLE_KIOSK alone), and the People root calls no get#SharedContext for them. The worker is never the request's user:
+    IdentifyAndClock (density handheld) reads their badge by scan-input (a keyboard-wedge scanner, or the number typed; the resolver
+    looks nothing up, so a scan names no one) and their PIN, and the punch transition calls Mantle's
+    mantle.humanres.AttendanceServices.record#KioskPunch, which records it only in a registered device's request and checks the badge,
+    the PIN (refusals counted and limited), the employer and the clocking. The answer is a message naming the worker and what was
+    recorded, or why nothing was; a refusal is a message too, never an error response, so nothing typed is kept in the browser's
+    session for the next worker. Either way the screen loads again, empty. The page also empties a half-typed form after a minute
+    without input, and reloads itself after half an hour idle, so a revoked device shows the server's refusal page and a quiet one
+    stays seen. A signed-in user who opens it (People's Time area grants) sees that it records punches only on a registered device;
+    its punches are refused. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Clocking kiosk" default-menu-include="false" standalone="true" history="false" density="handheld"
+        screen-theme-type-enum-id="STT_INTERNAL_QUASAR">
+
+    <!-- a punch by the badge and PIN given (the PIN's field is named password, which the framework never echoes or keeps): the refusal
+        answered as a message (not an error, whose response would keep the badge's number in the session for the next request), the
+        screen loaded again empty -->
+    <transition name="punch">
+        <actions><script><![CDATA[
+            const given = name => (typeof ec.context[name] === 'undefined' || ec.context[name] === '' ? null : ec.context[name])
+            const direction = given('directionEnumId')
+            let punched = null
+            let refusal = null
+            ec.message.pushErrors()
+            try {
+                punched = ec.service.sync().name('mantle.humanres.AttendanceServices.record#KioskPunch').parameters({
+                    badgeText: given('badgeText') || given('badgeText_scanText'), pin: given('password'),
+                    directionEnumId: ['AtdIn', 'AtdOut'].includes(direction) ? direction : null, operationKey: given('operationKey')
+                }).requireNewTransaction(true).call()
+                if (ec.message.hasError()) refusal = ec.message.getErrorsString()
+            } catch (error) {
+                refusal = String(error.message || error)
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+            if (refusal) {
+                // a refusal names its reason (CODE: message); anything else is a failure the worker cannot fix here
+                const coded = /\b([A-Z][A-Z0-9_]{3,}):\s*([^\n]*)/.exec(refusal)
+                if (!coded) ec.logger.warn('Clocking kiosk punch failed: ' + refusal)
+                ec.message.addMessage(coded ? ec.l10n.localize(coded[2]) : ec.l10n.localize('Not recorded. Try again.'), 'danger')
+            } else {
+                ec.message.addMessage(punched.personName + ': ' + ec.l10n.localize(punched.directionEnumId == 'AtdIn' ? 'clocked in at' : 'clocked out at') +
+                    ' ' + punched.punchTimeText, 'success')
+            }
+        ]]></script></actions>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+        <script><![CDATA[
+            onDevice = !!UserSecurityChecks.currentDevice()
+            // the employer the device serves: its display account's organization (the People root's setup#UserOrganizationInfo)
+            employerName = Array.from(ec.context.userOrgList || []).map(org => org.organizationName).filter(Boolean).join(', ')
+            if (sri.getRenderMode() == 'html') {
+                // the html page: the theme's style sheets, the qvt client's files and this screen as an island (WebrootPublic.qvt.js)
+                const qvtLib = ec.resource.script('component://webroot/screen/includes/QvtConfig.js')
+                const localeTag = String(ec.user.locale || 'en_US').replace('_', '-')
+                const quasarLang = qvtLib.quasarLangOf(localeTag)
+                const sheets = Array.from(sri.getThemeValues('STRT_STYLESHEET'))
+                const scripts = ['/libs/vue/vue.global.prod.js', '/libs/quasar/quasar.umd.prod.js', '/libs/quasar/lang/' + quasarLang + '.umd.prod.js']
+                if (sheets.some(sheet => String(sheet).includes('/libs/material-symbols/'))) scripts.push('/libs/quasar/icon-set/material-symbols-outlined.umd.prod.js')
+                scripts.push('/js/MoquiLib.js', '/js/MoquiL10n.js', '/js/WebrootVue.qvt.render.js', '/js/WebrootVue.qvt.js', '/js/WebrootPublic.qvt.js')
+                const version = '?v=' + ec.web.getResourceDistinctValue()
+                const href = location => WebUtilities.encodeHtml(sri.buildUrl(location).url + version)
+                kioskHead = sheets.map(sheet => '<link rel="stylesheet" href="' + href(sheet) + '">').join('')
+                kioskScripts = scripts.map(script => '<script src="' + href(script) + '"></script>').join('')
+                kioskLang = WebUtilities.encodeHtml(localeTag)
+                kioskTitle = WebUtilities.encodeHtml(ec.l10n.localize('Clock in or out'))
+                const island = {
+                    shell: 'island', sessionToken: ec.web.sessionToken, appRootPath: '', locale: localeTag, timeZone: ec.user.timeZone,
+                    quasarLang: quasarLang.replace(/-([a-zA-Z])/g, (m, ch) => ch.toUpperCase()),
+                    quasar: {notify: {progress: true, position: 'top', timeout: 6000}},
+                    qvt: {build: 'compiler', handles: ['merged-fragment', 'static-template']},
+                    route: {name: 'clocking-kiosk', basePath: sri.buildUrl('.').path, title: ec.l10n.localize('Clock in or out'), renderModes: ['qvt']},
+                    context: {}, labels: {loading: ec.l10n.localize('Loading'), notFound: ec.l10n.localize('This clock is not available.')}
+                }
+                kioskIsland = JSON.stringify(island).split('<').join('\\u003c')
+            }
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="KioskPage" condition="sri.getRenderMode() == 'html'">
+            <widgets>
+                <render-mode>
+                    <!-- the bare page: a minute without input empties a half-typed form (the island loads the screen again); half an hour
+                        idle reloads the page, so a revoked device shows the server's refusal page and a quiet one stays seen -->
+                    <text type="html" no-boundary-comment="true"><![CDATA[<!DOCTYPE html>
+<html lang="${kioskLang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>${kioskTitle}</title>${kioskHead}
+<style>.m-clocking-kiosk .q-notification { font-size: 1.5rem; padding: 16px 24px; } .m-clocking-kiosk #clocking-kiosk { max-width: 640px; margin: 0 auto; }</style></head>
+<body class="m-clocking-kiosk m-density-handheld"><script type="application/json" data-moqui-island="clocking-kiosk">${kioskIsland}</script>
+<div id="clocking-kiosk" class="q-pa-md"></div><noscript><p>This clock needs JavaScript.</p></noscript>${kioskScripts}
+<script>(function () {
+    var last = Date.now(), loaded = Date.now();
+    ['keydown', 'pointerdown', 'input'].forEach(function (type) { document.addEventListener(type, function () { last = Date.now(); }, true); });
+    setInterval(function () {
+        var idle = Date.now() - last;
+        if (idle >= 1800000 && Date.now() - loaded >= 1800000) { window.location.reload(); return; }
+        if (idle < 60000) return;
+        var typed = Array.prototype.some.call(document.querySelectorAll('#clocking-kiosk input'), function (input) {
+            return input.value && input.type !== 'radio' && input.type !== 'hidden';
+        });
+        if (typed && window.moqui && window.moqui.webrootVue) { last = Date.now(); window.moqui.webrootVue.load(); }
+    }, 5000);
+})();</script></body></html>
+]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+        <section name="IdentifyAndClockPage" condition="sri.getRenderMode() != 'html'">
+            <widgets>
+                <label text="${employerName ? employerName : 'Clock in or out'}" type="h5"/>
+                <section name="NotADevice" condition="!onDevice">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not a clocking device"/>
+                            <box-body><label type="p" text="This page records punches only on a clocking device registered in Admin › Security › Devices."/></box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <form-single name="IdentifyAndClock" transition="punch" focus-field="badgeText">
+                    <field name="badgeText">
+                        <default-field title="Badge" tooltip="Scan your badge, or type the number on it">
+                            <scan-input resolver="mantle.humanres.AttendanceServices.resolve#KioskBadge" allowed-types="badge"
+                                    auto-submit="false" scan-id-field="operationKey" placeholder="Scan your badge"/>
+                        </default-field>
+                    </field>
+                    <!-- named password, so the framework keeps it out of what a response echoes and an error keeps -->
+                    <field name="password"><default-field title="PIN"><password size="8" maxlength="8"/></default-field></field>
+                    <field name="directionEnumId">
+                        <default-field title="Action">
+                            <radio no-current-selected-key="auto">
+                                <option key="auto" text="In or out, as you are"/>
+                                <option key="AtdIn" text="Clock in"/>
+                                <option key="AtdOut" text="Clock out"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title=""><submit text="Clock in or out" icon="sym_o_timer"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

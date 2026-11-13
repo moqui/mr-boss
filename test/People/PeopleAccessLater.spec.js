@@ -63,6 +63,11 @@
 // an adjustment payroll's (refused for the permission to the HR officer, payroll past it with the same parameters); Services'
 // group missing to Retail's payroll; Hours for pay the payroll operator's and the manager's (the HR officer refused the screen),
 // Pay adjustments payroll's (the HR officer refused the screen).
+// P30: a clocking badge issued by an HR officer of the employer (the directory reader refused with the same parameters, Services'
+// employment refused to Retail's HR), its print HR's (the reader refused the screen); a kiosk punch refused outside a registered
+// device to the instance administrator, who holds PEOPLE_KIOSK_PUNCH, and to the employee, with the same parameters (the device's own
+// punch is PeopleKiosk's); the kiosk bundle assigned by the access administrator and proposed by the identity operator under Admin's
+// delegation rule, and refused to the reader.
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -1272,6 +1277,62 @@ feature(
                     hrAdjusts: "PERMISSION_DENIED",
                     managerReconciles: "accepted",
                     hrReconciles: "PERMISSION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P30: a clocking badge is HR's of the employer, its print HR's, a kiosk punch a registered device's alone, and the kiosk bundle the access administrator's to assign",
+    {
+        when() {
+            const A = "mantle.humanres.AttendanceServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            const issue = {partyRelationshipId: ids.employmentId, pin: "5931"}
+            const punch = {badgeText: "1234 5678 9012 3456 7890", pin: "5931"}
+            const proposal = user =>
+                asUser(user, () => {
+                    const out = refusal("org.moqui.admin.AccessServices.check#GrantProposal", {
+                        bundleGroupIdList: ["BOSS_PEOPLE_KIOSK"]
+                    })
+                    // a caller with neither Admin permission is refused by name, with no reason code
+                    if (out) return /ADMIN_ACCESS_VIEW or ADMIN_IDENTITY_VIEW is required/.test(out) ? "PERMISSION_DENIED" : out
+                    return invoke("org.moqui.admin.AccessServices.check#GrantProposal", {
+                        bundleGroupIdList: ["BOSS_PEOPLE_KIOSK"]
+                    }).allowed
+                        ? "accepted"
+                        : "refused"
+                })
+            const codes = {
+                hrIssues: as(users.hr, A + "issue#KioskBadge", issue),
+                readerIssues: as(users.reader, A + "issue#KioskBadge", issue),
+                hrIssuesServices: as(users.hr, A + "issue#KioskBadge", {partyRelationshipId: ids.otherEmploymentId, pin: "5931"}),
+                adminPunches: as(users.system, A + "record#KioskPunch", punch),
+                employeePunches: as(users.employee, A + "record#KioskPunch", punch),
+                accessAssigns: proposal("admin.access"),
+                identityProposes: proposal("admin.identity"),
+                readerAssigns: proposal(users.reader)
+            }
+            const problems = []
+            const opened = screenRefusal(users.hr, "Employees/BadgePrint", {kioskBadgeId: "0"})
+            if (opened) problems.push(`the HR officer's BadgePrint: ${opened}`)
+            const refusedScreen = screenRefusal(users.reader, "Employees/BadgePrint", {kioskBadgeId: "0"})
+            if (!unauthorized(refusedScreen)) problems.push(`${users.reader} opens BadgePrint: ${refusedScreen || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    hrIssues: "accepted",
+                    readerIssues: "RECORD_UNAVAILABLE",
+                    hrIssuesServices: "RECORD_UNAVAILABLE",
+                    adminPunches: "DEVICE_REQUIRED",
+                    employeePunches: "DEVICE_REQUIRED",
+                    accessAssigns: "accepted",
+                    identityProposes: "accepted",
+                    readerAssigns: "PERMISSION_DENIED"
                 }
             problems.join("\n") == ""
         }
