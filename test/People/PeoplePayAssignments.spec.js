@@ -221,7 +221,9 @@ feature(
                 "mantle.humanres.payroll.PayrollAssignment": ["inputValues"],
                 "mantle.humanres.payroll.PayrollComponentTerm": ["amount"],
                 "mantle.humanres.payroll.PayrollComponentExample": ["inputValues", "expectedAmount"],
-                "mantle.humanres.payroll.PayrollInput": ["amount", "rateAmount"]
+                "mantle.humanres.payroll.PayrollInput": ["amount", "rateAmount"],
+                // the worker rates copied on a time entry (the user's call of Nov 12, 2026)
+                "mantle.work.time.TimeEntry": ["vendorHourRate", "vendorPieceRate"]
             }
             const shared = Object.entries(fields).flatMap(([entityName, names]) =>
                 names.filter(name => !optedOut(entityName, name)).map(name => entityName + "." + name)

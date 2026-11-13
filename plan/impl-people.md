@@ -7251,6 +7251,158 @@ Design §8.2 (steps 1–5), PayRuns, PayRunDetail (Population, Inputs, Calculate
   demo group's month with a salaried, an hourly and a piece-quantity worker and one with missing setup, fixes it
   and retries only that one; `people.payapprover` approves the exact totals.
 
+**Built Nov 12 (P25).** mr-mantle and mr-boss (this commit), branch `ppl/p25`.
+- Checked first (the code over the plan): P22's PayrollConfiguration.js (`computeTerm` with each term's rounding stage through the
+  evaluator, `calculationOrder`, `workingLines` falling back to drafts for a preview, `previewStructure` rounding only the net, the
+  `periodsPerYear` input of a group and P22's two findings on rounding stages and that naming contract), PayrollLocalization.js (the
+  interface takes a profile, the demonstration reads none and rounds its levy to the currency), P23's PayrollAssignments.js (one
+  primary per employment and date, `readinessOf`'s codes, the salary's `timePeriodTypeId`, worker rates as RaprVendor RateAmounts by
+  `timePeriodUomId`), P24's PayInputs.js (`groupMembers` by the primary assignment at noon of each day in the group's zone, `periodOf`
+  refusing an unprepared period, inputs per employment, group and period with `inputName`, adjustments with `payrollComponentId`, the
+  paid-once keys, `PinFinalized` for P27), Approvals.js (`PakPayAdjustment`'s default payroll approvers, `selfPartyIds`, `statusOf`
+  superseding a request whose source revision moved, `PeopleApproval.sourceRevision` 63 characters), BOSS People.js (`today`,
+  `decisionUrl`, `hoursGroups` and `payPeriods` choices) and the Payroll area's grant (BOSS_PPL_PAYROLL inherits to new screens).
+- Mantle (`entity/PeoplePayrollEntities.xml`, appended block; `data/PeoplePayRunSetupData.xml`, new):
+  - `PayrollRun` (a group's run for a prepared period: employer, currency, pay date, kind regular, off-cycle or correction, cutoff, the
+    `PayrollRun` status flow Draft, Calculating, Review, Approved and P27's Finalizing and Finalized, Cancelled; `activeRunKey` unique, one
+    live regular run a group and period; who prepared it; `approvedRevision`, `returnedReason`), `PayrollRunEmployment` (a unit per
+    employment: the `PayrollRunUnit` flow pending, calculated, error, excluded, finalized; reason code and message, exclusion reason, the
+    assignment and structure, seven totals, the split and segment count, the source fingerprint, attempts), `PayrollRunResult` (a draft
+    line of a component or a localization item, its amount, currency or unit, in totals, explanation) and `PayrollInput.payrollRunId`
+    (the run whose calculation took it). Every amount, split and explanation field `ai-opt-out`. `PakPayrollRun` and the
+    `PayrollRunApproval` topic (approve#Run and return#Run, a title naming "a pay run", the group, the period and the step).
+  - `mantle.humanres.PayrollRunServices` over a new module `PayrollRuns.js`: `find#Runs` (a payroll reader's, with show attention),
+    `create#Run` (a payroll editor's; regular alone, `KIND_NOT_AVAILABLE`; `INPUTS_CONSUMED` when a live run took the period's inputs,
+    `RUN_EXISTS`, `GROUP_ENDED`, `PERIOD_UNAVAILABLE`; the population selected at once; an operation key), `select#Employments`
+    (brought in step with the group, excluded with a reason, `REASON_REQUIRED`, included again, the pay date; reviewed again),
+    `calculate#Run` (each pending, failed or stale unit in its own transaction under the employment's lock, at most 100 a call (500 at
+    most) and a minute, the rest staying pending for the next call; an unchanged calculated unit never again; a failure recorded with
+    its code in a transaction of its own), `get#Run`, `submit#Run` (an addition to the plan's list: asking is the preparer's, approving the
+    approver's; `CALCULATION_INCOMPLETE`, `UNITS_UNRESOLVED`, `NOTHING_CALCULATED`, `SOURCE_CHANGED`, `NOT_IN_REVIEW`), `approve#Run` and
+    `return#Run` (record#Decision; the topic's services too). Approvals.js: the kind `PakPayrollRun` (the employer's payroll approvers by
+    default, PAYROLL_APPROVE with PAYROLL_VIEW to decide, never who selected, calculated or asked; its revision `PayrollRuns.js
+    runRevision`: the pay date and each unit's state, exclusion, totals and stored fingerprint beside its fingerprint now, hashed to 48
+    characters). PayInputs.js and PayrollConfiguration.js export the helpers the run reuses.
+  - The calculation and where amounts are rounded (decided here, P22's finding; design §8 PayRunDetail as built): an employee's days
+    in the group split where the primary assignment, the salary or a worker pay rate changes; each part prorated by the group's policy
+    (calendar days, or the schedule's working days or hours; a whole period is 1; `NO_SCHEDULE`, `PRORATION_REQUIRED`); each part's
+    published lines in effect at its first day (an elective line when elected) in dependency order over the named inputs the run
+    supplies, `periodsPerYear`, `periodFraction`, `annualSalary` (made annual by the salary's frequency, a year 1 to a semi-month 24, a
+    week-based salary only in a group of that frequency, `SALARY_FREQUENCY`; multiplied by the part's share), `fullAnnualSalary`,
+    `hourlyRate`, `pieceRate` and the part's approved `workedHours`, `paidLeaveHours`, `unpaidLeaveHours`, `pieces` and `reimbursement`
+    (zero when none), which win over the assignment's values and a line's parameters (P22's naming finding made explicit); a component
+    whose declared inputs, or whose dependencies', include a part's input summed over the parts, another taken once from the last part;
+    approved adjustments and advance recoveries added to their component's line; each money line rounded to the currency once, after its
+    parts and adjustments (a term's own stage first, per part), so gross, deductions, contributions and net are sums of rounded lines and
+    nothing is balanced afterwards; a statistical value unrounded, in no total; the localization once over the period's lines with the
+    employee's profile; `NEGATIVE_NET`, `SALARY_MISSING`, `RATE_MISSING`, `NO_ASSIGNMENT`, `STRUCTURE_NOT_IN_EFFECT`, `CURRENCY_MISMATCH`,
+    the evaluator's and the dependency codes block that employee alone. No invoice, payment or ledger entry; no legacy payroll service or
+    `PayrollAdjustment` row is read.
+- BOSS:
+  - `People/Payroll/PayRuns` (menu 1, Payroll's new default): FindRuns, RunList (group, period, pay date, kind, employees, errors, gross
+    and net `ai-opt-out`, the state chip with its tui text; phone columns), New pay run (the one primary, a payroll editor's), opening the
+    run.
+  - `People/Payroll/PayRunDetail` (out of the menu): the record header (state chip, the group's readiness, preview only), the four step
+    links marked done with the step in the URL, the progress cards; Population (Bring in step with the group with the pay date, a row's
+    Exclude with its reason and Include again, phone columns); Inputs (the period's reconciliation counts, Prepare inputs, Hours for pay
+    and Pay adjustments); Calculate and review (Calculate, the employees with gross, deductions, net, employer cost and the change from the
+    last run `ai-opt-out`, an employee opened in an `ai-opt-out` section: lines and explanations, the split, the inputs taken); Approval
+    (the totals in an `ai-opt-out` section, the counts, exclusions and warnings, Ask for approval, Approve confirming the count and net,
+    Return with its reason, the approval's state). One primary at a time by step and state.
+  - People.js: `linkPaths` `Payroll/PayRuns` and `Payroll/PayRunDetail`, `decisionUrl` for `PakPayrollRun`, and Today's payroll exceptions
+    for a holder of PAYROLL_VIEW and PAYROLL_EDIT alone (`find#Runs` show attention: the group, the period and what is wrong, never a person
+    or an amount); the topic on People's root and in Approvals' list, its link in BossSetupData (appended block); PeopleSpecLib's
+    `payrollGroupMenu` gains PayRuns first.
+- The user's calls of Nov 12, 2026 from P24's review (§4, three rows), built here:
+  - the `employees` import's first salary: Mantle `PeopleLifecycleSetupData` adds the columns `salaryAmount`, `salaryCurrencyUomId`,
+    `salaryPeriodTypeId` and `salaryFromDate` (the employment's start when empty; "salary" leaves `refusedColumns`); for an importer who
+    also holds PAYROLL_EDIT and PAYROLL_VIEW, `PeopleImport.js` `salaryPlan` checks the terms as a pay change's (`checkPayTerms`,
+    `AMOUNT_REQUIRED`, `DATE_OUTSIDE`; an error of the row) and `applySalary` writes it at once through `writeSalary`, audited "Employee
+    import" and logged with no amount, with no pay change; for anyone else the salary columns alone are refused (`PERMISSION_DENIED`, a
+    warning and the row's result) and the hire is made; a salary already there `PAY_CHANGE_REQUIRED`; the row services answer
+    `salaryReasonCode` and `salaryWritten`. Spec Mantle PayAssignments' fifth feature (0.33 s);
+  - worker rates and AI: `TimeEntry.vendorHourRate` and `vendorPieceRate` `ai-opt-out` (a view alias inherits it), and TimeEntries' worker
+    rate, amount and the totals' worker cost (section `ProjectWorkerCost`), EditEntry's worker rate and WorkItemDetail's worker amount;
+    formulas and structure parameters unmarked. Spec BOSS PeoplePayAssignments' `aiOptOut` check covers the two fields;
+  - worker invoices are for contractors (owner contract, design-projects §8): `create#TimeEntryInvoiceItems` with RaprVendor refuses the
+    time of an employee of the invoice's payer (a `PrtEmployee` in effect on the entry's date or now) when named (`EMPLOYEE_TIME`, after
+    P24's `PAY_SOURCE_CONSUMED`) and leaves it out when found; ApprovedTimeBilling's payable list leaves it out; `get#PayRateAccess` takes
+    `organizationPartyId`. Specs Mantle WorkManualTimeBilling (an employee's entry refused, a contractor's invoiced, 0.06 s) and
+    AccountingReceivables (the payable list without the employee); no Projects or Accounting spec invoiced an employee's time.
+- Specs: Mantle `test/humanres/PayRuns` (5 features, 1.1 s release feature time: HR, another employer's payroll and an off-cycle kind
+  refused; five employees selected; one in error with SALARY_MISSING and four calculated, salaried with a bonus, pension and the
+  demonstration levy, hourly, pieces elected by one alone, to the cent; the input taken carries the run; no invoice; resumed after the
+  fix, only that employee calculated and the others' results kept, again nothing; a mid-period raise split 15/31 and 16/31 with its
+  pension summed per part; the run asked, the notice to the payroll approver alone without amount or person, a preparer SELF_APPROVAL, the
+  asker and HR refused, approved, an input changed making the approval no longer hold and that employee alone stale, recalculated alone;
+  a second regular run INPUTS_CONSUMED, an exclusion needing its reason and releasing its inputs). BOSS `test/People/PeoplePayRuns` (2
+  features, 0.2 s: PayRunDetail's one html render as the payroll operator on Calculate and review with Ines opened and Leon in error;
+  PayRuns' one html render as the payroll approver, no New pay run; Today's payroll exception the payroll operator's alone, naming no
+  person and no amount); `PeopleAccessLater` gains the P25 case (0.48 s: the HR officer refused creating a run with the parameters the
+  payroll operator then creates it with, Services' group missing to Retail's payroll, the runs read by the approver and refused to HR,
+  PayRuns and PayRunDetail the payroll operator's and the approver's, both refused to HR). Acceptance, written:
+  `acceptance/People/PeoplePayRunsUsable` (2 features, through the screens' transitions: the payroll operator creates December's run of a
+  salaried, an hourly, an hourly-with-pieces employee and Leon with no salary, calculates it with Leon in SALARY_MISSING, sets his salary
+  and calculates only him; asks for approval, is refused approving, and the payroll approver reads 7,490.00 gross and 7,340.20 net and
+  approves; no invoice). Not run as acceptance; its features were checked once through a temporary copy in `test/` (deleted), which
+  found December in place of June (Rafael is employed from October 26).
+- Tests run (the shared release binary, `--release --nobuild`, this phase's runtime): mr-mantle PayRuns, PayInputs, PayConfiguration,
+  PayAssignments, PeopleApprovals and PeopleScope 35 of 35, then PayRuns, PayInputs and PeopleApprovals 19 of 19 after Prettier; with the
+  carry-overs Mantle WorkManualTimeBilling, AccountingReceivables, WorkProjectBilling, WorkPlanToCashBasicFlow, AccountingProjectCost,
+  ProjectInvoiceOutput, TimeImports, WorkProjectMilestones, WorkTimeEntries, LaborCostingRate, HumanResServices, PayrollServices and
+  PeopleEmployment (138 of 138 in 16 specs with PayAssignments and PayInputs, 19.9 s of features); mr-boss PeoplePayRuns, PeopleAccessLater,
+  PeopleAccess, PeoplePayInputs, PeoplePayAssignments, PeoplePayConfiguration, PeopleApprovals, PeopleTime, PeopleSelfService,
+  PeopleReviews and PeopleTraining 62 of 62, and for the carry-overs PeopleLifecycle, WorkItemDetail, ProjectDetail, TimeEntries, Billing,
+  ClientBilling, AccountingReceivables, AccountingPaymentRuns, AccountingAccess and ProjectsAccess (88 of 88 in 12 specs). A one-off qvt,
+  tui and html render of PayRunDetail's four steps and of PayRuns as the payroll operator (not kept): all 200 with no error. `moqui lint
+  --screens` (release): 137 flagged sites as on master, none in the new or changed screens. Prettier clean on the new JavaScript and the
+  P25 hunks (BOSS People.js keeps two hunks of other phases Prettier would rewrite). Not run: test-apps, test-framework, the acceptance
+  suite.
+- Inventories: usl-inventory's People Added rows (the seven PayrollRunServices, prepare#Inputs' PayRunDetail) and its heading; ss-inventory
+  notes no baseline form maps to PayRuns or PayRunDetail.
+- Design edits: design-people (header; §1.1 "Pay and AI"; §1.2 Payroll's menu; §8 PayRuns and PayRunDetail as built, with the
+  calculation; §12's topic row and EmployeeImport's salary); design-projects §8 (worker invoices are for contractors; worker rates and AI).
+- Findings (provisional, numbered by the lead):
+  - A component that reads no part input (a fixed amount, a constant formula) is computed once for the period and not prorated, so a hire
+    in mid-period gets a fixed allowance whole; a formula reading `periodFraction` prorates. Whether fixed amounts prorate by default is
+    the user's call.
+  - A formula that is not linear in a part's input (a cap through `min`) applies per part and the parts are summed; the localization runs
+    once over the period's lines.
+  - A period is split at assignment, salary and pay rate changes only: a component term or structure line that changes within the period
+    is read at each part's first day, not split at its own date.
+  - Hourly pay reads the RaprVendor RateAmount in effect for the person (not a project's rate, not the rate an input carries, P24's
+    finding): an employee paid different rates on different projects is paid the person's rate.
+  - Off-cycle and correction runs are refused (`KIND_NOT_AVAILABLE`) and there is no cancel of a draft run (design §8.2): a mistaken run is
+    selected and calculated again. P26 (corrections) or P27 may add cancel, which releases the run's inputs and its `activeRunKey`.
+  - The bounded calculation is synchronous (each call at most 100 employees and a minute, the screen's Calculate resuming): no ServiceJob
+    resumes a run in the background, since a job runs as no user and every PayrollRunServices call is the caller's payroll scope.
+  - A run's revision and the stale check are computed on read (each calculated employee's fingerprint queried again), so `get#Run`,
+    `find#Runs` for an approved run and a decision cost a few queries an employee: fine for hundreds, to measure before thousands.
+  - Design Home's "payroll exceptions" number card is not built (Today's source is); P29's reports may add it.
+  - An input approved after an employee was calculated makes that employee "changed since calculated", since the fingerprint covers the
+    inputs a calculation would take now.
+  - From the carry-overs: a staged `employees` import row keeps its file values, salary included, for the batch's 30-day retention, readable
+    by whoever may view the batch (the importer, an HR reader at the employer, Admin's Imports), even when the importer's salary columns
+    were refused; the framework has no column-level read rule (the user's call: accept, a framework rule, or purge the salary values after
+    apply). Projects' Profitability report shows project worker cost totals derived from worker rates and is not marked `ai-opt-out` (an
+    aggregate; the user's call). A spec cannot read a view alias's `aiOptOut` (the host's `getFieldInfo` answers nothing for a view;
+    moqui-db copies it), a framework gap. The legacy `create#WorkerInvoiceItems` employee branch now finds nothing for a current employee's
+    time, and a current employee's earlier contractor time is refused too ("on the entry's date or now").
+- For the lead:
+  - budget share: mr-mantle PayRuns about 1.1 s release, PayAssignments +0.33 s, WorkManualTimeBilling +0.06 s, AccountingReceivables
+    +0.01 s; mr-boss PeoplePayRuns about 0.2 s (its setup about 0.3 s), PeopleAccessLater's P25 case 0.48 s, PeoplePayAssignments +0.01 s;
+  - merge hot spots: P30 (in review) also touches mr-boss `data/BossSetupData.xml` (P25's block appended at the end), `screen/People.xml`
+    (P25's topic after P24's) and `test/People/PeopleAccessLater.spec.js` (header line, the appended feature); otherwise mr-mantle
+    `entity/PeoplePayrollEntities.xml` (P24's PayrollInput gains `payrollRunId`; the appended block), `Approvals.js` (`PakPayrollRun`
+    after `PakPayAdjustment`), the exports of `PayInputs.js` and `PayrollConfiguration.js`, `entity/WorkEffortEntities.xml`,
+    `InvoiceServices.xml`, `ApprovedTimeBilling.js`, `EmploymentServices.xml`, `PeopleImport.js`, `PeopleServices.xml`,
+    `data/PeopleLifecycleSetupData.xml`; mr-boss `service/ironstone/people/People.js` (`linkPaths`' end, `decisionUrl`, `today` before the
+    weeks to submit), `screen/People/Payroll.xml` (the default item), `Approvals.xml`, PeopleSpecLib (`payrollGroupMenu`), Projects'
+    `TimeEntries.xml`, `EditEntry.xml` and `Shared/WorkItemDetail.xml`, design-people (header, §1.1, §1.2, §8, §12), design-projects §8,
+    usl-inventory and ss-inventory, §4 and this note;
+  - for the user's call: fixed amounts in a part period (the first finding), the salary values kept in staged import rows, and whether
+    Profitability's worker cost is opted out of AI.
+
 ### P26 — Payslips and corrections
 
 Design §8.2 (corrections), Payslips, PayslipDetail, §15 (the payslip); PE-10, PE-17.
@@ -7834,6 +7986,9 @@ the owner's design.
 | Nov 12, 2026 | The kiosk's burst-of-refusals notice links to the device in Admin › Security › Devices, where it is revoked, through Admin's route keys and record kinds, for a recipient who may open it there; HR without Admin access sees the notice without a link | The user's call (P30's review). Built in follow-up 4: the notice's record is the device, resolved for each viewer by Commons' record-link resolver (`PaletteServices.get#RecordLink`) through `Admin.js recordLink` (`recordKinds.device`, the mount route `adminDevice`, `recordOf` and `destinationOpens`); Devices takes `deviceId`; design-people §6, design-admin §6 Devices |
 | Nov 12, 2026 | The kiosk's burst-of-refusals notice also goes to the access administrators whose scope covers the device's display account (they get the Devices link); still direct-only and rate-limited as before | The user's call (follow-up 4). Built: `KioskIdentity.js accessAdminUsers` (holders of `ADMIN_ACCESS_MANAGE` on the staff of the display account's organizations: employee, agent or member), in the same notice under the same hourly mark (`KioskDeviceNotice`); design-people §6 |
 | Nov 12, 2026 | When a badge is stopped, the worker also gets a direct-only notice that their badge was stopped and HR must reset its PIN (no number, no PIN), linking to their SelfService clocking badge section | The user's call (follow-up 4). Built: `PeopleMyKioskBadgeDisabled` to the worker's own enabled accounts, once at the stop, its link (BOSS data) their SelfService under Commons, where My clocking badge shows the badge stopped ("ask HR to reset its PIN"); the client has no anchor to scroll to the box; design-people §6 |
+| Nov 12, 2026 | The `employees` import takes a first salary (amount, currency, frequency and from date), written at once and logged, for an importer who also holds PAYROLL_EDIT (with PAYROLL_VIEW) at the employer: the import's exception to first-salary approval; for anyone else the salary columns alone are refused and the rest of the row applied; a salary in place is not changed by an import | The user's call on P24's review finding (built in P25: Mantle PeopleLifecycleSetupData's salary columns, PeopleImport.js `salaryPlan` and `applySalary` over `writeSalary`, audited "Employee import"; Mantle PayAssignments; design-people §12 EmployeeImport). The row above's "the target refuses pay columns" no longer holds for the salary |
+| Nov 12, 2026 | `TimeEntry.vendorHourRate` and `vendorPieceRate` are opted out of AI, on the entity fields and on the time screens that show them under every app root (TimeEntries' worker rate, amount and cost, EditEntry's worker rate, WorkItemDetail's worker amount); pay component formulas and structure parameters stay readable | The user's call on P24's review finding (built in P25; BOSS PeoplePayAssignments' `aiOptOut` check; design-people §1.1 "Pay and AI") |
+| Nov 12, 2026 | A worker invoice refuses a time entry by someone with a current employment at the invoice's organization (a `PrtEmployee` in effect on the entry's date or now): worker invoices are for contractors. Projects' worker-invoice path (owner contract) refuses a named entry (`EMPLOYEE_TIME`) and leaves out one it finds; Accounting's approved-time billing leaves them out of the payable list | The user's call on P24's review finding (built in P25: Mantle InvoiceServices `create#TimeEntryInvoiceItems`, `get#PayRateAccess`'s `organizationPartyId`, ApprovedTimeBilling.js; Mantle WorkManualTimeBilling and AccountingReceivables; design-projects §8). No Projects or Accounting spec invoiced an employee's time |
 
 ## 5. Open questions
 

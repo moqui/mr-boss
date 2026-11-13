@@ -1439,7 +1439,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <label type="p" text="Your time: ${myHoursText} h · the task's time: ${task.actualText || '0'} h" style="text-caption m-muted q-px-sm q-pb-sm q-mb-none"/>
                     </box-body-nopad>
                 </container-box>
-                <!-- in Projects: everyone's time on the item, the amounts for those who manage money -->
+                <!-- in Projects: everyone's time on the item, the amounts for those who manage money (the worker amount, an employee's
+                    pay, opted out of AI, PE-21) -->
                 <section name="ItemTimeBox" condition="itemTimeShown"><widgets>
                     <container-box><box-header title="All time · ${itemTime.totalText} h"/>
                         <box-toolbar><link url="${itemTime.listUrl}" url-type="plain" link-type="anchor" text="In Time entries" icon="sym_o_list_alt"/></box-toolbar>
@@ -1452,7 +1453,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="workTypeLabel"><default-field title="Work type"><display/></default-field></field>
                                 <field name="billableText"><default-field title="Billable"><display/></default-field></field>
                                 <field name="clientAmountText" align="right" hide="!itemTime.ratesShown"><default-field title="Client amount"><display/></default-field></field>
-                                <field name="vendorAmountText" align="right" hide="!itemTime.ratesShown"><default-field title="Worker amount"><display/></default-field></field>
+                                <field name="vendorAmountText" align="right" hide="!itemTime.ratesShown" ai-opt-out="true"><default-field title="Worker amount"><display/></default-field></field>
                                 <field name="statusLabel"><default-field title="Week"><display/></default-field></field>
                                 <field name="comments"><default-field title="Comment"><display/></default-field></field>
                                 <columns>

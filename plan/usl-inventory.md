@@ -498,7 +498,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P24, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P25, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -712,11 +712,17 @@ the screens that call it.
 | PayrollLocalizationServices | calculate#Localization (interface), calculate#Demonstration | People/Payroll/PayStructureDetail (PreviewStructure's rule coverage) | People/Payroll/PayStructureDetail (Preview gross to net, through preview#Structure and the localization's registered service) (People P22) |
 | PayrollLocalizationServices | find#Localizations | People/Payroll/PayGroups | — (the screens' localization choice reads the registrations; P29's settings may list them) (People P22) |
 | PayrollInputServices | get#Reconciliation | People/Time/HoursForPay (Reconciliation) | People/Time/HoursForPay (FindReconciliation, the counts, ReconciliationList; an employment opened: its days, timesheets, leave and inputs; payroll's and a manager's for their reports, no amount) (People P24) |
-| PayrollInputServices | prepare#Inputs | People/Time/HoursForPay (PrepareInputs); People/Payroll/PayRunDetail (Inputs) | People/Time/HoursForPay (Prepare inputs, with its preview, a source cutoff and some employees) (People P24; PayRunDetail is P25's) |
+| PayrollInputServices | prepare#Inputs | People/Time/HoursForPay (PrepareInputs); People/Payroll/PayRunDetail (Inputs) | People/Time/HoursForPay (Prepare inputs, with its preview, a source cutoff and some employees) (People P24); People/Payroll/PayRunDetail (Inputs: Prepare inputs with its preview, the period's counts) (People P25) |
 | PayrollInputServices | store#Adjustment | People/Time/HoursForPay (ResolveInput); People/Payroll/PayAdjustments (Adjustment) | People/Time/HoursForPay (Resolve a day); People/Payroll/PayAdjustments (New adjustment, a row's Edit, Withdraw and Correct) (People P24) |
 | PayrollInputServices | find#Adjustments | People/Payroll/PayAdjustments (Adjustments) | People/Payroll/PayAdjustments (FindAdjustments, AdjustmentList, To decide) (People P24) |
 | PayrollInputServices | decide#Adjustment, approve#Adjustment, refuse#Adjustment | People/Payroll/PayAdjustments (ApproveAdjustment); the PeoplePayAdjustmentApproval topic | People/Payroll/PayAdjustments (a row's Approve and Refuse, Approve selected); People/Approvals and the tray (the topic's approve and refuse) (People P24) |
 | PayrollInputServices | check#SourceUse, release#Sources | — (the source guards of design §6 and PE-09) | — (no screen: Mantle's InvoiceServices create#TimeEntryInvoiceItems and ApprovedTimeBilling, TimesheetServices get#TimesheetAccess and reopen#Timesheet, TimeServices store# and delete#TimeEntry and ExpenseServices reserve#ClaimSettlement call them; TimesheetDetail shows a paid week's refused reopen) (People P24) |
+| PayrollRunServices | find#Runs | People/Payroll/PayRuns (Runs) | People/Payroll/PayRuns (FindRuns, RunList with each run's errors, gross, net and state; Needs attention); People's Today (the payroll operator's payroll exceptions) (People P25) |
+| PayrollRunServices | create#Run | People/Payroll/PayRuns (NewRun) | People/Payroll/PayRuns (New pay run, opening PayRunDetail) (People P25) |
+| PayrollRunServices | select#Employments | People/Payroll/PayRunDetail (Population) | People/Payroll/PayRunDetail (Population: bring in step with the group, the pay date, a row's Exclude with its reason and Include again) (People P25) |
+| PayrollRunServices | calculate#Run | People/Payroll/PayRunDetail (CalculateAndReview) | People/Payroll/PayRunDetail (Calculate and review: Calculate, resuming pending, failed and changed employees) (People P25) |
+| PayrollRunServices | get#Run | People/Payroll/PayRunDetail (CalculateAndReview, Approval) | People/Payroll/PayRunDetail (the header, the steps and progress, the population, an employee's lines and inputs, the Approval step's totals) (People P25) |
+| PayrollRunServices | submit#Run, approve#Run, return#Run | People/Payroll/PayRunDetail (Approval); the PayrollRunApproval topic | People/Payroll/PayRunDetail (Approval: Ask for approval, Approve, Return); People/Approvals and the tray (the topic's approve and return) (People P25) |
 
 ## Ledger (81 services)
 

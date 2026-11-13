@@ -1795,6 +1795,23 @@ unaffected. P24 review: the bulk rate reset (`resetAndGet#TimeEntryRates`, `rese
 pay input not finalized whose entry's worker rate it changes; payroll locks the entries it consumes and reads them again, as the
 worker invoice locks the entries it bills, so the two never both take one; an entry's pieces are payroll's on any time basis.
 
+**Worker invoices are for contractors (Nov 12, 2026; the user's call, owner contract with People).** The time of a person with
+a current employment at the organization (a `PrtEmployee` relationship to it in effect on the entry's date, or now) is paid by
+payroll, never on a worker invoice: `mantle.account.InvoiceServices.create#TimeEntryInvoiceItems` with `RaprVendor` (and so
+`create#ProjectInvoiceItems` and `create#WorkerInvoiceItems` for a worker) refuses such an entry when it names it
+(`EMPLOYEE_TIME`) and leaves it out when it finds it by the other parameters, the organization being the invoice's payer (its
+`toPartyId`); Accounting's approved-time billing leaves it out of its worker (payable) list. Time payroll consumed is refused
+first (`PAY_SOURCE_CONSUMED`, above). The employment is read by `mantle.humanres.EmploymentServices.get#PayRateAccess` with
+`organizationPartyId`. Contractors (an agent, `PrtAgent`, or a supplier's people) are invoiced as before, and a worker's
+client billing is unaffected. The legacy `create#WorkerInvoiceItems` branch for an employee (`InvoicePayroll`,
+`ItemHourlyEarnings`) now finds nothing for a current employee's time.
+
+**Worker rates and AI (Nov 12, 2026; the user's call).** A time entry's worker rates (`TimeEntry.vendorHourRate` and
+`vendorPieceRate`, an employee's pay rate copied on the entry) are opted out of AI (`ai-opt-out`, People's PE-21), as are the
+time screens' fields that show them or the worker amount derived from them: TimeEntries' Worker rate, Worker amount and the
+totals' Worker cost, EditEntry's worker rate and WorkItemDetail's Worker amount (People mounts the same screens). An agent's
+render shows "Not shared with AI" in their place.
+
 ### MyTime
 
 - **Layout:** list as `.qvue`, the week of one person (me; a manager may open someone else's). A header: the week

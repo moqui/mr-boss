@@ -112,6 +112,9 @@ profiles are new records (`PayrollAssignment`, `PayrollTaxProfile`); their Imple
 reconciliation form (the legacy `PayrollAdjustment` rows had no screen, and People reads none of them, design-people §8.4), and pay
 inputs are new records (`PayrollInput`, `PayrollInputSource`); their Implemented in is in usl-inventory's People rows. TimesheetDetail's
 refused reopen is Projects' screen, mounted under People (P10's row).
+**People P25 (Nov 12, 2026):** no baseline form is mapped to PayRuns or PayRunDetail: Marble's HumanRes payroll screens ran the legacy
+`process#TimePeriodPay` over `PayrollAdjustment` rows, which People neither calls nor reads (design-people §8.4); pay runs are new
+records (`PayrollRun`, `PayrollRunEmployment`, `PayrollRunResult`); their Implemented in is in usl-inventory's People rows.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

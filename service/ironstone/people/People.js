@@ -276,7 +276,10 @@ const linkPaths = [
     "Payroll/PayAssignments",
     // P24: hours for pay (design §6, payroll's and the managers' under Time & leave) and pay adjustments (design §8, payroll's)
     "Time/HoursForPay",
-    "Payroll/PayAdjustments"
+    "Payroll/PayAdjustments",
+    // P25: pay runs (design §8 PayRuns, PayRunDetail), payroll's under Payroll
+    "Payroll/PayRuns",
+    "Payroll/PayRunDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1965,6 +1968,9 @@ function decisionUrl(row) {
             : "/qapps/People/Payroll/PayComponentDetail?payrollComponentId=" + encodeURIComponent(row.payrollComponentId || "")
     // P24: a pay adjustment, among those waiting for the user's decision on PayAdjustments
     if (row.approvalKindEnumId === "PakPayAdjustment") return "/qapps/People/Payroll/PayAdjustments?show=decide"
+    // P25: a pay run, on its PayRunDetail
+    if (row.approvalKindEnumId === "PakPayrollRun")
+        return "/qapps/People/Payroll/PayRunDetail?payrollRunId=" + encodeURIComponent(row.sourceId)
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -2112,6 +2118,38 @@ function today(p) {
             }
         } catch (error) {
             ec.logger.error("People Today of " + ec.user.userId + ": the review steps due were left out: " + error.message)
+        }
+    }
+    // P25: payroll exceptions, the payroll operator's alone (PAYROLL_VIEW with PAYROLL_EDIT): each pay run that needs their work (an
+    // employee in error or still pending, returned by the approver, an approval that no longer holds), opening its PayRunDetail; the
+    // group, the period and the counts, never a person or an amount
+    if (ec.user.hasPermission("PAYROLL_VIEW") && ec.user.hasPermission("PAYROLL_EDIT")) {
+        try {
+            const found = lib.probe("mantle.humanres.PayrollRunServices.find#Runs", {show: "attention", pageSize: 10})
+            for (const row of Array.from(found.runs || [])) {
+                const what = row.errorCount
+                    ? row.errorCount + (row.errorCount === 1 ? " employee in error" : " employees in error")
+                    : row.state === "returned"
+                      ? "returned by the approver"
+                      : row.state === "stale"
+                        ? "its approval no longer holds"
+                        : row.pendingCount + " still to calculate"
+                items.push(
+                    item({
+                        kind: "payroll",
+                        title: "Pay run " + row.groupName + ", " + row.periodText + ": " + what,
+                        dueDate: row.payDateText || null,
+                        url: "/qapps/People/Payroll/PayRunDetail?payrollRunId=" + encodeURIComponent(row.payrollRunId),
+                        record: {
+                            recordEntityName: "mantle.humanres.payroll.PayrollRun",
+                            recordId: row.payrollRunId,
+                            recordName: "Pay run " + row.groupName + ", " + row.periodText
+                        }
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the payroll exceptions were left out: " + error.message)
         }
     }
     if (keepsTimeHere()) {

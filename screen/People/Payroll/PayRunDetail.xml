@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Pay run (design-people §8 PayRunDetail, §8.2 steps 1 to 5; style-guide §3.10 Wizard, as a detail with its
+    steps; impl-people P25): one run from mantle.humanres.PayrollRunServices.get#Run (a payroll reader's): the record header (group,
+    period, pay date, kind, employer, state, the group's readiness: preview only in this build) and its four steps with their
+    progress, the step in the URL (step): Population (select#Employments: the employees the group pays in the period, each its state,
+    brought in step with the group, excluded with a reason or included again; the pay date), Inputs (the period's hours for pay in
+    counts from PayrollInputServices.get#Reconciliation, Prepare inputs through prepare#Inputs, HoursForPay and PayAdjustments linked),
+    Calculate and review (calculate#Run: each employee calculated on its own, in bounded calls that resume the pending and failed
+    ones; the progress, each employee's gross, deductions, net, employer cost, variance from the previous run and reason; an employee
+    opened shows its lines with their explanations, how its period was split and the inputs it took), and Approval (the totals by
+    type, the counts, the exclusions and warnings; Ask for approval, submit#Run, a payroll editor's; Approve and Return, the payroll
+    approver's who neither selected nor calculated it, approve#Run and return#Run, confirming the count and net). Finalize and
+    Settlement are P27's. Amounts are opted out of AI. Nothing here makes an invoice or a payment. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay run" default-menu-include="false">
+    <parameter name="payrollRunId"/>
+    <parameter name="step"/>
+    <parameter name="partyRelationshipId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition name="selectEmployments">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.select#Employments" out-map="selected"
+                    in-map="{payrollRunId:payrollRunId, excludeIds:(excludeIds || null), includeIds:(includeIds || null),
+                        exclusionReason:(exclusionReason || null), payDate:(payDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Population updated: ${selected.addedCount} joined, ${selected.removedCount} left, ${selected.excludedCount} excluded, ${selected.includedCount} included</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="population"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="population"/></error-response>
+    </transition>
+    <transition name="prepareInputs">
+        <actions>
+            <service-call name="mantle.humanres.PayrollInputServices.prepare#Inputs" out-map="prepared"
+                    in-map="{payrollGroupId:payrollGroupId, timePeriodId:timePeriodId, preview:(preview == 'Y')}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError() && prepared) {
+                    const blocked = Array.from(prepared.rows || []).filter(row => row.outcome === 'blocked' || row.outcome === 'refused')
+                    ec.message.addMessage((preview == 'Y' ? 'Preview, nothing prepared: ' : 'Prepared: ') + (prepared.createdCount || 0) + ' inputs', preview == 'Y' ? 'info' : 'success')
+                    if (blocked.length) ec.message.addMessage('Not prepared: ' + blocked.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="inputs"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="inputs"/></error-response>
+    </transition>
+    <transition name="calculateRun">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.calculate#Run" out-map="calculated" in-map="{payrollRunId:payrollRunId}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Calculated ${calculated.calculatedCount}, ${calculated.errorCount} in error${calculated.remainingCount ? ', ' + calculated.remainingCount + ' still to calculate: calculate again to go on' : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="review"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="review"/></error-response>
+    </transition>
+    <transition name="submitRun">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.submit#Run" out-map="submitted"
+                    in-map="{payrollRunId:payrollRunId, justification:(justification || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Sent for approval. ${submitted.waitingText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="approval"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="approval"/></error-response>
+    </transition>
+    <transition name="decideRun">
+        <actions>
+            <if condition="decision == 'return'">
+                <service-call name="mantle.humanres.PayrollRunServices.return#Run"
+                        in-map="{payrollRunId:payrollRunId, peopleApprovalId:(peopleApprovalId || null), sourceRevision:(sourceRevision || null), reason:(reason || null)}"/>
+                <if condition="!ec.message.hasError()"><message type="success">Returned to review</message></if>
+                <else>
+                    <service-call name="mantle.humanres.PayrollRunServices.approve#Run"
+                            in-map="{payrollRunId:payrollRunId, peopleApprovalId:(peopleApprovalId || null), sourceRevision:(sourceRevision || null)}"/>
+                    <if condition="!ec.message.hasError()"><message type="success">Pay run approved</message></if>
+                </else>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="payrollRunId"/><parameter name="step" value="approval"/></default-response>
+        <error-response url="."><parameter name="payrollRunId"/><parameter name="step" value="approval"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollRunServices.get#Run" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{payrollRunId:payrollRunId, partyRelationshipId:(partyRelationshipId || null), state:(state || null), pageIndex:(pageIndex || 0)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            recordFound = !!found?.run
+            runInfo = found?.run || {}
+            counts = found?.counts || {}
+            totalsText = found?.totalsText || {}
+            approval = found?.approval || null
+            steps = found?.steps || {}
+            canEdit = !!found?.canEdit
+            canCalculate = !!found?.canCalculate
+            canSubmit = !!found?.canSubmit
+            canDecide = !!found?.canDecide
+            progressPercent = found?.progressPercent || 0
+            employment = found?.employment || null
+            resultRows = Array.from(employment?.results || [])
+            takenRows = Array.from(employment?.inputs || [])
+            unitRows = Array.from(found?.employments || [])
+            employmentsCount = found?.employmentsCount || 0
+            employmentsPageIndex = found?.employmentsPageIndex || 0
+            employmentsPageSize = found?.employmentsPageSize || 20
+            employmentsPageMaxIndex = found?.employmentsPageMaxIndex || 0
+            employmentsPageRangeLow = found?.employmentsPageRangeLow || 0
+            employmentsPageRangeHigh = found?.employmentsPageRangeHigh || 0
+            excludedRows = unitRows.filter(row => row.state === 'excluded')
+            const byState = runInfo.state
+            currentStep = step || (byState === 'draft' ? 'population' : ['waiting', 'approved', 'stale'].includes(byState) ? 'approval' : 'review')
+            stepList = [
+                {key: 'population', text: '1 Population', done: !!steps.population},
+                {key: 'inputs', text: '2 Inputs', done: !!steps.population},
+                {key: 'review', text: '3 Calculate and review', done: !!steps.resolved},
+                {key: 'approval', text: '4 Approval', done: !!steps.approved}
+            ].map(item => Object.assign(item, {label: item.text + (item.done ? ' ✓' : '') + (item.key === currentStep ? ' (here)' : '')}))
+            stateColors = {draft: 'grey-8', calculating: 'primary', review: 'orange-9', waiting: 'primary', approved: 'positive', returned: 'negative',
+                stale: 'negative', closed: 'grey-8', pending: 'grey-8', calculated: 'positive', error: 'negative', excluded: 'grey-8'}
+            headerCaption = [runInfo.periodText, 'pay date ' + runInfo.payDateText, runInfo.kindText, runInfo.organizationName, runInfo.currencyUomId].filter(Boolean).join(' · ')
+            reconciliation = null
+            if (recordFound && currentStep === 'inputs') {
+                try {
+                    reconciliation = ec.service.sync().name('mantle.humanres.PayrollInputServices.get#Reconciliation')
+                        .parameters({payrollGroupId: runInfo.payrollGroupId, timePeriodId: runInfo.timePeriodId, pageSize: 1}).call()
+                } catch (error) { reconciliation = null }
+                ec.message.clearErrors()
+            }
+            inputCounts = reconciliation?.counts || {}
+            hoursUrl = sharedLinks?.['Time/HoursForPay'] || null
+            adjustmentsUrl = sharedLinks?.['Payroll/PayAdjustments'] || null
+            runsUrl = sharedLinks?.['Payroll/PayRuns'] || '../PayRuns'
+            netConfirm = 'Approve ' + (counts.calculated || 0) + ' employees, net ' + (totalsText.net || '') + (counts.excluded ? ', ' + counts.excluded + ' excluded' : '') + '?'
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="RunMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This pay run is not available to you."/>
+                        <link url="${runsUrl}" url-type="plain" text="Back to pay runs" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RunRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Pay run ${runInfo.groupName}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[runInfo.state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(runInfo.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: runInfo.stateText})}]]></text>
+                                <text type="html">${runInfo.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${runsUrl}" url-type="plain" text="Pay runs" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <label text="${runInfo.readinessText}" type="span" style="text-caption"/>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- the steps and their progress; the step is in the URL -->
+                <container style="row q-gutter-sm q-my-sm">
+                    <section-iterate name="StepLinks" list="stepList" entry="stepItem">
+                        <widgets>
+                            <link url="." text="${stepItem.label}" link-type="anchor-button" btn-type="default"
+                                    parameter-map="{payrollRunId:payrollRunId, step:stepItem.key}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <dashboard min-width="140" style="q-mb-sm">
+                    <number-card title="Employees" value="${counts.total || 0}" icon="sym_o_groups" size="sm"/>
+                    <number-card title="Calculated" value="${counts.calculated || 0}" icon="sym_o_task_alt" size="sm"/>
+                    <number-card title="To calculate" value="${counts.pending || 0}" icon="sym_o_pending" size="sm"/>
+                    <number-card title="In error" value="${counts.error || 0}" icon="sym_o_error" size="sm"/>
+                    <number-card title="Excluded" value="${counts.excluded || 0}" icon="sym_o_person_off" size="sm"/>
+                    <number-card title="Progress" value="${progressPercent}%" icon="sym_o_percent" size="sm"/>
+                </dashboard>
+
+                <section name="PopulationStep" condition="currentStep == 'population'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Population"/>
+                            <box-toolbar>
+                                <container-dialog id="RefreshDialog" button-text="Bring in step with the group" icon="sym_o_sync" type="primary" width="520"
+                                        title="Select the population again" condition="canEdit">
+                                    <label type="p" text="Employees the group pays in ${runInfo.periodText} join as pending, and those it no longer pays leave. Excluded employees stay excluded. An approval no longer holds."/>
+                                    <form-single name="RefreshPopulation" transition="selectEmployments" map="{payrollRunId:payrollRunId, payDate:runInfo.payDateText}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="payDate"><default-field title="Pay date"><date-time type="date"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Update population"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PopulationList" list="unitRows" skip-form="true" paginate="true" condition="unitRows.length">
+                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="message"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="Exclude_${partyRelationshipId}" button-text="Exclude" icon="sym_o_person_off" width="480"
+                                                    title="Exclude ${personName} from this run" condition="canEdit &amp;&amp; state != 'excluded'">
+                                                <form-single name="ExcludeEmployment" transition="selectEmployments"
+                                                        map="{payrollRunId:payrollRunId, excludeIds:partyRelationshipId}">
+                                                    <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                                    <field name="excludeIds"><default-field><hidden/></default-field></field>
+                                                    <field name="exclusionReason"><default-field title="Why" tooltip="Shown in the approval"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Exclude"><submit confirmation="Exclude ${personName} from this run?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="Include_${partyRelationshipId}" button-text="Include again" icon="sym_o_person_add" width="420"
+                                                    title="Include ${personName} again" condition="canEdit &amp;&amp; state == 'excluded'">
+                                                <form-single name="IncludeEmployment" transition="selectEmployments"
+                                                        map="{payrollRunId:payrollRunId, includeIds:partyRelationshipId}">
+                                                    <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                                    <field name="includeIds"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Include again"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="message"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!unitRows.length"
+                                        text="The group pays no employee in this period. Employees join a pay group through their pay assignment."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="InputsStep" condition="currentStep == 'inputs'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Inputs"/>
+                            <box-toolbar>
+                                <container-dialog id="PrepareDialog" button-text="Prepare inputs" icon="sym_o_playlist_add_check" type="primary" width="520"
+                                        title="Prepare the period's pay inputs" condition="canEdit">
+                                    <label type="p" text="Approved hours, leave, pieces and payroll claims of ${runInfo.periodText} become pay inputs once; an employee with time to approve or attendance to resolve is left out and named."/>
+                                    <form-single name="PrepareInputs" transition="prepareInputs"
+                                            map="{payrollRunId:payrollRunId, payrollGroupId:runInfo.payrollGroupId, timePeriodId:runInfo.timePeriodId}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="payrollGroupId"><default-field><hidden/></default-field></field>
+                                        <field name="timePeriodId"><default-field><hidden/></default-field></field>
+                                        <field name="preview"><default-field title=" "><check><option key="Y" text="Preview only: prepare nothing"/></check></default-field></field>
+                                        <field name="submitButton"><default-field title="Prepare inputs"><submit confirmation="Prepare the pay inputs of ${runInfo.periodText}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${hoursUrl}" url-type="plain" text="Hours for pay" icon="sym_o_more_time" link-type="anchor-button" condition="hoursUrl"
+                                        parameter-map="{payrollGroupId:runInfo.payrollGroupId, timePeriodId:runInfo.timePeriodId}"/>
+                                <link url="${adjustmentsUrl}" url-type="plain" text="Pay adjustments" icon="sym_o_tune" link-type="anchor-button" condition="adjustmentsUrl"/>
+                            </box-toolbar>
+                            <box-body>
+                                <dashboard min-width="140">
+                                    <number-card title="Ready to prepare" value="${inputCounts.ready || 0}" icon="sym_o_playlist_add" size="sm"/>
+                                    <number-card title="Blocked" value="${inputCounts.blocked || 0}" icon="sym_o_block" size="sm"/>
+                                    <number-card title="Changed since prepared" value="${inputCounts.changed || 0}" icon="sym_o_sync_problem" size="sm"/>
+                                    <number-card title="Prepared" value="${inputCounts.prepared || 0}" icon="sym_o_task_alt" size="sm"/>
+                                </dashboard>
+                                <label type="p" style="m-muted" text="A blocked employee's time waits for approval or attendance to resolve: open Hours for pay. Only approved inputs are paid; an adjustment waiting for approval is not."/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="ReviewStep" condition="currentStep == 'review'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Calculate and review"/>
+                            <box-toolbar>
+                                <container-dialog id="CalculateDialog" button-text="Calculate" icon="sym_o_calculate" type="primary" width="480"
+                                        title="Calculate this pay run" condition="canCalculate">
+                                    <label type="p" text="Each pending, failed or changed employee is calculated on its own; one in error is named and the others go on. A long run is calculated in parts: calculate again to go on. Nothing is paid or posted."/>
+                                    <form-single name="CalculateRun" transition="calculateRun" map="{payrollRunId:payrollRunId}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Calculate"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <section name="ReviewTotals" condition="counts.calculated" ai-opt-out="true">
+                                    <widgets>
+                                        <label type="p" style="q-px-md q-pt-sm text-caption"
+                                                text="Calculated: gross ${totalsText.gross}, deductions ${totalsText.deductions}, localization ${totalsText.localEmployee}, net ${totalsText.net}, employer cost ${totalsText.employerCost}"/>
+                                    </widgets>
+                                </section>
+                                <form-list name="UnitList" list="unitRows" skip-form="true" paginate="true" condition="unitRows.length">
+                                    <field name="personName">
+                                        <default-field title="Employee">
+                                            <link url="." text="${personName}" link-type="anchor"
+                                                    parameter-map="{payrollRunId:payrollRunId, step:'review', partyRelationshipId:partyRelationshipId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                                    <field name="deductionText" align="right" ai-opt-out="true"><default-field title="Deductions"><display/></default-field></field>
+                                    <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                                    <field name="employerCostText" align="right" ai-opt-out="true"><default-field title="Employer cost"><display/></default-field></field>
+                                    <field name="varianceText" align="right" ai-opt-out="true"><default-field title="Change from last run"><display/></default-field></field>
+                                    <field name="message"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="message"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="netText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="OpenedEmployment" condition="employment" ai-opt-out="true">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="${employment.personName}"/>
+                                    <box-toolbar>
+                                        <link url="." text="Close" icon="sym_o_close" link-type="anchor-button"
+                                                parameter-map="{payrollRunId:payrollRunId, step:'review', partyRelationshipId:''}"/>
+                                    </box-toolbar>
+                                    <box-body>
+                                        <label text="${employment.message}" type="p" style="text-warning" condition="employment.message"/>
+                                        <label text="Period: ${employment.splitText}" type="p" style="text-caption" condition="employment.splitText"/>
+                                        <form-list name="ResultLines" list="resultRows" skip-form="true" paginate="false" condition="resultRows.length">
+                                            <field name="resultName"><default-field title="Line"><display/></default-field></field>
+                                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                            <field name="explanation"><default-field title="How"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="resultName"/><field-ref name="kindText"/></column>
+                                                <column><field-ref name="amountText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <form-list name="TakenInputs" list="takenRows" skip-form="true" paginate="false" condition="takenRows.length">
+                                            <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
+                                            <field name="typeText"><default-field title="Input"><display/></default-field></field>
+                                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                        </form-list>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+
+                <section name="ApprovalStep" condition="currentStep == 'approval'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-toolbar>
+                                <container-dialog id="SubmitDialog" button-text="Ask for approval" icon="sym_o_send" type="primary" width="520"
+                                        title="Ask for approval of this pay run" condition="canSubmit">
+                                    <label type="p" text="A payroll approver who neither selected nor calculated it approves these ${counts.calculated} employees and their amounts as they are; any change afterwards asks again."/>
+                                    <form-single name="SubmitRun" transition="submitRun" map="{payrollRunId:payrollRunId}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="justification"><default-field title="Note for the approver"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Ask for approval"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ApproveDialog" button-text="Approve" icon="sym_o_check" type="primary" width="480"
+                                        title="Approve this pay run" condition="canDecide">
+                                    <form-single name="ApproveRun" transition="decideRun"
+                                            map="{payrollRunId:payrollRunId, peopleApprovalId:approval?.peopleApprovalId, sourceRevision:approval?.sourceRevision}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                        <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                        <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Approve"><submit confirmation="${netConfirm}"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ReturnDialog" button-text="Return" icon="sym_o_undo" width="480"
+                                        title="Return this pay run to review" condition="canDecide">
+                                    <form-single name="ReturnRun" transition="decideRun"
+                                            map="{payrollRunId:payrollRunId, peopleApprovalId:approval?.peopleApprovalId, sourceRevision:approval?.sourceRevision}">
+                                        <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                        <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                        <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                        <field name="decision"><default-field><hidden default-value="return"/></default-field></field>
+                                        <field name="reason"><default-field title="Why" tooltip="Payroll reads it on the run"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Return"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <section name="ApprovalTotals" ai-opt-out="true">
+                                    <widgets>
+                                        <label type="p" text="Gross ${totalsText.gross} · deductions ${totalsText.deductions} · employer contributions ${totalsText.contributions} · localization ${totalsText.localEmployee} from employees and ${totalsText.localEmployer} from the employer · net ${totalsText.net} · employer cost ${totalsText.employerCost}"/>
+                                    </widgets>
+                                </section>
+                                <label type="p" text="${counts.calculated || 0} employees calculated, ${counts.excluded || 0} excluded, ${counts.error || 0} in error, ${counts.stale || 0} changed since calculated."/>
+                                <label type="p" style="text-warning" text="Employees in error are fixed and calculated again, or excluded with a reason, before approval." condition="counts.error"/>
+                                <label type="p" style="text-warning" text="Some results changed since they were calculated: calculate again." condition="counts.stale"/>
+                                <form-list name="ExcludedList" list="excludedRows" skip-form="true" paginate="false" condition="excludedRows.length">
+                                    <field name="personName"><default-field title="Excluded"><display/></default-field></field>
+                                    <field name="exclusionReason"><default-field title="Why"><display/></default-field></field>
+                                </form-list>
+                                <section name="ApprovalState" condition="approval">
+                                    <widgets>
+                                        <label type="p" text="${approval.statusText}${approval.waitingText ? ': ' + approval.waitingText : ''}. Asked by ${approval.requestedByName} ${approval.requestedDateText}${approval.justification ? ': ' + approval.justification : ''}"/>
+                                        <label type="p" text="Approved ${runInfo.approvedDateText}" condition="found.approvalHolds"/>
+                                        <label type="p" style="text-negative" text="Returned: ${runInfo.returnedReason}" condition="runInfo.returnedReason"/>
+                                    </widgets>
+                                </section>
+                                <label type="p" style="m-muted" text="Not sent for approval yet." condition="!approval"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
