@@ -87,13 +87,20 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-include="ec.user.hasPermission('SALES_CONFIGURE') || ec.user.hasPermission('SALES_TEAM_MANAGE')"/>
     </subscreens>
 
-    <!-- P1: the sales keymap (design §1.2). The palette source (P3, P4), quick create (P6), Today (P6), the Comms providers (P5,
-        P6) and the notification topics (P9, P14) arrive with their records. -->
+    <!-- P1: the sales keymap (design §1.2). The palette source (P3, P4), quick create (P6), Today (P6), the Comms providers (P5)
+        and the notification topics (P9, P14) arrive with their records. -->
     <shell-providers>
         <!-- P3: the palette's Sales records, accounts first, P4 the open leads and opportunities (ironstone.sales.ContextServices.search#Records,
             Mantle's scoped finds) -->
         <palette-source group="Sales" label="Sales records" icon="sym_o_handshake"
                 service="ironstone.sales.ContextServices.search#Records" sequence="51"/>
+        <!-- P5: the Comms hooks (design §1.4, F64; ironstone.sales.ContextServices over SalesComms.js): a lead's or opportunity's card,
+            search and links in Comms (before Comms' own, which knows no Sales link), the caller's open deals in the ring bar and the
+            call, and an inquirer who is no party yet as their lead's card (after Comms' own party card). Create lead on a message is
+            Comms' create-from provider's kind lead and Log call on opportunity a dialog mounted in Calls (screen-extend/basic-comms). -->
+        <record-lookup name="sales.records" service="ironstone.sales.ContextServices.lookup#Records" sequence="-5"/>
+        <call-context name="sales.deals" service="ironstone.sales.ContextServices.get#CallContext"/>
+        <contact-card name="sales.leads" service="ironstone.sales.ContextServices.get#ContactCard" sequence="50"/>
         <keymap scope="sales">
             <key keys="g s" label="Sales home" screen="Sales/Home"/>
             <!-- P3 -->

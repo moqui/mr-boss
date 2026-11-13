@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- IronStone's actions on a call in the BasicComms Calls (Sales P5, design-sales §1.4 Comms hooks): Log call on opportunity, Sales'
+    LogCall dialog mounted here for a Sales user (BOSS_SAL_LOG_CALL), in the call's call-actions slot (the item: callSessionId). -->
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <subscreens>
+        <subscreens-item name="SalesLogCall" location="component://mr-boss/screen/Sales/Pipeline/LogCall.xml" menu-include="false"/>
+    </subscreens>
+    <ext-action name="sales.logCall" slot="call-actions" sequence="50" label="Log call on opportunity" icon="sym_o_call_log" screen="SalesLogCall">
+        <parameter name="callSessionId"/>
+    </ext-action>
+</screen-extend>

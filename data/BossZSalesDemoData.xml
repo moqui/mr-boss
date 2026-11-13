@@ -225,4 +225,35 @@ along with this software (see the LICENSE.md file). If not, see
             statusId="WeptAssigned" fromDate="2026-11-01 09:00:00"/>
     <mantle.sales.opportunity.SalesOpportunityWorkEffort salesOpportunityId="BOSS_SAL_OPP_WINGTIP_Q4" workEffortId="BOSS_SAL_ACT_WINGTIP"/>
     <!-- ===== end of Sales P4 ===== -->
+    <!-- ===== Sales P5 (design-sales §3 Leads, §9 LeadSources, §1.4 CX-MAIL-INTAKE): lead intake ===== -->
+    <!-- Retail's sales intake mailbox (on Customer Service's local demo server, which sends nothing), read by sales.rep and sales.rep2
+        and managed by sales.manager, whose rule makes mail to sales+leads@ and sales+west@ a lead in East's or West's queue
+        (createLead: the team by the plus tag). East's leads take the website source; West's none. A tracked newsletter link maps to
+        the website source, its email medium to the partner referral. -->
+    <moqui.basic.email.EmailAccount emailAccountId="BOSS_SAL_INTAKE_MAIL" ownerPartyId="ORG_ZIZI_RETAIL" accountKindEnumId="EakShared"
+            emailServerId="BOSS_CS_DEMO_MAIL" emailAddress="sales@retail.example" accountName="Retail sales intake"
+            statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_SAL_INTAKE_MAIL" userId="BOSS_SAL_MANAGER" fromDate="0" permissionEnumId="EapManage"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_SAL_INTAKE_MAIL" userId="BOSS_SAL_REP" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_SAL_INTAKE_MAIL" userId="BOSS_SAL_REP2" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailRule emailRuleId="BOSS_SAL_INTAKE_RULE" ownerUserId="BOSS_SAL_MANAGER" emailAccountId="BOSS_SAL_INTAKE_MAIL"
+            ruleName="Sales leads by plus tag" sequenceNum="10" enabled="Y" matchAllEnumId="ErmAll"
+            conditionsJson='[{"field":"to","operator":"contains","value":"sales+"}]'
+            actionsJson='[{"action":"createLead","value":null}]'/>
+    <mantle.party.PartySetting partyId="BOSS_SAL_TEAM_EAST" partySettingTypeId="SalesIntakePlusTag" settingValue="leads"/>
+    <mantle.party.PartySetting partyId="BOSS_SAL_TEAM_EAST" partySettingTypeId="SalesIntakeSource" settingValue="BOSS_SAL_SRC_WEB"/>
+    <mantle.party.PartySetting partyId="BOSS_SAL_TEAM_WEST" partySettingTypeId="SalesIntakePlusTag" settingValue="west"/>
+    <mantle.sales.opportunity.SalesLeadSourceMap salesLeadSourceMapId="BOSS_SAL_UTM_NEWS" organizationPartyId="ORG_ZIZI_RETAIL"
+            utmSource="newsletter" dataSourceId="BOSS_SAL_SRC_WEB" fromDate="2026-01-01 00:00:00"/>
+    <mantle.sales.opportunity.SalesLeadSourceMap salesLeadSourceMapId="BOSS_SAL_UTM_NEWS_MAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            utmSource="newsletter" utmMedium="email" dataSourceId="BOSS_SAL_SRC_PARTNER" fromDate="2026-01-01 00:00:00"/>
+    <!-- an inquiry the rule took: a message to sales+leads@, East's queue, its sender kept on the intake and not as a party -->
+    <moqui.basic.email.EmailMessage emailMessageId="BOSS_SAL_MSG_INQUIRY" emailAccountId="BOSS_SAL_INTAKE_MAIL" statusId="ES_RECEIVED"
+            receivedDate="2026-11-10 14:05:00" messageDate="2026-11-10 14:05:00" isRead="N" hasAttachment="N"
+            fromAddress="morgan@northwind.example" fromName="Morgan Lee" toAddresses="sales+leads@retail.example"
+            subject="Shelving for three stores" contentType="text/plain" messageId="&lt;inquiry-3stores@northwind.example&gt;"
+            bodyText="Hello, we are fitting out three stores next spring and need shelving and checkout counters. Can someone call me? Morgan Lee, Northwind Traders, +1 555 0142"/>
+    <mantle.sales.OpportunityServices.create-LeadFromEmail emailMessageId="BOSS_SAL_MSG_INQUIRY" emailAccountId="BOSS_SAL_INTAKE_MAIL"
+            emailRuleId="BOSS_SAL_INTAKE_RULE" ruleOwnerUserId="BOSS_SAL_MANAGER"/>
+    <!-- ===== end of Sales P5 ===== -->
 </entity-facade-xml>

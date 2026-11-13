@@ -16,7 +16,12 @@ along with this software (see the LICENSE.md file). If not, see
     moqui.basic.DataSource rows of a LEAD_SOURCE type shared by the instance, each offered to an organization by a dated binding
     (mantle.sales.OpportunityServices.store#LeadSource): a new source, a source offered to the organization or no longer, and its
     name or type, changed only by an administrator of every organization it is offered to (another organization is named only
-    when it is in the user's scope). Ending an offer leaves the leads that name the source. The UTM map is P5's.
+    when it is in the user's scope). Ending an offer leaves the leads that name the source. P5: UtmSourceMap, the organization's
+    dated map from a tracked link's UTM source, and optionally its medium, to one of the sources it offers
+    (store#LeadSourceMapping, find#LeadSourceMappings), which the lead intake reads (source and medium over source alone); a
+    mapping is ended, never changed. The source and medium are typed until Marketing offers its vocabulary (impl-marketing P13).
+    And Mail intake: each team's intake address (its plus tag: mail to sales+tag@ the intake mailbox, with a mail rule whose action
+    is Make a sales lead, lands in the team's queue) and the source such a lead takes (store#TeamIntake, find#TeamIntakes).
     Built for a second mount (impl-sales §2; impl-marketing P13 mounts it under Marketing/Settings/LeadSources): its context is
     the mounting root's `sales` (get#SharedContext by that root's appRoot), it links only to itself and names no app root.
     SALES_CONFIGURE, which Mantle checks with the organization. -->
@@ -38,6 +43,30 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
         <error-response url="."><parameter name="organizationPartyId"/></error-response>
     </transition>
+    <!-- P5: a UTM mapping added or ended -->
+    <transition name="storeMapping">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#LeadSourceMapping"
+                    in-map="{salesLeadSourceMapId:(salesLeadSourceMapId || null), organizationPartyId:(organizationPartyId || null),
+                        utmSource:(utmSource || null), utmMedium:(utmMedium || null), dataSourceId:(dataSourceId || null),
+                        end:(end == 'Y'), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${end == 'Y' ? 'Mapping ended' : 'Mapping added'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <!-- P5: a team's intake address and default source -->
+    <transition name="storeTeamIntake">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#TeamIntake"
+                    in-map="{teamPartyId:(teamPartyId || ''), intakePlusTag:(intakePlusTag || null), intakeDataSourceId:(intakeDataSourceId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Intake address saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
     <always-actions>
         <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales lead sources are the Sales administrator\'s')</script>
     </always-actions>
@@ -54,6 +83,21 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sourceTypes" from="setup?.sourceTypes || []"/>
         <set field="offeredCount" from="sourceList.filter(row =&gt; row.offered).length"/>
         <set field="findValues" from="{organizationPartyId: organizationPartyId}"/>
+        <!-- P5: the UTM map of the organization, and the sources it offers to map to -->
+        <if condition="setupFound">
+            <service-call name="mantle.sales.OpportunityServices.find#LeadSourceMappings" out-map="mapped" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="mappingList" from="mapped?.mappingList || []"/>
+        <if condition="setupFound">
+            <service-call name="mantle.sales.OpportunityServices.find#TeamIntakes" out-map="intakes" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="teamIntakeList" from="intakes?.teamList || []"/>
+        <set field="offeredSources" from="sourceList.filter(row =&gt; row.offered)"/>
+        <set field="newMapping" from="{organizationPartyId: organizationPartyId}"/>
         <set field="newSource" from="{organizationPartyId: organizationPartyId, dataSourceTypeEnumId: 'LEAD_SOURCE'}"/>
     </actions>
     <widgets>
@@ -130,6 +174,92 @@ along with this software (see the LICENSE.md file). If not, see
                     </columns>
                 </form-list>
                 <label text="No lead source yet: create one." type="p" style="m-muted q-pa-sm" condition="!sourceList.length"/>
+            </box-body-nopad>
+        </container-box>
+        <!-- P5: UtmSourceMap (design §9) -->
+        <container style="row items-center q-col-gutter-sm q-mt-md" condition="setupFound">
+            <container style="col">
+                <label text="Tracked links" type="h6"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="A lead from a tracked link takes the source its UTM source and medium map to; a source with no medium mapped covers every medium, and an unmapped link keeps the form's or rule's own source."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="NewMappingDialog" button-text="Map a source" icon="sym_o_add" type="default" width="520"
+                        title="Map a tracked link's source" condition="offeredSources.length">
+                    <form-single name="NewMapping" transition="storeMapping" map="newMapping">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="utmSource"><default-field title="UTM source" tooltip="As the link carries it, such as newsletter"><text-line size="30"/></default-field></field>
+                        <field name="utmMedium"><default-field title="UTM medium" tooltip="Empty for every medium"><text-line size="30"/></default-field></field>
+                        <field name="dataSourceId">
+                            <default-field title="Lead source"><drop-down><list-options list="offeredSources" key="${dataSourceId}" text="${description}"/></drop-down></default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Add mapping"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container-box condition="setupFound">
+            <box-body-nopad>
+                <form-list name="UtmSourceMap" list="mappingList" skip-form="true" paginate="false">
+                    <field name="utmSource"><default-field title="UTM source"><display/></default-field></field>
+                    <field name="mediumText"><default-field title="Medium"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="Lead source"><display/></default-field></field>
+                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="storeMapping" text="End" icon="sym_o_event_busy" link-type="hidden-form" btn-type="default"
+                                    confirmation="End the mapping of ${utmSource}? Leads that took its source keep it."
+                                    parameter-map="{organizationPartyId:organizationPartyId, salesLeadSourceMapId:salesLeadSourceMapId,
+                                        expectedRevision:revision, end:'Y'}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="utmSource"/><field-ref name="mediumText"/></column>
+                        <column><field-ref name="sourceText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No tracked link is mapped: its leads keep their form's or rule's source." type="p" style="m-muted q-pa-sm"
+                        condition="!mappingList.length"/>
+            </box-body-nopad>
+        </container-box>
+        <!-- P5: Mail intake (design §1.4 CX-MAIL-INTAKE) -->
+        <container style="q-mt-md" condition="setupFound">
+            <label text="Mail intake" type="h6"/>
+            <label type="p" style="text-caption m-muted q-mb-none"
+                    text="Mail to sales+tag@ your intake mailbox becomes a lead in that team's queue when the mailbox has a rule whose action is Make a sales lead. Mail from anyone makes an inquiry, never a contact; the same message twice makes one lead."/>
+        </container>
+        <container-box condition="setupFound">
+            <box-body-nopad>
+                <form-list name="TeamIntakes" list="teamIntakeList" skip-form="true" paginate="false">
+                    <field name="teamName"><default-field title="Team"><display/></default-field></field>
+                    <field name="addressText"><default-field title="Intake address"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="Lead source"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="TeamIntake_${teamPartyId}" button-text="Set" icon="sym_o_edit" type="default" width="520"
+                                    title="Intake address of ${teamName}">
+                                <form-single name="TeamIntake" transition="storeTeamIntake"
+                                        map="{organizationPartyId:organizationPartyId, teamPartyId:teamPartyId, intakePlusTag:intakePlusTag,
+                                            intakeDataSourceId:intakeDataSourceId}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="intakePlusTag"><default-field title="Plus tag" tooltip="The part after + in sales+tag@; empty takes no mail"><text-line size="20"/></default-field></field>
+                                    <field name="intakeDataSourceId">
+                                        <default-field title="Lead source">
+                                            <drop-down allow-empty="true"><list-options list="offeredSources" key="${dataSourceId}" text="${description}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="teamName"/><field-ref name="addressText"/></column>
+                        <column><field-ref name="sourceText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No current team: add one in Teams to take mail." type="p" style="m-muted q-pa-sm" condition="!teamIntakeList.length"/>
             </box-body-nopad>
         </container-box>
     </widgets>

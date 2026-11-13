@@ -247,7 +247,7 @@ need in §17.
 | Contract | Sales entries |
 | --- | --- |
 | CX-ASSIST (L1) | Procedure skills in mr-boss `skill/`: `sales-qualify-lead.md`, `sales-issue-quote.md`, `sales-follow-up.md`, `sales-log-call.md`, each with `screens:` so they show as chips, `skill/aliases.json` (quote, RFQ, deal, account) and `test/skill-retrieval.json`. `assist-prompt` chips: OpportunityDetail "Summarize this deal", "Draft a follow-up", "What changed since the last activity"; OrderDetail quote context "Explain this price", "Draft a cover note"; Customer360 "Open work for this account". `response-action`s "Log as note" (a Chatter note on the host) and "Send as message" (opens Comms Compose). `AgentToolExposure` rows only for O/Q verbs no single screen does: O.create#Opportunity, O.move#Opportunity, O.close#Opportunity, Q.preview#Quote and Q.send#Quote, every mutating one behind an Assist approval; `exposeMcp` is Y for O.find#Opportunities and Q.find#Quotes and N for mutating verbs. Prerequisite: the Mantle active-organization user-facts provider (crosscut CX-ASSIST), which no component registers yet, so Sales builds it (impl-sales P6, F65); the facts are fixed when a conversation starts, so a tool still takes its organization. **Needs:** SAL-ASSIST |
-| Comms hooks (L8) | As Comms renders them (impl-sales F64): `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest, which Comms offers on a chat message; `ext-action`s "Create lead" in `chat-message-actions` and `voicemail-actions` (a voicemail's action is a transition given the voicemail, on Customer Service's pattern) and "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call; `contact-card`, which Comms' Mail reads, answers with the sender's account or lead card. "Create lead" and "Create RFQ" are in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13). **Needs:** SAL-SHELL |
+| Comms hooks (L8) | As Comms renders them (impl-sales F64): `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest, which Comms offers on a chat message; `ext-action`s "Create lead" in `chat-message-actions` and `voicemail-actions` (a voicemail's action is a transition given the voicemail, on Customer Service's pattern) and "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call; `contact-card`, which Comms' Mail reads, answers with the sender's account or lead card. "Create lead" and "Create RFQ" are in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13). As built (P5): create-from kind lead is a kind of Comms' one provider `boss.records` (ChatServices.create#FromChat, as Customer Service's case and People's kinds are), since a second create-from provider would answer every kind; Mail's slot posts the framework's `createRecord` transition with the message's ids; `record-lookup` comes before Comms' own (Sales' link), `contact-card` after it (a lead's card for an inquirer who is no party yet), and "Log call on opportunity" is a dialog (Sales/Pipeline/LogCall) mounted in Calls/Call and Calls/Voicemail. **Needs:** SAL-SHELL |
 | Meetings (L7) | A meeting activity is a Commons Event with a CallLink ("Add video call" on EventDetail); prospects are invited by iMIP through `mantle.work.EventServices.send#EventInvitations` and join by the link as guests, without an account (§3) |
 | CX-SYNC (L2) | Activities are events and tasks in the user's own CalDAV calendar already. Account contacts appear on reps' phones as a read-only projected CardDAV address book, "My accounts", answered by S with the rep's account scope (§4). **Needs:** SAL-SYNC |
 | CX-MAIL-INTAKE (L3) | `EmailRuleAction` actions `createLead` (O.store#LeadIntake) and `createQuoteRequest` (Q.create#QuoteRequest), reached by plus-tag intake addresses such as `sales+leads@` and `sales+rfq@` (§§3, 5). **Needs:** SAL-MAIL-INTAKE |
@@ -419,6 +419,18 @@ manager, reason and no placed linked order. Conversion history remains audit-rea
 the same action is in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13).
 The bulk "Add to list (evidenced)" action, shown with Marketing's audience capability, files an
 evidenced subscription request per lead contact through Marketing; it never subscribes directly.
+
+As built (impl-sales P5, Nov 13, 2026): SalesLeadIntake holds the inquiry (source kind and id, the submitted name,
+organization, email and phone, the UTM pair, campaign, tracking code, source, team queue, received, verified and purged
+dates, and whether it made its lead or joined one); `store#LeadIntake` takes an operation key of its own (a repeat answers
+the first result whoever calls, as Marketing's capture job and an operator's reprocess both do) and one source identity per
+intake (a mail by its Message-ID). The duplicate policy joins an open lead of the organization that an intake with the same
+submitted email made or joined (a review item on that lead, shown as "Joined this lead"), never a merge. A user caller assigns
+as `create#Opportunity`; a system caller (the mail rule, Marketing's job) names a team as the queue. "Create lead" on a chat
+or mail message and a voicemail makes the lead at once (the user its owner, the message filed on it) rather than opening a
+prefilled NewLead; OpportunityDetail's Inquiries box shows what came in, and QualifyLead starts its new account and contact
+from the first inquiry. LeadList's intake columns are Came by, Received and Verification. The inquirer's email verification
+is the caller's (`verified`); Sales sends no verification mail.
 **Source:** research §2. **Needs:** SAL-CRM, SAL-ACCOUNTS, SAL-SHELL, SAL-MAIL-INTAKE.
 
 ### OpportunityDetail
@@ -545,7 +557,9 @@ to another account's documents.
 Account contacts reach reps' phones as a read-only CardDAV address book, "My accounts", a projected
 collection that Mantle `mantle.party.ContactDavServices.get#DavCollections` lists and S answers with
 the contacts of the accounts the rep may see (L2). Phone edits are refused; the contact is edited
-here. **Needs:** SAL-SYNC.
+here. As built (impl-sales P5): the projection is Mantle's `ContactProjection` (the contacts counterpart of People's
+CalendarProjection, `projected-SalesMyAccounts`), and "the rep's accounts" are those they manage or that are the account of a
+deal assigned now to them or their team, not every account of the scope. **Needs:** SAL-SYNC.
 
 ### Customer360 — Context passed
 
@@ -1329,6 +1343,11 @@ O.store#LeadIntake looks up the intake's UTM source and medium (from Marketing's
 or the published form's link) and sets the lead's DataSource; source plus medium wins over source
 alone, and an unmapped pair leaves the publication's default source. The intake also writes the
 existing SalesOpportunityTracking join to the tracking code. **Needs:** SAL-CRM.
+
+As built (impl-sales P5): UtmSourceMap is `SalesLeadSourceMap` (organization, UTM source and medium lower-cased, a source the
+organization is offered, dated; ended, never changed), on LeadSources with its Map a source and End, the source and medium typed
+until Marketing offers its vocabulary. LeadSources also shows Mail intake: each team's plus tag (`sales+tag@` the intake mailbox,
+whose rule's action is Make a sales lead) and the source its mail takes, PartySettings of the team (`store#TeamIntake`).
 
 As built (impl-sales P2): the binding is `SalesLeadSourceBinding` (dataSourceId, organization, dates); a new source is offered to
 its organization at once, an offer is added or ended per organization of the caller's, and a source's name or type is changed

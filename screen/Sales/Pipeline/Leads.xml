@@ -22,7 +22,9 @@ along with this software (see the LICENSE.md file). If not, see
     Built for a second mount (impl-sales §2, F47): the context is the mounting root's `sales` (get#SharedContext by its appRoot:
     Sales, or Marketing at Marketing/Leads), every link goes through `sales.sharedLinks`, and a row whose OpportunityDetail the
     mounting root does not mount (Marketing's) shows its name without a link. LeadList has row selection; Marketing's bulk action
-    "Add to list (evidenced)" joins it as an owner contract (impl-marketing P3). -->
+    "Add to list (evidenced)" joins it as an owner contract (impl-marketing P3). P5: the intake columns (Came by, Received,
+    Verification) of a lead that came in through store#LeadIntake: mail to a team's intake address, Comms' Create lead, Marketing's
+    lead forms. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Leads" default-menu-index="2">
     <parameter name="text"/>
@@ -183,6 +185,11 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="accountName"><default-field title="Account"><display/></default-field></field>
                             <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <!-- P5: how the lead came in (its first intake: form, mail, chat, voicemail, staff), when, and whether
+                                the inquirer verified the email -->
+                            <field name="intakeKindText"><default-field title="Came by"><display/></default-field></field>
+                            <field name="receivedText"><default-field title="Received"><display/></default-field></field>
+                            <field name="verificationText"><default-field title="Verification"><display/></default-field></field>
                             <field name="marketingCampaignId"><default-field title="Campaign"><display/></default-field></field>
                             <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
                             <field name="teamName"><default-field title="Team"><display/></default-field></field>
@@ -216,6 +223,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <columns>
                                 <column><field-ref name="opportunityName"/><field-ref name="accountName"/></column>
                                 <column><field-ref name="sourceText"/><field-ref name="marketingCampaignId"/></column>
+                                <column><field-ref name="intakeKindText"/><field-ref name="receivedText"/><field-ref name="verificationText"/></column>
                                 <column><field-ref name="ownerName"/><field-ref name="teamName"/></column>
                                 <column><field-ref name="ageText"/></column>
                                 <column><field-ref name="nextActivityText"/></column>

@@ -159,4 +159,109 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="rows" from="found.rows"/>
         </actions>
     </service>
+    <!-- ===== P5: the Comms hooks (design §1.4 Comms hooks, §3 Leads; impl-sales F64; SalesComms.js) ===== -->
+    <service verb="create" noun="LeadFromMessage" allow-remote="false">
+        <description>"Create lead" from a message, as the user (Comms' create-from kind lead on a mail, internal or chat message,
+            through ironstone.comms.ChatServices.create#FromChat; Calls/Voicemail's createLead transition): the message read as the
+            user may read it (RECORD_UNAVAILABLE otherwise), Mantle's store#LeadIntake for the user's organization (the default one,
+            ORGANIZATION_DENIED when they sell for several) with the user its owner and the sender's name, address or number as
+            submitted, a voicemail's transcript (never its audio) as the description, and the message filed on the lead as its source.
+            The same message again answers the same lead. Refuses a user without Sales (SALES_UNAVAILABLE) or without
+            SALES_OPPORTUNITY_EDIT (PERMISSION_DENIED). Answers the lead's record, its OpportunityDetail link and a message.</description>
+        <in-parameters>
+            <parameter name="emailMessageId"/>
+            <parameter name="communicationEventId"/>
+            <parameter name="chatRoomId"/>
+            <parameter name="eventSeq" type="Integer"/>
+            <parameter name="voicemailId"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordEntityName"/>
+            <parameter name="recordId"/>
+            <parameter name="url"/>
+            <parameter name="message"/>
+            <parameter name="roomRecordLinked" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="made" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('leadFromMessage', context)"/>
+            <set field="recordEntityName" from="made.recordEntityName"/>
+            <set field="recordId" from="made.recordId"/>
+            <set field="url" from="made.url"/>
+            <set field="message" from="made.message"/>
+            <set field="roomRecordLinked" from="false"/>
+        </actions>
+    </service>
+    <service verb="lookup" noun="Records" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>
+        <description>Sales' record-lookup provider (Sales.xml shell-providers, sales.records): leads and opportunities the user sees
+            (Mantle's opportunityOf and find#Opportunities as the user). info and card: a deal's name, kind, stage or outcome, account
+            and owner (never its amount), with its OpportunityDetail link; a deal the user does not see is left to the other
+            providers. search: the open deals by name or id, as optionList {value: entity|id, label}. links: the deals a message's
+            OpportunityDetail links name, up to five.</description>
+        <out-parameters>
+            <parameter name="recordList" type="List"/>
+            <parameter name="card" type="Map"/>
+            <parameter name="optionList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('lookup', context)"/>
+            <set field="recordList" from="found.recordList"/>
+            <set field="card" from="found.card"/>
+            <set field="optionList" from="found.optionList"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CallContext" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
+        <description>Sales' call-context provider (Sales.xml shell-providers, sales.deals): for the number ringing, the open leads and
+            opportunities the user sees of the accounts the caller is or is a contact of, each with its Sales link, at most 20.
+            Comms' own provider answers the contacts. No amount.</description>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('callContext', context)"/>
+            <set field="contactList" from="found.contactList"/>
+            <set field="recordList" from="found.recordList"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ContactCard" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.contact#Card"/>
+        <description>Sales' contact-card provider (Sales.xml shell-providers, sales.leads, after Comms' own): an address that is no
+            party yet but the submitted email of an open lead's intake the user sees, as that lead's card (the submitted name,
+            organization and phone, the lead's link); nothing for a known party, whose card is Comms'.</description>
+        <actions>
+            <set field="card" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('contactCard', context).card"/>
+        </actions>
+    </service>
+    <service verb="get" noun="DealOptions" allow-remote="false" read-only="true">
+        <description>Log call's deal drop-down: the open leads and opportunities the user sees by name or id (term), at most 20, as
+            {value, label}. Refuses a user without Sales (SALES_UNAVAILABLE).</description>
+        <in-parameters><parameter name="term"/></in-parameters>
+        <out-parameters><parameter name="options" type="List"/></out-parameters>
+        <actions>
+            <set field="options" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('dealOptions', context).options"/>
+        </actions>
+    </service>
+    <service verb="log" noun="Call" allow-remote="false">
+        <description>"Log call on opportunity" from Comms' call (callSessionId) or voicemail (voicemailId: an inbound call when it was
+            left, its length, its transcript as the summary unless one is given; never its audio): Mantle's log#OpportunityCall as the
+            user on a deal they edit (RECORD_UNAVAILABLE, PERMISSION_DENIED). Refuses a user without Sales (SALES_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="salesOpportunityId" required="true"/>
+            <parameter name="summary"/>
+            <parameter name="direction"/>
+            <parameter name="durationMinutes"/>
+            <parameter name="voicemailId"/>
+            <parameter name="callSessionId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="communicationEventId"/>
+            <parameter name="url"/>
+            <parameter name="message"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('logCall', context)"/>
+            <set field="communicationEventId" from="found.communicationEventId"/>
+            <set field="url" from="found.url"/>
+            <set field="message" from="found.message"/>
+        </actions>
+    </service>
 </services>
