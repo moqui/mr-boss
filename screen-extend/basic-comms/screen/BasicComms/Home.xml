@@ -12,28 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone's boxes on the BasicComms Home (plans/Comms-Framework.md D-A4): Needs reply, the follow-ups due and the meetings
-    with Join before the chat rooms, and the mailboxes with unread after the shortcuts; their lists come from IronStone's
-    get#CommsHome, which its inbox-source provider answers. -->
+<!-- IronStone's boxes on the BasicComms Home (plans/Comms-Framework.md D-A4): the follow-ups due and the meetings with Join
+    before the chat rooms, and the mailboxes with unread after the shortcuts; their lists come from IronStone's get#CommsHome,
+    which its inbox-source provider answers. Needs reply is the framework's box, which shows IronStone's list (mail and
+    internal messages) from the same answer. -->
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets-extend name="HomeRooms" where="before">
-        <container-box><box-header title="Needs reply"/><box-toolbar>
-            <link url="/qapps/Comms/Inbox" url-type="plain" link-type="anchor" text="Inbox"/>
-        </box-toolbar><box-body-nopad>
-            <form-list name="NeedsReply" list="needsReplyList" skip-form="true" skip-header="true" paginate="false">
-                <field name="subject"><default-field><link url="${link}" url-type="plain" text="${subject}"/></default-field></field>
-                <field name="who"><default-field><display style="text-caption"/></default-field></field>
-                <field name="whenText" align="right"><default-field><display style="text-caption m-muted text-no-wrap"/></default-field></field>
-                <columns type="mobile">
-                    <column><field-ref name="subject"/><field-ref name="who"/></column>
-                    <column><field-ref name="whenText"/></column>
-                </columns>
-            </form-list>
-            <section name="NoNeedsReply" condition="!needsReplyList.length"><widgets>
-                <label type="p" text="Nothing waiting for your answer" style="m-muted q-pa-sm q-mb-none"/>
-            </widgets></section>
-        </box-body-nopad></container-box>
-
         <container-box><box-header title="Follow-ups due"/><box-toolbar>
             <link url="/qapps/Commons/Tasks" url-type="plain" link-type="anchor" text="Tasks"/>
         </box-toolbar><box-body-nopad>
