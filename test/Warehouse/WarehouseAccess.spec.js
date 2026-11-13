@@ -27,6 +27,14 @@ function removeAll(entity, condition) {
     ec.entity.find(entity).condition(condition).disableAuthz().deleteAll()
 }
 
+// The problem when a user's context does not default a new record to Retail with Retail's returns center in their scope.
+function defaultOrganization(user) {
+    const found = asUser(user, () => invoke(access + "get#SharedContext", {}))
+    const scope = Array.from(found.organizationPartyIds || [])
+    return scope.includes("BOSS_WH_RETURNS") && found.defaultOrganizationPartyId === "ORG_ZIZI_RETAIL"
+        ? []
+        : [`${user}'s default organization: ${found.defaultOrganizationPartyId} of ${scope}`]
+}
 feature("Warehouse opens to its groups: a holder gets the context and an area read, others are refused", {
     when() {
         const context = (user, parameters = {}) => asUser(user, () => refusal(access + "get#SharedContext", parameters))
@@ -42,7 +50,10 @@ feature("Warehouse opens to its groups: a holder gets the context and an area re
                     "WAREHOUSE_CONTEXT"),
                 // the Picking area is for its groups: the picker reads the picklist the reader is refused
                 ...outcome("the picker's picklist", picklist("warehouse.pick"), ""),
-                ...outcome("the reader's picklist", picklist("warehouse.read"), "RECORD_UNAVAILABLE")
+                ...outcome("the reader's picklist", picklist("warehouse.read"), "RECORD_UNAVAILABLE"),
+                // a new record's organization is the reader's own (Retail), though their scope also holds Retail's rollup child, the
+                // returns center (impl-sales F111)
+                ...defaultOrganization("warehouse.read")
             ],
             outsiders: [
                 context("finance.read"),

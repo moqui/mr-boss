@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="filtered" from="!!(text || organizationPartyId || statusId || maintenanceTypeEnumId)"/>
         <set field="emptyText" from="filtered ? 'No procedure matches these filters.'
                 : (canAuthor ? 'No procedure yet. Write one with New procedure.' : 'No procedure is available.')"/>
-        <set field="newProcedure" from="{organizationPartyId: maintenance.activeOrganizationPartyId || (maintenance.organizationPartyIds?.length == 1 ? maintenance.organizationPartyIds[0] : null)}"/>
+        <set field="newProcedure" from="{organizationPartyId: maintenance.defaultOrganizationPartyId || null}"/>
     </actions>
     <widgets>
         <context title="Procedures"/>

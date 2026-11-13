@@ -100,8 +100,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="newTemplateDefaults" from="{inspectionContextEnumId:manufacturingContext ? 'QicProduction' : 'QicReceipt',
                 samplePolicyEnumId:'QspAll', productionStageEnumId:manufacturingContext ? 'QpsFinal' : null,
                 sampleBasisEnumId:manufacturingContext ? 'QsbReceipt' : null,
-                organizationPartyId:appScope?.activeOrganizationPartyId ||
-                    (appScope?.organizationPartyIds?.length === 1 ? appScope.organizationPartyIds[0] : null)}"/>
+                organizationPartyId:appScope?.defaultOrganizationPartyId || null}"/>
     </actions>
     <widgets>
         <section name="TemplatesNotAvailable" condition="!templatesContext">

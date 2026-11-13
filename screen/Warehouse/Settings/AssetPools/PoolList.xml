@@ -37,8 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.warehouse.PolicyServices.get#Pools" in-map="{appRoot:appRoot, term:term}"
                 out-map="found" transaction="force-new" ignore-error="true"/>
         <set field="poolRows" from="found?.poolRows || []"/>
-        <set field="newPool" from="{ownerPartyId:warehouse.activeOrganizationPartyId
-            || (warehouse.organizationPartyIds?.length === 1 ? warehouse.organizationPartyIds[0] : null)}"/>
+        <set field="newPool" from="{ownerPartyId:warehouse.defaultOrganizationPartyId || null}"/>
     </actions>
     <widgets>
         <container-box>

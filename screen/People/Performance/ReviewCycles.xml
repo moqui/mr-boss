@@ -88,7 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
             templateOptions = templates.filter(row => !row.ended).map(row => ({key: row.reviewTemplateId,
                 text: row.templateName + (people?.organizationPartyIds?.length > 1 ? ' · ' + row.organizationName : '')}))
             stateColors = {RcsDraft: 'grey-8', RcsActive: 'primary', RcsClosed: 'positive'}
-            single = people?.organizationPartyIds?.length == 1 ? people.organizationPartyIds[0] : null
+            single = people?.defaultOrganizationPartyId || null
             newCycle = {organizationPartyId: single}
             newTemplate = {organizationPartyId: single, selfAssessment: 'Y'}
             findValues = {show: showing}
