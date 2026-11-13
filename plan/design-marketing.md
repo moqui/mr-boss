@@ -1,5 +1,10 @@
 # IronStone BOSS — Marketing design
 
+Nov 13, 2026 — impl-marketing's P0 checks done (its F64–F89): Sales' Accounts mounted at Marketing/Leads/Accounts for
+the bulk action (§§2, 10); a campaign cost cites a purchase invoice item or a ledger entry of the campaign's
+organization, and no Accounting budget applies (§3); the shared door tablet is registered with CheckIn, Admin's
+shared devices being built (§9); a public tracking route reaches the authority through PASS's transport (§13.1).
+
 Nov 11, 2026 — implementation plan written ([impl-marketing.md](impl-marketing.md)) and its questions answered;
 the decisions of its §4 and the findings of its §6 are stated here: the audience import's own permission
 `MARKETING_AUDIENCE_IMPORT` (§§1.1, 4), the one-person-team self-approval flag (§§3, 5, 12), SMS in the build, last
@@ -228,6 +233,7 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | Responses | Marketing/Surveys/Responses | report | xml | Inspect scoped responses and aggregates | FormResponse | Commons owner; Customer Service §7 | U, R | parity | form/publication/date filters |
 | ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml | Read one historical response | FormResponse | Commons owner; Customer Service §7 | authorized response readers | parity | response ID |
 | Leads | Marketing/Leads | list | xml | Follow campaign lead handoff | SalesOpportunity | Sales §3 | Sales readers | new | campaign/source filters |
+| Accounts | Marketing/Leads/Accounts | list | xml | Add a Sales account's contacts to a list with evidence | Party (account) | Sales §4 | Sales readers; Add to list with A-audience | new | Sales scope |
 | LeadRules | Marketing/Leads/LeadRules | settings | xml | Route explicitly captured interest | N MarketingLeadRule | own | A, S; Sales routing grant | new | rule ID |
 | Customer360 | Marketing/Customers/Customer360 | 360 | xml | Inspect authorized engagement | Party | crosscut §3.2 | U | parity | party ID |
 | ContactDetail | Marketing/Contacts/ContactDetail | detail | xml | Inspect contact data and subscription links | Party | crosscut §3.1, Commons §6 | U | parity | party ID |
@@ -328,6 +334,11 @@ Budget approval is not a spend reservation or an automatic Accounting posting. P
 CampaignCost rows record independently identified expense allocations or manual non-ledger costs.
 Source-line allocations are unique, cannot exceed the eligible amount and follow corrections by
 reversal/successor entries. A cost may be linked manually or sourced from Accounting, never both.
+An Accounting source is a purchase invoice item or a ledger entry of the campaign's organization, read
+with the reader's own Accounting permission (ACCOUNTING_VIEW, or PAYABLE_VIEW for a payable); neither
+carries a campaign today, so the link is the CampaignCost row alone. Accounting's budgets are by GL
+account and period and do not apply to a campaign: the campaign budget stays Marketing's own
+(impl-marketing F81).
 `actualCost` is a reconciled summary in campaign currency, with rate/date evidence; inaccessible
 source details stay masked. No implicit aggregation of child and parent totals doubles the cost.
 `numSent` and the report's `qualifiedLeadCount` are derived summaries with a defined basis (§11),
@@ -1109,7 +1120,8 @@ Check-in is online in the first release; offline mode is later, on moqui-browser
 There is no camera scanning: `scan-input` takes a keyboard-wedge scanner or typed code, and the
 framework has no camera decoder, so a phone without a wedge scanner uses attendee lookup. Staff
 check in under their own sign-in; a shared door tablet uses the CX-DEVICE device credential limited
-to the CheckIn route group, with an idle timeout. Duplicate scans return the first attendance
+to the CheckIn route group, with an idle timeout: a display account holding only the check-in
+permission of a device group, on People's clocking kiosk pattern (impl-marketing F83). Duplicate scans return the first attendance
 result. Wrong-event, cancelled, expired or unconfirmed tickets cannot enter; manager overrides
 require a reason and never fabricate payment. TUI supports typed/scanned codes; phone layout shows
 the action and attendee without horizontal scrolling. **Needs:** MKT-EVENT; CX-DEVICE.
@@ -1191,7 +1203,8 @@ emphasize source form/event/send, intake date, qualification state and owner; ac
 lead/opportunity actions. MARKETING_VIEW alone gives aggregate handoff counts, not a pipeline or
 account-edit grant. Leads use Sales' proposed `mantle.sales.OpportunityServices`; no Marketing lead
 entity duplicates SalesOpportunity. A successful qualification is not a newsletter subscription.
-Marketing adds one bulk action on Sales Leads and Accounts, "Add to list (evidenced)", which files
+Marketing adds one bulk action on Sales Leads and Accounts (mounted at Marketing/Leads and
+Marketing/Leads/Accounts, and on Sales' own), "Add to list (evidenced)", which files
 L.request#Subscriptions for each selected contact with the chosen topic and evidence; it shows only
 with MARKETING_AUDIENCE_EDIT and never subscribes directly. Crosscut §3.29 row:
 
@@ -1479,7 +1492,10 @@ result is read through `marketing.getRegistration`, which reports the attempt's 
 Accounting's coordinator; there is no Marketing payment-result operation (X9). Marketing
 landing-page rendering uses the shared registered page renderer. Tracking redirect/pixel and
 signed provider callbacks are web scripts (the framework's mechanism; the scripts are mr-pass's,
-impl-marketing F55) calling K, not facade operations or BOSS screens (§8).
+registered by a conf of mr-pass's own, impl-marketing F55, F79) calling K, not BOSS screens or operations a
+page offers (§8). A remote frontend has no Mantle, so a script reaches K through PASS's transport as
+pages do, by two schema operations of its own whose only fields are the code or token, the visitor key,
+the site and the kind; the destination always comes from the authority.
 
 The authority derives organization, site, allowed form fields, campaign and destination from its
 publication/credential. Requests never select arbitrary party IDs, service names, backend URLs,

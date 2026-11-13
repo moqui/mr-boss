@@ -1,5 +1,22 @@
 # IronStone BOSS — Marketing implementation
 
+Nov 13, 2026 — P0 done: the checks left after the plan's review, F64–F89 (§6), against master as People, Maintenance,
+Admin P17–P19, Insights P11–P12, Admin's "screens down", Sales P1–P4 and the runtime/components/{base,addon,dev,test}
+layout left it. §1 "Expected of the earlier apps" now says what Sales P1–P4 and People built: Sales' mount row admits
+Marketing for Leads and LeadSources only, so P3 adds Accounts (at Marketing/Leads/Accounts, F64), widens LeadList's
+row selection to the audience editor and resolves each lead's contact (F65), and points the Commons contact record's
+Consent link at Marketing's mount (F67); handoff counts are Marketing's own captures, `find#Opportunities` needing a
+Sales read (F66); `store#LeadIntake` is checked at P13 against Sales P5 as merged (F68). Marketing's setup and demo go
+in files of their own (F69). P12 registers in the survey builder's two registries and builds on People's
+`open#Publication` (F70); P21 seeds a CalendarProjection (F71) and rests on Sales P6's user-facts provider (F86). P6
+reads bounces on both the VERP and the edge path and stores template bodies as `.html.fancy-locked` resources (F76,
+F78); P9 passes the profile's site to the unsubscribe token (F75); P1's list check is the non-mailbox branch of the
+list access (F77); P15's scripts are registered by a MoquiConf.xml of mr-pass's own and reach the authority by two
+operations (F79); P12 and P17 add ExternalAccess scopes and a kind (F80); P2 names the cost sources (F81); P19
+follows Sales P3's merge pattern and keeps a withdrawal on a collision (F82); P18 registers the door tablet now that
+Admin P18 is built (F83); P20 writes the campaign-sent annotation as a Mantle business event (F85); P22's consent
+provider, receipts and day limit need the framework or the user's call (F72–F74). P1–P3, P6, P9, P12, P13, P15 and
+P17–P22 changed in place; the design's §§2, 3, 9, 10 and 13.1 changed. The build order and the suites' runs in §4.
 Nov 11, 2026 — the open questions answered (§4): the budgets may rise by the plan's estimates as its phases land, the
 audience import names `MARKETING_AUDIENCE_IMPORT`, a one-person team may self-approve and dispatch under 500
 recipients by a policy flag that is off by default, SMS is in this build, last, and a ticket order of a seller whose
@@ -55,8 +72,9 @@ service family (F3–F8, F31, F33). Marketing is built on what is there (as foun
   classes and alert templates;
 - from PASS: the facade and operation registry, the Account app with its Email preferences page, the shared page
   renderer of Shop, and the hosted payment step of Shop's checkout;
-- from the three apps built before it (expected, §1; not in the tree yet): Sales' leads, lead intake, lead sources,
-  accounts and storeless order tax, and People's survey builder for a second app and its projected calendar kind.
+- from the three apps built before it (§1 "Expected of the earlier apps"): People's survey builder for any app and
+  its projected calendar kind (built); Sales' leads, accounts and lead sources for a second mount (P2–P4, built), and
+  its lead intake (P5), storeless order tax (P7), approvals (P9, P11) and user-facts provider (P6), being built.
 
 **Inputs.**
 - Designs:
@@ -177,20 +195,30 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     `Shared/MessageTemplates`, `MessageTemplateDetail` and `SendingProfiles` (P6), each with Marketing's mount; the
     Comms mounts wait for a Comms settings area (§7, F16).
   - §7 holds the design's later capabilities (§17, §21), the privacy provider, and the parts waiting on Admin P18.
-- **Expected of the earlier apps** (checked against their plans at the review, F53 and F54; P0 reads the code when
-  they are built):
-  - Sales, by its plan's phases:
+- **Expected of the earlier apps** (checked against their plans at the review, F53 and F54, and against the code on
+  Nov 13, F64–F71, F86; what is not yet merged is checked by the phase that needs it, against the Sales phase as
+  merged):
+  - Sales, as built (P1–P4 on master):
+    - `ironstone.sales` Sales.js `mountRoots` (:30-33) admits the Marketing root for `Pipeline/Leads` (→
+      `Marketing/Leads`) and `Settings/LeadSources` (→ `Marketing/Settings/LeadSources`) only; its `sharedLinks` hold
+      just those two, so a lead shows unlinked under Marketing and every transition stays Sales' guarded service.
+      P3 adds `Accounts/Accounts` (→ `Marketing/Leads/Accounts`), P19 `Accounts/Customer360` (→
+      `Marketing/Customers/Customer360`) (F64).
+    - LeadList has row selection (Assign, Disqualify) for a Sales editor only (`condition="canEdit"`), its key
+      `id@revision`, and a row names its account and no contact; AccountList has none (F65).
+    - `find#Opportunities` filters by one campaign and one source (`marketingCampaignId`, `dataSourceId`) and needs
+      a Sales read (F66); SalesAccess.js decides the scope, with `defaultOrganization`.
+    - Consent is read only on Sales' ContactDetail through the Commons contact record's Consent tab, whose link goes
+      to Comms' Consent for a contact administrator only (F67).
+    - Sales' setup is `data/BossSetupSalesData.xml` and its demo `BossYSalesAccountsDemoData.xml` and
+      `BossZSalesDemoData.xml`; the deny pattern's longest row is 244, 254 with `marketing` (F69).
+  - Sales, by its plan's phases (not merged; each checked at the Marketing phase named, F68):
     - impl-sales P5: `mantle.sales.OpportunityServices.store#LeadIntake`, a validated submission with its source
       kind and identity, campaign, tracking code, UTM source and medium, team queue and operation key; it writes
       SalesLeadIntake, applies the duplicate policy and the lead-source map (`store#LeadSourceMapping`), sets the
-      opportunity's campaign and SalesOpportunityTracking, and answers the first result for a repeated key.
-    - impl-sales P4: `find#Opportunities`, filtered by campaign and source, under the caller's own Sales scope.
-    - impl-sales P4, P2, P5 and P3: `Sales/Pipeline/Leads` and `Sales/Settings/LeadSources` (with UtmSourceMap) as
-      definitions another app root mounts with its own context; LeadList, with row selection, and AccountList
-      (`Sales/Accounts/Accounts`) taking a second mount's context and a bulk action, AccountList's row selection
-      being P3's here; `Sales/Accounts/ContactDetail` with consent read only.
-    - impl-sales P1: the `SALES_*` permissions those reads check (`SALES_VIEW`, `SALES_OPPORTUNITY_EDIT`,
-      `SALES_CONFIGURE`).
+      opportunity's campaign and SalesOpportunityTracking, and answers the first result for a repeated key (at
+      Marketing P13, against Sales P5 as merged); UtmSourceMap on LeadSources (P5).
+    - impl-sales P6: Mantle's active-organization user-facts provider (impl-sales F65), which P21's exposures use.
     - impl-sales P10, P11 and P13 (its §2): every placement, an acceptance by staff or on PASS and a direct order
       alike, through `mantle.order.OrderServices.place#Order`, the status change Shop's checkout makes, so one
       SECA sees every placement.
@@ -201,17 +229,17 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
       built ones do, and `SALES_ORDER_APPROVE` with Sales' Awaiting approval list (its §4), which P17's ticket
       order meets as every sales order does.
 
-    impl-sales names each of these in the phase given and in its §2 and §7, under these names; P0 reads the code.
-  - People, by its plan's phases:
-    - impl-people P16: the four survey screens (`Shared/SurveyForms`, `SurveyFormDetail`, `SurveyResponses`,
-      `SurveyResponseDetail`) reading a per-app context registration (the purposes, default forms, list and
-      response services, capabilities and links), with Customer Service's and People's registrations; the form
-      definition services in `mantle.party.FormDefinitionServices` (`create#Form`, `get#Form`, `rename#Form`,
-      `save#FormField`, `save#FormCondition`, `end#FormPart`, `publish#Form`), each checking the permission its
-      purpose names, with `CaseFeedbackServices` keeping its names over them; People's purposes private to assigned
-      respondents (F53).
-    - impl-people P12: the projected calendar kind of `CalendarDavServices.get#DavCollections`, generic over an
-      owner service (P21).
+    impl-sales names each of these in the phase given and in its §2 and §7, under these names.
+  - People, as built:
+    - impl-people P16: the four survey screens read the mounting app's row of mr-boss
+      `service/ironstone/shared/SurveyApps.js` `apps` (purposes, services, capabilities, links, words; Customer
+      Service's and People's), and each purpose is registered in Mantle's `mantle.party.FormPurpose` (edit and view
+      permissions, scope service, publication access kinds, own services; FormPublicationEntities.xml:72-104);
+      `mantle.party.FormDefinitionServices` has `create#`, `get#`, `find#Forms`, `rename#Form`, `save#FormField`,
+      `save#FormCondition`, `end#FormPart` and `publish#Form`, and `FormPublicationServices` `guard#FormResponse` and
+      `open#Publication`; no option score (F70).
+    - impl-people P12: the projected calendar kind, a `mantle.work.calendar.CalendarProjection` row seeded by its
+      owner naming a service on `define#ProjectionOwner` (P21, F71).
   - Maintenance: nothing.
 - **Order.** One order for this plan, in the design's stages (§17), each ending at a gate. Mantle, framework and
   PASS work goes in the phase that first needs it; a phase marked PASS is built in mr-pass over that phase's Mantle
@@ -251,8 +279,12 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   release; P7's app and operations carry P12's, P14's, P16's and P17's pages; P9's recipient hand-off is what P10's
   variants, P11's send steps, P12's invitations and P17's notices use; P12's publication is P13's lead form and
   P16's registration questions; P15's events are what P20 attributes; P20's SECA handler is first made in P11, for
-  the order-placed trigger (§4). A phase of a side-by-side pair that appends to the same file as the other
-  (BossSetupData.xml, BossUsersDemoData.xml, Mantle's MarketingEntities.xml) rebases on it before merging.
+  the order-placed trigger (§4). Marketing's BOSS setup goes in a file of its own, `data/BossSetupMarketingData.xml`,
+  and its demo in `data/BossZZMarketingDemoData.xml`, loading after Sales' demo, as Sales' and Maintenance's did, so
+  its appends and Sales' track do not meet; only the deny pattern's rows are edited in BossSetupData.xml (P1; F69). A
+  phase of a side-by-side pair that appends to the same file as the other (Marketing's setup or demo file, Mantle's
+  MarketingEntities.xml) rebases on it before merging; so does a Marketing phase touching a file a Sales phase changes
+  (Sales.js, Leads.xml, Accounts.xml).
 
   Nothing is sent to a real recipient before its guards exist: P3 builds evidenced membership and the ledger's
   suppression refusal, P6 the profile, its readiness and the bounce intake, P7 sends only a rate-limited
@@ -376,7 +408,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 11 (§6 F1–F63); the checks below left |
+| P0 Checks | all (read) | — | done Nov 13 (§6 F1–F89) |
 | P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | — |
 | P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | — |
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | — |
@@ -405,7 +437,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 Verify the design's riskiest assumptions against the code before building. Each result is a row in §6 and, where it
 changes the design, an edit there. F1–F52 were found on Nov 11 while writing this plan; the design edits they call
-for in design-marketing were made then, and those in shared files are listed for the review. Still to check:
+for in design-marketing were made then, and those in shared files are listed for the review. The checks below were done
+Nov 13, 2026 (F64–F89), against master; those on Sales phases not yet merged are named in the Marketing phase that needs
+them (F68):
 
 - **The three earlier apps, when built** (§1 "Expected of the earlier apps"): `store#LeadIntake`'s parameters, what
   it answers for a duplicate and for a repeated key, and whether it takes a campaign and tracking code;
@@ -483,8 +517,12 @@ seeds); stage M0.
   - MarketSegment keeps its existing `ownerPartyId` as the filter field (§4); ContactList its `ownerPartyId`.
   - Filter rows for the three in `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` (MantleSetupData.xml:253), an unowned or
     `_NA_` row readable only to the app administrator.
-  - The organization check added to the list and consent services for a list that is not a mailbox (P0), so a
-    direct call is refused as a mount is.
+  - The organization check added to the list and consent services for a list that is not a mailbox (F77), so a
+    direct call is refused as a mount is: in `get#ContactListAccess`'s non-mailbox branch (ContactListServices.xml
+    :116-119, today header and post for anyone), which `update#`, `find#ContactLists`, `find#ContactListParties`,
+    `join#`, `add#`, `remove#`, `decline#ContactListParty` and `set#ContactListPartyDelivery` already ask, and an owner
+    of the caller's organizations required by `create#ContactList` (:197, :220); a contact administrator and `ADMIN`
+    keep every list, for Comms' Consent screens; the internal services Shop and the list send call are unchanged.
 - **Adoption** (design §15.4): `mantle.marketing.CampaignServices.preview#Adoption` and `apply#Adoption`: the
   campaigns, lists and segments with no owner, each assigned to an organization the administrator may work in, one
   result per record; nothing unowned is sendable or editable before it. Unknown historical consent stays unknown.
@@ -509,7 +547,7 @@ seeds); stage M0.
   `MARKETING_CONFIGURE`, fix place Marketing/Settings as a `fixRoute` key of Admin's mount. P1
   answers unowned lists and segments awaiting adoption; later phases add theirs (no policy, P2; no ready sending
   profile, P6; a mount with nothing published, P7; failed jobs and captures, P9–P17).
-- **Demo data.** BossUsersDemoData gains a user per group (`marketing.author`, `.audience`, `.approver`,
+- **Demo data.** Marketing's demo file (F69) gains a user per group (`marketing.author`, `.audience`, `.approver`,
   `.dispatch`, `.events`, `.analyst`, `.reader`, `.admin`), each a member of ORG_ZIZI_RETAIL, and one author of
   ORG_ZIZI_SERVICES only, for the isolation scenarios.
 - **Specs.**
@@ -535,7 +573,9 @@ RecordFiles hosts), §18 (the campaign plan print); MKT-CAMPAIGN, MKT-APPROVAL, 
 - **Mantle `mantle.marketing.CampaignServices`** (design §14.2 C): `find#Campaigns`, `create#Campaign`,
   `store#Campaign`, `get#Campaign`, `store#CampaignParty` (dated role rows; the organization row mirrored to
   `organizationPartyId`), `store#CampaignBudget`, `store#CampaignCost` and `find#CampaignCosts` (CampaignCost: a
-  manual cost or an Accounting source line, never both, corrected by reversal; P0 names the sources),
+  manual cost or an Accounting source line, never both, corrected by reversal: a purchase invoice item or an
+  AcctgTransEntry of the campaign's organization, read with the caller's `ACCOUNTING_VIEW`, or `PAYABLE_VIEW` for a
+  payable; no Accounting budget applies, F81),
   `store#CampaignAssociation` (CampaignAssociation: a typed, dated link to a list, segment, promotion, event, form
   or page of the same organization), the transitions over the native status flow (approve, start, complete with
   pending-work counts, cancel), `duplicate#Campaign`, `store#MarketingPolicy` and `preview#MarketingPolicy`
@@ -605,10 +645,21 @@ ContactDetail's Add to list; MKT-AUDIENCE, MKT-CONSENT (the suppression and scop
   `Shared/Suppressions` mounted at Audiences/Suppressions. QuickList; Home's audience card; the palette's lists
   source.
 - **Sales** (§1, the connection built here; owner contract): the bulk "Add to list (evidenced)" on Sales' LeadList and
-  AccountList (`Sales/Pipeline/Leads`, `Sales/Accounts/Accounts`), shown only with `MARKETING_AUDIENCE_EDIT`,
-  AccountList gaining row selection for it (LeadList has it from impl-sales P4), filing `request#Subscriptions` per
-  selected contact, each on its own; Sales' ContactDetail, where consent is read only, links to this Consent mount.
-  Marketing's own ContactDetail and its Add to list are P19's.
+  AccountList (`Sales/Pipeline/Leads`, `Sales/Accounts/Accounts`), shown only with `MARKETING_AUDIENCE_EDIT`, filing
+  `request#Subscriptions` per selected contact, each on its own (F64, F65):
+  - Sales.js `mountRoots`' Marketing row gains `Accounts/Accounts` → `Leads/Accounts`, mounted at
+    `Marketing/Leads/Accounts` (design §2), so the action is offered under both roots;
+  - LeadList's `row-selection` admits the audience editor too, its Assign and Disqualify actions taking
+    `condition="canEdit"` and the new action the audience capability (xml-form-3.xsd :177-182); AccountList gains row
+    selection for it; both render in qvt and tui only, as row selection does;
+  - a lead row names no contact (SalesOpportunities.js :841-884), so the action resolves each selected lead's current
+    contact rows and an account's contacts through Sales' services under the caller's Sales read, a lead with no
+    contact or address named as that item's failure.
+
+  The Commons contact record's Consent tab (template/ContactRecord.xml:876-889, owner contract Commons), which every
+  app's ContactDetail includes and which links to Comms' Consent for a contact administrator only, links a holder of
+  `MARKETING_CONSENT_EDIT` to this Consent mount; Sales' ContactDetail gets it so (F67). Marketing's own ContactDetail
+  and its Add to list are P19's.
 - **Demo data:** a newsletter and an announcement list of ORG_ZIZI_RETAIL with accepted, pending, unsubscribed and
   unevidenced legacy members, a single-use list, and two suppressions (a hard bounce, a complaint).
 - **Specs:** Mantle `test/marketing/Audiences` (a request is pending without confirmation; an accepted one needs
@@ -616,7 +667,8 @@ ContactDetail's Add to list; MKT-AUDIENCE, MKT-CONSENT (the suppression and scop
   before); `test/party/Suppressions` (a suppressed destination refused at the ledger's attempt; a new subscription
   does not end it; ending needs the review permission); the Consent spec's scoped grant against a global
   withdrawal; BOSS `MarketingLists` (ListDetail's one qvt render; the Sales bulk action refused without the
-  permission, on the context service, with no second render of Sales' lists); Sales' specs unchanged.
+  permission, on the context service, with no second render of Sales' lists); Sales' specs unchanged but
+  `SalesAccess`' Marketing links case, which gains `Leads/Accounts`.
 - **Usable when** (`test/acceptance/Marketing/MarketingAudienceWalk`; design §16.3 scenario 2): `marketing.audience`
   makes a list, adds three contacts with evidence and two without, sees two pending; a salesperson without the
   audience permission sees no bulk action and one with it files requests that arrive pending; a complaint
@@ -695,8 +747,11 @@ Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §1
 - **Comms' `mantle.party.MessageServices`** (design §14.2 G; owner contract):
   - MessageTemplate (organization, channel, purpose, locale, dated content with declared variables and fallbacks,
     its EmailTemplate for email) and `find#Templates`, `create#Template`, `store#Template`, `store#TemplateContent`,
-    `preview#Template`, `publish#Template`, `end#Template`; content rendered with `fancy-locked-html` over the
-    allowlisted values only (P0).
+    `preview#Template`, `publish#Template`, `end#Template`; content rendered with `fancy-locked-html` (F78): the
+    renderer renders only by location, so each dated content is a `dbresource://` file named `.html.fancy-locked`,
+    rendered through `ec.resource.template(location, map)` with a map of the declared variables and their fallbacks
+    only; an unknown name renders empty (null), so an undeclared variable is refused when the content is stored, by
+    the template service's own parse, not at render.
   - MessageSendingProfile (organization, channel, the infrastructure binding chosen from what Admin approved, sender
     and reply-to, purpose, throttle, quiet hours and zone, tracking policy, bounce domain, dates) and
     `find#SendingProfiles`, `store#SendingProfile`, `check#SendingProfile` (the readiness of design §12: sender and
@@ -709,8 +764,13 @@ Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §1
     (delivered, soft bounce, hard bounce, complaint), each recorded once and never moving an earlier fact back.
   - `process#DeliveryReport` and the email ECA `DeliveryReportIntake` on the bounce accounts: the VERP key finds the
     delivery; a permanent failure or a complaint becomes a receipt fact and one MessageSuppression; a transient one a
-    soft failure; an unknown key or an unreadable report is logged and left, and the rest go on. A message the edge
-    relay marks bounced reaches the same service (F18).
+    soft failure; an unknown key or an unreadable report is logged and left, and the rest go on (F76). The bounce
+    account is a hosted account made in Comms' account wizard (basic-comms Settings/MailAccounts/Add), which the
+    plus-tag lookup finds with the tag stripped (moqui-mail delivery.rs:66-104); the profile's readiness checks it
+    exists. Through an edge relay with `edge_mail_bounce_domain` set the edge replaces the envelope sender with its
+    own (edge_mail.rs:621-627) and marks the EmailMessage `ES_BOUNCED` itself (:1047-1085), so the per-call VERP
+    address is lost there: an EmailMessage turning `ES_BOUNCED` reaches `process#DeliveryReport` too, matched to its
+    delivery by `providerMessageId` (F18).
 - **Registrations:** Marketing's readiness (P1) gains the organization's sending profiles, read through
   `check#SendingProfile` as the viewer, with Settings/SendingProfiles as the fix; a provider of Comms' own waits
   for Comms' settings area (§7). The intake is a registered recovery (`moqui.server.RecoveryDescriptor`, as
@@ -828,8 +888,9 @@ jobs), §18 (the delivery report); MKT-SEND, MKT-TRANSPORT; CX-DELIVERY.
   recipient's failure never stops the next), `pause#Send`, `cancel#Send` (in-flight counts shown), `find#Recipients`,
   `get#Recipient`, `retry#Recipients` (asks the ledger to try its known retryable failures again) and
   `reconcile#Recipient` (records the outcome on the uncertain delivery, as the mail queue does). Each recipient's
-  message carries the List-Unsubscribe headers and link, its token made for the sending organization's site so the
-  link names that site's Email preferences page (F56); ContactListCommStatus and the CommunicationEvent are linked
+  message carries the List-Unsubscribe headers and link, its token made by `create#UnsubscribeToken` with `siteId` the
+  sending profile's permitted site, which names that site's Email preferences page whatever sites the recipient
+  belongs to (ConsentServices.xml:1166-1180, :1225-1237; F56, F75); ContactListCommStatus and the CommunicationEvent are linked
   as the list send links them, with the approved subject on both (F8). A retry of the worker after a stop queues
   nothing twice: the ledger answers the delivery it already holds for the key, and an uncertain one is never sent
   again.
@@ -918,9 +979,11 @@ gate 4 (M4).
 Design §10 Surveys and SurveyDetail, SurveyDistribution, Responses and ResponseDetail, §13 SubmitForm, §18 (the
 survey invitation and results); MKT-FORMS, MKT-PUBLIC; stage M5.
 
-- **Commons' form publication** (owner contract; F20): in `mantle.party.FormPublicationServices`,
-  `store#Publication`, `preview#Publication`, `publish#Publication`, `close#Publication`, `create#Invitations` and
-  `accept#Submission` over the built FormPublication and FormInvitation, with FormSubmission (the request identity,
+- **Commons' form publication** (owner contract; F20, F70): in `mantle.party.FormPublicationServices`, beside
+  People's `open#Publication` (which offers a published form by an access kind its purpose admits) and extending it
+  rather than a second publishing verb, `store#Publication` (the site, opening interval and context),
+  `preview#Publication`, `close#Publication`, `create#Invitations` and `accept#Submission` over the built
+  FormPublication and FormInvitation, with FormSubmission (the request identity,
   the response, the verified party if any, the status of its effects); the public purposes lead and registration
   beside survey, case feedback and People's private ones; a published anonymous response guarded as an invited one
   is. The form definition services are not here: they are `mantle.party.FormDefinitionServices`, moved there by
@@ -929,18 +992,20 @@ survey invitation and results); MKT-FORMS, MKT-PUBLIC; stage M5.
   made the four shared survey screens (`Shared/SurveyForms`, `SurveyFormDetail`, `SurveyResponses`,
   `SurveyResponseDetail`) read their context from the mounting app's registration. This phase adds to that and
   changes nothing of the generalization:
-  - Marketing's context registration, the third after Customer Service's and People's, answered by
-    `ironstone.marketing.ContextServices`: an organization's forms of the survey, lead and registration purposes,
-    an empty default form, the services that list its forms and read its responses, `MARKETING_CONTENT_EDIT` to
-    change one and `MARKETING_AUDIENCE_VIEW` or `MARKETING_REPORT_VIEW` to read answers, with no case response and
-    no People response ever in reach;
-  - the permission each Marketing purpose names, so `FormDefinitionServices` admits a holder of
-    `MARKETING_CONTENT_EDIT` for a form of a Marketing purpose and of no other;
-  - option scores for a summary (design §10) on the shared definition, if P0 finds People's scorecards and
-    assessments did not add them.
+  - Marketing's row in mr-boss `service/ironstone/shared/SurveyApps.js` `apps`, the third after Customer Service's
+    and People's: the survey, lead and registration purposes, `FormDefinitionServices`' `find#Forms`, `create#Form`
+    and the rest as its services, Marketing's response services, the capability from Marketing's context that shows
+    the edit actions, its routes and words (F70);
+  - three `mantle.party.FormPurpose` rows in Mantle seed data, with their DbFormPurpose and FormPublicationPurpose
+    enumerations (`FppSurvey` exists; the lead and registration ones are new): edit `MARKETING_CONTENT_EDIT`, view
+    `MARKETING_AUDIENCE_VIEW,MARKETING_REPORT_VIEW`, a Marketing scope service answering the organizations, and the
+    access kinds each admits, so `FormDefinitionServices` admits a Marketing editor for these purposes and no other,
+    and no case or People response is ever in reach;
+  - option scores for a summary (design §10) on the shared definition: People did not add them (F70).
 - **Mantle `mantle.marketing.MarketingFormServices`** (design §14.2 F): thin wrappers adding the campaign link and
   the promotional eligibility of invitations: `store#Publication`, `publish#Publication`, `create#Invitations` (a
-  send of P9 to an audience, each invitation an ExternalAccess capability), `find#Responses`, `get#Response`,
+  send of P9 to an audience, each invitation an ExternalAccess capability of the FormInvitation kind, which gains a
+  Marketing scope beside `CaseFeedback` with the purpose's issuer permission, ExternalAccess.js :131-145; F80), `find#Responses`, `get#Response`,
   `get#ResponseStats`.
 - **PASS** (operations `marketing.getForm`, `marketing.submitForm`): MarketingPortalServices `get#Form` and
   `submit#Form` (the publication's effective form rendered on the server; hidden and unknown fields refused; the
@@ -981,8 +1046,9 @@ MKT-LEAD; SAL-CRM. Every part of this phase is a connection to Sales (§1).
   source and team queue, published from SurveyDistribution; design-sales §11's LeadIntakeForms stays Sales' later
   screen (§4; impl-sales §5 Q9 agrees).
 - **Screens:** Leads, Sales' `Sales/Pipeline/Leads` mounted with Marketing's campaign and source filters over
-  `find#Opportunities` and the user's own Sales visibility (`MARKETING_VIEW` alone gives handoff counts, no
-  pipeline); LeadRules (LeadRuleList, LeadRule, LeadRulePreview, ReprocessCapture); LeadSources, Sales'
+  `find#Opportunities` (one campaign and one source a call) and the user's own Sales visibility; `MARKETING_VIEW`
+  alone gives handoff counts, no pipeline, counted from Marketing's own MarketingLeadCapture rows, since
+  `find#Opportunities` needs a Sales read (F66); the campaign column (an id today, Leads.xml:186) shows its name; LeadRules (LeadRuleList, LeadRule, LeadRulePreview, ReprocessCapture); LeadSources, Sales'
   `Sales/Settings/LeadSources` mounted, its UtmSourceMap offering Marketing's vocabulary (P2) for source and medium;
   CampaignDetail's Results tab gains handoff counts.
 - **Sales' lead forms** (owner contract; impl-sales §7): NewLead and the lead's header offer the campaign and its
@@ -990,6 +1056,8 @@ MKT-LEAD; SAL-CRM. Every part of this phase is a connection to Sales (§1).
   codes from P15) under the user's Marketing scope; a user without `MARKETING_VIEW` sees the stored value only.
 - **Registrations:** the capture job with `operation` and `operation-ref` and its `JobRegistration`; failed captures
   as a registered recovery (`RecoveryDescriptor`) so an operator sees them in Admin beside the others.
+- **Checked first** (F68): `store#LeadIntake`'s parameters, its answer for a duplicate and a repeated key, and its
+  campaign and tracking code, against Sales P5 as merged; this phase's text changes where they differ.
 - **Specs:** Mantle `test/marketing/LeadCapture` (one capture per rule and source event through a resubmission and
   a job retry; a failed handoff keeps the response and retries into one lead; an unpublished field never reaches
   Sales; a capture grants no consent); BOSS `MarketingLeads` (LeadRules' one qvt render; the Leads mount refused
@@ -1048,10 +1116,15 @@ MKT-TRACKING, MKT-CONSENT; gate 5.
   (MarketingTrackingEvent: the code, an opaque visitor key, the site, the kind, the recipient only with
   `PcpTracking`, and what marks a known automated fetch); TrackingCodeVisit written too when the request has a local
   visit.
-- **The public handlers** (F55): the redirect and the pixel as web scripts of mr-pass, registered on its webapp as the
-  framework's `servlet` elements (P0), which hand the code or token, the visitor key and the site to
-  `record#TrackingEvent` on the authority over the facade's transport, so a remote frontend records there with no Mantle
-  of its own; they are not operations a page may call with other fields. Each is rate limited by client and code, sets
+- **The public handlers** (F55, F79): the redirect and the pixel as web scripts of mr-pass, registered by `servlet`
+  elements in a `MoquiConf.xml` of mr-pass's own (its first outside `test/`, loaded on the authority and on a remote
+  frontend alike), with a `<rate-limit>` for their paths as mr-boss MoquiConf.xml:29-33 sets one. They decline the
+  session (`ec.web.declineSession()`), run as the anonymous request (no `runAsSystem` in a web script), set the visitor
+  key by a `Set-Cookie` header, and reach the authority through PASS's `Transport.js` `call()` (in process, REST or
+  gRPC) with two schema operations, `marketing.resolveTrackingLink` and `marketing.recordTrackingEvent`, whose only
+  fields are the code or token, the visitor key, the site and the kind, mapped to `TrackingServices`, so a remote
+  frontend records there with no Mantle of its own; the destination comes only from the authority. They are not
+  offered to pages, and each is added to the three `TOKEN_WRITES` lists if it writes under a token (impl-sales F73). Each is rate limited by client and code, sets
   nothing but the visitor key, and answers the redirect or the image even when recording fails. A disabled or expired
   link answers its configured safe destination or a neutral page, never a caller's URL. A send's links are rewritten at
   preparation to personalized opaque tokens only for a recipient with `PcpTracking`; the others get direct links and no
@@ -1142,8 +1215,12 @@ Design §9 RegistrationSetup's order rules, Registrations and RegistrationDetail
 - **PASS** (operations `marketing.reserveRegistration`, `completeRegistration`, `startRegistrationPayment`,
   `getRegistration`, `cancelRegistration`): Register (RegistrationChoice, RegistrationAnswers, RegistrationPayment
   on the hosted step Shop's checkout uses, RegistrationReceipt) and Registration (MyRegistration with the ticket and
-  entry QR, CancelRegistration), by verified account or a registration-scoped capability.
+  entry QR, CancelRegistration), by verified account or a registration-scoped capability: an ExternalAccess kind
+  `EventRegistration` in ExternalAccess.js `records` with the scopes `RegistrationView` and `RegistrationCancel`,
+  issued by the registration services (F80).
 - **Hosts:** EventRegistration as a Chatter and RecordFiles host (EventRegistrationContent).
+- **Demo data:** ORG_ZIZI_RETAIL's `PartyAcctgPreference.taxGatewayConfigId` set to `LOCAL`, so the storeless paid
+  workshop is taxed by X1 (none is set today; the store's LOCAL is its own, F88).
 - **Screens:** Registrations (RegistrationFind, Attendees, StaffRegistration, RegistrationBatch); RegistrationDetail
   (Registration, Answers, Attendance, RegistrationChange); Home's registrations card.
 - **Specs:** Mantle `test/work/EventRegistrations` (two reservations of the last seat: one held, one waitlisted; a
@@ -1166,8 +1243,7 @@ Design §9 RegistrationSetup's order rules, Registrations and RegistrationDetail
 
 ### P18 — Check-in
 
-Design §9 CheckIn; MKT-EVENT; CX-DEVICE; gate 6. The shared-device part is planned from design-admin §6 and
-impl-admin P18, which is not built (P0).
+Design §9 CheckIn; MKT-EVENT; CX-DEVICE; gate 6. Admin P18's shared devices are built (F83).
 
 - **EventRegistrationServices** `preview#CheckIn` and `checkIn#Registration`: the entry credential or an attendee
   lookup, the eligibility in words (confirmed, paid, used, cancelled, wrong event), one attendance fact per
@@ -1175,12 +1251,16 @@ impl-admin P18, which is not built (P0).
   payment.
 - **Screens:** CheckIn (EntryLookup with `scan-input` on a `density="handheld"` screen, EntryDecision, RecordEntry),
   online only, its terminal twin taking a typed or scanned code; RegistrationDetail's Attendance.
-- **The shared door tablet:** an artifact group holding CheckIn and its transitions alone, registered as a device
-  route group when Admin P18 lands; until then CheckIn runs under a staff sign-in on a phone, which is all the first
-  release needs (§4).
+- **The shared door tablet** (F83; §4), on People's clocking kiosk (BossSetupData.xml:5672-5700): an artifact group
+  `BOSS_DEV_MKT_CHECKIN` holding CheckIn and its transitions alone; the `moqui.security.DeviceRouteGroup`
+  `MARKETING_CHECKIN` (owner Marketing, home `/apps/Marketing/Events/CheckIn`, parameter the event occurrence); and a
+  display group `BOSS_MARKETING_CHECKIN_DEVICE` holding a new `MARKETING_CHECKIN` permission and a bundle opening
+  CheckIn, its transitions and the two services alone, which `preview#CheckIn` and `checkIn#Registration` accept
+  beside `MARKETING_EVENT_MANAGE` for the device's occurrence only. Staff still check in under their own sign-in.
 - **Specs:** Mantle `test/work/EventCheckIn` (a second scan answers the first; a cancelled, unconfirmed or
   wrong-event ticket refused; a substituted attendee's old credential refused; an override recorded with its
-  reason).
+  reason; a `MARKETING_CHECKIN` holder refused another occurrence); BOSS `MarketingAccess` gains the device group's
+  case (CheckIn admitted, every other Marketing screen refused).
 - **Usable when** (`test/acceptance/client/Marketing/MarketingCheckInWalk`, at 390 px; scenario 14): `marketing.events`
   checks in an attendee by code and another by name on a phone without horizontal scrolling, a repeat shows the
   first time, a cancelled ticket is refused, and cancelling the event stops its pending reminders.
@@ -1197,9 +1277,12 @@ Design §7, §10 Customer360 and ContactDetail; MKT-CAMPAIGN (associations), MKT
 - **Engagement:** `MarketingWorkspaceServices.get#Engagement`: a party's campaigns, memberships, sends and observed
   engagement, submissions, registrations, promotion use and consent, each source answered only with its own
   permission and omitted without it.
-- **Party merges** (X15; design §10; P0): `merge#Parties`' guards extended for Marketing's records: memberships,
-  consent and suppressions follow the surviving party with a withdrawal or suppression of either kept; recipients,
-  enrollments, registrations and captures are moved or the merge is refused naming them, as P0 lists.
+- **Party merges** (X15; design §10; F82), on Sales P3's pattern: a refusal with its reason code in mr-mantle
+  PartyMerge.js `rules()` and a move block in DuplicateServices.xml `merge#Parties` (as :1114-1123). ContactListParty,
+  PartyConsent and ContactListToken are moved today, but a ContactListParty key collision keeps the surviving party's
+  row (:1022), so a withdrawal on the merged party is lost: the collision keeps the more restrictive state (a
+  withdrawal or unsubscription wins). MarketSegmentParty, MessageSuppression, SubscriptionRequest and CampaignRecipient
+  are moved; an enrollment or a registration that is not ended refuses the merge, naming it; captures are moved.
 - **Screens:** Promotions and the three others at design §2's paths; Customer360 with Marketing's Engagement tab
   primary (the crosscut context Commerce and Customer Service mount, screen/Commerce/Customers.xml:27);
   ContactDetail, Commons' contact form mounted with Add to list (P3) and the Consent link.
@@ -1239,7 +1322,10 @@ MKT-TRACKING (attribution), MKT-REPORT.
   rows; a campaign dashboard; alert templates (a failure or complaint spike, a bounce rate over a threshold,
   uncertain deliveries older than N hours); the weekly campaign digest; attention providers (sends awaiting
   approval, failed and uncertain deliveries, held registrations); flow targets for the customer map's Marketing
-  steps; the campaign-sent business annotation (P0). The funnel stays Insights' (§7): `Marketing.Visits` is the
+  steps; the campaign-sent business annotation, a Mantle business event `CampaignSent` added to the fixed table of
+  mr-mantle BusinessEvents.js and registered by `release#Send` and the winner release, since `create#Annotation`'s
+  business source needs `REPORT_BUSINESS_ADMIN`, which only `ADMIN` holds, and `record#BusinessEvent` writes after
+  the commit with authorization off (BusinessEventServices.xml:17-30; F85). The funnel stays Insights' (§7): `Marketing.Visits` is the
   visit step it and Sales' PipelineAnalysis read.
 - **Commerce** (impl-commerce §7): conversion on Home and OnlineSales from the attribution rows.
 - **Screens:** Reports (ReportCatalog, ReportDefaults) and CampaignPerformance, DeliveryAnalysis, AudienceGrowth and
@@ -1270,13 +1356,16 @@ MKT-SHELL, MKT-SYNC, MKT-ASSIST; gate 7.
   screen/Projects/Projects/ProjectDetail/Plan/Calendar.xml:127) with the events of authorized campaigns and the
   read-only items of `MarketingWorkspaceServices.get#CalendarItems` (campaign windows, scheduled sends, sequence
   milestones, approved publication dates); only an event is dragged, through `update#EventOccurrence`; a send opens
-  SendDetail; the terminal twin is the dated agenda. The read-only projected CalDAV collection "Campaign calendar",
-  registered on the projected kind People built (impl-people P12; P0).
+  SendDetail; the terminal twin is the dated agenda. The read-only projected CalDAV collection "Campaign calendar": a
+  Mantle seed row `mantle.work.calendar.CalendarProjection` `MarketingCampaigns` whose `ownerServiceName` is
+  `MarketingWorkspaceServices.get#CampaignCalendar`, implementing `define#ProjectionOwner` (`admitted` for a holder
+  of `MARKETING_VIEW`; the event maps of the authorized campaigns' windows, sends and milestones; F71).
 - **Shell:** QuickCreate (QuickCampaign, QuickSend, QuickList and QuickEvent as mounts of their forms); the Today
   and palette sources complete, each failing by name alone; `record-lookup` for MarketingCampaign, CampaignSend and
   EventRegistration and `call-context` with the caller's upcoming registrations; the "Log as note" and "Send as
   message" response actions.
-- **Assist:** the three skills with `screens:`, `skill/aliases.json` (campaign, send, list, segment) and
+- **Assist:** the exposures rest on Mantle's active-organization user-facts provider, which Sales P6 builds (F86);
+  the three skills with `screens:`, `skill/aliases.json` (campaign, send, list, segment) and
   `test/skill-retrieval.json` cases; SendDetail's "Why were recipients excluded?" prompt.
 - **Specs:** BOSS `MarketingShell` (a failing provider named and the rest answered; no address or token in any
   shell row; Calendar's one qvue render); Mantle `test/work/CalendarDav` gains the projected collection (a device
@@ -1294,9 +1383,16 @@ built (F19). SMS is in this build, last, after the first release's gate (§4).
 - **The ledger's SMS channel** (Comms', owner contract): `MdcSms`, handing a delivery to
   `org.moqui.SmsServices.send#SmsMessage` with `isPromotional`, from the profile's number; its answer is the
   delivery's hand-off outcome, and an uncertain text is never sent again. The framework keeps no row for such a
-  text and reports nothing after the hand-off (F57): a later receipt is recorded as a delivery fact where P0 finds
-  the bridge reports one by `messageId`, and otherwise DeliveryAnalysis shows hand-off outcomes for SMS and the
+  text and reports nothing after the hand-off (F57): a receipt for a direct text reaches `note#DeliveryReceipt`,
+  which finds no ChatBridgeDelivery row and drops it (F73), so DeliveryAnalysis shows hand-off outcomes for SMS and the
   receipt is a framework ask (§7).
+- **The framework, first** (F72–F74; §5 Q6, the user's call): an `sms-consent` provider is declared only in an app
+  root's `<shell-providers>` and asked of the apps the current user may open (moqui-core screen/shell.rs:172-187,
+  :466-491, :521-563), so Mantle cannot register one and a dispatch running as the system may find none and be
+  refused; and a text with no user counts against `smsSystemMaxPerDay` (500 a day, shared with sign-in codes), one
+  with a user against that user's 200 and the 2000 of everyone, and needs the number granted to the user (call/Sms.js
+  :36, :301-340). The recommended answer: a conf-level `sms-consent` provider a component registers (Mantle's), asked
+  whoever sends, and a day limit per sending number for a promotional text, in mr-moqui in this phase.
 - **Mantle's `sms-consent` answer** (F57): the hook gives only the two numbers, so the topic is not its to check.
   The ledger's attempt checks `PcpSms` consent on the topic and the suppression, as for email, before the call;
   the provider answers yes only for a number whose party holds `PcpSms` consent with the organization that owns
@@ -1365,6 +1461,12 @@ design-marketing.md or the owner's design.
 | Nov 11, 2026 | SMS is in this build, last (P22, gate 8), after the first release's gate. The phase order of §1 stands as written | The user's call, as recommended: nothing gates it, and its specs run on the channel's test provider. A deployment still needs a messaging bridge. Two P0 checks may send part of it back to the framework: a receipt after the hand-off, and the day limit a campaign's texts count against (F57) |
 | Nov 11, 2026 | Store-sold tickets are later: this build sells tickets on PASS Register only, storeless unless the event's policy names a store (P17); a ticket in a Shop cart with other products is not built (§7) | The user's call, as the design recommended (design §21.4): it waits for a later Shop design; X9 settles payment either way |
 | Nov 11, 2026 | The seller's SalesPolicy approval setting is respected for a ticket order: where it is on, the paid order is not auto-approved and stays placed until a holder of `SALES_ORDER_APPROVE` approves it; the registration and the ticket follow the approval, and the registrant sees the registration pending, payment received, with no ticket meanwhile (P17). A pre-approval warning stops the order's auto-approval as built, with the setting off too, and the registration then waits in the same way; with the setting on the warnings are shown on the approver's screen only (corrected by the user the same day) | The user's call (impl-sales §4, its P9 and P11): the setting is respected globally, whichever app placed the order. The ticket order is approved through `autoApprove#Order`, where Sales' rule is, so with the setting off, its default, the attempt's authorization approves and confirms at once |
+| Nov 13, 2026 | The build order: Sales P1–P6 first, then Marketing as a second track beside Sales. Marketing P13 waits for Sales P5, Marketing P17 for Sales P7, P9 and P11, and Marketing P20 for Sales P19. At most three phase workers run at once; each phase is reviewed by a fresh agent and merged on its focused specs | The user's call; the same row is in impl-sales §4. Marketing keeps its own order (§1) and side-by-side pairs; a Marketing phase touching a file a Sales phase changes rebases on it (§1) |
+| Nov 13, 2026 | The full suites run once at the end of the build, then Sales' and Marketing's acceptance tests once | The user's call, as People's and Maintenance's builds did; a phase's Done (§2) is its focused specs and their suites' budgets, and its acceptance tests are written, not run |
+| Nov 13, 2026 | CheckIn's shared door tablet is built in P18, Admin P18 being built: a device route group, a display group and a `MARKETING_CHECKIN` permission on People's clocking kiosk pattern. This replaces the Nov 11 row that waited for Admin P18 | The user's call (Nov 13, as recommended). The plan's choice (F83); the new permission is §5 Q7, the user's call |
+| Nov 13, 2026 | Sales' Accounts is mounted at `Marketing/Leads/Accounts` (P3) for the bulk action, beside Leads; design §2 gains the row | The user's call (Nov 13, as recommended). The plan's choice (F64): Sales' mount row admits Leads and LeadSources only, and impl-sales §4 (Nov 11) has Marketing mount Accounts; the design had no path for it |
+| Nov 13, 2026 | Marketing's BOSS setup and demo go in files of their own (`data/BossSetupMarketingData.xml`, `data/BossZZMarketingDemoData.xml`), as Sales' and Maintenance's do | The plan's choice (F69), so Marketing's track and Sales' do not meet in one file |
+| Nov 13, 2026 | §5 Q6 answered as recommended: P22 adds framework support in mr-moqui, a conf-level `sms-consent` provider a component such as Mantle registers, and a per-number day limit for promotional texts apart from `smsSystemMaxPerDay`; a campaign text is sent by the system, not as the releasing user | The user's call; F72, F74. P22 works in an mr-moqui worktree |
 
 ## 5. Open questions
 
@@ -1372,13 +1474,15 @@ design-marketing.md or the owner's design.
 | --- | --- | --- |
 | Q4. (answered Nov 11, §4) Store-sold tickets (design §21.4) | P17 | Later: tickets are sold on PASS Register only in this build; a ticket in a Shop cart is in §7. Nothing is open |
 | Q5. (answered Nov 11, §4) Who may run the audience import? | P4 | A holder of `MARKETING_AUDIENCE_IMPORT` with the audience edit permission. Nothing is open |
+| Q6. (answered Nov 13, §4) Before P22: how does a campaign text pass the framework's SMS consent hook and day limit? | P22 | The hook is declared only by an app root and asked of the apps the sending user may open, and a text with no user counts against the system's 500 a day (F72, F74). Recommended: in P22, a conf-level `sms-consent` provider a component registers (Mantle's), asked whoever sends, and a per-number day limit for promotional texts, in mr-moqui. The alternative, sending as the releasing user, spends that user's 200 a day and needs the number granted to them |
+| Q7. (answered Nov 13, §4) Before P18: the new `MARKETING_CHECKIN` permission for a door tablet's display account | P18 | Recommended: yes, held by a display group alone, as People's `PEOPLE_KIOSK_PUNCH` (F83); without it the tablet waits (§7) and CheckIn runs under a staff sign-in |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here |
 
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design,
 it is written there too. F1–F52 were found on Nov 11, 2026, while writing this plan; F53–F63 at its review the same
-day, against the code and the other three plans.
+day, against the code and the other three plans; F64–F89 by the rest of P0 on Nov 13, against master.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1445,6 +1549,32 @@ day, against the code and the other three plans.
 | F61 | P0 (review): three things design names had no phase: the merge guards of X15 (design §10; only a P0 check), the retention part of design §15.3's "Reporting and retention" job, and a job registration for the attribution retry | P19 (guards), P20 (jobs) |
 | F62 | P0 (review): no phase planned abuse handling of the public endpoints beyond the verification mail's limit, or the update of `docs/security/Attack-Surface.md` | §2 "Public endpoints are bounded"; P7, P12, P15, P17 and P23 |
 | F63 | P0 (review): P15's walk opens P14's landing page and its PASS pages carry its codes, so P15 does not run beside P14; P14 named an Event component that P16 builds; P3 named Marketing's ContactDetail, which is P19's | §1 order; P14, P16, P3 corrected |
+| F64 | P0 (Nov 13): Sales' mount row (mr-boss service/ironstone/sales/Sales.js:30-33) admits the Marketing root for `Pipeline/Leads` → `Leads` and `Settings/LeadSources` → `Settings/LeadSources` only, and its `sharedLinks` hold just those two (:184-188), so a lead shows unlinked under Marketing and every transition stays Sales' guarded service; Accounts is not admitted (impl-sales F110), and design §2 had no Marketing path for it | P3 adds `Accounts/Accounts` → `Leads/Accounts` (Marketing/Leads/Accounts; §4, design §§2, 10), P19 `Accounts/Customer360` → `Customers/Customer360`. §1, P3 changed |
+| F65 | P0 (Nov 13): LeadList's row selection (screen/Sales/Pipeline/Leads.xml:90-128) is shown only with `canEdit` (SALES_OPPORTUNITY_EDIT) and its two actions carry no condition; row selection takes a condition per action and renders in qvt and tui only (framework xsd/xml-form-3.xsd:161, :177-182); its key is `id@revision` and a row names its account but no contact (mr-mantle SalesOpportunities.js:841-884). AccountList (screen/Sales/Accounts/Accounts.xml) has no row selection | P3: the selection admits the audience editor, Sales' actions take `canEdit`, Marketing's the audience capability; each selected lead's contacts are resolved through Sales' services, one with none named as its failure; AccountList gains its selection. P3 changed |
+| F66 | P0 (Nov 13): `find#Opportunities` (mr-mantle service/mantle/sales/OpportunityServices.xml:262-300) filters by one `marketingCampaignId` and one `dataSourceId` and refuses a caller with no Sales read (PERMISSION_DENIED); LeadList shows the campaign as its id (Leads.xml:186) and takes the campaign as a parameter (:35, :50) | P13: handoff counts for a `MARKETING_VIEW` holder come from Marketing's own MarketingLeadCapture rows; the campaign column shows its name. P13 changed |
+| F67 | P0 (Nov 13): consent on Sales' ContactDetail is the Commons contact record's Consent tab (mr-boss template/ContactRecord.xml:876-889, included by every app's ContactDetail), read only through `ironstone.comms.ConsentServices.get#ContactConsent` (template/ConsentRecord.xml:55-75), its link going to `/qapps/Comms/Consent/Contact` for a contact administrator (`isConsentAdmin`) only | P3: the tab links a holder of `MARKETING_CONSENT_EDIT` to Marketing's Consent mount (owner contract, Commons), which Sales' ContactDetail then shows. P3 changed |
+| F68 | P0 (Nov 13): Sales' P5 (`store#LeadIntake`, SalesLeadIntake, the lead-source map, UtmSourceMap), P6 (user facts), P7 (X1), P9 and P11 (the approval setting, `place#Order` from a quote) are not on master; nothing writes SalesLeadIntake or SalesOpportunityTracking yet (F87). impl-sales P5 names the inputs this plan expects (organization, source kind and id, name, email, phone, UTM source and medium, campaign, tracking code, default source, team queue, operation key; one lead per source identity; a repeated key answers the first result) | Checked by the phase that needs each, against the Sales phase as merged: `store#LeadIntake` at Marketing P13 against Sales P5; X1 and the placement at P17 against Sales P7, P9 and P11; the user facts at P21 against Sales P6. §1, P13 changed |
+| F69 | P0 (Nov 13): Sales' setup is `data/BossSetupSalesData.xml` and its demo `BossYSalesAccountsDemoData.xml` and `BossZSalesDemoData.xml`, as Maintenance's is in its own file; the deny pattern's fifteen rows in BossSetupData.xml now name `sales`, the longest 244 characters, 254 with `marketing` | §4: Marketing's setup in `BossSetupMarketingData.xml` and demo in `BossZZMarketingDemoData.xml`; P1 adds `marketing` to the rows with no split, as F58 expected. §1, P1 changed |
+| F70 | P0 (Nov 13): People's survey builder as built: the four shared screens read the mounting app's row of mr-boss `service/ironstone/shared/SurveyApps.js` `apps` (Customer Service's, People's; :1-60), and each purpose is a `mantle.party.FormPurpose` row (mr-mantle entity/FormPublicationEntities.xml:72-104: edit and view permissions, scope service, access kinds, own services; People's in data/PeopleRecruitingSetupData.xml:59-70); `FormDefinitionServices` has `create#`, `get#`, `find#Forms`, `rename#Form`, `save#FormField`, `save#FormCondition`, `end#FormPart` and `publish#Form` (FormDefinitionServices.xml:24-147), and `FormPublicationServices` `guard#FormResponse` and `open#Publication` (:20, :28); `FppSurvey` is seeded (:59), no lead or registration purpose, no option score | P12 adds Marketing's SurveyApps row and three FormPurpose rows, builds on `open#Publication`, and adds the scores. §1, P12 changed |
+| F71 | P0 (Nov 13): the projected calendar kind: a `mantle.work.calendar.CalendarProjection` row (projectionId, title, `ownerServiceName`; mr-mantle entity/WorkEffortEntities.xml:153-158) seeded by its owner, the owner service implementing `CalendarDavServices.define#ProjectionOwner` (`checkOnly`, `start`, `end` → `admitted`, `eventList` of ICalendar maps; CalendarDavServices.xml:158-174), a write refused 403 (:399-400); People's and Maintenance's rows (data/PeopleLeaveSetupData.xml:35, MaintenanceStackData.xml:19-22) | P21 seeds `MarketingCampaigns` over `get#CampaignCalendar`. P21 changed |
+| F72 | P0 (Nov 13): an `sms-consent` provider is declared only in an app root's `<shell-providers>` (crates/moqui-core/src/screen/shell.rs:172-187, :357-368) and asked of the apps the current user may open (:466-491, :521-563), each in its own transaction, one "no" vetoing and none refusing (base/framework call/Sms.js:279-319); none is registered today. Mantle, with no screen, cannot declare one, and a dispatch running as the system may find none | §5 Q6, the user's call before P22: recommended a conf-level provider in mr-moqui in P22. P22 changed |
+| F73 | P0 (Nov 13): `send#SmsMessage` answers `successful`, `messageId` and `reasonCode` (SmsServices.xml:36-41); a direct text goes through `send#BridgeDirect`, which keeps no row (chat/ChatBridgeServices.xml:716-720), and a provider receipt reaching `note#DeliveryReceipt` (moqui-channels webhook.rs:280-318) finds no ChatBridgeDelivery row and is dropped (ChatBridgeServices.xml:679-713) | P22: hand-off outcomes only for SMS; the receipt a framework ask (§7). P22 changed |
+| F74 | P0 (Nov 13): SMS day limits (call/Sms.js:36, :301-340): with no `userId` a text counts against `smsSystemMaxPerDay` (500, shared with sign-in codes); with one, against that user's 200 and everyone's 2000, and the from-number must be granted to the user; the from-number sets no limit | §5 Q6 with F72. P22 changed |
+| F75 | P0 (Nov 13): `create#UnsubscribeToken` takes `siteId` (mr-mantle ConsentServices.xml:1166-1180) and, given one, names that site's Account Email preferences page without checking the recipient's membership; without it, a `baseUrl` gives `/u/`, else the recipient's first PASS site mounting Account, else `/u/` (:1225-1237) | F56 settled: P9 passes the sending profile's permitted site. P9 changed |
+| F76 | P0 (Nov 13): the bounce account is a hosted account made in Comms' account wizard (base/basic-comms screen Settings/MailAccounts/Add/Address.xml:37-43; MailSettingsServices.xml:552-631); Admin's MailRelays make none; the plus tag is stripped to find it (crates/moqui-mail/src/delivery.rs:66-104). The edge replaces any envelope sender with `bounce+<item id>@` its bounce domain when `edge_mail_bounce_domain` is set (edge_mail.rs:621-627), matches a DSN by the queue item and marks the EmailMessage `ES_BOUNCED` (:1047-1085); `send#EmailTemplate` takes no subject or bounce address (framework service/org/moqui/EmailServices.xml:17-58), the subject being the template's expanded with `bodyParameters` (implementation.rs:480-487) | P6: the VERP path on a hosted bounce account the readiness checks, and on the edge path an EmailMessage turning `ES_BOUNCED` matched to its delivery by `providerMessageId`; F17's per-call subject and bounce address stand. P6 changed |
+| F77 | P0 (Nov 13): the list services' access is the mailbox model: for any other list `get#ContactListAccess` answers header and post for anyone (mr-mantle ContactListServices.xml:116-119), and `update#`, `find#ContactLists`, `find#ContactListParties`, `join#`, `add#`, `remove#`, `decline#ContactListParty` and `set#ContactListPartyDelivery` restrict only a mailbox (:253-646); `create#ContactList` takes any owner (:197, :220); the list sends are `allow-remote="false"` with no check. Consent checks only a private contact. Callers: the Forum on mailboxes (Forum.js:743, :3063, :3148); Comms' Consent through `check#ConsentAdmin` (mr-boss service/ironstone/comms/ConsentServices.xml:31); Shop's store topics through the internal `set#ContactListPartySubscription` on lists its store's organization owns (StoreTopics.js:104, :263, :274) | P1: the check in the non-mailbox branch and on `create#ContactList`'s owner, a contact administrator and ADMIN keeping every list; internal services unchanged. P1 changed |
+| F78 | P0 (Nov 13): `fancy-locked-html` renders only by location with an explicit map (impl-sales F70; crates/moqui-core/src/script/host/globals.rs:697-711), a location may be `dbresource://` (context/resource.rs:464, :507), and a name the map lacks reads null, rendering empty with no error (script/template.rs:1440-1446); the renderer keeps no allowlist: the map is it | P6: a template's content is a `dbresource://` `.html.fancy-locked` file rendered with a map of its declared variables, an undeclared one refused at store by the template service. P6 changed |
+| F79 | P0 (Nov 13): mr-pass has no conf outside `test/MoquiConf.xml`; a remote frontend loads framework, webroot and PASS only (mr-pass README.md:12-14, docs/Deployment.md:3-11) and reaches the authority through `service/pass/Transport.js` `call()` (:599; in process, REST to Mantle's PassApi, gRPC); a web script runs as the request's user, may not `runAsSystem`, declines the session with `ec.web.declineSession()` and sets a cookie only by a `Set-Cookie` header (docs/interfaces/Web-Scripts.md:110-122, :167-181); the framework has no per-servlet limit but a component's `<rate-limit>` (mr-boss MoquiConf.xml:29-33) | P15: a MoquiConf.xml of mr-pass's own with the two servlets and their limit, two allowlisted operations to the authority. Design §13.1 changed. P15 changed |
+| F80 | P0 (Nov 13): ExternalAccess kinds are code, mr-mantle service/mantle/party/ExternalAccess.js `records` (:25-150), each with its issuer permissions and scopes, and the scope is the action scope (one per check, :301-316; revoked per scope, :376-381); FormInvitation's kind has the scope `CaseFeedback` and issuer `SUPPORT_CASE_MANAGE` (:131-145); tokens are stored as a digest (:222) | P12: the FormInvitation kind gains Marketing's scope; P17: a kind `EventRegistration` with `RegistrationView` and `RegistrationCancel`. P12, P17 changed |
+| F81 | P0 (Nov 13): no InvoiceItem, AcctgTransEntry, Budget or BudgetItem carries a campaign (mr-mantle AccountingAccountEntities.xml:654, AccountingLedgerEntities.xml:820, AccountingOtherEntities.xml:26, :67); both lines carry a cost center; Accounting's budgets are by GL account and period, their organization through the TimePeriod (BudgetServices.xml:108, :429); a ledger read is ACCOUNTING_VIEW, GL_POST or ADMIN, a payable read adds PAYABLE_VIEW (InvoiceWorkflow.js:102, :412; InvoiceServices.xml:4403) | P2: a CampaignCost cites a purchase invoice item or a ledger entry of the campaign's organization under the reader's own permission; no Accounting budget applies. Design §3 changed. P2 changed |
+| F82 | P0 (Nov 13): `merge#Parties` (mr-mantle DuplicateServices.xml:792) guards through PartyMerge.js `rules()` (:59-88) and moves WorkEffortParty, CommunicationEventParty, ContactListParty, PartyConsent and ContactListToken (:1039-1052), a ContactListParty key collision keeping the surviving party's row (:1022), so a merged party's unsubscription is lost; MarketSegmentParty, MessageDelivery, FormInvitation and ExternalAccessCapability are not touched. Sales P3 added a refusal in `rules()` and a move block (:1114-1123) | P19 on that pattern, the collision keeping the more restrictive state; the ledger's, Commons' and ExternalAccess' rows are their owners' (§7). P19 changed |
+| F83 | P0 (Nov 13): Admin P18 is built: `moqui.security.DeviceRouteGroup` (framework entity/SecurityEntities.xml:472-498) with its artifact group, home path and parameter; a device's request runs as the credential's display account, which may hold no privileged group or sealed permission (crates/moqui-core/src/user/device.rs:398, :589-600), and passes only what the route group's artifact group admits (:770-822); People's clocking kiosk registers one with a display group holding `PEOPLE_KIOSK_PUNCH` alone (mr-boss data/BossSetupData.xml:5672-5700) | §4: P18 builds the door tablet; `MARKETING_CHECKIN` is §5 Q7. Design §9 changed. P18 changed |
+| F84 | P0 (Nov 13): Admin P17's audit is read only: `find#Changes` over EntityAuditLog through `moqui.server.AuditProjection` rows (framework AuditServices.xml:15-104; ServerEntities.xml:818-848), registered by the framework and mr-mantle data/PartyAuditData.xml only; no service records an administrative event; PartyConsent's audited status has no projection | Marketing registers no projection, as Sales (impl-sales F57); Admin's F257 is the user's call (§7) |
+| F85 | P0 (Nov 13): `org.moqui.report.ReportServices.create#Annotation` with the business source needs `org.moqui.report.annotation.business` (crates/moqui-report/src/annotations.rs:13-29), held by `REPORT_BUSINESS_ADMIN`, which only ADMIN has (base/tools data/MonitoringSecurityData.xml:43-50); Mantle's `BusinessEventServices.record#BusinessEvent` writes one after the commit with authorization off, for the fixed events of BusinessEvents.js (:21-46, :65, :99) | P20: a `CampaignSent` business event registered by the release. P20 changed |
+| F86 | P0 (Nov 13): no component registers a `user-facts` provider (framework conf/MoquiDefaultConf.xml:1058-1060 is a commented example); Sales P6 builds Mantle's (impl-sales F65) | P21's exposures rest on it; Sales P6 is before Marketing's track (§4). P21 changed |
+| F87 | P0 (Nov 13): nothing writes TrackingCodeVisit, TrackingCodeOrder, TrackingCodeOrderReturn or SalesOpportunityTracking in any component or crate; only their definitions exist (mr-mantle MarketingEntities.xml:354-418, SalesEntities.xml:188) | P15 and P20 as designed; Sales P5 writes SalesOpportunityTracking |
+| F88 | P0 (Nov 13): the demo: ORG_ZIZI_RETAIL owns POPC_DEFAULT (its store's tax gateway LOCAL, mr-mantle data/ZcaProductDemoData.xml:196) and the gateways TEST_APPROVE and BOSS_COM_HOSTED (mr-boss data/BossCommerceDemoData.xml:74-90), and the PASS site ZIZI_SHOP, made by Commerce's demo service, disabled until published, with Account, Billing, Support and Shop mounts (BossZCommerceDemoData.xml:15-19; service/ironstone/commerce/Demo.js:16); ORG_ZIZI_SERVICES owns BOSS_COM_DIGITAL and ZIZI_DIGITAL; no organization has a seller tax preference (impl-sales F62). A run captures mail with `mail_capture_sends=true` (docs/dev/JS-Testkit.md:341-346) | P1's users of ORG_ZIZI_RETAIL and ORG_ZIZI_SERVICES as written; P7 adds the Marketing mount to ZIZI_SHOP; P17 sets ORG_ZIZI_RETAIL's tax preference. P17 changed |
+| F89 | P0 (Nov 13): the earlier plans' §7 rows naming this plan: impl-sales §7 (P3, P5, P11, P13, P15, P17, P20, under the names §1 uses), impl-people §7 (P12, P21, CheckIn's route group), impl-maintenance §7 (none) | Consistent with §1, but for Accounts' mount (F64), which impl-sales F110 already names |
 
 ## 7. Later
 
@@ -1459,7 +1589,11 @@ Designed, not in this build:
 - **The privacy provider** (§4): Marketing's find, export and anonymize of consent and membership history,
   suppressions, recipients, tracking events, submissions and registrations, when Admin's PrivacyServices and the
   PASS Account privacy page are built.
-- **What waits on Admin P18:** CheckIn's device route group registered and a door tablet's credential.
+- **What waits on Admin P18:** nothing since it is built (F83), unless §5 Q7 is answered no: then CheckIn's device
+  route group and a door tablet's credential.
+- **Audit projections** (F84): Marketing registers no `moqui.server.AuditProjection`; its audited fields show in its
+  own History panels, as Sales' and People's do. Whether a business entity belongs in Admin's AuditChanges is Admin's
+  F257, the user's call.
 - **Comms' own mounts** of MessageTemplates, SendingProfiles, Suppressions and CampaignDelivery, with a Comms
   settings area and a readiness provider of its own; moving the store emails and the Forum's notices onto sending
   profiles.
@@ -1467,7 +1601,10 @@ Designed, not in this build:
   events.
 - **Sales':** LeadIntakeForms as Sales' own publishing screen; rule-based lead assignment.
 - **Owners' later work found here:** a retry of a failed ledger delivery by its owner's operator beyond the
-  ledger's own five tries; receipts for the system's own texts, if P0 finds the bridge reports none (F57).
+  ledger's own five tries; receipts for direct texts, which the bridge drops today (F57, F73); the edge relay keeping
+  an app's VERP envelope sender, so a bounce through the edge needs no EmailMessage match (F76); the merge moving
+  MessageDelivery, FormInvitation and ExternalAccessCapability rows, which stay on the merged party today (F82; Comms'
+  and Commons').
 
 ## 8. Verification
 
