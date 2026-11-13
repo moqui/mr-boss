@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     who manage money (the Projects managers and ADMIN) the Rates box: the client and worker hour rates set by hand, or found again
     from the rates (store#TimeEntryRates), also on a submitted week's entry, never an invoiced one. The worker rate of an employee's
     time is the employee's pay: shown only with PAYROLL_VIEW and changed only with PAYROLL_EDIT (get#TimeEntryEdit's
-    workerRateShown and workerRateEditable); without them the field is left out and not sent. Each change answers the list
+    workerRateShown and workerRateEditable); without them the field is left out and not sent. The worker rate is opted out of AI
+    (PE-21: an agent's render shows its placeholder). Each change answers the list
     again (in ProjectDetail's Time tab, with its project), or MyTime's originating person and week. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time entry" default-menu-include="false">
@@ -148,7 +149,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="myTimeWeek"><default-field><hidden/></default-field></field>
                         <field name="myTimePartyId"><default-field><hidden/></default-field></field>
                         <field name="clientHourRate"><default-field title="Client rate (an hour)"><text-line size="8" input-type="number"/></default-field></field>
-                        <field name="vendorHourRate">
+                        <field name="vendorHourRate" ai-opt-out="true">
                             <conditional-field condition="edit.workerRateEditable" title="Worker rate (an hour)"><text-line size="8" input-type="number"/></conditional-field>
                             <conditional-field condition="edit.workerRateShown" title="Worker rate (an hour)"><display also-hidden="false"/></conditional-field>
                             <default-field><ignored/></default-field>

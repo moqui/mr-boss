@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Pay runs (design-people §8 PayRuns, §8.2; style-guide §3.2 List; impl-people P25): the pay runs of the
+    employers in the user's payroll scope from mantle.humanres.PayrollRunServices.find#Runs: Runs (each its group, period, pay date,
+    kind, workers, errors, the gross and net of its calculated employees and its state chip; calculation and settlement tracked
+    apart, settlement with P27), filtered by group and state, or Needs attention (an employee in error or pending, returned by the
+    approver, an approval that no longer holds); NewRun (the one primary, a payroll editor's: create#Run, a group's prepared period,
+    its pay date and source cutoff, a regular run; a period whose inputs another run took, or with a regular run already, is
+    refused), which opens the run's PayRunDetail. Payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and write. Amounts are
+    opted out of AI. Creating and calculating a run make no invoice or payment. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay runs" default-menu-index="1" menu-image="sym_o_payments" menu-image-type="icon">
+    <parameter name="payrollGroupId"/>
+    <parameter name="statusId"/>
+    <parameter name="show"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="createRun">
+        <actions>
+            <service-call name="mantle.humanres.PayrollRunServices.create#Run" out-map="created"
+                    in-map="{payrollGroupId:payrollGroupId, timePeriodId:timePeriodId, payDate:(payDate || null),
+                        cutoffDate:(cutoffDate || null), description:(description || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Pay run created with ${created.selectedCount} employees</message></if>
+        </actions>
+        <conditional-response url="../PayRunDetail" condition="!ec.message.hasError()">
+            <parameter name="payrollRunId" from="created.payrollRunId"/>
+        </conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollRunServices.find#Runs" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{payrollGroupId:(payrollGroupId || null), statusId:(statusId || null), show:(show || null), pageIndex:(pageIndex || 0)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            runRows = Array.from(found?.runs || [])
+            runsCount = found?.runsCount || 0
+            runsPageIndex = found?.runsPageIndex || 0
+            runsPageSize = found?.runsPageSize || 20
+            runsPageMaxIndex = found?.runsPageMaxIndex || 0
+            runsPageRangeLow = found?.runsPageRangeLow || 0
+            runsPageRangeHigh = found?.runsPageRangeHigh || 0
+            canCreate = !!found?.canCreate
+            stateColors = {PrnDraft: 'grey-8', PrnCalculating: 'primary', PrnReview: 'orange-9', PrnApproved: 'positive', PrnFinalizing: 'primary',
+                PrnFinalized: 'positive', PrnCancelled: 'grey-8', returned: 'negative', stale: 'negative'}
+            findValues = {payrollGroupId: payrollGroupId || null, statusId: statusId || null, show: show || null}
+            detailUrl = sharedLinks?.['Payroll/PayRunDetail'] || '../PayRunDetail'
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Pay runs" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewRunDialog" button-text="New pay run" icon="sym_o_add" type="primary" width="560"
+                        title="New pay run" condition="canCreate">
+                    <label type="p" text="A regular run of a pay group for one of its prepared periods. Its employees are selected at once; you then check their inputs, calculate and send it for approval. Nothing is paid or posted."/>
+                    <form-single name="NewRun" transition="createRun">
+                        <field name="payrollGroupId">
+                            <default-field title="Pay group">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'hoursGroups'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timePeriodId">
+                            <default-field title="Period">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payPeriods'}">
+                                        <depends-on field="payrollGroupId" parameter="choicePayrollGroupId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="payDate"><default-field title="Pay date" tooltip="The period's pay date when empty"><date-time type="date"/></default-field></field>
+                        <field name="cutoffDate">
+                            <default-field title="Source cutoff" tooltip="Time and leave approved after this wait for the next run; none when empty">
+                                <date-time type="timestamp"/></default-field>
+                        </field>
+                        <field name="description"><default-field title="Note"><text-line size="40"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create pay run"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="payrollGroupId"/><field-ref name="timePeriodId"/></field-row>
+                            <field-row><field-ref name="payDate"/><field-ref name="cutoffDate"/></field-row>
+                            <field-ref name="description"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="FindRuns" transition="." map="findValues">
+            <field name="payrollGroupId">
+                <default-field title="Pay group">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'hoursGroups', selected:findValues.payrollGroupId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="PrnDraft" text="Draft"/>
+                        <option key="PrnCalculating" text="Calculating"/>
+                        <option key="PrnReview" text="Review"/>
+                        <option key="PrnApproved" text="Approved"/>
+                        <option key="PrnCancelled" text="Cancelled"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="show">
+                <default-field title="Show">
+                    <drop-down allow-empty="true"><option key="attention" text="Needs attention"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="payrollGroupId"/><field-ref name="statusId"/><field-ref name="show"/>
+                    <field-ref name="submitButton"/></field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="RunList" list="runRows" skip-form="true" paginate="true" condition="runRows.length">
+                    <field name="groupName">
+                        <default-field title="Pay group">
+                            <link url="${detailUrl}" url-type="plain" text="${groupName}" link-type="anchor" parameter-map="{payrollRunId:payrollRunId}"/>
+                        </default-field>
+                    </field>
+                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="workerCount" align="right"><default-field title="Employees"><display/></default-field></field>
+                    <field name="errorCount" align="right"><default-field title="Errors"><display/></default-field></field>
+                    <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                    <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || stateColors[statusId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="groupName"/><field-ref name="periodText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="netText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!runRows.length"
+                        text="No pay run matches. Create one for a pay group's prepared period with New pay run."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

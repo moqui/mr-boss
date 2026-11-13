@@ -1,5 +1,8 @@
 // The clocking kiosk (impl-people P30; design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; crosscut CX-DEVICE): HR issues
-// Tomas's badge with a one-time PIN and prints it once (BadgePrint's one html-print render: the barcode and the number), and Tomas,
+// Tomas's badge with a one-time PIN and prints it once, by a POST to BadgePrint's print (the barcode and the number; a GET of the
+// page before makes nothing and refuses, a GET of the print is refused, and the page after says it was printed: follow-up 4); the
+// burst notice's device opens Admin's Security › Devices for the access administrator and nowhere for HR, and a stopped badge's
+// notice to its worker opens their SelfService under Commons (follow-up 4); and Tomas,
 // with self-service alone, sets his own PIN through SelfService's setMyPin under Commons (the one-time PIN asked); a display account
 // for Retail holding the kiosk bundle alone is made and a tablet registered for the PEOPLE_CLOCKING route group and redeemed; as the
 // tablet, the bare page (the one html render) and its island (the one qvt render: the form, the employer, no "not a device" note), a
@@ -58,11 +61,22 @@ feature("HR prints Tomas's badge once, and a tablet is registered for Retail's c
                 invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId, oneTimePin})
             )
         )
-        // the print's one render (html-print), as its issuer: the number is made now and shown once
+        // a GET makes nothing (a link another site has HR open spends no badge): the page refuses, and the print is a POST
+        const page = path =>
+            request("apps/People/Employees/BadgePrint" + path, {kioskBadgeId: issued.kioskBadgeId}, null, "html-print")
+        const before = asUser(users.hr, () => page(""))
+        const printGet = asUser(users.hr, () => page("/print"))
+        const unprinted = system(
+            () =>
+                ec.entity.find("mantle.humanres.attendance.KioskBadge").condition("kioskBadgeId", issued.kioskBadgeId).one()
+                    .tokenHash
+        )
+        // the print, as its issuer: a POST answered with the printable badge, the number made now and shown once
         const printed = asUser(users.hr, () =>
-            request("apps/People/Employees/BadgePrint", {kioskBadgeId: issued.kioskBadgeId}, null, "html-print")
+            request("apps/People/Employees/BadgePrint/print", {kioskBadgeId: issued.kioskBadgeId}, null, null, "post")
         )
         state.number = (/\d{4} \d{4} \d{4} \d{4} \d{4}/.exec(printed.output) || [""])[0]
+        const after = asUser(users.hr, () => page(""))
         // Tomas sets his own PIN on SelfService under Commons (his self-service grant): the one-time PIN asked, his PIN HR never sees
         const pinSet = asUser(users.employee, () =>
             request(
@@ -99,10 +113,13 @@ feature("HR prints Tomas's badge once, and a tablet is registered for Retail's c
             .split(";")[0]
             .replace("moqui.device=", "")
         login("john.doe")
-        return {issued, printed, pinSet, display, registered}
+        return {issued, before, printGet, unprinted, printed, after, pinSet, display, registered}
     },
-    then({issued, printed, pinSet, display, registered}) {
+    then({issued, before, printGet, unprinted, printed, after, pinSet, display, registered}) {
         issued.kioskBadgeId != null
+        before.output.includes("not printed yet") && !/\d{4} \d{4} \d{4} \d{4} \d{4}/.test(before.output) && unprinted == null
+        printGet.status == 405
+        after.output.includes("was printed on") && !after.output.includes(state.number) && !after.output.includes("<svg")
         pinSet.errors == "" && pinSet.messages.includes("Your clocking PIN is set")
         printed.status == 200 &&
             printed.errors == "" &&
@@ -156,6 +173,7 @@ feature("as the tablet: the bare page and its form, Tomas clocks in and out by b
             selfService: request("apps/People/SelfService", {}, state.cookie),
             attendance: request("apps/People/Time/Attendance", {}, state.cookie),
             badgePrint: request("apps/People/Employees/BadgePrint", {kioskBadgeId: "0"}, state.cookie),
+            badgePrintPost: request("apps/People/Employees/BadgePrint/print", {kioskBadgeId: "0"}, state.cookie, null, "post"),
             shell: request("qapps/People/Time/ClockingKiosk", {}, state.cookie),
             search: request("apps/People/Employees/List/choices", {}, state.cookie)
         }
@@ -193,18 +211,63 @@ feature("as the tablet: the bare page and its form, Tomas clocks in and out by b
     }
 })
 
-feature("as an HR officer, not a device: the page says it records nothing here, and a punch through it is refused", {
-    when() {
-        return asUser(users.hr, () => ({
-            tui: request(kiosk, {}, null, "tui"),
-            punched: request(kiosk + "/punch", {badgeText: state.number, password: pin}, null, null, "post"),
-            punches: kioskPunches()
-        }))
-    },
-    then({tui, punched, punches}) {
-        tui.status == 200 && tui.errors == "" && tui.output.includes("Not a clocking device") && tui.output.includes("PIN")
-        !/Error rendering|Exception in render/.test(tui.output)
-        punched.errors == "" && punched.messages.includes("recorded only at a registered clocking device")
-        punches == 2
+feature(
+    "as an HR officer, not a device: the page says it records nothing here, a punch through it is refused, and the tablet's refusals notice links nowhere for them; a stopped badge's notice opens its worker's SelfService",
+    {
+        when() {
+            // the burst notice on the tablet as Commons' notification lists show it (its record the device): Admin's Devices for the
+            // access administrator, no link for HR, who has no Admin
+            const notice = {
+                notificationMessageId: "SpecKiosk",
+                topic: "PeopleKioskRefusals",
+                recordEntityName: DEVICE,
+                recordId: state.deviceId
+            }
+            const openUrl = () =>
+                ec.artifactExecution.runAsUser(
+                    "component://mr-boss/screen/Commons.xml",
+                    () =>
+                        invoke("ironstone.commons.CommonsServices.decorate#Notifications", {notificationList: [notice]}).rows[0]
+                            .openUrl
+                ) || null
+            return asUser(users.hr, () => ({
+                tui: request(kiosk, {}, null, "tui"),
+                punched: request(kiosk + "/punch", {badgeText: state.number, password: pin}, null, null, "post"),
+                punches: kioskPunches(),
+                hrLink: openUrl(),
+                adminLink: asUser("admin.access", openUrl),
+                // a stopped badge's notice to its worker (follow-up 4) opens their SelfService under Commons
+                workerLink: asUser(users.employee, () => {
+                    const sent = system(() =>
+                        ec
+                            .makeNotificationMessage()
+                            .topic("PeopleMyKioskBadgeDisabled")
+                            .message({organizationName: "Ziziwork Retail", wrongCount: 20})
+                            .userIds([ec.user.userId])
+                            .directOnly()
+                            .send()
+                    )
+                    const link = sent.getLink()
+                    const notice = {
+                        notificationMessageId: "SpecKioskStopped",
+                        topic: "PeopleMyKioskBadgeDisabled",
+                        linkText: link
+                    }
+                    const shown = ec.artifactExecution.runAsUser("component://mr-boss/screen/Commons.xml", () =>
+                        invoke("ironstone.commons.CommonsServices.decorate#Notifications", {notificationList: [notice]})
+                    ).rows[0]
+                    return {link, openUrl: shown.openUrl, screen: shown.openIsScreen}
+                })
+            }))
+        },
+        then({tui, punched, punches, hrLink, adminLink, workerLink}) {
+            hrLink == null && adminLink == "/qapps/Admin/Security/Devices?deviceId=" + encodeURIComponent(state.deviceId)
+            workerLink.link == "/qapps/Commons/People/SelfService" && workerLink.openUrl == workerLink.link
+            workerLink.screen === true
+            tui.status == 200 && tui.errors == "" && tui.output.includes("Not a clocking device") && tui.output.includes("PIN")
+            !/Error rendering|Exception in render/.test(tui.output)
+            punched.errors == "" && punched.messages.includes("recorded only at a registered clocking device")
+            punches == 2
+        }
     }
-})
+)

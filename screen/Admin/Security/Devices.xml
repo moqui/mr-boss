@@ -24,7 +24,9 @@ along with this software (see the LICENSE.md file). If not, see
     ADMIN_ACCESS_VIEW or ADMIN_ACCESS_MANAGE and the caller's identity scope
     itself, whatever opens the screen: another organization's display account or device is not available, and is counted,
     never named. No code, secret or hash is listed, and the code is in no request, session or message. Another app opens
-    RegisterDevice for its route group with newRouteGroupId and newParameterValue (Insights' Playlists, P11). -->
+    RegisterDevice for its route group with newRouteGroupId and newParameterValue (Insights' Playlists, P11), and links one device
+    with deviceId (its mount route adminDevice: People's clocking kiosk notice, impl-people follow-up 4), listed whatever its
+    state. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Devices" menu-image="sym_o_tv_signin" menu-image-type="icon">
     <parameter name="text"/>
@@ -34,6 +36,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="seenSinceDays"/>
     <parameter name="pageIndex"/>
     <parameter name="revealDeviceId"/>
+    <parameter name="deviceId"/>
     <parameter name="newRouteGroupId"/>
     <parameter name="newParameterValue"/>
 
@@ -85,7 +88,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="revealRefused" from="revealDeviceId &amp;&amp; !registrationCode ? (revealed?.reason || 'The code is not available') : null"/>
         <service-call name="mantle.party.IdentityServices.find#SharedDevices" out-map="found" transaction="force-new" ignore-error="true"
                 in-map="{text:(text || null), routeGroupId:(routeGroupId || null), facilityId:(facilityId || null),
-                    state:(state &amp;&amp; state != 'all' ? state : null), includeEnded:(state == 'all'),
+                    deviceId:(deviceId || null), state:(state &amp;&amp; state != 'all' ? state : null),
+                    includeEnded:(state == 'all' || !!deviceId),
                     seenSinceDays:(seenSinceDays || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
         <!-- ignore-error clears a refusal's message -->
         <set field="available" from="!!found?.deviceList"/>
@@ -124,7 +128,7 @@ along with this software (see the LICENSE.md file). If not, see
             codeExpiresText = revealed?.codeExpireDate ? ec.l10n.format(Number(revealed.codeExpireDate), 'HH:mm') : ''
             try { devicePageUrl = (ec.web.getWebappRootUrl() || '') + '/Device' } catch (err) { devicePageUrl = '/Device' }
         ]]></script>
-        <set field="filtered" from="!!(text || routeGroupId || facilityId || state || seenSinceDays)"/>
+        <set field="filtered" from="!!(text || routeGroupId || facilityId || state || seenSinceDays || deviceId)"/>
         <set field="findValues" from="{text:text, routeGroupId:routeGroupId, facilityId:facilityId, state:state, seenSinceDays:seenSinceDays}"/>
     </actions>
     <widgets>

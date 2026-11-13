@@ -5676,4 +5676,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
             artifactName="component://mr-boss/screen/People/Employees/BadgePrint.xml" artifactTypeEnumId="AT_XML_SCREEN"
             inheritAuthz="Y"/>
+    <!-- People follow-up 4 (the user's call of Nov 12, 2026): the worker's notice that their clocking badge is stopped opens their
+        SelfService under Commons (every self-service employee's mount), where My clocking badge shows it stopped until HR resets
+        its PIN. Only the link is set here; the topic is Mantle's. -->
+    <moqui.security.user.NotificationTopic topic="PeopleMyKioskBadgeDisabled" linkTemplate="/qapps/Commons/People/SelfService"/>
+    <!-- impl-people P25 (design-people §8 PayRuns, PayRunDetail, §8.2): pay runs under Payroll's grant (BOSS_PPL_PAYROLL: the payroll
+        operator prepares, the payroll approver reads and decides). A pay run to approve (Mantle's PayrollRunApproval) opens its
+        PayRunDetail at the Approval step, where its approver (a payroll approver who neither selected nor calculated it) decides. -->
+    <moqui.security.user.NotificationTopic topic="PayrollRunApproval"
+            linkTemplate="/qapps/People/Payroll/PayRunDetail?payrollRunId=${payrollRunId}"/>
 </entity-facade-xml>

@@ -64,11 +64,14 @@
 // group missing to Retail's payroll; Hours for pay the payroll operator's and the manager's (the HR officer refused the screen),
 // Pay adjustments payroll's (the HR officer refused the screen).
 // P30: a clocking badge issued by an HR officer of the employer (the directory reader refused with the same parameters, Services'
-// employment refused to Retail's HR), its print HR's (the reader refused the screen); its PIN set by the employee alone (HR refused
-// with the same parameters) and reset by HR (the reader and the employee refused); a kiosk punch refused outside a registered
-// device to the instance administrator, who holds PEOPLE_KIOSK_PUNCH, and to the employee, with the same parameters (the device's own
-// punch is PeopleKiosk's); the kiosk bundle assigned by the access administrator and proposed by the identity operator under Admin's
+// employment refused to Retail's HR), its print HR's (the reader refused the screen and the print's POST, follow-up 4); its PIN
+// set by the employee alone (HR refused with the same parameters) and reset by HR (the reader and the employee refused); a kiosk
+// punch refused outside a registered device to the instance administrator, who holds PEOPLE_KIOSK_PUNCH, and to the employee,
+// with the same parameters (the device's own punch is PeopleKiosk's); the kiosk bundle assigned by the access administrator and proposed by the identity operator under Admin's
 // delegation rule, and refused to the reader.
+// P25: a pay run created by the payroll operator and refused to the HR officer with the same parameters; Services' group missing to
+// Retail's payroll; the runs read by the payroll approver and refused to the HR officer; PayRuns and PayRunDetail the payroll
+// operator's and the approver's (the HR officer refused both screens).
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -1342,6 +1345,17 @@ feature(
             if (opened) problems.push(`the HR officer's BadgePrint: ${opened}`)
             const refusedScreen = screenRefusal(users.reader, "Employees/BadgePrint", {kioskBadgeId: "0"})
             if (!unauthorized(refusedScreen)) problems.push(`${users.reader} opens BadgePrint: ${refusedScreen || "opened"}`)
+            // follow-up 4: the print is a POST to BadgePrint's print, refused the reader as the page is
+            const printed = asUser(users.reader, () =>
+                ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .render("apps/People/Employees/BadgePrint/print", {kioskBadgeId}, "post")
+            )
+            const printRefusal = printed.status + " " + Array.from(printed.errorMessages || []).join(" | ")
+            ec.message.clearErrors()
+            if (!unauthorized(printRefusal) || String(printed.output || "").includes("<svg"))
+                problems.push(`${users.reader} prints a badge: ${printRefusal}`)
             return {codes, problems}
         },
         then({codes, problems}) {
@@ -1360,6 +1374,92 @@ feature(
                     employeeResets: "RECORD_UNAVAILABLE",
                     employeeSetsPin: "accepted",
                     hrResets: "accepted"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P25: a pay run is payroll's: created by the payroll operator and refused to the HR officer with the same parameters, Services' group missing to Retail's payroll; PayRuns and PayRunDetail payroll's",
+    {
+        when() {
+            const S = "mantle.humanres.PayrollRunServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
+            // a Retail group and a Services group with a period each, as data: configuration is P22's
+            const group = (payrollGroupId, organizationPartyId) =>
+                system(() => {
+                    call("create#mantle.humanres.payroll.PayrollGroup", {
+                        payrollGroupId,
+                        organizationPartyId,
+                        groupName: payrollGroupId,
+                        currencyUomId: "USD",
+                        timePeriodTypeId: "PayrollMonth",
+                        firstPeriodFromDate: "2026-05-01",
+                        periodsPerYear: 12,
+                        payDateOffsetDays: 0,
+                        prorationEnumId: "PprCalendarDays",
+                        timeBasisEnumId: "PtbTimesheets",
+                        payrollLocalizationId: "PlzDemonstration",
+                        liveEnabled: "N",
+                        fromDate: 0
+                    })
+                    const existing = ec.entity
+                        .find("mantle.party.time.TimePeriod")
+                        .condition({partyId: organizationPartyId, timePeriodTypeId: "PayrollMonth", fromDate: "2026-05-01"})
+                        .one()
+                    const timePeriodId = existing
+                        ? existing.timePeriodId
+                        : call("mantle.party.TimeServices.create#TimePeriod", {
+                              partyId: organizationPartyId,
+                              timePeriodTypeId: "PayrollMonth",
+                              fromDate: "2026-05-01",
+                              thruDate: "2026-05-31"
+                          }).timePeriodId
+                    call("create#mantle.humanres.payroll.PayrollGroupPeriod", {
+                        payrollGroupId,
+                        timePeriodId,
+                        payDate: "2026-05-31"
+                    })
+                    return {payrollGroupId, timePeriodId}
+                })
+            const retail = group("PPL_SPEC_PAL_RG", ids.organizationId)
+            const services = group("PPL_SPEC_PAL_RGS", ids.otherOrganizationId)
+            // the HR officer first, with the parameters the payroll operator then creates the run with
+            const codes = {
+                hrCreates: as(users.hr, S + "create#Run", retail),
+                payrollCreates: as(users.payroll, S + "create#Run", retail),
+                payrollServices: as(users.payroll, S + "create#Run", services),
+                approverReads: as(users.payApprover, S + "find#Runs", {}),
+                hrReads: as(users.hr, S + "find#Runs", {})
+            }
+            const problems = []
+            const runId = system(() =>
+                ec.entity.find("mantle.humanres.payroll.PayrollRun").condition({payrollGroupId: retail.payrollGroupId}).one()
+            )?.payrollRunId
+            for (const user of [users.payroll, users.payApprover])
+                for (const [path, parameters] of [
+                    ["Payroll/PayRuns", {}],
+                    ["Payroll/PayRunDetail", {payrollRunId: runId}]
+                ]) {
+                    const opened = screenRefusal(user, path, parameters)
+                    if (opened) problems.push(`${user}'s ${path}: ${opened}`)
+                }
+            for (const path of ["Payroll/PayRuns", "Payroll/PayRunDetail"]) {
+                const refusedScreen = screenRefusal(users.hr, path, {payrollRunId: runId})
+                if (!unauthorized(refusedScreen)) problems.push(`${users.hr} opens ${path}: ${refusedScreen || "opened"}`)
+            }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    hrCreates: "PERMISSION_DENIED",
+                    payrollCreates: "accepted",
+                    payrollServices: "RECORD_UNAVAILABLE",
+                    approverReads: "accepted",
+                    hrReads: "PERMISSION_DENIED"
                 }
             problems.join("\n") == ""
         }

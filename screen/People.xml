@@ -214,6 +214,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P24: a pay adjustment to approve (PeoplePayAdjustmentApproval; PayrollInputServices approve#Adjustment and
             refuse#Adjustment), a title naming no person and no amount -->
         <notification-topic topic="PeoplePayAdjustmentApproval"/>
+        <!-- P25: a pay run to approve (PayrollRunApproval; PayrollRunServices approve#Run and return#Run), a title naming the group
+            and the period, never a person or an amount -->
+        <notification-topic topic="PayrollRunApproval"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>
