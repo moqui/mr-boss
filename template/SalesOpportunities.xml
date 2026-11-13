@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The lead and opportunity transitions of the IronStone Sales screens (impl-sales P4; design-sales §3): each calls Mantle's guarded
+    service (mantle.sales.OpportunityServices, which checks SALES_OPPORTUNITY_EDIT, the organization, the assignment and every party,
+    stage and reason it is given, and the revision read), so a screen that includes one adds no authority, and a second root that
+    mounts Sales' Leads (Marketing's, impl-marketing P13) includes the same ones. A screen includes each transition it uses by name
+    (transition-include); the links go through the mounting root's `sales.sharedLinks`. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new lead or opportunity (NewLead, NewOpportunity): OpportunityDetail of the new deal under Sales, else the list again -->
+    <transition name="createOpportunity">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.create#Opportunity" in-map="context" out-map="created"/>
+            <set field="detailPath" from="sales.sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">${typeEnumId == 'SotLead' ? 'Lead' : 'Opportunity'} ${created.salesOpportunityId} created</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath</expression></condition>
+            <parameter name="salesOpportunityId" from="created.salesOpportunityId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a card moved on the board to another stage column, at the card's revision: the board groups by the stage's name (stageText,
+        a stage's name is unique in its pipeline; the board's column labels are the values of a field that is no status or
+        enumeration), which names the stage of the deal's pipeline; the answer is JSON, and a refused move goes back with its message -->
+    <transition name="moveCard">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.get#Opportunity" out-map="moving"
+                    in-map="{salesOpportunityId:salesOpportunityId}"/>
+            <set field="targetStageId" from="opportunityStageId || (moving.stages || []).find(stage =&gt; stage.description == stageText)?.opportunityStageId || '_NONE_'"/>
+            <service-call name="mantle.sales.OpportunityServices.move#Opportunity" out-map="moved"
+                    in-map="{salesOpportunityId:salesOpportunityId, opportunityStageId:targetStageId, expectedRevision:(revision || '')}"/>
+            <script>ec.web.sendJsonResponse(ec.message.hasError() || !moved ? {} : {messageInfos: [{type: 'success',
+                    message: 'Moved ' + salesOpportunityId + ' to ' + moved.stageText}]})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- ChangeStage: the same move from a dialog, with its probability mode and note (the board's visible alternative to dragging,
+        on a phone and in the terminal too) -->
+    <transition name="changeStage">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.move#Opportunity"
+                    in-map="{salesOpportunityId:salesOpportunityId, opportunityStageId:opportunityStageId, expectedRevision:expectedRevision,
+                        probabilityModeEnumId:(probabilityModeEnumId || null), estimatedProbability:(estimatedProbability || null), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Stage changed</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- OpportunityBatch: the selected deals (selectionKey: id@revision) moved, assigned or lost, each on its own -->
+    <transition name="applyBatch">
+        <actions>
+            <set field="opportunityKeys" from="Array.isArray(selectedKeys) ? selectedKeys : String(selectedKeys || '').split(',').filter(Boolean)"/>
+            <service-call name="mantle.sales.OpportunityServices.apply#OpportunityBatch" out-map="batchOut"
+                    in-map="{operation:batch, opportunityKeys:opportunityKeys, opportunityStageId:(opportunityStageId || null),
+                        ownerPartyId:(ownerPartyId || null), lostReasonEnumId:(lostReasonEnumId || null), note:(note || null)}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const verb = {move: 'Moved', assign: 'Assigned', lose: 'Closed as lost'}[batch] || 'Done'
+                    if (batchOut.successCount) ec.message.addMessage(verb + ' ' + batchOut.successCount + ' of ' + batchOut.results.length + ': '
+                            + batchOut.results.filter(row => row.ok).map(row => row.salesOpportunityId).join(', '), 'success')
+                    for (const row of batchOut.results.filter(row => !row.ok))
+                        ec.message.addMessage('Not done ' + row.salesOpportunityId + ': ' + String(row.message || '').replace(/^(Error: )?([A-Z_]+: )/, ''), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- QualifyLead: the same record promoted, its operation key the lead and the revision read (a retry answers the first result) -->
+    <transition name="qualifyLead">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.qualify#Lead" out-map="qualified"
+                    in-map="{salesOpportunityId:salesOpportunityId, expectedRevision:expectedRevision,
+                        operationKey:('qualify-' + salesOpportunityId + '-' + expectedRevision).slice(0, 40),
+                        accountPartyId:(accountPartyId || null), accountName:(accountName || null), contactPartyId:(contactPartyId || null),
+                        contactFirstName:(contactFirstName || null), contactLastName:(contactLastName || null), contactEmail:(contactEmail || null),
+                        salesPipelineId:(salesPipelineId || null), opportunityStageId:(opportunityStageId || null), ownerPartyId:(ownerPartyId || null),
+                        estimatedAmount:(estimatedAmount || null), currencyUomId:(currencyUomId || null), estimatedCloseDate:(estimatedCloseDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Lead ${salesOpportunityId} qualified</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the deal's facts (Opportunity), at the revision read -->
+    <transition name="updateOpportunity">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.update#Opportunity" in-map="context"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- CloseOpportunity and ReopenOpportunity -->
+    <transition name="closeOpportunity">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.close#Opportunity"
+                    in-map="{salesOpportunityId:salesOpportunityId, expectedRevision:expectedRevision, statusId:statusId,
+                        lostReasonEnumId:(lostReasonEnumId || null), closedDate:(closedDate || null), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${statusId == 'SalesOppWon' ? 'Closed as won' : 'Closed as lost'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="reopenOpportunity">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.reopen#Opportunity"
+                    in-map="{salesOpportunityId:salesOpportunityId, expectedRevision:expectedRevision, reason:reason,
+                        opportunityStageId:(opportunityStageId || null), estimatedCloseDate:(estimatedCloseDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Reopened</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- OpportunityParties: the owner, team and contacts, dated -->
+    <transition name="storeParty">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#OpportunityParty"
+                    in-map="{salesOpportunityId:salesOpportunityId, expectedRevision:expectedRevision, partyId:partyId, roleTypeId:roleTypeId,
+                        fromDate:(fromDate || null), end:(endParty == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endParty == 'Y' ? 'Ended' : 'Saved'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- Competitors -->
+    <transition name="storeCompetitor">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.store#Competitor"
+                    in-map="{salesOpportunityId:salesOpportunityId, expectedRevision:expectedRevision, competitorPartyId:competitorPartyId,
+                        positionEnumId:(positionEnumId || null), strengths:(strengths || null), weaknesses:(weaknesses || null),
+                        remove:(removeCompetitor == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${removeCompetitor == 'Y' ? 'Competitor removed' : 'Competitor saved'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- an activity on the deal (a Commons task linked to it) -->
+    <transition name="addActivity">
+        <actions>
+            <service-call name="mantle.sales.OpportunityServices.add#OpportunityActivity"
+                    in-map="{salesOpportunityId:salesOpportunityId, workEffortName:workEffortName, description:(description || null),
+                        estimatedCompletionDate:(estimatedCompletionDate || null), assignToPartyId:(assignToPartyId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Activity scheduled</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets/>
+</screen>

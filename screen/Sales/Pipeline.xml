@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Pipeline area of IronStone Sales (design-sales §3, §1.2; impl-sales P4): Opportunities (the board by default, a list and a
+    calendar over one scoped query) and Leads, in the menu; OpportunityDetail and the shared WorkItemDetail in Sales' context (a task
+    linked to a deal the user sees), hidden from the menu. Shown to a user who reads Sales (the root's menu condition); every read is
+    Mantle's scoped find (mantle.sales.OpportunityServices.find#Opportunities, get#Opportunity) and every write Mantle's guarded
+    opportunity service. Forecast joins with P18. Leads is built for a second mount (impl-sales §2): Marketing's root mounts it at
+    Marketing/Leads with its own context. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pipeline" default-menu-index="2" menu-image="sym_o_trending_up" menu-image-type="icon">
+    <subscreens default-item="Opportunities" always-use-full-path="true">
+        <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="SalesPipelinePanel" type="tab"/>
+    </widgets>
+</screen>

@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Pipeline › OpportunityDetail (design-sales §3 OpportunityDetail: Opportunity, OpportunityParties, Competitors, RelatedSales,
+    CloseOpportunity, ReopenOpportunity, Collaboration; style-guide §3.3 Detail; impl-sales P4): one lead or opportunity the user
+    sees (check#Record opportunity: an organization of their sales scope, assigned to them or a team of theirs, or the organization's
+    pipeline for SALES_TEAM_VIEW; else "Not available", linking back). The record header: its id and name, type, account, organization,
+    amount, probability and expected close, the stage bar of its pipeline and the outcome chip; one primary action by state (Qualify
+    for an open lead, Close for an open opportunity until P7's New quote takes its place, Reopen for a closed one), Schedule activity
+    beside it and the others (Change stage, Disqualify a lead, the account) in More. The
+    boxes: Overview (the facts, Edit), People (the owner, team and contacts, dated: Change owner, Set team, Add contact, End),
+    Competitors, Activities (the linked tasks, each opening WorkItemDetail; Schedule activity), Quotes and orders (the linked documents
+    an organization reader sees, until the quote and order scopes, P7 and P11), Conversation (Chatter) and Files (RecordFiles), the
+    opportunity being a Chatter and files host (get#RecordLinkInfo, F69). Every change is Mantle's guarded service at the revision
+    read; a stage move is not a closure. An account the user may not see is unnamed. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Opportunity" default-menu-include="false">
+    <parameter name="salesOpportunityId" required="true"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="changeStage" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="qualifyLead" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="updateOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="closeOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="reopenOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="storeParty" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="storeCompetitor" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="addActivity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <actions>
+        <service-call name="ironstone.sales.ContextServices.check#Record" out-map="dealCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'opportunity', recordId:salesOpportunityId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="dealCheck?.recordId">
+            <service-call name="mantle.sales.OpportunityServices.get#Opportunity" out-map="detail" transaction="force-new"
+                    ignore-error="true" in-map="{salesOpportunityId:salesOpportunityId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.opportunityFound"/>
+        <set field="deal" from="detail?.opportunity || {}"/>
+        <set field="stageList" from="detail?.stages || []"/>
+        <set field="partyList" from="detail?.parties || []"/>
+        <set field="competitorList" from="detail?.competitors || []"/>
+        <set field="activityList" from="detail?.activities || []"/>
+        <set field="orderList" from="detail?.orders || []"/>
+        <set field="canEdit" from="!!detail?.canEdit"/>
+        <set field="customer360Path" from="sharedLinks['Accounts/Customer360'] || null"/>
+        <set field="workItemPath" from="sharedLinks['Pipeline/WorkItemDetail'] || null"/>
+        <set field="captionText" from="[deal.typeText, deal.accountName, deal.organizationName, deal.pipelineName].filter(Boolean).join(' · ')"/>
+        <set field="factsText" from="[deal.amountText, deal.probabilityText ? deal.probabilityText + ' (' + (deal.probabilityModeEnumId == 'SpmManual' ? 'manual' : 'from the stage') + ')' : null,
+                deal.closeText ? 'closing ' + deal.closeText : 'no close date', deal.recurringText || null].filter(Boolean).join(' · ')"/>
+        <set field="revision" from="deal.revision"/>
+        <set field="editValues" from="Object.assign({}, deal, {expectedRevision: deal.revision,
+                estimatedCloseDate: deal.estimatedCloseDate ? ec.l10n.format(deal.estimatedCloseDate, 'yyyy-MM-dd') : null})"/>
+        <set field="qualifyValues" from="{salesOpportunityId:salesOpportunityId, expectedRevision:deal.revision, organizationPartyId:deal.organizationPartyId,
+                accountPartyId:deal.accountPartyId, salesPipelineId:deal.salesPipelineId}"/>
+        <set field="dealRef" from="{salesOpportunityId:salesOpportunityId, expectedRevision:deal.revision}"/>
+        <set field="stageValues" from="{salesOpportunityId:salesOpportunityId, expectedRevision:deal.revision, opportunityStageId:deal.opportunityStageId}"/>
+        <set field="activityValues" from="{salesOpportunityId:salesOpportunityId}"/>
+    </actions>
+    <widgets>
+        <section name="OpportunityNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Opportunity ${salesOpportunityId} is not available: it does not exist, it is not one of your organizations', or it is not assigned to you or your team."
+                                type="p"/>
+                        <link url="${sharedLinks['Pipeline/Opportunities']}" text="Back to opportunities" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OpportunityFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.sales.opportunity.SalesOpportunity" record-id="${salesOpportunityId}" title="${deal.opportunityName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${salesOpportunityId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${deal.opportunityName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${factsText}" type="div" style="text-caption m-muted"/>
+                            <label text="Lost: ${deal.lostReasonText}" type="div" style="text-caption text-negative" condition="deal.lostReasonText"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${deal.statusColor}">${WebUtilities.encodeHtml(deal.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(deal.statusText ?? "")})}]]></text>
+                                <text type="html">${deal.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <!-- the stage bar: the pipeline's stages in order, the deal's own marked -->
+                    <container style="row items-center q-gutter-xs q-mt-sm">
+                        <section-iterate name="StageBar" list="stageList" entry="stage">
+                            <widgets>
+                                <label text="${stage.description}" type="span"
+                                        style="${stage.current ? 'q-px-sm q-py-xs rounded-borders text-caption text-weight-bold bg-primary text-white' : 'q-px-sm q-py-xs rounded-borders text-caption m-tonal'}"/>
+                            </widgets>
+                        </section-iterate>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <container-dialog id="QualifyDialog" button-text="Qualify" icon="sym_o_verified" type="primary"
+                                    title="Qualify ${deal.opportunityName}" width="760" condition="detail.canQualify">
+                                <section-include name="QualifyLeadForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
+                            </container-dialog>
+                            <!-- the primary action by state: Qualify an open lead, Close an open opportunity (P7's New quote takes its place),
+                                Reopen a closed deal -->
+                            <container-dialog id="CloseDialog" button-text="Close" icon="sym_o_flag" type="primary"
+                                    title="Close ${deal.opportunityName}" width="560" condition="detail.canClose &amp;&amp; !deal.isLead">
+                                <form-single name="CloseOpportunity" transition="closeOpportunity" map="dealRef">
+                                    <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="statusId">
+                                        <default-field title="Outcome">
+                                            <radio><option key="SalesOppWon" text="Won"/><option key="SalesOppLost" text="Lost"/></radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="lostReasonEnumId">
+                                        <default-field title="Lost reason" tooltip="A lost deal needs its reason">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lostReasons'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="closedDate"><default-field title="Closed on" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                    <field name="note"><default-field title="Note"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Close" confirmation="Close ${deal.opportunityName} with this outcome?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ReopenDialog" button-text="Reopen" icon="sym_o_replay" type="primary"
+                                    title="Reopen ${deal.opportunityName}" width="560" condition="detail.canReopen">
+                                <form-single name="ReopenOpportunity" transition="reopenOpportunity" map="stageValues">
+                                    <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-line size="40" required="true"/></default-field></field>
+                                    <field name="opportunityStageId">
+                                        <default-field title="Stage">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'stages', selected:opportunityStageId, organizationPartyId:deal.organizationPartyId,
+                                                            salesPipelineId:deal.salesPipelineId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="estimatedCloseDate"><default-field title="Expected close"><date-time type="date"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Reopen" confirmation="Reopen ${deal.opportunityName}? Its close stays in the history."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ActivityDialog" button-text="Schedule activity" icon="sym_o_event"
+                                    title="Schedule an activity on ${deal.opportunityName}" width="560" condition="detail.canAddActivity">
+                                <form-single name="AddActivity" transition="addActivity" map="activityValues">
+                                    <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                    <field name="workEffortName"><default-field title="Activity"><text-line size="40" required="true"/></default-field></field>
+                                    <field name="estimatedCompletionDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                    <field name="assignToPartyId">
+                                        <default-field title="For" tooltip="You when empty">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'owners', organizationPartyId:deal.organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="description"><default-field title="Notes"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Schedule"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="ChangeStageDialog" button-text="Change stage" icon="sym_o_swap_horiz"
+                                        title="Change the stage of ${deal.opportunityName}" width="520" condition="canEdit &amp;&amp; stageList.length">
+                                    <form-single name="ChangeStage" transition="changeStage" map="stageValues">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="opportunityStageId">
+                                            <default-field title="Stage">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'stages', selected:opportunityStageId, organizationPartyId:deal.organizationPartyId,
+                                                                salesPipelineId:deal.salesPipelineId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="probabilityModeEnumId">
+                                            <default-field title="Probability">
+                                                <drop-down allow-empty="true">
+                                                    <option key="SpmStage" text="From the stage"/>
+                                                    <option key="SpmManual" text="Keep mine"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="note"><default-field title="Note"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Change stage"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="DisqualifyDialog" button-text="Disqualify" icon="sym_o_block"
+                                        title="Disqualify ${deal.opportunityName}" width="520" condition="detail.canClose &amp;&amp; deal.isLead">
+                                    <form-single name="DisqualifyLead" transition="closeOpportunity" map="dealRef">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="statusId" from="'SalesOppLost'"><default-field><hidden/></default-field></field>
+                                        <field name="lostReasonEnumId">
+                                            <default-field title="Reason">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lostReasons'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="note"><default-field title="Note"><text-area rows="2" cols="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Disqualify" type="danger" confirmation="Disqualify ${deal.opportunityName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${customer360Path}" text="Account" icon="sym_o_storefront" parameter-map="{customerPartyId:deal.accountPartyId}"
+                                        condition="customer360Path &amp;&amp; deal.accountPartyId"/>
+                                <link url="${sharedLinks['Pipeline/Opportunities']}" text="All opportunities" icon="sym_o_list"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Overview"/>
+                            <box-toolbar>
+                                <container-dialog id="EditDialog" button-text="Edit" icon="sym_o_edit" title="Edit ${deal.opportunityName}" width="760"
+                                        condition="canEdit">
+                                    <form-single name="Opportunity" transition="updateOpportunity" map="editValues">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="opportunityName"><default-field title="Name"><text-line required="true"/></default-field></field>
+                                        <field name="accountPartyId">
+                                            <default-field title="Account">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="estimatedAmount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
+                                        <field name="currencyUomId">
+                                            <default-field title="Currency">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                            <order-by field-name="description"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="probabilityModeEnumId">
+                                            <default-field title="Probability from">
+                                                <drop-down allow-empty="false">
+                                                    <option key="SpmStage" text="The stage"/>
+                                                    <option key="SpmManual" text="My value"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="estimatedProbability"><default-field title="Probability %" tooltip="Kept with My value"><text-line size="5" input-type="number"/></default-field></field>
+                                        <field name="estimatedCloseDate"><default-field title="Expected close"><date-time type="date"/></default-field></field>
+                                        <field name="recurringAmount"><default-field title="Recurring amount"><text-line size="12" input-type="number"/></default-field></field>
+                                        <field name="recurringPlanEnumId">
+                                            <default-field title="Every">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'recurringPlans', selected:recurringPlanEnumId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="dataSourceId">
+                                            <default-field title="Source">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'sources', selected:dataSourceId, organizationPartyId:deal.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="nextStep"><default-field title="Next step"><text-line size="50"/></default-field></field>
+                                        <field name="description"><default-field title="Description"><text-area rows="3" cols="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="opportunityName"/><field-ref name="accountPartyId"/></field-row>
+                                            <field-row><field-ref name="estimatedAmount"/><field-ref name="currencyUomId"/></field-row>
+                                            <field-row><field-ref name="probabilityModeEnumId"/><field-ref name="estimatedProbability"/></field-row>
+                                            <field-row><field-ref name="estimatedCloseDate"/><field-ref name="dataSourceId"/></field-row>
+                                            <field-row><field-ref name="recurringAmount"/><field-ref name="recurringPlanEnumId"/></field-row>
+                                            <field-ref name="nextStep"/>
+                                            <field-ref name="description"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="Account: ${deal.accountName}" type="p" style="q-mb-xs" condition="deal.accountName"/>
+                                <label text="No account yet; qualifying links or creates one." type="p" style="m-muted q-mb-xs" condition="!deal.accountName"/>
+                                <label text="Stage: ${deal.stageText} for ${deal.stageAgeText}" type="p" style="q-mb-xs" condition="deal.stageText"/>
+                                <label text="Owner: ${deal.ownerName}${deal.teamName ? ' · team ' + deal.teamName : ''}" type="p" style="q-mb-xs"
+                                        condition="deal.ownerName || deal.teamName"/>
+                                <label text="Source: ${deal.sourceText}" type="p" style="q-mb-xs" condition="deal.sourceText"/>
+                                <label text="Campaign: ${deal.campaignText || deal.marketingCampaignId}" type="p" style="q-mb-xs" condition="deal.marketingCampaignId"/>
+                                <label text="Next step: ${deal.nextStep}" type="p" style="q-mb-xs" condition="deal.nextStep"/>
+                                <label text="${deal.description}" type="p" style="m-muted" condition="deal.description"/>
+                                <label text="Qualified ${deal.convertedText}" type="p" style="text-caption m-muted" condition="deal.convertedText"/>
+                                <label text="Closed ${deal.closedText}" type="p" style="text-caption m-muted" condition="deal.closedText"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="People"/>
+                            <box-toolbar>
+                                <container-dialog id="AddContactDialog" button-text="Add contact" icon="sym_o_person_add"
+                                        title="Add a contact to ${deal.opportunityName}" width="520" condition="canEdit">
+                                    <form-single name="AddContactParty" transition="storeParty" map="dealRef">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="roleTypeId" from="'Contact'"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Contact" tooltip="The account's contacts first">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'dealContacts', accountPartyId:deal.accountPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Add contact"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ChangeOwnerDialog" button-text="Change owner" icon="sym_o_manage_accounts"
+                                        title="Change the owner of ${deal.opportunityName}" width="520" condition="canEdit">
+                                    <form-single name="ChangeOwnerParty" transition="storeParty" map="dealRef">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="roleTypeId" from="'SalesRepresentative'"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Owner" tooltip="A sales manager assigns outside your teams">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'owners', organizationPartyId:deal.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Change owner"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="SetTeamDialog" button-text="Set team" icon="sym_o_groups"
+                                        title="Set the team of ${deal.opportunityName}" width="520" condition="canEdit">
+                                    <form-single name="SetTeamParty" transition="storeParty" map="dealRef">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="roleTypeId" from="'SalesTeam'"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Team">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'teams', organizationPartyId:deal.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Set team"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PartyList" list="partyList" skip-form="true" paginate="false">
+                                    <field name="name"><default-field title="Name"><display/></default-field></field>
+                                    <field name="roleText"><default-field title="As"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <conditional-field title="" condition="canEdit &amp;&amp; current &amp;&amp; roleTypeId != 'SalesRepresentative'">
+                                            <link url="storeParty" link-type="hidden-form-link" text="End" icon="sym_o_link_off" btn-type="danger"
+                                                    confirmation="End ${name} on the deal? The history is kept."
+                                                    parameter-map="{salesOpportunityId:salesOpportunityId, expectedRevision:revision, partyId:partyId,
+                                                        roleTypeId:roleTypeId, fromDate:fromDate, endParty:'Y'}"/>
+                                        </conditional-field>
+                                        <default-field title=""><display text=""/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="roleText"/></column>
+                                        <column><field-ref name="fromText"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="Nobody is on the deal yet." type="p" style="m-muted q-pa-sm" condition="!partyList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Activities"/>
+                            <box-body-nopad>
+                                <form-list name="ActivityList" list="activityList" skip-form="true" paginate="false">
+                                    <field name="workEffortName">
+                                        <conditional-field title="Activity" condition="workItemPath">
+                                            <link url="${workItemPath}" text="${workEffortName}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                        </conditional-field>
+                                        <default-field title="Activity"><display/></default-field>
+                                    </field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workEffortName"/></column>
+                                        <column><field-ref name="dueText"/><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No activity yet${detail.canAddActivity ? ' · Schedule one.' : '.'}" type="p" style="m-muted q-pa-sm" condition="!activityList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Competitors"/>
+                            <box-toolbar>
+                                <container-dialog id="AddCompetitorDialog" button-text="Add" icon="sym_o_add" title="Add a competitor" width="560" condition="canEdit">
+                                    <form-single name="Competitors" transition="storeCompetitor" map="dealRef">
+                                        <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="competitorPartyId">
+                                            <default-field title="Competitor">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'competitors'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="positionEnumId">
+                                            <default-field title="Position">
+                                                <drop-down allow-empty="true">
+                                                    <option key="ScpLeading" text="Ahead of us"/>
+                                                    <option key="ScpEven" text="Even"/>
+                                                    <option key="ScpTrailing" text="Behind us"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="strengths"><default-field title="Strengths"><text-line size="50"/></default-field></field>
+                                        <field name="weaknesses"><default-field title="Weaknesses"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="CompetitorList" list="competitorList" skip-form="true" paginate="false">
+                                    <field name="name"><default-field title="Competitor"><display/></default-field></field>
+                                    <field name="positionText"><default-field title="Position"><display/></default-field></field>
+                                    <field name="strengths"><default-field title="Strengths"><display/></default-field></field>
+                                    <field name="weaknesses"><default-field title="Weaknesses"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <link url="storeCompetitor" link-type="hidden-form-link" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                                    condition="canEdit" confirmation="Remove ${name} from the deal?"
+                                                    parameter-map="{salesOpportunityId:salesOpportunityId, expectedRevision:revision,
+                                                        competitorPartyId:competitorPartyId, removeCompetitor:'Y'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="positionText"/></column>
+                                        <column><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No competitor recorded." type="p" style="m-muted q-pa-sm" condition="!competitorList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <section name="RelatedSales" condition="orderList.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Quotes and orders"/>
+                            <box-body-nopad>
+                                <form-list name="RelatedSalesList" list="orderList" skip-form="true" paginate="false">
+                                    <field name="orderName"><default-field title="Document"><display/></default-field></field>
+                                    <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="orderName"/><field-ref name="dateText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Conversation"/>
+                            <box-body>
+                                <chatter id="OpportunityChatter" record-entity="mantle.sales.opportunity.SalesOpportunity" record-id="${salesOpportunityId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <record-files id="OpportunityFiles" record-entity="mantle.sales.opportunity.SalesOpportunity" record-id="${salesOpportunityId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

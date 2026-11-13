@@ -7,7 +7,7 @@
 // are Mantle's SalesAccounts; the access rules of the record kinds and of MergeAccounts are SalesAccess'.
 // Run: ./moq test mr-boss --spec SalesAccounts
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
-const {ids, users, asUser, system, refusal, page} = lib
+const {ids, users, asUser, system, refusal, invoke, page} = lib
 const {accounts, contacts} = ids
 
 spec({
@@ -59,7 +59,7 @@ feature(
 )
 
 feature(
-    "ContactDetail shows a contact of two accounts with both; the representative edits it, not another organization's contact",
+    "ContactDetail shows a contact of two accounts with both; the representative edits its identity, not its organizations or another organization's or a shared contact",
     {
         when() {
             const detail = asUser(users.rep, () => page("Accounts/ContactDetail", {partyId: contacts.dana}, "html"))
@@ -73,6 +73,36 @@ feature(
                 )
             const own = edit(contacts.dana)
             const other = edit(contacts.lee)
+            // P4 (F98, the user's call): the identity and channels only; the organizations (and relationships, notes, photo) stay the
+            // contact admin's (canEdit), and a shared person (_NA_) a contact of a Retail account is not the representative's
+            const organization = asUser(users.rep, () =>
+                system(() =>
+                    refusal("ironstone.commons.ContactServices.store#ContactOrganization", {
+                        partyId: contacts.dana,
+                        organizationPartyId: accounts.contoso,
+                        jobTitle: "Spec title"
+                    })
+                )
+            )
+            const shared = system(() => {
+                call("create#mantle.party.Party", {
+                    partyId: "SAL_SPEC_SHARED_PERSON",
+                    partyTypeEnumId: "PtyPerson",
+                    ownerPartyId: "_NA_"
+                })
+                call("create#mantle.party.Person", {partyId: "SAL_SPEC_SHARED_PERSON", firstName: "Shared", lastName: "Shopper"})
+                call("create#mantle.party.PartyRelationship", {
+                    relationshipTypeEnumId: "PrtContact",
+                    fromPartyId: "SAL_SPEC_SHARED_PERSON",
+                    toPartyId: accounts.wingtip,
+                    fromDate: ec.user.nowTimestamp
+                })
+                return "SAL_SPEC_SHARED_PERSON"
+            })
+            const sharedEdit = edit(shared)
+            const access = asUser(users.rep, () =>
+                system(() => invoke("ironstone.commons.ContactServices.check#ContactAccess", {partyId: contacts.dana}))
+            )
             const nicknames = system(() => {
                 const read = partyId =>
                     ec.entity.find("mantle.party.Person").condition("partyId", partyId).one()?.nickname || null
@@ -80,10 +110,15 @@ feature(
                 ec.service.sync().name("update#mantle.party.Person").parameters({partyId: contacts.dana, nickname: null}).call()
                 return found
             })
-            return {detail, own, other, nicknames}
+            return {detail, own, other, nicknames, organization, sharedEdit, access}
         },
-        then({detail, own, other, nicknames}) {
+        then({detail, own, other, nicknames, organization, sharedEdit, access}) {
             own == ""
+            access.canEditIdentity == true
+            access.canEdit == false
+            organization.includes("You may not change contact")
+            sharedEdit.includes("You may not change contact")
+            !detail.output.includes("ContactOrgAddDialog")
             nicknames.dana == "Spec nickname"
             other.includes("You may not change contact")
             nicknames.lee != "Spec nickname"

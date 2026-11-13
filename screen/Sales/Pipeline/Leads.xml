@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Pipeline › Leads (design-sales §3 Leads: LeadFind, LeadList, NewLead, QualifyLead; style-guide §3.2 List; impl-sales P4):
+    the leads of the user's sales scope (find#Opportunities with the lead type: the leads assigned to the user or a team of theirs,
+    a team's queue among them, or the organization's every lead for SALES_TEAM_VIEW), open ones by default, found by name, owner or
+    team, source and age. New lead (a lead with no account needed) is the primary action; a row's Qualify promotes the same record
+    (qualify#Lead, atomic, its operation key the lead and the revision read); the selection assigns or disqualifies (closes as lost
+    with a reason) the chosen leads, each on its own. A lead's campaign is shown and filtered where it is set; it is chosen once
+    Marketing offers its campaigns (impl-sales §7).
+    Built for a second mount (impl-sales §2, F47): the context is the mounting root's `sales` (get#SharedContext by its appRoot:
+    Sales, or Marketing at Marketing/Leads), every link goes through `sales.sharedLinks`, and a row whose OpportunityDetail the
+    mounting root does not mount (Marketing's) shows its name without a link. LeadList has row selection; Marketing's bulk action
+    "Add to list (evidenced)" joins it as an owner contract (impl-marketing P3). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Leads" default-menu-index="2">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="ownerPartyId"/>
+    <parameter name="mine"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="dataSourceId"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="orderByField"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="qualifyLead" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <transition-include name="applyBatch" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="statusFilter" from="statusId == 'all' ? null : (statusId || 'SalesOppOpen')"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.sales.OpportunityServices.find#Opportunities" out-map="found" transaction="force-new"
+                    ignore-error="true"
+                    in-map="{typeEnumId:'SotLead', text:text, organizationPartyId:organizationPartyId, ownerPartyId:ownerPartyId, mine:mine,
+                        teamPartyId:teamPartyId, statusId:statusFilter, dataSourceId:dataSourceId, marketingCampaignId:marketingCampaignId,
+                        orderByField:(orderByField || '-createdDate'), pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="leadList" from="found?.opportunityList || []"/>
+        <set field="leadListCount" from="found?.opportunityListCount"/>
+        <set field="leadListPageIndex" from="found?.opportunityListPageIndex"/>
+        <set field="leadListPageSize" from="found?.opportunityListPageSize"/>
+        <set field="leadListPageMaxIndex" from="found?.opportunityListPageMaxIndex"/>
+        <set field="leadListPageRangeLow" from="found?.opportunityListPageRangeLow"/>
+        <set field="leadListPageRangeHigh" from="found?.opportunityListPageRangeHigh"/>
+        <!-- the links of the mounting root (Sales', or Marketing's, which mounts no OpportunityDetail) -->
+        <set field="detailPath" from="sales.sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+        <set field="canEdit" from="!!can.opportunityEdit"/>
+        <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || (statusId &amp;&amp; statusId != 'SalesOppOpen')
+                || dataSourceId || marketingCampaignId)"/>
+        <set field="emptyText" from="filtered ? 'No lead matches these filters.' : 'No open leads' + (canEdit ? ' · Capture one with New lead.' : '.')"/>
+        <set field="newLeadDefaults" from="{organizationPartyId: sales.activeOrganizationPartyId ||
+                (sales.organizationPartyIds?.length == 1 ? sales.organizationPartyIds[0] : null)}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read leads in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="LeadsRegister" condition="can.anyRead">
+            <widgets>
+                <context title="Leads" selection-form="LeadList"/>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Leads" type="h5"/>
+                    </container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewLeadDialog" button-text="New lead" title="New lead" icon="sym_o_person_add"
+                                width="760" type="primary" condition="canEdit">
+                            <section-include name="NewLeadForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
+                        </container-dialog>
+                        <link url="." text="Mine" link-type="anchor-button" icon="sym_o_person" parameter-map="{mine:'Y'}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="LeadList" list="leadList" skip-form="true" paginate="true" header-dialog="true"
+                                saved-finds="true" select-columns="true" show-csv-button="true">
+                            <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="canEdit">
+                                <action>
+                                    <form-single name="LeadAssign" transition="applyBatch">
+                                        <field name="batch" from="'assign'"><default-field><hidden/></default-field></field>
+                                        <field name="ownerPartyId">
+                                            <default-field title="Owner">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'owners', organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Assign">
+                                                <submit icon="sym_o_person_check" confirmation="Assign the selected leads? Each is assigned on its own."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                                <action>
+                                    <form-single name="LeadDisqualify" transition="applyBatch">
+                                        <field name="batch" from="'lose'"><default-field><hidden/></default-field></field>
+                                        <field name="lostReasonEnumId">
+                                            <default-field title="Reason">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'lostReasons'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Disqualify">
+                                                <submit icon="sym_o_block" type="danger"
+                                                        confirmation="Disqualify the selected leads? Each is closed as lost with the reason, on its own."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                            <field name="text">
+                                <header-field title="Name or id"><text-line size="20"/></header-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="ownerPartyId">
+                                <header-field title="Owner">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'owners', selected:ownerPartyId, organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="mine">
+                                <header-field title="Mine"><check><option key="Y" text="My leads"/></check></header-field>
+                            </field>
+                            <field name="teamPartyId">
+                                <header-field title="Team">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:(organizationPartyId || sales.activeOrganizationPartyId)}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="Outcome">
+                                    <drop-down allow-empty="true">
+                                        <option key="SalesOppOpen" text="Open"/>
+                                        <option key="SalesOppLost" text="Disqualified"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="dataSourceId">
+                                <header-field title="Source">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'sources', selected:dataSourceId, organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="opportunityName">
+                                <conditional-field title="Lead" condition="detailPath">
+                                    <link url="${detailPath}" text="${opportunityName}" link-type="anchor"
+                                            parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                </conditional-field>
+                                <default-field title="Lead"><display/></default-field>
+                            </field>
+                            <field name="accountName"><default-field title="Account"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="marketingCampaignId"><default-field title="Campaign"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="teamName"><default-field title="Team"><display/></default-field></field>
+                            <field name="ageText" align="right"><default-field title="Age"><display/></default-field></field>
+                            <field name="nextActivityText"><default-field title="Next activity"><display/></default-field></field>
+                            <field name="outcome">
+                                <default-field title="Outcome">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="QualifyLead_${salesOpportunityId}" button-text="Qualify" icon="sym_o_verified"
+                                            title="Qualify ${opportunityName}" width="760" condition="canEdit &amp;&amp; statusId == 'SalesOppOpen'">
+                                        <section name="QualifyRow">
+                                            <actions>
+                                                <set field="qualifyValues" from="{salesOpportunityId:salesOpportunityId, expectedRevision:revision,
+                                                        organizationPartyId:organizationPartyId, accountPartyId:accountPartyId}"/>
+                                            </actions>
+                                            <widgets>
+                                                <section-include name="QualifyLeadForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
+                                            </widgets>
+                                        </section>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns>
+                                <column><field-ref name="opportunityName"/><field-ref name="accountName"/></column>
+                                <column><field-ref name="sourceText"/><field-ref name="marketingCampaignId"/></column>
+                                <column><field-ref name="ownerName"/><field-ref name="teamName"/></column>
+                                <column><field-ref name="ageText"/></column>
+                                <column><field-ref name="nextActivityText"/></column>
+                                <column><field-ref name="outcome"/></column>
+                                <column><field-ref name="rowActions"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="opportunityName"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="outcome"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoLeads" condition="!leadList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

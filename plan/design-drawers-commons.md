@@ -923,6 +923,14 @@ by an organization of it, or a shared `_NA_` account; mr-mantle `SalesAccess.js 
 `canEdit`, the Organizations, Relationships, Notes and photo edits open to them too; a login's person stays the contact
 administrator's.
 
+As built in impl-sales P4 (F98, the user's call of Nov 13, 2026): `check#ContactAccess` has a second flag, `canEditIdentity`
+(`need: 'identity'`), which `update#Contact`, `store#ContactInfo` and `store#ContactInfoPurpose` and ContactRecord's Edit, contact
+information and address forms read; `canEdit` (`need: 'edit'`: Organizations, Relationships, Notes, the photo, the record files,
+the merge) is the contact administrator's and a personal contact's owner's alone. The Sales account editor (`isSalesEditor`) gets
+`canEditIdentity` only, for a person owned by an organization of their sales scope (never a shared `_NA_` person) who is a current
+contact of an account owned by an organization of the scope (not a shared account) and has no user account. For a contact
+administrator and an owner the two flags are equal, so Commons' behaviour is unchanged.
+
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Commons | the four steps | directory or a book | merge, not a duplicate | contact info |

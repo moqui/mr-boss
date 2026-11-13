@@ -16,7 +16,8 @@ suite(
         "InsightsDashboardsWalk",
         "AdminUsersWalk",
         "PeopleHireWalk",
-        "MaintenanceWorkOrdersWalk"
+        "MaintenanceWorkOrdersWalk",
+        "SalesPipelineWalk"
     ],
     {
         server: {
