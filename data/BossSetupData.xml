@@ -5417,12 +5417,16 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- P13: an employee's own clock on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is non-inheritable, so its
         clock transition and the services it calls need their own): get#MyClock and record#Punch take no party and answer the caller's
-        own employments alone (PEOPLE_SELF_SERVICE) -->
+        own employments alone (PEOPLE_SELF_SERVICE). P30 review (the user's call of Nov 12, 2026; F28's pattern): the worker's own
+        clocking badge PIN, set and changed on SelfService (setMyPin; get#MyKioskBadges and set#MyKioskPin take no party and admit the
+        caller's own badge alone) -->
     <artifactGroups artifactGroupId="BOSS_PPL_CLOCK_SELF" description="People own clock">
         <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/clock" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
                 inheritAuthz="N"/>
-        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(get#MyClock|record#Punch)" artifactTypeEnumId="AT_SERVICE"
-                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/setMyPin" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(get#MyClock|record#Punch|get#MyKioskBadges|set#MyKioskPin)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_CLOCK_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>

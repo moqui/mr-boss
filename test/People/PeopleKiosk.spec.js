@@ -1,5 +1,6 @@
 // The clocking kiosk (impl-people P30; design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; crosscut CX-DEVICE): HR issues
-// Tomas's badge with his PIN and prints it once (BadgePrint's one html-print render: the barcode and the number); a display account
+// Tomas's badge with a one-time PIN and prints it once (BadgePrint's one html-print render: the barcode and the number), and Tomas,
+// with self-service alone, sets his own PIN through SelfService's setMyPin under Commons (the one-time PIN asked); a display account
 // for Retail holding the kiosk bundle alone is made and a tablet registered for the PEOPLE_CLOCKING route group and redeemed; as the
 // tablet, the bare page (the one html render) and its island (the one qvt render: the form, the employer, no "not a device" note), a
 // scan resolved, and Tomas clocking in by badge and PIN, a retry with the scan's key answering the first, and clocking out; People's
@@ -14,6 +15,7 @@ const kiosk = "apps/People/Time/ClockingKiosk"
 const DEVICE = "moqui.security.DeviceCredential"
 const PUNCH = "mantle.humanres.attendance.AttendancePunch"
 const pin = "4827"
+const oneTimePin = "1590"
 const state = {}
 // a request of a browser at the web root: with the device cookie it is the device's, whoever is signed in on this thread; its
 // messages (a transition's answer) read before they are cleared
@@ -53,7 +55,7 @@ feature("HR prints Tomas's badge once, and a tablet is registered for Retail's c
         // the service as Employee360's issueBadge calls it, under the People root's grant (Mantle checks the HR officer itself)
         const issued = asUser(users.hr, () =>
             system(() =>
-                invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId, pin})
+                invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId, oneTimePin})
             )
         )
         // the print's one render (html-print), as its issuer: the number is made now and shown once
@@ -61,6 +63,16 @@ feature("HR prints Tomas's badge once, and a tablet is registered for Retail's c
             request("apps/People/Employees/BadgePrint", {kioskBadgeId: issued.kioskBadgeId}, null, "html-print")
         )
         state.number = (/\d{4} \d{4} \d{4} \d{4} \d{4}/.exec(printed.output) || [""])[0]
+        // Tomas sets his own PIN on SelfService under Commons (his self-service grant): the one-time PIN asked, his PIN HR never sees
+        const pinSet = asUser(users.employee, () =>
+            request(
+                "apps/Commons/People/SelfService/setMyPin",
+                {kioskBadgeId: issued.kioskBadgeId, currentPassword: oneTimePin, newPassword: pin},
+                null,
+                null,
+                "post"
+            )
+        )
         // the display account (Retail's, the kiosk bundle alone) made by the identity operator's service, and its device
         let display = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.clock").one())
         if (!display) {
@@ -87,10 +99,11 @@ feature("HR prints Tomas's badge once, and a tablet is registered for Retail's c
             .split(";")[0]
             .replace("moqui.device=", "")
         login("john.doe")
-        return {issued, printed, display, registered}
+        return {issued, printed, pinSet, display, registered}
     },
-    then({issued, printed, display, registered}) {
+    then({issued, printed, pinSet, display, registered}) {
         issued.kioskBadgeId != null
+        pinSet.errors == "" && pinSet.messages.includes("Your clocking PIN is set")
         printed.status == 200 &&
             printed.errors == "" &&
             printed.output.includes("<svg") &&

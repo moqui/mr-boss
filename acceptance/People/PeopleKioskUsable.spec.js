@@ -2,9 +2,11 @@
 // an acceptance walk with artifact authorization on, through the screens and their transitions: the identity operator makes a
 // display account for Ziziwork Retail with the kiosk bundle alone (Admin › Users) and the access administrator registers a tablet
 // for the clocking route group and reads its code once (Security › Devices); the code makes one browser the tablet at /Device. HR
-// issues Tomas's and Ines's badges from Employee360 with their PINs (Ines's clocking turned on in Attendance's Who clocks) and
-// prints each once; the instance administrator issues Kenji's (Ziziwork Services). As the tablet, with no one signed in: the
-// kiosk's page and its form, Tomas and Ines clock in by badge and PIN, Kenji is refused as another employer's worker, and the tablet
+// issues Tomas's and Ines's badges from Employee360 (Tomas's with a one-time PIN; Ines's clocking turned on in Attendance's Who
+// clocks) and prints each once; the instance administrator issues Kenji's (Ziziwork Services); Tomas sets his own PIN on SelfService
+// (Ines and Kenji have no account here: their PINs are written as set#MyKioskPin writes them, once Ines's badge was refused for
+// having none). As the tablet, with no one signed in: the kiosk's page and its form, Tomas and Ines clock in by badge and PIN, Kenji
+// is refused as another employer's worker, and the tablet
 // opens nothing else of People, the directory, self-service, the shell or the app list; revoking it in Admin refuses its next
 // request. The rules are Mantle's KioskIdentity and mr-boss's PeopleKiosk, the credential the framework's (DeviceCredential).
 // Run: ./moq accept mr-boss --spec PeopleKioskUsable
@@ -41,12 +43,12 @@ function request(path, parameters, cookie, mode, method) {
 }
 const asRequest = (user, path, parameters, mode, method) => asUser(user, () => request(path, parameters, null, mode, method))
 const outside = out => out.errors.includes("This device opens only PEOPLE_CLOCKING")
-// a badge issued from Employee360 by the user with the PIN, then printed once: its number
-function badge(user, partyId, partyRelationshipId, pin) {
+// a badge issued from Employee360 by the user with a one-time PIN or none, then printed once: its number
+function badge(user, partyId, partyRelationshipId, oneTimePin) {
     asRequest(
         user,
         "apps/People/Employees/Employee360/issueBadge",
-        {partyId, partyRelationshipId, newPassword: pin},
+        {partyId, partyRelationshipId, newPassword: oneTimePin || ""},
         null,
         "post"
     )
@@ -56,6 +58,22 @@ function badge(user, partyId, partyRelationshipId, pin) {
     const printed = asRequest(user, "apps/People/Employees/BadgePrint", {kioskBadgeId: issued?.kioskBadgeId}, "html-print")
     return (numberPattern.exec(printed.output) || [""])[0]
 }
+const latestBadge = partyRelationshipId =>
+    system(() => find("mantle.humanres.attendance.KioskBadge", {partyRelationshipId}).orderBy("-issuedDate").limit(1).one())
+// the PIN of a worker with no account here, written as set#MyKioskPin writes it
+const ownPin = (partyRelationshipId, pin) =>
+    system(() =>
+        ec.service
+            .sync()
+            .name("update#mantle.humanres.attendance.KioskBadge")
+            .parameters({
+                kioskBadgeId: latestBadge(partyRelationshipId).kioskBadgeId,
+                pinHash: ec.user.hashPassword(pin),
+                pinSetDate: ec.user.nowTimestamp,
+                oneTimePinHash: null
+            })
+            .call()
+    )
 
 spec({
     stepwise: true,
@@ -126,9 +144,18 @@ feature("HR issues Tomas's and Ines's badges from Employee360 and prints each on
             null,
             "post"
         )
-        state.tomas = badge(users.hr, ids.employeePartyId, ids.employmentId, "3816")
-        state.ines = badge(users.hr, ids.reportPartyId, ids.reportEmploymentId, "5270")
-        state.kenji = badge(users.system, ids.otherEmployeePartyId, ids.otherEmploymentId, "9044")
+        state.tomas = badge(users.hr, ids.employeePartyId, ids.employmentId, "6402")
+        state.ines = badge(users.hr, ids.reportPartyId, ids.reportEmploymentId)
+        state.kenji = badge(users.system, ids.otherEmployeePartyId, ids.otherEmploymentId)
+        // Tomas sets his own PIN on SelfService under Commons, with the one-time PIN HR gave him
+        const pinSet = asRequest(
+            users.employee,
+            "apps/Commons/People/SelfService/setMyPin",
+            {kioskBadgeId: latestBadge(ids.employmentId).kioskBadgeId, currentPassword: "6402", newPassword: "3816"},
+            null,
+            "post"
+        )
+        ownPin(ids.otherEmploymentId, "9044")
         // a second print of Tomas's badge says it was printed
         const tomasBadge = system(() =>
             find("mantle.humanres.attendance.KioskBadge", {partyRelationshipId: ids.employmentId})
@@ -142,10 +169,11 @@ feature("HR issues Tomas's and Ines's badges from Employee360 and prints each on
             {kioskBadgeId: tomasBadge.kioskBadgeId},
             "html-print"
         )
-        return {again}
+        return {again, pinSet}
     },
-    then({again}) {
+    then({again, pinSet}) {
         state.tomas != "" && state.ines != "" && state.kenji != ""
+        pinSet.messages.includes("Your clocking PIN is set")
         again.output.includes("printed already") && !numberPattern.test(again.output)
     }
 })
@@ -157,10 +185,13 @@ feature(
             const punch = (number, pin, key) =>
                 request(kiosk + "/punch", {badgeText: number, password: pin, operationKey: key + run}, state.cookie, null, "post")
             const before = system(() => find(PUNCH, {deviceId: state.deviceId}).count())
+            const inesNoPin = punch(state.ines, "5270", "ines-none-")
+            ownPin(ids.reportEmploymentId, "5270")
             return {
                 page: request(kiosk, {}, state.cookie),
                 island: request(kiosk, {}, state.cookie, "qvt"),
                 tomas: punch(state.tomas, "3816", "tomas-"),
+                inesNoPin,
                 ines: punch(state.ines, "5270", "ines-"),
                 kenji: punch(state.kenji, "9044", "kenji-"),
                 wrong: punch(state.ines, "0000", "ines-wrong-"),
@@ -177,7 +208,8 @@ feature(
                 }
             }
         },
-        then({page, island, tomas, ines, kenji, wrong, added, refused}) {
+        then({page, island, tomas, inesNoPin, ines, kenji, wrong, added, refused}) {
+            inesNoPin.messages.includes("Set your PIN in self-service first")
             page.status == 200 && page.output.includes('data-moqui-island="clocking-kiosk"')
             island.status == 200 && island.output.includes("IdentifyAndClock") && island.output.includes("Ziziwork Retail")
             tomas.messages.includes("Tomas") && tomas.messages.includes("clocked in at")

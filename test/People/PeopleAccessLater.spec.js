@@ -64,7 +64,8 @@
 // group missing to Retail's payroll; Hours for pay the payroll operator's and the manager's (the HR officer refused the screen),
 // Pay adjustments payroll's (the HR officer refused the screen).
 // P30: a clocking badge issued by an HR officer of the employer (the directory reader refused with the same parameters, Services'
-// employment refused to Retail's HR), its print HR's (the reader refused the screen); a kiosk punch refused outside a registered
+// employment refused to Retail's HR), its print HR's (the reader refused the screen); its PIN set by the employee alone (HR refused
+// with the same parameters) and reset by HR (the reader and the employee refused); a kiosk punch refused outside a registered
 // device to the instance administrator, who holds PEOPLE_KIOSK_PUNCH, and to the employee, with the same parameters (the device's own
 // punch is PeopleKiosk's); the kiosk bundle assigned by the access administrator and proposed by the identity operator under Admin's
 // delegation rule, and refused to the reader.
@@ -1290,7 +1291,7 @@ feature(
             const A = "mantle.humanres.AttendanceServices."
             const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
             const as = (user, service, parameters) => code(asUser(user, () => system(() => refusal(service, parameters))))
-            const issue = {partyRelationshipId: ids.employmentId, pin: "5931"}
+            const issue = {partyRelationshipId: ids.employmentId, oneTimePin: "5931"}
             const punch = {badgeText: "1234 5678 9012 3456 7890", pin: "5931"}
             const proposal = user =>
                 asUser(user, () => {
@@ -1308,13 +1309,34 @@ feature(
             const codes = {
                 hrIssues: as(users.hr, A + "issue#KioskBadge", issue),
                 readerIssues: as(users.reader, A + "issue#KioskBadge", issue),
-                hrIssuesServices: as(users.hr, A + "issue#KioskBadge", {partyRelationshipId: ids.otherEmploymentId, pin: "5931"}),
+                hrIssuesServices: as(users.hr, A + "issue#KioskBadge", {
+                    partyRelationshipId: ids.otherEmploymentId,
+                    oneTimePin: "5931"
+                }),
                 adminPunches: as(users.system, A + "record#KioskPunch", punch),
                 employeePunches: as(users.employee, A + "record#KioskPunch", punch),
                 accessAssigns: proposal("admin.access"),
                 identityProposes: proposal("admin.identity"),
                 readerAssigns: proposal(users.reader)
             }
+            // P30 review: the badge's PIN is the worker's (set#MyKioskPin, the caller's own badge alone), HR resets a forgotten one
+            const kioskBadgeId = system(
+                () =>
+                    ec.entity
+                        .find("mantle.humanres.attendance.KioskBadge")
+                        .condition({partyRelationshipId: ids.employmentId})
+                        .orderBy("-issuedDate")
+                        .limit(1)
+                        .one()?.kioskBadgeId
+            )
+            const own = {kioskBadgeId, currentPin: "5931", newPin: "7319"}
+            Object.assign(codes, {
+                hrSetsPin: as(users.hr, A + "set#MyKioskPin", own),
+                readerResets: as(users.reader, A + "reset#KioskPin", {kioskBadgeId}),
+                employeeResets: as(users.employee, A + "reset#KioskPin", {kioskBadgeId}),
+                employeeSetsPin: as(users.employee, A + "set#MyKioskPin", own),
+                hrResets: as(users.hr, A + "reset#KioskPin", {kioskBadgeId})
+            })
             const problems = []
             const opened = screenRefusal(users.hr, "Employees/BadgePrint", {kioskBadgeId: "0"})
             if (opened) problems.push(`the HR officer's BadgePrint: ${opened}`)
@@ -1332,7 +1354,12 @@ feature(
                     employeePunches: "DEVICE_REQUIRED",
                     accessAssigns: "accepted",
                     identityProposes: "accepted",
-                    readerAssigns: "PERMISSION_DENIED"
+                    readerAssigns: "PERMISSION_DENIED",
+                    hrSetsPin: "RECORD_UNAVAILABLE",
+                    readerResets: "RECORD_UNAVAILABLE",
+                    employeeResets: "RECORD_UNAVAILABLE",
+                    employeeSetsPin: "accepted",
+                    hrResets: "accepted"
                 }
             problems.join("\n") == ""
         }
