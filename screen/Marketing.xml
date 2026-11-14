@@ -69,6 +69,11 @@ along with this software (see the LICENSE.md file). If not, see
             permissions and the organization again -->
         <subscreens-item name="Audiences" location="component://mr-boss/screen/Marketing/Audiences.xml" menu-index="3"
                 menu-include="ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')"/>
+        <!-- P6: Sends (design §5): Comms' shared MessageTemplates and MessageTemplateDetail, for the authors and the administrator
+            (BOSS_MKT_SENDS denies the root user group); Mantle's template services check the permissions and the organization again.
+            Sends, SendDetail and Compose join in P8 -->
+        <subscreens-item name="Sends" location="component://mr-boss/screen/Marketing/Sends.xml" menu-index="4"
+                menu-include="ec.user.hasPermission('MESSAGE_TEMPLATE_VIEW') || ec.user.hasPermission('MESSAGE_TEMPLATE_EDIT')"/>
         <!-- P3: Leads (design §10, F64): Sales' Leads and Accounts in Sales' context for this root, with the bulk "Add to list
             (evidenced)", for a user who reads Sales; Sales' own services decide what they read -->
         <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="8"
@@ -117,6 +122,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g l" label="Lists" screen="Marketing/Audiences/Lists"/>
             <!-- P5 -->
             <key keys="g s" label="Segments" screen="Marketing/Audiences/Segments"/>
+            <!-- P6 -->
+            <key keys="g t" label="Message templates" screen="Marketing/Sends/MessageTemplates"/>
         </keymap>
     </shell-providers>
 

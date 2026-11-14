@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SendingProfiles (design-marketing §12 SendingProfiles: Profiles, SendingProfile, SenderReadiness; impl-marketing P6, F13, F16, F76):
+    Comms' shared sending profiles, built by Marketing for Comms with Marketing's mount only (Marketing/Settings/SendingProfiles);
+    Comms' own mount comes with a Comms settings area. The list of the organizations' profiles with each one's readiness; a profile
+    (sendingProfileId) to bind: its relay chosen from what Admin approved (by id: never a host or credential), sender and reply-to,
+    purpose, throttle, quiet hours, tracking, bounce domain and site; and its readiness, each check with the place that fixes it (Comms'
+    mail accounts for the bounce account, Admin's relays for the transport). Everything is mantle.party.MessageServices
+    (MESSAGE_SENDING_CONFIGURE writes; it and Marketing's configurer, authors and dispatchers read); Admin alone changes relays,
+    domains and credentials. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sending profiles" default-menu-index="5">
+    <parameter name="sendingProfileId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="pageIndex"/>
+    <transition name="storeProfile">
+        <actions>
+            <service-call name="mantle.party.MessageServices.store#SendingProfile" out-map="stored"
+                    in-map="{sendingProfileId:(sendingProfileId || null), expectedRevision:(expectedRevision || null),
+                        organizationPartyId:(organizationPartyId || null), profileName:profileName, emailServerId:emailServerId,
+                        fromAddress:fromAddress, fromName:(fromName ?? ''), replyToAddress:(replyToAddress ?? ''), purposeEnumId:(purposeEnumId ?? ''),
+                        throttlePerHour:(throttlePerHour ?? ''), quietFrom:(quietFrom ?? ''), quietThru:(quietThru ?? ''), timeZone:(timeZone ?? ''),
+                        trackingPolicyEnumId:(trackingPolicyEnumId || null), bounceDomain:bounceDomain, siteId:(siteId ?? '')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Sending profile saved</message></if>
+        </actions>
+        <default-response url="." parameter-map="{sendingProfileId:(stored?.sendingProfileId || sendingProfileId)}"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="checkProfile">
+        <actions>
+            <service-call name="mantle.party.MessageServices.check#SendingProfile" in-map="{sendingProfileId:sendingProfileId, refresh:true}"/>
+        </actions>
+        <default-response url="." parameter-map="{sendingProfileId:sendingProfileId}"/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.party.MessageServices.find#SendingProfiles" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:organizationPartyId, pageIndex:pageIndex}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="readable" from="found?.profileList != null"/>
+        <set field="profileList" from="found?.profileList || []"/>
+        <set field="profileListCount" from="found?.profileListCount"/>
+        <set field="profileListPageIndex" from="found?.profileListPageIndex"/>
+        <set field="profileListPageSize" from="found?.profileListPageSize"/>
+        <set field="profileListPageMaxIndex" from="found?.profileListPageMaxIndex"/>
+        <set field="profileListPageRangeLow" from="found?.profileListPageRangeLow"/>
+        <set field="profileListPageRangeHigh" from="found?.profileListPageRangeHigh"/>
+        <if condition="sendingProfileId">
+            <service-call name="mantle.party.MessageServices.get#SendingProfile" out-map="chosen" transaction="force-new" ignore-error="true"
+                    in-map="{sendingProfileId:sendingProfileId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="profile" from="chosen?.profile || null"/>
+        <set field="organizationOptions" from="Array.from(marketing?.organizationOptions || [])"/>
+        <!-- the relays to choose from, Admin's approved ones by id (Mantle answers them to a configurer) -->
+        <set field="relayOptions" from="Array.from(chosen?.relayOptions || found?.relayOptions || [])"/>
+        <!-- the places a readiness check names (its fixRoute): this screen, Admin's relays, Comms' mail accounts -->
+        <set field="fixPlaces" from="{marketingSendingProfiles: {url: '.', text: 'This profile'},
+                adminMailRelay: {url: '/qapps/Admin/Protocols/MailRelays', text: 'Admin: mail relays'},
+                mailAccount: {url: '/qapps/Comms/Settings/MailAccounts', text: 'Comms: mail accounts'}}"/>
+        <set field="checkList" from="Array.from(chosen?.checkList || []).map(row =&gt; Object.assign({}, row, {
+                fixUrl: row.fixRoute &amp;&amp; row.fixRoute != 'marketingSendingProfiles' ? fixPlaces[row.fixRoute]?.url : null,
+                fixText: row.fixRoute ? fixPlaces[row.fixRoute]?.text || '' : '',
+                stateColor: {ready: 'positive', warning: 'warning', blocked: 'negative'}[row.state] || 'grey-8'}))"/>
+        <set field="profileValues" from="profile ? Object.assign({}, profile, {expectedRevision: profile.revision, emailServerId: profile.relayId})
+                : {organizationPartyId: organizationOptions.length == 1 ? organizationOptions[0].value : null, trackingPolicyEnumId: 'MtrNone'}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read sending profiles." type="p" style="m-muted" condition="!readable"/>
+        <section name="SendingProfilesRegister" condition="readable">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Sending profiles" type="h5"/>
+                        <label text="Which approved relay and sender each organization's mail goes out from, its limits and bounce address. Relays, domains and credentials are Admin's."
+                                type="p" style="m-muted"/></container>
+                    <container style="col-auto">
+                        <link url="." text="New profile" link-type="anchor-button" icon="sym_o_add" condition="found.canCreate &amp;&amp; profile"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Profiles" list="profileList" skip-form="true" paginate="true">
+                            <field name="profileName">
+                                <default-field title="Profile">
+                                    <link url="." text="${profileName}" link-type="anchor" parameter-map="{sendingProfileId:sendingProfileId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="fromAddress"><default-field title="Sender"><display/></default-field></field>
+                            <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
+                            <field name="limitsText"><default-field title="Limits"><display/></default-field></field>
+                            <field name="readinessText">
+                                <default-field title="Readiness">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColor}">${WebUtilities.encodeHtml(ready ? 'Ready' : 'Not ready')}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: ready ? "Ready" : "Not ready"})}]]></text>
+                                        <text type="html">${ready ? 'Ready' : 'Not ready'}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="profileName"/><field-ref name="fromAddress"/></column>
+                                <column><field-ref name="readinessText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No sending profile yet." type="p" style="m-muted q-pa-sm" condition="!profileList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box condition="profile">
+                    <box-header title="Readiness of ${profile?.profileName}"/>
+                    <box-toolbar>
+                        <link url="checkProfile" text="Check again" link-type="anchor-button" icon="sym_o_refresh"
+                                parameter-map="{sendingProfileId:sendingProfileId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="${chosen?.ready ? 'Ready: mail may go out from this profile.' : 'Not ready: nothing goes out from this profile until each blocked check is fixed.'}"
+                                type="p" style="q-pa-sm ${chosen?.ready ? 'text-positive' : 'text-negative'}"/>
+                        <form-list name="SenderReadiness" list="checkList" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Check"><display/></default-field></field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(state)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state})}]]></text>
+                                        <text type="html">${state}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="message"><default-field title="Finding"><display/></default-field></field>
+                            <field name="fix">
+                                <conditional-field title="Fix in" condition="fixUrl">
+                                    <link url="${fixUrl}" url-type="plain" text="${fixText}" link-type="anchor"/>
+                                </conditional-field>
+                                <default-field title="Fix in"><display text="${fixText}"/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="message"/></column>
+                                <column><field-ref name="state"/><field-ref name="fix"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="Last checked ${profile?.lastCheckText}" type="p" style="m-muted q-pa-sm" condition="profile?.lastCheckText"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box condition="found.canCreate">
+                    <box-header title="${profile ? 'Profile ' + profile.profileName : 'New profile'}"/>
+                    <box-body>
+                        <form-single name="SendingProfile" transition="storeProfile" map="profileValues">
+                            <field name="sendingProfileId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="profileName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                            <field name="organizationPartyId">
+                                <conditional-field title="Organization" condition="profile"><display text="${profile?.organizationName}"/></conditional-field>
+                                <default-field title="Organization">
+                                    <drop-down><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="emailServerId">
+                                <default-field title="Relay" tooltip="A relay Admin approved, by its id">
+                                    <drop-down><list-options list="relayOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromAddress"><default-field title="Sender address"><text-line size="40"/></default-field></field>
+                            <field name="fromName"><default-field title="Sender name"><text-line size="40"/></default-field></field>
+                            <field name="replyToAddress"><default-field title="Reply-to"><text-line size="40"/></default-field></field>
+                            <field name="purposeEnumId">
+                                <default-field title="Purpose">
+                                    <drop-down allow-empty="true">
+                                        <option key="MtpPromotional" text="Promotional"/>
+                                        <option key="MtpTransactional" text="Transactional"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="throttlePerHour"><default-field title="At most an hour" tooltip="Empty: no throttle"><text-line size="8"/></default-field></field>
+                            <field name="quietFrom"><default-field title="Quiet from" tooltip="HH:mm"><text-line size="6"/></default-field></field>
+                            <field name="quietThru"><default-field title="Quiet until" tooltip="HH:mm"><text-line size="6"/></default-field></field>
+                            <field name="timeZone"><default-field title="Time zone" tooltip="As America/Chicago"><text-line size="20"/></default-field></field>
+                            <field name="trackingPolicyEnumId">
+                                <default-field title="Tracking">
+                                    <drop-down>
+                                        <option key="MtrNone" text="No tracking"/>
+                                        <option key="MtrConsented" text="Links and opens of recipients who allow tracking"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="bounceDomain">
+                                <default-field title="Bounce domain" tooltip="Bounces come to bounces+(delivery).(key)@ this domain, received by the mail account bounces@ it">
+                                    <text-line size="30"/></default-field>
+                            </field>
+                            <field name="siteId"><default-field title="Site" tooltip="The PASS site whose email preferences take its unsubscribes"><text-line size="20"/></default-field></field>
+                            <field name="submitButton"><default-field title=""><submit text="Save profile"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="profileName"/><field-ref name="organizationPartyId"/></field-row>
+                                <field-row><field-ref name="emailServerId"/><field-ref name="purposeEnumId"/></field-row>
+                                <field-row><field-ref name="fromAddress"/><field-ref name="fromName"/></field-row>
+                                <field-row><field-ref name="replyToAddress"/><field-ref name="bounceDomain"/></field-row>
+                                <field-row><field-ref name="throttlePerHour"/><field-ref name="trackingPolicyEnumId"/></field-row>
+                                <field-row><field-ref name="quietFrom"/><field-ref name="quietThru"/><field-ref name="timeZone"/></field-row>
+                                <field-row><field-ref name="siteId"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MessageTemplateDetail (design-marketing §5 MessageTemplateDetail: TemplateHeader, TemplateContent, TemplatePreview, TemplateRelease;
+    impl-marketing P6, F16, F78): one template of Comms' library, built by Marketing for Comms with Marketing's mount only
+    (Marketing/Sends/MessageTemplateDetail). The header (name, purpose, locale) at its revision; the draft's content (subject,
+    preheader, the body in the rich editor with its inline text actions, the text alternative, the declared variables with their
+    labels, fallbacks and whether each is required, one per line as name | label | fallback | required), stored by
+    store#TemplateContent, whose own parse refuses an undeclared variable, an expression, a tag, a variable in a link and unsafe HTML;
+    the preview through the locked renderer with sample values (never a recipient's data); publication at a date with a reason, which
+    ends the content in effect then and authorizes no send; the end of the template; the published contents. Every read and write is
+    mantle.party.MessageServices (MESSAGE_TEMPLATE_VIEW reads, MESSAGE_TEMPLATE_EDIT writes); the mounting root adds nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Template" default-menu-include="false">
+    <parameter name="messageTemplateId" required="true"/>
+    <parameter name="sampleText"/>
+    <transition name="storeTemplate">
+        <actions>
+            <service-call name="mantle.party.MessageServices.store#Template"
+                    in-map="{messageTemplateId:messageTemplateId, expectedRevision:expectedRevision, templateName:templateName,
+                        purposeEnumId:purposeEnumId, localeId:(localeId ?? '')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Template saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeContent">
+        <actions>
+            <!-- the variables, a line each: name | label | fallback | required -->
+            <set field="variableList" from="String(variablesText || '').split(/\r?\n/).map(line =&gt; line.trim()).filter(Boolean).map(line =&gt; {
+                    const [name, label, fallback, required] = line.split(/\|/).map(part =&gt; part.trim())
+                    return {name, label: label || name, fallback: fallback || '', required: /^(y|yes|required|true)$/i.test(required || '')}})"/>
+            <service-call name="mantle.party.MessageServices.store#TemplateContent" out-map="stored"
+                    in-map="{messageTemplateId:messageTemplateId, expectedRevision:expectedRevision, subject:(subject ?? ''),
+                        preheader:(preheader ?? ''), body:(body ?? ''), bodyText:(bodyText ?? ''), variables:variableList}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Draft saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishTemplate">
+        <actions>
+            <service-call name="mantle.party.MessageServices.publish#Template"
+                    in-map="{messageTemplateId:messageTemplateId, expectedRevision:expectedRevision, fromDate:(fromDate || null), reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Published</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="endTemplate">
+        <actions>
+            <service-call name="mantle.party.MessageServices.end#Template"
+                    in-map="{messageTemplateId:messageTemplateId, expectedRevision:expectedRevision, reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">The template has ended</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.party.MessageServices.get#Template" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{messageTemplateId:messageTemplateId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="template" from="found?.template || null"/>
+        <!-- the sample values of the preview, a line each as name = value (synthetic: no recipient's data is read here) -->
+        <set field="sampleValues" from="Object.fromEntries(String(sampleText || '').split(/\r?\n/).map(line =&gt; line.split('='))
+                .filter(parts =&gt; parts.length &gt;= 2 &amp;&amp; parts[0].trim()).map(parts =&gt; [parts[0].trim(), parts.slice(1).join('=').trim()]))"/>
+        <if condition="template">
+            <service-call name="mantle.party.MessageServices.preview#Template" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{messageTemplateId:messageTemplateId, sampleValues:sampleValues}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="editing" from="found?.draft || found?.current || null"/>
+        <set field="headerValues" from="template ? {messageTemplateId, expectedRevision: template.revision, templateName: template.templateName,
+                purposeEnumId: template.purposeEnumId, localeId: template.localeId} : {}"/>
+        <set field="contentValues" from="template ? {messageTemplateId, expectedRevision: found.draft ? found.draft.revision : template.revision,
+                subject: editing?.subject || '', preheader: editing?.preheader || '', body: editing?.body || '', bodyText: editing?.bodyText || '',
+                variablesText: Array.from(editing?.variables || []).map(v =&gt; [v.name, v.label, v.fallback, v.required ? 'required' : ''].join(' | ')).join('\n')} : {}"/>
+        <set field="releaseValues" from="found?.draft ? {messageTemplateId, expectedRevision: found.draft.revision} : {}"/>
+        <set field="endValues" from="template ? {messageTemplateId, expectedRevision: template.revision} : {}"/>
+        <set field="contentList" from="Array.from(found?.contentList || [])"/>
+        <set field="findingList" from="Array.from(preview?.findings || []).map(text =&gt; ({text}))"/>
+        <set field="safeBody" from="preview?.safeBody || ''"/>
+        <set field="previewValues" from="{messageTemplateId, sampleText: sampleText || Array.from(editing?.variables || []).map(v =&gt; v.name + ' = ').join('\n')}"/>
+        <set field="listUrl" from="sharedLinks?.['Sends/MessageTemplates'] || null"/>
+    </actions>
+    <widgets>
+        <label text="This template is not available." type="p" style="m-muted" condition="!template"/>
+        <section name="TemplateRecord" condition="template">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <link url="${listUrl}" text="Templates" link-type="anchor" icon="sym_o_arrow_back" condition="listUrl"/>
+                        <label text="${template?.templateName}" type="h5"/>
+                        <label text="${template?.organizationName} · ${template?.channelText} · ${template?.purposeText} · ${template?.stateText}${template?.hasDraft &amp;&amp; template?.state != 'draft' ? ' · a draft waits' : ''}"
+                                type="p" style="m-muted"/>
+                    </container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="PublishDialog" button-text="Publish" title="Publish the draft" icon="sym_o_publish" width="560"
+                                type="primary" condition="template?.canEdit &amp;&amp; found?.draft">
+                            <label text="The draft takes effect at its date and ends the content in effect then. Publishing sends nothing and changes no prepared message."
+                                    type="p" style="m-muted"/>
+                            <form-single name="TemplateRelease" transition="publishTemplate" map="releaseValues">
+                                <field name="messageTemplateId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="fromDate"><default-field title="Takes effect" tooltip="Empty: now"><date-time/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Publish" confirmation="Publish this draft? It becomes the template's content from its date."/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="EndTemplateDialog" button-text="End" title="End the template" icon="sym_o_block" width="560"
+                                condition="template?.canEdit">
+                            <label text="An ended template is no longer offered; its contents stay." type="p" style="m-muted"/>
+                            <form-single name="EndTemplate" transition="endTemplate" map="endValues">
+                                <field name="messageTemplateId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="End the template" type="danger" confirmation="End this template?"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container-box condition="template?.canEdit">
+                    <box-header title="Template"/>
+                    <box-body>
+                        <form-single name="TemplateHeader" transition="storeTemplate" map="headerValues">
+                            <field name="messageTemplateId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="templateName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                            <field name="purposeEnumId">
+                                <default-field title="Purpose">
+                                    <drop-down>
+                                        <option key="MtpPromotional" text="Promotional"/>
+                                        <option key="MtpTransactional" text="Transactional"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="localeId"><default-field title="Locale"><text-line size="10"/></default-field></field>
+                            <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                            <field-layout><field-row><field-ref name="templateName"/><field-ref name="purposeEnumId"/></field-row>
+                                <field-row><field-ref name="localeId"/><field-ref name="submitButton"/></field-row></field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="${found?.draft ? 'Draft' : found?.current ? 'Content in effect' : 'Content'}"/>
+                    <box-body>
+                        <label text="Variables are written as ${'$'}{name}; each must be declared below, with its fallback for a recipient who has no value. A published content is never changed: saving starts a draft."
+                                type="p" style="m-muted"/>
+                        <form-single name="TemplateContent" transition="storeContent" map="contentValues" condition="template?.canEdit">
+                            <field name="messageTemplateId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><text-line size="60"/></default-field></field>
+                            <field name="preheader"><default-field title="Preheader"><text-line size="60"/></default-field></field>
+                            <field name="body"><default-field title="Body"><text-area rows="12" cols="80" editor-type="rich"/></default-field></field>
+                            <field name="bodyText"><default-field title="Text alternative"><text-area rows="6" cols="80"/></default-field></field>
+                            <field name="variablesText">
+                                <default-field title="Variables" tooltip="One a line: name | label | fallback | required">
+                                    <text-area rows="4" cols="80"/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Save draft"/></default-field></field>
+                        </form-single>
+                        <section name="ContentReadOnly" condition="!template?.canEdit &amp;&amp; editing">
+                            <widgets>
+                                <label text="Subject: ${editing?.subject}" type="p"/>
+                                <label text="Text: ${editing?.bodyText}" type="p" style="m-muted"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <container-box condition="preview">
+                    <box-header title="Preview"/>
+                    <box-body>
+                        <form-single name="TemplatePreview" transition="." map="previewValues">
+                            <field name="messageTemplateId"><default-field><hidden/></default-field></field>
+                            <field name="sampleText">
+                                <default-field title="Sample values" tooltip="One a line: name = value. Synthetic only: no recipient's data is read here">
+                                    <text-area rows="3" cols="60"/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                        </form-single>
+                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium"/>
+                        <label text="${preview?.renderedPreheader}" type="p" style="m-muted" condition="preview?.renderedPreheader"/>
+                        <render-mode>
+                            <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 640px">${safeBody}</div>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
+                        </render-mode>
+                        <form-list name="Findings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
+                            <field name="text"><default-field title="To check"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box condition="contentList.length">
+                    <box-header title="Published contents"/>
+                    <box-body-nopad>
+                        <form-list name="ContentHistory" list="contentList" skip-form="true" paginate="false">
+                            <field name="contentSeqId"><default-field title="#"><display/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="publishReason"><default-field title="Reason"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="subject"/><field-ref name="fromText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
