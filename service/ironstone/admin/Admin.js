@@ -403,6 +403,9 @@ const settingsRoutes = {
     salesStages: {url: "/qapps/Sales/Settings/Stages", idParameter: "salesPipelineId", plain: true},
     salesTeams: {url: "/qapps/Sales/Settings/Teams", plain: true},
     salesLeadSources: {url: "/qapps/Sales/Settings/LeadSources", plain: true},
+    // Sales P9: its defaults (the readiness's sales.defaults and sales.commercialRevision) and approval rules
+    salesDefaults: {url: "/qapps/Sales/Settings/SalesDefaults", plain: true},
+    salesApprovalPolicies: {url: "/qapps/Sales/Settings/ApprovalPolicies", plain: true},
     // Marketing P1: its settings landing (marketing.settings) and its setup readiness's places (marketing.setup)
     marketingSettings: {url: "/qapps/Marketing/Settings", plain: true},
     marketingAdoption: {url: "/qapps/Marketing/Settings/Adoption", plain: true},

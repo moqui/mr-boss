@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The request for quote transitions of IronStone Sales (design-sales §5 QuoteRequests and QuoteRequestDetail; impl-sales P8), each
+    one a call of Mantle's guarded RFQ service (mantle.order.SalesQuoteServices, which checks SALES_QUOTE_EDIT, the organization, the
+    assignment and the request's revision itself): createQuoteRequest (NewQuoteRequest, from RFQs; it opens the new request), and
+    QuoteRequestDetail's Sales context: rfqChoices (the drop-downs: accounts, an account's contacts, the organization's teams and
+    people, the seller's products), rfqStoreItem (a line, new, changed or removed), rfqUpdate (the request's facts and its
+    assignment), rfqCreateQuote (a quote from the chosen lines, under an operation key; it opens the quote's OrderDetail) and
+    rfqDecline (with the requester told at the previewed address). A screen includes each transition it uses by name. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createQuoteRequest">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.create#QuoteRequest" out-map="created"
+                    in-map="{organizationPartyId:(organizationPartyId || null), customerPartyId:(customerPartyId || null),
+                        contactPartyId:(contactPartyId || null), teamPartyId:(teamPartyId || null), requestName:(requestName || null),
+                        description:(description || null), responseRequiredDate:(responseRequiredDate || null),
+                        salesChannelEnumId:(salesChannelEnumId || null)}"/>
+            <set field="detailPath" from="sales?.sharedLinks?.['Quotes/QuoteRequestDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Request for quote ${created.requestId} made</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath</expression></condition>
+            <parameter name="requestId" from="created.requestId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="rfqChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
+                        organizationPartyId:(organizationPartyId || null), accountPartyId:(accountPartyId || null)}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="rfqStoreItem">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.store#QuoteRequestItem"
+                    in-map="{requestId:requestId, requestRevision:requestRevision, requestItemSeqId:(requestItemSeqId || null),
+                        productId:(productId || null), quantity:(quantity || null), description:(description ?? null),
+                        requiredByDate:(requiredByDate || null), cancel:(cancel || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Line ${cancel == 'Y' ? 'removed' : 'saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."><parameter name="requestId"/></error-response>
+    </transition>
+    <transition name="rfqUpdate">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.update#QuoteRequest"
+                    in-map="{requestId:requestId, requestRevision:requestRevision, requestName:(requestName || null),
+                        description:(description ?? null), responseRequiredDate:(responseRequiredDate || null),
+                        customerPartyId:(customerPartyId || null), contactPartyId:(contactPartyId || null),
+                        ownerPartyId:(ownerPartyId || null), teamPartyId:(teamPartyId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Request ${requestId} saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."><parameter name="requestId"/></error-response>
+    </transition>
+    <transition name="rfqCreateQuote">
+        <actions>
+            <set field="chosenIds" from="requestItemSeqIdList == null ? [] : (Array.isArray(requestItemSeqIdList) ? requestItemSeqIdList
+                    : String(requestItemSeqIdList).split(',')).map(id =&gt; String(id).trim()).filter(Boolean)"/>
+            <service-call name="mantle.order.SalesQuoteServices.create#QuoteFromRequest" out-map="created"
+                    in-map="{requestId:requestId, requestRevision:requestRevision, operationKey:operationKey,
+                        requestItemSeqIdList:chosenIds, validThruDate:(validThruDate || null)}"/>
+            <set field="quotePath" from="sales?.sharedLinks?.['Orders/OrderDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote ${created.orderId} made from request ${requestId}</message></if>
+        </actions>
+        <conditional-response url="${quotePath}"><condition><expression>quotePath &amp;&amp; !ec.message.hasError()</expression></condition>
+            <parameter name="orderId" from="created.orderId"/></conditional-response>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."><parameter name="requestId"/></error-response>
+    </transition>
+    <transition name="rfqDecline">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.decline#QuoteRequest" out-map="declined"
+                    in-map="{requestId:requestId, requestRevision:requestRevision, reason:(reason || null), notify:(notify || null),
+                        toAddress:(toAddress || null), messageText:(messageText || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; declined.notified"><message type="success">Request ${requestId} declined; the requester is told</message>
+                <else-if condition="!ec.message.hasError()"><message type="success">Request ${requestId} declined</message></else-if></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."><parameter name="requestId"/></error-response>
+    </transition>
+    <widgets/>
+</screen>

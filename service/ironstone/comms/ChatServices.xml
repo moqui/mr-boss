@@ -117,10 +117,12 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="chatRoomId"/>
             <parameter name="eventSeq" type="Integer"/>
-            <parameter name="emailMessageId"><description>Sales P5: a mail message, for kind lead (Mail's message-actions)</description></parameter>
-            <parameter name="communicationEventId"><description>Sales P5: an internal message, for kind lead</description></parameter>
+            <parameter name="emailMessageId"><description>Sales P5: a mail message, for kind lead (Mail's message-actions); P8 quoteRequest too</description></parameter>
+            <parameter name="communicationEventId"><description>Sales P5: an internal message, for kind lead; P8 quoteRequest too</description></parameter>
             <parameter name="kind" required="true"><description>lead (Sales P5, "Create lead": the sender's inquiry as a lead of
-                the user's, from a chat, mail or internal message, ironstone.sales.ContextServices.create#LeadFromMessage), task, request, event or case (Customer Service P6: a case for
+                the user's, from a chat, mail or internal message, ironstone.sales.ContextServices.create#LeadFromMessage), quoteRequest
+                (Sales P8, "Create RFQ": a request for quote of the user's from a chat, mail or internal message,
+                ironstone.sales.ContextServices.create#QuoteRequestFromMessage), task, request, event or case (Customer Service P6: a case for
                 the customer who sent it, ironstone.customerservice.ChannelServices.create#CaseFromMessage), or claimLine (People
                 P15, "Add to my claim": the caller's own message as a draft line of their expense claim,
                 mantle.humanres.ExpenseServices.create#ClaimLineFromChat), or application (People P16, "Create application": the
@@ -135,6 +137,19 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="roomRecordLinked" type="Boolean"/>
         </out-parameters>
         <actions><script><![CDATA[
+            if (kind === 'quoteRequest') {
+                // Sales P8: a request for quote from the message, the user's (refused for a user without Sales: its services are
+                // BOSS_SALES'; Mantle reads the message as the user before anything is written)
+                const made = ec.service.sync().name('ironstone.sales.ContextServices.create#QuoteRequestFromMessage').parameters({chatRoomId: chatRoomId || null,
+                    eventSeq: eventSeq, emailMessageId: emailMessageId || null, communicationEventId: communicationEventId || null}).call()
+                if (ec.message.hasError()) return
+                recordEntityName = made.recordEntityName
+                recordId = made.recordId
+                url = made.url
+                message = made.message
+                roomRecordLinked = false
+                return
+            }
             if (kind === 'lead') {
                 // Sales P5: a lead from the message, the user's (refused for a user without Sales: its services are BOSS_SALES')
                 const made = ec.service.sync().name('ironstone.sales.ContextServices.create#LeadFromMessage').parameters({chatRoomId: chatRoomId || null,

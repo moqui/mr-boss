@@ -140,9 +140,10 @@ along with this software (see the LICENSE.md file). If not, see
                 cf.makeCondition([cf.makeCondition('requestCategoryId', 'equals', null), cf.makeCondition('requestCategoryId', 'not-in', serviceQueueIds.length ? serviceQueueIds : ['_NONE_'])], 'or')], 'and'))
             if (!reach.length) return
             let find = ec.entity.find('mantle.request.Request').condition(cf.makeCondition(reach, 'or'))
-            // a purchase RFQ is in no Projects list (impl-purchasing P11, R-PUR-13)
+            // a purchase RFQ is in no Projects list (impl-purchasing P11, R-PUR-13), nor a customer's request for quote (Sales',
+            // impl-sales P8 review)
             find = find.condition(cf.makeCondition([cf.makeCondition('requestTypeEnumId', 'is-null', null),
-                    cf.makeCondition('requestTypeEnumId', 'not-equals', 'RqtPurchaseRfq')], 'or'))
+                    cf.makeCondition('requestTypeEnumId', 'not-in', ['RqtPurchaseRfq', 'RqtQuote'])], 'or'))
             if (rootWorkEffortId) find = find.condition('rootWorkEffortId', rootWorkEffortId)
             else if (noProject) find = find.condition('rootWorkEffortId', null)
             const all = Array.from(find.orderBy('-lastUpdatedStamp').limit(5000).list())

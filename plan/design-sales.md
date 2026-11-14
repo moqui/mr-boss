@@ -247,7 +247,7 @@ need in §17.
 | Contract | Sales entries |
 | --- | --- |
 | CX-ASSIST (L1) | Procedure skills in mr-boss `skill/`: `sales-qualify-lead.md`, `sales-issue-quote.md`, `sales-follow-up.md`, `sales-log-call.md`, each with `screens:` so they show as chips, `skill/aliases.json` (quote, RFQ, deal, account) and `test/skill-retrieval.json`. `assist-prompt` chips: OpportunityDetail "Summarize this deal", "Draft a follow-up", "What changed since the last activity"; OrderDetail quote context "Explain this price", "Draft a cover note"; Customer360 "Open work for this account". `response-action`s "Log as note" (a Chatter note on the host) and "Send as message" (opens Comms Compose). `AgentToolExposure` rows only for O/Q verbs no single screen does: O.create#Opportunity, O.move#Opportunity, O.close#Opportunity, Q.preview#Quote and Q.send#Quote, every mutating one behind an Assist approval; `exposeMcp` is Y for O.find#Opportunities and Q.find#Quotes and N for mutating verbs. Prerequisite: the Mantle active-organization user-facts provider (crosscut CX-ASSIST), which no component registers yet, so Sales builds it (impl-sales P6, F65); the facts are fixed when a conversation starts, so a tool still takes its organization. **Needs:** SAL-ASSIST |
-| Comms hooks (L8) | As Comms renders them (impl-sales F64): `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest, which Comms offers on a chat message; `ext-action`s "Create lead" in `chat-message-actions` and `voicemail-actions` (a voicemail's action is a transition given the voicemail, on Customer Service's pattern) and "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call; `contact-card`, which Comms' Mail reads, answers with the sender's account or lead card. "Create lead" and "Create RFQ" are in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13). As built (P5): create-from kind lead is a kind of Comms' one provider `boss.records` (ChatServices.create#FromChat, as Customer Service's case and People's kinds are), since a second create-from provider would answer every kind; Mail's slot posts the framework's `createRecord` transition with the message's ids; `record-lookup` comes before Comms' own (Sales' link), `contact-card` after it (a lead's card for an inquirer who is no party yet), and "Log call on opportunity" is a dialog (Sales/Pipeline/LogCall) mounted in Calls/Call and Calls/Voicemail. **Needs:** SAL-SHELL |
+| Comms hooks (L8) | As Comms renders them (impl-sales F64): `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest, which Comms offers on a chat message; `ext-action`s "Create lead" in `chat-message-actions` and `voicemail-actions` (a voicemail's action is a transition given the voicemail, on Customer Service's pattern) and "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call; `contact-card`, which Comms' Mail reads, answers with the sender's account or lead card. "Create lead" and "Create RFQ" are in Mail's `message-actions` slot, which Sales P5 makes basic-comms render (impl-sales §4, Nov 13). As built (P5): create-from kind lead is a kind of Comms' one provider `boss.records` (ChatServices.create#FromChat, as Customer Service's case and People's kinds are), since a second create-from provider would answer every kind; Mail's slot posts the framework's `createRecord` transition with the message's ids; `record-lookup` comes before Comms' own (Sales' link), `contact-card` after it (a lead's card for an inquirer who is no party yet), and "Log call on opportunity" is a dialog (Sales/Pipeline/LogCall) mounted in Calls/Call and Calls/Voicemail. As built (P8): "Create RFQ" is the kind quoteRequest of the same provider, beside "Create lead" in Mail's `message-actions` and Chat's `chat-message-actions`; Mantle's `create#QuoteRequest` reads the message as the user before anything is written. **Needs:** SAL-SHELL |
 | Meetings (L7) | A meeting activity is a Commons Event with a CallLink ("Add video call" on EventDetail); prospects are invited by iMIP through `mantle.work.EventServices.send#EventInvitations` and join by the link as guests, without an account (§3) |
 | CX-SYNC (L2) | Activities are events and tasks in the user's own CalDAV calendar already. Account contacts appear on reps' phones as a read-only projected CardDAV address book, "My accounts", answered by S with the rep's account scope (§4). **Needs:** SAL-SYNC |
 | CX-MAIL-INTAKE (L3) | `EmailRuleAction` actions `createLead` (O.store#LeadIntake) and `createQuoteRequest` (Q.create#QuoteRequest), reached by plus-tag intake addresses such as `sales+leads@` and `sales+rfq@` (§§3, 5). **Needs:** SAL-MAIL-INTAKE |
@@ -725,6 +725,32 @@ Mounted at `Sales/Quotes/QuoteRequestDetail`; crosscut §3.11 row:
 | --- | --- | --- | --- | --- |
 | Sales | Overview, Items, Parties, Quotes, Activities, Files | RqtQuote; authorized selling organization | create quote from items, decline RFQ, assign; no case or SLA actions | turning the request into an offer |
 
+**As built (impl-sales P8, Nov 13, 2026).** An RFQ is an RqtQuote Request whose current OrgInternal RequestParty is its selling
+organization; its customer, contact, owner and team are its Customer, Contact, SalesRepresentative and SalesTeam rows (the owner
+and team as a quote's part has them, not Assignee), and its scope is a quote's: a Sales reader sees the RFQs assigned to them or
+their team, a holder of `SALES_TEAM_VIEW` the organization's (SalesAccess.js `quoteRequestOf`; `check#QuoteRequestAccess` is its
+record visibility for Chatter, files and record links in every app). The Q services are `find#QuoteRequests`, `get#QuoteRequest`,
+`create#QuoteRequest`, `create#QuoteRequestFromEmail` (the `createQuoteRequest` rule action, the team by the rule's value or the
+plus tag as `createLead`'s, its owner needing `SALES_QUOTE_EDIT`; it stops the later rules), `store#QuoteRequestItem`,
+`update#QuoteRequest` (the facts and the assignment: Assign is a dialog of it), `create#QuoteFromRequest`,
+`preview#QuoteRequestDecline` and `decline#QuoteRequest`. A sender is matched to an account or to the contact of exactly one
+account of the organization; mail never makes a party. The request's revision is the latest stamp of the request, its lines and
+parties. A quote links to its request line by line (RequestItemOrder), not by a record link; a first quote puts the RFQ In progress;
+a decline is Cancelled with the resolution Rejected and its reason a RequestNote, and tells the requester (the first message's
+sender, else the contact's or customer's email) only at the address the preview showed, from the mailbox the RFQ came in by when it is an RFQ intake mailbox (an enabled
+createQuoteRequest rule runs on it) or one the rep may send from. A
+request with no line products cannot be quoted until a line has one. QuoteRequestDetail is Shared/RequestDetail's Sales branch
+(template/SalesQuoteRequestDetail.xml) at `Sales/Quotes/QuoteRequestDetail`: the header with Create quote, More (Add line, Edit
+request, Assign, Decline), Overview, Lines, Quotes, Conversation and Files; the Parties and Activities of the table above are the
+Overview's people and Conversation. The chargeable repair (§6): a warranty claim whose current decision has a charge estimate, or
+that a quote was made from, is listed under RFQs' "Repairs to quote" for a holder of `SALES_QUOTE_EDIT` or `SALES_TEAM_VIEW` of
+its organization, shown by its customer and its lines' products and quantities alone, and quoted as "Repair estimate" with no
+line description; get#WarrantyClaim answers the quotes made from it (`salesQuotes`), which WarrantyAssessment shows. Notices go
+both ways (the user's call, impl-sales §4 Nov 13): a chargeable decision tells the organization's default Sales team
+(SalesPolicy, topic SalesRepairToQuote), and a repair's quote tells the claim's assignee, else its queue (SalesRepairQuoted);
+neither names the fault text, diagnosis, decision or an amount. A customer's request for quote is Sales' alone: Commons' and
+Projects' requests neither list nor open it.
+
 ### OrderDetail — Quote context passed
 
 This is the **quote context of the one OrderDetail** defined in crosscut §3.6, reached at
@@ -910,6 +936,31 @@ crosscut §3.15 row:
 | Sales | Quote/discount exceptions and commercial order changes | SalesQuoteApproval and OrderChangeApproval of the selling organization; current source revision | approve or refuse through Q.decide#Quote or C.decide#OrderChange; no self-approval unless policy allows | price and margin exceptions |
 
 **Source:** research §§5, 11; Commons approvals. **Needs:** SAL-APPROVAL, SAL-SHELL.
+
+### As built (impl-sales P9, Nov 13, 2026)
+
+- The approval verbs are `mantle.order.SalesApprovalServices` (service/mantle/order/SalesApprovals.js), beside Q's quote verbs:
+  `preview#Quote`, `request#QuoteApproval` (the rep asks; the notice goes then, not on each change), `decide#Quote`, the
+  SalesQuoteApproval topic's `approve#QuoteMessage` and `refuse#QuoteMessage`, and SalesDefaults' and ApprovalPolicies' writers.
+  `SalesQuoteServices.propose#Quote` carries the approval guard (APPROVAL_REQUIRED); P10 adds the issue's checks to it.
+- A decision is an OrderDecision with the order revision, purpose (`SapQuote`, `SapOrder`), rule (none for the unconfigured
+  manual-price rule, `SarOverride`), evaluation time, result (`SdrRequested`, `SdrApproved`, `SdrRefused`), decider and operation
+  key; a decision counts only at the quote's current revision, and a commercial change marks the earlier ones invalidated (the SECA
+  on `increment#OrderRevision`), so a file or note leaves it in force where the seller's commercial revision is on.
+- The approver holds SALES_APPROVE in the seller's organization, is in the rule's group when it names one (the "approver role" is a
+  user group), and is not the quote's owner, who asked for the approval or who entered a line the rule names, unless the rule allows
+  it. A holder of SALES_APPROVE sees a quote of their organization once its approval was asked (SalesAccess.js quoteOf), to read
+  and decide, not to change it. The rep asks for each rule (one SdrRequested row a rule); the notice names the rules asked for,
+  deciding it decides those and no rule set since, and only when the approver may decide each of them (the framework then reads
+  the notice for every recipient); a rule set since is asked for again.
+- A free or zero-price line is the rep's to draft where a rule will need it approved (the manual-price rule while none is set, a
+  free-line, discount or floor rule); elsewhere it still needs SALES_APPROVE (FREE_LINE_DENIED) (the user's call of Nov 13).
+- Sales' pre-approval warnings: for a seller with a rule in effect, an accepted quote's open quote rules and the order rules the order
+  meets, each naming the rule's kind and id, never an amount; an organization with none adds nothing. The notice's title names the
+  kinds of the rules, never an amount.
+- OrderDetail's Approval box shows the rules, their inputs and states, Ask for approval and Approve or Refuse; ApprovalPolicies shows a
+  quote's preview when one is named. Approvals lists both topics; an order change's row opens where Commons' resolver sends the
+  approver (Sales' Approvals until P14).
 
 ## 6. Orders and commercial changes
 
@@ -1473,6 +1524,13 @@ thresholds explicitly; installation seeds no permissive monetary threshold. Unti
 manual price overrides require an approver distinct from their author. **Needs:** SAL-APPROVAL.
 
 **Source:** research §§5, 10; OrderDecision and Carbon sales-rule guardrails.
+
+As built (impl-sales P9, Nov 13, 2026): SalesPolicy and SalesPolicyThreshold (entity/SalesApprovalEntities.xml) hold every field
+above; SalesDefaults shows and publishes those Sales reads so far (a new quote's validity and default team, the intake retention)
+with a preview, and the commercial revision on the seller's own preference; the templates, response requirements, thresholds, the
+approval setting and the net-terms option join the form with P10, P11 and P13, which read them. Rules are bounded to four types
+(amount, discount, price floor, free line) of two purposes; the floor's cost is the approved standard cost, else the seller's average
+cost, read on the server only. Readiness adds `sales.defaults` and `sales.commercialRevision`, both fixed in SalesDefaults.
 
 ## 10. PASS Sales customer access
 

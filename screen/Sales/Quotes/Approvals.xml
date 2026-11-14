@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Quotes › Approvals (design-sales §5 Approvals, crosscut §3.15's Sales row; impl-sales P9, F26, F43, F58): the Commons
+    Notifications list mounted with Sales' approval topics and the current recipient, as Purchasing mounts it
+    (Purchasing/Approvals.xml), for the sales approver (BOSS_SAL_APPROVALS: BOSS_SALES_APPROVE, which holds SALES_APPROVE from P9) and
+    the administrator. Its rows are a quote's exception (SalesQuoteApproval, titled with the quote, the customer and the kinds of its
+    rules, never an amount) and a commercial order change Customer Service filed (OrderChangeApproval). Approve and refuse call the
+    topics' handlers through the framework (mantle.order.SalesApprovalServices approve#QuoteMessage and refuse#QuoteMessage, which
+    decide at the message's revision and refuse a stale one naming the current revision; OrderChangeServices' for a change); opening a
+    quote's row opens its OrderDetail, whose Approval box shows the rules, and a change's row opens where Commons' record-link resolver
+    sends the approver (F58). The list adds no right: each decision is Mantle's check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Approvals" default-menu-index="8" menu-image="sym_o_approval" menu-image-type="icon"
+        default-menu-include="ec.user.hasPermission('SALES_APPROVE')">
+    <always-actions>
+        <script>if(!(sales.capabilities.approve))throw new Error('PERMISSION_DENIED: Sales approvals are the sales approver\'s')</script>
+        <set field="notificationTopics" from="['SalesQuoteApproval', 'OrderChangeApproval']"/>
+        <set field="notificationsTitle" value="Approvals"/>
+    </always-actions>
+    <subscreens default-item="Notifications" always-use-full-path="true">
+        <subscreens-item name="Notifications" location="component://mr-boss/screen/Commons/Notifications.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

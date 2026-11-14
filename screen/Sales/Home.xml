@@ -55,6 +55,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="leadsCard" from="counterOf.leads || unavailable"/>
         <set field="mineCard" from="counterOf.myOpportunities || unavailable"/>
         <set field="lateCard" from="counterOf.pastClose || unavailable"/>
+        <!-- P8: the requests for quote awaiting a response -->
+        <set field="rfqCard" from="counterOf.quoteRequests || unavailable"/>
         <set field="laterCards" from="Array.from(home?.counters || []).filter(counter =&gt; counter.state == 'notConfigured')"/>
         <set field="assignedList" from="Array.from(home?.assignedWork || [])"/>
         <set field="assignedUnavailable" from="!home || home.assignedState == 'unavailable'"/>
@@ -112,12 +114,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     link="${mineCard.link}"/>
                             <number-card title="Past their expected close" value="${lateCard.stateText}" icon="sym_o_event_busy" size="sm"
                                     link="${lateCard.link}"/>
-                            <number-card title="RFQs awaiting response" value="Not configured" icon="sym_o_request_quote" size="sm"/>
+                            <number-card title="RFQs awaiting response" value="${rfqCard.stateText}" icon="sym_o_request_quote" size="sm"
+                                    link="${rfqCard.link}"/>
                             <number-card title="Quotes to send" value="Not configured" icon="sym_o_send" size="sm"/>
                             <number-card title="Quotes expiring" value="Not configured" icon="sym_o_hourglass_bottom" size="sm"/>
                             <number-card title="Orders blocked" value="Not configured" icon="sym_o_block" size="sm"/>
                         </dashboard>
-                        <label text="Requests for quote, quotes and orders are counted here once they are set up; until then none is shown as zero."
+                        <label text="Quotes and orders are counted here once they are set up; until then none is shown as zero."
                                 type="p" style="text-caption m-muted" condition="laterCards.length"/>
                     </box-body>
                 </container-box>

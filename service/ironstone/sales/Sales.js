@@ -189,7 +189,14 @@ const linkPaths = [
     "Orders/OrderDetail",
     "Products/Product360",
     "Products/InventoryAvailability",
-    "Products/PriceExplain"
+    "Products/PriceExplain",
+    // P8: requests for quote (design §5 QuoteRequests, QuoteRequestDetail)
+    "Quotes/QuoteRequests",
+    "Quotes/QuoteRequestDetail",
+    // P9: the approvals list and the defaults and approval rules
+    "Quotes/Approvals",
+    "Settings/SalesDefaults",
+    "Settings/ApprovalPolicies"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -281,6 +288,23 @@ const recordKinds = {
             }
         }
     },
+    // P8: a request for quote the user sees (SalesAccess.js quoteRequestOf: of an organization of the scope, assigned to them or a
+    // team of theirs, or the organization's every one for SALES_TEAM_VIEW), QuoteRequestDetail
+    quoteRequest: {
+        name: "Request for quote",
+        icon: "sym_o_contract_edit",
+        destination: "Quotes/QuoteRequestDetail",
+        parameter: "requestId",
+        read: (userScope, requestId) => {
+            const found = salesAccess.quoteRequestOf(userScope.mantle, requestId)
+            if (!found) return null
+            return {
+                organizationPartyId: found.organizationPartyId,
+                label: found.request.requestName || "Request for quote " + requestId,
+                detail: "Request for quote"
+            }
+        }
+    },
     contact: {
         name: "Contact",
         icon: "sym_o_contact_page",
@@ -300,6 +324,32 @@ const recordKinds = {
         }
     }
 }
+// ===== P9: a commercial order change (impl-sales P9, F58) =====
+// A commercial-kind change of a sales order of the scope (RqtOrderChange; not a cancel or substitute, Customer Service's), for a
+// sales approver (SALES_APPROVE), who decides it from Approvals until P14 gives it its OrderChangeDetail under Sales; Mantle's
+// decide#OrderChange checks the permission and the organization again.
+recordKinds.orderChange = {
+    name: "Order change",
+    icon: "sym_o_edit_note",
+    destination: "Quotes/Approvals",
+    parameter: "requestId",
+    read: (userScope, requestId) => {
+        if (!userScope.capabilities.approve) return null
+        const request = one("mantle.request.Request", {requestId})
+        if (!request || request.requestTypeEnumId !== "RqtOrderChange" || !request.orderId) return null
+        if (["OckCancel", "OckSubstitute"].includes(request.orderChangeKindEnumId)) return null
+        const part = Array.from(
+            find("mantle.order.OrderPart").condition("orderId", request.orderId).orderBy("orderPartSeqId").list()
+        )[0]
+        if (!part || !covers(userScope, part.vendorPartyId)) return null
+        return {
+            organizationPartyId: part.vendorPartyId,
+            label: request.requestName || "Order change " + requestId,
+            detail: "Order change"
+        }
+    }
+}
+// ===== end of P9 =====
 // A party's name for a label: the organization's name or the person's.
 function partyLabel(party) {
     if (!party) return ""
@@ -692,6 +742,25 @@ Object.assign(choiceSources, {
         )
     }
 })
+// ===== P9: the approvers' groups (impl-sales P9) =====
+// an approval rule's approver role: the user groups that hold SALES_APPROVE now (store#SalesApprovalPolicy checks the group again)
+choiceSources.approverGroups = (userScope, term) => {
+    const groupIds = Array.from(
+        new Set(
+            Array.from(find("moqui.security.UserGroupPermission").condition("userPermissionId", "SALES_APPROVE").list())
+                .filter(row => lib.active(row))
+                .map(row => row.userGroupId)
+        )
+    )
+    if (!groupIds.length || !userScope.capabilities.configure) return []
+    return byTerm(
+        Array.from(find("moqui.security.UserGroup").condition("userGroupId", "in", groupIds).orderBy("description").list()).map(
+            row => ({value: row.userGroupId, label: row.description || row.userGroupId})
+        ),
+        term
+    )
+}
+// ===== end of P9 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(
@@ -831,6 +900,22 @@ searchFinds.push({
             recordEntity: "mantle.order.OrderHeader",
             recordId: row.orderId,
             url: recordUrl("quote", row.orderId)
+        }))
+    }
+})
+// P8: requests for quote, through Mantle's scoped find (find#QuoteRequests' text: name or id), open ones
+searchFinds.push({
+    kind: "quoteRequest",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.order.SalesQuoteServices.find#QuoteRequests", {text, pageSize: limit})
+        return Array.from(found.quoteRequestList || []).map(row => ({
+            title: row.requestName,
+            subtitle: ["RFQ " + row.requestId, row.customerName, row.statusText].filter(Boolean).join(" · "),
+            icon: recordKinds.quoteRequest.icon,
+            recordEntity: "mantle.request.Request",
+            recordId: row.requestId,
+            url: recordUrl("quoteRequest", row.requestId)
         }))
     }
 })

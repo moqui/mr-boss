@@ -333,8 +333,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | built and reviewed Nov 13, merged |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | built and reviewed Nov 13, merged |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | built and reviewed Nov 13, merged |
-| P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
-| P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | — |
+| P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | built and reviewed Nov 13, merged |
+| P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | — |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | — |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
@@ -2138,6 +2138,224 @@ Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff
   a rep makes a quote from two of its three lines and a second quote later; a declined RFQ notifies the requester
   after the recipient preview; a warranty claim's chargeable lines become a quote Customer Service can read.
 
+**Built Nov 13 (P8).** mr-mantle and mr-boss on branch `sal/p8` (hashes in the worker's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P5 and P7 Built and Review notes, §4's Nov 13 rows, F53–F155; the request model (RequestEntities,
+  `create#Request`, `create#RequestFromEmail`, `file#RequestEmail`, `send#IntakeConfirmation`, RequestTriageNotice and
+  `notify#RequestTriage`, `complete#RequestFromWork`, the case rules); Purchasing's RFQs (Sourcing.js: the organization the OrgInternal
+  RequestParty); Customer Service's warranty claims (Warranty.js, WarrantyDecision: a claim's order evidence is its RequestRecord to
+  OrderHeader, read as the first such link); P5's createLead path (SalesIntake.js `intakeTeam`, `userHolds`, `check#LeadRuleOwner`),
+  SalesComms.js and `create#FromChat`; Shared/RequestDetail's app branches (F68); the record visibility rules of
+  CommunicationServices; PaletteServices `get#RecordLink`. The code over the plan:
+  - a quote is linked to its request line by line (RequestItemOrder), not by a RequestRecord: on a warranty claim a RequestRecord to an
+    OrderHeader would be read as the claim's order evidence (Warranty.js `evidenceOf`);
+  - the RFQ's owner and team are SalesRepresentative and SalesTeam rows, as a quote's part, not the design's "assignee"; its scope is a
+    quote's (SalesAccess.js `quoteRequestOf`), and the RFQ follows Sales' scope for Chatter, files and record links in every app
+    (`check#QuoteRequestAccess`, a block in CommunicationServices' visibility beside the quote's);
+  - the plan's four Q services needed five more for the screen and the rule: `get#QuoteRequest`, `create#QuoteRequestFromEmail` (the
+    rule action), `store#QuoteRequestItem` (the lines a mailed request is given), `update#QuoteRequest` (the facts and Assign) and
+    `preview#QuoteRequestDecline` (the recipient preview), with `check#QuoteRequestAccess`;
+  - "the request's stamp" is the latest `lastUpdatedStamp` of the request, its lines and its parties (`requestRevision`), so a line or
+    an assignment changed since the read is seen; `notify#RequestTriage` leaves RqtQuote out too (as it does RqtHrCase), beside the EECA;
+  - Customer Service has no "request a sales estimate" action: a claim whose current decision has a charge estimate is the source by
+    itself, listed under RFQs' "Repairs to quote".
+- Mantle:
+  - `service/mantle/order/SalesQuoteRequests.js` (new) and `SalesQuoteServices.xml` (a P8 block at the end): `find#QuoteRequests` (states
+    awaiting, quoted, open, declined, completed, all; overdue; organization, customer, owner or mine, team, text; paged in the query; kind
+    repair: the chargeable claims of the scope), `get#QuoteRequest` (a repair source answers its customer and its lines' products and
+    quantities alone), `create#QuoteRequest` (from a mail, internal or chat message read as the user before anything is written; the same
+    message, by its Message-ID ignoring case or its event, answers the same request, REQUEST_TAKEN to one who cannot open it; the sender
+    matched to an account or to the contact of exactly one account, never a party), `create#QuoteRequestFromEmail` (the rule action: owner
+    holds SALES_QUOTE_EDIT, RULE_NOT_ALLOWED; the team by value or plus tag, TEAM_UNAVAILABLE; answers stopProcessing), `store#QuoteRequestItem`,
+    `update#QuoteRequest` (OWNER_INVALID, TEAM_UNAVAILABLE, CUSTOMER_INVALID, CONTACT_INVALID; replaced party rows ended),
+    `create#QuoteFromRequest` (one quote through SalesQuotes.js `createQuote` and `storeLine`, each line's RequestItemOrder, atomically;
+    a PostingOperation key, OPERATION_KEY_CONFLICT; REVISION_CHANGED, ITEMS_REQUIRED, ITEM_UNAVAILABLE, ITEM_PRODUCT_REQUIRED,
+    CUSTOMER_REQUIRED, REQUEST_CLOSED; an RFQ's first quote puts it In progress; a claim is kept as it is, its quote "Repair estimate" with
+    no line description), `preview#QuoteRequestDecline`, `decline#QuoteRequest` (REASON_REQUIRED, RECIPIENT_CHANGED, NOTIFY_UNAVAILABLE;
+    a RequestNote, Cancelled with RrRejected; the mail a draft of the mailbox the RFQ came in by, answering its first message, filed on it
+    and delivered), `check#QuoteRequestAccess`; `quotesOfRequest` for Customer Service.
+  - `SalesAccess.js` (a P8 block after P7's): `quoteRequestType`, `quoteRequestRoles`, `requestParties`, `assignedQuoteRequestIds`,
+    `quoteRequestOf`, `requireQuoteRequest`.
+  - `data/SalesIntakeData.xml`: ErActCreateQuoteRequest (`createQuoteRequest`). `SalesIntake.js`: `check#LeadRuleOwner` refuses a
+    createQuoteRequest action of an owner without SALES_QUOTE_EDIT; exports `intakeTeam`, `userHolds`, `subjectName`, `plainText`.
+  - F31, F63: `entity/Request.eecas.xml` RequestTriageNotice and `RequestServices` `notify#RequestTriage` and `complete#RequestFromWork`
+    leave RqtQuote out; the case rules unchanged.
+  - `CommunicationServices.xml`: an RqtQuote request and its RequestContent seen by `check#QuoteRequestAccess` alone.
+  - Owner contract with Customer Service: `Warranty.js` `get` and `get#WarrantyClaim` answer `salesQuotes` (state, total, validity).
+  - `SalesWorkspace.js` `get#SalesHome`: the RFQs awaiting a response counted (the list's filter, Quotes/QuoteRequests state awaiting),
+    no longer "Not configured".
+- BOSS:
+  - Screens: `Sales/Quotes/QuoteRequests.xml` (new: QuoteRequestFind, QuoteRequestList with the saved lists Awaiting a response, Open,
+    Quoted, Overdue, Declined, Repairs to quote, NewQuoteRequest); `Sales/Quotes.xml` mounts Shared/RequestDetail as QuoteRequestDetail;
+    `Shared/RequestDetail.xml` (owner contract: the Sales branch before the Commons fall-through, its transition-includes and section,
+    Sales in the not-found list) over `template/SalesQuoteRequestDetail.xml` (new) and `template/SalesQuoteRequests.xml` (new: createQuoteRequest,
+    rfqChoices, rfqStoreItem, rfqUpdate, rfqCreateQuote, rfqDecline); `Sales/Home.xml` (the RFQ card counted); `Sales.xml` (an RqtQuote
+    request a record panel host).
+  - `Sales.js`: linkPaths Quotes/QuoteRequests and Quotes/QuoteRequestDetail, the record kind `quoteRequest`, the palette's RFQs.
+    `PaletteServices` `get#RecordLink`: an RqtQuote request opens under Sales for its reader, else nowhere.
+  - Create RFQ (§4 Nov 13): `screen-extend/basic-comms` Inbox/Mail `sales.createRfq` (message-actions, createRecord, hook create-from) beside
+    Create lead, and Chat `sales.createRfq`; `ChatServices.create#FromChat` kind quoteRequest; `ContextServices` `create#QuoteRequestFromMessage`
+    over `SalesComms.js` `quoteRequestFromMessage` (Mantle's create#QuoteRequest as the user).
+  - Owner contract: `CustomerService/Returns/WarrantyAssessment.xml` shows the claim's Sales quotes.
+  - Demo (`data/BossZSalesDemoData.xml`, a P8 block): the RFQ rule on Retail's intake mailbox (sequence 5, sales+rfq@, East), Wingtip's
+    mailed request for counters taken by it, and sales.rep's phoned Wingtip stockroom request (three lines, one with no product).
+    No setup rows: the RFQ services are under the root's grants (ironstone.sales is BOSS_SALES').
+- Specs:
+  - Mantle `test/order/SalesQuoteRequests` (new, 4 features, 2.1 s): a mail delivered twice (two Message-ID cases) one request in the
+    plus-tag team's queue with the account's contact matched, the message on it, a rule owner without SALES_QUOTE_EDIT refused, Projects'
+    triage taking a support request of the organization but not the RFQ, the team's rep and the manager seeing it, another team's rep
+    and another organization's not (list, detail and record link); a quote from two of three lines with RequestItemOrder links, the
+    same key the same quote, a stale revision refused, a second quote later, a reader and another organization's rep refused, the RFQ In
+    progress and not completed; a decline's preview, a changed recipient and no reason refused, the mail answering the first message
+    and filed, Cancelled and Rejected with the reason noted, a second decline REQUEST_CLOSED; a chargeable claim's quote without its
+    diagnosis or fault text in the source or the quote, the claim and decision untouched, quotesOfRequest reading it, a covered claim no
+    source and another organization's rep not listing it.
+  - mr-boss `test/Sales/SalesQuoteRequests` (new, 3 features, 1.2 s): Create RFQ in Mail's and Chat's ext items, posted through
+    createRecord: refused to sales.rep3 (who does not read the mailbox) as for a missing message with nothing written and to another
+    app's user, then the rep's request with Wingtip matched, once; QuoteRequestDetail's one qvt render (header, Create quote, lines, the
+    line with no product, Decline, Chatter and Files, no Reassign), its record link under Sales and none for another organization's rep,
+    who is told "Request not available" (html); RFQs' one html render. `SalesSpecLib.js`: quotesMenu, rfqs.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesRfqUsable` (4 features: a mailed RFQ with its attachment; three lines added
+    and two quotes through QuoteRequestDetail's transitions; a decline telling the requester at the previewed address; a chargeable
+    claim's quote read back by Customer Service on get#WarrantyClaim).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteRequests 4 of 4, with SalesLeadIntake,
+  SalesWorkspace, SalesQuoteDrafts, SalesOpportunities, RecordVisibility, RecordLinks, WorkProjectRequests, PeopleCases, SupportWarranty,
+  MaintenanceIntake, SupportCases, SupportSla, PurchaseRequests and Sourcing 117 of 117 (15 specs); mr-boss SalesQuoteRequests 3 of 3, with
+  SalesHome, SalesAccess, SalesIntake, SalesQuotes, SalesOpportunities, Chat, Inbox, CommsHome, CustomerServiceChannels,
+  CustomerServiceWarranty, CustomerServiceAccess, CustomerServiceCases, ProjectRequests, Requests, PurchasingRequests, MaintenanceRequests,
+  ManufacturingDowntime, PeopleAccess, WarehouseTransfers and QuickCreate 177 of 177 (21 specs), and after the record link change
+  PurchasingAccess, CustomerServiceAccess, CommerceAccess, PeopleAccess, CommerceOrders, ProjectRequests, AccountingAccess, ProductsAccess,
+  Chatter, Requests and SalesOpportunities 150 of 150. The demo loads with no data file failing. `moqui lint --screens` (release): 141
+  flagged sites, as before. Prettier clean on the new and changed JavaScript. Not run: ./moq test-apps, test-framework, the acceptance
+  suite.
+- Findings, numbered by the lead F170 to F178 in order:
+  - the createQuoteRequest rule's owner must hold SALES_QUOTE_EDIT, when the rule is saved and when it runs, applying the user's Nov 13
+    call on createLead by analogy (check#LeadRuleOwner extended); the user's to confirm;
+  - a chargeable repair's claim is seen (its customer and products, under "Repairs to quote") by every holder of SALES_QUOTE_EDIT or
+    SALES_TEAM_VIEW of the claim's organization, with no assignment scope (a claim has no Sales owner or team), and Customer Service is
+    not told when a quote is made, nor Sales when a claim becomes chargeable (no topic); whether to narrow it to a team or add a notice is
+    the user's call;
+  - Create quote prices each line by the resolver: an unpriced product refuses PRICE_UNAVAILABLE and the rep enters prices on the quote;
+    `create#QuoteFromRequest` takes an entered price and reason per line by its API only (a repair's charge), and a claim carries the
+    faulty product, not a repair service, so a repair's line is that product at the price entered;
+  - Customer Service reads a repair quote's state, total and validity on the claim (get#WarrantyClaim `salesQuotes`), not the quote:
+    OrderDetail, Chatter and files of an unplaced quote follow Sales' scope (P7 review R1), and the customer's consent is still
+    recorded on the decision by hand;
+  - a decline is sent from the mailbox the RFQ came in by, written as the system after Sales' checks: the rep need not be a sender of
+    that mailbox (as send#IntakeConfirmation); an RFQ of no mailbox cannot tell its requester from Sales;
+  - an RFQ's notes (the decline's reason) are RequestNotes the Sales context does not show; Customer360's RFQs tab, OpportunityDetail's
+    RFQ → quote → order strip, Quotes' "RFQ received" list and NewQuote's RFQ field (design §3, §4, §5) are not built;
+  - Sales' lifecycle participant (P6) does not move a leaving user's RFQ owner rows, as it now does quotes' (P7 review R2);
+  - `moqui lint --screens` counted a gstring idiom in RequestDetail's actions script because a `//` comment held apostrophes (moqui-devkit
+    groovy_convert `string_spans` reads a quote in a comment as a string); the comment was reworded;
+  - `docs/security/Attack-Surface.md` (mr-moqui) says the RFQ address "follows in Sales P8"; P8 had no mr-moqui worktree (the line below).
+- For the lead:
+  - budget share: mr-mantle about 2.1 s (SalesQuoteRequests); mr-boss server about 1.2 s (SalesQuoteRequests); client none;
+  - merge hot spots (Sales P9 builds beside P8): mr-mantle `service/mantle/sales/SalesAccess.js` (a P8 block after P7's, and the export
+    list), `service/mantle/order/SalesQuoteServices.xml` (a P8 block at the end), `SalesIntake.js` (check#LeadRuleOwner, the exports),
+    `SalesWorkspace.js` (salesHome's counters), `CommunicationServices.xml` (the visibility block after the quote's), `RequestServices.xml`,
+    `entity/Request.eecas.xml`, `Warranty.js` and `WarrantyServices.xml`; mr-boss `data/BossZSalesDemoData.xml` (a P8 block after P7's;
+    no BossSetupSalesData change), `service/ironstone/sales/Sales.js` (linkPaths, recordKinds before `contact`, a searchFinds push before
+    `search`), `ContextServices.xml` (a P8 block at the end), `SalesComms.js`, `screen/Sales.xml` (panelHosts only; no menu change),
+    `screen/Sales/Quotes.xml` (subscreens: P9's Approvals joins this area), `screen/Sales/Home.xml`, `screen/Shared/RequestDetail.xml`,
+    `service/ironstone/comms/ChatServices.xml`, `screen-extend/basic-comms/screen/BasicComms/{Inbox/Mail,Chat}.xml`,
+    `service/ironstone/commons/PaletteServices.xml`, `screen/CustomerService/Returns/WarrantyAssessment.xml`, `test/Sales/SalesSpecLib.js`
+    (quotesMenu, rfqs), `plan/ss-inventory.md`, `plan/usl-inventory.md`, `plan/design-sales.md` §1.4, §5, `plan/design-customer-service.md`;
+  - mr-moqui `docs/security/Attack-Surface.md`, the intake paragraph's RFQ clause for the lead to replace: "the request for quote address
+    (`createQuoteRequest`, Mantle `create#QuoteRequestFromEmail`) takes the team the same way, its rule's owner holding
+    `SALES_QUOTE_EDIT`, and makes an RqtQuote request in that team's queue with the message and its files on it, never a party (the
+    sender is matched to an account or to the contact of exactly one account of the organization); the same `Message-ID` again makes
+    no second request";
+  - the user's call: the rule owner's permission and the repair sources' reach (above).
+
+**Review 2026-11-14 (P8).** A fresh review of `sal/p8` (mr-mantle f60a8505, mr-boss 3b8cea0a), with master merged in first (Marketing
+P2) and again after Sales P9 merged (conflicts in SalesQuoteServices.xml, BossZSalesDemoData.xml, Sales.js, Sales.xml, SalesSpecLib.js
+and usl-inventory.md, both phases' blocks kept; SalesSpecLib's approver tabs are now Quotes, RFQs, Approvals), against P8, §2, §4, design
+§5 and §6.
+- Checked and sound:
+  - `quoteRequestOf` is the one scope on every Sales path: find#QuoteRequests (the organization filter, then the assigned ids or
+    SALES_TEAM_VIEW, each page row read again through it), get#QuoteRequest (requestFound false for another team's or organization's),
+    Home's count (find#QuoteRequests itself), the palette (Sales.js searchFinds over find#QuoteRequests), the record link (Sales.js
+    recordLink reads recordKinds' quoteRequestOf; PaletteServices sends an RqtQuote nowhere else), the record panel host (Sales.xml
+    panelHosts through recordKinds), Chatter and RecordFiles (CommunicationServices' RqtQuote block over check#QuoteRequestAccess, no
+    user none) and RequestDetail's Sales branch (get#QuoteRequest; "Request not available" otherwise). Every write checks
+    SALES_QUOTE_EDIT, the request's revision (request, lines and parties) and that it is open; update#QuoteRequest ends replaced party
+    rows; owner and team are bounded by the caller's teams unless SALES_TEAM_MANAGE.
+  - Create RFQ and the mail rule: create#QuoteRequest checks Sales, SALES_QUOTE_EDIT and the organization, then reads the message as the
+    user (get#Thread, get#InternalThread, findOrCreate#ChatCommunicationEvent) before anything is written, a message they cannot read
+    answering as a missing one (the BOSS spec's sales.rep3); the sender is matched to an account or the contact of exactly one account,
+    never a party made; Message-ID ignoring case and the event make one request; a repeat of a request the caller cannot open is
+    REQUEST_TAKEN naming none (P5 R1's lesson). create#QuoteRequestFromEmail is allow-remote false, fixes every value from the stored
+    message, checks the owner's SALES_QUOTE_EDIT each run and takes only a team of an organization the owner works for.
+  - The chargeable repair handoff: an RqtWarranty claim is a source only with a current chargeable decision (or a quote already made),
+    answered by its customer and its lines' products and quantities; the quote is "Repair estimate" with no line description or date;
+    the claim and its decision are not changed; a quote is linked by RequestItemOrder, which Warranty.js does not read (its order
+    evidence is RequestRecord). Customer Service sees the quote's state, total and validity only (get#WarrantyClaim `salesQuotes`,
+    WarrantyAssessment's box, no link to the quote). SupportWarranty and CustomerServiceWarranty pass unchanged.
+  - F31, F63: RequestTriageNotice, notify#RequestTriage and complete#RequestFromWork leave RqtQuote out beside RqtHrCase; the case rules
+    need no guard; the Mantle spec shows Projects' triage taking a support request but not the RFQ.
+  - Decline: the reason is required and noted, the recipient is the first received message's Reply-To or From (else the contact's or
+    customer's email) and must be the one previewed (RECIPIENT_CHANGED), the text is the rep's own, and the request closes, so one mail
+    per RFQ; a send that fails waits in the Outbox.
+- Fixed:
+  - R1 (confidentiality, medium). An RFQ was also a Commons request: its filer or owner found it in Commons' Requests (and a Projects
+    triage list of an organization triaging RqtQuote) and could cancel or edit it there, around decline's reason and Sales' rules.
+    Commons' get#RequestAccess and find#RequestRows and Projects' request list now leave RqtQuote out as they do RqtPurchaseRfq. BOSS
+    SalesQuoteRequests: the rep's own RFQ is not visible to Commons' access and is in no Commons list (failed on the unfixed code).
+  - R2 (authority, medium). decline#QuoteRequest sent the rep's own text as the system from the mailbox of the RFQ's first received
+    message, whatever the mailbox: a rep who could only read a mailbox (Create RFQ needs reading alone) could mail its correspondents
+    from it. Sales now answers only from an RFQ intake mailbox (an enabled createQuoteRequest rule whose owner holds SALES_QUOTE_EDIT
+    runs on it) or one the rep may send from; otherwise the preview says to tell the requester yourself and a notify is
+    NOTIFY_UNAVAILABLE. Mantle SalesQuoteRequests: with the mailbox's rule off the preview cannot notify and the decline is refused.
+  - R3 (scope, low). A request's quotes listed every quote made from it by title, and the list counted them: a quote of another
+    assignment (a manager's, which takes no team) gave its title and count to the RFQ's team. Such a quote now shows only that it exists
+    ("A quote you cannot open", no total), its id is left out of the line's "quoted in", and find#QuoteRequests counts readable quotes.
+    Mantle SalesQuoteRequests: the manager's quote of the rep's RFQ (failed on the unfixed code).
+  - R4 (confidentiality, low). "Repairs to quote" searched and sorted claims by their name, which is Customer Service's and often the
+    fault: a search probed the claim's text. A repair is found by its id and sorted by date only. Spec: a search for the fault word finds
+    nothing, the claim's id finds it.
+  - R5 (low). A message on two RFQs (one of another organization's mailbox) answered REQUEST_TAKEN when the first found was not the
+    caller's; the one the caller sees is answered first.
+  - R6 (the user's calls of Nov 13, §4). The repair notices both ways: decide#WarrantyClaim's commit runs notify#RepairToQuote
+    (service/SalesQuoteRequest.secas.xml; a replay tells nobody), which tells the current members of the organization's default team
+    (P9's SalesPolicy, `SalesApprovals.js policyOf`) who work for it and hold SALES_QUOTE_EDIT or SALES_TEAM_VIEW (SalesRepairToQuote:
+    claim, customer, product); no default team, no notice (logged). create#QuoteFromRequest on a claim tells its assignee, else its
+    queue's team or fallback assignee, not the maker (SalesRepairQuoted: quote, claim, customer, maker; the claim as the record). Topics
+    in data/SalesIntakeData.xml with TopicRegistration rows (Sales, Customer Service); links in BossSetupSalesData.xml (QuoteRequestDetail)
+    and BossSetupData.xml (WarrantyAssessment); the shells' notification-topic entries. Mantle SalesQuoteRequests: the chargeable
+    decision tells East's quote maker and not its SALES_VIEW member, a covered one nobody, the quote tells the claim's agent, no title
+    with the fault or the amount. The rule-owner call needed no change.
+- Findings, numbered by the lead F179 to F182 in order:
+  - a quote made from an RFQ takes its maker's team (SalesQuotes.js teamFor), not the RFQ's: a manager's quote of a team's RFQ is no
+    quote of that team, whose members see only that it exists (R3); passing the RFQ's team to createQuote is the user's call;
+  - Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another
+    organization's mailbox answers the first organization's request; a decline goes to the message's Reply-To, as forgeable as its From,
+    shown in the preview;
+  - with no default team in the organization's SalesPolicy a chargeable decision tells nobody (the list still shows it);
+  - update#QuoteRequest given a new customer alone ends the contact row.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): before the P9 merge mr-mantle SalesQuoteRequests 4 of 4 (2.6 s) and
+  mr-boss SalesQuoteRequests 3 of 3; after it mr-mantle SalesQuoteRequests, SalesQuoteApprovals, SalesQuoteDrafts and SupportWarranty 20
+  of 20, and mr-boss SalesQuoteRequests, SalesApprovals, SalesQuotes, SalesAccess, CustomerServiceWarranty, Requests, ProjectRequests and
+  SalesHome 46 of 46. R1 and R3 checks failed on the unfixed code (the stepwise spec stops at R3's feature, so R2's, R4's and R6's ran
+  only on the fixed code). Prettier clean on the changed JavaScript; `moqui lint --screens` (release) flags neither Sales.xml nor
+  CustomerService.xml. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +0.5 s on the Built note's (SalesQuoteRequests' manager quote, previews and notices); mr-boss about
+    +0.1 s (the Commons checks);
+  - merge hot spots: mr-mantle `SalesQuoteRequests.js`, `SalesQuoteServices.xml` (notify#RepairToQuote at the P8 block's end, before
+    P9's), `data/SalesIntakeData.xml` (the two topics), `service/SalesQuoteRequest.secas.xml` (new); mr-boss
+    `service/ironstone/commons/RequestServices.xml`, `service/ironstone/projects/ProjectRequestServices.xml`,
+    `data/BossSetupSalesData.xml` (after P9's SalesQuoteApproval link), `data/BossSetupData.xml` (after WarrantyRepairFinished),
+    `screen/Sales.xml`, `screen/CustomerService.xml`, `plan/design-sales.md` §5, `plan/design-customer-service.md` §13;
+  - mr-moqui `docs/security/Attack-Surface.md`: in the intake paragraph replace "(`createLead`, Mantle `create#LeadFromEmail`; the
+    request for quote address `createQuoteRequest` follows in Sales P8)" with "(`createLead`, Mantle `create#LeadFromEmail`)", and
+    after "The mail text decides only the lead's name and description." add: "The request for quote address (`createQuoteRequest`,
+    Mantle `create#QuoteRequestFromEmail`) takes the team the same way, its rule's owner holding `SALES_QUOTE_EDIT` when the rule is
+    saved and each time it runs, and makes an `RqtQuote` request in that team's queue with the message and its files on it, never a
+    party (the sender is matched to an account or to the contact of exactly one account of the organization); the same `Message-ID`
+    again makes no second request. A decline is mailed as the system only from such an intake mailbox, or one the rep may send from,
+    to the address the rep previewed, once per request.";
+  - the user's calls are recorded in §4 (Nov 13 rows) and built (R6).
+
 ### P9 — Sales defaults, approval policies and approvals
 
 Design §9 SalesDefaults and ApprovalPolicies, §5 Approvals and the approval binding, §13.1 (OrderPlacedAutoApprove,
@@ -2186,6 +2404,227 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
 - **Usable when** (design §14.3 scenario 5, its approval half; `test/acceptance/Sales/SalesApprovalUsable`):
   `sales.admin` publishes a discount rule; a rep's override waits for `sales.approver`, who approves it from
   Approvals; the rep cannot approve their own; a direct service call cannot propose the unapproved quote.
+
+**Built Nov 13 (P9).** mr-mantle and mr-boss on branch `sal/p9` (hashes in the worker's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P6's and P7's Built and Review notes, §4 (the Nov 11 rows on OrderDecision, the approval
+  setting and the pre-approval warnings, the acceptance threshold; the Nov 13 rows, the free line among them), F11, F14, F26, F43, F52,
+  F58, F60, F61 and F144–F155; OrderDecision (OrderEntities.xml:319), `autoApprove#Order`, `approve#Order` and `check#OrderPreApprove`
+  with the credit and purchase SECAs; Purchasing's approval rules (PurchaseApprovals.js: steps, `refusalFor`, `notify`,
+  `clearNotices`, the `revisionChanged` SECA, the topic handlers); OrderChanges.js' deciders, notices and `decide`; the
+  OrderChangeApproval topic and its BOSS link; Commons' `open#Notification` and `get#RecordLink`; Purchasing/Approvals.xml;
+  SalesQuotes.js' free-line check; SalesSettings' readiness; SalesIntake's purge. The code over the plan:
+  - `approve#Order` does not call `check#OrderPreApprove` (F11), so a Sales warning on that check stops `autoApprove#Order` and never
+    a person's approval, with nothing more to build for "does not refuse that approval";
+  - the approval verbs are a service file of their own, `mantle.order.SalesApprovalServices` (store#SalesPolicy, get#SalesPolicy,
+    store#SalesCommercialRevision, store#SalesApprovalPolicy, find#SalesApprovalPolicies, preview#Quote, request#QuoteApproval,
+    decide#Quote, the topic's approve#QuoteMessage and refuse#QuoteMessage, the two SECA services), so P8's quote-request verbs and
+    these do not meet in SalesQuoteServices.xml; `propose#Quote` is SalesQuoteServices' (a P9 block), its approval guard built here,
+    its issue checks P10's; the design's "Q." names hold as a package;
+  - the plan names no request step: a notice is sent when the rep asks (`request#QuoteApproval`), not on every line change, and a
+    holder of SALES_APPROVE sees a quote of their organization once its approval was asked (SalesAccess.js quoteOf, design §1.1 "an
+    assigned approval grants its authorized approver the source projection");
+  - the default pipeline is P2's (SalesPipeline.defaultFlag) and stays so; SalesPolicy holds the default team, not a pipeline;
+  - the "approver role" is a user group holding SALES_APPROVE, as Purchasing's steps name one;
+  - the commercial revision is the seller's own PartyAcctgPreference flag, which `find#PartyAcctgPreference` inherits from a parent
+    organization: SalesDefaults sets it only on the seller's own row (PREFERENCE_INHERITED otherwise; the demo's Retail inherits ON from
+    ORG_ZIZI_CORP);
+  - SalesDefaults shows the defaults Sales reads today (validity, team, intake retention); the templates, response requirements,
+    acceptance thresholds, the approval setting and the net-terms option are stored by store#SalesPolicy and join the form with P10,
+    P11 and P13, which read them, so no field the user sets does nothing.
+- Mantle:
+  - `entity/SalesApprovalEntities.xml` (new): SalesPolicy and SalesPolicyThreshold (an organization's dated defaults, the acceptance
+    thresholds per currency), SalesApprovalPolicy (dated rules: purpose SapQuote or SapOrder, type SarAmount, SarDiscount, SarPriceFloor
+    or SarFreeLine, with SarOverride for the unconfigured manual-price rule; threshold and currency, discount percent, floor margin,
+    approver group, self-approval), their key fields audit-logged with the change reason; OrderDecision extended with the order revision,
+    organization, purpose, rule, rule type, evaluation time, result (SdrRequested, SdrApproved, SdrRefused), decider, reason text and
+    operation key.
+  - `service/mantle/order/SalesApprovals.js` and `SalesApprovalServices.xml` (new): policies published as dated successors (a preview
+    writes nothing; REVISION_CHANGED, NO_CHANGE, DATE_INVALID, TEAM_INVALID, TEMPLATE_INVALID); rules (THRESHOLD_REQUIRED,
+    PERCENT_INVALID, APPROVER_INVALID, RULE_ENDED; another organization's rule as missing); the evaluation (each rule a quote meets at
+    its revision, its inputs as text, the lines and their authors; a floor's cost from the approved standard cost, else the seller's
+    average cost, never answered; a currency other than an amount rule's does not meet it); the states (required, requested, approved,
+    refused) from the decisions at the revision; separation (owner, requester, a priced line's actor) unless the rule allows; the
+    approvers (SALES_APPROVE holders who work for the seller, in the rule's group); `decide#Quote` (SALES_APPROVE, the quote's
+    organization, a draft, unexpired, the revision named, APPROVAL_NOT_NEEDED, SELF_APPROVAL, APPROVER_INVALID, the operation key);
+    the notice (title of the quote, customer and the kinds of its rules, no amount) and its handlers at the message's revision;
+    `freeLineCovered`; propose's guard (APPROVAL_REQUIRED, LINES_REQUIRED).
+  - `service/SalesApproval.secas.xml` (new): `OrderPreApproveSales` on `check#OrderPreApprove` (Sales' warnings for a seller with a
+    rule in effect: an accepted quote's open quote rules, the order rules met) and `OrderRevisionSalesApproval` on
+    `increment#OrderRevision` (a quote's commercial change invalidates its earlier decisions and reads their notices; any other order
+    returns at once).
+  - `data/MantleSetupData.xml`: the SalesQuoteApproval topic beside OrderChangeApproval (F26).
+  - `SalesQuotes.js`: the free line (P7's SALES_APPROVE check now only where no rule covers the line, the user's call), get#Quote's
+    `approval` and `canFreeLine`, create#Quote's validity from the policy's days and its team falling back to the policy's default team;
+    `SalesQuoteServices.xml` (get#Quote's approval, store#QuoteLine's description, `propose#Quote`); `SalesAccess.js` (a P9 block:
+    `approvalAsked` in quoteOf); `SalesIntake.js` (the purge holds each intake to its organization's retention, 30 when none);
+    `SalesSettings.js` (readiness `sales.defaults` and `sales.commercialRevision`, fixed at `salesDefaults`).
+- BOSS:
+  - Screens: `Sales/Quotes/Approvals.xml` (the Commons list with SalesQuoteApproval and OrderChangeApproval, for SALES_APPROVE);
+    `Sales/Settings/SalesDefaults.xml` (in effect, publish with preview, scheduled and earlier, the commercial revision) and
+    `Sales/Settings/ApprovalPolicies.xml` (rules with New, Edit as the next version and End; a named quote's preview);
+    `template/SalesOrderDetail.xml`'s Approval box and `template/SalesQuotes.xml`'s salesRequestApproval and salesDecideQuote, included
+    by `Shared/OrderDetail.xml` (owner contract, beside the P7 includes); `Sales.xml` (the two topics in shell-providers);
+    `Sales/Settings/Readiness.xml` (the two places).
+  - `Sales.js` (P9 blocks): linkPaths Quotes/Approvals, Settings/SalesDefaults and Settings/ApprovalPolicies, the choice
+    `approverGroups`, the record kind `orderChange` (a commercial change of the scope for a sales approver, opening Approvals until
+    P14); `Admin.js` mountRoutes `salesDefaults` and `salesApprovalPolicies`.
+  - F58 (owner contracts with Customer Service and Commons): OrderChangeApproval's link (BossSetupData.xml) is Commons' `openRecord`
+    link of the change request; `PaletteServices.get#RecordLink` has an order-change branch: Customer Service's OrderChangeDetail for one
+    who works orders there, else Sales' Approvals for a sales approver of a commercial kind, else nothing. One topic.
+  - `data/BossSetupSalesData.xml` (a P9 block): SALES_APPROVE for BOSS_SALES_APPROVE (F43) in its bundle; BOSS_SAL_APPROVALS (Approvals
+    denied to the root group, ALWAYS for the approver); the SalesQuoteApproval link to Sales' OrderDetail.
+  - Demo (`data/BossZSalesDemoData.xml`, a P9 block): Retail's defaults (30 days' validity, 60 days' intake retention) and its two quote
+    rules, a discount of 5 % or more (the Wingtip draft's entered refit price meets it) and a free line, each for BOSS_SALES_APPROVE;
+    Ziziwork Sales sets none, so its manual prices meet the unconfigured rule.
+- Specs:
+  - Mantle `test/order/SalesQuoteApprovals` (new, 5 features, 2.2 s): defaults published as a successor with a preview, stale and
+    rep refused, a new quote's validity from them, a rule's input refused, a rep refused a rule; an entered price over the rule needs
+    approval, propose refused, the approver sees the quote once asked and is notified (the rep not; the title with no amount), the rep,
+    another organization's approver, a stale revision and a lead who priced the quote refused, the approval with an operation key
+    answered again, the notices read; a file leaves the approval current (commercial revision on), a line change supersedes it, the
+    quote proposes once approved again; a free line refused where only an amount rule is set and admitted under a free-line rule or a
+    discount rule; with the approval setting off a Sales order rule stops `autoApprove#Order` (a store order with a covering
+    authorization) and not a person's `approve#Order`, and an organization with no rule auto-approves as before.
+    `SalesQuoteDrafts`' free-line feature now has the rep's free line admitted under the unconfigured rule, the quote needing approval.
+  - mr-boss `test/Sales/SalesApprovals` (new, 2 features, 0.6 s): the rep asks for the Wingtip draft's approval, the notice's title
+    names the quote and Wingtip and no amount, Approvals' one html render as the approver has its row and no amount, the approver
+    decides it; OrderChangeApproval's link (openRecord) opens Customer Service's OrderChangeDetail for its order desk, Sales' Approvals
+    for the approver and nothing for a rep. `SalesAccess` (a P9 feature, 0.4 s; the approver's capabilities with `approve`): Quotes'
+    tabs with Approvals for the approver only, Approvals refused a rep, decide#Quote refused a rep for the permission and the approver
+    for another organization's quote, with the same parameters. `SalesQuotes`' one OrderDetail render shows the Approval box.
+    `SalesSpecLib.js`: the Settings tabs with Defaults and Approval rules, Quotes' tabs for an approver, Retail's rule ids.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesApprovalUsable` (3 features: sales.admin publishes a discount rule
+    through ApprovalPolicies; a rep's quote over it waits, the rep cannot decide and a direct propose is refused; the approver approves
+    from Approvals' approve transition and the quote proposes).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteApprovals, SalesQuoteDrafts, StorelessOrderTax,
+  SalesWorkspace, SalesLeadIntake, SalesPipelineSetup, SalesOpportunities, SalesAccounts, SalesOrganizationScope, SalesLeadQualify,
+  RecordVisibility, OrderLifecycle, OrderChanges, PurchaseApprovals, PurchaseOrders, OrderToCashBasicFlow, ShopCheckout, StoreCheckout,
+  StoreFulfillment, ShopCustomer, ShopSubscriptions, Subscriptions, AccountingReturns, ReturnPolicies, OrderConfirmations,
+  StoreOperations, CartRecovery, WorkProjectMilestones and AccountingCredit 220 of 220 (31 specs with their dependencies); after the
+  last changes SalesQuoteApprovals, SalesQuoteDrafts, SalesLeadIntake, SalesPipelineSetup, SalesWorkspace and StorelessOrderTax 26 of
+  26. mr-boss SalesAccess, SalesAccounts, SalesApprovals, SalesHome, SalesIntake, SalesOpportunities, SalesQuotes, SalesReports,
+  SalesSettings, CustomerServiceAccess, CustomerServiceOrderChanges, CustomerServiceOrders, CommerceOrders, CommerceAccess,
+  PurchasingOrders, PurchasingAccess, AccountingCollections, ProjectsAccess, Chat, RecordFiles, Notifications, QuickCreate,
+  AdminRegistries, AdminCapabilities, AdminSettings, InsightsRecords, ProductsSharedContext, MaintenanceAccess, PeopleAccess,
+  WarehouseAccess and ManufacturingAccess 283 of 283 (32 specs). The demo loads with no data file failing. `moqui lint --screens`
+  (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on the new and changed JavaScript. Not run:
+  the client walk (no screen it walks changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in the Sales build: defaults, approval policies and approvals" table; ss-inventory has no
+  baseline form naming Sales' approvals, defaults or rules (the order approval forms are P11's), so no row changed.
+- Design edits: design-sales §5 "As built (impl-sales P9)" after Approvals and a note under §9 ApprovalPolicies; design-crosscut §3.15
+  (the SalesQuoteApproval row as built, OrderChangeApproval's link per recipient, the Sales row's service), design-drawers-commons §4
+  (the SalesQuoteApproval row, the link) and design-customer-service §4 (Approvals' context: the link resolved per recipient), owner
+  contracts.
+- Findings, numbered by the lead F156 to F164 in order:
+  - the approval setting, the templates, response requirements, acceptance thresholds and net-terms option are stored by
+    store#SalesPolicy but shown on SalesDefaults only when P10, P11 and P13 read them; until then a configurer sets them through the
+    service alone;
+  - the commercial revision is set only on a seller's own accounting preference: Retail and the other Ziziwork organizations inherit
+    ORG_ZIZI_CORP's, so SalesDefaults shows where it is set and does not change it there (Accounting's settings own that row);
+  - a notice is sent when the rep asks for approval; a later line change supersedes the decisions and reads the notices, and the rep
+    asks again (there is no automatic resubmission, unlike Purchasing's placed orders);
+  - an approval by the topic's handler without a rule named decides every open rule the approver may decide; one the approver may not
+    (another group's) stays open, and a refusal from the list refuses each;
+  - a SapOrder rule warns on every sales order of its seller that meets it, store orders included, so with the setting off such an order
+    waits for a person as §4 says; nothing yet records an order-purpose decision (P11's `approve#Order` direction);
+  - an amount rule in one currency does not meet a quote in another (no conversion), as Purchasing's bands; design §9's "missing FX
+    blocks" is not built;
+  - `get#RecordLink`'s order-change branch sends a Sales approver to Approvals, not to the change, until P14's OrderChangeDetail;
+  - the Approvals screen's own permission check runs in its always-actions before the artifact deny is reported, so a refused
+    render names PERMISSION_DENIED rather than the authorization (the deny row holds: checked by `isPermitted`);
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the Sales approval verbs; all are `allow-remote="false"` and check
+    SALES_APPROVE or SALES_CONFIGURE and the organization themselves; P9 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 2.2 s (SalesQuoteApprovals; SalesQuoteDrafts unchanged in time); mr-boss server about 1.0 s
+    (SalesApprovals 0.6 s, SalesAccess' P9 feature 0.4 s); client none;
+  - merge hot spots (P8 is built beside P9 on sal/p8): mr-boss `data/BossSetupSalesData.xml` and `data/BossZSalesDemoData.xml` (P9
+    blocks after P7's), `service/ironstone/sales/Sales.js` (linkPaths' P9 entries after P7's, the choice and record kind in their own P9
+    blocks), `screen/Sales.xml` (the comment and two notification topics in shell-providers), `test/Sales/SalesAccess.spec.js` (the
+    approver's capabilities and a P9 feature at the end), `test/Sales/SalesSpecLib.js` (settingsMenu, approverQuotesMenu,
+    approvalRules); also `screen/Shared/OrderDetail.xml` (two includes), `template/SalesOrderDetail.xml` and `template/SalesQuotes.xml`
+    (P9 blocks), `service/ironstone/commons/PaletteServices.xml`, `service/ironstone/admin/Admin.js`, `data/BossSetupData.xml` (the
+    OrderChangeApproval link), `plan/usl-inventory.md`, `plan/design-sales.md`, `plan/design-crosscut.md`,
+    `plan/design-drawers-commons.md`, `plan/design-customer-service.md`; mr-mantle `service/mantle/order/SalesQuoteServices.xml` (a P9
+    block at the end, get#Quote's output), `SalesQuotes.js`, `service/mantle/sales/SalesAccess.js` (a P9 block before requireQuote),
+    `SalesIntake.js`, `SalesSettings.js`, `data/MantleSetupData.xml` (the topic after OrderChangeApproval);
+  - Attack-Surface, a line for the lead: "- Sales' approvals (`mantle.order.SalesApprovalServices`, all `allow-remote="false"`):
+    `decide#Quote` and the SalesQuoteApproval handlers need SALES_APPROVE in the quote's selling organization, the revision the
+    approver read and an approver other than the quote's owner, requester or a priced line's actor unless the rule allows it; the
+    defaults and rules need SALES_CONFIGURE for the organization; a price floor's cost is read on the server and never answered.";
+  - nothing needs the user's call; the free line's rule is the user's call of Nov 13 as recorded.
+
+**Review 2026-11-14 (P9).** A fresh review of `sal/p9` (mr-mantle dcb31310, mr-boss f0c1843d; master merged into each first, nothing
+new on it) against P9, §2, §4 (the Nov 11 rows on OrderDecision, the approval setting and the warnings; the Nov 13 free line), design
+§5 and §9, F11, F14, F26, F43 and F58.
+- Checked and sound:
+  - The owner contract: `OrderPreApproveSales` adds nothing for a seller with no rule in effect, so every existing caller auto-approves
+    as before (ShopCheckout, StoreCheckout, ShopSubscriptions, OrderLifecycle, OrderToCashBasicFlow, WorkProjectMilestones,
+    AccountingCredit, CommerceOrders and CustomerServiceOrders pass unchanged). `approve#Order` does not call the check (F11), so a
+    person's approval is never refused. A store order meeting a SapOrder rule loses auto-approval (Built finding 5): that is §4 Nov 11
+    ("Sales' own warnings do so too ... whichever app placed it ... only for a seller with the setting on or a Sales rule set").
+  - The binding: decisions are read at the current revision only, and the `increment#OrderRevision` SECA marks the earlier ones
+    invalidated, never deleted (no OrderDecision is deleted anywhere). What moves a quote's revision with the commercial revision on:
+    a line's quantity, price or other field, a part change (validity, address, customer), an OrderPartParty change (an owner or team
+    reassignment too), a part contact or term; a file, a note and a status-only change do not. With it off every change moves it,
+    so an approval falls with a file (the readiness finding says so).
+  - Separation: owner, requester and a priced line's actor refused unless the rule allows; another organization's approver sees the
+    quote as missing; a stale or missing revision names the current one; an expired or proposed quote refused; the operation key
+    answers the first result; `propose#Quote` refuses an unapproved quote. The notice's title and messageJson carry no amount, the
+    topic is private, and the rep gets no notice.
+  - The free line (the user's call): a rep drafts a free or zero line where a SapQuote free-line, discount or floor rule meets it, or
+    while no quote rule is set (the manual-price rule); elsewhere `SALES_APPROVE` is still needed (FREE_LINE_DENIED). A floor's cost
+    is read on the server and never answered.
+  - F58: the one OrderChangeApproval link resolves per recipient: Customer Service's OrderChangeDetail for its order desk, Sales'
+    Approvals for a sales approver of a commercial kind, nothing for a rep (CustomerServiceOrderChanges and SalesApprovals pass).
+  - The defaults and rules: SALES_CONFIGURE and the organization on every writer and reader, dated successors, audit reasons; the
+    Approvals screen checks SALES_APPROVE and its artifact deny holds.
+- Fixed:
+  - R1 (medium, approval integrity; Built finding 4): approving or refusing from the notice (the Approvals list, the Commons inbox)
+    decided every rule open at the revision, a rule set after the notice was sent among them, and only those the approver might decide,
+    while the framework then reads the notice for every recipient, stranding another group's rule with no notice. The notice now
+    names its rules (`ruleKeys`), `approve#QuoteMessage` and `refuse#QuoteMessage` decide those only, and `decide#Quote` refuses
+    unless the approver may decide every rule chosen (one rule from OrderDetail still decides that rule alone). The request is now a
+    row per rule, so a rule set after a request shows as needing approval and the rep can ask for it (the earlier code left it
+    "waiting" with no notice and refused a second request), and a request after a refusal shows as waiting. SalesQuoteApprovals' new
+    feature fails on the unfixed code.
+  - R2 (medium, scope): a holder of `SALES_APPROVE` admitted to a quote only because its approval was asked could change it when they
+    also held `SALES_QUOTE_EDIT` (a lead who drafts quotes), then approve an amount rule over their own change. `quoteOf` gives such a
+    reader `canEdit` false and `requireQuote`'s edit refuses it (PERMISSION_DENIED). Fails on the unfixed code.
+  - R3 (low, confidentiality): Sales' pre-approval warnings carried the rule's threshold and the order's amounts into whatever reads
+    `check#OrderPreApprove` (today the server log, from P11 the order screens); they now name the rule's kind and id only.
+  - R4 (low, §2 revisions): `store#SalesPolicy` and `store#SalesApprovalPolicy` accepted a replacing write that named no revision; it
+    is refused REVISION_REQUIRED (the screens pass it).
+- Findings, numbered by the lead F165 to F169 in order:
+  - any holder of `SALES_APPROVE` in the seller sees a quote once its approval was asked, also one outside the rule's approver group
+    who cannot decide it (design §1.1 "its authorized approver"); narrow it to the approvers of its rules if wanted;
+  - an owner or team reassignment of a quote (OrderPartParty) moves its revision and so ends its approvals, with the commercial
+    revision on too; P10 and P14 may want it counted as not commercial;
+  - OrderDetail's Approve and Refuse send no operation key (a double submit writes a second, identical decision); the list's goes
+    through the notice once;
+  - a rule ended after a free line was drafted under it leaves that line needing no approval when other quote rules remain (the
+    manual-price rule applies only while none is set);
+  - the Built note's findings stand but the fourth, fixed here (R1).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteApprovals 6 features (about 2.7 s, was 2.2),
+  SalesQuoteDrafts, SalesLeadIntake, SalesWorkspace, SalesPipelineSetup 24 of 24 (46 s); SalesQuoteDrafts, ShopCheckout, StoreCheckout,
+  OrderLifecycle, OrderChanges, PurchaseApprovals, ShopSubscriptions, WorkProjectMilestones, OrderToCashBasicFlow, AccountingCredit,
+  SalesOrganizationScope and StorelessOrderTax 122 of 122 (14 specs with dependencies, 69 s). mr-boss SalesApprovals, SalesAccess,
+  SalesQuotes, CustomerServiceOrderChanges, CustomerServiceOrders and CommerceOrders 24 of 24 (33 s); SalesApprovals, SalesAccess,
+  SalesQuotes, SalesSettings and Notifications 28 of 28 (57 s). R1's and R2's checks were run against the unfixed code and failed
+  there. Prettier clean on the changed JavaScript. Not run: test-apps, test-framework, acceptance (SalesApprovalUsable unchanged; its
+  approval from the list decides the one discount rule its notice names).
+- For the lead:
+  - budget share: mr-mantle about 2.7 s for P9 (SalesQuoteApprovals' sixth feature, 0.3 s); mr-boss as the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/sales/SalesAccess.js` (quoteOf's P9 lines and requireQuote),
+    `service/mantle/order/SalesApprovals.js`; mr-boss `plan/design-sales.md` (§5's as built);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), the line: "- Sales' approvals (`mantle.order.SalesApprovalServices`,
+    all `allow-remote="false"`): `decide#Quote` and the SalesQuoteApproval handlers need `SALES_APPROVE` in the quote's selling
+    organization (a quote asked for approval is readable by such a holder, never editable through that), the revision the approver
+    read and an approver other than the quote's owner, requester or a priced line's actor unless the rule allows it; a notice decides
+    only the rules it named, and only when the approver may decide each; `request#QuoteApproval` and `propose#Quote` need
+    `SALES_QUOTE_EDIT` on an assigned quote; the defaults and rules need `SALES_CONFIGURE` for the organization and name the revision
+    they replace; a price floor's cost is read on the server and never answered; the pre-approval warnings name a rule, never an
+    amount.";
+  - nothing new needs the user's call; R1 follows the lead's preference (the notice decides only the rules it names).
 
 ### P10 — Issue, send and the customer's response
 
@@ -2696,6 +3135,8 @@ the owner's design.
 | Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
 | Nov 13, 2026 | `merge#Parties`' guards keep admitting a caller that disabled authorization or runs as the system (jobs, Shop's verified guest claim) (P3) | The user's call (the P3 Built note's last question) |
 | Nov 13, 2026 | An entered zero price or a free quote line keeps requiring `SALES_APPROVE` of the one who enters it until P9 (P7); in P9 a free or zero line becomes a rule in Sales' approval policies, so a rep can draft it and the approver decides at issue (P7, P9) | The user's call (the P7 Built note's free-line finding) |
+| Nov 13, 2026 | A mail rule's `createQuoteRequest` action (Create RFQ from mail) needs its owner to hold `SALES_QUOTE_EDIT`, when the rule is saved (`check#LeadRuleOwner`) and each time it runs (`create#QuoteRequestFromEmail`), as built (P8) | The user's call (the P8 Built note's first finding), by analogy with createLead's owner |
+| Nov 13, 2026 | A chargeable repair's warranty claim stays visible to Sales as built (holders of `SALES_QUOTE_EDIT` or `SALES_TEAM_VIEW` in the claim's organization, its customer and products only, under RFQs' "Repairs to quote"), with notices both ways: Customer Service's chargeable decision tells the organization's default Sales team (P9's SalesPolicy; topic SalesRepairToQuote), and a repair quote made tells the claim's assignee or queue (SalesRepairQuoted); neither title carries fault text or an amount (P8 review) | The user's call (the P8 Built note's second finding); written into design-sales §5 and design-customer-service §13 |
 
 ## 5. Open questions
 
@@ -2878,6 +3319,33 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F153 | P7 (Review Nov 13): `modify#ProductPriceList` declares `pricingContext` (a Map) and is `allow-remote="false"`: an in-process caller passing one could set `storeAuthority` or `sellerAuthority`; no screen or service does today (Shop's pattern, not P7's) | P7: as its Review note says |
 | F154 | P7 (Review Nov 13): find#Quotes' `state: all` includes a quote placed later, so OpportunityDetail's Quotes box and its Orders box will both show an accepted quote once P11 places one; P11 to decide which list owns it | P7: as its Review note says |
 | F155 | P7 (Review Nov 13): The Built note's findings stand but the two fixed here (Chatter and files, R1; the lifecycle transfer, R2) | P7: as its Review note says |
+| F156 | P9 (Built Nov 13): the approval setting, the templates, response requirements, acceptance thresholds and net-terms option are stored by store#SalesPolicy but shown on SalesDefaults only when P10, P11 and P13 read them; until then a configurer sets them through the service alone | P9: as its Built note says |
+| F157 | P9 (Built Nov 13): the commercial revision is set only on a seller's own accounting preference: Retail and the other Ziziwork organizations inherit ORG_ZIZI_CORP's, so SalesDefaults shows where it is set and does not change it there (Accounting's settings own that row) | P9: as its Built note says |
+| F158 | P9 (Built Nov 13): a notice is sent when the rep asks for approval; a later line change supersedes the decisions and reads the notices, and the rep asks again (there is no automatic resubmission, unlike Purchasing's placed orders) | P9: as its Built note says |
+| F159 | P9 (Built Nov 13): an approval by the topic's handler without a rule named decides every open rule the approver may decide; one the approver may not (another group's) stays open, and a refusal from the list refuses each | P9: as its Built note says |
+| F160 | P9 (Built Nov 13): a SapOrder rule warns on every sales order of its seller that meets it, store orders included, so with the setting off such an order waits for a person as §4 says; nothing yet records an order-purpose decision (P11's `approve#Order` direction) | P9: as its Built note says |
+| F161 | P9 (Built Nov 13): an amount rule in one currency does not meet a quote in another (no conversion), as Purchasing's bands; design §9's "missing FX blocks" is not built | P9: as its Built note says |
+| F162 | P9 (Built Nov 13): `get#RecordLink`'s order-change branch sends a Sales approver to Approvals, not to the change, until P14's OrderChangeDetail | P9: as its Built note says |
+| F163 | P9 (Built Nov 13): the Approvals screen's own permission check runs in its always-actions before the artifact deny is reported, so a refused render names PERMISSION_DENIED rather than the authorization (the deny row holds: checked by `isPermitted`) | P9: as its Built note says |
+| F164 | P9 (Built Nov 13): `docs/security/Attack-Surface.md` (mr-moqui) does not name the Sales approval verbs; all are `allow-remote="false"` and check SALES_APPROVE or SALES_CONFIGURE and the organization themselves; P9 had no mr-moqui worktree | P9: as its Built note says |
+| F165 | P9 (Review Nov 13): any holder of `SALES_APPROVE` in the seller sees a quote once its approval was asked, also one outside the rule's approver group who cannot decide it (design §1.1 "its authorized approver"); narrow it to the approvers of its rules if wanted | P9: as its Review note says |
+| F166 | P9 (Review Nov 13): an owner or team reassignment of a quote (OrderPartParty) moves its revision and so ends its approvals, with the commercial revision on too; P10 and P14 may want it counted as not commercial | P9: as its Review note says |
+| F167 | P9 (Review Nov 13): OrderDetail's Approve and Refuse send no operation key (a double submit writes a second, identical decision); the list's goes through the notice once | P9: as its Review note says |
+| F168 | P9 (Review Nov 13): a rule ended after a free line was drafted under it leaves that line needing no approval when other quote rules remain (the manual-price rule applies only while none is set) | P9: as its Review note says |
+| F169 | P9 (Review Nov 13): the Built note's findings stand but the fourth, fixed here (R1) | P9: as its Review note says |
+| F170 | P8 (Built Nov 13): the createQuoteRequest rule's owner must hold SALES_QUOTE_EDIT, when the rule is saved and when it runs, applying the user's Nov 13 call on createLead by analogy (check#LeadRuleOwner extended); the user's to confirm | P8: as its Built note says |
+| F171 | P8 (Built Nov 13): a chargeable repair's claim is seen (its customer and products, under "Repairs to quote") by every holder of SALES_QUOTE_EDIT or SALES_TEAM_VIEW of the claim's organization, with no assignment scope (a claim has no Sales owner or team), and Customer Service is not told when a quote is made, nor Sales when a claim becomes chargeable (no topic); whether to narrow it to a team or add a notice is the user's call | P8: as its Built note says |
+| F172 | P8 (Built Nov 13): Create quote prices each line by the resolver: an unpriced product refuses PRICE_UNAVAILABLE and the rep enters prices on the quote; `create#QuoteFromRequest` takes an entered price and reason per line by its API only (a repair's charge), and a claim carries the faulty product, not a repair service, so a repair's line is that product at the price entered | P8: as its Built note says |
+| F173 | P8 (Built Nov 13): Customer Service reads a repair quote's state, total and validity on the claim (get#WarrantyClaim `salesQuotes`), not the quote: OrderDetail, Chatter and files of an unplaced quote follow Sales' scope (P7 review R1), and the customer's consent is still recorded on the decision by hand | P8: as its Built note says |
+| F174 | P8 (Built Nov 13): a decline is sent from the mailbox the RFQ came in by, written as the system after Sales' checks: the rep need not be a sender of that mailbox (as send#IntakeConfirmation); an RFQ of no mailbox cannot tell its requester from Sales | P8: as its Built note says |
+| F175 | P8 (Built Nov 13): an RFQ's notes (the decline's reason) are RequestNotes the Sales context does not show; Customer360's RFQs tab, OpportunityDetail's RFQ → quote → order strip, Quotes' "RFQ received" list and NewQuote's RFQ field (design §3, §4, §5) are not built | P8: as its Built note says |
+| F176 | P8 (Built Nov 13): Sales' lifecycle participant (P6) does not move a leaving user's RFQ owner rows, as it now does quotes' (P7 review R2) | P8: as its Built note says |
+| F177 | P8 (Built Nov 13): `moqui lint --screens` counted a gstring idiom in RequestDetail's actions script because a `//` comment held apostrophes (moqui-devkit groovy_convert `string_spans` reads a quote in a comment as a string); the comment was reworded | P8: as its Built note says |
+| F178 | P8 (Built Nov 13): `docs/security/Attack-Surface.md` (mr-moqui) says the RFQ address "follows in Sales P8"; P8 had no mr-moqui worktree (the line below) | P8: as its Built note says |
+| F179 | P8 (Review Nov 13): a quote made from an RFQ takes its maker's team (SalesQuotes.js teamFor), not the RFQ's: a manager's quote of a team's RFQ is no quote of that team, whose members see only that it exists (R3); passing the RFQ's team to createQuote is the user's call | P8: as its Review note says |
+| F180 | P8 (Review Nov 13): Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another organization's mailbox answers the first organization's request; a decline goes to the message's Reply-To, as forgeable as its From, shown in the preview | P8: as its Review note says |
+| F181 | P8 (Review Nov 13): with no default team in the organization's SalesPolicy a chargeable decision tells nobody (the list still shows it) | P8: as its Review note says |
+| F182 | P8 (Review Nov 13): update#QuoteRequest given a new customer alone ends the contact row | P8: as its Review note says |
 
 ## 7. Later
 
