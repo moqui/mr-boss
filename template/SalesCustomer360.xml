@@ -15,9 +15,10 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Customer360's Sales branch (crosscut §3.2 Sales row; design-sales §4 Customer360; impl-sales P3): the section Shared/Customer360
     includes when appRoot is Sales, over mantle.sales.SalesWorkspaceServices.get#CustomerSales (read in its always-actions): "not
     available" for an account outside the user's sales scope; else the header with the account's name, kind, role and owner (a
-    shared account says so: only the user's organizations' documents show), New contact for an account editor, the contact record,
-    the account's contacts and, for a manager or administrator, its duplicates in More; the key numbers (contacts, and by the
-    user's rights open orders and open invoices, each linking to its tab), then the tabs. -->
+    shared account says so: only the user's organizations' documents show), New contact for an account editor, Invite to Sales
+    for an inviter (P13, template/SalesInvite.xml), the contact record, the account's contacts and, for a manager or
+    administrator, its duplicates in More; the key numbers (contacts, and by the user's rights open orders and open invoices,
+    each linking to its tab), then the tabs. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
         <section name="SalesCustomer" condition="appRoot == 'Sales'">
@@ -54,6 +55,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <link url="${customer360Base}/SalesContacts${accountQuery}&amp;_openDialog=NewAccountContactDialog"
                                             url-type="plain" text="New contact" icon="sym_o_person_add" link-type="anchor-button"
                                             btn-type="primary" condition="customerDetail.canEdit"/>
+                                    <!-- P13: Invite to Sales for a holder of SALES_CUSTOMER_INVITE (template/SalesInvite.xml) -->
+                                    <section name="SalesCustomerInvite">
+                                        <actions><set field="salesInviteFor" from="{accountPartyId: customerPartyId}"/></actions>
+                                        <widgets>
+                                            <section-include name="SalesInviteSection" location="component://mr-boss/template/SalesInvite.xml"/>
+                                        </widgets>
+                                    </section>
                                     <button-menu text="More" icon="more_horiz">
                                         <link url="${sharedLinks['Accounts/ContactDetail']}" text="Contact record"
                                                 parameter-map="{partyId:customerPartyId}"/>

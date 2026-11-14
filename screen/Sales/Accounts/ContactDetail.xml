@@ -18,8 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     contact); anyone else is "not available". Above it, Sales' own box: the accounts the person is a contact of in the user's
     scope, with Add to an account (add#Contact) and End (delete#Contact) for a holder of SALES_ACCOUNT_EDIT. Identity and channels
     are maintained under the record's own party checks (ContactServices.check#ContactAccess); consent is read only there, with the
-    link to Comms' Consent (template/ConsentRecord.xml), as Commons §16 gives Sales. Invite to Sales (P13) and New lead or
-    opportunity (P4) join with their phases. -->
+    link to Comms' Consent (template/ConsentRecord.xml), as Commons §16 gives Sales. Invite to Sales (P13, template/SalesInvite.xml)
+    for a person who is a contact of a customer account; New lead or opportunity (P4) joins with its phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Contact" default-menu-include="false">
     <parameter name="partyId" required="true"/>
@@ -47,6 +47,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <transition-include name="addContact" location="component://mr-boss/template/SalesAccounts.xml"/>
     <transition-include name="endContact" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <!-- P13: Invite to Sales -->
+    <transition-include name="inviteSalesContact" location="component://mr-boss/template/SalesInvite.xml"/>
     <actions>
         <service-call name="ironstone.sales.ContextServices.check#Record" out-map="salesContact" transaction="force-new"
                 ignore-error="true" in-map="{appRoot:appRoot, recordType:'contact', recordId:partyId}"/>
@@ -150,6 +152,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                             </box-body-nopad>
                         </container-box>
+                    </widgets>
+                </section>
+                <!-- P13: Invite to Sales, for a holder of SALES_CUSTOMER_INVITE (template/SalesInvite.xml) -->
+                <section name="SalesContactInvite" condition="!isAccount">
+                    <actions><set field="salesInviteFor" from="{contactPartyId: partyId}"/></actions>
+                    <widgets>
+                        <container style="q-mb-sm">
+                            <section-include name="SalesInviteSection" location="component://mr-boss/template/SalesInvite.xml"/>
+                        </container>
                     </widgets>
                 </section>
                 <section-include name="ContactRecordSection" location="component://mr-boss/template/ContactRecord.xml"/>

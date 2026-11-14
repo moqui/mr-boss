@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Invite to Sales (design-sales §4 Customer360 and ContactDetail, §10.1; impl-sales P13): a holder of SALES_CUSTOMER_INVITE
+    invites a contact of a customer account of their sales scope, at one of the contact's own addresses, to the organization's
+    PASS Sales pages, through mantle.sales.AccountServices get#SalesInvite and invite#SalesContact (Mantle's invite#Contact for the
+    sales app, bound to the account and the organization). Redeeming it lets the account see the customer's issued quotes and accept
+    them signed in, with no user group. The link is shown once, for the user to send. Included by name in Sales/Accounts/ContactDetail
+    (salesInviteFor: the person) and template/SalesCustomer360.xml (the account). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="inviteSalesContact">
+        <actions>
+            <set field="chosen" from="String(inviteChoice || '').split('|')"/>
+            <service-call name="mantle.sales.AccountServices.invite#SalesContact" out-map="invited"
+                    in-map="{accountPartyId:(chosen[0] || null), contactPartyId:(chosen[1] || null), emailAddress:(chosen[2] || null),
+                        organizationPartyId:(organizationPartyId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Invitation for ${chosen[2]} made; send them this link, which works until ${ec.l10n.format(invited.expiresAt, 'yyyy-MM-dd')}: ${invited.invitationUrl}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="customerPartyId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="customerPartyId"/></error-response>
+    </transition>
+    <widgets>
+        <section name="SalesInviteSection" condition="appRoot == 'Sales' &amp;&amp; !!sales?.capabilities?.customerInvite">
+            <actions>
+                <service-call name="mantle.sales.AccountServices.get#SalesInvite" out-map="salesInvite" transaction="force-new"
+                        ignore-error="true" in-map="salesInviteFor"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="salesInviteValues" from="{inviteChoice: salesInvite?.choices?.[0]?.value,
+                        organizationPartyId: salesInvite?.organizationOptions?.[0]?.value, partyId: partyId || null,
+                        customerPartyId: customerPartyId || null}"/>
+            </actions>
+            <widgets>
+                <section name="SalesInviteAvailable" condition="!!salesInvite?.canInvite">
+                    <widgets>
+                        <container-dialog id="SalesInviteDialog" button-text="Invite to Sales" icon="sym_o_person_add" width="560"
+                                title="Invite a contact to your customer quote pages">
+                            <label text="The contact signs in to see the quotes you issue to their company and to accept them online, and nothing else." type="p"/>
+                            <form-single name="InviteSalesContact" transition="inviteSalesContact" map="salesInviteValues">
+                                <field name="partyId"><default-field><hidden/></default-field></field>
+                                <field name="customerPartyId"><default-field><hidden/></default-field></field>
+                                <field name="inviteChoice">
+                                    <default-field title="Contact and email">
+                                        <drop-down allow-empty="false"><list-options list="salesInvite.choices" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="organizationPartyId">
+                                    <conditional-field title="For" condition="salesInvite.organizationOptions.length &gt; 1">
+                                        <drop-down><list-options list="salesInvite.organizationOptions" key="${value}" text="${label}"/></drop-down></conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Invite"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </widgets>
+                    <fail-widgets>
+                        <label text="Invite to Sales: ${salesInvite?.reason || 'not available for this contact'}" type="p" style="text-caption m-muted"/>
+                    </fail-widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
