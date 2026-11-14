@@ -1,3 +1,6 @@
+Nov 14, 2026 — gate 2 built: P6–P7 (stage M2), email readiness and public subscription (templates, sending profiles, bounce intake,
+PASS Marketing), each phase reviewed by a fresh agent and merged on its focused specs; P6 with its framework part (per-call mail values,
+the DSN and ARF reader). Next: P8 (sends, with a paged evaluation past the 5,000 preview cap), P9, then P10 beside P11.
 Nov 14, 2026 — gate 1 built: P1–P5 (stage M0–M1), campaigns and audiences, each phase reviewed by a fresh agent and merged on its
 focused specs, beside Sales P7–P11. The user's calls of the build are in §4. Next: P6 (templates, sending profiles and bounce intake),
 P7, then the sends (P8, with a paged evaluation past the 5,000 preview cap).
@@ -418,7 +421,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | built and reviewed Nov 14, merged |
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | built and reviewed Nov 14, merged |
 | P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | built and reviewed Nov 14, merged |
-| P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | — |
+| P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | built and reviewed Nov 14, merged |
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | — |
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | — |
 | P10 Experiments | Mantle, BOSS | ExperimentDetail | — |
@@ -2097,7 +2100,7 @@ offer; MKT-PUBLIC, MKT-AUDIENCE, MKT-CONSENT; gate 2.
 - Inventories: usl-inventory's "Added in Marketing P7" table; ss-inventory has no row naming a PASS Marketing path.
 - Design edits: design-marketing §13 Subscribe and VerifySubscription and EmailPreferences (as built); design-drawers-commons'
   Mailboxes row (owner contract: the organization scope of `unsubscribe#ContactListParty`, the page's Marketing context).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F175 to F185 in order:
   - the operations are camelCase and the request is an anonymous write named in the transport (the code over the plan above);
   - a confirmation link per verification attempt (SubscriptionRequestToken), any of a request's links confirming it for seven days;
   - a public offer with no site is offered nowhere (P3's offers and demo), not refused;
@@ -2196,7 +2199,7 @@ and design §13, after merging master (Sales P14, P15, Marketing P6) and then ma
   - Merges: both schema copies rebuilt from master's (DG6, then Sales' quotes and orders) with Marketing's four operations after
     the Sales block, byte-identical; both route copies likewise; the header's branch keeps Sales' My orders and adds Marketing;
     README and the acceptance suite list both phases' tests.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F186 to F189 in order:
   - a residual timing difference: a new address makes a person, a contact mech and its party link (a few writes) and a known one
     does not; bounded by the address limit (5 an hour), not equalized;
   - two concurrent posts with one request key can both pass the repeat check (two groups, two messages within the mail limit);
@@ -3082,6 +3085,21 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F172 | P6 (Review Nov 14): a profile's purpose (promotional or transactional) is not checked against the delivery's: a promotional delivery may name a transactional-only profile; P8 should choose by purpose or queue#Delivery refuse it | P6: as its Review note says |
 | F173 | P6 (Review Nov 14): the template body check is a pattern list, not a sanitizer: it refuses what it names (scripts, frames, forms, handlers, script links) and leaves styles and remote images; mail clients clean the rest, and BOSS shows the preview through cleanHtml | P6: as its Review note says |
 | F174 | P6 (Review Nov 14): the worker's findings stand (five per-call values; the stored message keeps no bounce address; recovery by the poll job; sender domain a warning; no SMTP-listener path in the regression suite) | P6: as its Review note says |
+| F175 | P7 (Built Nov 14): the operations are camelCase and the request is an anonymous write named in the transport (the code over the plan above) | P7: as its Built note says |
+| F176 | P7 (Built Nov 14): a confirmation link per verification attempt (SubscriptionRequestToken), any of a request's links confirming it for seven days | P7: as its Built note says |
+| F177 | P7 (Built Nov 14): a public offer with no site is offered nowhere (P3's offers and demo), not refused | P7: as its Built note says |
+| F178 | P7 (Built Nov 14): the verification goes from a ready profile of the organization, a transactional one first, else any ready one (Retail's demo profile is promotional; F172), and waits out the profile's quiet hours like any delivery; with no ready profile or no published confirmation template the request is kept and nothing is sent (readiness says which) | P7: as its Built note says |
+| F179 | P7 (Built Nov 14): the visitor's display name is never put in the message; the matched party is the first directory party with the address, so a request may put a pending membership on a customer's or staff member's party, which only that address can confirm | P7: as its Built note says |
+| F180 | P7 (Built Nov 14): a list confirmation renews the list's grant and passes a withdrawn purpose (F120) but does not undo a global marketing email withdrawal (PcpMarketingEmail with no organization); whether that blocks the list's sends is P9's dispatch check | P7: as its Built note says |
+| F181 | P7 (Built Nov 14): the limits' client key is the framework's requester key: server-side callers with no request (a spec, a job) share one bucket | P7: as its Built note says |
+| F182 | P7 (Built Nov 14): a marketing mount with no list offered makes the site not ready (every check must be ready), so mounting Marketing before publishing a list holds the site's readiness | P7: as its Built note says |
+| F183 | P7 (Built Nov 14): on the preferences page a topic turned on by a list link is sent for confirmation (the legacy page's resubscribe of a list the party is on stays as built); "No more email from" the organization is scoped to it, the legacy "No marketing email at all" global | P7: as its Built note says |
+| F184 | P7 (Built Nov 14): the checkout's news grant now records a request and a list grant with source PcsCheckout (was PcsForm through `set#ContactListPartySubscription`); a news choice the audience refuses (a personal contact, no address) is the outcome failed, logged | P7: as its Built note says |
+| F185 | P7 (Built Nov 14): the Forum spec's schema identity check failed on master (the DG6 and Sales P13 blocks in different orders); fixed by copying Mantle's ForumSchema.js to mr-pass Schema.js | P7: as its Built note says |
+| F186 | P7 (Review Nov 14): a residual timing difference: a new address makes a person, a contact mech and its party link (a few writes) and a known one does not; bounded by the address limit (5 an hour), not equalized | P7: as its Review note says |
+| F187 | P7 (Review Nov 14): two concurrent posts with one request key can both pass the repeat check (two groups, two messages within the mail limit) | P7: as its Review note says |
+| F188 | P7 (Review Nov 14): a checkout news choice confirmed by the receipt's link records a new accepted request and leaves the placement's checkout request SrsPending (the spec expects both); deciding the pending row would be cleaner | P7: as its Review note says |
+| F189 | P7 (Review Nov 14): the Built note's others stand as written: a link per attempt, a site-less offer offered nowhere, the matched party the first directory party with the address, a list confirmation not undoing a global marketing withdrawal (P9's dispatch check), a marketing mount with no offered list holding the site's readiness | P7: as its Review note says |
 
 ## 7. Later
 
