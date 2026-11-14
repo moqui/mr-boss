@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Quotes › RFQs (design-sales §5 QuoteRequests: QuoteRequestFind, QuoteRequestList, NewQuoteRequest; style-guide §3.2 List;
+    impl-sales P8): the customers' requests for quote of the user's sales scope (Mantle's find#QuoteRequests: RqtQuote requests of the
+    scope's organizations, the user's and their teams' or, for SALES_TEAM_VIEW, the organization's), paged in the query, with the saved
+    lists Awaiting, Open, Quoted, Overdue, Declined and Repairs (the warranty claims Customer Service asked a chargeable repair's quote
+    for, named by their product only), found by text, organization, customer, mine and state; each row opens QuoteRequestDetail with its
+    customer, wanted date, owner, source and quotes. New request for a holder of SALES_QUOTE_EDIT (create#QuoteRequest checks the
+    organization, customer, contact and team). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="RFQs" default-menu-index="2">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="mine"/>
+    <parameter name="state"/>
+    <parameter name="overdue"/>
+    <parameter name="kind"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createQuoteRequest" location="component://mr-boss/template/SalesQuoteRequests.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="repairs" from="kind == 'repair'"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.order.SalesQuoteServices.find#QuoteRequests" out-map="context"
+                    in-map="{kind:(repairs ? 'repair' : 'rfq'), text:text, organizationPartyId:organizationPartyId,
+                        customerPartyId:customerPartyId, mine:mine, state:(state || 'open'), overdue:overdue, pageIndex:pageIndex,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+        </if>
+        <set field="quoteRequestList" from="quoteRequestList || []"/>
+        <set field="detailPath" from="sharedLinks['Quotes/QuoteRequestDetail'] || null"/>
+        <set field="quotePath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || mine || overdue || (state &amp;&amp; state != 'open'))"/>
+        <set field="newRequestDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, customerPartyId: customerPartyId || null}"/>
+        <!-- the saved lists (design §5): each a link to this list with its filter -->
+        <set field="savedLists" from="[{label: 'Awaiting a response', state: 'awaiting', overdue: '', kind: ''},
+                {label: 'Open', state: 'open', overdue: '', kind: ''}, {label: 'Quoted', state: 'quoted', overdue: '', kind: ''},
+                {label: 'Overdue', state: 'open', overdue: 'Y', kind: ''}, {label: 'Declined', state: 'declined', overdue: '', kind: ''},
+                {label: 'Repairs to quote', state: '', overdue: '', kind: 'repair'}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read requests for quote in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="QuoteRequestsRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Requests for quote" type="h5"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewQuoteRequestDialog" button-text="New request" title="New request for quote" icon="sym_o_add"
+                                width="760" type="primary" condition="can.quoteEdit">
+                            <form-single name="NewQuoteRequest" transition="createQuoteRequest" map="newRequestDefaults">
+                                <field name="organizationPartyId">
+                                    <default-field title="Selling organization">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="customerPartyId">
+                                    <default-field title="Customer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="contactPartyId">
+                                    <default-field title="Contact" tooltip="A contact of the customer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'dealContacts', selected:contactPartyId, accountPartyId:customerPartyId}">
+                                                <depends-on field="customerPartyId" parameter="accountPartyId"/></dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="teamPartyId">
+                                    <default-field title="Team" tooltip="Your only team of the organization when empty">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'teams', selected:teamPartyId, organizationPartyId:organizationPartyId}">
+                                                <depends-on field="organizationPartyId"/></dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="requestName"><default-field title="Subject"><text-line/></default-field></field>
+                                <field name="responseRequiredDate">
+                                    <default-field title="Response wanted by"><date-time type="date"/></default-field>
+                                </field>
+                                <field name="salesChannelEnumId">
+                                    <default-field title="Came by">
+                                        <drop-down allow-empty="true">
+                                            <option key="ScPhone" text="Phone"/>
+                                            <option key="ScEmail" text="Mail"/>
+                                            <option key="ScWeb" text="Web"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="What is asked"><text-area rows="4"/></default-field></field>
+                                <field name="submitButton"><default-field title="Make request"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="organizationPartyId"/><field-ref name="customerPartyId"/></field-row>
+                                    <field-row><field-ref name="contactPartyId"/><field-ref name="teamPartyId"/></field-row>
+                                    <field-row><field-ref name="requestName"/><field-ref name="responseRequiredDate"/></field-row>
+                                    <field-ref name="salesChannelEnumId"/>
+                                    <field-ref name="description"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted" text="Add its lines on the request, then make a quote from them."/>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row q-gutter-xs q-mb-sm">
+                    <section-iterate name="QuoteRequestSavedLists" list="savedLists" entry="saved">
+                        <widgets>
+                            <link url="." text="${saved.label}" link-type="anchor-button"
+                                    style="${(kind || '') == saved.kind &amp;&amp; (repairs || ((state || 'open') == saved.state &amp;&amp; (overdue || '') == saved.overdue)) ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{state:saved.state, overdue:saved.overdue, kind:saved.kind, text:'', customerPartyId:'', mine:'', pageIndex:''}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <label type="p" style="text-caption m-muted" condition="repairs"
+                        text="Warranty claims whose repair Customer Service will charge for: make the estimate's quote from the claim's lines. Nothing of the claim but its customer and products is shown here."/>
+                <form-list name="QuoteRequestList" list="quoteRequestList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <field name="text">
+                        <header-field title="Name or id"><text-line size="20"/></header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="mine">
+                        <header-field title="Mine"><check><option key="Y" text="My requests"/></check></header-field>
+                    </field>
+                    <field name="state">
+                        <header-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="awaiting" text="Awaiting a response"/>
+                                <option key="open" text="Open"/>
+                                <option key="quoted" text="Quoted"/>
+                                <option key="declined" text="Declined"/>
+                                <option key="completed" text="Completed"/>
+                                <option key="all" text="Any"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="requestName">
+                        <conditional-field title="Request" condition="detailPath">
+                            <link url="${detailPath}" text="${requestName}" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                        </conditional-field>
+                        <default-field title="Request"><display/></default-field>
+                    </field>
+                    <field name="requestId"><default-field title="Id"><display/></default-field></field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'ReqSubmitted' || statusId == 'ReqReviewed' ? 'warning' : statusId == 'ReqInProgress' ? 'primary' : statusId == 'ReqCancelled' ? 'grey' : 'positive'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="dueText">
+                        <default-field title="Wanted by">
+                            <label text="${dueText}" type="span" style="${overdue ? 'text-negative' : ''}"/>
+                            <label text="Overdue" type="div" style="text-caption text-negative" condition="overdue"/>
+                        </default-field>
+                    </field>
+                    <field name="quoteCount">
+                        <default-field title="Quotes">
+                            <link url="${quotePath}" text="${quoteCount == 1 ? quoteId : quoteCount + ' quotes'}" link-type="anchor"
+                                    parameter-map="{orderId:quoteId}" condition="quoteId &amp;&amp; quotePath"/>
+                            <label text="None yet" type="span" style="m-muted" condition="!quoteId"/>
+                        </default-field>
+                    </field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="teamName"><default-field title="Team"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="Came by"><display/></default-field></field>
+                    <field name="receivedText"><default-field title="Received"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <columns>
+                        <column><field-ref name="requestName"/><field-ref name="requestId"/></column>
+                        <column><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/></column>
+                        <column><field-ref name="dueText"/></column>
+                        <column><field-ref name="quoteCount"/></column>
+                        <column><field-ref name="ownerName"/><field-ref name="teamName"/></column>
+                        <column><field-ref name="sourceText"/><field-ref name="receivedText"/></column>
+                        <column><field-ref name="organizationName"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="requestName"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoQuoteRequests" condition="!quoteRequestList.length">
+                    <widgets>
+                        <label text="${repairs ? 'No repairs wait for a quote' : filtered ? 'No requests match' : 'No requests for quote yet' + (can.quoteEdit ? ' · Make one with New request, or Create RFQ on a message in Comms' : '')}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

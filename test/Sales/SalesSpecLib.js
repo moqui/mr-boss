@@ -54,7 +54,10 @@ const ids = {
     // P7: the demo quotes (data/BossZSalesDemoData.xml): Retail East's draft for Wingtip (sales.rep; a customer price line and an
     // entered price), Ziziwork Sales' storeless draft for Fabrikam (sales.rep3; taxed through the seller's gateway); Quotes' tabs
     quotes: {wingtip: "BOSS_SAL_QTE_WINGTIP", fabrikam: "BOSS_SAL_QTE_FABRIKAM"},
-    quotesMenu: ["Quotes"]
+    quotesMenu: ["Quotes", "QuoteRequests"],
+    // P8: the demo requests for quote (data/BossZSalesDemoData.xml): sales.rep's phoned request from Wingtip (three lines, the third
+    // with no product), and the mail to sales+rfq@ that East's queue took (its request found by the message)
+    rfqs: {wingtip: "BOSS_SAL_RFQ_WINGTIP", mailMessage: "BOSS_SAL_MSG_RFQ"}
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork
 // Sales only) and sales.manager2 and sales.admin (both), none in ADMIN; a Projects client contact, a PASS public account and another

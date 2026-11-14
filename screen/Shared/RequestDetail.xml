@@ -67,6 +67,13 @@ along with this software (see the LICENSE.md file). If not, see
     employee who filed it and its handlers), opted out of AI; any other request is not available there, and a case is not
     available in any other context (Commons' get#RequestAccess and every app's own read leave it out).
 
+    Sales (impl-sales P8, crosscut §3.11's Sales row, design-sales §5 QuoteRequestDetail; mantle.order.SalesQuoteServices
+    get#QuoteRequest, template/SalesQuoteRequestDetail.xml): a customer's request for quote (RqtQuote) of the user's sales scope at
+    Sales/Quotes/QuoteRequestDetail: its header with Create quote (the chosen lines), Add line, Edit, Assign and Decline (the requester
+    told only at the previewed address), Overview, Lines, the quotes made from it, Conversation and Files; or a warranty claim whose
+    repair Customer Service charges for, answered by its customer and its lines' products alone, with Create quote. No case or SLA
+    actions; any other request is not available there.
+
     Commerce (impl-commerce P8, crosscut §3.11, design-commerce §10 RequestDetail; mantle.order.StoreOperationsServices
     get#StoreRequest, template/CommerceRequestDetail.xml): a case of the user's stores at Commerce/Customers/RequestDetail,
     read only but for an internal note, with Open in Customer Service.
@@ -128,6 +135,12 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="changeCase" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
     <transition-include name="assignCaseHandler" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
     <transition-include name="addCaseTask" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
+    <!-- Sales (impl-sales P8): a request for quote's lines, facts, assignment, quote and decline (template/SalesQuoteRequests.xml) -->
+    <transition-include name="rfqChoices" location="component://mr-boss/template/SalesQuoteRequests.xml"/>
+    <transition-include name="rfqStoreItem" location="component://mr-boss/template/SalesQuoteRequests.xml"/>
+    <transition-include name="rfqUpdate" location="component://mr-boss/template/SalesQuoteRequests.xml"/>
+    <transition-include name="rfqCreateQuote" location="component://mr-boss/template/SalesQuoteRequests.xml"/>
+    <transition-include name="rfqDecline" location="component://mr-boss/template/SalesQuoteRequests.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->
@@ -387,6 +400,28 @@ along with this software (see the LICENSE.md file). If not, see
                 recordFound = false
                 return
             }
+            // Sales (impl-sales P8, F68; the Sales row of crosscut §3.11): a request for quote of the sales scope of the user, or the
+            // warranty claim of a chargeable repair answered by its customer and products alone, in its own section
+            // (template/SalesQuoteRequestDetail.xml), before the Commons fall-through; any other request is not available there
+            if (appRoot === 'Sales') {
+                salesRequest = null
+                salesDecline = null
+                ec.message.pushErrors()
+                try {
+                    const out = ec.service.sync().name('mantle.order.SalesQuoteServices.get#QuoteRequest').parameters({requestId: requestId})
+                            .requireNewTransaction(true).call() || {}
+                    salesRequest = out.requestFound && !ec.message.hasError() ? out : null
+                    if (salesRequest?.quoteRequest?.canDecline) {
+                        const preview = ec.service.sync().name('mantle.order.SalesQuoteServices.preview#QuoteRequestDecline')
+                                .parameters({requestId: requestId}).requireNewTransaction(true).call() || {}
+                        salesDecline = ec.message.hasError() ? null : preview
+                    }
+                } catch (error) {
+                    salesRequest = null
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = false
+                return
+            }
             // Customer Service (impl-customer-service P2, F49): a case in its own section (template/CustomerServiceCaseDetail.xml)
             if (appRoot === 'CustomerService') {
                 detailPath = '/qapps/CustomerService/Cases/CaseDetail'
@@ -581,12 +616,13 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="PurchasingRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
         <section-include name="CustomerServiceCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
         <section-include name="CommerceRequest" location="component://mr-boss/template/CommerceRequestDetail.xml"/>
+        <section-include name="SalesQuoteRequest" location="component://mr-boss/template/SalesQuoteRequestDetail.xml"/>
         <!-- People (impl-people P21): the confidential case, opted out of AI as a whole (PE-21; the opt-out is on this section, since a
             section-include does not carry the included section's) -->
         <section name="PeopleCaseConfidential" condition="appRoot == 'People'" ai-opt-out="true"><widgets>
             <section-include name="PeopleCase" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
         </widgets></section>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'People' &amp;&amp; !mfgRequest &amp;&amp; !mntRequest"><widgets>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'People' &amp;&amp; appRoot != 'Sales' &amp;&amp; !mfgRequest &amp;&amp; !mntRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>

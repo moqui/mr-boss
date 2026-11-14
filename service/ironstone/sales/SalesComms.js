@@ -10,6 +10,7 @@
 // - callContext: the caller's open deals the user sees, for the ring bar and the call.
 // - contactCard: an inquirer who is no party yet, by the email of an open lead's intake the user sees, as the lead's card.
 // - logCall: "Log call on opportunity" from a call or a voicemail, Mantle's log#OpportunityCall.
+// - quoteRequestFromMessage (P8): "Create RFQ" on a mail, internal or chat message, Mantle's create#QuoteRequest as the user.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const salesAccess = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesAccess.js")
 const intake = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesIntake.js")
@@ -393,7 +394,41 @@ function logCall(p) {
     }
 }
 
-const operations = {leadFromMessage, lookup, callContext, contactCard, dealOptions, logCall}
+// ===== P8: Create RFQ from a message =====
+// "Create RFQ" on a mail message (Mail's message-actions slot), an internal message or a chat message (Comms' create-from kind
+// quoteRequest): Mantle's create#QuoteRequest as the user, which reads the message as the user may read it before anything is written
+// (a message they may not read answers as a missing one), matches the sender to an account's contact, files the message and its
+// files on the request and answers the same request for the same message.
+const requestPath = "/qapps/Sales/Quotes/QuoteRequestDetail?requestId="
+function quoteRequestFromMessage(p) {
+    const userScope = salesScope()
+    salesAccess.requireCapability(userScope, "quoteEdit")
+    const organizationPartyId = text(p.organizationPartyId) || salesAccess.defaultOrganization(userScope)
+    if (!organizationPartyId)
+        denied("ORGANIZATION_DENIED", "You sell for more than one organization: make the request with New request in Sales' RFQs")
+    if (blank(p.emailMessageId) && blank(p.communicationEventId) && blank(p.chatRoomId))
+        denied("RECORD_UNAVAILABLE", "Which message?")
+    const made = asUser("mantle.order.SalesQuoteServices.create#QuoteRequest", {
+        organizationPartyId,
+        emailMessageId: text(p.emailMessageId),
+        communicationEventId: text(p.communicationEventId),
+        chatRoomId: text(p.chatRoomId),
+        eventSeq: p.eventSeq ?? null
+    })
+    return {
+        recordEntityName: "mantle.request.Request",
+        recordId: made.requestId,
+        url: requestPath + encodeURIComponent(made.requestId),
+        message: ec.resource.expand(
+            made.alreadyApplied ? "Already request for quote ${id}" : "Request for quote ${id} made from the message",
+            "",
+            {id: made.requestId}
+        ),
+        roomRecordLinked: false
+    }
+}
+
+const operations = {leadFromMessage, lookup, callContext, contactCard, dealOptions, logCall, quoteRequestFromMessage}
 ;({
     execute: (op, parameters) => {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown Sales Comms operation " + op)

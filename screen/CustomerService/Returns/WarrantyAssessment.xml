@@ -152,6 +152,8 @@ along with this software (see the LICENSE.md file). If not, see
             }
         ]]></script>
         <set field="returnList" from="claimOut?.returns || []"/>
+        <!-- IronStone Sales P8 (the chargeable repair's handoff, design-sales §6): the sales quotes made from the claim, read only -->
+        <set field="salesQuoteList" from="claimOut?.salesQuotes || []"/>
         <set field="can" from="claimOut?.actions || {}"/>
         <set field="traceList" from="coverage?.trace || []"/>
         <set field="stateColors" from="{needsEvidence: 'warning', assessment: 'info', approved: 'positive', rejected: 'negative',
@@ -464,6 +466,26 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="!decisionList.length"/>
                             </box-body-nopad>
                         </container-box>
+                        <!-- IronStone Sales P8: the chargeable repair's sales quotes (Sales makes and sends them; consent stays recorded here) -->
+                        <section name="ClaimSalesQuotes" condition="salesQuoteList.length"><widgets>
+                            <container-box>
+                                <box-header title="Sales quotes · ${salesQuoteList.length}"/>
+                                <box-body-nopad>
+                                    <form-list name="ClaimSalesQuoteList" list="salesQuoteList" skip-form="true" paginate="false">
+                                        <field name="orderId"><default-field title="Quote"><display/></default-field></field>
+                                        <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                        <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                                        <field name="validThruText"><default-field title="Valid through"><display/></default-field></field>
+                                        <columns type="mobile">
+                                            <column><field-ref name="orderId"/><field-ref name="statusText"/></column>
+                                            <column><field-ref name="totalText"/></column>
+                                        </columns>
+                                    </form-list>
+                                    <label type="p" style="text-caption m-muted q-pa-sm q-mb-none"
+                                            text="Sales prepares and sends the estimate; record the customer's consent here as a decision."/>
+                                </box-body-nopad>
+                            </container-box>
+                        </widgets></section>
                         <container-box>
                             <box-header title="Repairs and returns"/>
                             <box-body>

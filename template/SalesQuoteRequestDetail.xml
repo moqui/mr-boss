@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestDetail's Sales context (crosscut §3.11's Sales row; design-sales §5 QuoteRequestDetail; impl-sales P8, F68): the section
+    Shared/RequestDetail includes when appRoot is Sales, over mantle.order.SalesQuoteServices.get#QuoteRequest (a request for quote
+    of the user's sales scope: theirs, their team's or, for SALES_TEAM_VIEW, the organization's; another's and a missing one are "not
+    available" alike). The header (the request, its customer, organization, team and wanted date, state) with Create quote (the
+    primary of an open request: a quote from the chosen lines, under an operation key, opening its OrderDetail) and More (Add line, Edit
+    request, Assign, Decline, the customer); Overview with the description; Lines, each with Edit and Remove; the quotes made from it;
+    Conversation and Files (the root admits a request the user sees). Decline shows whom it tells before it is confirmed (preview).
+    A chargeable repair's warranty claim (Customer Service's) shows its customer and its lines' products and quantities with Create
+    quote, and nothing else of the claim. No case or SLA actions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="SalesQuoteRequest" condition="appRoot == 'Sales'">
+            <widgets>
+                <section name="SalesQuoteRequestMissing" condition="!salesRequest">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Request not available"/>
+                            <box-body>
+                                <label type="p" text="Request ${requestId} is not available: it does not exist, it is not a request for quote, or it is not yours, your team's or your organization's to see."/>
+                                <link url="${sharedLinks['Quotes/QuoteRequests']}" text="Back to requests for quote" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="SalesQuoteRequestFound" condition="salesRequest">
+                    <actions>
+                        <set field="rq" from="salesRequest.quoteRequest"/>
+                        <set field="rqLines" from="salesRequest.items"/>
+                        <set field="rqQuotes" from="salesRequest.quotes"/>
+                        <set field="customerUrl" from="rq.customerPartyId &amp;&amp; sharedLinks['Accounts/Customer360'] ? sharedLinks['Accounts/Customer360'] : null"/>
+                        <set field="quoteUrl" from="sharedLinks['Orders/OrderDetail']"/>
+                        <set field="productUrl" from="sharedLinks['Products/Product360']"/>
+                        <set field="quotableOptions" from="rqLines.filter(line =&gt; !line.cancelled &amp;&amp; line.productId)
+                                .map(line =&gt; ({value: line.requestItemSeqId, label: line.requestItemSeqId + ' · ' + line.productName + ' × ' + line.quantityText}))"/>
+                        <set field="quoteValues" from="{requestId:requestId, requestRevision:rq.requestRevision,
+                                operationKey:'rfq-quote-' + ec.user.randomString(20), requestItemSeqIdList:quotableOptions.map(option =&gt; option.value)}"/>
+                        <set field="lineDefaults" from="{requestId:requestId, requestRevision:rq.requestRevision, quantity:'1'}"/>
+                        <set field="editValues" from="{requestId:requestId, requestRevision:rq.requestRevision, requestName:rq.requestName,
+                                description:rq.description, responseRequiredDate:rq.responseRequiredDate, customerPartyId:rq.customerPartyId,
+                                contactPartyId:rq.contactPartyId}"/>
+                        <set field="assignValues" from="{requestId:requestId, requestRevision:rq.requestRevision, ownerPartyId:rq.ownerPartyId,
+                                teamPartyId:rq.teamPartyId}"/>
+                        <set field="declineValues" from="{requestId:requestId, requestRevision:rq.requestRevision, toAddress:salesDecline?.toAddress || '',
+                                messageText:salesDecline?.messageText || '', notify:(salesDecline?.canNotify ? 'Y' : '')}"/>
+                        <set field="overviewRows" from="[['Customer', rq.customerName], ['Contact', rq.contactName], ['Organization', rq.organizationName],
+                                ['Owner', rq.ownerName], ['Team', rq.teamName], ['Received', rq.receivedText], ['Response wanted by', rq.dueText],
+                                ['Came by', rq.sourceText]].filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]}))"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.request.Request" record-id="${requestId}" title="${rq.repair ? '' : 'RFQ ' + requestId + ' · '}${rq.requestName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="${rq.repair ? ec.l10n.localize('Repair') : ec.l10n.localize('RFQ')} ${requestId}" type="h5"/>
+                                        <label text="${rq.requestName}" type="span" style="text-subtitle1"/>
+                                    </container>
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <link url="${customerUrl}" url-type="plain" text="${rq.customerName}" link-type="anchor"
+                                                parameter-map="{customerPartyId:rq.customerPartyId}" condition="customerUrl"/>
+                                        <label text="${rq.customerName || ec.l10n.localize('No customer yet')}" type="span" condition="!customerUrl"/>
+                                        <label text="${[rq.organizationName, rq.teamName, rq.dueText ? ec.l10n.localize('wanted by') + ' ' + rq.dueText : ''].filter(Boolean).join(' · ')}"
+                                                type="span" style="text-caption m-muted"/>
+                                    </container>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${rq.statusText}" type="span" style="text-weight-medium"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-xs m-record-actions">
+                                <container-dialog id="SalesRfqCreateQuote" button-text="Create quote" icon="sym_o_request_quote" width="640"
+                                        type="primary" title="A quote from ${rq.repair ? 'repair' : 'request'} ${requestId}" condition="rq.canQuote">
+                                    <form-single name="SalesRfqCreateQuoteForm" transition="rfqCreateQuote" map="quoteValues">
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="requestRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="requestItemSeqIdList">
+                                            <default-field title="Lines to quote">
+                                                <drop-down allow-multiple="true" allow-empty="false">
+                                                    <list-options list="quotableOptions" key="${value}" text="${label}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="validThruDate"><default-field title="Valid through"><date-time type="date"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Create quote"><submit/></default-field></field>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted"
+                                            text="Each line is priced for the customer; change prices on the quote. The request stays open for more quotes."/>
+                                </container-dialog>
+                                <label text="${rq.quoteHint}" type="span" style="text-caption m-muted" condition="rq.canEdit &amp;&amp; !rq.canQuote &amp;&amp; rq.quoteHint"/>
+                                <button-menu text="More" icon="more_horiz" condition="rq.canEdit || customerUrl">
+                                    <container-dialog id="SalesRfqAddLine" button-text="Add line" icon="sym_o_add" width="600"
+                                            title="Add a line to request ${requestId}" condition="rq.canEdit">
+                                        <form-single name="SalesRfqAddLineForm" transition="rfqStoreItem" map="lineDefaults">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="requestRevision"><default-field><hidden/></default-field></field>
+                                            <field name="productId">
+                                                <default-field title="Product" tooltip="Leave empty for a line described only; give it a product to quote it">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="rfqChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'products', organizationPartyId:rq.organizationPartyId, selected:productId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                            <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                            <field name="requiredByDate"><default-field title="Required by"><date-time type="date"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Add line"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="SalesRfqEdit" button-text="Edit request" icon="sym_o_edit" width="680"
+                                            title="Edit request ${requestId}" condition="rq.canEdit">
+                                        <form-single name="SalesRfqEditForm" transition="rfqUpdate" map="editValues">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="requestRevision"><default-field><hidden/></default-field></field>
+                                            <field name="requestName"><default-field title="Subject"><text-line/></default-field></field>
+                                            <field name="customerPartyId">
+                                                <default-field title="Customer">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="rfqChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="contactPartyId">
+                                                <default-field title="Contact" tooltip="A contact of the customer">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="rfqChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'dealContacts', selected:contactPartyId, accountPartyId:customerPartyId}">
+                                                            <depends-on field="customerPartyId" parameter="accountPartyId"/></dynamic-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="responseRequiredDate">
+                                                <default-field title="Response wanted by"><date-time type="date"/></default-field>
+                                            </field>
+                                            <field name="description"><default-field title="What is asked"><text-area rows="4"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="SalesRfqAssign" button-text="Assign" icon="sym_o_assignment_ind" width="560"
+                                            title="Assign request ${requestId}" condition="rq.canEdit">
+                                        <form-single name="SalesRfqAssignForm" transition="rfqUpdate" map="assignValues">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="requestRevision"><default-field><hidden/></default-field></field>
+                                            <field name="ownerPartyId">
+                                                <default-field title="Owner">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="rfqChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'owners', organizationPartyId:rq.organizationPartyId, selected:ownerPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="teamPartyId">
+                                                <default-field title="Team">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="rfqChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'teams', organizationPartyId:rq.organizationPartyId, selected:teamPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Assign"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="SalesRfqDecline" button-text="Decline" icon="sym_o_block" width="640"
+                                            title="Decline request ${requestId}" condition="rq.canDecline">
+                                        <label type="p" text="${salesDecline?.notifyText || ''}" style="text-body2"/>
+                                        <form-single name="SalesRfqDeclineForm" transition="rfqDecline" map="declineValues">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="requestRevision"><default-field><hidden/></default-field></field>
+                                            <field name="toAddress"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Why it is declined" tooltip="Kept on the request; the requester does not see it">
+                                                    <text-line/></default-field>
+                                            </field>
+                                            <field name="notify">
+                                                <conditional-field title="Tell the requester" condition="salesDecline?.canNotify">
+                                                    <check><option key="Y" text="Send them the message below"/></check></conditional-field>
+                                                <default-field><ignored/></default-field>
+                                            </field>
+                                            <field name="messageText">
+                                                <conditional-field title="Message to the requester" condition="salesDecline?.canNotify">
+                                                    <text-area rows="4"/></conditional-field>
+                                                <default-field><ignored/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Decline request">
+                                                    <submit type="danger" confirmation="Decline request ${requestId}? It is closed and no more quotes are made from it."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="${customerUrl}" url-type="plain" text="Customer" parameter-map="{customerPartyId:rq.customerPartyId}"
+                                            condition="customerUrl"/>
+                                </button-menu>
+                            </container>
+                        </container>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Overview"/>
+                                    <box-body-nopad>
+                                        <form-list name="SalesRfqOverview" list="overviewRows" skip-form="true" skip-header="true" paginate="false">
+                                            <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
+                                            <field name="value"><default-field><display/></default-field></field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <section name="SalesRfqDescription" condition="!rq.repair"><widgets>
+                                    <container-box>
+                                        <box-header title="What is asked"/>
+                                        <box-body>
+                                            <label type="p" text="${rq.description}" style="text-body2" condition="rq.description"/>
+                                            <label type="p" text="No description" style="m-muted" condition="!rq.description"/>
+                                        </box-body>
+                                    </container-box>
+                                </widgets></section>
+                                <section name="SalesRfqRepairNote" condition="rq.repair"><widgets>
+                                    <container-box>
+                                        <box-header title="Chargeable repair"/>
+                                        <box-body>
+                                            <label type="p" style="text-body2"
+                                                    text="Customer Service asks for the quote of a repair it will charge for. Its claim stays with Customer Service; the quote carries its products and your prices only."/>
+                                        </box-body>
+                                    </container-box>
+                                </widgets></section>
+                            </row-col>
+                        </container-row>
+                        <container-box>
+                            <box-header title="Lines · ${rqLines.length}"/>
+                            <box-body-nopad>
+                                <form-list name="SalesRfqLines" list="rqLines" skip-form="true" paginate="false">
+                                    <field name="requestItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="productName">
+                                        <default-field title="Item">
+                                            <link url="${productUrl}" text="${productName}" link-type="anchor" parameter-map="{productId:productId}"
+                                                    condition="productId &amp;&amp; productUrl"/>
+                                            <label text="${productName || description}" type="div" condition="!productId || !productUrl"/>
+                                            <label text="${description}" type="div" style="text-caption m-muted" condition="productId &amp;&amp; description"/>
+                                            <label text="No product yet" type="div" style="text-caption text-warning" condition="!productId &amp;&amp; !cancelled"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                    <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <label text="${statusText}${quotedText ? ' · ' + quotedText : ''}" type="span" style="${cancelled ? 'm-muted' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="SalesRfqEditLine_${requestItemSeqId}" button-text="Edit" icon="sym_o_edit"
+                                                    width="560" title="Edit line ${requestItemSeqId}" condition="rq.canEdit &amp;&amp; !cancelled">
+                                                <form-single name="SalesRfqEditLine" transition="rfqStoreItem">
+                                                    <field name="requestId" from="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="requestRevision" from="rq.requestRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="requestItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="productId">
+                                                        <default-field title="Product">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="rfqChoices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'products', organizationPartyId:rq.organizationPartyId, selected:productId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="quantity" from="quantityText"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                                    <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                                    <field name="requiredByDate"><default-field title="Required by"><date-time type="date"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="rfqStoreItem" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                                    condition="rq.canEdit &amp;&amp; !cancelled"
+                                                    parameter-map="{requestId:requestId, requestRevision:rq.requestRevision, requestItemSeqId:requestItemSeqId, cancel:'Y'}"
+                                                    confirmation="Remove line ${requestItemSeqId} of request ${requestId}?"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="quantityText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!rqLines.length"
+                                        text="${rq.canEdit ? 'No lines yet · Add what the customer asks for with Add line in More' : 'No lines'}"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Quotes · ${rqQuotes.length}"/>
+                            <box-body-nopad>
+                                <form-list name="SalesRfqQuotes" list="rqQuotes" skip-form="true" paginate="false">
+                                    <field name="orderName">
+                                        <default-field title="Quote">
+                                            <link url="${quoteUrl}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"
+                                                    condition="canOpen &amp;&amp; quoteUrl"/>
+                                            <label text="${orderName}" type="span" condition="!canOpen || !quoteUrl"/>
+                                            <label text="${orderId}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                                    <field name="entryText"><default-field title="Made"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="orderName"/></column>
+                                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No quote made from it yet." condition="!rqQuotes.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="SalesRfqActivity" condition="!rq.repair"><widgets>
+                            <container-row>
+                                <row-col md="6">
+                                    <container-box>
+                                        <box-header title="Conversation"/>
+                                        <box-body><chatter id="SalesRfqChatter" record-entity="mantle.request.Request" record-id="${requestId}"/></box-body>
+                                    </container-box>
+                                </row-col>
+                                <row-col md="6">
+                                    <container-box>
+                                        <box-header title="Files"/>
+                                        <box-body><record-files id="SalesRfqFiles" record-entity="mantle.request.Request" record-id="${requestId}"/></box-body>
+                                    </container-box>
+                                </row-col>
+                            </container-row>
+                        </widgets></section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
