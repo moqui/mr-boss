@@ -3776,6 +3776,134 @@ Design §6 OrderChanges, OrderChangeDetail, ShipmentDetail and InvoiceDetail; SA
   change against a picked line waits with its conflict; a partly shipped and invoiced order's remaining quantities
   reconcile with its shipments and invoices.
 
+**Built Nov 14 (P14).** mr-mantle and mr-boss on branch `sal/p14` (hashes in the worker's reply), with master (Sales P12, P13) merged
+in; mr-moqui and mr-pass unchanged, no Rust built.
+- Checked first (the code over the plan): P9's, P11's and P12's Built and Review notes, §4 (F43's row, the Nov 13 administrator row),
+  F13, F26, F34, F43, F46, F58, F162, F202; Customer Service's OrderChangeServices.xml and OrderChanges.js, its spec and
+  Shared/OrderChangeDetail; PurchaseOrders.js holdAllowed (unchanged); hold#Order, release#OrderHold, update#OrderItem and its
+  reservation SECA (OrderItemUpdateCheckReserve), handle#OrderMajorChange, release#ShipmentDraftInvoice, evaluate#OrderCredit,
+  get#InvoiceFinanceDetail and send#Invoice; Shared/ShipmentDetail and InvoiceDetail's contexts. The code over the plan:
+  - "Warehouse's release and rebuild of open reservations" is update#OrderItem's own reservation rule (checkReserve with
+    resetReservations), so apply calls no reservation service itself; "Accounting's draft-release contract" is
+    `release#ShipmentDraftInvoice`, which needs RECEIVABLE_EDIT: a packed price line is applied only by a change operator who also
+    holds it, else it waits (BILLING_CONFLICT naming the receivables editor), as design §6 says ("application waits for the owning
+    operator");
+  - a new line is priced by `get#SellerProductPrice` (the seller's authority, as a quote line's), not `get#OrderProductPrice`, which
+    answers a caller without PRICE_VIEW no scoped price (the change operator holds none), the price shown at preview kept at apply;
+  - an address, ship method or carrier change names its part: Request gains `orderPartSeqId` (audit-logged, in the proposal's
+    revision; entity/SalesOrderChangeEntities.xml), the order's only part when empty;
+  - "policy" at apply is the approval current at the proposal's and the order's revisions, unexpired, and the fiscal period open
+    (OrderChanges.js' head, shared with Customer Service's kinds); the credit check runs again on a higher total
+    (`evaluate#OrderCredit` with placeHold, which may leave a Credit hold that keeps the order held);
+  - the plan's "Mantle `test/order/OrderChanges` gains the owner kinds" is a new spec, `test/order/SalesOrderChanges`: with them
+    OrderChanges ran 19 s, over the 15-second limit;
+  - a change operator needs to see the orders they change: SalesAccess.js `orderOf` and find#SalesOrders give `SALES_ORDER_CHANGE`
+    read-only reach to the organization's Placed, Processing, Approved and held orders (as P11's approver reach);
+  - a Sales reader who sees an order reads its changes and their prices (the order's owner, OrderDetail's Changes); `SALES_TEAM_VIEW`
+    joins find#OrderChanges' read permissions for the manager's Changes list.
+- Mantle:
+  - `service/mantle/order/SalesOrderChanges.js` (new): `canFile`, `seesOrder`, `mayApply`, `validateSave` (PRICE_REQUIRED,
+    QUANTITY_INVALID, PRODUCT_REQUIRED, DATE_REQUIRED, PART_REQUIRED, ADDRESS_REQUIRED, ADDRESS_INVALID, METHOD_INVALID,
+    CARRIER_INVALID), `checkLines` (ACTIVE_PICK, ALREADY_SHIPPED, BILLING_CONFLICT, QUANTITY_INVALID, PRODUCT_NOT_USABLE,
+    PRICE_UNAVAILABLE, LINE_UNAVAILABLE; its own preview version over the lines and the part's open shipments), `effects` (total
+    before and after, tax estimate, freight, credit), `apply` (FORBIDDEN without SALES_ORDER_CHANGE, RECORD_UNAVAILABLE outside the
+    sales scope, STOCK_CHANGED, the writes listed in design §6 "As built (P14)"), and the handoffs `getShipment` and `checkInvoice`.
+  - Owner contract with Customer Service: `OrderChanges.js` (Sales' filers in save, a new line's RequestItem, readPermissions with
+    SALES_TEAM_VIEW, amountRead and requireRead for a Sales reader, checkLines and applyChange delegating the commercial kinds after
+    the shared head checks, apply's permission split keeping FORBIDDEN for the order desk, actionsOf.apply, get's part texts,
+    preview's effects and version, find's `orderChangeKindEnumId` and `kindGroup`, storeApplied's given print lines, `salesTools`);
+    `OrderChangeServices.xml` (descriptions; save's `orderPartSeqId`, find's two filters). Customer Service's specs unchanged.
+  - `SalesAccess.js` (P14: `changeStatuses`, orderOf's change reach, export), `SalesOrders.js` (findOrders' change reach),
+    `SalesOrderServices.xml` (a P14 block at the end: `get#SalesShipment`, `check#SalesInvoice`), `entity/SalesOrderChangeEntities.xml`.
+- BOSS:
+  - Screens: `Sales/Orders/OrderChanges.xml` (new, tab 2 "Changes": saved lists, ChangeList, New change), `Sales/Orders.xml`
+    (OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail); `Shared/OrderChangeDetail.xml` (owner contract: each
+    transition and the actions check by root, Sales' check#Record for appRoot Sales; saveChange passes the part kinds' fields and a
+    new line; the Sales form included; Customer Service's form, Edit and owner reminder hidden in Sales; an Effects box);
+    `template/SalesOrderChanges.xml` (new: salesChangeChoices, SalesNewOrderChange); `Shared/ShipmentDetail.xml` and
+    `Shared/InvoiceDetail.xml` (owner contracts: a Sales branch each), `template/SalesHandoffs.xml` (new: SalesShipment, SalesInvoice,
+    salesInvoiceSend); `template/SalesOrderDetail.xml` (a P14 part of P11's context: Changes box, More › New change, the shipment and
+    invoice rows' links); `template/SalesParts.xml` and `ContextServices.xml` get#Choices (`orderId`).
+  - `Sales.js` (a P14 block after P12's): linkPaths, `areas.changes` and its read, recordKinds `orderChange` (now
+    Orders/OrderChangeDetail, for an approver, a change operator or a reader of the order), `shipment`, `invoice`; choices
+    `changeOrders`, `orderLines`, `customerAddresses`, `carriers`.
+  - `PaletteServices.xml` get#RecordLink: an order change asks Sales first, then Customer Service (F58); `BossSetupData.xml` the
+    topic's comment.
+  - `data/BossSetupSalesData.xml` (a P14 block at the end): SALES_ORDER_CHANGE and ORDER_CHANGE_HOLD_RELEASE for BOSS_SALES_CHANGE in
+    its bundle (F43); BOSS_SAL_CHANGES (deny to BOSS_SALES, ALWAYS for the change operator, approver and manager).
+- Specs:
+  - Mantle `test/order/SalesOrderChanges` (new, 2 features, about 3 s): a price change Customer Service filed, decided by the sales
+    approver, refused the order desk (FORBIDDEN) and another organization's operator (RECORD_UNAVAILABLE), applied once by the change
+    operator under its key (retry answers alreadyApplied, price 4, PDF stored, revision moved, no hold left); an increase below the
+    line refused; a quantity increase and a new line filed by the change operator applied with a Credit hold left (5 reserved, the
+    line's price kept, the new line at the seller's 7, stillHeld); ACTIVE_PICK, ALREADY_SHIPPED (with BILLING_CONFLICT in the
+    preview), STALE_ORDER and APPROVAL_EXPIRED refused with the order unchanged; get#SalesShipment for who sees the order and not
+    another organization's; check#SalesInvoice refused without a receivable read.
+  - mr-boss `test/Sales/SalesOrderChanges` (new, 1 feature, about 1–2 s): OrderChangeDetail's one qvt render in Sales' context as the
+    change operator (Approved, Apply, Effects, the order total, Sales' wording without Customer Service's reminder); apply with the
+    same parameters reaching STOCK_CHANGED for the change operator, refused the order desk and PERMISSION_DENIED for a rep; the
+    approver's record link opens Sales' OrderChangeDetail. `SalesApprovals` (F58's link now Sales' OrderChangeDetail), `SalesAccess`
+    (the change operator's capabilities with orderChange).
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesChangeScenarios` (3 features: a price change filed by the order desk,
+    decided by sales.approver and applied by sales.change through OrderChangeDetail's transitions, the total down and the PDF stored;
+    a ship-date change against a picked line waiting with ACTIVE_PICK; a partly shipped and invoiced order's shipped and billed
+    quantities, its shipment opening under Sales).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle OrderChanges, SalesOrderChanges,
+  SalesOrderApproval, SalesWorkspace, SupportPortal, SalesQuoteTemplates, PurchaseHoldPermission and SalesPortal 33 of 33 (8 specs,
+  67 s) after the master merge (29 of 29 before it, without SalesPortal); Customer Service's OrderChanges unchanged and passing.
+  mr-boss SalesOrderChanges, SalesApprovals, SalesOrders, SalesAccess, SalesHome, SalesQuotes, SalesQuoteTemplates, SalesOpportunities,
+  SalesAccounts, CustomerServiceOrderChanges, CustomerServiceAccess, CustomerServiceOrders, AccountingReceivables, ProjectsAccess,
+  Notifications, InsightsHome and PurchasingOrders 102 of 102 (17 specs, 83 s) after the merge (before it SalesAccess' capability row
+  failed until the change operator's orderChange was added). `moqui lint --screens` (release): 141 flagged sites, as before, none in
+  a new or changed screen. Prettier clean on the new and changed JavaScript. Not run: the client walk (no screen it walks changed),
+  ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in the Sales build: commercial changes and the fulfillment and billing handoffs" table;
+  ss-inventory unchanged (no baseline form maps to OrderChanges, and its ShipmentDetail rows name no Sales path).
+- Design edits: design-sales §6 "As built (impl-sales P14)"; design-customer-service §4 (the commercial kinds applied in the same
+  services; OrderChangeApproval's link asked of Sales first).
+- Findings (provisional, numbered by the lead):
+  - editing a filed commercial proposal is not offered in Sales: save#OrderChange's edit (`actions.save`) asks ORDER_CHANGE_REQUEST
+    and Customer Service's Edit form has its own kinds' fields; a Sales filer withdraws and files again;
+  - BILLING_CONFLICT for a finalized invoice is checked at apply but the spec meets it only in the preview: a shipped and invoiced
+    line answers ALREADY_SHIPPED first, and a line billed but not shipped needs an invoice made outside the order's flow;
+  - a packed price line's draft invoice is released only by an applier who also holds RECEIVABLE_EDIT; otherwise the change waits and
+    nothing tells Accounting (no handoff notice);
+  - the change operator's read-only reach shows the organization's Placed, Processing, Approved and held orders on Orders too, and a
+    completed order (all shipped) leaves their sight, so a change operator cannot open the shipment of a completed order;
+  - the preview's tax effect is an estimate at the order's current tax rate; a store order's shipping and promotions are recalculated
+    by handle#OrderMajorChange while the order is held;
+  - a price change marks the line's manual price with the applier as `priceOverrideUserId`, the change and its reason as the reason;
+  - `SALES_TEAM_VIEW` among find#OrderChanges' read permissions lets a Sales manager or reader also list the organization's cancel and
+    substitute proposals;
+  - SalesAccess has no P14 feature: the holder and non-holder on apply are in mr-boss SalesOrderChanges and another organization's
+    refusal in Mantle SalesOrderChanges (one setup each);
+  - Sales' ShipmentDetail and InvoiceDetail have no regression render (their reads are Mantle-checked; the acceptance test opens the
+    shipment);
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the commercial apply; P14 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 3.0 s (SalesOrderChanges); mr-boss server about 1–2 s (SalesOrderChanges' one feature); client none;
+  - merge hot spots (P15 beside it): mr-mantle `service/mantle/order/OrderChanges.js`, `OrderChangeServices.xml`,
+    `service/mantle/sales/SalesAccess.js` (orderOf's unassigned branch, changeStatuses, exports after orderApprover),
+    `SalesOrders.js` findOrders, `SalesOrderServices.xml` (a P14 block at the end); mr-boss `service/ironstone/sales/Sales.js` (a P14
+    block after P12's), `data/BossSetupSalesData.xml` (a P14 block at the end), `screen/Shared/OrderChangeDetail.xml`,
+    `screen/Shared/ShipmentDetail.xml`, `screen/Shared/InvoiceDetail.xml`, `template/SalesOrderDetail.xml` (P11's context: actions,
+    More, Fulfillment and Invoices boxes, a Changes box), `screen/Sales/Orders.xml`, `template/SalesParts.xml`,
+    `service/ironstone/sales/ContextServices.xml` (get#Choices), `service/ironstone/commons/PaletteServices.xml`,
+    `data/BossSetupData.xml` (the OrderChangeApproval comment), `test/Sales/SalesAccess.spec.js` (the change operator's row),
+    `test/Sales/SalesApprovals.spec.js`, `plan/usl-inventory.md`, `plan/design-sales.md` (§6), `plan/design-customer-service.md` (§4).
+    Sales.xml and Shared/OrderDetail.xml are not touched;
+  - Attack-Surface (mr-moqui), a paragraph after Sales' quote templates: "Sales' commercial order changes (in
+    `mantle.order.OrderChangeServices`, all `allow-remote="false"`; SalesOrderChanges.js): a price, quantity increase or new line,
+    ship date, address, ship method or carrier change of a sales order is filed by Customer Service's `ORDER_CHANGE_REQUEST`, Sales'
+    `SALES_ORDER_CHANGE` or the order's editor in Sales, decided under `SALES_APPROVE` (not by its filer unless the organization's
+    policy allows), and applied only under `SALES_ORDER_CHANGE` in the seller's sales scope, under the order's lock, at the
+    proposal's and the order's revisions with a current approval; an active pick, a shipped quantity or a finalized invoice refuses
+    it by name, a packed line's draft invoice is released only through Accounting's `release#ShipmentDraftInvoice` (RECEIVABLE_EDIT),
+    the higher total meets Accounting's credit check, and only its own Change hold is released; another organization's change
+    answers as missing. A change operator reads the organization's placed, approved and held orders and never edits them; Sales'
+    shipment and invoice reads answer only for an order the user sees, an invoice only for a receivable reader.";
+  - nothing needs the user's call; the first and third findings may be worth the user's look.
+
 ### P15 — Agreements and customer prices
 
 Design §7 Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail and PriceExplain (the agreement
