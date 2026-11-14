@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The quote template transitions of IronStone Sales (design-sales §5 QuoteTemplates and QuoteTemplateDetail; impl-sales P12), each a
+    call of Mantle's guarded template service (mantle.order.SalesQuoteServices, which checks the template manager's permissions, the
+    organization and the revision itself): createQuoteTemplate (NewTemplate; it opens the new template), salesStoreTemplate (a
+    draft's header), salesSucceedTemplate (a published template's successor, a draft copy that opens next), salesPublishTemplate and
+    salesEndTemplate, each at the revision shown. A template's lines go through the quote draft's salesStoreLine and salesDeleteLine
+    (template/SalesQuotes.xml). A screen includes each transition it uses by name. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createQuoteTemplate">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.store#QuoteTemplate" out-map="created"
+                    in-map="{organizationPartyId:(organizationPartyId || null), orderName:(orderName || null),
+                        templateDescription:(templateDescription || null), currencyUomId:(currencyUomId || null),
+                        templateValidityDays:(templateValidityDays || null)}"/>
+            <set field="detailPath" from="sales.sharedLinks['Quotes/QuoteTemplateDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Template ${created.orderId} started · add its lines</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; !ec.message.hasError()</expression></condition>
+            <parameter name="orderId" from="created.orderId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="salesStoreTemplate">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.store#QuoteTemplate"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, orderName:(orderName ?? ''),
+                        templateDescription:(templateDescription ?? ''), templateValidityDays:(templateValidityDays ?? '')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Template saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesSucceedTemplate">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.store#QuoteTemplate" out-map="started"
+                    in-map="{predecessorOrderId:orderId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Successor ${started.orderId} started · change it, then publish it to replace ${orderId}</message></if>
+        </actions>
+        <conditional-response url="."><condition><expression>!ec.message.hasError()</expression></condition>
+            <parameter name="orderId" from="started.orderId"/></conditional-response>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesPublishTemplate">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.publish#QuoteTemplate" out-map="published"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Template ${orderId} ${published.state == 'current' ? 'published' : 'scheduled'}${published.predecessorOrderId ? ' · it replaces ' + published.predecessorOrderId : ''}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesEndTemplate">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.end#QuoteTemplate"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, thruDate:(thruDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Template ${orderId} ended</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <widgets/>
+</screen>

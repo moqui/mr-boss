@@ -948,7 +948,7 @@ Added in Marketing P5 (Nov 14, 2026; `mantle.marketing.SegmentServices`, impl-ma
 | OrderServices | reject#Order |  | Purchasing/Orders/OrderDetail and Purchasing/Approvals (Refuse, through mantle.order.PurchaseServices.decide#PurchaseApproval) (Purchasing P4) |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
-| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3); Commerce/Orders/OrderDetail (Order again, through mantle.order.StoreOperationsServices.reorder#StoreOrder: copyPayment false, then repriced; Commerce P8) |
+| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3); Commerce/Orders/OrderDetail (Order again, through mantle.order.StoreOperationsServices.reorder#StoreOrder: copyPayment false, then repriced; Commerce P8); Sales/Quotes/QuoteTemplateDetail and Sales/Quotes/Quotes (New quote from a template, through SalesQuoteServices.create#Quote: copyPayment false, then priced as of the quote's date; a successor through store#QuoteTemplate) (Sales P12) |
 | OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
 | OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
 | OrderServices | create#RecurringOrder |  |  |
@@ -1254,7 +1254,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | InventoryReportServices | get#PriceHistoryInfo | Products/Pricing/PriceHistory | Products/Prices/PriceHistory |
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
-| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Orders/OrderDetail; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail; Sales/Agreements/PriceListDetail; Sales/Agreements/PriceExplain; Sales/Quotes/QuoteTemplateDetail | Shared/PriceExplain; Purchasing/Suppliers/PriceExplain (Shared/PriceExplain) (Purchasing P2); Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail (P3); PASS:Shop/Home; PASS:Shop/Categories/CategoryDetail; PASS:Shop/Search; PASS:Shop/Products/ProductDetail (its resolver as the store's authority, through mantle.product.PriceServices.get#StoreProductPrice and ShopCatalogServices; Shop P3) |
+| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Orders/OrderDetail; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail; Sales/Agreements/PriceListDetail; Sales/Agreements/PriceExplain; Sales/Quotes/QuoteTemplateDetail | Shared/PriceExplain; Purchasing/Suppliers/PriceExplain (Shared/PriceExplain) (Purchasing P2); Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail (P3); PASS:Shop/Home; PASS:Shop/Categories/CategoryDetail; PASS:Shop/Search; PASS:Shop/Products/ProductDetail (its resolver as the store's authority, through mantle.product.PriceServices.get#StoreProductPrice and ShopCatalogServices; Shop P3); Sales/Quotes/QuoteTemplateDetail (the template's lines and its preview, through get#SellerProductPrice, the seller's authority; Sales P12) |
 | PriceServices | get#OrderProductPrice | Sales/Orders/OrderDetail | — Sales P7: a quote line's price is get#SellerProductPrice's (the seller's authority after Sales' checks) |
 | ProductServices | find#ProductByIdValue | Products; Products/Products; Products/Units/Packaging; Products/Settings/IdentificationTypes | Products (guarded exact-ID palette) |
 | ProductServices | clone#Product | Products/Products/Product360; Shared/Product360 |  |
@@ -2340,6 +2340,17 @@ remain historical; these rows add no implementation claim.
 | order/SalesOrderServices | get#SalesWorkSummary | Sales/Home; Insights/Home (attention) | Sales/Home (through get#SalesHome); Insights/Home (Sales.QuotesToSend, Sales.QuotesExpiring, Sales.OrdersAwaitingApproval) |
 | order/SalesOrderServices | send#OrderConfirmation, build#OrderConfirmationMessage | — (the OrderPlacedSalesConfirmation rule; the delivery ledger's MdsrcSalesOrderConfirmation) | no screen |
 | sales/SalesWorkspaceServices | find#SalesOrders | Sales/Orders/Orders (OrderFind, OrderList) | Sales/Orders/Orders; Sales/Home (Orders blocked); the Sales palette |
+
+### Added in the Sales build: quote templates (P12, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesQuoteServices | find#QuoteTemplates | Sales/Quotes/QuoteTemplates (TemplateFind, TemplateList); Sales/Quotes/Quotes (NewQuote's template) | Sales/Quotes/QuoteTemplates; NewQuote's template choice (ironstone.sales get#Choices quoteTemplates) |
+| order/SalesQuoteServices | get#QuoteTemplate | Sales/Quotes/QuoteTemplateDetail | Sales/Quotes/QuoteTemplateDetail (TemplateHeader, TemplateItems, History) |
+| order/SalesQuoteServices | store#QuoteTemplate | Sales/Quotes/QuoteTemplates (NewTemplate); Sales/Quotes/QuoteTemplateDetail (TemplateHeader) | Sales/Quotes/QuoteTemplates (New template); Sales/Quotes/QuoteTemplateDetail (Edit template, Start successor) |
+| order/SalesQuoteServices | publish#QuoteTemplate, end#QuoteTemplate | Sales/Quotes/QuoteTemplateDetail (TemplateHeader) | Sales/Quotes/QuoteTemplateDetail (Publish; End or Set aside) |
+| order/SalesQuoteServices | preview#QuoteTemplate | Sales/Quotes/QuoteTemplateDetail (TemplatePreview) | Sales/Quotes/QuoteTemplateDetail (Preview) |
+| order/SalesQuoteServices | store#QuoteLine, delete#QuoteLine (a template draft's lines) | Sales/Quotes/QuoteTemplateDetail (TemplateItems) | Sales/Quotes/QuoteTemplateDetail (Add line, Add shipping charge, Edit, Remove) |
 
 ## Marketing design — source-verified service additions
 

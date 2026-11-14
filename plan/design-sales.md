@@ -920,6 +920,40 @@ price is explicitly part of the template. Existing quotes retain their terms whe
 Template text renders with `fancy-locked-html`. Optional upsell/configuration belongs to
 §11. **Source:** research §5. **Needs:** SAL-TEMPLATE.
 
+### As built (impl-sales P12, Nov 14, 2026)
+
+- **Records.** No SalesQuoteTemplate table: a template is an order of purpose `OrpSalesQuoteTemplate` (Mantle seeds it beside
+  `OrpSalesQuote` and `OrpSalesOrder`) with one part of the selling organization and no customer, in one currency; OrderHeader gains
+  `templateDescription` and `templateValidityDays` (the days a quote made from it is valid; empty for SalesPolicy's). Its published
+  interval is the part's validity: a draft has none, a published one a start (scheduled before it, current from it) and an end once
+  its successor is published or it is ended; a draft set aside ends without being published. `update#OrderStatus` refuses such an
+  order any status but Open (QUOTE_TEMPLATE), so it is never proposed, placed, approved or cancelled.
+- **Scope.** SalesAccess.js `templateOf`: a Sales reader sees the current templates of the scope's organizations; a template
+  manager, `SALES_QUOTE_EDIT` with `SALES_TEAM_MANAGE` or `SALES_CONFIGURE` (the manager and the administrator, design §2's M and
+  S; no new permission), every one, and changes a draft only (TEMPLATE_PUBLISHED). Another organization's answers as missing.
+- **Q.** `find#QuoteTemplates`, `get#QuoteTemplate`, `store#QuoteTemplate` (a draft, its changes, or a published template's
+  successor: a draft copy made with `clone#Order` whose parentOrderId names it, one at a time, SUCCESSOR_EXISTS),
+  `publish#QuoteTemplate` (the predecessor ends at the successor's start), `end#QuoteTemplate` and `preview#QuoteTemplate` (the
+  lines priced for a customer, or none, on a date, with warnings; no tax). A template's lines go through the quote draft's
+  `store#QuoteLine` and `delete#QuoteLine`: a product priced on the quote's date, a fixed price entered with its reason (a free one
+  under the quote's free-line rule), or a shipping charge. The currency policy is the template's one currency: a quote from it is
+  in that currency (TEMPLATE_CURRENCY otherwise).
+- **A quote from a template.** `create#Quote` with `templateOrderId` copies a current template of the organization with
+  `clone#Order` (no payments, notes, files or parties; the quote's owner, team, contact and opportunity as any quote's), its
+  parentOrderId naming the template, and prices it as of its own date: each product line at the seller's price for the customer
+  now with its provenance, a fixed line keeping its price, reason and author beside today's calculated basis (so the quote's
+  manual-price and discount rules read it as entered), a line with no price left without one for the rep (propose#Quote refuses it
+  until then), each named in the result's warnings. A successor changes no quote made before it, nor its stored PDF.
+- **Readers left out.** As for `OrpRecurringTemplate` (F7): credit's open orders, reservation (both checks), invoicing
+  (`create#InvoiceFromSource`, Payables' order source), the sales summaries and top products, store worklists and store mail,
+  subscription fulfillment; Sales' quote and order scopes read their own purposes, so a template is never a quote or an order.
+- **Screens.** Quote templates (`Sales/Quotes/QuoteTemplates`, tab 3: the saved lists Open, Published, Drafts, Scheduled and Ended
+  for a manager, the published ones for a reader; New template); QuoteTemplateDetail (`Sales/Quotes/QuoteTemplateDetail`: the header
+  with the state's one primary, Add line, Publish, New quote or Start successor, and More with Add shipping charge, Edit template,
+  End or Set aside, and the predecessor and successor; Overview; Items with each line's pricing and the quote draft's Edit and Remove;
+  Preview; History); NewQuote's template choice. Not built: a template's own terms text (the quote takes its organization's stored
+  text, SalesPolicy's `quoteTextLocation`) and TemplateFind's category filter (a product filter is built).
+
 ### Approvals — Context passed
 
 Mount Commons' approval list filtered to SalesQuoteApproval and OrderChangeApproval; do not replace
@@ -1084,7 +1118,9 @@ Mounted at `Sales/Orders/OrderDetail`; crosscut §3.6 rows (one record, two acti
   `OrpSalesQuote`: once placed it is an order (find#Quotes' "all" leaves it out, P7's review), a draft or proposed one a quote.
 - **Order scope.** SalesAccess.js `orderOf`: an order whose first part sells, of a seller of the scope, assigned to the user or a
   team of theirs, the organization's for `SALES_TEAM_VIEW`, and for an order approver (`SALES_ORDER_APPROVE` or `ORDER_APPROVE`)
-  one Placed or on hold, to decide, not to change.
+  one Placed or on hold, to decide, not to change, and (impl-sales P12, the user's call of Nov 14) read only an order they recorded
+  a decision on (an approval or refusal of theirs, OrderDecision) once it is approved; the organization's other approved orders
+  stay out of their sight. find#SalesOrders' approver reach is the same.
 - **Net-terms option.** With the seller's setting off and `approveNetTermsOrders` Y, `respond#Quote`'s acceptance, once placed
   and with no Sales rule open, is approved as the system through `approve#Order` (a claim only Mantle's code sets for that order),
   whose credit check may hold it (the response's outcome held).

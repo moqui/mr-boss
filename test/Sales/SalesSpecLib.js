@@ -55,14 +55,18 @@ const ids = {
     // P7: the demo quotes (data/BossZSalesDemoData.xml): Retail East's draft for Wingtip (sales.rep; a customer price line and an
     // entered price), Ziziwork Sales' storeless draft for Fabrikam (sales.rep3; taxed through the seller's gateway); Quotes' tabs
     quotes: {wingtip: "BOSS_SAL_QTE_WINGTIP", fabrikam: "BOSS_SAL_QTE_FABRIKAM"},
-    quotesMenu: ["Quotes", "QuoteRequests"],
+    // P12 adds Quote templates
+    quotesMenu: ["Quotes", "QuoteRequests", "QuoteTemplates"],
     // P8: the demo requests for quote (data/BossZSalesDemoData.xml): sales.rep's phoned request from Wingtip (three lines, the third
     // with no product), and the mail to sales+rfq@ that East's queue took (its request found by the message)
     rfqs: {wingtip: "BOSS_SAL_RFQ_WINGTIP", mailMessage: "BOSS_SAL_MSG_RFQ"},
     // P9: Quotes' tabs for a sales approver (Approvals), and Retail's demo approval rules (data/BossZSalesDemoData.xml): a discount of
     // 5 % or more (the Wingtip draft's refit line) and a free line, each a sales approver's
-    approverQuotesMenu: ["Quotes", "QuoteRequests", "Approvals"],
-    approvalRules: {discount: "BOSS_SAL_APR_RETAIL_DISCOUNT", free: "BOSS_SAL_APR_RETAIL_FREE"}
+    approverQuotesMenu: ["Quotes", "QuoteRequests", "QuoteTemplates", "Approvals"],
+    approvalRules: {discount: "BOSS_SAL_APR_RETAIL_DISCOUNT", free: "BOSS_SAL_APR_RETAIL_FREE"},
+    // P12: Retail's demo quote templates (data/BossZSalesDemoData.xml): the published store refit starter (sales.manager's: Demo
+    // Product One-One priced on the quote's date, Demo Product One-Two at a fixed bundle rate, an installation charge) and a draft
+    templates: {refit: "BOSS_SAL_TPL_REFIT", service: "BOSS_SAL_TPL_SERVICE"}
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork
 // Sales only) and sales.manager2 and sales.admin (both), none in ADMIN; a Projects client contact, a PASS public account and another

@@ -3225,6 +3225,142 @@ Design §5 QuoteTemplates and QuoteTemplateDetail, §19 item 2; SAL-TEMPLATE.
   publishes a template, a rep starts a quote from it, the manager publishes a successor, and the first quote and its
   PDF are unchanged.
 
+**Built Nov 14 (P12).** mr-mantle and mr-boss on branch `sal/p12` (hashes in the worker's reply); mr-moqui and mr-pass unchanged, no
+Rust built.
+- Checked first (the code over the plan): P7's, P10's and P11's Built and Review notes, §4 (the Nov 11 template row, the Nov 14 rows),
+  F7 and the readers of `OrpRecurringTemplate`; `clone#Order`, `create#Order`, `update#OrderStatus`; SalesQuotes.js (createQuote, the
+  line verbs, priceFields), SalesAccess.js (`orderExcludedPurposes` already named `OrpSalesQuoteTemplate`, P11), SalesAccounts.js
+  (`ordersOf` already left it out), SalesOrders.js findOrders; Shared/OrderDetail's quote line editor. The code over the plan:
+  - who maintains templates: design §2 gives QuoteTemplates to R, M and S and QuoteTemplateDetail to M and S, and no permission names
+    templates; a template manager is SALES_QUOTE_EDIT with SALES_TEAM_MANAGE or SALES_CONFIGURE (the manager and the administrator, as
+    `mergesFor`), a Sales reader sees the current templates; no new permission and no setup row;
+  - "never placed and never leaves Open" is a guard in `update#OrderStatus` (QUOTE_TEMPLATE for any other status), the one status
+    write behind propose, place, approve and cancel, on the header it already reads; `create#InvoiceFromSource` and Payables' order
+    source refuse a template too (QUOTE_TEMPLATE);
+  - the design's header fields: OrderHeader gains `templateDescription` and `templateValidityDays` (no table); the "currency policy" is
+    the template's one currency (create#Order always sets one), a quote from it in that currency (TEMPLATE_CURRENCY); the "terms/print
+    template" is not built (a template's own text location would be rendered into a customer's PDF from a location a manager types;
+    the quote takes its organization's SalesPolicy text, as before);
+  - the line editor: `store#QuoteLine` and `delete#QuoteLine` admit a template draft (SalesQuotes.js `lineTarget`), so the template's
+    lines are priced, checked and free-line-ruled as a quote's; a template line has no customer, so a product with no seller's price of
+    its own is admitted unpriced (create#OrderItem stores 0, no source) and priced on each quote for its customer; an entered price is
+    the template's fixed price with its reason (the "authorized contractual fixed price"), kept on the quote with today's calculated
+    basis beside it and its author, so the quote's manual-price, discount and free-line rules read it as entered;
+  - "copied with clone#Order": `create#Quote` with `templateOrderId` clones the template (no parties, payments, notes, files or work
+    efforts; the template's two header fields cleared), its parentOrderId naming the template, then reprices each product line as of
+    now, deletes any tax line and runs `handle#OrderMajorChange` (X1); a line left without a price or not usable for the customer is
+    named in a new `warnings` output, and propose#Quote refuses it until the rep prices it;
+  - a dated successor is a draft clone of the published template (parentOrderId names it, one at a time: SUCCESSOR_EXISTS); its publish
+    ends the predecessor at its start; `end#QuoteTemplate` (not in the plan's list) ends a published template or sets a draft aside;
+  - the user's call of Nov 14 (P11's review): `orderOf` admits an order approver read only to an order they recorded a decision on (an
+    OrderDecision of theirs, approved or refused) once it is approved, and find#SalesOrders' approver reach adds those orders; with no
+    order rule met, `approve#SalesOrder` records no decision, so such an approver still loses sight of the order once approved (below).
+- Mantle:
+  - `entity/SalesQuoteTemplateEntities.xml` (new): the purpose `OrpSalesQuoteTemplate`; OrderHeader's `templateDescription` and
+    `templateValidityDays`.
+  - `service/mantle/order/SalesQuoteTemplates.js` (new) and a P12 block of `SalesQuoteServices.xml`: `find#QuoteTemplates` (a reader's
+    current ones; a manager's open, current, draft, scheduled, ended or all; organization, text, product; paged), `get#QuoteTemplate`,
+    `store#QuoteTemplate` (NAME_REQUIRED, CURRENCY_FIXED, TEMPLATE_DRAFT, SUCCESSOR_EXISTS, VALIDITY_INVALID, the revision),
+    `publish#QuoteTemplate` (LINES_REQUIRED, DATE_INVALID, VALIDITY_INVALID, SUCCESSOR_EXISTS), `end#QuoteTemplate` (TEMPLATE_ENDED),
+    `preview#QuoteTemplate` (a customer of the organization or none, a date; warnings; no tax), and `usableTemplate`, `cloneForQuote`,
+    `priceCopy` for create#Quote. create#Quote's `templateOrderId` and `warnings` (RECORD_UNAVAILABLE, TEMPLATE_UNAVAILABLE,
+    TEMPLATE_INVALID, TEMPLATE_CURRENCY).
+  - `SalesAccess.js` (a P12 block before the module value): `templatePurpose`, `templateManager`, `templateState`, `templateOf`,
+    `requireTemplate` (RECORD_UNAVAILABLE, PERMISSION_DENIED, TEMPLATE_PUBLISHED), `decidedOrderIds`; `orderOf`'s approver test.
+    `SalesQuotes.js` (createQuote's template branch, `lineTarget`, priceFields' unpriced template line); `SalesOrders.js` (findOrders'
+    approver reach).
+  - F7's readers (owner contracts, each beside its `OrpRecurringTemplate` test): `OrderServices.xml` update#OrderStatus;
+    `StoreOperations.js` withoutRecurringBases; `OrderInfoServices.xml` send#OrderStoreEmail; `SalesReportServices.xml` (the two
+    summaries); `AssetServices.xml` (both reservation checks); `InvoiceServices.xml` create#InvoiceFromSource; `Payables.js`
+    invoiceSource; `Credit.js` the open orders; `SubscriptionServices.xml` fulfill#OrderSubscriptions.
+- BOSS:
+  - Screens: `Sales/Quotes/QuoteTemplates.xml` (new, tab 3 "Quote templates": TemplateFind in the list's header, TemplateList, the
+    manager's saved lists Open, Published, Drafts, Scheduled and Ended, NewTemplate); `Sales/Quotes/QuoteTemplateDetail.xml` (new, hidden
+    from the menu: TemplateHeader with the state's one primary, Add line, Publish, New quote or Start successor, and More with Add
+    shipping charge, Edit template, End or Set aside and the predecessor and successor; Overview; TemplateItems over the quote draft's
+    salesStoreLine and salesDeleteLine; TemplatePreview; History); `template/SalesQuoteTemplates.xml` (new: createQuoteTemplate,
+    salesStoreTemplate, salesSucceedTemplate, salesPublishTemplate, salesEndTemplate); `template/SalesQuoteForms.xml` (NewQuote's
+    template choice) and `template/SalesQuotes.xml` (createQuote passes it and warns of the lines left for the rep); `Sales/Quotes.xml`
+    (comment).
+  - `Sales.js` (a P12 block after P9's choices): linkPaths Quotes/QuoteTemplates and Quotes/QuoteTemplateDetail, the choice
+    `quoteTemplates` (find#QuoteTemplates' current ones of the selling organization).
+  - Demo (`data/BossZSalesDemoData.xml`, a P12 block at the end): Retail's published "Store refit starter" (sales.manager's: Demo
+    Product One-One priced on the quote's date, One-Two at a fixed bundle rate, an installation charge, quotes valid 45 days) and a
+    draft "Yearly service visit".
+- Specs:
+  - Mantle `test/order/SalesQuoteTemplates` (new, 4 features, 1.6 s): a manager keeps a draft (a line priced on the quote's date, a fixed
+    line with its reason, a charge, a customer-priced product admitted unpriced), refused to a rep for the permission and to B's manager
+    as missing, hidden from the rep until published, previewed for the account (340), published, then refused an edit
+    (TEMPLATE_PUBLISHED), listed to the rep; a quote from it after the price rose from 100 to 120 is priced 120, the fixed line 45 beside
+    a 50 basis with its reason, the customer-priced line 70, 14 days valid, parentOrderId the template, the template unchanged, another
+    currency and another organization refused; a successor (a second refused) with a changed quantity, published, ends the first
+    (refused to the rep as missing, to the manager TEMPLATE_UNAVAILABLE), the earlier quote's lines and revision unchanged, the next
+    quote of 3; neither template among find#Quotes' "all" or find#SalesOrders, not a quote (get#Quote, propose#Quote), place#Order
+    refused QUOTE_TEMPLATE, no reservation. `SalesOrderApproval` (the carry-over, about 0.1 s): the approver who decided the store order
+    still sees it read only once approved, and not the order of the first feature approved with no decision of theirs, in get#SalesOrder
+    and find#SalesOrders.
+  - mr-boss `test/Sales/SalesQuoteTemplates` (new, 1 feature, 0.25 s warm, 0.9 s cold): QuoteTemplateDetail's one qvt render as the
+    manager (published, Start successor, New quote, the fixed rate's reason, the preview for Wingtip with its total, no line editing)
+    and Quote templates' one html render as the rep (the published template, not the draft, no New template). `SalesAccess` (a P12
+    feature, 0.19 s): the draft's change refused the rep for the permission and reaching the manager's revision check with the same
+    parameters, the published template read by the rep and missing to Ziziwork Sales' rep. `SalesSpecLib.js`: the Quotes tabs with
+    QuoteTemplates, the demo templates.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesTemplateUsable` (3 features through the screens' transitions: the
+    manager's template with a priced and a fixed line published; the rep's quote from it for Wingtip at Wingtip's price with the fixed
+    line; the successor published, the first template ended, the first quote's lines and print unchanged, the next quote copying the
+    successor).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteTemplates, SalesQuoteDrafts, SalesQuoteIssue,
+  SalesQuoteResponse, SalesQuoteApprovals, SalesQuoteRequests, SalesWorkspace, SalesOrderApproval, StorelessOrderConfirmation,
+  StorelessOrderTax, StoreOperations, StoreReports, OrderLifecycle, ShopCheckout, ShopSubscriptions, Subscriptions, AccountingCredit,
+  PurchaseBills, OrderToCashBasicFlow, OrderConfirmations, OrderChanges, SalesAccounts, SalesOpportunities, AccountingReturns and
+  RecordVisibility 184 of 184 (27 specs with dependencies, 95 s), then SalesQuoteTemplates and SalesQuoteDrafts again after the last
+  changes. mr-boss SalesQuoteTemplates, SalesAccess, SalesQuotes, SalesOrders, SalesQuoteSend, SalesHome, QuickCreate,
+  SalesOpportunities, SalesAccounts, SalesApprovals, SalesQuoteRequests, CommerceOrders, CustomerServiceOrders and InsightsHome 71 of 71
+  (14 specs, 47 s); a draft's qvt and tui renders, the manager's list and NewQuote's template choice were checked once by hand and not
+  kept. mr-pass whole suite 190 of 190 (19.6 s of its 20 s under the parallel workers' load; 13.4 s at P11's review). `moqui lint
+  --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on the new and changed
+  JavaScript. Not run: the client walk (no screen it walks changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's clone#Order and get#ProductPrice rows and an "Added in the Sales build: quote templates" table;
+  ss-inventory unchanged (no baseline form maps to QuoteTemplates or QuoteTemplateDetail).
+- Design edits: design-sales §5 "As built (impl-sales P12)" and §6's order scope (the approver's decided orders).
+- Findings (provisional, numbered by the lead):
+  - a template's own terms and print text (design §5 TemplateHeader) is not built: a quote from a template takes its organization's
+    stored text; a per-template text needs a registered text choice an administrator sets, not a location a manager types;
+  - with no order rule met, `approve#SalesOrder` records no OrderDecision, so the approver who approved such an order loses sight of
+    it once approved (the carry-over covers the orders they decided a rule on); recording a no-rule decision would change P9's rule
+    reading (a decision with no policy is the unconfigured manual-price rule's);
+  - a template's fixed line keeps the template author as `priceOverrideUserId` on the quote, so that author may not approve the
+    quote's manual-price rule for it (separation by price author, P9); the rep who copied it may;
+  - a template line with no seller's price is stored at 0 with no source (create#OrderItem's default), shown unpriced on the detail
+    and counted 0 in its example total; the preview prices it for the customer chosen;
+  - TemplateFind's category filter (design §5) is not built; a product filter is;
+  - Quote templates is shown to every Sales reader (R), who sees only the published ones; drafts, scheduled and ended templates are
+    the manager's and the administrator's;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the template verbs; P12 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 1.7 s (SalesQuoteTemplates 1.6 s, SalesOrderApproval's checks about 0.1 s); mr-boss server about
+    0.45 s (SalesQuoteTemplates 0.25 s warm, SalesAccess' P12 feature 0.19 s); client none;
+  - merge hot spots (P13 beside it): mr-mantle `service/mantle/sales/SalesAccess.js` (orderOf's approver test in P11's block; a P12
+    block before the module value; exports at the end), `service/mantle/order/SalesQuoteServices.xml` (create#Quote's parameters and
+    description, store#QuoteLine's and delete#QuoteLine's descriptions, a P12 block at the end before `</services>`, the file comment),
+    `SalesQuotes.js` (createQuote, storeLine and deleteLine, priceFields), `SalesOrders.js` findOrders, `OrderServices.xml`
+    update#OrderStatus, `test/order/SalesOrderApproval.spec.js` (feature 2); the F7 readers above (Shop's, Accounting's, the sales
+    summaries); mr-boss `service/ironstone/sales/Sales.js` (a P12 block after P9's choices, before accountContactIds),
+    `data/BossZSalesDemoData.xml` (a P12 block at the end), `template/SalesQuotes.xml` (createQuote), `template/SalesQuoteForms.xml`
+    (NewQuote), `screen/Sales/Quotes.xml` (comment), `test/Sales/SalesAccess.spec.js` (a feature at the end),
+    `test/Sales/SalesSpecLib.js` (quotesMenu, approverQuotesMenu, templates), `plan/usl-inventory.md`, `plan/design-sales.md` (§5 as
+    built, §6's order scope). BossSetupSalesData.xml, Sales.xml and SalesQuoteIssues.js are not touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' orders: "Sales' quote templates (in
+    `mantle.order.SalesQuoteServices`, all `allow-remote="false"`): orders of purpose `OrpSalesQuoteTemplate`, which
+    `mantle.order.OrderServices.update#OrderStatus` keeps Open and invoicing refuses; a Sales reader of the organization reads the
+    current ones, and only a template manager (`SALES_QUOTE_EDIT` with `SALES_TEAM_MANAGE` or `SALES_CONFIGURE`) reads the others and
+    changes a draft, at its revision; another organization's answers as missing; a template's lines go through the quote line verbs,
+    priced by the seller's authority for no customer; `create#Quote` copies only a current template of the quote's organization, in its
+    currency, and reprices it for the quote's customer as of the quote's date. An order approver reads an approved order only when they
+    recorded a decision on it.";
+  - the user's call, if the lead agrees: whether `approve#SalesOrder` should record a decision when no order rule is met, so the
+    approver keeps sight of every order they approved (the second finding).
+
 ### P13 — PASS Sales: quotes
 
 Design §10.1, CustomerQuotes, CustomerQuote and QuoteResponse, §4's Invite to Sales, §12.1 (public operation
