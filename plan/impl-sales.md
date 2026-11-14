@@ -333,7 +333,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | built and reviewed Nov 13, merged |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | built and reviewed Nov 13, merged |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | built and reviewed Nov 13, merged |
-| P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
+| P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | built and reviewed Nov 13, merged |
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | — |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | — |
@@ -2227,7 +2227,7 @@ Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff
   Chatter, Requests and SalesOpportunities 150 of 150. The demo loads with no data file failing. `moqui lint --screens` (release): 141
   flagged sites, as before. Prettier clean on the new and changed JavaScript. Not run: ./moq test-apps, test-framework, the acceptance
   suite.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F170 to F178 in order:
   - the createQuoteRequest rule's owner must hold SALES_QUOTE_EDIT, when the rule is saved and when it runs, applying the user's Nov 13
     call on createLead by analogy (check#LeadRuleOwner extended); the user's to confirm;
   - a chargeable repair's claim is seen (its customer and products, under "Repairs to quote") by every holder of SALES_QUOTE_EDIT or
@@ -2324,7 +2324,7 @@ and usl-inventory.md, both phases' blocks kept; SalesSpecLib's approver tabs are
     and BossSetupData.xml (WarrantyAssessment); the shells' notification-topic entries. Mantle SalesQuoteRequests: the chargeable
     decision tells East's quote maker and not its SALES_VIEW member, a covered one nobody, the quote tells the claim's agent, no title
     with the fault or the amount. The rule-owner call needed no change.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F179 to F182 in order:
   - a quote made from an RFQ takes its maker's team (SalesQuotes.js teamFor), not the RFQ's: a manager's quote of a team's RFQ is no
     quote of that team, whose members see only that it exists (R3); passing the RFQ's team to createQuote is the user's call;
   - Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another
@@ -3333,6 +3333,19 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F167 | P9 (Review Nov 13): OrderDetail's Approve and Refuse send no operation key (a double submit writes a second, identical decision); the list's goes through the notice once | P9: as its Review note says |
 | F168 | P9 (Review Nov 13): a rule ended after a free line was drafted under it leaves that line needing no approval when other quote rules remain (the manual-price rule applies only while none is set) | P9: as its Review note says |
 | F169 | P9 (Review Nov 13): the Built note's findings stand but the fourth, fixed here (R1) | P9: as its Review note says |
+| F170 | P8 (Built Nov 13): the createQuoteRequest rule's owner must hold SALES_QUOTE_EDIT, when the rule is saved and when it runs, applying the user's Nov 13 call on createLead by analogy (check#LeadRuleOwner extended); the user's to confirm | P8: as its Built note says |
+| F171 | P8 (Built Nov 13): a chargeable repair's claim is seen (its customer and products, under "Repairs to quote") by every holder of SALES_QUOTE_EDIT or SALES_TEAM_VIEW of the claim's organization, with no assignment scope (a claim has no Sales owner or team), and Customer Service is not told when a quote is made, nor Sales when a claim becomes chargeable (no topic); whether to narrow it to a team or add a notice is the user's call | P8: as its Built note says |
+| F172 | P8 (Built Nov 13): Create quote prices each line by the resolver: an unpriced product refuses PRICE_UNAVAILABLE and the rep enters prices on the quote; `create#QuoteFromRequest` takes an entered price and reason per line by its API only (a repair's charge), and a claim carries the faulty product, not a repair service, so a repair's line is that product at the price entered | P8: as its Built note says |
+| F173 | P8 (Built Nov 13): Customer Service reads a repair quote's state, total and validity on the claim (get#WarrantyClaim `salesQuotes`), not the quote: OrderDetail, Chatter and files of an unplaced quote follow Sales' scope (P7 review R1), and the customer's consent is still recorded on the decision by hand | P8: as its Built note says |
+| F174 | P8 (Built Nov 13): a decline is sent from the mailbox the RFQ came in by, written as the system after Sales' checks: the rep need not be a sender of that mailbox (as send#IntakeConfirmation); an RFQ of no mailbox cannot tell its requester from Sales | P8: as its Built note says |
+| F175 | P8 (Built Nov 13): an RFQ's notes (the decline's reason) are RequestNotes the Sales context does not show; Customer360's RFQs tab, OpportunityDetail's RFQ → quote → order strip, Quotes' "RFQ received" list and NewQuote's RFQ field (design §3, §4, §5) are not built | P8: as its Built note says |
+| F176 | P8 (Built Nov 13): Sales' lifecycle participant (P6) does not move a leaving user's RFQ owner rows, as it now does quotes' (P7 review R2) | P8: as its Built note says |
+| F177 | P8 (Built Nov 13): `moqui lint --screens` counted a gstring idiom in RequestDetail's actions script because a `//` comment held apostrophes (moqui-devkit groovy_convert `string_spans` reads a quote in a comment as a string); the comment was reworded | P8: as its Built note says |
+| F178 | P8 (Built Nov 13): `docs/security/Attack-Surface.md` (mr-moqui) says the RFQ address "follows in Sales P8"; P8 had no mr-moqui worktree (the line below) | P8: as its Built note says |
+| F179 | P8 (Review Nov 13): a quote made from an RFQ takes its maker's team (SalesQuotes.js teamFor), not the RFQ's: a manager's quote of a team's RFQ is no quote of that team, whose members see only that it exists (R3); passing the RFQ's team to createQuote is the user's call | P8: as its Review note says |
+| F180 | P8 (Review Nov 13): Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another organization's mailbox answers the first organization's request; a decline goes to the message's Reply-To, as forgeable as its From, shown in the preview | P8: as its Review note says |
+| F181 | P8 (Review Nov 13): with no default team in the organization's SalesPolicy a chargeable decision tells nobody (the list still shows it) | P8: as its Review note says |
+| F182 | P8 (Review Nov 13): update#QuoteRequest given a new customer alone ends the contact row | P8: as its Review note says |
 
 ## 7. Later
 
