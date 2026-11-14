@@ -2457,6 +2457,7 @@ remain historical; these rows add no implementation claim.
 | order/SalesRecurrenceServices | change#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceAction) | Sales/Agreements/RecurringOrders (Make the due order now, Pause, Resume, End) |
 | order/SalesRecurrenceServices | find#SalesSubscriptions | Sales/Agreements/Subscriptions (Commerce's Subscriptions with a Sales context) | Shared/Subscriptions in Sales' context at Sales/Agreements/Subscriptions |
 | order/SalesRecurrenceServices | add#SubscriptionFollowUp | Sales/Agreements/Subscriptions (Follow up, over mantle.work.TaskServices.create#SimpleTask) | Shared/Subscriptions in Sales' context (Follow up) |
+| order/SalesRecurrenceServices | invoice#RecurringOrder | Sales/Agreements/RecurringOrders (RecurrenceSettings' auto-invoice; §4 Nov 14) | No screen: the SalesRecurrenceApprovedInvoice SECA on an order's approval (Sales follow-up 2) |
 
 ### Added in the Sales build: reports and Insights registrations (P19, Nov 14, 2026)
 

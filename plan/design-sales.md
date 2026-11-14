@@ -1420,8 +1420,13 @@ does not end already paid access; a subscription with no billing link is shown a
   last order and resumption, inside its dates, not paused (a paused month is skipped); one order for an occurrence under the base's
   lock, so the job and an operator's retry answer the same order; cloned with `copyPayment=false` and no purpose, placed through
   `place#Order`. With no payment copied, a generated order is never auto-approved: it waits in Awaiting approval like any sales order
-  (the seller's approval setting changes nothing more), and auto-invoice, which bills only a part approved at its placement, bills
-  nothing until a renewal payment (Accounting's attempt with recorded consent, §7) exists for native bases. An agreement the base or a line's price names that no longer applies (PriceResolver's guard) fails the occurrence
+  (the seller's approval setting changes nothing more). As built in follow-up 2 (Nov 14, the user's calls): auto-invoice bills a
+  generated order once it is approved, at placement or later by a person (`SalesRecurrenceApprovedInvoice` SECA,
+  `invoice#RecurringOrder`, through Accounting's `create#FulfillmentInvoice`, Shop's renewals' path, once); a base copies every line of
+  its source (its charges and discounts with its products, `clone#Order` keeping each child line under its own parent) and each
+  generated order copies every line of its base and is retaxed before it is placed by its own path (`handle#OrderMajorChange`: a
+  storeless seller's gateway, X1; a store's promotions, shipping and tax). Accounting's renewal payment with recorded consent for
+  native bases stays later (§7). An agreement the base or a line's price names that no longer applies (PriceResolver's guard) fails the occurrence
   (AGREEMENT_INACTIVE); each base runs in its own transaction, a failure is logged and kept on the base, and the next base runs. A
   Shop contract's base is only dispatched to Shop and is not Sales'.
 - The readers that counted an approved base now leave it out (§4 Q7 confirmed against the code): supply planning's demand, shipment
