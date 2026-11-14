@@ -194,6 +194,8 @@ along with this software (see the LICENSE.md file). If not, see
             const check = ec.service.sync().name('ironstone.projects.TimeServices.check#WeekEdit').parameters({partyId: person, day: day}).call() || {}
             if (ec.message.hasError()) return
             if (workEffortId && check.isOwner) { ec.service.sync().name('ironstone.projects.TimeServices.check#TimeItem').parameters({workEffortId: workEffortId}).call(); if (ec.message.hasError()) return }
+            // an approver writing another's time: only on an item the approver may see, with the answer of an item that does not exist
+            else if (workEffortId && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(workEffortId)) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} is not available', '', {workEffortId})); return }
             const step = Number(check.policy?.minHours || 0.25)
             const raw = hours == null || String(hours).trim() === '' ? 0 : Number(String(hours).replace(',', '.'))
             if (Number.isNaN(raw) || raw < 0 || raw > 24) { ec.message.addError(L('Hours are from 0 to 24')); return }
@@ -287,6 +289,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (workEffortId && check.isOwner && workEffortId !== entry?.workEffortId) {
                 ec.service.sync().name('ironstone.projects.TimeServices.check#TimeItem').parameters({workEffortId: workEffortId}).call()
                 if (ec.message.hasError()) return
+            } else if (workEffortId && workEffortId !== entry?.workEffortId && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(workEffortId)) {
+                // an approver writing another's time: only on an item the approver may see
+                ec.message.addError(ec.resource.expand('Work item ${workEffortId} is not available', '', {workEffortId})); return
             }
             const at = (time) => {
                 const text = String(time || '').trim()
@@ -407,8 +412,11 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!(id in projectNames)) projectNames[id] = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', id).disableAuthz().one()?.workEffortName || id
                 return projectNames[id]
             }
+            const hiddenIds = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').ids(vis)
             const add = (row) => {
                 if (!row || optionList.some((option) => option.value === row.workEffortId)) return
+                // never a confidential issue's task the user is no Owner of (HiddenItems.js)
+                if (hiddenIds.has(row.workEffortId)) return
                 if (row.workEffortTypeEnumId === 'WetTask' && ['WevRestricted', 'WevConfidential'].includes(row.visibilityEnumId)
                         && !Array.from(vis.restrictedItemIds || []).includes(row.workEffortId) && !Array.from(vis.managedProjectIds || []).includes(row.rootWorkEffortId)) return
                 optionList.push({value: row.workEffortId, label: label(row, row.workEffortTypeEnumId === 'WetProject' ? '' : projectName(row.rootWorkEffortId))})
@@ -854,8 +862,11 @@ along with this software (see the LICENSE.md file). If not, see
             // list's bulk Move, which searches
             const itemOptions = Array.from(ec.service.sync().name('ironstone.projects.TimeServices.search#TimeItems').call()?.optionList || [])
             if (itemId && !itemOptions.some((option) => option.value === itemId)) {
+                // an id from the request names its item only to a user who may see that item (HiddenItems.js mayName); the item of
+                // an entry the user is shown stays the entry's, by its id alone when the user no longer sees the item
                 const item = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', itemId).disableAuthz().one()
-                if (item) itemOptions.unshift({value: item.workEffortId, label: item.workEffortId + ' ' + (item.workEffortName || '')})
+                const named = !!item && ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(item.workEffortId)
+                if (item && (named || row)) itemOptions.unshift({value: item.workEffortId, label: item.workEffortId + (named ? ' ' + (item.workEffortName || '') : '')})
             }
             const money = ec.user.hasPermission('TIME_ENTRY_RATE')
             const n = (value) => value == null ? '' : String(value)
