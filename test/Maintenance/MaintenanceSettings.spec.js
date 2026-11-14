@@ -5,7 +5,7 @@
 // qvt render, the setup readiness (each finding named with its owner's place as a route key Admin's mount resolves, Admin's
 // Health showing the provider to the administrator and not to a reader) with Readiness' one qvt render, and the equipment import
 // listed in Admin's Imports for a data operator who also holds MAINTENANCE_RESOURCE_VIEW and not for one without it. The import's
-// row rules are Mantle's MaintenanceImport; the access cases are MaintenanceAccess'; the "usable when" is the acceptance
+// row rules are Mantle's MaintenanceImport; the access cases are MaintenanceRecordAccess'; the "usable when" is the acceptance
 // MaintenanceSetupWalk. P8: Teams' one qvt render (People's compressor team read only, its lead and members with their dates, the
 // link to People's organization structure, its dispatch defaults), the team a People unit of its employer that People's
 // membership service reaches (impl-people's Maintenance merge review); Facilities maintenance too, its agents members, both apps

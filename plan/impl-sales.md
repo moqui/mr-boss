@@ -5743,6 +5743,66 @@ the merge.
     on and that no Shop contract renews."
   - Nothing needs the user's call.
 
+### Follow-up 3 — SalesOrderApproval's batch flake (F210) and MaintenanceAccess's split
+
+**Built Nov 14 (follow-up 3).** mr-mantle and mr-boss on branch `sal/fix3` (hashes in the worker's reply); mr-moqui unchanged, no
+Rust built. A test-stability fix, no product code changed.
+- Checked first (the code over the plan): P11's Review note (the batch feature's one failure, successCount 1, no cause found) and
+  F210; `SalesOrders.js` `applyBatch` (each order through `approve#SalesOrder` at the revision of its key, `requireRevision`), the
+  `OrderPlacedSalesConfirmation` rule (`SalesOrder.secas.xml`, at tx-commit), `register_tx_rules` in moqui-core `service/call.rs`
+  (tx-commit rules run on a service worker after the commit, not in the caller's thread), `buildConfirmation` and
+  `OrderConfirmations.js` `storeAsSystem` (the stored confirmation, an OrderContent of OctOrderConfirmation), and Order.eecas.xml
+  `OrderContentRevision` with `increment#OrderRevision` (a content change counts a revision unless the seller counts commercial
+  changes only; the fixtures' B and C count every change, A commercial ones only).
+- The cause: a storeless direct order's placement queues its confirmation on a service worker, whose build stores the confirmation
+  as an OrderContent and so raises the order's revision by one a moment after `place#SalesOrder` returns. The batch feature places
+  two orders of B and then reads their revisions for the batch keys; when the worker is late (its pool busy with the other specs of
+  a run, or a cold first run), a key carries the revision from before the confirmation and `approve#SalesOrder` refuses that order
+  REVISION_CHANGED, so successCount is 1. A probe shows it even alone: the second order's revision read 3 just before the batch and 4
+  once the worker pool was drained. No shared demo data, credit limit, open-order total, ID prefix, ordering or clock was involved
+  (the spec's organizations, accounts and credit policies are its own, prefix SOA). Not a product bug: a revision that moves when
+  the confirmation is stored is the revision rule as built (§2), and a person who acts on a stale revision is asked to reload.
+- Built: `test/order/SalesOrderApproval.spec.js` gains `confirmed(orderId)`, which waits (up to 10 s, then fails naming the order)
+  for that order's own stored confirmation before the batch feature reads its revisions; it does not wait for the shared worker pool
+  to empty, which other specs keep busy. Only the batch feature uses it: feature 1's orders are A's (content not counted) or
+  approved through the native `approve#Order` with no revision, and feature 2's storeless orders have no Sales purpose (no
+  confirmation). No `dependsOn` is needed; the spec reads no other spec's data.
+- MaintenanceAccess (mr-boss): one spec of 28 features, 10.3 s of feature time and 12.2 s of spec time alone, 17.2 s beside
+  MaintenanceWorkOrders, MaintenanceScheduling and MaintenanceRequests on `--workers 4`, where the run failed it ("regression specs
+  over 15 seconds"). Split along its features, none deleted: `MaintenanceAccess` keeps the app's own access (context and refusals,
+  menu, keys, palette and launcher, each group's capabilities, the Retail and Services isolation of the context services, the root
+  grant, the shared device and record panels, Home and Settings, Admin's registries, team defaults, custom groups: 10 features), and
+  the new `test/Maintenance/MaintenanceRecordAccess.spec.js` holds each later phase's record rules (equipment write, work order,
+  request and Report a problem, procedure, outage, part issue, preventive plan, booking policy and requests, generation and
+  compliance, checklist, purchases, stack providers, import and readiness, customer repair, a chat message's report, costs, work
+  status and reports: 18 features), with the helpers they use (`screenRefusalIn`, `shellData`, `quickCreates`, `deviceRequest`)
+  and no spec state. The headers say which spec a later phase's case goes in; the regression specs whose headers named
+  MaintenanceAccess for a record rule (Costs, Equipment, Parts, Plans, Reports, Requests, Settings, Stack) name MaintenanceRecordAccess.
+  The acceptance specs' header mentions are left as they are.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOrderApproval 4 of 4 alone three times (spec
+  feature time 3.5 to 5.8 s; the batch feature 0.9 to 1.3 s), and beside StorelessOrderConfirmation, ShopCheckout, StoreOperations,
+  SalesQuoteResponse, SalesPortal, OrderLifecycle, OrderToCashBasicFlow, DeliveryLedger and StoreCheckout (12 specs with
+  dependencies) 88 of 88 serially and 88 of 88 on `--workers 4`. Before the fix the set passed twice serially too: the failure is a
+  race, so the probe above stands for its reproduction. mr-boss MaintenanceAccess and MaintenanceRecordAccess 28 of 28 three times
+  (spec time 4.8 to 5.4 s and 6.0 to 6.9 s), and beside MaintenanceWorkOrders, MaintenanceScheduling and MaintenanceRequests on
+  `--workers 4` 44 of 44 (6.4 s and 9.0 s, no spec over 15 s). The eight specs with only a header line changed once: 30 of 31,
+  MaintenancePlans' "Due maintenance offers November's filter change ..." failing on `report.output.includes("33.3% on time")`; it
+  fails alone and with the spec as on master (this branch's base, unchanged), so it is not this change's (below). Prettier clean on
+  the changed JavaScript. No screen changed. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- Findings (provisional, numbered by the lead):
+  - SalesOrderApproval's batch flake (F210) was the confirmation's revision raised after placement on a service worker; fixed in the
+    spec. Other specs that place a storeless direct order of a seller counting every change and then act on its revision at once
+    have the same race; none was seen failing;
+  - MaintenancePlans' P14 feature fails on master's mr-boss with this worktree's runtime ("33.3% on time" not in the Preventive
+    compliance report), alone as well; not looked into here (out of scope).
+- For the lead:
+  - Budget share: mr-mantle unchanged within noise (the wait is the confirmation's own time, usually milliseconds); mr-boss
+    unchanged (the same 28 features, now in two specs).
+  - Merge hot spots: mr-mantle `test/order/SalesOrderApproval.spec.js` (the batch feature's first lines); mr-boss
+    `test/Maintenance/MaintenanceAccess.spec.js` (a Maintenance or Marketing phase adding an access case there must put a record's
+    rule in MaintenanceRecordAccess instead) and the eight Maintenance specs' header lines.
+  - Nothing needs the user's call.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or

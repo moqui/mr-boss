@@ -8,7 +8,7 @@
 // planner and another technician refused, a forged record of the message form too (review R2). Mantle's rules (the
 // projected calendars, a PUT refused 403, the calendar files, Report a problem from a chat message, the video call) are Mantle's
 // MaintenanceStack; the skills resolve by their aliases in test/skill-retrieval.json (./moq test mr-boss --skills); the access
-// cases are MaintenanceAccess's; the "usable when" is the acceptance MaintenanceStackWalk.
+// cases are MaintenanceRecordAccess's; the "usable when" is the acceptance MaintenanceStackWalk.
 // Run: ./moq test mr-boss --spec MaintenanceStack
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib
