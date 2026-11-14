@@ -422,7 +422,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | built and reviewed Nov 14, merged |
 | P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | built and reviewed Nov 14, merged |
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | built and reviewed Nov 14, merged |
-| P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | — |
+| P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | built and reviewed Nov 14, merged |
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | — |
 | P10 Experiments | Mantle, BOSS | ExperimentDetail | — |
 | P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | — |
@@ -2372,7 +2372,7 @@ and Sales P14, P15 and P17; mr-moqui unchanged, no Rust built. Built beside Sale
 - Inventories: usl-inventory's "Added in Marketing P8" table; ss-inventory has no row for P8's screens.
 - Design edits: design-marketing §5 Compose's as-built paragraph (and MessageTemplateDetail's Use); design-drawers-commons' Mailboxes
   row (owner contract: the ledger's own-message sources, the profile check, the test source).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F190 to F199 in order:
   - the ledger's own-message extension was built by Sales P10 and P6 before P8 (the code over the plan above); P8 adds the test
     source and the profile check;
   - the paged evaluation counts the topic's members only: a person a list or segment finds who is not on the topic is not read, so a
@@ -2462,7 +2462,7 @@ and §18, after merging master (Sales P17, P18, Marketing P7's numbering) into b
     queues one off the list: suppressed, no mail;
   - R4 (low; disclosure): SendDetail's sample-person choice (`sendMembers`) listed another user's personal contacts, disabled and
     merged parties on the topic by name; now through Mantle's `inScopeParties`, as `preview#Send` refuses them.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F200 to F205 in order:
   - a campaign file attached to a send stays the campaign's: its editor can remove or replace it after the send's approval; P9
     should attach copies made at preparation, or refuse a release whose attachment changed;
   - R1's sharers are not restricted to the organization's audience: a segment's match outside it (the preview's universe) blocks
@@ -3304,6 +3304,22 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F187 | P7 (Review Nov 14): two concurrent posts with one request key can both pass the repeat check (two groups, two messages within the mail limit) | P7: as its Review note says |
 | F188 | P7 (Review Nov 14): a checkout news choice confirmed by the receipt's link records a new accepted request and leaves the placement's checkout request SrsPending (the spec expects both); deciding the pending row would be cleaner | P7: as its Review note says |
 | F189 | P7 (Review Nov 14): the Built note's others stand as written: a link per attempt, a site-less offer offered nowhere, the matched party the first directory party with the address, a list confirmation not undoing a global marketing withdrawal (P9's dispatch check), a marketing mount with no offered list holding the site's readiness | P7: as its Review note says |
+| F190 | P8 (Built Nov 14): the ledger's own-message extension was built by Sales P10 and P6 before P8 (the code over the plan above); P8 adds the test source and the profile check | P8: as its Built note says |
+| F191 | P8 (Built Nov 14): the paged evaluation counts the topic's members only: a person a list or segment finds who is not on the topic is not read, so a prepared send's buckets differ from a preview's in "not subscribed"; and a withdrawal at a shared address by such a person (a purpose withdrawn, a solicitation refused) does not block the address for a member, as F155 has it for anyone outside the selection; the resultDigest then differs from the preview's and a prepare given it is refused (PREVIEW_STALE) | P8: as its Built note says |
+| F192 | P8 (Built Nov 14): a send's variables are the recipient's first name, last name and name only; a template variable beyond them takes its fallback | P8: as its Built note says |
+| F193 | P8 (Built Nov 14): a publicly retrievable inline file is not offered (no public store for a staff file); files are attachments, and the test message does not yet carry them (the ledger takes attachments; P9's message builds them for the recipients) | P8: as its Built note says |
+| F194 | P8 (Built Nov 14): a send's reply-to is kept and shown but the ledger sends the profile's reply-to (P9's message to apply it) | P8: as its Built note says |
+| F195 | P8 (Built Nov 14): a test message carries the draft as it is now with synthetic values, from the send's profile, at most 20 a day a send; its recipient party is the tester's (the ledger is keyed by party), its address the allowlist's | P8: as its Built note says |
+| F196 | P8 (Built Nov 14): a re-preparation marks the earlier recipients replaced and keeps them (no hand-off exists before P9); a large list's repeated preparations keep each set | P8: as its Built note says |
+| F197 | P8 (Built Nov 14): the policy's audience limit is checked at preparation (AUDIENCE_LIMIT) as well as P9's release | P8: as its Built note says |
+| F198 | P8 (Built Nov 14): CampaignDefaults' preview box read `preview.effectiveText` with no preview, an error in every mode (P2's); now `preview?.` | P8: as its Built note says |
+| F199 | P8 (Built Nov 14): a link to `//Marketing/...` renders disabled in a spec rendered from the app's root file (SendDetail's AudiencePreview link, MessageTemplates' Use), as Practices-App-Dev says, so the specs check the link's text and not that it is enabled | P8: as its Built note says |
+| F200 | P8 (Review Nov 14): a campaign file attached to a send stays the campaign's: its editor can remove or replace it after the send's approval; P9 should attach copies made at preparation, or refuse a release whose attachment changed | P8: as its Review note says |
+| F201 | P8 (Review Nov 14): R1's sharers are not restricted to the organization's audience: a segment's match outside it (the preview's universe) blocks an address the preview would not, the stricter way; an SMS topic (P22) matches a sharer by the same contact mech only | P8: as its Review note says |
+| F202 | P8 (Review Nov 14): a prepared send's buckets still differ from a preview's in "not subscribed" (non-members at other addresses are not read) | P8: as its Review note says |
+| F203 | P8 (Review Nov 14): the test daily limit is counted without a lock (concurrent tests can pass 20 by a few); a test does not run the PRIVATE_LINK check (a template's link reaches only the test list), which preparation does | P8: as its Review note says |
+| F204 | P8 (Review Nov 14): preparation creates each CampaignRecipient by its own call: a large list's preparation is slow (P9's load test) | P8: as its Review note says |
+| F205 | P8 (Review Nov 14): the Built note's findings stand as written (variables, attachments only, reply-to, a re-preparation keeping replaced rows, the audience limit at preparation) | P8: as its Review note says |
 
 ## 7. Later
 
