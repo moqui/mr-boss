@@ -398,6 +398,34 @@ function textCondition(fields, term) {
 // The organization a choice is narrowed to: one of the scope's, else every one of them.
 const choiceOrganizations = (userScope, p) =>
     p.organizationPartyId && covers(userScope, p.organizationPartyId) ? [p.organizationPartyId] : organizationIds(userScope)
+// The people on a topic (a send's or an automation's, whose organization the caller checked) to preview or enroll, by name: never
+// another user's personal contact, a disabled or a merged party (Mantle's preview#Send and enroll#Party refuse them too; P8 review).
+// The topic is never taken from the request (P11 review).
+function topicMembers(contactListId, term, selected) {
+    let partyIds = Array.from(
+        find("mantle.marketing.contact.ContactListParty", {contactListId})
+            .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
+            .selectField("partyId")
+            .distinct(true)
+            .limit(500)
+            .list()
+    ).map(row => row.partyId)
+    const inScope = segments().inScopeParties(partyIds)
+    partyIds = partyIds.filter(partyId => inScope.has(partyId))
+    if (!partyIds.length) return []
+    let query = find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("^firstName").limit(choiceLimit)
+    if (term) query = query.condition(textCondition(["firstName", "lastName"], term))
+    const options = Array.from(query.list()).map(row => ({
+        value: row.partyId,
+        label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId
+    }))
+    return withSelected(
+        options,
+        selected,
+        partyId => partyIds.includes(partyId),
+        partyId => lib.partyNames([partyId])[partyId] || partyId
+    )
+}
 const choiceSources = {
     // the organizations of the user's marketing scope
     organizations: (userScope, term, selected) =>
@@ -667,38 +695,9 @@ const choiceSources = {
     // P8: a person on a send's topic to preview it as, by name, for an audience reader (MARKETING_AUDIENCE_VIEW; Mantle's preview#Send
     // checks it and the topic again)
     sendMembers: (userScope, term, selected, p) => {
-        // P11: an automation's topic (automationMembers, which checked it) in place of a send's
-        const send = p.topicListId
-            ? {contactListId: p.topicListId, organizationPartyId: null}
-            : p.campaignSendId
-              ? one(SEND, {campaignSendId: p.campaignSendId})
-              : null
-        if (!send || !userScope.capabilities.audienceRead || (!p.topicListId && !covers(userScope, send.organizationPartyId)))
-            return []
-        let partyIds = Array.from(
-            find("mantle.marketing.contact.ContactListParty", {contactListId: send.contactListId})
-                .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
-                .selectField("partyId")
-                .distinct(true)
-                .limit(500)
-                .list()
-        ).map(row => row.partyId)
-        // never another user's personal contact, a disabled or a merged party (Mantle's preview#Send refuses them too; P8 review)
-        const inScope = segments().inScopeParties(partyIds)
-        partyIds = partyIds.filter(partyId => inScope.has(partyId))
-        if (!partyIds.length) return []
-        let query = find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("^firstName").limit(choiceLimit)
-        if (term) query = query.condition(textCondition(["firstName", "lastName"], term))
-        const options = Array.from(query.list()).map(row => ({
-            value: row.partyId,
-            label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId
-        }))
-        return withSelected(
-            options,
-            selected,
-            partyId => partyIds.includes(partyId),
-            partyId => lib.partyNames([partyId])[partyId] || partyId
-        )
+        const send = p.campaignSendId ? one(SEND, {campaignSendId: p.campaignSendId}) : null
+        if (!send || !userScope.capabilities.audienceRead || !covers(userScope, send.organizationPartyId)) return []
+        return topicMembers(send.contactListId, term, selected)
     },
     // P11: the stores of the organization named an order or cart trigger may read, by name
     automationStores: (userScope, term, selected, p) => {
@@ -717,7 +716,7 @@ const choiceSources = {
     automationMembers: (userScope, term, selected, p) => {
         const automation = p.marketingAutomationId ? one(AUTOMATION, {marketingAutomationId: p.marketingAutomationId}) : null
         if (!automation || !userScope.capabilities.audienceRead || !covers(userScope, automation.organizationPartyId)) return []
-        return choiceSources.sendMembers(userScope, term, selected, {campaignSendId: null, topicListId: automation.contactListId})
+        return topicMembers(automation.contactListId, term, selected)
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
     emailTemplates: (userScope, term, selected) => {

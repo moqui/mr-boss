@@ -115,6 +115,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="${captionText}" type="div" style="text-caption m-muted"/>
                             <label text="${factsText}" type="div" style="text-caption m-muted"/>
                             <label text="${countsText}" type="div" style="text-caption m-muted"/>
+                            <label text="Runs as ${automation.ownerName}, who activated it" type="div" style="text-caption m-muted" condition="automation.ownerName"/>
                             <label text="Awaiting approval" type="div" style="text-caption text-warning" condition="detail.awaitingApproval"/>
                             <label text="Paused: ${automation.pauseNote}" type="div" style="text-caption text-warning" condition="automation.statusId == 'MaPaused' &amp;&amp; automation.pauseNote"/>
                         </container>
