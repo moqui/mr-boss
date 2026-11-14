@@ -11,7 +11,8 @@ const ids = {
     audienceMenu: ["Home", "Campaigns", "Audiences"],
     adminMenu: ["Home", "Campaigns", "Audiences", "Settings"],
     systemMenu: ["Home", "Campaigns", "Audiences", "Leads", "Settings"],
-    audiencesMenu: ["Lists", "Consent", "Suppressions"],
+    // P5: Segments and AudiencePreview join the Audiences tabs
+    audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
     settingsMenu: ["Index", "Adoption", "CampaignDefaults", "Vocabularies"],
     // Campaigns' tabs: Approvals the approvers'
     campaignsMenu: ["Campaigns"],
@@ -34,7 +35,12 @@ const ids = {
     salesContactId: "BOSS_SAL_CON_DANA",
     // P4's demo import: Retail's fall fair sign-ups into its store announcements (two pending, one invalid row)
     fairImportId: "BOSS_MKT_IMP_FAIR",
-    storeListId: "BOSS_MKT_LIST_STORE"
+    storeListId: "BOSS_MKT_LIST_STORE",
+    // P5's demo segments: Retail's garden newsletter readers (a rule segment: the list's accepted members, Maya and the legacy Pete,
+    // with Noah included by hand) and its spring preview guests (explicit: Maya included, Olive excluded)
+    gardenSegmentId: "BOSS_MKT_SEG_GARDEN",
+    vipSegmentId: "BOSS_MKT_SEG_VIP",
+    legacyPartyId: "BOSS_MKT_CON_PETE"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

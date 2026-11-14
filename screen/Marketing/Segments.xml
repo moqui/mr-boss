@@ -13,11 +13,11 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Marketing/Segments (impl-marketing F2; design-marketing §1.2): the old placeholder's route, kept so an incoming link still
-    lands, now a redirect hidden from the menu: to Marketing's Home until Audiences (P5) exists, then there. -->
+    lands, a redirect hidden from the menu: to Audiences › Segments since P5. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-include="false">
     <always-actions>
-        <script>sri.sendRedirectAndStopRender('/qapps/Marketing/Home')</script>
+        <script>sri.sendRedirectAndStopRender('/qapps/Marketing/Audiences/Segments')</script>
     </always-actions>
     <widgets/>
 </screen>

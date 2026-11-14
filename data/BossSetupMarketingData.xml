@@ -213,4 +213,25 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SUPPRESSION_REVIEW" fromDate="0"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SUPPRESSION_REVIEW" capabilityKindEnumId="CpkEdit"/>
     <!-- ===== end of Marketing P3 ===== -->
+
+    <!-- ===== Marketing P5: segments and audience preview (impl-marketing P5; design-marketing §2 AudiencePreview, §4) ===== -->
+    <!-- AudiencePreview (design §2: authors, audience managers and dispatchers) past the Audiences area's deny of the root user group:
+        the authors and dispatchers get an ALWAYS on Audiences.xml that is not inherited (so its other subscreens, Lists and the rest,
+        stay refused to them) and an inherited one on AudiencePreview.xml; an ALWAYS wins over the deny (impl-marketing P3). The audience
+        managers, the administrator and ADMIN open it as the rest of the area. Mantle's preview#Audience checks MARKETING_AUDIENCE_VIEW,
+        MARKETING_SEND_EDIT or MARKETING_DISPATCH and the organization again, and shows names and whole addresses to an audience reader
+        only. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_AUDIENCE_PREVIEW" description="Marketing audience preview">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Audiences.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Audiences/AudiencePreview.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_PREVIEW_AUTHOR" userGroupId="BOSS_MARKETING_AUTHOR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_PREVIEW_DISPATCH" userGroupId="BOSS_MARKETING_DISPATCH" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- ===== end of Marketing P5 ===== -->
 </entity-facade-xml>

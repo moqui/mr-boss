@@ -225,15 +225,24 @@ const capabilityNames = [
     // P2: the Approvals area, the approvers'
     "approvals",
     // P3: the Audiences area, the audience managers'
-    "audiences"
+    "audiences",
+    // P5: the audience preview's read (an audience reader, an author or a dispatcher) and its screen
+    "previewRead",
+    "audiencePreview"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
 const capabilityUsers = [
-    {user: users.author, granted: ["view", "campaignEdit", "sendEdit", "contentEdit", "templateView", "anyRead"]},
-    {user: users.audience, granted: ["view", ...audienceGrants, "anyRead", "audienceRead", "audiences"]},
+    {
+        user: users.author,
+        granted: ["view", "campaignEdit", "sendEdit", "contentEdit", "templateView", "anyRead", "previewRead", "audiencePreview"]
+    },
+    {
+        user: users.audience,
+        granted: ["view", ...audienceGrants, "anyRead", "audienceRead", "audiences", "previewRead", "audiencePreview"]
+    },
     {user: users.approver, granted: ["view", "approve", "anyRead", "approvals"]},
-    {user: users.dispatch, granted: ["view", "dispatch", "anyRead"]},
+    {user: users.dispatch, granted: ["view", "dispatch", "anyRead", "previewRead", "audiencePreview"]},
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
     {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead"]},
     {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead"]},
@@ -387,7 +396,7 @@ function panelRequest(path, parameters = {}) {
     return {status: out.status, errors: Array.from(out.errorMessages || []).join("\n")}
 }
 feature(
-    "Home renders for an author; the settings landing and adoption for the administrator, Settings refused an author; panels of no other app's record",
+    "Home renders for an author; the settings landing and adoption for the administrator, Settings refused an author; AudiencePreview opens for an author, not the rest of Audiences; panels of no other app's record",
     {
         when() {
             const authorHome = asUser(users.author, () => page("Home", {organizationPartyId: ids.organizationId}))
@@ -414,17 +423,24 @@ feature(
                 author: screenRefusal(users.author, "Campaigns/Approvals"),
                 admin: screenRefusal(users.admin, "Campaigns/Approvals")
             }
+            // P5: AudiencePreview for an author past the Audiences area's deny, the area's other screens still refused; a reader neither
+            const preview = {
+                author: screenRefusal(users.author, "Audiences/AudiencePreview"),
+                authorLists: screenRefusal(users.author, "Audiences/Lists"),
+                reader: screenRefusal(users.reader, "Audiences/AudiencePreview")
+            }
             return {
                 authorHome,
                 otherHome,
                 panels,
                 approvals,
+                preview,
                 adminSettings: asUser(users.admin, () => page("Settings/Index", {}, "html")),
                 adminAdoption: asUser(users.admin, () => page("Settings/Adoption", {}, "html")),
                 authorSettings: screenRefusal(users.author, "Settings/Index")
             }
         },
-        then({authorHome, otherHome, panels, approvals, adminSettings, adminAdoption, authorSettings}) {
+        then({authorHome, otherHome, panels, approvals, preview, adminSettings, adminAdoption, authorSettings}) {
             authorHome.errors.length == 0
             authorHome.output.includes("Marketing at a glance")
             authorHome.output.includes("Running campaigns")
@@ -452,6 +468,9 @@ feature(
             approvals.approver == ""
             unauthorized(approvals.author) || approvals.author.includes("PERMISSION_DENIED")
             approvals.admin.includes("PERMISSION_DENIED")
+            preview.author == ""
+            unauthorized(preview.authorLists)
+            unauthorized(preview.reader)
         }
     }
 )

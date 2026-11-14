@@ -79,8 +79,8 @@ along with this software (see the LICENSE.md file). If not, see
             Mantle's settings and adoption services check the permission again -->
         <subscreens-item name="Settings" location="component://mr-boss/screen/Marketing/Settings.xml" menu-index="10"
                 menu-include="ec.user.hasPermission('MARKETING_CONFIGURE')"/>
-        <!-- the old placeholders' links (F2, design §1.2), hidden from the menu: Segments to Audiences (P5), Newsletters to Sends (P8);
-            until those exist, Home -->
+        <!-- the old placeholders' links (F2, design §1.2), hidden from the menu: Segments to Audiences › Segments (P5), Newsletters to
+            Sends (P8; until then Home) -->
         <subscreens-item name="Segments" location="component://mr-boss/screen/Marketing/Segments.xml" menu-include="false"/>
         <subscreens-item name="Newsletters" location="component://mr-boss/screen/Marketing/Newsletters.xml" menu-include="false"/>
     </subscreens>
@@ -103,6 +103,9 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="MarketingCampaignApproval"/>
         <notification-topic topic="MarketingSendApproval"/>
         <notification-topic topic="MarketingAutomationApproval"/>
+        <!-- P5 (design §1.3 CX-ASSIST): SegmentDetail's chip, skill/marketing-audience-check.md -->
+        <assist-prompt label="Explain this segment" text="Explain this segment: who it finds and by which rule, who it leaves out and why, and what a send to it would still need"
+                screen="Marketing/Audiences/SegmentDetail" entity="mantle.marketing.segment.MarketSegment" sequence="65"/>
         <!-- P2 (design §1.3 CX-ASSIST): CampaignDetail's chip; its results arrive with the reports (P20) -->
         <assist-prompt label="Summarize this campaign's results" text="Summarize this campaign's results: its plan, budget and actual cost, approvals and what is next"
                 screen="Marketing/Campaigns/CampaignDetail" entity="mantle.marketing.campaign.MarketingCampaign" sequence="64"/>
@@ -112,6 +115,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g c" label="Campaigns" screen="Marketing/Campaigns/Campaigns"/>
             <!-- P3 -->
             <key keys="g l" label="Lists" screen="Marketing/Audiences/Lists"/>
+            <!-- P5 -->
+            <key keys="g s" label="Segments" screen="Marketing/Audiences/Segments"/>
         </keymap>
     </shell-providers>
 

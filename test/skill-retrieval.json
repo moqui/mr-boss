@@ -46,6 +46,8 @@
         {"query": "draft a follow-up to the customer on this deal", "page": "/qapps/Sales/Pipeline/OpportunityDetail", "expect": ["sales-follow-up"]},
         {"query": "summarize this campaign's results", "page": "/qapps/Marketing/Campaigns/CampaignDetail", "expect": ["marketing-campaign-summary"]},
         {"query": "how is the spring campaign doing against its budget", "expect": ["marketing-campaign-summary"]},
+        {"query": "explain this segment", "page": "/qapps/Marketing/Audiences/SegmentDetail", "expect": ["marketing-audience-check"]},
+        {"query": "why are so many recipients excluded from the garden newsletter audience", "expect": ["marketing-audience-check"]},
         {"query": "what changed on the Wingtip deal since the last activity", "expect": ["sales-follow-up"]},
         {"query": "I just called Dana at Wingtip, log the call", "expect": ["sales-log-call"]},
         {"query": "record my call notes on this opportunity", "page": "/qapps/Sales/Pipeline/OpportunityDetail", "expect": ["sales-log-call"]},

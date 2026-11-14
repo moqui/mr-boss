@@ -1485,6 +1485,194 @@ Design §4 Segments, SegmentDetail and AudiencePreview; MKT-SEGMENT, MKT-ACCESS;
   segment with missing addresses, a duplicate, a pending and an unsubscribed member, a suppression and a tracking
   refusal shows bucket totals that sum exactly, with addresses masked for `marketing.author`.
 
+**Built Nov 14 (P5).** mr-mantle and mr-boss on branch `mkt/p5` (hashes in the worker's reply), from master after P3's merge; mr-moqui
+unchanged, no Rust built. Built beside P4 (`mkt/p4`), which appends to the same files (the hot spots below).
+- Checked first (the code over the plan): P1's to P3's Built and Review notes, F4, F5, F90–F131 and §4's rows (MarketSegment's
+  `ownerPartyId` as its X12 field; suppressions promotional only but a hard bounce; the consent rule); the native MarketSegment,
+  MarketSegmentParty (keyed by segment, party and role; no dates) and rule entities, used today only by the contact merge and the
+  filter rows; P3's AudienceServices, ConsentServices' organization rule and MessageSuppressions.js `suppressedOf`; Mantle's
+  SalesAccess.js (`opportunityOf`, `accountOf`, `contactAccounts`); the authorization engine's ALWAYS and inheritance
+  (moqui-core user/authz.rs). The code over the plan:
+  - the plan does not say what a rule segment is evaluated over: it is the segment organization's audience (its Marketing lists'
+    current members, the parties it owns, the segment's explicit members and what its filter's sources discover: an order's customer,
+    a contact of a Sales deal the caller sees), bounded at 5,000 (AUDIENCE_TOO_LARGE); a native classification or geography never
+    reaches beyond it;
+  - SegmentList's "last evaluated, eligible count" is not stored or listed: an evaluation runs under the caller's own sources (a Sales
+    representative sees their own leads), so a stored count would tell one reader what another's sources found; SegmentDetail
+    evaluates for its reader;
+  - MarketSegmentParty's dates and kind are fields, not a key: a party added again after its end takes the same row with new dates,
+    the audit log keeping the earlier ones (the contact merge and the native key unchanged); the native classification and geography
+    rows are added and removed as before, the dimension bounds audit-logged; the saved filter is a dated row of its own
+    (MarketSegmentFilter), a JSON tree naming registered sources only;
+  - the sources built are party, contact, purchases (`COMMERCE_ORDER_VIEW`: no Mantle order read exists for Marketing), engagement
+    (list membership and the ledger's deliveries; tracking events are P15's) and Sales' leads, opportunities and accounts; registration
+    waits for P16, which makes its records;
+  - the preview's identity is two digests, not a stored record: previewKey (what was asked, its time included) and resultDigest (who
+    is eligible, with address and tracking), which P8 recomputes and compares;
+  - AudiencePreview is for authors, audience managers and dispatchers (design §2) under the Audiences area, which denies the root user
+    group: `BOSS_MKT_AUDIENCE_PREVIEW` gives the author and dispatcher groups an ALWAYS on Audiences.xml that is not inherited (so
+    Lists and the rest stay refused to them) and an inherited one on AudiencePreview.xml; Audiences stays out of their menu, and P8's
+    SendDetail links the preview.
+- Mantle:
+  - `entity/MarketingEntities.xml`: MarketSegment gains `segmentName`, `segmentKindEnumId` (MskRule, MskExplicit; audited),
+    `createdByUserId`, `archivedDate` (audited) and `definitionRevision`; MarketSegmentDimension's unit and bounds audited;
+    MarketSegmentParty `fromDate`, `thruDate`, `memberKindEnumId` (MspInclude, MspExclude; audited) and `comments`; a P5 block after
+    P3's with MarketSegmentFilter.
+  - `SegmentServices.xml` over `MarketingSegments.js`: `find#Segments`, `get#Segment`, `store#Segment` (parent of the organization,
+    never a cycle: PARENT_CYCLE), `archive#Segment` (SEGMENT_IN_USE while an open child names it), `duplicate#Segment`,
+    `store#SegmentRules` (one change at the revision read), `store#SegmentFilter` (replace, add or remove a condition, all or any,
+    clear; every source readable by the caller, SOURCE_UNAVAILABLE), `store#SegmentMember` (dated include or exclude, ended never
+    deleted), `evaluate#Segment` (the rule match joined by inclusions, within the parent, less the exclusions; the rule each matched by
+    or the reason each is left out; paged; nothing stored). The projections' registry (`sources`): each source's fields, typed
+    operators and read; a missing value never matches, whatever the operator. Over `MarketingEligibility.js`: `preview#Audience`
+    (design §4's seven buckets by precedence, summing to the matched people; deduplicated by normalized address in the organization
+    and channel, the lowest party id chosen; a withdrawal or unsubscription of anyone at an address blocks it for everyone there;
+    the untracked flag; names and whole addresses for an audience reader only, a person the caller may not see a count only) and the
+    internal `classify#Recipients`, the reusable rule P8 prepares and P11 admits with (consent by organization from P3, suppressions
+    as the ledger applies them to a promotional delivery, evidenced membership: a granted consent of the topic or of the purpose, the
+    address's solicitation refusal a withdrawal).
+- BOSS:
+  - Screens: `Marketing/Audiences/Segments` (SegmentFind, SegmentList, NewSegment; tab 2), `SegmentDetail` (the record header with
+    Preview audience and More: Edit, Duplicate, Archive; Rules, Filter, Explicit members, Evaluation as of a time, refused with no
+    count on an unreadable source; Filter history), `AudiencePreview` (AudienceSelection, the buckets as number cards each showing its
+    people, the reasons, RecipientPreview; tab 6); `template/MarketingSegments.xml` (the transitions and NewSegmentForm); the old
+    `Marketing/Segments` now redirects to Audiences › Segments (F2); the root's "Explain this segment" chip and `g s`.
+  - `Marketing.js`: the area `audiencePreview` with the capability `previewRead`, the segment's destination (SegmentDetail) and label,
+    choices `segments` (not archived, excludeId, the selected one), `classifications`, `geos`, `dimensionTypes`, `units`, the palette's
+    segments, the P5 link paths. `data/BossSetupMarketingData.xml` (a P5 block): BOSS_MKT_AUDIENCE_PREVIEW. Demo
+    (`BossZZMarketingDemoData.xml`, a P5 block): Retail's "Garden newsletter readers" (a rule segment over the newsletter's accepted
+    members, Noah included by hand) and "Spring preview guests" (explicit: Maya included, Olive excluded).
+  - `skill/marketing-audience-check.md`, its alias (`segment`) and two retrieval cases.
+- Specs:
+  - Mantle `test/marketing/Segments` (5 features, 1.3 s: parent intersection, a cycle and a self parent refused, a stale write; an
+    exclusion wins, an inclusion joins within the parent, a member ended and kept; dimension bounds inclusive across a unit conversion,
+    min over max refused; a Sales filter refused to an editor without Sales at store and at evaluation with no count, matched for one
+    who reads Sales, a negation never matching a missing value, an entity name refused; an evaluation subscribes no one, another
+    organization's segment missing, a reader refused); `test/marketing/Eligibility` (3 features, 0.6 s: thirteen people each in their
+    expected bucket and reason, the buckets summing to the matched total, the duplicate chosen the same each time with the same
+    digests, the untracked eligible, a private contact a nameless row; an author's counts with masked addresses and no names, the
+    internal rule's same buckets; a segment on an unreadable source refused with no count, another organization's list and topic
+    missing, a reader refused, nothing subscribed).
+  - mr-boss `MarketingSegments` (2 features, 0.25 s: SegmentDetail's one qvt render; AudiencePreview's one html render, for an author
+    past the area's deny, masked); `MarketingAccess` (+0.2 s: the `previewRead` and `audiencePreview` capabilities per group;
+    AudiencePreview opened by an author, Lists refused the author, AudiencePreview refused a reader); `MarketingSpecLib` (the Audiences
+    tabs, the demo segments).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingAudiencePreviewWalk` (3 features: the audience manager makes a
+    segment on Segments and includes two people on SegmentDetail; a preview over two lists and the segment with a missing address, a
+    duplicate, a pending and an unsubscribed member, a suppression and a tracking refusal: the bucket totals sum exactly, each person
+    in their bucket; the author's same totals with every address masked and no name, and a segment change subscribing no one).
+    Marketing's one regression client walk is P9's MarketingSendWalk (§2); none is added here.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Segments 5 of 5, Eligibility 3 of 3, MarketingScope 6,
+  Audiences 7, Campaigns 7, ContactBooks 22 (50 of 50); mr-boss MarketingSegments 2 of 2, MarketingAccess 7 of 7; MarketingLists,
+  MarketingCampaigns, AppOrganizationFilters, QuickCreate and SalesAccess (45 of 45); `moqui test mr-boss --skills` 52 of
+  52. A throwaway render of Segments (qvt, tui), SegmentDetail (tui, html: a rule and an explicit segment, the administrator, a
+  missing one), AudiencePreview (qvt, tui, a bucket, a dispatcher with no topic) passed and was not kept. `moqui lint --screens`: 141
+  flagged sites, as before, none in Marketing. Prettier clean on the changed JavaScript. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's Marketing section gains P5's SegmentServices rows; ss-inventory has no row for P5's screens.
+- Design edits: design-marketing §4 AudiencePreview's as-built paragraph (segments, sources, eligibility, the preview's route grant).
+- Findings (provisional, numbered by the lead):
+  - a rule segment is evaluated over its organization's audience, bounded at 5,000 (the code over the plan above);
+  - SegmentList shows no match count or freshness: an evaluation is the caller's own, under their sources;
+  - the purchases source reads with `COMMERCE_ORDER_VIEW`, the orders the organization sold, totals in its base currency only;
+    registration waits for P16 and tracking events for P15;
+  - a withdrawal or unsubscription of anyone at an address blocks every person at it (DESTINATION_WITHDRAWN): the design's "duplicates
+    with conflicting consent require review" built as a block; the duplicate kept is the lowest party id;
+  - an accepted member is eligible on a granted consent of the topic list or of the purpose (the organization's, else the global
+    one); a legacy member with neither needs evidence; the address's solicitation flag N blocks as a withdrawal;
+  - Sales' sources evaluate per caller (a representative's own leads, a manager's whole pipeline), so one segment answers differently
+    for two readers; an account counts when the organization owns it or it is shared;
+  - an "excludes" condition on a multi-valued field matches a known empty set (empty is known, not missing);
+  - MarketSegmentParty's dates are fields, not a key, and the native rule rows are not dated (the filter is): their history is the
+    audit log's;
+  - AudiencePreview's route grant for authors and dispatchers is an ALWAYS on Audiences.xml that is not inherited, a pattern new to the
+    apps' area denies.
+- For the lead:
+  - budget share: mr-mantle about 1.9 s (Segments 1.3 s, Eligibility 0.6 s); mr-boss server about 0.45 s (MarketingSegments 0.25 s,
+    MarketingAccess +0.2 s); no client spec;
+  - merge hot spots (P4 on `mkt/p4` appends to the first five; Sales P11 touches none of these): mr-mantle `entity/MarketingEntities.xml`
+    (MarketSegment, MarketSegmentDimension and MarketSegmentParty in place, and a P5 block after P3's); mr-boss
+    `data/BossSetupMarketingData.xml` and `data/BossZZMarketingDemoData.xml` (P5 blocks after P3's), `service/ironstone/marketing/Marketing.js`
+    (areas, areaReads, scope's `previewRead`, linkPaths, recordKinds.segment, choiceSources, searchFinds), `screen/Marketing.xml`
+    (the assist prompt, `g s`, a comment), `screen/Marketing/Audiences.xml` (its comment; Segments takes menu index 2 and
+    AudiencePreview 6, so P4's tabs take others), `test/Marketing/MarketingSpecLib.js` (`audiencesMenu`, which P4's tabs extend too),
+    `test/Marketing/MarketingAccess.spec.js` (capabilityNames, the groups' grants, the Home feature), `plan/usl-inventory.md` (the
+    Marketing heading and a P5 block after P3's), `plan/design-marketing.md` (§4 after AudiencePreview), `skill/aliases.json`,
+    `test/skill-retrieval.json`;
+  - the user's calls: none required; to confirm, AudiencePreview opened to authors and dispatchers by the route grant above, and the
+    purchases source on `COMMERCE_ORDER_VIEW`.
+
+**Review Nov 14 (P5).** A fresh review of `mkt/p5` (mr-mantle 5376f2c8, mr-boss ec7fc04d) against P5, §2, §4 and design §4
+Segments, SegmentDetail and AudiencePreview; master had nothing newer in either repository, so no merge.
+- Checked and sound:
+  - scope: every segment service asks `MARKETING_AUDIENCE_VIEW` (a write `_EDIT`) and the segment's organization by
+    `segmentOfScope`, a missing, other or unowned one answering RECORD_UNAVAILABLE alike; a parent of the same organization, not
+    archived, a cycle refused at store and at evaluation; revisions on every segment write and on an existing member row; members
+    and filters ended, never deleted; `preview#Audience` asks a Marketing read with the audience, send or dispatch permission, the
+    topic's organization and that every list and segment is of it, before anything is counted;
+  - confidentiality: Sales' sources read through SalesAccess `opportunityOf`, `accountOf` and `contactAccounts` under the caller's
+    own Sales scope in the segment's organization; a filter naming a source the caller cannot read is refused at store and at
+    evaluation, a parent's included, before any count (SOURCE_UNAVAILABLE); nothing about an evaluation is stored, so no count of one
+    reader's sources reaches another; a person the caller may not see (another user's personal contact, disabled, merged) is an
+    unnamed row with no address; names and whole addresses only for `MARKETING_AUDIENCE_VIEW`, masked otherwise; previewKey hashes
+    the request only;
+  - `classify#Recipients` (internal, allow-remote false): the seven buckets in design §4's order, each person in exactly one, the
+    counts summing to the matched; consent by organization as P3 has it (the organization's purpose row unless the latest global
+    one withdraws); suppressions read as a promotional delivery (`suppressedOf(..., false)`), so every kind applies here, a
+    complaint, staff block and soft failures as well as a hard bounce: right for an eligibility that only promotional sends use;
+    evidenced membership (a granted consent of the topic or of the purpose; a legacy member needs evidence); duplicates by the
+    normalized address, the lowest party id kept; untracked flagged on the eligible, never excluded;
+  - the AudiencePreview route grant (the worker's choice): authz.rs gives a non-inheritable ALWAYS on Audiences.xml to the frame
+    alone, so each child is decided by its own records: Lists, Segments, SegmentDetail, Comms' Consent (no record of its own) and
+    Suppressions stay refused to authors and dispatchers, AudiencePreview opens by its inheritable ALWAYS; Audiences.xml has no
+    transition or action of its own, and the service checks the permission and organization again. Sound as built;
+  - a missing value never matches whatever the operator; no entity name, SQL or script is accepted; the screens' transitions call
+    Mantle only; one render per mode in MarketingSegments; no route fixture.
+- Fixed:
+  - R1 (the 5,000 cap, high). The cap was checked on the people left after the exclusions, and each list was read with a limit of
+    5,001: an exclusion list of more than 5,000 was applied partly, so people meant to be left out were counted eligible (and P8
+    would prepare from it), and an included list cut at 5,001 could pass the cap once exclusions removed people. The universe's own
+    contacts (internal organizations removed after the limit) and Sales' pipeline discovery (a limit of 5,000, no check) cut short
+    silently too. Now `bounded` refuses every such read past the cap (AUDIENCE_TOO_LARGE, naming the list), in MarketingSegments.js
+    and MarketingEligibility.js `listMembers`; nothing is truncated. Not covered by a spec (it takes 5,001 rows).
+  - R2 (confidentiality, medium; the worker's purchases choice). The purchase source was open to any holder of
+    `COMMERCE_ORDER_VIEW` over every order the organization vended: no Commerce store scope (a store staff member read the other
+    stores' orders) and Sales orders with no store, which are Sales' records, under a Commerce permission. Now it is readable with
+    `COMMERCE_VIEW` and `COMMERCE_ORDER_VIEW` over the organization's stores in StoreAdmin.js's store scope, and its facts and
+    discovery read those stores' orders only. Segments: an editor with both permissions and no store of the organization is refused
+    SOURCE_UNAVAILABLE (stored on the unfixed code).
+  - R3 (precedence, low). A withdrawal at an address demoted only the eligible there, so a legacy member at a withdrawn address stayed
+    "needs evidence", against the order withdrawn before evidence. Eligibility's Ned (fails on the unfixed code).
+  - R4 (confidentiality, low). `duplicate#Segment` copied a filter whose source the caller cannot read, which `store#SegmentFilter`
+    refuses; now refused alike before anything is made. Segments (fails on the unfixed code).
+  - R5 (confidentiality, low). resultDigest was an unkeyed SHA over the party, the normalized address and the tracking flag: an author
+    holding it and a masked address ("j***@domain") of a one-person preview could confirm a guessed address offline. It is now over
+    the contact mech id (an address changed is a new contact mech, so P8's comparison still moves with it).
+- Provisional findings (for the lead to number):
+  - the universe is the organization's whole audience (every Marketing list's members and its own contacts), so an organization with
+    more than 5,000 people on its lists can evaluate no rule segment and preview no segment, and a preview of a list over 5,000 is
+    refused: refused, never truncated (R1), but P8's sends to a large list need a paged or streamed evaluation or a universe narrowed
+    to the preview's lists first;
+  - purchases are store orders only (R2): a Sales order with no store is no purchase fact, a won Sales opportunity being the Sales
+    source's;
+  - a withdrawal blocks an address for the matched people only: someone outside the selection who withdrew at the same address does
+    not block it (a suppression does, address-wide);
+  - resultDigest and previewKey stay unkeyed hashes (over ids now); a keyed digest needs a server-keyed hash the script host lacks;
+  - `classify#Recipients` puts another user's personal contact in "not available" by the calling user, so a P8 or P11 caller running
+    as a job user (no user) sees every personal contact as not available; P8 and P11 should call it as the user who prepares;
+  - SegmentDetail describes a stored Sales condition (its lead sources or campaigns in words) to an editor without Sales, marked
+    unreadable; a definition, not Sales data;
+  - "has an open lead is false" matches a person whose leads the caller cannot see: it reads as "none you can see" and discloses
+    nothing.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Segments 5 of 5 and Eligibility 3 of 3 (3.8 s of
+  features; the new checks failed on the unfixed code, 2 features); mr-boss MarketingSegments 2 of 2 and MarketingAccess 7 of 7
+  (3.9 s of features). Prettier clean on the changed JavaScript. No screen changed, so no lint. Not run: test-apps, the acceptance
+  MarketingAudiencePreviewWalk (its scenario unchanged by the review).
+- For the lead:
+  - budget share: as the Built note (Segments and Eligibility gain a few calls, under 0.1 s);
+  - merge hot spots: the Built note's, and `plan/design-marketing.md` §4's as-built paragraph (the cap and the purchase source);
+  - the user's calls: none; the two worker choices judged above (the route grant kept, the purchase source scoped, R2); whether to
+    lift the 5,000 universe before P8 (the first finding) may want the user's view.
+
 ### P6 — Templates, sending profiles and bounce intake
 
 Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §15.1 (`DeliveryReportIntake`), §15.2
