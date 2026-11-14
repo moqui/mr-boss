@@ -144,13 +144,16 @@ along with this software (see the LICENSE.md file). If not, see
                                     title="Release ${exp.winnerText} to the remainder" width="560" condition="can.canRelease">
                                 <label text="${releasePreview.heldCount} recipients wait for the winner; ${releasePreview.excludedSinceCount} of the ${releasePreview.checkedCount} checked now have withdrawn, been suppressed or changed address since the sample and will not be sent. The audience is checked again at the release: no one is added, and no one is sent this send twice."
                                         type="p"/>
+                                <label text="Only ${releasePreview.checkedCount} of the ${releasePreview.heldCount} were checked here; the release checks every one." type="p" style="text-warning"
+                                        condition="releasePreview.checkedCount &lt; releasePreview.heldCount"/>
                                 <label text="You wrote, asked for or approved this send: the one-person team's policy lets you release it, and it is recorded so." type="p" style="text-warning"
                                         condition="can.releaseSelf"/>
-                                <form-single name="ReleaseWinner" transition="releaseExperimentWinner" map="{campaignSendId:campaignSendId}">
+                                <form-single name="ReleaseWinner" transition="releaseExperimentWinner" map="{campaignSendId:campaignSendId, campaignExperimentVariantId:exp.winnerVariantId}">
                                     <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="campaignExperimentVariantId"><default-field><hidden/></default-field></field>
                                     <field name="reason"><default-field title="Note"><text-line size="50"/></default-field></field>
                                     <field name="submitButton">
-                                        <default-field title=""><submit text="Release the winner" confirmation="Release ${exp.winnerText} to ${releasePreview.eligibleNowCount} recipients? It is released once."/></default-field>
+                                        <default-field title=""><submit text="Release the winner" confirmation="Release ${exp.winnerText} to up to ${releasePreview.eligibleNowCount} recipients? It is released once."/></default-field>
                                     </field>
                                 </form-single>
                             </container-dialog>
@@ -158,7 +161,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="${sendPath}" text="Open the send" link-type="anchor" icon="sym_o_forward_to_inbox" parameter-map="{campaignSendId:campaignSendId}"/>
                                 <container-dialog id="EditExperimentDialog" button-text="Edit the setup" icon="sym_o_edit" title="The A/B test of ${send.sendName}"
                                         width="560" condition="experiment &amp;&amp; can.canEdit">
-                                    <label text="A change of the sample ends an approval; the measure and the observation do not." type="p" style="m-muted"/>
+                                    <label text="A change of the setup ends an approval." type="p" style="m-muted"/>
                                     <form-single name="EditExperiment" transition="storeExperiment" map="setupValues">
                                         <field name="campaignSendId"><default-field><hidden/></default-field></field>
                                         <field name="expectedRevision"><default-field><hidden/></default-field></field>

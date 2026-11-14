@@ -236,7 +236,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="releaseExperimentWinner">
         <actions>
             <service-call name="mantle.marketing.CampaignSendServices.release#ExperimentWinner" out-map="released"
-                    in-map="{campaignSendId:campaignSendId, reason:(reason || null)}"/>
+                    in-map="{campaignSendId:campaignSendId, campaignExperimentVariantId:(campaignExperimentVariantId || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${released.alreadyReleased ? 'Released already' : 'Winner released'}: ${released.releasedCount} recipients${released.droppedCount ? ', ' + released.droppedCount + ' left out' : ''}${released.selfDispatch ? ' (one-person team)' : ''}</message></if>
         </actions>
         <default-response url="."/>
