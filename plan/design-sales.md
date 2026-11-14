@@ -1715,6 +1715,33 @@ reused as a payment or support grant. **Needs:** SAL-PORTAL, SAL-QUOTE.
 
 **Source:** research §5; Carbon quote acceptance and PASS Billing result handling.
 
+### As built (impl-sales P13, Nov 14, 2026)
+
+- **Operations.** The public operations are named as PASS names every operation, camelCase: `findSalesQuotes`,
+  `getSalesQuote`, `getSalesQuoteDocument`, `respondSalesQuote` (the bearer write, in the three `TOKEN_WRITES` lists) and
+  `getSalesQuoteResponse`, over `mantle.order.SalesPortalServices` find#CustomerQuotes, get#CustomerQuote, get#QuoteDocument,
+  respond#CustomerQuote and get#QuoteResponse; the reads are GET routes with the token in the authority's query, as the
+  Support app's; `sales.findOrders` and `sales.getOrder` come with P17.
+- **Links.** `send#Quote` makes each recipient's link in that recipient's mail (the ledger's build at each attempt, and the
+  rep's own send): the `SalesOrder` kind's QuoteView and QuoteRespond scopes on one capability, its `recordRevision` the
+  issue's, ending with the validity, issued under `SALES_QUOTE_SEND`; `create#AccessCapability` refuses the quote scopes
+  (only `send#Quote` binds a revision). `revise#Quote` and `withdraw#Quote` revoke them; a native change supersedes the
+  issue, which the link then no longer opens. The stored PDF, one per issue, carries the quote's page with no token
+  (`/CustomerQuote?orderId=`, for a signed-in contact) and its QR, so a forwarded PDF opens nothing by itself.
+- **Identity.** A link reaches its issue while it stands and its response's receipt afterwards; a signed-in account reaches
+  the latest issue of a quote of a customer it acts for (a contact grant of the `sales` app, or the customer's own
+  verified account, the self relationship). A customer's response records the capability or the signed-in party, the
+  acceptor's name and title and the PO (SalesQuoteResponse `capabilityId`, `acceptorName`, `acceptorTitle`; source
+  SqsPortal). Its operation key binds that identity, the organization, the issue and the payload (F36).
+- **Threshold.** Above the seller's SalesPolicyThreshold for the quote's currency (SalesDefaults; strictly above, unset by
+  default) a link alone shows Decline and a sign-in link; the invited contact, and a person customer's own verified
+  account, accepts signed in.
+- **Invite to Sales.** On Customer360's header and ContactDetail, for a holder of `SALES_CUSTOMER_INVITE`:
+  `mantle.sales.AccountServices.invite#SalesContact` for a customer account of the user's scope (or a person account
+  itself), one of the contact's own addresses, and an organization with a published PASS Sales site.
+- **Not built here.** The Account hub's card shows quotes only (orders in P17); the one-time code for high-value acceptance
+  is later (§11); no notice tells the rep of a customer's online response (the order and OrderDetail show it).
+
 ### CustomerOrders
 
 B2B order self-service without Shop (SAL-R01): a customer contact follows the orders of the
