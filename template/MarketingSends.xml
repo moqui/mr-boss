@@ -117,7 +117,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="testSend">
         <actions>
             <service-call name="mantle.marketing.CampaignSendServices.test#Send" out-map="tested"
-                    in-map="{campaignSendId:campaignSendId, toAddress:toAddress, note:(note || null)}"/>
+                    in-map="{campaignSendId:campaignSendId, toAddress:toAddress, note:(note || null),
+                        campaignExperimentVariantId:(campaignExperimentVariantId || null)}"/>
             <if condition="!ec.message.hasError()"><message type="${tested?.stateEnumId == 'MdsSent' ? 'success' : 'warning'}">Test to ${toAddress}: ${tested?.stateText}</message></if>
         </actions>
         <default-response url="."/>
@@ -196,6 +197,52 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <!-- ===== end of Marketing P9 ===== -->
+
+    <!-- ===== Marketing P10: a send's experiment (design §5 ExperimentDetail: ExperimentSetup, Variants, ReleaseWinner) ===== -->
+    <!-- ExperimentSetup: set up, change or remove (action remove) at the send's revision read -->
+    <transition name="storeExperiment">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.store#Experiment" out-map="stored"
+                    in-map="{campaignSendId:campaignSendId, expectedRevision:expectedRevision, action:(action || 'store'),
+                        samplePercent:(samplePercent || null), measureEnumId:(measureEnumId || null), observationHours:(observationHours || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'remove' ? 'Experiment removed' : 'Experiment saved'}${stored?.approvalEnded ? '; its approval ended: prepare and ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- Variants: a variant's name and content as it should read; a part equal to the send's stays the send's -->
+    <transition name="storeExperimentVariant">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.store#ExperimentVariant" out-map="stored"
+                    in-map="{campaignSendId:campaignSendId, campaignExperimentVariantId:campaignExperimentVariantId,
+                        expectedRevision:expectedRevision, variantName:(variantName ?? null), subject:(subject ?? null),
+                        preheader:(preheader ?? null), body:(body ?? null), bodyText:(bodyText ?? null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Variant saved${stored?.approvalEnded ? '; its approval ended: prepare and ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ReleaseWinner: the winner chosen with a reason, then released to the remainder once -->
+    <transition name="chooseExperimentWinner">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.choose#ExperimentWinner"
+                    in-map="{campaignSendId:campaignSendId, campaignExperimentVariantId:campaignExperimentVariantId,
+                        expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Winner chosen</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="releaseExperimentWinner">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.release#ExperimentWinner" out-map="released"
+                    in-map="{campaignSendId:campaignSendId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${released.alreadyReleased ? 'Released already' : 'Winner released'}: ${released.releasedCount} recipients${released.droppedCount ? ', ' + released.droppedCount + ' left out' : ''}${released.selfDispatch ? ' (one-person team)' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ===== end of Marketing P10 ===== -->
 
     <widgets>
         <section name="NewSendForm">

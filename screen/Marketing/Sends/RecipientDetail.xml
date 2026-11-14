@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="listPath" from="sharedLinks['Sends/Sends']"/>
         <set field="sendPath" from="sharedLinks['Sends/SendDetail']"/>
         <set field="deliveryPath" from="sharedLinks['Sends/CampaignDelivery']"/>
-        <set field="captionText" from="[recipient.sendName, 'topic ' + recipient.topicName, 'selected ' + recipient.selectedDateText,
+        <set field="captionText" from="[recipient.sendName, 'topic ' + recipient.topicName, recipient.variantText ? 'A/B ' + recipient.variantText : null, 'selected ' + recipient.selectedDateText,
                 'revision ' + recipient.preparedRevision].filter(Boolean).join(' · ')"/>
         <set field="stateText" from="recipient.deliveryStateText || recipient.statusText"/>
         <set field="reconcileValues" from="{campaignRecipientId:campaignRecipientId, expectedRevision:recipient.revision, outcome:'sent'}"/>

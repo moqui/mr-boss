@@ -857,6 +857,24 @@ same release identity, even with a new request key. **Needs:** MKT-EXPERIMENT, M
 
 **Source:** research §2; Odoo A/B sample/variant/winner workflow.
 
+As built (impl-marketing P10): ExperimentDetail is `Marketing/Sends/ExperimentDetail`, opened from SendDetail's A/B test box (a box,
+as SendDetail's sections are, not a tab) by the send's id: a send has one live experiment (Mantle `CampaignExperiment`, removed only
+from a draft). Its setup (the total sample 1 to 90%, the measure shown, the observation period in hours) and its two variants (Mantle
+`CampaignExperimentVariant`, A and B, each the parts of the send's content it changes: subject, preheader, body, text; a part left as the
+send's is the send's) are content of the send: a change of the sample or a variant raises the send's revision and ends its approval, so
+an approval covers both variants as prepared. Sender variants are not built (the profile is the send's). Preparation keeps each
+variant's content beside the send's and assigns every eligible person once, by their normalized address in the experiment's seeded
+order (the same audience prepared again assigns alike), to an equal sample of A or B or the remainder, held (CampaignRecipient
+`campaignExperimentVariantId`, `experimentRemainder`; state "Held for the winner"); identical variants and a sample that gives a variant
+or the remainder no one are refused. The release sends the samples only (the audience limit and the one-person team's count read the
+whole audience); once they settle the send is "Sample sent", a state of its own. A dispatcher chooses the winner with a reason once the
+observation period from the sample's sending has passed (chosen again until released) and releases it once: the remainder is checked
+against the send's audience evaluated again (someone it no longer admits is left out, no one is added) and against what the send
+already sent, then dispatched as any recipient is, each checked again just before. The results show each variant's assigned, accepted,
+confirmed delivered and failed counts from the ledger, the tracking-enabled share and the denominators; unique clicks and conversions
+read "Not available" until tracking (P15) and attribution (P20) record them, so the decision shown stays undecided (a tie or no
+observations stay undecided in any case); a test of a variant counts nowhere.
+
 ### CampaignDelivery
 
 This Marketing-owned execution projection is registered as `Shared/CampaignDelivery` and mounted
