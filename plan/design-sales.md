@@ -752,6 +752,15 @@ both ways (the user's call, impl-sales §4 Nov 13): a chargeable decision tells 
 neither names the fault text, diagnosis, decision or an amount. A customer's request for quote is Sales' alone: Commons' and
 Projects' requests neither list nor open it.
 
+**As built (impl-sales P20 review, Nov 14, 2026): the RFQ acknowledgement (§16).** Off unless the organization's SalesPolicy
+turns it on (SalesDefaults' "Acknowledge a request for quote by mail", `rfqAcknowledge`): a request made from mail
+(`create#QuoteRequestFromEmail`) whose sender matched a contact or account of the organization is acknowledged once, to the
+mail's From address, through the delivery ledger from the organization (`MdsrcSalesRfqAck`, `MANTLE_SALES_RFQ_ACK`, a
+transactional delivery naming it, so its suppressions apply), never to automatic, list, bulk or system mail and marked an
+automatic reply itself. Its text is the organization's stored `.html.fancy-locked` resource (`rfqAcknowledgeTextLocation`, else
+Mantle's `SalesQuoteRequestAck`) rendered with an explicit map: the request's reference and the seller's name, nothing of the
+request's content. A request made by a rep or from Comms is not acknowledged.
+
 ### OrderDetail — Quote context passed
 
 This is the **quote context of the one OrderDetail** defined in crosscut §3.6, reached at
@@ -1351,6 +1360,10 @@ and cost/margin additionally requires cost authority. Promotion editing remains 
   and Price lists (Products' shared screens, for a holder of Products' price permissions), OrderDetail's Agreements box (the
   agreements whose prices the lines took) and Customer360's Agreements tab. PriceExplain stays at `Sales/Products/PriceExplain` (P7's
   one route), not `Sales/Agreements/PriceExplain`. An agreement is a record panel host of the root and in the palette.
+- Print (impl-sales P20 review, §16 Agreement): AgreementDetail's More › Print (PDF) renders the agreement as it is now from its
+  own records (`get#SalesAgreementPrint`, Mantle's `template/party/SalesAgreement.print.html.fancy`: parties, items with their
+  negotiated prices, terms and text, marked a draft until active) for one who reads it; no cost or linked orders. A stored approved
+  PDF of an amendment stays §11.
 
 ### RecurringOrders
 
