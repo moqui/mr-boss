@@ -3,7 +3,7 @@
 // of its service technicians, 48 USD an hour, its estimate; no pay rate), MaintenanceCostReport's one qvt render (the scope's totals
 // by currency, the air handler's gaskets at cost, the hours not approved apart, the motor's rewind pending), its CSV export (the
 // options and the same sources) and its print (html-print, its own template); and Projects' money (an owner contract): a repair
-// charged to the support project shows there as a cost. Who reads costs is MaintenanceAccess' (the cost reader's tab, the
+// charged to the support project shows there as a cost. Who reads costs is MaintenanceRecordAccess' (the cost reader's tab, the
 // planner's none); the rules are Mantle's MaintenanceCosts; the "usable when" is the acceptance MaintenanceCostWalk.
 // Run: ./moq test mr-boss --spec MaintenanceCosts
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")

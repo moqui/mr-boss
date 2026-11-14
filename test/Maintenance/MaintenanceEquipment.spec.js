@@ -3,7 +3,7 @@
 // reader's context carries the Book), the Equipment list and asset tags, the facility tree's hidden ancestor (an unnamed node,
 // never its name or id) with the Facilities and FacilityDetail renders, Product360's spare parts and Employee360's Maintenance row
 // (the custodian's public work card and the equipment Maintenance reads). Each screen with logic of its own is rendered once, in
-// qvt, with all of its checks on that render. Access rules are MaintenanceAccess's; Mantle's rules (meters, custody, the writer)
+// qvt, with all of its checks on that render. Access rules are MaintenanceRecordAccess's; Mantle's rules (meters, custody, the writer)
 // are Mantle's MaintenanceResources. The usable-when walk is the acceptance MaintenanceEquipmentWalk.
 // Run: ./moq test mr-boss --spec MaintenanceEquipment
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")

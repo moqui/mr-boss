@@ -3,11 +3,11 @@
 // its explanation naming its last
 // accepted reading, its increment over the model default and its next threshold, Activate offered), a reader's plan read with no
 // write, the stale plan's due answered unknown with its count meter's unit read in its name, and the plan choices (each called once, with a selected value not on its page). The
-// due rules are Mantle's MaintenanceDue; the access rule is MaintenanceAccess'; EquipmentDetail's plans pane is checked on its
+// due rules are Mantle's MaintenanceDue; the access rule is MaintenanceRecordAccess'; EquipmentDetail's plans pane is checked on its
 // Maintenance tab's render in MaintenanceWorkOrders; the "usable when" is the acceptance MaintenancePlansWalk. P14: Due maintenance's,
 // the filter plan's PlanDetail level and its Due history and Generated work tabs', PM compliance's and Work policy's one render each
 // (the demo's active filter plan: November's due date ready for work, August on time, September late, October skipped; one of three
-// on time; the job paused); generation's rules are Mantle's MaintenanceGeneration, its access MaintenanceAccess', and the
+// on time; the job paused); generation's rules are Mantle's MaintenanceGeneration, its access MaintenanceRecordAccess', and the
 // "usable when" the acceptance MaintenancePreventiveWalk.
 // Run: ./moq test mr-boss --spec MaintenancePlans
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
@@ -126,8 +126,14 @@ feature(
             const work = asUser(users.planner, () =>
                 page("Preventive/Plans/PlanDetail/GeneratedWork", Object.assign({lastStandalone: "true"}, plan))
             )
+            // the period ends before November's due date (2026-11-14 09:00): to now, it is outstanding once that has passed and the
+            // demo's fixed dates read one of four
             const report = asUser(users.planner, () =>
-                page("Reports/PreventiveComplianceReport", {lastStandalone: "true", fromDate: "2026-08-01"})
+                page("Reports/PreventiveComplianceReport", {
+                    lastStandalone: "true",
+                    fromDate: "2026-08-01",
+                    thruDate: "2026-11-13"
+                })
             )
             const policy = asUser(users.admin, () =>
                 page("Settings/WorkPolicy", {lastStandalone: "true", organizationPartyId: ids.organizationId})

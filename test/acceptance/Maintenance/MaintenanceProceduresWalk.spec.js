@@ -6,7 +6,7 @@
 // compressor with New work order (a resubmitted form answering the first); the author then changes the procedure, and neither work
 // order changes: their steps, step policies and the instruction they resolve stay as made; the changed procedure makes no work until
 // it is approved again; the template is in no technician's Tasks and takes no time. The rules are Mantle's MaintenanceProcesses and
-// BOSS's MaintenanceProcedures and MaintenanceAccess.
+// BOSS's MaintenanceProcedures and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenanceProceduresWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
