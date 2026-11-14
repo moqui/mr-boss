@@ -2048,6 +2048,74 @@ Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability
     checks of the seller (the caller's sales scope), the customer (an account of it) and the quote (the caller's).";
   - the user's call: the free-line permission (above).
 
+**Review 2026-11-13 (P7).** A fresh review of `sal/p7` (mr-mantle 977fc14c, mr-boss 865cc822, each with master merged in first:
+Marketing P1, no conflict) against P7, §2, §4, design-sales §5 and §7 and CX-PRICING.
+- Checked and sound: X1 (`calculate#OrderSalesTax`'s storeless branch, `check#OrderTaxGateway`, the three change rules): a store order
+  takes the path it took before; a storeless order is retaxed only when a part's internal seller names a gateway, and then only out of
+  the no-recalculation statuses and before billing, as the store path; promotions and carrier estimates stay store-only; a part with
+  no address (its own, the customer's or its facility's) keeps no tax line rather than refusing the change. The only sellers with a
+  gateway are ORG_ZIZI_SALES (P7's demo) and BOSS_ACCT_ORG (Accounting's demo, set at load), so only their addressed storeless orders
+  change; every order-taxing spec of Shop, Commerce, Customer Service, Projects and Accounting passes unchanged. A missing address
+  set later on the quote (`update#Quote`'s postalContactMechId) retaxes it through `handle#OrderPartChange`; a customer address added
+  on the party is taken at the quote's next change. `get#SellerProductPrice`: `allow-remote="false"`, called only by SalesQuotes.js
+  after `requireQuote` (the seller in the caller's scope, the customer an account of it, the quote assigned or the team reader's),
+  `sellerAuthority` set only inside its own script (no service declares it), `readable` keeps public rows and the seller's and the
+  customer's own, never an agreement row, average cost or another party's, `listEligible` keeps the seller's published non-agreement
+  lists, and no trace (`traceAllowed` false). `quoteOf` on every Sales path: find (purpose and seller in the query, the assignment ids),
+  get (missing and unauthorized both `quoteFound` false), the line verbs and `update#Quote` (`requireQuote` edit, the draft and the
+  revision, `QUOTE_NOT_DRAFT`, `REVISION_REQUIRED`/`REVISION_CHANGED`), explain, the palette (find#Quotes), the record kind and
+  `get#RecordLink` (Sales only for one who sees it), Customer360's and OpportunityDetail's lists; an entered price keeps its basis,
+  reason, actor and date, and a quantity change keeps it. Products' `salesContext()` grants no edit, cost, supplier price, margin,
+  method or stock action; PriceExplain's Sales branch gives a rep the line's safe explanation and no trace form. No cost or margin
+  in `get#Quote`, the template or the explanation.
+- Fixed:
+  - R1 (high, confidentiality): `get#RecordLinkInfo` showed a draft quote's Chatter and files by the order rule (any agent of the
+    seller, and the customer's party). A quote not yet placed and its OrderContent now follow Sales' scope for every caller
+    (`mantle.order.SalesQuoteServices.check#QuoteAccess` over `quoteOf`, as a deal's `check#OpportunityAccess`); a placed order keeps
+    the order rule. SalesQuoteDrafts checks the rep, approver and manager see it and another team's rep and another organization's do
+    not (fails on the unfixed code).
+  - R2 (medium, F54): the P6 lifecycle participant now lists a leaving user's open quotes (Open, Requested or Proposed, never placed;
+    `quote:orderId`) and moves the owner row under `SALES_OWNER_CHANGE` to one who works for the seller, keeping team and contact;
+    the owner row is undated, so the old row is removed and the move logged, as a deal's is. SalesWorkspace checks the listing, the
+    move, a cancelled quote refused (RECORD_CLOSED) and a new owner elsewhere refused (NOT_EMPLOYED).
+  - R3 (low): under the seller's authority a price rule based on another list read it through PricePolicy's reader check, so a rep
+    without `PRICE_VIEW` was refused the line; `listOf` reads it as the seller's authority (still kept to the seller's published
+    lists). SalesQuoteDrafts' base-list feature fails on the unfixed code.
+  - R4 (low): `get#Quote`'s tax note tells a storeless quote with no address of its own that choosing one in Edit quote taxes it.
+- Provisional findings (for the lead to number):
+  - X1 retaxes a storeless quote at the customer's party address only on the quote's next change: a customer address added after the
+    last change leaves the draft untaxed until then (the note says so). P10's issue should recalculate tax before it issues.
+  - `calculate#OrderSalesTax` itself has no status or billing guard, for a store order as before and now for a storeless one of a
+    gateway seller; the change rules guard it, but mantle.rest.xml's `orders/{orderId}/salesTax/calculate` reaches it directly for a
+    REST user with that grant.
+  - `modify#ProductPriceList` declares `pricingContext` (a Map) and is `allow-remote="false"`: an in-process caller passing one could
+    set `storeAuthority` or `sellerAuthority`; no screen or service does today (Shop's pattern, not P7's).
+  - find#Quotes' `state: all` includes a quote placed later, so OpportunityDetail's Quotes box and its Orders box will both show an
+    accepted quote once P11 places one; P11 to decide which list owns it.
+  - The Built note's findings stand but the two fixed here (Chatter and files, R1; the lifecycle transfer, R2).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle StorelessOrderTax 3, SalesQuoteDrafts 6 (about 2.1 s),
+  SalesWorkspace 4 and with them AccountingReturns, ReturnPolicies, OrderToCashBasicFlow, ReturnToResponseBasicFlow, AccountingTax,
+  ProductPriceLists, ShopCatalog, ProductEffectivePrices, StoreCheckout, WorkProjectMilestones, WorkProjectClients, ShopCheckout,
+  OrderConfirmations, Subscriptions, OrderChanges, OrderLifecycle, StoreOperations, CartRecovery, StoreEmailOnce, SalesAccounts,
+  SalesOpportunities, RecordVisibility and SalesOrganizationScope: 216 of 216 (29 specs with dependencies, 66 s). mr-boss SalesQuotes,
+  SalesAccess, SalesAccounts, SalesOpportunities, SalesHome, QuickCreate, AccountingCollections, AccountingReceivables, AccountingTax,
+  CustomerServiceOrders, CommerceOrders, PurchasingOrders, ProductsPriceLists, ProductsSharedContext, ProductsInventory,
+  InsightsRecords, ClientBilling, ProjectsAccess, Chat and RecordFiles: 173 of 173 (21 specs, 59 s). R1's and R3's checks were run
+  against the unfixed code and failed there. Prettier clean on the changed JavaScript. Not run: test-apps, test-framework, acceptance.
+- For the lead:
+  - budget share: mr-mantle up about 0.3 s (SalesQuoteDrafts' sixth feature, SalesWorkspace's quote moves); mr-boss unchanged;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/party/CommunicationServices.xml` (a quote block in the
+    description and in `visible`, after the deal's rule), `service/mantle/sales/SalesWorkspace.js` and `SalesWorkspaceServices.xml`,
+    `service/mantle/order/SalesQuoteServices.xml` (`check#QuoteAccess`); mr-boss `plan/impl-sales.md` (§4's row, P9's text);
+  - the user's call on the free line is recorded (§4 Nov 13, 2026; P9's text): P7 keeps `SALES_APPROVE` for an entered zero or free
+    line; P9 makes it an approval rule;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Shop's store authority: "- Sales' quote lines are priced by
+    `mantle.product.PriceServices.get#SellerProductPrice` (`allow-remote="false"`), the selling organization's authority: the public
+    price rows, the seller's and the customer's own, and the seller's published price lists (a rule's base list included), for a
+    caller without `PRICE_VIEW`; never an agreement's row or list, an average cost or another party's row, and no trace. Only
+    `mantle.order.SalesQuoteServices` calls it, after its own checks of the seller (the caller's sales scope), the customer (an
+    account of it) and the quote (assigned to the caller or their team, or the organization's for `SALES_TEAM_VIEW`)."
+
 ### P8 — Requests for quote
 
 Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff; SAL-QUOTE, SAL-MAIL-INTAKE.
@@ -2093,6 +2161,9 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
     branch opens a commercial change for a Sales approver in Sales (from P14) and in Customer Service otherwise: one
     topic, opened by recipient (F58; owner contract with Customer Service and Commons). Until an organization sets rules, a manual override on a quote made through Q needs an
     approver other than its author; the rule guards `propose#Quote`, not native order entry.
+  - A free or zero-price line (§4 Nov 13, the user's call): P7's `SALES_APPROVE` check on entering one (`FREE_LINE_DENIED` in
+    SalesQuotes.js `priceFields`) is replaced by a rule of SalesApprovalPolicy: the rep drafts the line with its reason, and
+    `preview#Quote` names the approval it needs, decided at issue by an approver other than the author.
   - Sales' pre-approval warnings (an unresolved Sales approval, a price under its floor; §4): a SECA on
     `check#OrderPreApprove` adds them to its `approveWarnings`, as Accounting's credit warning and Purchasing's
     approval warning are added (AccountingCredit.secas.xml:20, Purchase.secas.xml:22). With the seller's approval
@@ -2624,6 +2695,7 @@ the owner's design.
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
 | Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
 | Nov 13, 2026 | `merge#Parties`' guards keep admitting a caller that disabled authorization or runs as the system (jobs, Shop's verified guest claim) (P3) | The user's call (the P3 Built note's last question) |
+| Nov 13, 2026 | An entered zero price or a free quote line keeps requiring `SALES_APPROVE` of the one who enters it until P9 (P7); in P9 a free or zero line becomes a rule in Sales' approval policies, so a rep can draft it and the approver decides at issue (P7, P9) | The user's call (the P7 Built note's free-line finding) |
 
 ## 5. Open questions
 
