@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The campaign plan (design-marketing §18: the campaign plan, budget and approval history as an html-print or PDF; impl-marketing
+    P2): one campaign of the user's organizations as of an effective date and time (asOf, now when empty; the time is printed): its
+    plan, organization and dates, the people responsible then, the budget and the costs recorded by then (an Accounting source's
+    details only with the reader's own Accounting permission), its links and its requests and decisions made by then, with
+    self-approvals marked and those a later change ended. Printed from CampaignDetail's More menu as html-print
+    (renderMode=html-print); printing changes nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Campaign plan" default-menu-include="false">
+    <parameter name="marketingCampaignId" required="true"/>
+    <parameter name="asOf"/>
+    <actions>
+        <service-call name="mantle.marketing.CampaignServices.get#Campaign" out-map="detail" transaction="force-new" ignore-error="true"
+                in-map="{marketingCampaignId:marketingCampaignId, asOf:(asOf || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!detail?.campaign"/>
+        <set field="campaign" from="detail?.campaign || {}"/>
+        <set field="partyList" from="(detail?.parties || []).filter(party =&gt; party.current)"/>
+        <set field="costList" from="detail?.costs || []"/>
+        <set field="costSummary" from="detail?.costSummary || {}"/>
+        <set field="associationList" from="(detail?.associations || []).filter(link =&gt; link.current)"/>
+        <set field="decisionList" from="detail?.decisions || []"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="PlanMissing" condition="!recordFound">
+            <widgets><label text="Campaign ${marketingCampaignId} is not available." type="p"/></widgets>
+        </section>
+        <section name="Plan" condition="recordFound">
+            <widgets>
+                <label text="Campaign plan: ${campaign.campaignName} (${marketingCampaignId})" type="h5"/>
+                <label text="${[campaign.organizationName, campaign.statusText, campaign.datesText, 'revision ' + campaign.campaignRevision,
+                        'as of ' + detail.asOfText, 'printed ' + printedText].filter(Boolean).join(' · ')}" type="p"/>
+                <label text="${campaign.campaignSummary}" type="p" condition="campaign.campaignSummary"/>
+                <label text="Budget ${costSummary.budgetText || 'not set'} · expected spend ${campaign.estimatedText || 'not set'} · actual ${costSummary.actualText || '0'}"
+                        type="p"/>
+                <label text="Responsible" type="h6"/>
+                <form-list name="PlanParties" list="partyList" skip-form="true" paginate="false">
+                    <field name="partyName"><default-field title="Who"><display/></default-field></field>
+                    <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="partyName"/></column>
+                        <column><field-ref name="roleText"/></column>
+                    </columns>
+                </form-list>
+                <label text="Costs" type="h6"/>
+                <label text="No costs recorded by then." type="p" condition="!costList.length"/>
+                <form-list name="PlanCosts" list="costList" skip-form="true" paginate="false" condition="costList.length">
+                    <field name="costDateText"><default-field title="Date"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                    <field name="description"><default-field title="Description"><display/></default-field></field>
+                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/></column>
+                        <column><field-ref name="amountText"/></column>
+                    </columns>
+                </form-list>
+                <label text="Links" type="h6" condition="associationList.length"/>
+                <form-list name="PlanLinks" list="associationList" skip-form="true" paginate="false" condition="associationList.length">
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="label"><default-field title="Name"><display/></default-field></field>
+                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="label"/></column>
+                        <column><field-ref name="kindText"/></column>
+                    </columns>
+                </form-list>
+                <label text="Approval history" type="h6"/>
+                <label text="No approval asked by then." type="p" condition="!decisionList.length"/>
+                <form-list name="PlanDecisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
+                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                    <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                        <column><field-ref name="decisionDateText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

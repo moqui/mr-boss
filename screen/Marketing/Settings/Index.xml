@@ -33,7 +33,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the places of the route keys an entry or a check names: Marketing's own settings screens -->
         <set field="places" from="{
                 marketingSettings: {url: sharedLinks['Settings/Index'], text: 'Settings'},
-                marketingAdoption: {url: sharedLinks['Settings/Adoption'], text: 'Adoption'}}"/>
+                marketingAdoption: {url: sharedLinks['Settings/Adoption'], text: 'Adoption'},
+                marketingCampaignDefaults: {url: sharedLinks['Settings/CampaignDefaults'], text: 'Campaign defaults'},
+                marketingVocabularies: {url: sharedLinks['Settings/Vocabularies'], text: 'Vocabularies'}}"/>
         <set field="entryRows" from="Array.from(settingsFound?.entries || []).map(row =&gt; Object.assign({}, row, {
                 placeUrl: places[row.route]?.url || null}))"/>
         <set field="checkRows" from="Array.from(readinessFound?.checks || []).map(row =&gt; {

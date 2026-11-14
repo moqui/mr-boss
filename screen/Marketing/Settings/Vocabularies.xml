@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Settings › Vocabularies (design-marketing §12 Vocabularies; impl-marketing P2): the values an organization offers,
+    dated and ended, never deleted: list types and tracking code types (their enumerations) and the UTM sources, media and content
+    codes with their labels, which Sales' UtmSourceMap maps to a lead source. The Marketing administrator's (MARKETING_CONFIGURE;
+    mantle.marketing.CampaignServices.store#Vocabulary and find#Vocabulary). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Vocabularies" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="includeEnded"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition name="storeVocabulary">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#Vocabulary"
+                    in-map="{organizationPartyId:organizationPartyId, action:(action || 'add'), marketingVocabularyId:(marketingVocabularyId || null),
+                        vocabularyKindEnumId:(vocabularyKindEnumId || null), enumId:(enumId || null), vocabularyCode:(vocabularyCode || null),
+                        label:(label || null), sequenceNum:(sequenceNum || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'end' ? 'Value ended' : 'Value offered'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || marketing.organizationPartyIds[0] || null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.marketing.CampaignServices.find#Vocabulary" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:organizationPartyId, includeEnded:includeEnded}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="vocabularyList" from="found?.vocabularyList || []"/>
+        <set field="newValues" from="{organizationPartyId:organizationPartyId, vocabularyKindEnumId:'MvkUtmSource'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Vocabularies" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="AddValueDialog" button-text="Offer a value" icon="sym_o_add" type="primary" title="Offer a value"
+                        width="560" condition="found">
+                    <form-single name="AddValue" transition="storeVocabulary" map="newValues">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="vocabularyKindEnumId">
+                            <default-field title="Kind">
+                                <drop-down allow-empty="false">
+                                    <option key="MvkUtmSource" text="UTM source"/>
+                                    <option key="MvkUtmMedium" text="UTM medium"/>
+                                    <option key="MvkUtmContent" text="UTM content"/>
+                                    <option key="MvkListType" text="List type"/>
+                                    <option key="MvkTrackingCodeType" text="Tracking code type"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="vocabularyCode"><default-field title="Code" tooltip="For a UTM value, as it appears in a link"><text-line size="20"/></default-field></field>
+                        <field name="enumId">
+                            <default-field title="Type" tooltip="For a list or tracking code type">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration">
+                                            <econdition field-name="enumTypeId" operator="in" value="ContactListType,TrackingCodeType"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="label"><default-field title="Label"><text-line size="30"/></default-field></field>
+                        <field name="sequenceNum"><default-field title="Order"><text-line size="4"/></default-field></field>
+                        <field name="submitButton"><default-field title=""><submit text="Offer"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="VocabularyScope" transition="." map="{organizationPartyId:organizationPartyId, includeEnded:includeEnded}">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="includeEnded"><default-field title="Ended too"><check><option key="Y" text="Show ended values"/></check></default-field></field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="includeEnded"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+        <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationPartyId &amp;&amp; !found"/>
+        <label text="Nothing offered yet. Offer a UTM source, medium or content value, or a list or tracking code type." type="p" style="m-muted"
+                condition="found &amp;&amp; !vocabularyList.length"/>
+        <form-list name="Vocabulary" list="vocabularyList" skip-form="true" paginate="false" condition="vocabularyList.length">
+            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+            <field name="value"><default-field title="Value"><display/></default-field></field>
+            <field name="label"><default-field title="Label"><display/></default-field></field>
+            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+            <field name="rowActions" align="right">
+                <default-field title="">
+                    <container-dialog id="EndValue_${marketingVocabularyId}" button-text="End" icon="sym_o_block" title="End ${label}"
+                            width="440" condition="current">
+                        <form-single name="EndValue" transition="storeVocabulary"
+                                map="{organizationPartyId:organizationPartyId, marketingVocabularyId:marketingVocabularyId}">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="marketingVocabularyId"><default-field><hidden/></default-field></field>
+                            <field name="action" from="'end'"><default-field><hidden/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title=""><submit text="End" type="danger" confirmation="Stop offering ${label}? Its history stays."/></default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column><field-ref name="label"/><field-ref name="kindText"/></column>
+                <column><field-ref name="value"/><field-ref name="rowActions"/></column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

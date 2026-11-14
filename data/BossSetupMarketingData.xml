@@ -155,4 +155,40 @@ along with this software (see the LICENSE.md file). If not, see
             screenLocation="component://mr-boss/screen/Marketing/Settings.xml" viewPermission="MARKETING_CONFIGURE"
             configuredBy="Marketing administrator" providerKey="marketing.setup" sequenceNum="90"/>
     <!-- ===== end of Marketing P1 ===== -->
+
+    <!-- ===== Marketing P2: campaigns and approvals (impl-marketing P2, F42, F59; design-marketing §3, §14.3) ===== -->
+    <!-- Approvals (design §3 Approvals) for the approvers only: the area denies the root user group and allows the approver group with
+        the root's filter sets; the administrator and ADMIN open it through their ALWAYS on the root, and its own check asks
+        MARKETING_APPROVE (an administrator holds none, so is refused there: approval stays with its group, the user's call of Nov 13) -->
+    <artifactGroups artifactGroupId="BOSS_MKT_APPROVALS" description="Marketing approvals">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Campaigns/Approvals.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_APPROVALS_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_APPROVALS_APPROVER" userGroupId="BOSS_MARKETING_APPROVER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the approval topics' links (Mantle seeds the topics with their decision services, data/MarketingSeedData.xml): a campaign's
+        notice opens its CampaignDetail; a send's (P8) and an automation's (P11) links join with their screens -->
+    <moqui.security.user.NotificationTopic topic="MarketingCampaignApproval"
+            linkTemplate="/qapps/Marketing/Campaigns/CampaignDetail?marketingCampaignId=${marketingCampaignId}"/>
+    <!-- MARKETING_OWNER_CHANGE (as SALES_OWNER_CHANGE, the user's call of Nov 13 for Sales): the transfer of a departing user's campaign
+        manager and contributor rows by Marketing's lifecycle participant, held by Admin's identity operator and its administrator; no
+        Marketing group holds it. In those groups' bundles. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="MARKETING_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="MARKETING_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="MARKETING_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="MARKETING_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <!-- Marketing's lifecycle participant (owner contract, design-admin §14; §4, F59): a departing user's manager and contributor rows on
+        campaigns not completed or cancelled, through Mantle's own services on the owned-resource contract (CampaignServices
+        find#OwnedCampaignRoles, transfer#CampaignRole; every user may call them, mr-mantle data/MarketingSeedData.xml), which check
+        MARKETING_OWNER_CHANGE and that the successor works for the campaign's organization. Approvals go to the holders of
+        MARKETING_APPROVE, not a person, and a scheduled send keeps its own approval: neither is moved. -->
+    <ironstone.admin.LifecycleParticipant participantKey="marketing.campaigns" version="1" ownerApp="Marketing" title="Marketing campaigns"
+            description="The user's manager and contributor roles on open campaigns, handed to a successor who works for the campaign's organization."
+            resourceKind="assignment" lookupService="mantle.marketing.CampaignServices.find#OwnedCampaignRoles"
+            transferService="mantle.marketing.CampaignServices.transfer#CampaignRole" resourceParameter="campaignResourceId"
+            requiredPermission="MARKETING_OWNER_CHANGE" sequenceNum="85"/>
+    <!-- ===== end of Marketing P2 ===== -->
 </entity-facade-xml>

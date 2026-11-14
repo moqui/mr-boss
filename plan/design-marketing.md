@@ -332,6 +332,12 @@ campaign duplicated this way: no separate template record. **Needs:** MKT-CAMPAI
 
 **Source:** research §§1–2; Odoo campaign list/kanban and native MarketingCampaign.
 
+As built (impl-marketing P2): `Marketing/Campaigns/Campaigns` lists the campaigns of the user's organizations (C.`find#Campaigns`,
+scoped in the query; open by default) as a list, a board by status and a calendar by start, with New campaign (A) and the
+filters of CampaignFind (text, organization, status, parent, a running range, mine). Duplicate is CampaignDetail's
+(C.`duplicate#Campaign`: a new planned campaign with the name, summary, organization, open parent, currency, budget, managers and
+current links; approvals, costs, files and notes stay); archive and bulk owner and date changes are not built.
+
 ### CampaignDetail
 
 Detail with Summary and budget, Audience, Sends, Automation, Content, Tracking links, Promotions,
@@ -375,6 +381,24 @@ Complete/Cancel confirm record and pending counts. Material changes invalidate a
 sent messages and accepted registrations remain historical facts. **Source:** research §§2, 12.
 **Needs:** MKT-CAMPAIGN, MKT-APPROVAL, MKT-COLLAB, MKT-REPORT.
 
+As built (impl-marketing P2): one detail screen with the record header (one primary action by status: Request approval, Approve
+for an approver while it awaits a decision, Start, Complete; Duplicate, the plan print and Cancel in More) and the boxes Summary
+(CampaignHeader), People (CampaignParties, with Change organization), Budget and costs (Budget, CostEntries), Links (RelatedWork:
+lists and segments), Decisions and Activity (the native MarketingCampaignNote rows read only, Chatter) and Files (RecordFiles,
+CampaignAsset); the other tabs join with their phases as boxes. MarketingCampaign gains `campaignRevision` (raised by a material
+change: the organization, parent, dates, currency, budget or a manager; never by a status change) `createdByUserId` (the
+author) and `revisedByUserId` (who made the current revision's material change, an author of it too: P2 review), and its dates, budget and currency are audit-logged. Every write names the revision it read (`expectedRevision`, the
+lastUpdatedStamp). A material change of an approved campaign ends its approval and returns it to Planned (a new flow transition,
+Approved → Planned); an in-progress campaign takes no material change (CAMPAIGN_IN_PROGRESS), a closed one none at all.
+Completion refuses with the pending work's counts (P2: open child campaigns; the sends and enrollments of later phases); the
+confirmed stop-then-complete command is not built. The organization's successor is refused while the campaign has costs, links or
+child campaigns (ORGANIZATION_IN_USE). CampaignCost: a manual cost or one purchase invoice item (the invoice billed to the
+organization; PAYABLE_VIEW or ACCOUNTING_VIEW) or one posted ledger debit (ACCOUNTING_VIEW), each in Accounting's own scope of the
+organization, counted once by a campaign and within
+the line's amount over every campaign, in the campaign's currency (no conversion: CURRENCY_MISMATCH), corrected by a negative
+reversal row; `actualCost` is the sum of the rows. CampaignAssociation links a list (not a mailbox), a segment, a store promotion
+or a form publication of the campaign's organization; an event and a page wait for their phases to keep an organization.
+
 ### Approvals — Context passed
 
 Mount Commons Notifications/Approvals with proposed MarketingCampaignApproval, MarketingSendApproval
@@ -393,6 +417,17 @@ audience address. Mounted at
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Marketing | Campaign, send and sequence approvals | MarketingCampaignApproval, MarketingSendApproval and MarketingAutomationApproval of the authorized organizations; current target stamp | approve or refuse through C.decide#MarketingApproval; self-approval only under the one-person-team flag and below 500 recipients (§12) | what will be sent, to how many, and when |
+
+As built (impl-marketing P2): MarketingDecision holds the requests (MddRequested) and decisions (MddApproved, MddRefused) of a
+target (MdtCampaign; MdtSend P8, MdtAutomation P11) at its revision (`targetRevision`); a decision answers one request, once (the
+target read locked); a material change marks the earlier revision's rows superseded and reads their notices. C.`request#` and
+`decide#MarketingApproval`, the topics' handlers C.`approve#` and `refuse#MarketingTarget` (deciding at the notice's revision),
+C.`get#Decisions`. The topics are seeded in Mantle (MarketingSeedData) with their decision services and TopicRegistration rows
+(`MARKETING_APPROVE`); BossSetupMarketingData adds the campaign link. A notice goes to the holders of `MARKETING_APPROVE` who work for
+the organization, the author left out unless they may decide. The approval needs an organization, dates, a budget currency and
+(the policy's `managerRequired`, on by default) a current manager. The one-person-team flag admits the author's own campaign too
+(a campaign sends nothing itself; each send is approved on its own, under the 500 limit), recorded as a self-approval. Approvals
+is an area of its own (`BOSS_MKT_APPROVALS`: the root user group denied, the approver group ALWAYS).
 
 **Needs:** MKT-APPROVAL, MKT-SHELL.
 
@@ -1440,6 +1475,12 @@ remove/anonymize eligible data without corrupting required native source records
 
 **Source:** research §§2, 10; native campaign budget/lifecycle fields and the shared effective-policy pattern.
 
+As built (impl-marketing P2): `Marketing/Settings/CampaignDefaults` over C.`get#`, `preview#` and `store#MarketingPolicy`
+(MarketingPolicy: currency, `selfApprovalAllowed`, `managerRequired`, audience limit, frequency cap, recipient and statistics
+retention, explanation; dated, a change from now ending the one in effect, named as read). The consent policy and assigned
+approvers by threshold are not built; the 500 is the user's call, not a setting. The readiness check `marketing.policy` warns of an
+organization with no policy (fix `marketingCampaignDefaults`).
+
 ### Vocabularies
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -1453,6 +1494,10 @@ source and medium values to a lead DataSource at intake (Sales §9, X10). Seeded
 not editable labels pretending to define a new workflow. **Needs:** MKT-CAMPAIGN, MKT-TRACKING.
 
 **Source:** research §§9–10; Odoo UTM dictionaries, native ContactListType/TrackingCodeType and Sales lead sources.
+
+As built (impl-marketing P2): `Marketing/Settings/Vocabularies` over C.`store#` and `find#Vocabulary` (MarketingVocabulary: kinds
+MvkListType and MvkTrackingCodeType by enumeration, MvkUtmSource, MvkUtmMedium and MvkUtmContent by a lower-case code as in a link,
+with label, channel and sequence; one current binding per organization, kind and value).
 
 ### LeadSources — Context passed
 

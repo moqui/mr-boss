@@ -141,6 +141,11 @@ along with this software (see the LICENSE.md file). If not, see
                 // Sales reader of it; never its amount
                 title = String(record.opportunityName || '')
                 typeLabel = L(record.typeEnumId === 'SotLead' ? 'Lead' : 'Opportunity')
+            } else if (entityName === 'mantle.marketing.campaign.MarketingCampaign') {
+                // IronStone Marketing's campaign (impl-marketing P2): its name, read after get#RecordLinkInfo admitted the user as a
+                // Marketing reader of its organization; never its budget
+                title = String(record.campaignName || '')
+                typeLabel = L('Campaign')
             } else if (entityName === 'moqui.resource.GitMergeRequest') {
                 // a merge request by its number and title (get#RecordLinkInfo checked its repository's view right)
                 title = '!' + record.mergeRequestNum + ' ' + (record.title || '')
