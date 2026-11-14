@@ -14,6 +14,7 @@
 // screen), searchFinds (the palette), choiceSources (the drop-downs) and linkPaths (sharedLinks).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const marketingAccess = ec.resource.script("component://mr-mantle/service/mantle/marketing/MarketingAccess.js")
+const segments = () => ec.resource.script("component://mr-mantle/service/mantle/marketing/MarketingSegments.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -617,7 +618,7 @@ const choiceSources = {
     sendMembers: (userScope, term, selected, p) => {
         const send = p.campaignSendId ? one(SEND, {campaignSendId: p.campaignSendId}) : null
         if (!send || !userScope.capabilities.audienceRead || !covers(userScope, send.organizationPartyId)) return []
-        const partyIds = Array.from(
+        let partyIds = Array.from(
             find("mantle.marketing.contact.ContactListParty", {contactListId: send.contactListId})
                 .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
                 .selectField("partyId")
@@ -625,6 +626,9 @@ const choiceSources = {
                 .limit(500)
                 .list()
         ).map(row => row.partyId)
+        // never another user's personal contact, a disabled or a merged party (Mantle's preview#Send refuses them too; P8 review)
+        const inScope = segments().inScopeParties(partyIds)
+        partyIds = partyIds.filter(partyId => inScope.has(partyId))
         if (!partyIds.length) return []
         let query = find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("^firstName").limit(choiceLimit)
         if (term) query = query.condition(textCondition(["firstName", "lastName"], term))
