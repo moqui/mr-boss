@@ -347,7 +347,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | built and reviewed Nov 14, merged |
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
 | P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | built and reviewed Nov 14, merged |
-| P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | — |
+| P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | built and reviewed Nov 14, merged |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -5095,7 +5095,7 @@ built.
   the Sales build: reports and Insights registrations" table.
 - Design edits: design-sales §8 "As built (impl-sales P19)", §10 a P19 bullet on cancelled orders; design-accounting §13 SalesAnalysis
   "As built (impl-sales P19)" and its Insights registration paragraph (owner contracts).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F304 to F313 in order:
   - "Quote expiring in N days" is not shipped as an alert template: an alert reads a dataset and no quote dataset exists; Home's counter
     and Insights' Sales.QuotesExpiring attention provider show them. A quote dataset (document, feed, Sales' quote row filter) would
     let it be built;
@@ -5190,7 +5190,7 @@ then P19's. mr-pass had nothing to merge.
     orders (P16); added.
   - R3 (low, wording): the weekly digest said each recipient's rows are their own scope's; it renders as its owner and reaches only an
     owner-equivalent recipient.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F314 to F318 in order:
   - the plan (P19's Insights registrations) and design §8 L6 ship the alert template "quote expiring in N days"; it is not built (no
     quote dataset). Building it needs a quote dataset (document, feed, Sales' quote row filter, grants and admission) beside the alert
     JSON; Home's counter and Insights' Sales.QuotesExpiring attention provider show expiring quotes now. Required by the plan, so the
@@ -5745,6 +5745,21 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F301 | P16 (Review Nov 14): a base made from a store order keeps its store, so its generated orders follow the store's rules (approval delay, store mail) | P16: as its Review note says |
 | F302 | P16 (Review Nov 14): the clock-change hour (Built finding 2, as judged above) | P16: as its Review note says |
 | F303 | P16 (Review Nov 14): the Built note's other findings stand: no base detail screen; missed occurrences make one order; the job runs native bases in series; 500-candidate reads filtered in the script; a Sales reader sees the organization's store contracts | P16: as its Review note says |
+| F304 | P19 (Built Nov 14): "Quote expiring in N days" is not shipped as an alert template: an alert reads a dataset and no quote dataset exists; Home's counter and Insights' Sales.QuotesExpiring attention provider show them. A quote dataset (document, feed, Sales' quote row filter) would let it be built | P19: as its Built note says |
+| F305 | P19 (Built Nov 14): the stalled-deal alert measures stage movement (`stageEnteredDate`), not every activity: a logged call or task does not touch the deal, so a worked deal sitting in one stage still fires | P19: as its Built note says |
+| F306 | P19 (Built Nov 14): Pipeline analysis' next-activity coverage is of the open tasks now, not as of the report time (said on the screen) | P19: as its Built note says |
+| F307 | P19 (Built Nov 14): a deal's past state is read from its audit log; a deal loaded with audit off (data files) reads as it is now before its first logged change, and a deal closed before the log counts by its stored close only | P19: as its Built note says |
+| F308 | P19 (Built Nov 14): Sales analysis for a Sales reader takes the organization's own fiscal and sales periods, not those of an organization it rolls up to (Accounting's reader keeps the rollup), and with no period or days the organization's fiscal month holding today, else the calendar month; an issued line's cost in another currency than the sale's is unknown, never converted | P19: as its Built note says |
+| F309 | P19 (Built Nov 14): the readiness checks for jobs and mail templates have no place of their own to fix them (Admin's jobs and mail relays are framework routes with no route key), so they point to Readiness; a development instance with no SMTP host shows the templates check as a warning | P19: as its Built note says |
+| F310 | P19 (Built Nov 14): the report catalogue keeps no saved filters or last run (design §8's SalesReportCatalogue fields); a list's saved finds are kept | P19: as its Built note says |
+| F311 | P19 (Built Nov 14): a flow target with an organization parameter is opened with the map's organization (FlowMaps.js), so the quote step links to Quotes of that organization | P19: as its Built note says |
+| F312 | P19 (Built Nov 14): carry-over: staff may now issue a new OrderView link for a cancelled storeless order (create resolves by the same rule); a link's reader can still file a Support question on a cancelled order (intended by §4); the cancelled order's PDF is the confirmation as placed, with no cancelled label | P19: as its Built note says |
+| F313 | P19 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) is not updated: P19 had no mr-moqui worktree (texts below) | P19: as its Built note says |
+| F314 | P19 (Review Nov 14): the plan (P19's Insights registrations) and design §8 L6 ship the alert template "quote expiring in N days"; it is not built (no quote dataset). Building it needs a quote dataset (document, feed, Sales' quote row filter, grants and admission) beside the alert JSON; Home's counter and Insights' Sales.QuotesExpiring attention provider show expiring quotes now. Required by the plan, so the user's call: build it (a follow-up) or accept the attention provider in its place | P19: as its Review note says |
+| F315 | P19 (Review Nov 14): "deal with no activity for N days" is built as "no stage movement" (`stageEnteredDate`): a logged call or task does not reset it, so a worked deal sitting in one stage fires; the design's wording asks for activity | P19: as its Review note says |
+| F316 | P19 (Review Nov 14): the "weekly pipeline and forecast digest" is the pipeline dashboard alone; forecasts are not in it (no forecast dashboard exists) | P19: as its Review note says |
+| F317 | P19 (Review Nov 14): the readiness additions (jobs, templates, approval rules) have no spec | P19: as its Review note says |
+| F318 | P19 (Review Nov 14): a cancelled storeless order's confirmation PDF carries no cancelled mark | P19: as its Review note says |
 
 ## 7. Later
 
