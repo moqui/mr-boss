@@ -197,7 +197,9 @@ const linkPaths = [
     "Sends/Compose",
     // P9: a send's delivery and one recipient (design §5 CampaignDelivery, RecipientDetail)
     "Sends/CampaignDelivery",
-    "Sends/RecipientDetail"
+    "Sends/RecipientDetail",
+    // P10: a send's experiment (design §5 ExperimentDetail)
+    "Sends/ExperimentDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"

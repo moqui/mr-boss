@@ -954,6 +954,17 @@ screens, the dispatch job and the ledger:
 | party/MessageServices | queue#Delivery (consentOrganizationPartyId, consentContactMechId), attempt#Delivery (a source's reply-to) | the ledger's contract (F13: organization and topic consent) | handOff#Recipient (Marketing P9) |
 | party/MessageServices | resolve#Delivery (the reviewer's organization, the resolution kept), find#DeliveryReceipts (MESSAGE_DELIVERY_REVIEW scoped but for a system administrator) | the ledger's contract (F13: the permission granted to the dispatcher) | reconcile#Recipient; Admin's MailQueue (recover#OwnedMailOutcome) (Marketing P9) |
 
+Added in Marketing P10 (Nov 14, 2026; a send's A/B experiment in `mantle.marketing.CampaignSendServices` over MarketingExperiments.js,
+impl-marketing P10), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/CampaignSendServices | store#Experiment | Marketing/Sends/ExperimentDetail (ExperimentSetup) | Marketing/Sends/ExperimentDetail (Set up the test; More: Edit the setup, Remove the test); SendDetail's A/B test box (Set up an A/B test) (Marketing P10) |
+| marketing/CampaignSendServices | store#ExperimentVariant | Marketing/Sends/ExperimentDetail (Variants) | Marketing/Sends/ExperimentDetail (a variant's Edit) (Marketing P10) |
+| marketing/CampaignSendServices | get#Experiment | Marketing/Sends/ExperimentDetail (ExperimentResults) | Marketing/Sends/ExperimentDetail (Variants, Results, Winner) (Marketing P10) |
+| marketing/CampaignSendServices | choose#ExperimentWinner, release#ExperimentWinner | Marketing/Sends/ExperimentDetail (ReleaseWinner) | Marketing/Sends/ExperimentDetail (Choose the winner, Release the winner; More: Choose again) (Marketing P10) |
+| marketing/CampaignSendServices | prepare#Send (the assignment), preview#Send and test#Send (a variant), get#Send (experiment) | Marketing/Sends/SendDetail (Experiment) | Marketing/Sends/SendDetail (Prepare; the A/B test box); ExperimentDetail (a variant's Test) (Marketing P10) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

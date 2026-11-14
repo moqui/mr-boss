@@ -2804,6 +2804,202 @@ Design §5 ExperimentDetail; MKT-EXPERIMENT; gate 3.
   sample goes out, a retry reassigns no one, the dispatcher releases the chosen winner to the remainder once, and a
   recipient who unsubscribed in between is not sent.
 
+**Built Nov 14 (P10).** mr-mantle and mr-boss on branch `mkt/p10` (hashes in the worker's reply), from master after P9's merge; mr-moqui
+unchanged, no Rust built. Built beside Marketing P11 (on `mkt/p11`) and Sales P20 (in review); the hot spots below.
+- Checked first (the code over the plan): P8's and P9's Built and Review notes, F190–F223 and §4 (the one-person-team flag under 500; the
+  5,000 cap for an interactive preview only), MarketingSends.js (prepare, revise, sendProblems, the test source), MarketingDispatch.js
+  (release, claim, checkPage, sweep, cancel, retry, build), MarketingApprovals.js (currentApproval, the send kind) and
+  MarketingEligibility.js evaluateSend. The code over the plan:
+  - the send and recipient flows had no state for a send whose samples are out while its remainder waits: CampaignSend gains "Sample
+    sent" (CsSampleSent: from Sending when the samples settle with recipients held, back to Sending at the winner's release or a retry of
+    the samples' failures, or Cancelled), CampaignRecipient "Held for the winner" (CrsHeld, never claimed by the dispatch; to Selected,
+    Skipped, Cancelled or Replaced);
+  - "each variant approved as content of the send": a variant is the parts of the send's content it changes (subject, preheader, body,
+    text; a part left as the send's is the send's, so variant A is the send's content until changed); setting up an experiment, changing
+    its sample, changing a variant's content or removing it calls the send's `revise`, which raises the revision and ends the approval, so
+    an approval always covers both variants as prepared. Sender variants are not built (the profile is the send's);
+  - "one stable assignment per normalized recipient at preparation": each eligible person by their normalized address, in the order of a
+    hash seeded by the experiment's id, A's equal share first, B's next, the rest held; the same audience prepared again assigns everyone
+    alike, and a sample recipient's variant is on its row and never changes (a dispatch retry or a page claimed again reassigns no one);
+  - "a remainder recipient withdrawn or suppressed since is dropped at dispatch": built stricter, as the lead asked ("the winner selection
+    never sending ... to anyone the audience no longer admits"): the winner's release evaluates the send's audience again (its lists and
+    segments less the exclusions, the topic's consent and suppressions, as the releasing dispatcher) and leaves out a held person it no
+    longer admits (AUDIENCE_LEFT) or one at a person or address the send already sent (ALREADY_SENT); no one is added; the dispatch then
+    checks each again just before its hand-off (P9's check);
+  - one live experiment a send, so the experiment services and ExperimentDetail take the send's id (design §2 names an experiment ID);
+  - choose#ExperimentWinner needs MARKETING_DISPATCH (design §1.1: D chooses and releases a winner); the separation from the authors and
+    the approver applies at the release, as release#Send's; the observation period runs from the later of the release and the schedule;
+  - the measure: unique clicks and conversions are not recorded before P15 and P20, so the results read "Not available" and the decision
+    shown stays undecided; the rule (`compare`: a tie, no observations or no tracking-enabled denominator stay undecided, else the variant
+    leading, informational) is in place for P15 and spec'd on the module.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P10 block after P9's): CampaignExperiment (the send, sample percent, measure, observation hours, the
+    counts at preparation, the winner chosen with its reason, its release: date, by whom, count, left out, self-dispatch; audited key
+    fields; the measure enumeration), CampaignExperimentVariant (label, name, its own parts, the prepared content and revision, the sample
+    count), CampaignRecipient `campaignExperimentVariantId` and `experimentRemainder`. `data/MarketingSeedData.xml` (a P10 block after P9's):
+    CsSampleSent, CrsHeld and their transitions.
+  - `MarketingExperiments.js` (new) under `CampaignSendServices.xml` (a P10 block after P9's): `store#Experiment` (action remove),
+    `store#ExperimentVariant`, `get#Experiment` (the results per variant from the ledger, the remainder, the decision, a release preview of
+    up to 2,000 held recipients for a dispatcher who may release, the measure options), `choose#ExperimentWinner`,
+    `release#ExperimentWinner`; refusals in each description.
+  - `MarketingSends.js` (P10 lines): prepare's assignment and the variants' preparation (VARIANTS_SAME, SAMPLE_TOO_SMALL), the earlier
+    preparation's held rows replaced too; sendProblems' experiment problems; preview#Send and test#Send of a variant (the test source builds
+    the variant as it is now, suppressed when the variant is no longer the send's); get#Send's `experiment`; `evaluateAudience` (prepare's
+    and the winner release's, lenient there about an archive); the `forExperiments` exports. `MarketingDispatch.js` (P10 lines): release
+    counts the held remainder toward the audience limit and the one-person team's count; sweep's Sample sent; cancel's held rows;
+    retry from Sample sent; build's variant content (a held recipient is never built); the delivery rows' variant and the held state;
+    `forExperiments` exports. `MarketingWorkspace.js`: the troubled sends read Sample sent.
+- BOSS:
+  - Screens: `Marketing/Sends/ExperimentDetail` (new; the record header with Set up the test, Choose the winner or Release the winner by
+    state and More: Open the send, Edit the setup, Choose again, Remove the test; Variants with each row's Edit and Test; Results with the
+    denominators, tracking coverage, clicks and conversions not available and the remainder; Winner), hidden in Sends; SendDetail's A/B test
+    box (state, sample, variants, Open the test; Set up an A/B test for a draft's editor) and the held count in its Delivery box; Sends'
+    Sample sent filter and board column; CampaignDelivery's held filter and Variant column; RecipientDetail's caption names the variant.
+    `template/MarketingSends.xml` (a P10 block: storeExperiment, storeExperimentVariant, chooseExperimentWinner, releaseExperimentWinner;
+    testSend passes the variant). `Marketing.js`: the link path.
+  - Demo (`BossZZMarketingDemoData.xml`, a P10 block at the end): a draft "Spring sale subject test" of the spring campaign with a 20%
+    experiment, variant B ("Urgent") changing the subject only.
+- Specs:
+  - Mantle `test/marketing/Experiments` (new, 3 features, 1.6–2.6 s: a reader's setup refused, identical variants refused, a script in a
+    variant refused, a subject-only variant, a 10% sample of ten refused, four sampled (two each) and six held, the same assignment after a
+    second preparation, a variant's change ending the approval; the release sending each sample its variant's subject and the remainder
+    nothing, Sample sent, a test of variant B marked TEST and in no result, clicks not available and the decision undecided, a choice before
+    the observation's end refused, `compare` undecided on a tie and leading otherwise; after the observation an author's choice refused,
+    another organization's experiment refused, a choice without a reason refused, a release without a winner refused, the winner chosen and
+    released to five with the one who withdrew left out (AUDIENCE_LEFT, not mailed), a second release with another key answering the first,
+    no sample recipient mailed again, the send completed, a choice after the release refused).
+  - mr-boss `MarketingSends` (+1 feature, 0.12 s: ExperimentDetail's one qvt render of the demo subject test for its author); `MarketingSpecLib`
+    (the id).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingExperimentScenario` (2 features, scenario 8: the author sets up a
+    20% two-variant test through SendDetail and ExperimentDetail, the approver approves, the dispatcher's release sends the samples, a second
+    run reassigns no one and sends nothing; after the observation a remainder subscriber unsubscribes, the dispatcher chooses B with a reason
+    and releases it once, the unsubscribed one not sent, no one mailed twice).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Experiments (3 of 3), Sends, Dispatch, DeliveryLedger,
+  MarketingApprovals, MarketingScope, Eligibility, Segments (42 of 42 with Experiments; Experiments, Dispatch, Sends and MarketingScope again
+  after the last changes, 23 of 23, 9.4 s of features); mr-boss MarketingSends, MarketingDelivery, MarketingAccess, MarketingTemplates,
+  MarketingCampaigns, RecordFiles, QuickCreate (42 of 42 after the last changes); the client walk MarketingSendWalk (`--serve`, three runs:
+  8.99, 8.47, 9.69 s, with the P11 worker's runs on the same machine; the walk is unchanged, SendDetail gained the A/B test box). A throwaway
+  render of SendDetail (qvt, tui) and ExperimentDetail (tui, html) and a post of each ExperimentDetail and SendDetail transition passed
+  and was not kept. `moqui lint --screens`: 141 flagged sites, as before, none in Marketing; parse failures 0. Prettier clean on the changed
+  JavaScript. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P10" table; ss-inventory has no row for P10's screen.
+- Design edits: design-marketing §5 (the as-built paragraph after ExperimentDetail).
+- Findings (provisional, numbered by the lead):
+  - the flows' new states, Sample sent and Held for the winner (the code over the plan above);
+  - the winner's release evaluates the send's audience again as the releasing dispatcher: a person only the preparer could see (a personal
+    contact, F157) is left out, the stricter way, and the release costs a preparation's evaluation; an archived list or segment is still read
+    there, so an archive never holds a winner back;
+  - a variant changes parts of the send's content; a part cannot be made empty in a variant (empty is the send's); sender variants are not
+    built;
+  - clicks and conversions are not available before P15 and P20: every experiment's decision reads undecided until then; a person chooses;
+  - choosing the winner is a dispatcher's (no separation from the authors at the choice; it holds at the release); the observation runs from
+    the later of the release and the schedule;
+  - the audience limit and the one-person team's count read the whole prepared audience (samples and remainder) at both releases;
+  - the send's CommunicationEvent carries the send's own subject (variant A's unless A was changed); variant B's recipients' list rows name it
+    too;
+  - duplicate#Send does not copy an experiment;
+  - ExperimentDetail's release preview runs P9's page check over up to 2,000 held recipients on each render for a dispatcher who may release
+    (none otherwise);
+  - the demo gains a draft subject test (the plan listed no demo for P10).
+- For the lead:
+  - budget share: mr-mantle about 2.6 s (Experiments; 1.6 s in the last run); mr-boss server about 0.1 s (MarketingSends' ExperimentDetail
+    render); no client spec (MarketingSendWalk unchanged; 8.5 to 9.7 s in three runs on a loaded machine);
+  - merge hot spots (P11 beside appends to the same files): mr-mantle `entity/MarketingEntities.xml` (a P10 block after P9's),
+    `data/MarketingSeedData.xml` (a P10 block after P9's), `service/mantle/marketing/CampaignSendServices.xml` (get#Send's out-parameters,
+    preview#Send's, test#Send's and prepare#Send's parameters and descriptions, release#Send's description, a P10 block after P9's),
+    `MarketingSends.js` (prepare, sendProblems, previewSend, testSend, buildTest, getSend, evaluateAudience, the exports),
+    `MarketingDispatch.js` (releasedStatuses, the texts, recipientCounts, controlOf, release's counts, sweep, cancel, findRecipients'
+    states and rows, retry, build, the exports), `MarketingWorkspace.js` (troubledSends' states); mr-boss `data/BossZZMarketingDemoData.xml`
+    (a P10 block at the end), `template/MarketingSends.xml` (testSend's in-map, a P10 block after P9's), `screen/Marketing/Sends.xml` (a
+    subscreens-item, the comment), `Sends/SendDetail.xml` (a transition-include, the A/B test box before Decisions, the Delivery label, the
+    comment), `Sends/Sends.xml` (a state option, the board's columns), `Shared/CampaignDelivery.xml`, `Sends/RecipientDetail.xml`,
+    `service/ironstone/marketing/Marketing.js` (linkPaths), `test/Marketing/MarketingSends.spec.js`, `MarketingSpecLib.js`,
+    `plan/usl-inventory.md`, `plan/design-marketing.md`, this file. Not touched: `BossSetupMarketingData.xml`, Sales files, PASS, mr-moqui;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, the ledger's paragraph; no public endpoint is added), a sentence after P9's:
+    "A send's A/B experiment releases its two samples through release#Send as any send's recipients; its remainder reaches recipients only
+    through `mantle.marketing.CampaignSendServices.release#ExperimentWinner` (MARKETING_DISPATCH, the send's organization, a winner chosen
+    with a reason by a dispatcher after the observation period, the send's current approval at its revision and readiness; the releaser
+    none of its authors nor its approver but under the one-person-team flag with the whole audience under 500), once: the remainder is
+    checked against the send's audience evaluated again and against what the send already sent, so no one new is added and no one gets a
+    second message of it, and each is then checked again by the dispatch just before its hand-off. A setup or variant change ends the
+    send's approval.";
+  - the user's calls: none required; to confirm, the winner's release re-evaluating the audience (stricter than the plan's dispatch check),
+    choosing the winner as a dispatcher's, the Sample sent state, sender variants not built, and the client walk's timing on a loaded
+    machine.
+
+**Review Nov 14 (P10).** A fresh review of `mkt/p10` (mr-mantle a8edf7a7, mr-boss 69604a2b) against P10, §2, §4 and design §5
+ExperimentDetail, §14.1; master (Sales P20) merged into both first without conflict (mr-mantle 27317ca5, mr-boss c324165e; both sides kept).
+- Checked and sound:
+  - P9's guards across variants: each variant's content is checked as the send's (checkContent, PRIVATE_LINK) at store#ExperimentVariant
+    and again at preparation (subject, body, VARIANTS_SAME); setup, sample, variant change and removal call the send's `revise` (revision
+    raised, approval ended, back to draft); sendProblems adds the experiment's problems, so release#Send and the winner's release both
+    need the variants prepared at the send's revision; build#CampaignDelivery sends a recipient only its variant's prepared content at the
+    current preparation and suppresses a remainder row without a winner.
+  - One hand-off per recipient: the remainder rows are disjoint from the samples by construction (one eligible row per person and
+    address, assigned once), each row has its own execution key (the ledger key), claimPage reads only Selected rows under the lease, and
+    the winner's release skips a held person or address already handed off (ALREADY_SENT); the release locks the send and the experiment
+    and runs once (winnerReleasedDate), re-evaluating the audience as the releasing dispatcher (a missing segment refuses; no one added).
+  - Separation at both releases: release#Send and release#ExperimentWinner refuse an author or the approver unless the one-person flag
+    admits the whole prepared audience (samples and remainder); the choice is a dispatcher's with a reason after the observation period.
+  - The two states: Sample sent and Held are read by the sweep (Sample sent when only held rows remain), cancel (held rows cancelled),
+    retry (from Sample sent back to Sending), controlOf, findRecipients and CampaignDelivery (held filter, Variant column), troubledSends
+    (Home's attention), Sends' filter and board; pause stays Scheduled/Sending only (nothing is in flight in Sample sent); the due worker,
+    hand-off and claim read Sending and Selected only, so a held recipient is never handed off before the winner's release.
+  - The assignment: FNV-1a over the experiment id and the normalized address, ties by the address: deterministic across preparations
+    (spec'd), the samples equal and disjoint, SAMPLE_TOO_SMALL when a variant or the remainder gets no one.
+  - ExperimentDetail's release preview: checkPage only reads (classifyPeople, sharers, the frequency cap's deliveries); at most 2,000 held
+    rows in pages of 500, run only for a dispatcher who may release; the held total is counted apart.
+  - Scope: every service takes the send through sendOf under the caller's scope (missing and other organization's alike
+    RECORD_UNAVAILABLE); a reader's get#Experiment carries no variant bodies.
+- Fixed:
+  - R1 (medium; the winner's release). release#ExperimentWinner named no winner: a release raced by "Choose again" sent the other variant,
+    and a later call answered "released already" whatever winner its caller meant. It now takes `campaignExperimentVariantId` (the winner
+    read; ExperimentDetail passes it) and refuses another (WINNER_CHANGED) before the release and after it; a call naming the released
+    winner, or none, still answers the first whatever key. Spec'd (both refusals; fail on the unfixed code).
+  - R2 (medium; separation). A paused experiment's resume (and SendDetail's Resume offer) admitted an author under the one-person flag by
+    `releasedCount`, the samples only, so an author could resume and send a remainder of 500 or more released by another dispatcher. The
+    resume counts the larger of what was released and the whole prepared audience (unchanged for a send without an experiment). Not
+    spec'd (it needs 500 recipients); read in review.
+  - R3 (low; idempotency). A second release#Send of a send in Sample sent was refused STATUS_INVALID instead of answering the first
+    (P9's rule). Spec'd.
+  - R4 (low; the setup is the send's). Changing the measure or the observation period of an approved send kept its approval; the
+    observation decides when a winner may be chosen and released. Any change of the stored setup now ends the approval (storing the same
+    values changes nothing); ExperimentDetail's note and the service description say so. Spec'd (unchanged kept, a new period ends it).
+  - R5 (low; the winner's recheck). The lenient re-evaluation dropped an exclusion list no longer found, admitting whom it excluded; it
+    now refuses (RECORD_UNAVAILABLE), as a missing segment already did.
+  - R6 (low; the preview). Over 2,000 held, or when a page could not be checked, ExperimentDetail said "N of the M checked" and confirmed
+    "Release to X recipients" as if all were checked; it now says only part was checked (the release checks every one) and confirms "up
+    to X". SendDetail's A/B box no longer reads the variant bodies to show their subjects.
+- Provisional findings (for the lead to number):
+  - the winner's release names the winner read (WINNER_CHANGED; R1); a paused experiment's resume counts the whole audience (R2);
+  - any change of an experiment's setup ends the send's approval, the measure and the observation period too (R4; the Built note had them
+    as the reading's);
+  - no attention row for a send in Sample sent waiting for a winner (troubledSends lists it only with a failed or uncertain delivery);
+  - release#ExperimentWinner's `operationKey` names nothing (the experiment is the identity), as release#Send's stamp.
+- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle Experiments (3 of 3, about 2.1 s of features; the new checks
+  fail on the unfixed services), with Sends, Dispatch, DeliveryLedger, MarketingApprovals, MarketingScope, Eligibility, Segments (42 of
+  42, 13.2 s); mr-boss MarketingSends, MarketingDelivery, MarketingAccess, MarketingTemplates, MarketingCampaigns (14 of 14, 5.1 s); the
+  client walk MarketingSendWalk alone (`--serve`, two runs: 7.93, 7.97 s, load 3.5; under the ~9 s estimate, so nothing trimmed: SendDetail's
+  box costs one query for a send without an experiment). `moqui lint --screens`: parse failures 0, nothing in ExperimentDetail or
+  SendDetail. Prettier clean. Not run: test-apps, the acceptance suite (MarketingExperimentScenario unchanged: it names no winner, which
+  still answers).
+- For the lead:
+  - budget share as the Built note (mr-mantle Experiments about 2.1 s; mr-boss about 0.1 s); no client spec added;
+  - merge hot spots as the Built note, plus MarketingDispatch.js releaseSend's first-release states, controlOf's Resume count and
+    resumeSend (`resumeCount`), MarketingSends.js evaluateAudience, CampaignSendServices.xml store#Experiment's and
+    release#ExperimentWinner's descriptions and parameters, `template/MarketingSends.xml` releaseExperimentWinner's in-map;
+  - Attack-Surface: the worker's sentence holds with three corrections; as it should read: "A send's A/B experiment releases its two
+    samples through release#Send as any send's recipients; its remainder reaches recipients only through
+    `mantle.marketing.CampaignSendServices.release#ExperimentWinner` (MARKETING_DISPATCH, the send's organization, a winner chosen with
+    a reason by a dispatcher after the observation period and named by the releaser, the send's current approval at its revision and
+    readiness; the releaser none of its authors nor its approver but under the one-person-team flag with the whole audience under 500,
+    which a paused experiment's resume counts too), once: the remainder is checked against the send's audience evaluated again as the
+    releasing dispatcher and against what the send already sent, so no one new is added and no one gets a second message of it, and
+    each is then checked again by the dispatch just before its hand-off. Any change of the experiment's setup or a variant ends the
+    send's approval.";
+  - the user's calls: as the Built note's (the re-evaluated audience at the winner's release, the choice as a dispatcher's, Sample sent,
+    no sender variants), and R4 (the measure and observation period are approved content).
+
 ### P11 — Automation
 
 Design §6 Automations, AutomationDetail and EnrollmentDetail, §15.3 (the admission and step jobs); MKT-AUTOMATION;

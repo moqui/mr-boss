@@ -59,7 +59,9 @@ const ids = {
     // (Maya its one recipient), and the December one approved for 1 December
     draftSendId: "BOSS_MKT_SEND_PREVIEW",
     approvedSendId: "BOSS_MKT_SEND_NOV",
-    scheduledSendId: "BOSS_MKT_SEND_DEC"
+    scheduledSendId: "BOSS_MKT_SEND_DEC",
+    // P10: the draft subject test (an A/B experiment, not prepared)
+    experimentSendId: "BOSS_MKT_SEND_ABTEST"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's
