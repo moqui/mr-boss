@@ -350,12 +350,13 @@ function sharedContext(p) {
 // ===== record kinds =====
 // A sales order: a part's vendor is an internal organization (the record's owner) and its customer is not; every customer it
 // names must be one the user serves. A Sales quote template (purpose OrpSalesQuoteTemplate, impl-sales P12 review) is never an
-// order: Sales' own (SalesAccess.js templateOf).
-const quoteTemplatePurpose = "OrpSalesQuoteTemplate"
+// order: Sales' own (SalesAccess.js templateOf); nor is a recurring base (OrpRecurringTemplate, impl-sales P16), whose generated
+// orders are.
+const templatePurposes = ["OrpSalesQuoteTemplate", "OrpRecurringTemplate"]
 function readOrder(orderId) {
     const order = one("mantle.order.OrderHeader", {orderId})
     const parts = order ? rows("mantle.order.OrderPart", {orderId}) : []
-    if (!order || !parts.length || order.orderPurposeEnumId === quoteTemplatePurpose) return null
+    if (!order || !parts.length || templatePurposes.includes(order.orderPurposeEnumId)) return null
     if (!parts.every(part => isInternal(part.vendorPartyId) && !isInternal(part.customerPartyId))) return null
     const customerIds = Array.from(new Set(parts.map(part => part.customerPartyId).filter(Boolean)))
     return {
@@ -553,7 +554,7 @@ function recordLink(kind, recordId) {
 }
 // Whether an order is a sales order (every part sold by an internal organization to an outside party), for get#RecordLink.
 function isSalesOrder(orderId) {
-    if (one("mantle.order.OrderHeader", {orderId})?.orderPurposeEnumId === quoteTemplatePurpose) return false
+    if (templatePurposes.includes(one("mantle.order.OrderHeader", {orderId})?.orderPurposeEnumId)) return false
     const parts = rows("mantle.order.OrderPart", {orderId})
     return parts.length > 0 && parts.every(part => isInternal(part.vendorPartyId) && !isInternal(part.customerPartyId))
 }
