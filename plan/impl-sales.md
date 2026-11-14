@@ -5422,7 +5422,7 @@ with its products, and tax is computed on each generated order when it is placed
   test-framework, the acceptance suite (no acceptance test changed).
 - Inventories and design: usl-inventory's "Added in the Sales build: recurring orders and subscriptions" table gains
   `invoice#RecurringOrder`; design-sales §7 "As built (impl-sales P16)" says what follow-up 2 changed.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F319 to F324 in order:
   - the invoice is left as `create#EntireOrderPartInvoice` makes it (InvoiceInProcess), as Accounting's Invoice from order and the
     worker's old branch left it; Shop finalizes its renewal's invoice after the capture, a native renewal's waits for Accounting to
     finalize it with its other drafts;
@@ -5490,7 +5490,7 @@ the merge.
     (`recurFailureDate`, the message), and no order is made. This guards the behavior; it would pass on the worker's code too.
     R1 has no spec of its own (two workers at once cannot be driven from a spec); the single-approval billing and the second
     `invoice#RecurringOrder` that bills nothing still pass.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F325 to F327 in order:
   - R1 above (medium): a recurring order could be invoiced twice when two approvals' tx-commit rules ran at once; fixed.
   - A legacy base (made recurring before Sales, not marked `OrpRecurringTemplate`) with `recurAutoInvoice` Y is billed on approval
     too. Before, it was billed only when approved at placement, which never happened with no payment copied. That matches §4's call
@@ -5931,6 +5931,15 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F316 | P19 (Review Nov 14): the "weekly pipeline and forecast digest" is the pipeline dashboard alone; forecasts are not in it (no forecast dashboard exists) | P19: as its Review note says |
 | F317 | P19 (Review Nov 14): the readiness additions (jobs, templates, approval rules) have no spec | P19: as its Review note says |
 | F318 | P19 (Review Nov 14): a cancelled storeless order's confirmation PDF carries no cancelled mark | P19: as its Review note says |
+| F319 | Follow-up 2 (Built Nov 14): the invoice is left as `create#EntireOrderPartInvoice` makes it (InvoiceInProcess), as Accounting's Invoice from order and the worker's old branch left it; Shop finalizes its renewal's invoice after the capture, a native renewal's waits for Accounting to finalize it with its other drafts | Follow-up 2: as its Built note says |
+| F320 | Follow-up 2 (Built Nov 14): the trigger is the order header's approval; a generated order of several parts approved part by part (a credit hold on one part) is billed for the parts approved when the header becomes approved, and a part approved later only by Accounting's Invoice from order (`invoice#RecurringOrder` is internal); Sales' bases repeat one-part orders in practice | Follow-up 2: as its Built note says |
+| F321 | Follow-up 2 (Built Nov 14): an order whose header returns to Approved (`checkStillComplete` after a return) runs the rule again, which bills nothing (a part already billed is skipped, and `create#FulfillmentInvoice` keeps one invoice for a source) | Follow-up 2: as its Built note says |
+| F322 | Follow-up 2 (Built Nov 14): a base made in P16 holds product lines only; it repeats them as before until it is made again from its source (editing its schedule does not copy lines) | Follow-up 2: as its Built note says |
+| F323 | Follow-up 2 (Built Nov 14): a storeless seller with no tax gateway: its generated orders repeat the source's tax lines as they were entered (nothing recomputes them, as X1 leaves such an order untouched); a store with no tax gateway drops them, as the store's own path does | Follow-up 2: as its Built note says |
+| F324 | Follow-up 2 (Built Nov 14): a generated order the gateway cannot tax (TAX_ADDRESS_MISSING, TAX_RATE_MISSING) now fails its occurrence with that reason, kept on the base as "Last run failed"; before, X1's step during the clone would have refused it the same way | Follow-up 2: as its Built note says |
+| F325 | Follow-up 2 (Review Nov 14): R1 above (medium): a recurring order could be invoiced twice when two approvals' tx-commit rules ran at once; fixed | Follow-up 2: as its Review note says |
+| F326 | Follow-up 2 (Review Nov 14): A legacy base (made recurring before Sales, not marked `OrpRecurringTemplate`) with `recurAutoInvoice` Y is billed on approval too. Before, it was billed only when approved at placement, which never happened with no payment copied. That matches §4's call ("a native recurring order"), but its auto-invoice may have been set through Mantle's `update#OrderRecur`, without Sales' `RECEIVABLE_EDIT` check | Follow-up 2: as its Review note says |
+| F327 | Follow-up 2 (Review Nov 14): `clone#Order` maps a child's parent only when the parent's id sorts before it, which is how Mantle creates lines. A child listed before its parent keeps the source's id, as every child did before | Follow-up 2: as its Review note says |
 
 ## 7. Later
 
