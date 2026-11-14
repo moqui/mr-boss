@@ -900,12 +900,14 @@ More; the Delivery box shows the release, the counts from the ledger (handed off
 waiting, skipped at dispatch) and why a run handed off nothing. A send scheduled for later is Scheduled until the due job
 (`run_MarketingDueSends`, `run#DueSends`) starts it; a send released now is Sending at once and its first pages are handed off on a
 service worker after the release commits. Each page is claimed under a lease, checked together (the topic's membership, consent and
-suppression by AudiencePreview's rule, the address against the prepared one, the policy's frequency cap) and each recipient handed to
+suppression by AudiencePreview's rule, the address against the prepared one, a withdrawal by anyone who holds the address now, the
+policy's frequency cap) and each recipient handed to
 the ledger in a transaction of its own, or skipped with its reason; the ledger checks the consent within the organization and the
 suppressions again at each attempt. A send completes when nothing waits and no delivery is queued, retrying or uncertain (Completed
 with failures when one failed, which a retry of its failures sends again). The attachments are copied at preparation; each message
-carries a List-Unsubscribe header and link from a token for the sending profile's site (the server's `/u/` page when the profile names
-none, from the root at the release). CampaignDelivery (DeliveryFind as the list's header filters, DeliveryRows with the CSV and PDF
+carries a List-Unsubscribe header and link from a token for the sending profile's site when it mounts Account, else the server's `/u/`
+page under a configured root (the profile's relay's web base URL, the send template's, else the conf webapp's root kept at the release;
+never a request's Host header); a release with no address for the link is refused (impl-marketing P9 review). CampaignDelivery (DeliveryFind as the list's header filters, DeliveryRows with the CSV and PDF
 report of every row, RetryRecipients as the row selection's Retry failures) and RecipientDetail (Recipient, Attempts, the receipts,
 ResolveDelivery as Reconcile, and Retry) are Sends' hidden screens, opened from SendDetail and the rows; the name and whole address
 show to an audience reader only. The dispatcher holds MESSAGE_DELIVERY_REVIEW for the reconciliation, of the organization's deliveries
