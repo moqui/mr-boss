@@ -337,7 +337,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | built and reviewed Nov 14, merged |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | built and reviewed Nov 14, merged |
-| P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
+| P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | built and reviewed Nov 14, merged |
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | — |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | — |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | — |
@@ -3323,7 +3323,7 @@ Rust built.
 - Inventories: usl-inventory's clone#Order and get#ProductPrice rows and an "Added in the Sales build: quote templates" table;
   ss-inventory unchanged (no baseline form maps to QuoteTemplates or QuoteTemplateDetail).
 - Design edits: design-sales §5 "As built (impl-sales P12)" and §6's order scope (the approver's decided orders).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F212 to F218 in order:
   - a template's own terms and print text (design §5 TemplateHeader) is not built: a quote from a template takes its organization's
     stored text; a per-template text needs a registered text choice an administrator sets, not a location a manager types;
   - with no order rule met, `approve#SalesOrder` records no OrderDecision, so the approver who approved such an order loses sight of
@@ -3401,7 +3401,7 @@ against P12, §2, §4 (the Nov 11 template row, the Nov 14 rows), F7 and design-
   was put there by the rep who chose the template. Fixed: `priceCopy` makes the quote's maker the author (priceOverrideUserId and
   date), keeping the price and reason; the rep is refused the rule as owner and author, the template's author may decide it. Spec
   check: SalesQuoteTemplates feature 2 (the fixed line's author is the rep); failed on the unfixed code.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F219 to F222 in order:
   - the five report definitions above name only `OrpRecurringTemplate` in their "Not a recurring base order" filter; a template is
     left out by the dataset's `placedDate` time field, not by the filter, so a panel without a time range would count its lines;
   - the palette has no Sales link for a template (it falls through to no app); QuoteTemplateDetail is reached from Quote templates;
@@ -4063,6 +4063,17 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F209 | P11 (Review Nov 14): with the setting on, the native `approve#Order` answers an order outside the approver's sales scope ORGANIZATION_DENIED, not as missing (only to a holder of SALES_ORDER_APPROVE) | P11: as its Review note says |
 | F210 | P11 (Review Nov 14): SalesOrderApproval's batch feature failed once (successCount 1) on the first run after the master merge with StorelessOrderConfirmation beside it, and passed in the five runs after; no cause found | P11: as its Review note says |
 | F211 | P11 (Review Nov 14): the Built note's findings stand. On its first two: Sales' Approve deciding the order rules with the setting off is right to keep (the rule is the seller's ask for separation and leaves an audit of who decided; the native path stays as built, the owner contract); for the unassigned approver, recommend read-only sight of an order they decided (an OrderDecision of theirs), not the organization's approved orders, so they can follow it without SALES_TEAM_VIEW | P11: as its Review note says |
+| F212 | P12 (Built Nov 14): a template's own terms and print text (design §5 TemplateHeader) is not built: a quote from a template takes its organization's stored text; a per-template text needs a registered text choice an administrator sets, not a location a manager types | P12: as its Built note says |
+| F213 | P12 (Built Nov 14): with no order rule met, `approve#SalesOrder` records no OrderDecision, so the approver who approved such an order loses sight of it once approved (the carry-over covers the orders they decided a rule on); recording a no-rule decision would change P9's rule reading (a decision with no policy is the unconfigured manual-price rule's) | P12: as its Built note says |
+| F214 | P12 (Built Nov 14): a template's fixed line keeps the template author as `priceOverrideUserId` on the quote, so that author may not approve the quote's manual-price rule for it (separation by price author, P9); the rep who copied it may | P12: as its Built note says |
+| F215 | P12 (Built Nov 14): a template line with no seller's price is stored at 0 with no source (create#OrderItem's default), shown unpriced on the detail and counted 0 in its example total; the preview prices it for the customer chosen | P12: as its Built note says |
+| F216 | P12 (Built Nov 14): TemplateFind's category filter (design §5) is not built; a product filter is | P12: as its Built note says |
+| F217 | P12 (Built Nov 14): Quote templates is shown to every Sales reader (R), who sees only the published ones; drafts, scheduled and ended templates are the manager's and the administrator's | P12: as its Built note says |
+| F218 | P12 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the template verbs; P12 had no mr-moqui worktree | P12: as its Built note says |
+| F219 | P12 (Review Nov 14): the five report definitions above name only `OrpRecurringTemplate` in their "Not a recurring base order" filter; a template is left out by the dataset's `placedDate` time field, not by the filter, so a panel without a time range would count its lines | P12: as its Review note says |
+| F220 | P12 (Review Nov 14): the palette has no Sales link for a template (it falls through to no app); QuoteTemplateDetail is reached from Quote templates | P12: as its Review note says |
+| F221 | P12 (Review Nov 14): `decidedBy` counts any decision of the caller, a SapQuote decision on the quote before it became the order included, as the Nov 14 row reads ("a decision on it"); a quote approver who also approves orders keeps read-only sight of that order | P12: as its Review note says |
+| F222 | P12 (Review Nov 14): the Built note's other findings stand as written (no per-template terms text, no category filter, the unpriced line at 0 on the detail, Quote templates shown to every reader) | P12: as its Review note says |
 
 ## 7. Later
 
