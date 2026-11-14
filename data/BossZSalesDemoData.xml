@@ -368,4 +368,21 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.request.RequestItem requestId="BOSS_SAL_RFQ_WINGTIP" requestItemSeqId="03" statusId="ReqSubmitted" quantity="1"
             description="Delivery and installation"/>
     <!-- ===== end of Sales P8 ===== -->
+    <!-- ===== Sales P9 (impl-sales P9): Retail's Sales defaults and approval rules ===== -->
+    <!-- Retail's defaults: a quote is valid 30 days, unverified inquiries are kept 60 -->
+    <mantle.sales.policy.SalesPolicy salesPolicyId="BOSS_SAL_POLICY_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            fromDate="2026-11-01 00:00:00" quoteValidityDays="30" intakeRetentionDays="60"
+            changeReason="Retail's Sales defaults" changedByUserId="BOSS_SAL_ADMIN"/>
+    <!-- Retail's quote rules: a discount of 5 % or more under the calculated price (the Wingtip draft's entered refit price is one) and
+        a free line, each decided by a sales approver (BOSS_SALES_APPROVE) other than the quote's author. Ziziwork Sales sets none, so a
+        manual price there needs an approver other than its author. -->
+    <mantle.sales.policy.SalesApprovalPolicy salesApprovalPolicyId="BOSS_SAL_APR_RETAIL_DISCOUNT" organizationPartyId="ORG_ZIZI_RETAIL"
+            purposeEnumId="SapQuote" ruleTypeEnumId="SarDiscount" discountPercent="5" approverUserGroupId="BOSS_SALES_APPROVE"
+            selfApprovalAllowed="N" description="Discounts of 5 % or more" fromDate="2026-11-01 00:00:00"
+            changeReason="Retail's discount control" changedByUserId="BOSS_SAL_ADMIN"/>
+    <mantle.sales.policy.SalesApprovalPolicy salesApprovalPolicyId="BOSS_SAL_APR_RETAIL_FREE" organizationPartyId="ORG_ZIZI_RETAIL"
+            purposeEnumId="SapQuote" ruleTypeEnumId="SarFreeLine" approverUserGroupId="BOSS_SALES_APPROVE" selfApprovalAllowed="N"
+            description="Free samples and lines" fromDate="2026-11-01 00:00:00" changeReason="Retail's free lines"
+            changedByUserId="BOSS_SAL_ADMIN"/>
+    <!-- ===== end of Sales P9 ===== -->
 </entity-facade-xml>

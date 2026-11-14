@@ -932,6 +932,31 @@ crosscut §3.15 row:
 
 **Source:** research §§5, 11; Commons approvals. **Needs:** SAL-APPROVAL, SAL-SHELL.
 
+### As built (impl-sales P9, Nov 13, 2026)
+
+- The approval verbs are `mantle.order.SalesApprovalServices` (service/mantle/order/SalesApprovals.js), beside Q's quote verbs:
+  `preview#Quote`, `request#QuoteApproval` (the rep asks; the notice goes then, not on each change), `decide#Quote`, the
+  SalesQuoteApproval topic's `approve#QuoteMessage` and `refuse#QuoteMessage`, and SalesDefaults' and ApprovalPolicies' writers.
+  `SalesQuoteServices.propose#Quote` carries the approval guard (APPROVAL_REQUIRED); P10 adds the issue's checks to it.
+- A decision is an OrderDecision with the order revision, purpose (`SapQuote`, `SapOrder`), rule (none for the unconfigured
+  manual-price rule, `SarOverride`), evaluation time, result (`SdrRequested`, `SdrApproved`, `SdrRefused`), decider and operation
+  key; a decision counts only at the quote's current revision, and a commercial change marks the earlier ones invalidated (the SECA
+  on `increment#OrderRevision`), so a file or note leaves it in force where the seller's commercial revision is on.
+- The approver holds SALES_APPROVE in the seller's organization, is in the rule's group when it names one (the "approver role" is a
+  user group), and is not the quote's owner, who asked for the approval or who entered a line the rule names, unless the rule allows
+  it. A holder of SALES_APPROVE sees a quote of their organization once its approval was asked (SalesAccess.js quoteOf), to read
+  and decide, not to change it. The rep asks for each rule (one SdrRequested row a rule); the notice names the rules asked for,
+  deciding it decides those and no rule set since, and only when the approver may decide each of them (the framework then reads
+  the notice for every recipient); a rule set since is asked for again.
+- A free or zero-price line is the rep's to draft where a rule will need it approved (the manual-price rule while none is set, a
+  free-line, discount or floor rule); elsewhere it still needs SALES_APPROVE (FREE_LINE_DENIED) (the user's call of Nov 13).
+- Sales' pre-approval warnings: for a seller with a rule in effect, an accepted quote's open quote rules and the order rules the order
+  meets, each naming the rule's kind and id, never an amount; an organization with none adds nothing. The notice's title names the
+  kinds of the rules, never an amount.
+- OrderDetail's Approval box shows the rules, their inputs and states, Ask for approval and Approve or Refuse; ApprovalPolicies shows a
+  quote's preview when one is named. Approvals lists both topics; an order change's row opens where Commons' resolver sends the
+  approver (Sales' Approvals until P14).
+
 ## 6. Orders and commercial changes
 
 ### Orders
@@ -1494,6 +1519,13 @@ thresholds explicitly; installation seeds no permissive monetary threshold. Unti
 manual price overrides require an approver distinct from their author. **Needs:** SAL-APPROVAL.
 
 **Source:** research §§5, 10; OrderDecision and Carbon sales-rule guardrails.
+
+As built (impl-sales P9, Nov 13, 2026): SalesPolicy and SalesPolicyThreshold (entity/SalesApprovalEntities.xml) hold every field
+above; SalesDefaults shows and publishes those Sales reads so far (a new quote's validity and default team, the intake retention)
+with a preview, and the commercial revision on the seller's own preference; the templates, response requirements, thresholds, the
+approval setting and the net-terms option join the form with P10, P11 and P13, which read them. Rules are bounded to four types
+(amount, discount, price floor, free line) of two purposes; the floor's cost is the approved standard cost, else the seller's average
+cost, read on the server only. Readiness adds `sales.defaults` and `sales.commercialRevision`, both fixed in SalesDefaults.
 
 ## 10. PASS Sales customer access
 

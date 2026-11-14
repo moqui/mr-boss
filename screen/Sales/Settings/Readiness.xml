@@ -39,7 +39,9 @@ along with this software (see the LICENSE.md file). If not, see
                 salesSettings: {url: sales.sharedLinks['Settings/Readiness'], text: 'Readiness'},
                 salesStages: {url: sales.sharedLinks['Settings/Stages'], text: 'Stages', idParameter: 'salesPipelineId'},
                 salesTeams: {url: sales.sharedLinks['Settings/Teams'], text: 'Teams'},
-                salesLeadSources: {url: sales.sharedLinks['Settings/LeadSources'], text: 'Sources'}}"/>
+                salesLeadSources: {url: sales.sharedLinks['Settings/LeadSources'], text: 'Sources'},
+                salesDefaults: {url: sales.sharedLinks['Settings/SalesDefaults'], text: 'Defaults'},
+                salesApprovalPolicies: {url: sales.sharedLinks['Settings/ApprovalPolicies'], text: 'Approval rules'}}"/>
         <set field="checkRows" from="(found?.checks || []).map(row =&gt; {
                 const place = row.fixRoute ? fixPlaces[row.fixRoute] : null
                 return Object.assign({}, row, {
