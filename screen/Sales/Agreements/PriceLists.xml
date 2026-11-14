@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Agreements › Price lists (design-sales §7 PriceLists and PriceListDetail; impl-sales P15; crosscut §3.21): Products'
+    Shared/PriceLists and Shared/PriceListDetail in Products' Sales context, for a price reader (PRICE_VIEW); list edits need
+    PRICE_EDIT, checked again in Mantle (Commerce's pattern). A list naming an agreement applies only while the agreement is active
+    and dated (the price resolver's guard). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Price lists" default-menu-index="3">
+    <subscreens default-item="List">
+        <subscreens-item name="List" location="component://mr-boss/screen/Shared/PriceLists.xml"/>
+        <subscreens-item name="PriceListDetail" location="component://mr-boss/screen/Shared/PriceListDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

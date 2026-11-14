@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Agreements area of IronStone Sales (design-sales §7, §1.2 "Agreements and prices"; impl-sales P15): Agreements (AgreementFind,
+    AgreementList, NewAgreement) and the shared AgreementDetail (hidden from the menu), a Sales reader's, every read and write
+    Mantle's guarded agreement service (mantle.party.SalesAgreementServices); Customer prices (Shared/Prices) and Price lists
+    (Shared/PriceLists, PriceListDetail) in Products' Sales context, shown to a holder of Products' price permissions only. Recurring
+    orders and Subscriptions are P16's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreements" default-menu-index="6" menu-image="sym_o_contract" menu-image-type="icon">
+    <subscreens default-item="Agreements" always-use-full-path="true">
+        <subscreens-item name="Agreements" location="component://mr-boss/screen/Sales/Agreements/Agreements.xml" menu-index="1"/>
+        <subscreens-item name="AgreementDetail" location="component://mr-boss/screen/Shared/AgreementDetail.xml" menu-include="false"/>
+        <subscreens-item name="CustomerPrices" location="component://mr-boss/screen/Sales/Agreements/CustomerPrices.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('PRICE_VIEW') || ec.user.hasPermission('PRICE_EDIT')"/>
+        <subscreens-item name="PriceLists" location="component://mr-boss/screen/Sales/Agreements/PriceLists.xml" menu-index="3"
+                menu-include="ec.user.hasPermission('PRICE_VIEW') || ec.user.hasPermission('PRICE_EDIT')"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="SalesAgreementsPanel" type="tab"/>
+    </widgets>
+</screen>

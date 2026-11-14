@@ -26,7 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
     P8: RFQs (Quotes/QuoteRequests and the shared RequestDetail at Quotes/QuoteRequestDetail), whose request is a record panel host.
     P9: Quotes' Approvals tab (a sales approver's), Settings' Defaults and Approval rules, the approval topics. P11: Orders in the menu
     (the order list, Awaiting approval, NewSalesOrder, OrderBatch), OrderDetail's sales-order context, an order as a record panel host
-    and in the palette. -->
+    and in the palette. P15: Agreements and prices (Agreements, the shared AgreementDetail, Customer prices and Price lists), an
+    agreement as a record panel host and in the palette. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
 
@@ -60,6 +61,8 @@ along with this software (see the LICENSE.md file). If not, see
                 // P11: an order the user sees too (Sales.js recordKinds orderDocument: a quote, else a sales order, SalesAccess.js orderOf)
                 const panelHosts = {'mantle.party.Party': 'contact', 'mantle.sales.opportunity.SalesOpportunity': 'opportunity',
                     'mantle.order.OrderHeader': 'orderDocument', 'mantle.request.Request': 'quoteRequest'}
+                // P15: a customer agreement the user sees (Sales.js recordKinds agreement, SalesAccess.js agreementOf)
+                panelHosts['mantle.party.agreement.Agreement'] = 'agreement'
                 if (!Object.hasOwn(panelHosts, entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
                 panelRecordType = panelHosts[entityName]
@@ -100,6 +103,11 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Orders" location="component://mr-boss/screen/Sales/Orders.xml" menu-index="5"
                 menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
         <subscreens-item name="Products" location="component://mr-boss/screen/Sales/Products.xml" menu-index="9" menu-include="false"/>
+        <!-- P15: Agreements and prices (design §7), for a user who reads Sales: Agreements and the shared AgreementDetail (Mantle's
+            agreement services scope every read to the user's organizations); Customer prices and Price lists, Products' shared screens
+            in Sales' context, shown to a holder of Products' price permissions (PRICE_VIEW or PRICE_EDIT), checked again there -->
+        <subscreens-item name="Agreements" location="component://mr-boss/screen/Sales/Agreements.xml" menu-index="6"
+                menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
         <!-- P2: Settings (design §9), the administrator's (SALES_CONFIGURE) and, for Teams, the manager's (SALES_TEAM_MANAGE);
             BOSS_SAL_SETTINGS denies the root user group and opens it to the manager; Mantle's setup services check again -->
         <subscreens-item name="Settings" location="component://mr-boss/screen/Sales/Settings.xml" menu-index="8"
@@ -171,6 +179,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g q" label="Quotes" screen="Sales/Quotes/Quotes"/>
             <!-- P11 -->
             <key keys="g r" label="Orders" screen="Sales/Orders/Orders"/>
+            <!-- P15 -->
+            <key keys="g m" label="Agreements" screen="Sales/Agreements/Agreements"/>
         </keymap>
     </shell-providers>
 

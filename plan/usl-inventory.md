@@ -1063,8 +1063,8 @@ Added in Accounting P15 (budgets), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail (Add file; Purchasing P13) |
-| AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | — Purchasing: an agreement's file is not edited after its upload (F135) (Purchasing P13) |
+| AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail (Add file; Purchasing P13); Sales/Agreements/AgreementDetail (Add document, and activate#SalesAgreement's acceptance evidence; Sales P15) |
+| AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | — Purchasing: an agreement's file is not edited after its upload (F135) (Purchasing P13); — Sales: the same (Sales P15) |
 | AgreementServices | save#AgreementContentFile | Shared/RecordFiles |  |
 | CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions | CustomerService/Cases/ChannelSessions |
 | CommunicationServices | create#Message | Commons/QuickCreate; Commons/Files; Comms/Inbox/Compose; Projects/Requests/RequestDetail; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter; CustomerService/Cases/CaseDetail; Shared/RequestDetail; PASS: Forum/Compose; Sales/Pipeline/OpportunityDetail | Comms/Inbox/Compose; Shared/Chatter; CustomerService/Cases/CaseDetail (Conversation, through Shared/Chatter and Compose, Customer Service P2); Sales/Pipeline/OpportunityDetail (Conversation, through Shared/Chatter; the opportunity a record host, Sales P4) |
@@ -1282,7 +1282,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | InventoryReportServices | get#PriceHistoryInfo | Products/Pricing/PriceHistory | Products/Prices/PriceHistory |
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
-| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Orders/OrderDetail; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail; Sales/Agreements/PriceListDetail; Sales/Agreements/PriceExplain; Sales/Quotes/QuoteTemplateDetail | Shared/PriceExplain; Purchasing/Suppliers/PriceExplain (Shared/PriceExplain) (Purchasing P2); Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail (P3); PASS:Shop/Home; PASS:Shop/Categories/CategoryDetail; PASS:Shop/Search; PASS:Shop/Products/ProductDetail (its resolver as the store's authority, through mantle.product.PriceServices.get#StoreProductPrice and ShopCatalogServices; Shop P3); Sales/Quotes/QuoteTemplateDetail (the template's lines and its preview, through get#SellerProductPrice, the seller's authority; Sales P12) |
+| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Orders/OrderDetail; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail; Sales/Agreements/PriceListDetail; Sales/Agreements/PriceExplain; Sales/Quotes/QuoteTemplateDetail | Shared/PriceExplain; Purchasing/Suppliers/PriceExplain (Shared/PriceExplain) (Purchasing P2); Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail (P3); PASS:Shop/Home; PASS:Shop/Categories/CategoryDetail; PASS:Shop/Search; PASS:Shop/Products/ProductDetail (its resolver as the store's authority, through mantle.product.PriceServices.get#StoreProductPrice and ShopCatalogServices; Shop P3); Sales/Quotes/QuoteTemplateDetail (the template's lines and its preview, through get#SellerProductPrice, the seller's authority; Sales P12); Sales/Agreements/CustomerPrices, Sales/Agreements/PriceLists/PriceListDetail and Sales/Products/PriceExplain (Products' shared screens in the Sales context; a quote line's agreement price through get#SellerProductPrice; PriceExplain kept at the P7 route, one route per screen); every caller now meets the agreement guard (Sales P15, F20) |
 | PriceServices | get#OrderProductPrice | Sales/Orders/OrderDetail | — Sales P7: a quote line's price is get#SellerProductPrice's (the seller's authority after Sales' checks) |
 | ProductServices | find#ProductByIdValue | Products; Products/Products; Products/Units/Packaging; Products/Settings/IdentificationTypes | Products (guarded exact-ID palette) |
 | ProductServices | clone#Product | Products/Products/Product360; Shared/Product360 |  |
@@ -2390,6 +2390,30 @@ remain historical; these rows add no implementation claim.
 | order/SalesPortalServices | get#QuoteResponse | PASS:Sales/QuoteResponse (ResponseReceipt) | PASS:Sales/QuoteResponse (getSalesQuoteResponse) |
 | order/SalesPortalServices | check#SalesAppReadiness, get#AccountCard | — (PASS's app registry, PublicApps.js) | PASS:Sites/SiteDetail readiness; PASS:Account/Home |
 | sales/AccountServices | get#SalesInvite, invite#SalesContact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail (Invite to Sales) | Shared/Customer360 (Sales header); Sales/Accounts/ContactDetail (template/SalesInvite.xml) |
+
+### Added in the Sales build: commercial changes and the fulfillment and billing handoffs (P14, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/OrderChangeServices | save#OrderChange (the commercial kinds, filed in Sales) | Sales/Orders/OrderChanges (NewChange); Sales/Orders/OrderChangeDetail | Sales/Orders/OrderChanges (New change); Sales/Orders/OrderChangeDetail (SalesChangeProposal, template/SalesOrderChanges.xml); Sales/Orders/OrderDetail (More › New change) |
+| order/OrderChangeServices | find#OrderChanges (kindGroup owner; one order's for a Sales reader) | Sales/Orders/OrderChanges (ChangeFind, ChangeList) | Sales/Orders/OrderChanges (ChangeList with its saved lists); Sales/Orders/OrderDetail (Changes) |
+| order/OrderChangeServices | get#OrderChange, preview#OrderChange (the commercial kinds' effects) | Sales/Orders/OrderChangeDetail | Sales/Orders/OrderChangeDetail (Proposal, Decisions, Impact, Effects) |
+| order/OrderChangeServices | decide#OrderChange | Sales/Orders/OrderChangeDetail; Sales/Quotes/Approvals | Sales/Orders/OrderChangeDetail (Decide); Sales/Quotes/Approvals (the topic's handlers) |
+| order/OrderChangeServices | apply#OrderChange (the commercial kinds, SALES_ORDER_CHANGE) | Sales/Orders/OrderChangeDetail | Sales/Orders/OrderChangeDetail (Apply) |
+| order/SalesOrderServices | get#SalesShipment | Sales/Orders/ShipmentDetail | Sales/Orders/ShipmentDetail (template/SalesHandoffs.xml SalesShipment); Sales/Orders/OrderDetail (Fulfillment's links) |
+| order/SalesOrderServices | check#SalesInvoice | Sales/Orders/InvoiceDetail | Sales/Orders/InvoiceDetail (template/SalesHandoffs.xml SalesInvoice, over InvoiceServices.get#InvoiceFinanceDetail); Sales/Orders/OrderDetail (Invoices' links) |
+| account/InvoiceServices | get#InvoiceFinanceDetail, send#Invoice | Sales/Orders/InvoiceDetail | Sales/Orders/InvoiceDetail (the overview, lines and payments; Send with pay link for a receivables editor) |
+
+### Added in the Sales build: agreements and customer prices (P15, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| party/SalesAgreementServices | find#SalesAgreements | Sales/Agreements/Agreements (AgreementFind, AgreementList); Accounts/Customer360 (Agreements) | Sales/Agreements/Agreements; Shared/Customer360 Agreements tab; OrderDetail's Agreements box (template/SalesAgreementParts.xml); NewAgreement's template choice and the palette (ironstone.sales Sales.js) |
+| party/SalesAgreementServices | get#SalesAgreement | Sales/Agreements/AgreementDetail (AgreementHeader, AgreementParties, AgreementTerms, AgreementItems, AgreementConnections) | Shared/AgreementDetail at Sales/Agreements/AgreementDetail |
+| party/SalesAgreementServices | create#SalesAgreement | Sales/Agreements/Agreements (NewAgreement) | Sales/Agreements/Agreements (New agreement); Shared/AgreementDetail (New agreement from a template); Shared/Customer360 Agreements (New agreement) |
+| party/SalesAgreementServices | store#SalesAgreement, store#AgreementParty, store#AgreementTerm, store#AgreementItem | Sales/Agreements/AgreementDetail | Shared/AgreementDetail (Edit agreement, Add party, Add term, Add item, Price, Remove) |
+| party/SalesAgreementServices | activate#SalesAgreement, end#SalesAgreement, renew#SalesAgreement | Sales/Agreements/AgreementDetail (ActivateAgreement, EndAgreement) | Shared/AgreementDetail (Activate, End agreement or Cancel draft, Renew) |
+| party/SalesAgreementServices | expire#SalesAgreements | — (job) | ServiceJob expire_SalesAgreements (data/SalesAgreementSetupData.xml) |
 
 ## Marketing design — source-verified service additions
 

@@ -7,12 +7,12 @@ const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SALES",
     // the menu of design §1.2 built so far: every Sales user's (Pipeline since P4, Accounts since P3, Quotes since P7, Orders since
-    // P11), and with Reports a report reader's
-    staffMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders"],
-    reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Reports"],
+    // P11, Agreements since P15), and with Reports a report reader's
+    staffMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements"],
+    reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements", "Reports"],
     reportsMenu: ["SalesSummary", "SalesAnalysis"],
     accountsMenu: ["Accounts", "Contacts"],
-    keys: ["g s", "g a", "g c", "g o", "g l", "g q", "g r"],
+    keys: ["g s", "g a", "g c", "g o", "g l", "g q", "g r", "g m"],
     // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
     // Wingtip Group), Contoso Labs (a prospect, sales.rep2's), Kim Park (an individual customer) and the duplicate pair Adatum
     // Corporation and Adatum Corp; Dana Morales, a contact of Wingtip Traders and Contoso Labs; Ziziwork Sales' Fabrikam
@@ -28,8 +28,10 @@ const ids = {
         tailspin: "BOSS_SAL_ACC_TAILSPIN"
     },
     contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"},
+    // P15: Retail's demo agreements (data/BossZSalesDemoData.xml): Contoso's active supply terms and the standard terms template
+    agreements: {contoso: "BOSS_SAL_AGR_CONTOSO", standard: "BOSS_SAL_AGR_STANDARD"},
     // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
-    managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Reports", "Settings"],
+    managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements", "Reports", "Settings"],
     // P9 adds Defaults and Approval rules
     settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons", "SalesDefaults", "ApprovalPolicies"],
     // P4: Pipeline's tabs, and the demo deals (data/BossZSalesDemoData.xml): Retail East's (sales.rep's) Wingtip refit in Proposal with
