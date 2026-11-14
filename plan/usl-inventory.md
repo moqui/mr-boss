@@ -875,6 +875,17 @@ impl-marketing P3), called by built screens:
 | party/MessageServices | find#Suppressions, store#Suppression | Marketing/Audiences/Suppressions (Shared/Suppressions: SuppressionFind, SuppressionList, SuppressionChange) | Marketing/Audiences/Suppressions (Shared/Suppressions) (Marketing P3) |
 | party/MessageServices | check#Suppressions | the ledger's attempt; Marketing/Audiences/MemberDetail | attempt#Delivery; get#Member; request#Subscriptions (Marketing P3) |
 
+Added in Marketing P4 (Nov 14, 2026; `mantle.marketing.AudienceServices`, impl-marketing P4), called by built screens and the
+framework's transfer services:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/AudienceServices | preview#AudienceImport, apply#AudienceImport, apply#AudienceImportRow, get#AudienceImport, get#AudienceImportErrors | Marketing/Audiences/AudienceImport (ImportFile, ImportEvidence, ImportMatches, ImportResults) | Marketing/Audiences/AudienceImport (Marketing P4) |
+| marketing/AudienceServices | find#AudienceImportRuns | Admin/Data/Imports (the target marketingAudience); Marketing/Audiences/AudienceImport | Admin's Imports (DataTransferServices find#TargetRuns); Marketing/Audiences/AudienceImport's recent imports (Marketing P4) |
+| marketing/AudienceServices | purge#AudienceImports | the daily job purge_MarketingAudienceImports | (job) (Marketing P4) |
+| marketing/AudienceServices | find#MemberExportScopes, export#MemberTransfer | Marketing/Audiences/ListDetail (membership export, design §18) | Marketing/Audiences/ListDetail's Export members (DataTransferServices run#Export of marketingAudienceMembers) (Marketing P4) |
+| marketing/AudienceServices | preview#ListMerge, merge#Lists | Marketing/Audiences/AudienceMerge (MergeSelection, MergePreview, ApplyMerge) | Marketing/Audiences/AudienceMerge (Marketing P4) |
+
 Added in Marketing P5 (Nov 14, 2026; `mantle.marketing.SegmentServices`, impl-marketing P5), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
@@ -920,9 +931,9 @@ Added in Marketing P5 (Nov 14, 2026; `mantle.marketing.SegmentServices`, impl-ma
 | OrderServices | update#OrderStatus | Purchasing/Orders/OrderDetail | — Purchasing: the status moves through mantle.order.PurchaseServices (place, decide#PurchaseApproval, send, hold, cancel) (Purchasing P3) |
 | OrderServices | propose#Order | Sales/Orders/OrderDetail |  |
 | OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Place, through PurchaseServices.place#PurchaseOrder) (Purchasing P3); PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5); the renewal's order (Shop P7); Commerce/Integrations/ChannelImport and the channel intake (StoreChannels.js; Commerce P13); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
-| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Approve) and Purchasing/Orders/PurchaseOrders (bulk), through PurchaseServices.decide#PurchaseApproval; its direction check and the approval gate (Purchasing P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); store orders approve by Mantle's store approval checks (StoreDetail's Order checks tab, Commerce P2) |
+| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Approve, through SalesOrderServices.approve#SalesOrder; the sales direction under the seller's approval setting; Sales P11); Sales/Orders/Orders (OrderBatch's Approve, each order on its own; Sales P11); Purchasing/Orders/OrderDetail (Approve) and Purchasing/Orders/PurchaseOrders (bulk), through PurchaseServices.decide#PurchaseApproval; its direction check and the approval gate (Purchasing P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); store orders approve by Mantle's store approval checks (StoreDetail's Order checks tab, Commerce P2) |
 | OrderServices | autoApprove#OrdersDelayed |  |  |
-| OrderServices | autoApprove#Order |  |  |
+| OrderServices | autoApprove#Order |  | no screen (the seller's approval setting leaves a sales order placed for Sales/Orders/Orders' Awaiting approval; Sales P11) |
 | OrderServices | isFulfilled#OrderPart |  |  |
 | OrderServices | isFulfilled#OrderItem |  |  |
 | OrderServices | checkComplete#OrderPart |  |  |
@@ -1169,10 +1180,10 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactBookServices | filter#ContactAddresses |  | Comms/Settings/OutOfOffice (theme value STRT_EMAIL_CONTACT_SERVICE) |
 | ContactBookServices | find#OwnedContactBooks | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.contactBooks participant) (Admin P6) |
 | ContactBookServices | transfer#ContactBookOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
-| ContactImportServices | read#ContactFileText |  | Commons/Contacts/Import/Source; Projects/Time/Import/Source; Projects/WorkItems/Import/Source |
-| ContactImportServices | parse#ContactFile | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source |
-| ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview |
-| ContactImportServices | import#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Result |
+| ContactImportServices | read#ContactFileText |  | Commons/Contacts/Import/Source; Projects/Time/Import/Source; Projects/WorkItems/Import/Source; Marketing/Audiences/AudienceImport (an upload, through mantle.marketing.AudienceServices.preview#AudienceImport) (Marketing P4) |
+| ContactImportServices | parse#ContactFile | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source; Marketing/Audiences/AudienceImport (the columns, through preview#AudienceImport; read#ContactRows reads the rows) (Marketing P4) |
+| ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview; — Marketing/Audiences/AudienceImport previews through preview#AudienceImport over read#ContactRows and match#Contact by the list's address alone (preview#Contacts matches by name too) (Marketing P4) |
+| ContactImportServices | import#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Result; — Marketing/Audiences/AudienceImport makes a row's contact with import#ContactRow (a directory contact) in apply#AudienceImport (import#Contacts imports into a contact book) (Marketing P4) |
 | ContactImportServices | export#Contacts | Admin/Data/DataExport | Commons/Contacts/ContactDetail; Commons/Contacts/List; Admin/Data/DataExport |
 | DuplicateServices | mark#PartyNotDuplicate |  | Commons/Contacts/Compare; Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts; Sales/Accounts/MergeCompare (through Commons mark#NotDuplicate; Sales P3) |
 | PartyServices | get#ShellCounts |  | shell header (theme value STRT_SHELL_COUNTS_SERVICE) |
@@ -2178,8 +2189,8 @@ remain historical; these rows add no implementation claim.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| order/OrderServices | hold#Order | Sales/Orders/OrderDetail |  |
-| order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail |  |
+| order/OrderServices | hold#Order | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Hold, a Manual or Change hold, through SalesOrderServices.hold#SalesOrder; Sales P11) |
+| order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Release of a Manual or Change hold, through SalesOrderServices.release#SalesOrderHold; Sales P11) |
 | party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse | PASS:Supplier/SupplierHome; PASS:Supplier/QuoteResponse; PASS:Supplier/OrderAcknowledgement (its rule, through mantle.order.SupplierPortalServices) (Purchasing P16) |
 | party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail | Purchasing/Sourcing/QuoteRequestDetail (Send: each quote's QuoteResponse link); Purchasing/Orders/OrderDetail (Send: the revision's OrderAcknowledgement link) (its rule, through send#QuoteRequest and send#PurchaseOrder) (Purchasing P16) |
 | party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16) |
@@ -2312,6 +2323,23 @@ remain historical; these rows add no implementation claim.
 | order/SalesQuoteIssueServices | apply#QuoteBatch | Sales/Quotes/Quotes (QuoteBatch) | Sales/Quotes/Quotes (the rows' Send and Withdraw) |
 | order/SalesQuoteIssueServices | get#QuotePrint, get#QuoteIssueDocument | Sales/Orders/OrderDetail (html-print and PDF, design §16) | Shared/OrderDetail (Sales: Print (PDF); an issue's PDF) |
 | party/MessageServices | requeue#Delivery | — (a source's retry of a failed delivery) | no screen (send#Quote) |
+
+### Added in the Sales build: orders, approval and the storeless confirmation (P11, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesOrderServices | create#SalesOrder | Sales/Orders/Orders (NewSalesOrder) | Sales/Orders/Orders (New order) |
+| order/SalesOrderServices | store#SalesOrderLine, delete#SalesOrderLine | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: a direct draft's Add line and Remove) |
+| order/SalesOrderServices | place#SalesOrder | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Place) |
+| order/SalesOrderServices | approve#SalesOrder | Sales/Orders/OrderDetail; Sales/Orders/Orders (Awaiting approval) | Shared/OrderDetail (Sales: Approve); apply#SalesOrderBatch |
+| order/SalesOrderServices | hold#SalesOrder, release#SalesOrderHold | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Hold; a hold's Release) |
+| order/SalesOrderServices | cancel#SalesOrderRemainder | Sales/Orders/OrderDetail; Sales/Orders/Orders (OrderBatch) | Shared/OrderDetail (Sales: Cancel remainder); apply#SalesOrderBatch |
+| order/SalesOrderServices | clone#SalesOrder | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Copy as a new order) |
+| order/SalesOrderServices | apply#SalesOrderBatch | Sales/Orders/Orders (OrderBatch) | Sales/Orders/Orders (the rows' Approve and Close remainders) |
+| order/SalesOrderServices | get#SalesOrder | Sales/Orders/OrderDetail (sales-order context) | Shared/OrderDetail (Sales: the order context) |
+| order/SalesOrderServices | get#SalesWorkSummary | Sales/Home; Insights/Home (attention) | Sales/Home (through get#SalesHome); Insights/Home (Sales.QuotesToSend, Sales.QuotesExpiring, Sales.OrdersAwaitingApproval) |
+| order/SalesOrderServices | send#OrderConfirmation, build#OrderConfirmationMessage | — (the OrderPlacedSalesConfirmation rule; the delivery ledger's MdsrcSalesOrderConfirmation) | no screen |
+| sales/SalesWorkspaceServices | find#SalesOrders | Sales/Orders/Orders (OrderFind, OrderList) | Sales/Orders/Orders; Sales/Home (Orders blocked); the Sales palette |
 
 ## Marketing design — source-verified service additions
 

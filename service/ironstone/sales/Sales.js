@@ -196,7 +196,10 @@ const linkPaths = [
     // P9: the approvals list and the defaults and approval rules
     "Quotes/Approvals",
     "Settings/SalesDefaults",
-    "Settings/ApprovalPolicies"
+    "Settings/ApprovalPolicies",
+    // P11: the order list (design §6 Orders)
+    "Orders",
+    "Orders/Orders"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -350,6 +353,33 @@ recordKinds.orderChange = {
     }
 }
 // ===== end of P9 =====
+// ===== P11: a sales order (impl-sales P11; design §6) =====
+// A sales order the user sees (SalesAccess.js orderOf: a direct order, an accepted quote or another sales order of a seller of the scope,
+// assigned to them or a team of theirs, the organization's for SALES_TEAM_VIEW, or awaiting approval or held for an order approver),
+// the one OrderDetail route; and the order document of the root's record panels, a quote the user sees or such an order.
+recordKinds.order = {
+    name: "Order",
+    icon: "sym_o_receipt_long",
+    destination: "Orders/OrderDetail",
+    parameter: "orderId",
+    read: (userScope, orderId) => {
+        const found = salesAccess.orderOf(userScope.mantle, orderId)
+        if (!found) return null
+        return {
+            organizationPartyId: found.organizationPartyId,
+            label: found.order.orderName || "Order " + orderId,
+            detail: "Order"
+        }
+    }
+}
+recordKinds.orderDocument = {
+    name: "Order",
+    icon: "sym_o_receipt_long",
+    destination: "Orders/OrderDetail",
+    parameter: "orderId",
+    read: (userScope, orderId) => recordKinds.quote.read(userScope, orderId) || recordKinds.order.read(userScope, orderId)
+}
+// ===== end of P11 =====
 // A party's name for a label: the organization's name or the person's.
 function partyLabel(party) {
     if (!party) return ""
@@ -916,6 +946,22 @@ searchFinds.push({
             recordEntity: "mantle.request.Request",
             recordId: row.requestId,
             url: recordUrl("quoteRequest", row.requestId)
+        }))
+    }
+})
+// P11: sales orders, through Mantle's scoped find (find#SalesOrders' text: id, name or the customer's reference), recent ones
+searchFinds.push({
+    kind: "order",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.sales.SalesWorkspaceServices.find#SalesOrders", {text, pageSize: limit})
+        return Array.from(found.orderList || []).map(row => ({
+            title: row.orderName,
+            subtitle: ["Order " + row.orderId, row.customerName, row.statusText, row.totalText].filter(Boolean).join(" · "),
+            icon: recordKinds.order.icon,
+            recordEntity: "mantle.order.OrderHeader",
+            recordId: row.orderId,
+            url: recordUrl("order", row.orderId)
         }))
     }
 })

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     P3): the lists of the user's organizations (mantle.marketing.AudienceServices.find#Lists, scoped and paged in the query; never a
     mailbox), active ones by default, each with its kind, channel, organization, campaign, subscribed and pending counts and state.
     New list is the primary action (MARKETING_AUDIENCE_EDIT); a list subscribes no one, its members come by evidenced requests on
-    ListDetail. Import and Merge join with P4. -->
+    ListDetail. Import (AudienceImport, MARKETING_AUDIENCE_IMPORT) and Merge (AudienceMerge) open their screens (P4). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Lists" default-menu-index="1">
     <parameter name="text"/>
@@ -61,6 +61,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 width="760" type="primary" condition="canEdit">
                             <section-include name="NewListForm" location="component://mr-boss/template/MarketingAudiences.xml"/>
                         </container-dialog>
+                        <link url="${sharedLinks['Audiences/AudienceImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload_file"
+                                condition="canEdit &amp;&amp; can.audienceImport"/>
+                        <link url="${sharedLinks['Audiences/AudienceMerge']}" text="Merge" link-type="anchor-button" icon="sym_o_merge" condition="canEdit"/>
                         <link url="." text="Archived" link-type="anchor-button" icon="sym_o_inventory_2" parameter-map="{archived:'Y'}"/>
                     </container>
                 </container>

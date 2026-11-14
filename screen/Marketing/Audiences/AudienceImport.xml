@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › AudienceImport (design-marketing §4 AudienceImport: ImportFile, ImportEvidence, ImportMatches,
+    ImportResults; §18 the error rows; style-guide §3.9 Wizard; impl-marketing P4): contacts for a Marketing list from a file, with their
+    consent evidence. Without an import: 1. File and evidence (the list, the file, the evidence source, date and text or the column
+    that gives each row's, accept with the evidence for a consent editor) and the recent imports of the user's organizations
+    (find#AudienceImportRuns). With one (audienceImportId; Admin's Imports opens a run here): its header and counts; 2. Mapping and
+    evidence again while it is previewed; 3. Rows, each with the proposed action, the matched contact, the address masked and its
+    exclusion or note, then its outcome; Apply (at the revision read), Retry failures and the error rows' download. Everything is
+    Mantle's guarded AudienceServices (MARKETING_AUDIENCE_IMPORT beside MARKETING_AUDIENCE_EDIT and the organization; reading
+    MARKETING_AUDIENCE_VIEW); no raw file or address is shell context. Hidden from the Audiences tabs; opened from Lists and
+    ListDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Import" default-menu-include="false">
+    <parameter name="audienceImportId"/>
+    <parameter name="contactListId"/>
+    <parameter name="outcome"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="previewImport" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="applyImport" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="downloadImportErrors" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <set field="canImport" from="!!(can.audienceEdit &amp;&amp; can.audienceImport)"/>
+        <if condition="audienceImportId &amp;&amp; can.audienceRead">
+            <service-call name="mantle.marketing.AudienceServices.get#AudienceImport" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{audienceImportId:audienceImportId, outcome:(outcome || null), pageIndex:pageIndex}"/>
+        </if>
+        <if condition="!audienceImportId &amp;&amp; can.audienceRead">
+            <service-call name="mantle.marketing.AudienceServices.find#AudienceImportRuns" out-map="runs" transaction="force-new" ignore-error="true"
+                    in-map="{targetId:'marketingAudience', contactListId:(contactListId || null), maxRows:20}"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="importFound" from="!!detail?.audienceImport"/>
+        <set field="imported" from="detail?.audienceImport || {}"/>
+        <set field="counts" from="detail?.counts || {}"/>
+        <set field="proposed" from="detail?.proposed || {}"/>
+        <set field="importCan" from="detail?.capabilities || {}"/>
+        <set field="itemList" from="detail?.itemList || []"/>
+        <set field="itemListCount" from="detail?.itemListCount"/>
+        <set field="itemListPageIndex" from="detail?.itemListPageIndex"/>
+        <set field="itemListPageSize" from="detail?.itemListPageSize"/>
+        <set field="itemListPageMaxIndex" from="detail?.itemListPageMaxIndex"/>
+        <set field="itemListPageRangeLow" from="detail?.itemListPageRangeLow"/>
+        <set field="itemListPageRangeHigh" from="detail?.itemListPageRangeHigh"/>
+        <set field="runList" from="runs?.runList || []"/>
+        <set field="listsPath" from="sharedLinks['Audiences/Lists']"/>
+        <set field="listPath" from="sharedLinks['Audiences/ListDetail']"/>
+        <set field="columnOptions" from="(detail?.columns || []).map(name =&gt; ({value: name, label: name}))"/>
+        <set field="fileValues" from="{contactListId: contactListId || null, sourceEnumId: 'PcsImport', characterSet: 'UTF-8'}"/>
+        <set field="mappingValues" from="Object.assign({audienceImportId: audienceImportId, expectedRevision: imported.revision,
+                sourceEnumId: imported.sourceEnumId || 'PcsImport', evidenceDate: imported.evidenceDate, evidenceText: imported.evidenceText,
+                evidenceColumn: imported.evidenceColumn, evidenceDateColumn: imported.evidenceDateColumn, accept: imported.acceptEvidence},
+                detail?.fieldColumns || {})"/>
+        <set field="applyValues" from="{audienceImportId: audienceImportId, expectedRevision: imported.revision}"/>
+        <set field="factsText" from="importFound ? [imported.rowCount + ' rows', proposed.add + ' new contacts', proposed.match + ' existing',
+                proposed.exclude + ' excluded', proposed.skip + ' skipped', proposed.noted ? proposed.noted + ' with a note' : null].filter(Boolean).join(' · ') : ''"/>
+        <set field="outcomeText" from="importFound &amp;&amp; imported.state != 'staged' ? [counts.pending + ' pending', counts.accepted + ' accepted',
+                counts.existing + ' already on the list', counts.refused + ' refused', counts.invalid + ' invalid', counts.skipped + ' skipped',
+                counts.failed ? counts.failed + ' failed' : null, counts.staged ? counts.staged + ' not applied' : null].filter(Boolean).join(' · ') : ''"/>
+        <set field="captionText" from="importFound ? [imported.listName, imported.organizationName, 'staged ' + imported.stagedText + (imported.stagedBy ? ' by ' + imported.stagedBy : ''),
+                imported.appliedText ? 'applied ' + imported.appliedText + (imported.appliedBy ? ' by ' + imported.appliedBy : '') : null,
+                imported.purged ? 'file removed' : 'file kept until ' + imported.expireText].filter(Boolean).join(' · ') : ''"/>
+        <set field="evidenceSummary" from="importFound ? [imported.sourceText, imported.evidenceDateText, imported.evidenceColumn ? 'the evidence of each row from ' + imported.evidenceColumn : null,
+                imported.acceptEvidence == 'Y' ? 'accepted with the evidence' : 'each person confirms'].filter(Boolean).join(' · ') : ''"/>
+    </actions>
+    <widgets>
+        <label text="You do not read audiences in Marketing." type="p" style="m-muted" condition="!can.audienceRead"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Audience import" type="h5"/></container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="." text="New import" link-type="anchor-button" icon="sym_o_upload_file" condition="audienceImportId &amp;&amp; canImport"/>
+                <link url="${listsPath}" text="Lists" link-type="anchor-button" icon="sym_o_list"/>
+            </container>
+        </container>
+
+        <!-- 1. File and evidence (design §4 ImportFile, ImportEvidence) and the recent imports -->
+        <section name="ImportStart" condition="!audienceImportId &amp;&amp; can.audienceRead">
+            <widgets>
+                <section name="ImportFileBox" condition="canImport"><widgets>
+                <container-box>
+                    <box-header title="1. File and evidence"/>
+                    <box-body>
+                        <label text="Choosing a list is not consent: give the evidence of what the people did or said, or the column that gives each row's. Each request waits for the person's confirmation unless a consent editor accepts with the evidence; a withdrawal or a suppression is never cleared."
+                                type="p" style="m-muted"/>
+                        <form-single name="ImportFile" transition="previewImport" map="fileValues">
+                            <field name="contactListId">
+                                <default-field title="List">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'audienceLists', selected:fileValues.contactListId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="importFile"><default-field title="File"><file accept=".csv,.vcf,text/csv,text/vcard"/></default-field></field>
+                            <field name="characterSet">
+                                <default-field title="Encoding">
+                                    <drop-down>
+                                        <option key="UTF-8" text="UTF-8"/>
+                                        <option key="WINDOWS-1252" text="Windows (1252)"/>
+                                        <option key="ISO-8859-1" text="Latin-1"/>
+                                        <option key="UTF-16" text="UTF-16"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sourceEnumId">
+                                <default-field title="Evidence source">
+                                    <drop-down>
+                                        <option key="PcsImport" text="Import"/>
+                                        <option key="PcsForm" text="Form"/>
+                                        <option key="PcsStaff" text="Staff"/>
+                                        <option key="PcsCheckout" text="Checkout"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="evidenceDate"><default-field title="Evidence date" tooltip="When the people asked (or name the column with each row's date); never today by default"><date-time type="date-time"/></default-field></field>
+                            <field name="evidenceText"><default-field title="Evidence" tooltip="What the people did or said, and where"><text-area rows="3" cols="60"/></default-field></field>
+                            <field name="evidenceColumn"><default-field title="Evidence column" tooltip="The file's column with each row's own evidence, if any"><text-line size="30"/></default-field></field>
+                            <field name="evidenceDateColumn"><default-field title="Evidence date column" tooltip="The file's column with each row's own evidence date, if any"><text-line size="30"/></default-field></field>
+                            <field name="accept">
+                                <conditional-field title="Accept now" condition="can.consentEdit">
+                                    <check><option key="Y" text="Accept with this evidence instead of asking for confirmation"/></check>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="contactListId"/><field-ref name="importFile"/></field-row>
+                                <field-row><field-ref name="characterSet"/><field-ref name="sourceEnumId"/></field-row>
+                                <field-row><field-ref name="evidenceDate"/><field-ref name="evidenceColumn"/></field-row>
+                                <field-ref name="evidenceText"/>
+                                <field-row><field-ref name="evidenceDateColumn"/><field-ref name="accept"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <label type="p" style="text-caption m-muted"
+                                text="CSV with a header row, or vCard; at most 1 MiB and 1,000 rows. Names, email and phone columns are found by their headers and can be changed after the preview. A contact is matched by the list's address alone, or made; nothing is filed until you apply."/>
+                    </box-body>
+                </container-box>
+                </widgets></section>
+                <container-box>
+                    <box-header title="Recent imports"/>
+                    <box-body-nopad>
+                        <form-list name="RecentImports" list="runList" skip-form="true">
+                            <field name="runId">
+                                <default-field title="Import"><link url="." text="${runId}" link-type="anchor" parameter-map="{audienceImportId:runId}"/></default-field>
+                            </field>
+                            <field name="fileLabel"><default-field title="File and list"><display/></default-field></field>
+                            <field name="scopeTitle"><default-field title="Organization"><display/></default-field></field>
+                            <field name="startedText"><default-field title="Staged"><display/></default-field></field>
+                            <field name="userName"><default-field title="By"><display/></default-field></field>
+                            <field name="rowCount" align="right"><default-field title="Rows"><display format="#,##0"/></default-field></field>
+                            <field name="errorCount" align="right"><default-field title="Errors"><display format="#,##0"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="runId"/><field-ref name="fileLabel"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="rowCount"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No imports yet." type="p" style="m-muted q-pa-sm" condition="!runList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- an import: its header, the mapping again, its rows and the actions -->
+        <section name="ImportNotFound" condition="audienceImportId &amp;&amp; can.audienceRead &amp;&amp; !importFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Import ${audienceImportId} is not available: it does not exist or it is not one of your organizations'." type="p"/>
+                        <link url="." text="Back to imports" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ImportFound" condition="importFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${audienceImportId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${imported.fileName || 'Import'}" type="h5" style="q-my-none"/>
+                            </container>
+                            <container style="row items-center q-gutter-x-xs">
+                                <link url="${listPath}" text="${imported.listName}" link-type="anchor" parameter-map="{contactListId:imported.contactListId}"/>
+                                <label text="${captionText}" type="span" style="text-caption m-muted"/>
+                            </container>
+                            <label text="${factsText}" type="div" style="text-caption m-muted"/>
+                            <label text="Evidence: ${evidenceSummary}${imported.evidenceText ? ' · ' + imported.evidenceText : ''}" type="div" style="text-caption m-muted"/>
+                            <label text="${outcomeText}" type="div" style="text-caption" condition="outcomeText"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${imported.stateColor}">${WebUtilities.encodeHtml(imported.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(imported.stateText ?? "")})}]]></text>
+                                <text type="html">${imported.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <container-dialog id="ApplyImportDialog" button-text="Apply" icon="sym_o_playlist_add_check" type="primary"
+                                    title="Apply import ${audienceImportId}" width="560" condition="importCan.canApply">
+                                <label text="Each row not yet applied files one subscription request, ${imported.acceptEvidence == 'Y' ? 'accepted with the evidence' : 'pending until the person confirms'}. A withdrawal after the evidence is refused; a suppressed address stays suppressed. A row that fails does not stop the others."
+                                        type="p"/>
+                                <form-single name="ApplyImport" transition="applyImport" map="applyValues">
+                                    <field name="audienceImportId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Apply ${(proposed.add || 0) + (proposed.match || 0)} rows"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <section name="RetryImportAction" condition="importCan.canRetry"><widgets>
+                            <form-single name="RetryImport" transition="applyImport" map="applyValues">
+                                <field name="audienceImportId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="retryFailed"><default-field><hidden default-value="Y"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Retry ${counts.failed} failed rows"/></default-field></field>
+                            </form-single>
+                            </widgets></section>
+                            <link url="downloadImportErrors" text="Download error rows" link-type="anchor-button" icon="sym_o_download"
+                                    parameter-map="{audienceImportId:audienceImportId}" condition="importCan.canDownloadErrors"/>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- 2. the mapping and the evidence again, while it is previewed -->
+                <section name="ImportMappingBox" condition="importCan.canPreview"><widgets>
+                <container-box>
+                    <box-header title="2. Columns and evidence"/>
+                    <box-body>
+                        <form-single name="ImportMapping" transition="previewImport" map="mappingValues">
+                            <field name="audienceImportId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="emailColumn"><default-field title="Email"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="phoneColumn"><default-field title="Phone"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="firstNameColumn"><default-field title="First name"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="lastNameColumn"><default-field title="Last name"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="nameColumn"><default-field title="Full name"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="organizationColumn"><default-field title="Organization"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="evidenceColumn"><default-field title="Evidence column"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="evidenceDateColumn"><default-field title="Evidence date column"><drop-down allow-empty="true"><list-options list="columnOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="sourceEnumId">
+                                <default-field title="Evidence source">
+                                    <drop-down>
+                                        <option key="PcsImport" text="Import"/>
+                                        <option key="PcsForm" text="Form"/>
+                                        <option key="PcsStaff" text="Staff"/>
+                                        <option key="PcsCheckout" text="Checkout"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="evidenceDate"><default-field title="Evidence date"><date-time type="date-time"/></default-field></field>
+                            <field name="evidenceText"><default-field title="Evidence"><text-area rows="2" cols="60"/></default-field></field>
+                            <field name="accept">
+                                <conditional-field title="Accept now" condition="importCan.canAccept">
+                                    <check><option key="Y" text="Accept with this evidence instead of asking for confirmation"/></check>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview again"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="emailColumn"/><field-ref name="phoneColumn"/></field-row>
+                                <field-row><field-ref name="firstNameColumn"/><field-ref name="lastNameColumn"/></field-row>
+                                <field-row><field-ref name="nameColumn"/><field-ref name="organizationColumn"/></field-row>
+                                <field-row><field-ref name="evidenceColumn"/><field-ref name="evidenceDateColumn"/></field-row>
+                                <field-row><field-ref name="sourceEnumId"/><field-ref name="evidenceDate"/></field-row>
+                                <field-ref name="evidenceText"/>
+                                <field-ref name="accept"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                </widgets></section>
+
+                <!-- 3. the rows: the preview (ImportMatches), then the outcomes (ImportResults) -->
+                <container-box>
+                    <box-header title="${imported.state == 'staged' ? '3. Preview' : 'Results'} · ${itemListCount || 0}"/>
+                    <box-toolbar>
+                        <link url="." text="All" link-type="anchor" parameter-map="{audienceImportId:audienceImportId}"/>
+                        <link url="." text="Errors" link-type="anchor" parameter-map="{audienceImportId:audienceImportId, outcome:'errors'}"/>
+                        <link url="." text="Excluded" link-type="anchor" parameter-map="{audienceImportId:audienceImportId, outcome:'excluded'}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ImportRows" list="itemList" skip-form="true" paginate="true">
+                            <field name="rowNumber" align="right"><default-field title="Row"><display/></default-field></field>
+                            <field name="contactName"><default-field title="Name"><display/></default-field></field>
+                            <field name="addressMasked"><default-field title="Address"><display/></default-field></field>
+                            <field name="actionText"><default-field title="Contact"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Note"><display/></default-field></field>
+                            <field name="outcomeText">
+                                <default-field title="Outcome">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColor}">${WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(outcomeText ?? "")})}]]></text>
+                                        <text type="html">${outcomeText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="rowNumber"/><field-ref name="contactName"/></column>
+                                <column><field-ref name="outcomeText"/><field-ref name="reasonText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No rows to show." type="p" style="m-muted q-pa-sm" condition="!itemList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

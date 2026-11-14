@@ -57,7 +57,8 @@ along with this software (see the LICENSE.md file). If not, see
     Sales (appRoot Sales, mounted at Sales/Orders/OrderDetail, the one route; crosscut §3.6's Sales row, design-sales §5, impl-sales
     P7, P9, P10; mantle.order.SalesQuoteServices.get#Quote; template/SalesOrderDetail.xml): a quote of the user's sales scope, its draft's
     lines priced by the one resolver with their provenance and entered prices, the shipping charge, X1's tax, validity, history,
-    Chatter and Files; P11 adds the sales-order context. -->
+    Chatter and Files; P11 adds the sales-order context (mantle.order.SalesOrderServices.get#SalesOrder, asked first: a direct order,
+    a quote once placed or another sales order of the scope). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Order" default-menu-include="false">
 
@@ -137,6 +138,15 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="salesCloneQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
     <transition-include name="salesQuotePrint" location="component://mr-boss/template/SalesQuotes.xml"/>
     <transition-include name="salesQuoteDocument" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <!-- Sales P11: a sales order's lines, placement, approval, holds, remainder and copy -->
+    <transition-include name="salesStoreOrderLine" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesDeleteOrderLine" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesPlaceOrder" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesApproveOrder" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesHoldOrder" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesReleaseHold" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesCancelRemainder" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesCloneOrder" location="component://mr-boss/template/SalesOrders.xml"/>
     <!-- Insights (appRoot Insights, mounted at Insights/Records/OrderDetail; design-insights §10, crosscut's Insights row, impl-insights
         P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
         below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads
@@ -195,11 +205,19 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="operationLinks" from="linksOut?.links || {}"/>
             <set field="recordFound" from="false"/>
         </else-if><else-if condition="appRoot == 'Sales'">
-            <!-- Sales (crosscut §3.6's Sales row, impl-sales P7, F68): a quote of the user's sales scope, before Projects' default -->
-            <service-call name="mantle.order.SalesQuoteServices.get#Quote" in-map="{orderId:orderId}" out-map="salesQuoteOut"
+            <!-- Sales P11 (crosscut §3.6's second Sales row): a sales order of the user's sales scope first (a direct order, a quote once
+                placed, another sales order), else a quote (P7) -->
+            <service-call name="mantle.order.SalesOrderServices.get#SalesOrder" in-map="{orderId:orderId}" out-map="salesOrderOut"
                     transaction="force-new" ignore-error="true"/>
             <script>ec.message.clearErrors()</script>
-            <set field="salesQuote" from="salesQuoteOut?.quoteFound ? salesQuoteOut : null"/>
+            <set field="salesOrder" from="salesOrderOut?.orderFound ? salesOrderOut : null"/>
+            <!-- Sales (crosscut §3.6's Sales row, impl-sales P7, F68): a quote of the user's sales scope, before Projects' default -->
+            <if condition="!salesOrder">
+                <service-call name="mantle.order.SalesQuoteServices.get#Quote" in-map="{orderId:orderId}" out-map="salesQuoteOut"
+                        transaction="force-new" ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <set field="salesQuote" from="!salesOrder &amp;&amp; salesQuoteOut?.quoteFound ? salesQuoteOut : null"/>
             <set field="recordFound" from="false"/>
         </else-if><else>
         <script><![CDATA[

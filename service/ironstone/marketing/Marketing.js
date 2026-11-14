@@ -156,6 +156,9 @@ const linkPaths = [
     "Leads",
     "Leads/Accounts",
     "QuickCreate/NewList",
+    // P4: the audience import (Admin's Imports opens a run there) and the list merge (design §4)
+    "Audiences/AudienceImport",
+    "Audiences/AudienceMerge",
     // P5: segments and the audience preview (design §4)
     "Audiences/Segments",
     "Audiences/SegmentDetail",

@@ -194,7 +194,7 @@ feature("Projects', Accounting's, Purchasing's, Customer Service's and Commerce'
                 .filter(([, , id]) => id)
                 .map(([root, path, id]) => {
                     const out = asUser(users.system, () => page(path, {orderId: id}, "html", root))
-                    return {root, opened: opened(out), quoteContext: out.output.includes("Quote not available")}
+                    return {root, opened: opened(out), quoteContext: out.output.includes("it is not a sales quote or order")}
                 })
         }
     },
