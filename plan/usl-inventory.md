@@ -2400,6 +2400,17 @@ remain historical; these rows add no implementation claim.
 | party/SalesAgreementServices | activate#SalesAgreement, end#SalesAgreement, renew#SalesAgreement | Sales/Agreements/AgreementDetail (ActivateAgreement, EndAgreement) | Shared/AgreementDetail (Activate, End agreement or Cancel draft, Renew) |
 | party/SalesAgreementServices | expire#SalesAgreements | — (job) | ServiceJob expire_SalesAgreements (data/SalesAgreementSetupData.xml) |
 
+### Added in the Sales build: forecast and targets (P18, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| sales/ForecastServices | get#Forecast | Sales/Pipeline/Forecast (ForecastMetrics, ForecastDeals) | Sales/Pipeline/Forecast (Measures, Deals behind the pipeline with CSV, Forecasts below this one) |
+| sales/ForecastServices | store#Forecast | Sales/Pipeline/Forecast (SubmitForecast) | Sales/Pipeline/Forecast (Submit forecast) |
+| sales/ForecastServices | store#ForecastDetail | Sales/Pipeline/Forecast (ForecastDetail) | Sales/Pipeline/Forecast (Allocate, Remove) |
+| sales/ForecastServices | store#Target, find#Targets | Sales/Settings/Targets (SalesTargets) | Sales/Settings/Targets (New target, Change, the list with CSV) |
+| sales/ForecastServices | ensure#SalesPeriods | — (not in the design) | Sales/Settings/Targets (Add sales periods) |
+| sales/ForecastServices | get#TargetAttainment | Sales/Reports/TargetAttainment (TargetOptions, TargetResults) | Sales/Reports/TargetAttainment (with CSV) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section
