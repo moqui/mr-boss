@@ -195,7 +195,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="bounceDomain">
-                                <default-field title="Bounce domain" tooltip="Bounces come to bounces+(delivery)@ this domain, received by the mail account bounces@ it">
+                                <default-field title="Bounce domain" tooltip="Bounces come to bounces+(delivery).(key)@ this domain, received by the mail account bounces@ it">
                                     <text-line size="30"/></default-field>
                             </field>
                             <field name="siteId"><default-field title="Site" tooltip="The PASS site whose email preferences take its unsubscribes"><text-line size="20"/></default-field></field>

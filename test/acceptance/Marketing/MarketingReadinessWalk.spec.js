@@ -157,7 +157,14 @@ feature(
                 )
             }
             const sentBounce = capture.getMessages().map(mail => mail.bounceAddress)
-            const verp = name => "bounces+" + deliveries[name] + "@" + domain
+            // the VERP address carries the delivery's random key (P6 review)
+            const verp = name =>
+                "bounces+" +
+                deliveries[name] +
+                "." +
+                one("mantle.party.MessageDelivery", {deliveryId: deliveries[name]}).bounceKey +
+                "@" +
+                domain
             const dsn = stored(
                 verp("dsn"),
                 "message/delivery-status",
