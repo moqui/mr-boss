@@ -411,7 +411,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F89) |
 | P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | built and reviewed Nov 13, merged |
 | P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | built and reviewed Nov 13, merged |
-| P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | — |
+| P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | built and reviewed Nov 14, merged |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | — |
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | — |
 | P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | — |
@@ -1152,7 +1152,7 @@ both; mr-moqui unchanged, no Rust built.
   suppression services); ss-inventory has no row for P3's screens.
 - Design edits: design-marketing §4 (as built); design-drawers-commons' Mailboxes row (owner contract: lists, consent's organization and
   change rule, suppressions and the ledger's refusal).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F118 to F126 in order:
   - the consent mutators (`subscribe#ContactListParty`, `store#PartyConsent`, the signed-in `unsubscribe#ContactListParty`) admitted any
     signed-in user for any party that was not someone's personal contact; now the party's own user, a contact administrator or
     Marketing's consent editor of the organization; every caller found passes (Comms as a contact administrator, Shop and the account
@@ -1232,7 +1232,7 @@ worktrees during the review, clean, both sides kept. The user's two calls (Nov 1
     MessageDelivery gains `organizationPartyId` (queue#Delivery's parameter; a Comms ledger extension ahead of P9's campaign
     delivery, which will use it), the attempt uses it before the store's, and SalesQuoteIssues.js names the seller on both queues.
     Suppressions' feature: a hard bounce of A's refuses a storeless delivery from A and not one from B.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F127 to F131 in order:
   - the token and code paths' consent writes go through the internal `record#PartyConsent` (R1);
   - suppressions by kind of delivery (R2) and the editor's undated blocks (R3); the lead contacts' visibility (R4); the delivery's
     own organization (R5, which touches Sales P10's SalesQuoteIssues.js: two queue parameters);
@@ -2191,6 +2191,20 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F115 | P2 (Review Nov 13): `store#MarketingPolicy`'s stale check is not locked: two first policies stored at once could both start (low; configurers are few) | P2: as its Review note says |
 | F116 | P2 (Review Nov 13): `create#CampaignAsset` takes `userId` and `contentDate` from its parameters (the auto-parameters), as Sales' `create#OpportunityContent`: an editor could name another uploader; left for a shared fix of the content hosts | P2: as its Review note says |
 | F117 | P2 (Review Nov 13): Attention's approvals list shows an approver the requests they authored too, which they may not decide | P2: as its Review note says |
+| F118 | P3 (Built Nov 14): the consent mutators (`subscribe#ContactListParty`, `store#PartyConsent`, the signed-in `unsubscribe#ContactListParty`) admitted any signed-in user for any party that was not someone's personal contact; now the party's own user, a contact administrator or Marketing's consent editor of the organization; every caller found passes (Comms as a contact administrator, Shop and the account hub for the party's own user, the token pages with no user) | P3: as its Built note says |
+| F119 | P3 (Built Nov 14): Marketing reads lists and members through its own finds rather than extending `find#ContactLists`/`find#ContactListParties` (the code over the plan above) | P3: as its Built note says |
+| F120 | P3 (Built Nov 14): a request whose evidence predates the party's latest withdrawal is refused WITHDRAWN, and a staff acceptance of a purpose the person withdrew (for every organization or the list's) is refused CONSENT_WITHDRAWN while a pending request with newer evidence is filed (the person's own confirmation, P7, renews it): the plan's "never clears a withdrawal" made precise | P3: as its Built note says |
+| F121 | P3 (Built Nov 14): with organizations asked, `find#Consents` merges the scoped rows of all of them into one state per purpose; a contact administrator's registry (no organization) shows the global states only, so an organization's scoped grant shows only under Marketing's mount | P3: as its Built note says |
+| F122 | P3 (Built Nov 14): suppressions apply to every delivery of the ledger, transactional notices too, for their organization or every one; a delivery's organization is its store's until P9 gives a campaign delivery its own | P3: as its Built note says |
+| F123 | P3 (Built Nov 14): the bulk action's capability shows from `ec.user.hasPermission('MARKETING_AUDIENCE_EDIT')` in Sales' screens (no Marketing context there); Mantle checks it, the list's organization and each record under the caller's Sales read | P3: as its Built note says |
+| F124 | P3 (Built Nov 14): Comms' Consent screens answer a Marketing consent editor under Comms' own root too (the rule is by permission, not by mount) | P3: as its Built note says |
+| F125 | P3 (Built Nov 14): the Leads area mounts Sales' Leads in P3 (the plan places Marketing's Leads in P13), as Accounts needed an area | P3: as its Built note says |
+| F126 | P3 (Built Nov 14): the design's ConsentDetail and Lists/ListDetail paths are Consent/Contact and Audiences/ListDetail (the code over the plan above) | P3: as its Built note says |
+| F127 | P3 (Review Nov 14): the token and code paths' consent writes go through the internal `record#PartyConsent` (R1) | P3: as its Review note says |
+| F128 | P3 (Review Nov 14): suppressions by kind of delivery (R2) and the editor's undated blocks (R3); the lead contacts' visibility (R4); the delivery's own organization (R5, which touches Sales P10's SalesQuoteIssues.js: two queue parameters) | P3: as its Review note says |
+| F129 | P3 (Review Nov 14): a Sales record of one organization may be filed to a list of another when the caller holds both (Sales there, Marketing here); nothing requires the lead's or account's organization to be the list's; left as built (the caller sees both) | P3: as its Review note says |
+| F130 | P3 (Review Nov 14): Comms' Consent/Contact for a Marketing consent editor of several organizations shows the global purpose states only (the scoped state is asked for one organization); history and lists are theirs; a display gap, no disclosure | P3: as its Review note says |
+| F131 | P3 (Review Nov 14): a contact with only a scoped consent appears in a contact administrator's registry with no purpose state (its scoped rows hidden) | P3: as its Review note says |
 
 ## 7. Later
 
