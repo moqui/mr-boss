@@ -946,6 +946,61 @@ choiceSources.carriers = (userScope, term) => {
         .slice(0, choiceLimit)
 }
 // ===== end of P14 =====
+// ===== P15: customer agreements and prices (impl-sales P15; design-sales §7 Agreements, AgreementDetail, CustomerPrices, PriceLists) =====
+linkPaths.push(
+    "Agreements",
+    "Agreements/Agreements",
+    "Agreements/AgreementDetail",
+    "Agreements/CustomerPrices",
+    "Agreements/PriceLists",
+    "Agreements/PriceLists/PriceListDetail"
+)
+// An agreement the user sees (SalesAccess.js agreementOf: of an organization of the scope, for a Sales reader), the shared
+// AgreementDetail under Agreements; a record panel host of the root
+recordKinds.agreement = {
+    name: "Agreement",
+    icon: "sym_o_contract",
+    destination: "Agreements/AgreementDetail",
+    parameter: "agreementId",
+    read: (userScope, agreementId) => {
+        const found = salesAccess.agreementOf(userScope.mantle, agreementId)
+        if (!found) return null
+        return {
+            organizationPartyId: found.organizationPartyId,
+            label: found.agreement.description || "Agreement " + agreementId,
+            detail: found.agreement.isTemplate === "Y" ? "Agreement template" : "Agreement",
+            accountPartyId: found.agreement.otherPartyId || null
+        }
+    }
+}
+// NewAgreement's template: the agreement templates of the selling organization (Mantle's scoped find#SalesAgreements)
+choiceSources.agreementTemplates = (userScope, term, selected, p) => {
+    const organizationPartyId = choiceOrganization(userScope, p)
+    if (!organizationPartyId) return []
+    const found = lib.probe("mantle.party.SalesAgreementServices.find#SalesAgreements", {
+        organizationPartyId,
+        state: "templates",
+        text: term || null,
+        pageSize: choiceLimit
+    })
+    return Array.from(found.agreementList || [])
+        .filter(row => row.statusId !== "AgmStCancelled")
+        .map(row => ({value: row.agreementId, label: row.description + " · " + row.currencyUomId}))
+}
+// AgreementParties' party: the customer (accountPartyId) and its current contacts, and the people working for the organization
+// (store#AgreementParty checks the party again)
+choiceSources.agreementParties = (userScope, term, selected, p) => {
+    const organizationPartyId = choiceOrganization(userScope, p)
+    const account = p.accountPartyId ? salesAccess.accountOf(userScope.mantle, p.accountPartyId) : null
+    const ids = (account ? [p.accountPartyId].concat(accountContactIds(p.accountPartyId) || []) : []).concat(
+        organizationPartyId ? memberIds([organizationPartyId]) : []
+    )
+    const options = peopleOptions(ids, term, userScope)
+    if (account && (!term || partyLabel(account.party).toLowerCase().includes(term.toLowerCase())))
+        options.unshift({value: p.accountPartyId, label: partyLabel(account.party)})
+    return options
+}
+// ===== end of P15 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(
@@ -1120,6 +1175,23 @@ searchFinds.push({
         }))
     }
 })
+// ===== P15: the palette's agreements, through Mantle's scoped find (find#SalesAgreements' text: name or id), open ones
+searchFinds.push({
+    kind: "agreement",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.party.SalesAgreementServices.find#SalesAgreements", {text, pageSize: limit})
+        return Array.from(found.agreementList || []).map(row => ({
+            title: row.description,
+            subtitle: ["Agreement " + row.agreementId, row.customerName, row.statusText].filter(Boolean).join(" · "),
+            icon: recordKinds.agreement.icon,
+            recordEntity: "mantle.party.agreement.Agreement",
+            recordId: row.agreementId,
+            url: recordUrl("agreement", row.agreementId)
+        }))
+    }
+})
+// ===== end of P15 =====
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}

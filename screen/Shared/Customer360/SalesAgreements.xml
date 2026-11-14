@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales Agreements tab (crosscut §3.2 Sales row; design-sales §4 Customer360, §7; impl-sales P15): the account's
+    customer agreements the user sees (Mantle's scoped find#SalesAgreements for the customer: of the user's organizations), every state
+    but templates, newest first, each opening AgreementDetail; New agreement for the account for a holder of SALES_AGREEMENT_EDIT. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreements" default-menu-index="6">
+    <parameter name="customerPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createSalesAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <condition><expression>appRoot == 'Sales' &amp;&amp; !!sales?.capabilities?.anyRead</expression></condition>
+    <actions>
+        <if condition="customerFound">
+            <service-call name="mantle.party.SalesAgreementServices.find#SalesAgreements" out-map="accountAgreements" transaction="force-new"
+                    ignore-error="true" in-map="{customerPartyId:customerPartyId, state:'all', pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="agreementRows" from="(accountAgreements?.agreementList || []).filter(row =&gt; !row.isTemplate)"/>
+        <set field="agreementDetailPath" from="sharedLinks['Agreements/AgreementDetail'] || null"/>
+        <set field="newAgreementDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, customerPartyId: customerPartyId, agreementTypeEnumId: 'AgrSales'}"/>
+    </actions>
+    <widgets>
+        <section name="SalesAgreementsTab" condition="customerFound">
+            <widgets>
+                <container style="row justify-end q-mb-sm">
+                    <container-dialog id="AccountNewAgreementDialog" button-text="New agreement" icon="sym_o_add" width="640"
+                            title="New agreement" condition="sales.capabilities.agreementEdit">
+                        <form-single name="AccountNewAgreement" transition="createSalesAgreement" map="newAgreementDefaults">
+                            <field name="organizationPartyId">
+                                <default-field title="Selling organization">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="customerPartyId"><default-field><hidden/></default-field></field>
+                            <field name="agreementTypeEnumId"><default-field><hidden/></default-field></field>
+                            <field name="description"><default-field title="Name"><text-line/></default-field></field>
+                            <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                            <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                            <field name="submitButton"><default-field title="Start agreement"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <form-list name="SalesAccountAgreements" list="agreementRows" skip-form="true" paginate="false">
+                    <field name="description">
+                        <conditional-field title="Agreement" condition="agreementDetailPath">
+                            <link url="${agreementDetailPath}" text="${description}" link-type="anchor" parameter-map="{agreementId:agreementId}"/>
+                        </conditional-field>
+                        <default-field title="Agreement"><display/></default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'AgmStActive' ? (expiring ? 'warning' : 'positive') : statusId == 'AgmStDraft' ? 'secondary' : 'grey-7'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="intervalText"><default-field title="In effect"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="intervalText"/></column>
+                        <column><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No agreements with this account" condition="!agreementRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

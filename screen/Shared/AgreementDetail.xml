@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AgreementDetail, the customer agreement's definition (crosscut Shared/AgreementDetail; design-sales §7 AgreementDetail, §12.2;
+    style-guide §3.3 Detail; impl-sales P15, §5 Q5): Sales owns it and mounts it at Sales/Agreements/AgreementDetail; another root
+    answers "not available" until its context is built (Customer Service's read of coverage and Accounting's term actions, design §7).
+    It shares Mantle's records and status flow with Purchasing's own AgreementDetail and none of its forms (§4 Nov 13, Q5). Over
+    mantle.party.SalesAgreementServices.get#SalesAgreement (an agreement of the user's sales scope; another organization's and a
+    missing one "not available" alike): the header (customer, organization, currency, dates, state) with the state's one primary
+    (Activate a draft, Renew an active or expired one, New agreement from a template) and More (Edit, Add document, End or Cancel, the
+    agreement it renews and its renewal); what activation still needs; Overview; Parties (AgreementParties); Items and prices
+    (AgreementItems, AgreementPrices: the negotiated price of each product, kept on the agreement); Terms (AgreementTerms); Linked
+    quotes and orders (AgreementConnections, the lines priced from it that the user sees); Documents; History; Conversation and Files
+    (AgreementCollaboration). Every change is Mantle's guarded service at the revision shown (template/SalesAgreements.xml). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreement" default-menu-include="false">
+    <parameter name="agreementId" required="true"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createSalesAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesStoreAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesStoreAgreementParty" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesStoreAgreementTerm" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesStoreAgreementItem" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesActivateAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesEndAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesRenewAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesAgreementContent" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <actions>
+        <if condition="appRoot == 'Sales'">
+            <service-call name="mantle.party.SalesAgreementServices.get#SalesAgreement" out-map="detail" transaction="force-new"
+                    ignore-error="true" in-map="{agreementId:agreementId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.agreementFound"/>
+        <set field="ag" from="detail?.agreement || {}"/>
+        <set field="agParties" from="detail?.parties || []"/>
+        <set field="agItems" from="detail?.items || []"/>
+        <set field="agTerms" from="detail?.terms || []"/>
+        <set field="agContents" from="detail?.contents || []"/>
+        <set field="agConnections" from="detail?.connections || []"/>
+        <set field="agHistory" from="detail?.history || []"/>
+        <set field="agIssues" from="detail?.activationIssues || []"/>
+        <set field="termTypes" from="detail?.termTypes || []"/>
+        <set field="primaryAction" from="ag.canActivate ? 'activate' : ag.canRenew ? 'renew' : ag.canAgree ? 'agree' : ag.canEdit ? 'addItem' : ''"/>
+        <set field="revisionValues" from="{agreementId:agreementId, agreementRevision:ag.agreementRevision}"/>
+        <set field="headerValues" from="{agreementId:agreementId, agreementRevision:ag.agreementRevision, description:ag.description,
+                textData:ag.textData, customerPartyId:ag.customerPartyId, currencyUomId:ag.currencyUomId,
+                fromDate:ag.fromDate, thruDate:ag.thruDate}"/>
+        <set field="newFromTemplate" from="{organizationPartyId:ag.organizationPartyId, templateAgreementId:agreementId,
+                agreementTypeEnumId:ag.agreementTypeEnumId, description:ag.description}"/>
+        <set field="customerUrl" from="sharedLinks['Accounts/Customer360'] || null"/>
+        <set field="orderUrl" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="captionText" from="[ag.customerName, ag.organizationName, ag.currencyUomId, ag.intervalText].filter(Boolean).join(' · ')"/>
+        <set field="overviewRows" from="[['Type', ag.typeText], ['Customer', ag.customerName], ['Organization', ag.organizationName],
+                ['Currency', ag.currencyUomId], ['In effect', ag.intervalText], ['Agreed', ag.agreementDateText], ['Renews', ag.predecessorName],
+                ['Renewed by', ag.successorName], ['Revision', String(ag.agreementRevision ?? '')], ['Text', ag.textData]]
+                .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]}))"/>
+    </actions>
+    <widgets>
+        <section name="AgreementNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Agreement ${agreementId} is not available: it does not exist or it is not one of your organizations'." type="p"/>
+                        <link url="${sharedLinks['Agreements/Agreements'] || '.'}" text="Back to agreements" link-type="anchor"
+                                condition="sharedLinks &amp;&amp; sharedLinks['Agreements/Agreements']"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="AgreementFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${agreementId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${ag.description}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${ag.statusId == 'AgmStActive' ? 'positive' : ag.statusId == 'AgmStDraft' ? 'secondary' : 'grey'}">${WebUtilities.encodeHtml(ag.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(ag.statusText ?? "")})}]]></text>
+                                <text type="html">${ag.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="AgreementActivate" button-text="Activate" icon="sym_o_task_alt" width="560" type="primary"
+                                title="Activate agreement ${agreementId}" condition="primaryAction == 'activate'">
+                            <form-single name="AgreementActivateForm" transition="salesActivateAgreement" map="revisionValues">
+                                <field name="agreementId"><default-field><hidden/></default-field></field>
+                                <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                <field name="fromDate"><default-field title="Active from" tooltip="Its own start, else now, when empty"><date-time type="date"/></default-field></field>
+                                <field name="acceptanceEvidence">
+                                    <default-field title="Customer's acceptance" tooltip="How the customer accepted, when no signed document is attached">
+                                        <text-area rows="2"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Activate">
+                                        <submit confirmation="Activate agreement ${agreementId}? Its prices apply to the customer's new quotes from its start."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="salesRenewAgreement" link-type="hidden-form" text="Renew" icon="sym_o_autorenew"
+                                btn-type="${primaryAction == 'renew' ? 'primary' : 'default'}" condition="ag.canRenew" parameter-map="{agreementId:agreementId, agreementRevision:ag.agreementRevision}"
+                                confirmation="Start a renewal of ${ag.description}? It is a draft until you activate it, which ends this agreement at its start."/>
+                        <container-dialog id="AgreementFromTemplate" button-text="New agreement" icon="sym_o_add" width="640" type="primary"
+                                title="New agreement from ${ag.description}" condition="primaryAction == 'agree'">
+                            <form-single name="AgreementFromTemplateForm" transition="createSalesAgreement" map="newFromTemplate">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="templateAgreementId"><default-field><hidden/></default-field></field>
+                                <field name="agreementTypeEnumId"><default-field><hidden/></default-field></field>
+                                <field name="customerPartyId">
+                                    <default-field title="Customer">
+                                        <drop-down allow-empty="false" required-manual-select="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Name"><text-line/></default-field></field>
+                                <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                <field name="submitButton"><default-field title="Start agreement"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="AgreementAddItem" button-text="Add item" icon="sym_o_add" width="640"
+                                type="${primaryAction == 'addItem' ? 'primary' : 'default'}" title="Add an item to agreement ${agreementId}" condition="ag.canEdit">
+                            <form-single name="AgreementAddItemForm" transition="salesStoreAgreementItem" map="revisionValues">
+                                <field name="agreementId"><default-field><hidden/></default-field></field>
+                                <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                <field name="agreementItemTypeEnumId">
+                                    <default-field title="Kind">
+                                        <drop-down allow-empty="false">
+                                            <option key="AitPricing" text="A product at a negotiated price"/>
+                                            <option key="AitSection" text="A section of text"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'products', organizationPartyId:ag.organizationPartyId, selected:productId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="price"><default-field title="Negotiated price (${ag.currencyUomId})"><text-line size="10"/></default-field></field>
+                                <field name="minQuantity"><default-field title="From quantity" tooltip="0 when empty"><text-line size="8"/></default-field></field>
+                                <field name="itemText"><default-field title="Text"><text-area rows="2"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add item"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="AgreementEdit" button-text="Edit agreement" icon="sym_o_edit" width="640"
+                                    title="Edit agreement ${agreementId}" condition="ag.canEdit">
+                                <form-single name="AgreementEditForm" transition="salesStoreAgreement" map="headerValues">
+                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                    <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                    <field name="description"><default-field title="Name"><text-line/></default-field></field>
+                                    <field name="customerPartyId">
+                                        <conditional-field title="Customer" condition="ag.canDraftEdit">
+                                            <drop-down allow-empty="${ag.isTemplate ? 'true' : 'false'}">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                                            </drop-down>
+                                        </conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="currencyUomId">
+                                        <conditional-field title="Currency" condition="ag.canDraftEdit">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                                            </drop-down>
+                                        </conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="fromDate">
+                                        <conditional-field title="From" condition="ag.canDraftEdit"><date-time type="date"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                    <field name="textData"><default-field title="Text"><text-area rows="4"/></default-field></field>
+                                    <field name="changeReason"><default-field title="Reason for the change"><text-line/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AgreementAddParty" button-text="Add party" icon="sym_o_person_add" width="560"
+                                    title="Add a party to agreement ${agreementId}" condition="ag.canEdit">
+                                <form-single name="AgreementAddPartyForm" transition="salesStoreAgreementParty" map="revisionValues">
+                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                    <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                    <field name="partyId">
+                                        <default-field title="Party" tooltip="The customer or one of its contacts, or a person of the organization">
+                                            <drop-down allow-empty="false" required-manual-select="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'agreementParties', organizationPartyId:ag.organizationPartyId,
+                                                            accountPartyId:ag.customerPartyId, selected:partyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="roleTypeId">
+                                        <default-field title="Role">
+                                            <drop-down allow-empty="false">
+                                                <option key="AgreementSigner" text="Signer"/>
+                                                <option key="Customer" text="Customer"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Add party"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AgreementAddTerm" button-text="Add term" icon="sym_o_gavel" width="560"
+                                    title="Add a term to agreement ${agreementId}" condition="ag.canEdit">
+                                <form-single name="AgreementAddTermForm" transition="salesStoreAgreementTerm" map="revisionValues">
+                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                    <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                    <field name="termTypeEnumId">
+                                        <default-field title="Term">
+                                            <drop-down allow-empty="false"><list-options list="termTypes" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="termNumber"><default-field title="Value" tooltip="Days, a percent or an amount, as the term reads"><text-line size="8"/></default-field></field>
+                                    <field name="termText"><default-field title="Text"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Add term"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AgreementAddDocument" button-text="Add document" icon="sym_o_attach_file" width="560"
+                                    title="Add a document to agreement ${agreementId}" condition="ag.canEdit">
+                                <form-single name="AgreementAddDocumentForm" transition="salesAgreementContent" map="revisionValues">
+                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                    <field name="contentTypeEnumId">
+                                        <default-field title="Kind">
+                                            <drop-down allow-empty="false">
+                                                <option key="AcntDocument" text="Signed agreement or acceptance"/>
+                                                <option key="AcntSupporting" text="Supporting document"/>
+                                                <option key="AcntPriceSheet" text="Price sheet"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                    <field name="contentFile"><default-field title="File"><file/></default-field></field>
+                                    <field name="submitButton"><default-field title="Add document"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AgreementEnd" button-text="${ag.statusId == 'AgmStDraft' ? 'Cancel draft' : 'End agreement'}" icon="sym_o_event_busy"
+                                    width="560" title="${ag.statusId == 'AgmStDraft' ? 'Cancel draft' : 'End agreement'} ${agreementId}" condition="ag.canEnd">
+                                <form-single name="AgreementEndForm" transition="salesEndAgreement" map="revisionValues">
+                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                    <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                    <field name="endDate">
+                                        <conditional-field title="Ends on" tooltip="Now when empty; a later date keeps it active until then" condition="ag.statusId == 'AgmStActive'">
+                                            <date-time type="date"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><text-line/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="${ag.statusId == 'AgmStDraft' ? 'Cancel draft' : 'End agreement'}">
+                                            <submit type="danger" confirmation="End agreement ${agreementId}? Its prices stop for new quotes from its end; orders priced from it keep their prices."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="." text="Renews ${ag.predecessorName}" parameter-map="{agreementId:ag.predecessorAgreementId}" condition="ag.predecessorAgreementId"/>
+                            <link url="." text="Renewal ${ag.successorName}" parameter-map="{agreementId:ag.successorAgreementId}" condition="ag.successorAgreementId"/>
+                            <link url="${customerUrl}" url-type="plain" text="Customer" parameter-map="{customerPartyId:ag.customerPartyId}"
+                                    condition="customerUrl &amp;&amp; ag.customerPartyId"/>
+                            <link url="${sharedLinks['Agreements/Agreements']}" url-type="plain" text="All agreements"
+                                    condition="sharedLinks['Agreements/Agreements']"/>
+                        </button-menu>
+                    </container>
+                </container>
+                <section name="AgreementActivationNeeds" condition="agIssues.length">
+                    <widgets>
+                        <container-box type="info">
+                            <box-header title="Before it is activated · ${agIssues.length}"/>
+                            <box-body>
+                                <section-iterate name="AgreementIssues" list="agIssues" entry="issue">
+                                    <widgets><label text="${issue.message}" type="div"/></widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-row>
+                    <row-col md="5">
+                        <container-box>
+                            <box-header title="Overview"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementOverview" list="overviewRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Parties · ${agParties.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementParties" list="agParties" skip-form="true" paginate="false">
+                                    <field name="partyName">
+                                        <default-field title="Party">
+                                            <label text="${partyName}" type="span"/>
+                                            <label text="${side} · ${roleText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="remove">
+                                        <default-field title="">
+                                            <link url="salesStoreAgreementParty" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                                    condition="ag.canEdit" confirmation="Remove ${partyName} from the agreement?"
+                                                    parameter-map="{agreementId:agreementId, agreementRevision:ag.agreementRevision, partyId:partyId, roleTypeId:roleTypeId, remove:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No parties yet: add the customer's signer before activating." condition="!agParties.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="7">
+                        <container-box>
+                            <box-header title="Items and prices · ${agItems.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementItems" list="agItems" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Item">
+                                            <label text="${productName || itemTypeText}" type="span" style="${ended ? 'm-muted' : ''}"/>
+                                            <label text="${[productId, itemText, intervalText, ended ? ec.l10n.localize('ended') : ''].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="priceText" align="right">
+                                        <default-field title="Negotiated price">
+                                            <label text="${productId ? priceText : ''}" type="span"/>
+                                            <label text="${minQuantity &amp;&amp; Number(String(minQuantity)) > 0 ? ec.l10n.localize('from') + ' ' + String(Number(String(minQuantity))) : ''}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="AgreementItemPrice_${agreementItemSeqId}" button-text="Price" icon="sym_o_edit" width="520"
+                                                    title="Price of item ${agreementItemSeqId}" condition="ag.canEdit &amp;&amp; productId &amp;&amp; !ended">
+                                                <form-single name="AgreementItemPriceForm" transition="salesStoreAgreementItem"
+                                                        map="{agreementId:agreementId, agreementRevision:ag.agreementRevision, agreementItemSeqId:agreementItemSeqId,
+                                                            price:(price == null ? '' : String(price))}">
+                                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                                    <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="agreementItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="price"><default-field title="Negotiated price"><text-line size="10"/></default-field></field>
+                                                    <field name="changeReason"><default-field title="Reason"><text-line/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save price"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="salesStoreAgreementItem" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                                    condition="ag.canEdit &amp;&amp; !ended" confirmation="Remove item ${agreementItemSeqId}? An active agreement's item is ended, its history kept."
+                                                    parameter-map="{agreementId:agreementId, agreementRevision:ag.agreementRevision, agreementItemSeqId:agreementItemSeqId, remove:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/></column>
+                                        <column><field-ref name="priceText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No items yet${ag.canEdit ? ' · Add one with Add item' : ''}." condition="!agItems.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Terms · ${agTerms.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementTerms" list="agTerms" skip-form="true" paginate="false">
+                                    <field name="termTypeText">
+                                        <default-field title="Term">
+                                            <label text="${termTypeText}" type="span" style="${ended ? 'm-muted' : ''}"/>
+                                            <label text="${[termText, settlementText, intervalText, ended ? ec.l10n.localize('ended') : ''].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="termNumber" align="right"><default-field title="Value"><display/></default-field></field>
+                                    <field name="remove">
+                                        <default-field title="">
+                                            <link url="salesStoreAgreementTerm" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                                    condition="ag.canEdit &amp;&amp; !ended" confirmation="Remove this term?"
+                                                    parameter-map="{agreementId:agreementId, agreementRevision:ag.agreementRevision, agreementTermId:agreementTermId, remove:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No terms yet." condition="!agTerms.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Linked quotes and orders · ${agConnections.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementConnections" list="agConnections" skip-form="true" paginate="false">
+                                    <field name="orderName">
+                                        <conditional-field title="Quote or order" condition="orderUrl">
+                                            <link url="${orderUrl}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                            <label text="${orderId} · ${statusText}" type="div" style="text-caption m-muted"/>
+                                        </conditional-field>
+                                        <default-field title="Quote or order"><display/></default-field>
+                                    </field>
+                                    <field name="productId"><default-field title="Product"><display/></default-field></field>
+                                    <field name="unitText" align="right"><default-field title="Price"><display/></default-field></field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No quote or order you can see is priced from it." condition="!agConnections.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Documents · ${agContents.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementDocuments" list="agContents" skip-form="true" paginate="false">
+                                    <field name="typeText">
+                                        <default-field title="Document">
+                                            <label text="${description || typeText}" type="span"/>
+                                            <label text="${typeText} · ${dateText}${hasFile ? '' : ' · ' + ec.l10n.localize('no file')}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No documents yet." condition="!agContents.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-box>
+                    <box-header title="History · ${agHistory.length}"/>
+                    <box-body-nopad>
+                        <form-list name="AgreementHistory" list="agHistory" skip-form="true" paginate="false">
+                            <field name="changedText"><default-field title="When"><display/></default-field></field>
+                            <field name="fieldText"><default-field title="Change"><display/></default-field></field>
+                            <field name="newText">
+                                <default-field title="From and to"><label text="${oldText || '—'} → ${newText || '—'}" type="span"/></default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="userName"><default-field title="By"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No changes recorded yet." condition="!agHistory.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Conversation"/>
+                            <box-body><chatter id="AgreementChatter" record-entity="mantle.party.agreement.Agreement" record-id="${agreementId}"/></box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body><record-files id="AgreementFiles" record-entity="mantle.party.agreement.Agreement" record-id="${agreementId}"/></box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

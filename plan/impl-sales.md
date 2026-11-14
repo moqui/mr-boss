@@ -4016,6 +4016,222 @@ scope), §19 item 5; SAL-AGREEMENT, SAL-COLLAB, PRD-PRICE.
   them and PriceExplain says why, and after the agreement is ended a new quote does not, while the earlier order
   keeps its price.
 
+**Built Nov 14 (P15).** mr-mantle and mr-boss on branch `sal/p15` (hashes in the worker's reply), with master (Sales P12, P13) merged in
+before the last runs; mr-moqui and mr-pass unchanged, no Rust built.
+- Checked first (the code over the plan): P7's Built and Review notes (`get#SellerProductPrice` never read an agreement row), P12's and
+  P13's notes, §4 (Q5: a Sales AgreementDetail of its own, sharing records and status flow with Purchasing's, not forms), F19, F20,
+  F67, F69; Purchasing's agreements (PurchaseAgreementEntities.xml, PurchaseAgreementServices.xml, PurchaseAgreements.js, its expiry
+  job); PriceResolver.js (`typed`, `readable`, `listEligible`), PricePolicy.js and PriceLists.js' agreement checks; Customer Service's
+  `Sla.js` agreementsOf (an AgrService agreement with no status counts as active); Products' SharedContext.js, Pricing.js and the
+  shared price screens; get#RecordLinkInfo's Agreement branch. The code over the plan:
+  - Products' own spec ProductPriceLists prices an agreement with no status and no dates (a row of an agreement made outside the flow),
+    as Customer Service's SLA reads its service agreements: the guard treats an agreement with no status by its dates alone, so that
+    spec and Customer Service pass unchanged; every agreement this build writes has a status;
+  - "for the order's parties": the agreement's organization is the price organization and, when it names one, its other party is the
+    transaction's counterparty (the customer of a sale, the supplier of a purchase); AgreementParty rows are not read by the guard;
+  - a rep's quote line has no agreement to name, so the seller's authority (`get#SellerProductPrice`) chooses the selling organization's
+    current customer agreements with the customer itself (active, dated, not a template), ranked first, the latest first; any other
+    caller still gets an agreement's row only by naming the agreement (`agreementId`), now guarded;
+  - who reads agreements: design §2 gives Agreements to "app" (every Sales reader); agreements are the organization's terms, not
+    assigned work, so a Sales reader of the organization reads them all, a change needs `SALES_AGREEMENT_EDIT`; no area deny, no new
+    permission and no setup row (BossSetupSalesData.xml is not touched);
+  - the negotiated prices are kept on the agreement by `store#AgreementItem` under `SALES_AGREEMENT_EDIT` (ProductPrice rows naming
+    the agreement and item), as Purchasing keeps its own, since the agreement keeper holds no `PRICE_EDIT` (borrowed authority, §2);
+    Products' editor (Customer prices) can still write a sales agreement's row for a `PRICE_EDIT` holder, and activation refuses a
+    row not in the agreement's currency or parties (PRICE_INVALID);
+  - "parties" for activation: the customer and a signer of the customer's (the customer or a current contact, AgreementParty);
+    "evidence": an AgreementContent of type AcntDocument, or the acceptance typed at activation, kept as one; AgreementParty needs no
+    dates (no succession reads them), so none were added;
+  - renewal's link type: AgreementAssoc had only AatAlternate and AatAddendum; P15 seeds AatRenewal;
+  - OrderDetail is boxes, not tabs: "the Agreements tab" is an Agreements box in the quote and sales-order contexts (shown when a line
+    took an agreement's price); PriceExplain stays at P7's `Sales/Products/PriceExplain` (one route per screen), not the design's
+    `Sales/Agreements/PriceExplain`;
+  - Agreement's Chatter and files branch (F69) is kept as it is: of the user's organizations, with a customer the user may see.
+- Mantle:
+  - `service/mantle/party/SalesAgreementServices.xml` and `SalesAgreements.js` (new): `find#SalesAgreements` (states open, draft,
+    active, expiring, ended, templates, all; organization, customer, type, text, a date range, an order's agreements; paged),
+    `get#SalesAgreement` (header, activation needs, parties, terms, items with the price in effect, documents, the quote and order
+    lines priced from it the caller sees, history, term types, the caller's actions), `create#SalesAgreement` (from a template's items,
+    prices and terms), `store#SalesAgreement`, `store#AgreementParty`, `store#AgreementTerm`, `store#AgreementItem`,
+    `activate#SalesAgreement` (PARTIES_REQUIRED, DATE_INVALID, EVIDENCE_REQUIRED, TERMS_REQUIRED, PRICE_REQUIRED, PRICE_INVALID,
+    TEMPLATE_NO_ACTIVATE, STATUS_INVALID; a renewal ends its predecessor at its start), `end#SalesAgreement` (a draft cancelled, an
+    active one closed now or ended at a later date, an expired one closed; REASON_REQUIRED), `renew#SalesAgreement` (SUCCESSOR_EXISTS),
+    `expire#SalesAgreements`; every write at `agreementRevision` (REVISION_REQUIRED, REVISION_CHANGED). All `allow-remote="false"`.
+  - `entity/SalesAgreementEntities.xml` (new: AatRenewal), `data/SalesAgreementSetupData.xml` (new: job `expire_SalesAgreements`).
+  - `SalesAccess.js` (a P15 block before the module value): `agreementTypes`, `agreementOf`, `requireAgreement`.
+  - The guard (Products' owner contract, F20): `PriceResolver.js` `agreementApplies`, `sellerAgreementIds`, `agreementChosen`, used in
+    `readable` (the seller's authority), `typed` (the trace says "Agreement not active, outside its dates or not with these parties")
+    and `listEligible`; `PriceServices.xml` get#ProductPrice's description (the obsolete TODOs removed) and get#SellerProductPrice's.
+  - `SalesQuotes.js` explainLine and `SalesQuoteServices.xml` explain#QuoteLinePrice: the line's agreement, its name and dates.
+- BOSS:
+  - Screens: `Sales.xml` (Agreements, menu index 6; an agreement as a record panel host; key `g m`); `Sales/Agreements.xml`,
+    `Sales/Agreements/Agreements.xml` (AgreementFind in the list's header, AgreementList with Open, Active, Expiring, Drafts, Ended and
+    Templates, NewAgreement), `Sales/Agreements/CustomerPrices.xml` and `PriceLists.xml` (Shared/Prices, PriceLists and PriceListDetail,
+    shown to a holder of PRICE_VIEW or PRICE_EDIT); `Shared/AgreementDetail.xml` (new: header with Activate, Renew or New agreement and
+    More; activation needs; Overview, Parties, Items and prices, Terms, Linked quotes and orders, Documents, History, Conversation and
+    Files); `Shared/Customer360/SalesAgreements.xml` (new tab); `template/SalesAgreements.xml` (transitions) and
+    `template/SalesAgreementParts.xml` (OrderDetail's Agreements box), included from `template/SalesOrderDetail.xml`;
+    `Shared/PriceExplain.xml` (the agreement line; the agreement passed to a price reader's trace).
+  - `Sales.js` (a P15 block after P12's, and a palette block before `search`): linkPaths, recordKinds `agreement`, choices
+    `agreementTemplates` and `agreementParties`, the palette's agreements.
+  - Owner contract: Products' `SharedContext.js` `salesContext()` passes a holder's PRICE_EDIT through and links PriceListDetail.
+  - Demo (`data/BossZSalesDemoData.xml`, a P15 block at the end): Retail East's active "Contoso supply terms" (One-One at 17.50,
+    One-Two at 10,800, net 30, Dana Morales signing, the signed copy) and the draft template "Standard supply terms".
+- Specs:
+  - Mantle `test/party/SalesAgreements` (new, 3 features, about 2.1 s): activation refused without the customer's signer and without
+    evidence, a stale revision and a reader's change refused, an outsider refused as a party, a draft's price no price; a new quote
+    at the two negotiated prices, the explanation naming the agreement, the order's agreements found, End refused without a reason, then
+    a new quote at the general price and the first keeping its own, the linked lines for a reader and none for the keeper (who sees
+    none of the rep's quotes); a renewal a draft linked to the old with its item, price and party, a second refused, another
+    organization's agreement missing to A's keeper and absent from B's list, the job expiring one past its date.
+    `test/product/ProductAgreementPrices` (new, 2 features, 0.2 s): an agreement's price only while active, dated and with the customer
+    (active and no-status apply; draft, closed, future, past, another customer's and a template's do not; the trace's reason); the
+    seller's authority takes its current agreement, another customer's own, the later of two once both have started, none once closed;
+    a reader naming no agreement gets the general price.
+  - mr-boss `test/Sales/SalesAgreements` (new, 1 feature, 0.2 s warm, 0.8 s cold): AgreementDetail's one qvt render as the keeper and
+    Agreements' one html render as the rep. `SalesAccess` (a P15 feature, about 0.23 s). `SalesSpecLib.js`: the menus with Agreements,
+    the key `g m`, the demo agreements.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesAgreementUsable` (3 features through AgreementDetail's transitions:
+    the keeper's agreement for Contoso with two prices, a signer and the acceptance, activated; sales.rep2's quote at the two prices
+    and PriceExplain's agreement line; the agreement ended, a new quote at the general price and the first keeping its own; the demo
+    agreement ended first). The earlier order of the scenario is the earlier quote here: a quote line and an order line keep their
+    price the same way.
+- Tests run (release binary, `--nobuild`, this worktree's runtime), after the merge of master: mr-mantle ProductPriceLists,
+  ProductEffectivePrices, ProductPricePolicy, PurchaseAgreements, PurchaseOrders, Sourcing, DropShip, ShopCatalog, StoreCheckout,
+  ShopCheckout, ShopSubscriptions, Subscriptions, Promotions, StorePromotions, SalesQuoteDrafts, SalesQuoteTemplates, SalesQuoteIssue,
+  SalesQuoteResponse, SalesPortal, SalesOrderApproval, SalesOrganizationScope, OrderToCashBasicFlow, CalcGridSales, SupportWarranty,
+  ContentRecords, RecordVisibility, ProductAgreementPrices and SalesAgreements 194 of 194 (30 specs with dependencies, 116 s). mr-boss
+  SalesAgreements, SalesAccess, SalesQuotes, SalesOrders, SalesQuoteTemplates, SalesAccounts, SalesHome, SalesOpportunities,
+  SalesSettings, SalesApprovals, SalesQuoteSend, QuickCreate, PurchasingAgreements, PurchasingAccess, ProductsPriceLists,
+  ProductsSharedContext, ProductsInventory, CommerceOrders, CustomerServiceOrders, Chat, RecordFiles, AdminAccess and InsightsRecords
+  all passing (SalesAccess 15 of 15 after the merge's conflict, the rest 164 of 164). Client SalesPipelineWalk 1 of 1 (7.9 s, before the
+  merge). OrderDetail's quote (with the Agreements box), Customer360's Agreements tab (html), Customer prices and Price lists (html, as a
+  price reader), PriceExplain with an agreement, AgreementDetail in tui and the templates list were rendered once by hand without
+  errors and not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on
+  the new and changed JavaScript. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: ss-inventory's EditAgreement, FindAgreement and EditPrices rows naming Sales/Agreements; usl-inventory's
+  create#AgreementContent, update#AgreementContent and get#ProductPrice rows and an "Added in the Sales build: agreements and customer
+  prices" table.
+- Design edits: design-sales §7 "As built (impl-sales P15)"; design-products §7 (the guard, the seller's agreements, Sales' price
+  mounts; owner contract).
+- Findings (provisional, numbered by the lead):
+  - the guard admits an agreement with no status by its dates alone (Products' ProductPriceLists and Customer Service's service
+    agreements are made so); a raw Agreement row written without a status, by REST or an import, would price without activation;
+    making the status required is the user's call (it changes Products' spec and Customer Service's SLA reading);
+  - Products' price editor (Customer prices, `store#ProductPrice` with `PRICE_EDIT`) still writes a sales agreement's row directly,
+    with PricePolicy checking only the agreement's organization; Purchasing refuses its agreements' rows there ("changes on the
+    agreement"); Sales leaves it open (design §7 names the Products editor for AgreementPrices) and activation checks the rows'
+    currency and parties, but a row added to an active agreement in Products is not checked;
+  - the seller's authority with two current agreements with one customer takes the latest-started one's row first; no rule stops two
+    overlapping active agreements of one customer;
+  - `get#SalesAgreement`'s linked lines and `find#SalesAgreements`' orderId read the quotes and orders the caller sees, so the agreement
+    keeper (no quote or order of their own) sees none; a keeper who should see them needs `SALES_TEAM_VIEW`;
+  - a template's terms and print text, an agreement's print and stored approved PDF, ContractSchedules, the agreement as a Commons
+    record link in the palette's other roots, and Customer Service's and Accounting's AgreementDetail contexts are not built;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the agreement services or the guard; P15 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 2.3 s (SalesAgreements about 2.1 s, ProductAgreementPrices 0.2 s); mr-boss server about 0.45 s
+    (SalesAgreements 0.2 s warm, SalesAccess' P15 feature 0.23 s); client none;
+  - merge hot spots (P14 and Marketing P6 beside it): mr-mantle `service/mantle/sales/SalesAccess.js` (a P15 block after P12's end and
+    exports at the end), `service/mantle/product/PriceResolver.js` and `PriceServices.xml` (get#ProductPrice's description and
+    parameters, get#SellerProductPrice's description), `service/mantle/order/SalesQuotes.js` explainLine and `SalesQuoteServices.xml`
+    explain#QuoteLinePrice; mr-boss `service/ironstone/sales/Sales.js` (a P15 block after P12's end, a palette block before
+    `search`), `screen/Sales.xml` (the record panel hosts, the Agreements subscreen after Products, the keymap, the header comment),
+    `template/SalesOrderDetail.xml` (two section-includes, after the quote's and the order's Items boxes),
+    `service/ironstone/products/SharedContext.js` (salesPaths, salesContext's capabilities), `screen/Shared/PriceExplain.xml`,
+    `data/BossZSalesDemoData.xml` (a P15 block at the end), `test/Sales/SalesSpecLib.js` (menus, keys, ids), `test/Sales/SalesAccess.spec.js`
+    (a feature after P12's), `plan/ss-inventory.md`, `plan/usl-inventory.md`, `plan/design-sales.md` §7, `plan/design-products.md` §7.
+    BossSetupSalesData.xml is not touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' quote templates: "Sales' customer agreements
+    (`mantle.party.SalesAgreementServices`, all `allow-remote="false"`): AgrSales and AgrProduct agreements of a selling organization;
+    a Sales reader of the organization reads them, a change needs `SALES_AGREEMENT_EDIT` and names the agreement's revision, another
+    organization's answers as missing and Purchasing's agreements are not reached; activation needs the customer's signer, acceptance
+    evidence and priced items. The price resolver applies an agreement's price row or list only while the agreement is active (or has
+    no status) and in its dates, of the price organization and with the transaction's counterparty; `get#SellerProductPrice` reads only
+    the selling organization's current agreements with the quote's customer.";
+  - the user's call: whether an agreement without a status should price at all (the first finding).
+
+**Review 2026-11-14 (P15).** A fresh review of `sal/p15` (mr-mantle 905cd118, mr-boss a70305e5 and 3a6a7412) against P15, §2, §4, F19,
+F20 and design §7 and design-products §7, access, scope and the pricing of every caller first. Master (Marketing P6) merged into both
+branches first, without conflict (mr-mantle 992fc867, mr-boss c59fed77); P15's specs and the pricing callers' re-run after it.
+- Checked and sound:
+  - The guard (`PriceResolver.js` `agreementApplies`, `agreementChosen`, `sellerAgreementIds`): a row or list naming an agreement is
+    eligible only for the agreement the context names (with its item when the row names one) or, for the seller's authority alone, one
+    of the selling organization's current AgrSales or AgrProduct agreements with the customer; and only while that agreement is active
+    (or has no status), dated at the price date, not a template, of the price organization and with the transaction's counterparty.
+    Other rows and lists are matched as before; a purchase context checks the supplier, so Purchasing's agreement rows price as they
+    did (PurchaseAgreements, PurchaseOrders, Sourcing, DropShip pass unchanged). The store's authority still reads no agreement row
+    (Shop and Commerce unchanged), lists still need `PRICE_VIEW` outside the seller's authority, and the trace stays a price reader's.
+  - No leak to another customer: a caller without `PRICE_VIEW` reads no row naming a vendor or customer (every row Sales writes names
+    both), whatever `agreementId` or `customerPartyId` it passes; a price reader naming another customer's agreement, or its own with
+    another customer, gets the general price (ProductAgreementPrices; SalesAgreements now checks the rep's crafted call too).
+    `get#SellerProductPrice` takes no `agreementId`, reads only the organization's current agreements with the quote's customer (the
+    quote services checked the customer is an account of the caller's scope), never another party's row, a cost or a trace;
+    `explain#QuoteLinePrice` names the line's agreement only to a reader of the quote, who as a Sales reader of the organization reads
+    its agreements anyway.
+  - SalesAgreementServices: every service checks the Sales scope and the organization (`agreementOf`: AgrSales or AgrProduct of an
+    organization of the scope; another organization's, a purchase agreement and a missing one answer RECORD_UNAVAILABLE alike) and
+    `SALES_AGREEMENT_EDIT` for a change; every party, template, product, term type, settlement term and customer given is checked;
+    every write but create names `agreementRevision` and counts it once; an active agreement's price change, removed item and changed
+    term are ended and started anew, never deleted (a draft's change in place); activation checks the customer's signer, the dates,
+    the evidence, every open pricing item priced and every price row in the agreement's currency and parties; a renewal's activation
+    ends its predecessor at its start; `expire#SalesAgreements` takes each agreement in its own transaction, logs a failure and goes on.
+    Purchasing's services and its expiry job (AgrPurchase only) are untouched.
+  - Screens: AgreementDetail's transitions call Mantle at the revision shown; Customer360's tab and the price mounts show only in Sales'
+    context; `salesContext()` passes a holder's own `PRICE_EDIT` and nothing more.
+- Fixed (mr-mantle, mr-boss "Sales P15 review"):
+  - R1 (medium, borrowed authority; the Built note's second finding): Products' price editor (`store#ProductPrice`,
+    `replace#ProductPrice`, `expire#ProductPrice`, the bulk price change, an import) could add to or change an active customer
+    agreement's prices with `PRICE_EDIT` alone, past `SALES_AGREEMENT_EDIT`, the agreement's revision and activation's checks, and a
+    bulk "+5 % on sales prices" would reprice agreement rows. PricePolicy's write check now refuses a row of an AgrSales or AgrProduct
+    agreement ("A customer agreement's price changes on the agreement"), as it refuses Purchasing's; the bulk change fails those rows
+    one by one and goes on. SalesAgreements checks it (fails on the unfixed code).
+  - R2 (low, revisions): `renew#SalesAgreement` named no revision, so two renewals from one read could race past SUCCESSOR_EXISTS. It
+    now takes `agreementRevision` (REVISION_REQUIRED, REVISION_CHANGED) and counts the predecessor's revision, with the reason "Renewed
+    by …"; AgreementDetail's Renew passes it. SalesAgreements checks a missing and a stale one.
+  - R3 (low; the Built note's third finding, judged): two active agreements of one organization with one customer pricing the same
+    product in overlapping dates left the price to whichever started later, silently. Activation now refuses it (AGREEMENT_OVERLAP,
+    naming the other agreement and product), as does a priced product added to an active agreement; a renewal's predecessor, which its
+    activation ends, is not counted, and agreements pricing different products (a product agreement beside general terms) may overlap.
+    SalesAgreements checks an overlapping activation refused and a renewal's activation ending its predecessor (that path was untested).
+- Provisional findings (for the lead to number):
+  - the Built note's first finding stands for the user (an agreement with no status prices by its dates alone); with R1 a raw AgrSales
+    row is no longer writable through Products, so the remaining path is an Agreement written by REST, an import or entity data;
+  - Products' price-list editor (`store#ProductPriceList`, PriceLists.js) may still attach a price list to a customer agreement under
+    `PRICE_EDIT`; the guard applies it only while the agreement is active, but the list is not on the agreement's revision or
+    activation checks;
+  - `salesAgreementContent` (BOSS) adds a document, which counts as acceptance evidence, to an agreement of any status and names no
+    revision (it checks `agreementEdit` and the organization);
+  - the Built note's fourth and fifth findings stand (the keeper sees linked lines only of quotes and orders they read; the template
+    print, contract schedules and the other apps' AgreementDetail contexts are not built).
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge): mr-mantle SalesAgreements, ProductAgreementPrices,
+  ProductPriceLists, ProductEffectivePrices, ProductPricePolicy, ProductCatalogImport, ProductCatalogCsv, PurchaseAgreements,
+  PurchaseOrders, Sourcing, DropShip, ShopCatalog, StoreCheckout, ShopCheckout, ShopSubscriptions, Subscriptions, Promotions,
+  StorePromotions, SalesQuoteDrafts, SalesQuoteTemplates, SalesQuoteIssue, SalesQuoteResponse, SalesPortal, SalesOrderApproval,
+  SalesOrganizationScope, OrderToCashBasicFlow, CalcGridSales, SupportWarranty, ContentRecords and RecordVisibility 211 of 211 (32
+  specs with dependencies, 78.5 s); SalesAgreements again after Prettier 3 of 3 (feature time about 2.0 s); with the fixes taken out,
+  R1's check fails. mr-boss SalesAgreements, SalesAccess, SalesQuotes, SalesOrders, ProductsPriceLists, ProductsSharedContext,
+  PurchasingAgreements, PurchasingAccess, CustomerServiceOrders and CommerceOrders 72 of 72 (44 s). `moqui lint --screens` (release):
+  no site flagged in Shared/AgreementDetail or the Sales templates (Purchasing's AgreementDetail as before). Prettier (mr-moqui's
+  config) on the changed JavaScript. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about 2.4 s (SalesAgreements about 2.2 s with the review's checks, ProductAgreementPrices 0.1 s); mr-boss as
+    the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/product/PricePolicy.js` (the agreement write check, beside
+    Purchasing's), `service/mantle/party/SalesAgreements.js` and its spec; mr-boss `template/SalesAgreements.xml` (Renew's revision);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), after Sales' quote templates: "Sales' customer agreements
+    (`mantle.party.SalesAgreementServices`, all `allow-remote="false"`): AgrSales and AgrProduct agreements of a selling organization
+    with its customer; a Sales reader of the organization reads them, a change needs `SALES_AGREEMENT_EDIT` and names the agreement's
+    revision, another organization's answers as missing and Purchasing's agreements are not reached; activation needs the customer's
+    signer, acceptance evidence, every pricing item priced in the agreement's currency and parties and no other active agreement with
+    the customer pricing one of its products in its dates. Its negotiated prices change only on the agreement: Products' price editor,
+    bulk changes and imports refuse a customer agreement's row, as they refuse a purchase agreement's. The price resolver applies an
+    agreement's price row or list only while the agreement is active (or has no status) and in its dates, not a template, of the price
+    organization and with the transaction's counterparty, and only for the agreement the caller names; a caller without the price
+    permission reads no party's row whatever agreement or customer it names; `get#SellerProductPrice` reads only the selling
+    organization's current agreements with the quote's customer, and the store's authority none.";
+  - the user's call: the Built note's first finding (whether an agreement with no status prices at all), with the lead.
+
 ### P16 — Recurring orders and subscriptions
 
 Design §7 RecurringOrders and Subscriptions, §13.1 (`create_RecurringOrders`); SAL-RECURRENCE, CX-RECURRING (X5).
