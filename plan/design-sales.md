@@ -941,12 +941,16 @@ Template text renders with `fancy-locked-html`. Optional upsell/configuration be
 - **A quote from a template.** `create#Quote` with `templateOrderId` copies a current template of the organization with
   `clone#Order` (no payments, notes, files or parties; the quote's owner, team, contact and opportunity as any quote's), its
   parentOrderId naming the template, and prices it as of its own date: each product line at the seller's price for the customer
-  now with its provenance, a fixed line keeping its price, reason and author beside today's calculated basis (so the quote's
-  manual-price and discount rules read it as entered), a line with no price left without one for the rep (propose#Quote refuses it
+  now with its provenance, a fixed line keeping its price and reason beside today's calculated basis, its author on the quote the
+  one who made the quote (so the quote's manual-price and discount rules read it as entered and separate that rep, not the
+  template's author, P12 review), a line with no price left without one for the rep (propose#Quote refuses it
   until then), each named in the result's warnings. A successor changes no quote made before it, nor its stored PDF.
 - **Readers left out.** As for `OrpRecurringTemplate` (F7): credit's open orders, reservation (both checks), invoicing
   (`create#InvoiceFromSource`, Payables' order source), the sales summaries and top products, store worklists and store mail,
   subscription fulfillment; Sales' quote and order scopes read their own purposes, so a template is never a quote or an order.
+  P12 review: the record rule (`get#RecordLinkInfo`, behind Chatter, files, product connections and the palette) gives a template
+  the template scope (`check#QuoteAccess`), and Customer Service's order record kind leaves it out, so no other app shows it as an
+  order.
 - **Screens.** Quote templates (`Sales/Quotes/QuoteTemplates`, tab 3: the saved lists Open, Published, Drafts, Scheduled and Ended
   for a manager, the published ones for a reader; New template); QuoteTemplateDetail (`Sales/Quotes/QuoteTemplateDetail`: the header
   with the state's one primary, Add line, Publish, New quote or Start successor, and More with Add shipping charge, Edit template,
@@ -1120,7 +1124,9 @@ Mounted at `Sales/Orders/OrderDetail`; crosscut §3.6 rows (one record, two acti
   team of theirs, the organization's for `SALES_TEAM_VIEW`, and for an order approver (`SALES_ORDER_APPROVE` or `ORDER_APPROVE`)
   one Placed or on hold, to decide, not to change, and (impl-sales P12, the user's call of Nov 14) read only an order they recorded
   a decision on (an approval or refusal of theirs, OrderDecision) once it is approved; the organization's other approved orders
-  stay out of their sight. find#SalesOrders' approver reach is the same.
+  stay out of their sight. find#SalesOrders' approver reach is the same. approve#SalesOrder records a decision on every approval,
+  an order rule's or, with none left to decide, one of purpose SapOrder with no rule (the user's call of Nov 14, P12 review), so an
+  approver keeps sight of every order they approved.
 - **Net-terms option.** With the seller's setting off and `approveNetTermsOrders` Y, `respond#Quote`'s acceptance, once placed
   and with no Sales rule open, is approved as the system through `approve#Order` (a claim only Mantle's code sets for that order),
   whose credit check may hold it (the response's outcome held).

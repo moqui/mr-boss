@@ -40,3 +40,20 @@ feature("QuoteTemplateDetail shows a published template to its manager with its 
         !list.output.includes("New template")
     }
 })
+
+// P12 review: a template is never another app's order. Customer Service's order lookup (its palette and OrderDetail read the same
+// record kind) finds neither the demo template's id nor its name for an agent of Retail.
+feature("Customer Service's order lookup never finds a quote template", {
+    when() {
+        const cs = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
+        const find = term =>
+            cs.asUser(cs.users.agent, () =>
+                cs.invoke("ironstone.customerservice.CaseServices.find#ServiceOrders", {term}).orders.map(row => row.orderId)
+            )
+        return {byId: find(templates.refit), byName: find("Store refit starter")}
+    },
+    then({byId, byName}) {
+        byId.length == 0
+        !byName.includes(templates.refit)
+    }
+})

@@ -3361,6 +3361,83 @@ Rust built.
   - the user's call, if the lead agrees: whether `approve#SalesOrder` should record a decision when no order rule is met, so the
     approver keeps sight of every order they approved (the second finding).
 
+**Review 2026-11-14 (P12).** A fresh review of `sal/p12` (mr-mantle 81856f2e, mr-boss 487c9312; master had nothing newer, so no merge)
+against P12, §2, §4 (the Nov 11 template row, the Nov 14 rows), F7 and design-sales §5 and §6.
+- Checked and sound: the template scope (`templateOf`: a Sales reader of the organization sees current ones only, a template manager
+  every one and changes a draft only; another organization, or a state the caller does not see, answers as missing; a rep's and B's
+  manager's edits refused as the spec shows); every verb takes the template's organization from its own part, never a parameter;
+  revisions on store, publish, end and the line verbs; publish's date window, the predecessor ended at the successor's start, one
+  successor at a time; `create#Quote` copies only a current template of the quote's organization in its currency, through
+  `clone#Order` with no payments, notes, files or parties, the template's two fields cleared, then prices each product line through
+  `get#SellerProductPrice` for the quote's customer as of now (P7's date for every quote line; no cost, no other party's price),
+  deletes copied tax and retaxes (X1); `preview#QuoteTemplate` writes nothing and prices only for an account the caller sees.
+  `update#OrderStatus`'s guard: every status path (propose, place, approve, cancel, reject, the part-status checks behind
+  cancel#OrderPart, bulk status changes) goes through it, and it reads only the order's own purpose, so no other order is touched.
+  F7's readers in Mantle (credit, both reservation checks, invoicing and Payables' source, store mail, store worklists, the sales
+  summaries, subscription fulfillment), Sales' own (find#Quotes, find#SalesOrders, ordersOf, Home) and the customer-keyed readers
+  (Shop, PASS, Accounting's and Customer Service's customer lists, promotions, new-customer counts, Commerce's store-keyed lists and
+  palette) leave a template out; the five report definitions whose filter names only `OrpRecurringTemplate` (mantle-sales,
+  boss-commerce-store-operations, insights-suite-orders and -order-value) read the `mantle-sales-orders` dataset, whose time field
+  is `placedDate`, which a template never has. Screens: one qvt render of QuoteTemplateDetail and one html render of Quote
+  templates in the regression suite; the transitions call only the guarded services.
+- R1 (confidentiality and F7, medium): a template was an order to every other app. Customer Service's order record kind (a part
+  sold by an internal organization, every customer served: a template has none) admitted it, so an agent of Retail found the demo
+  template by id or name in the order lookup and the palette and opened it in OrderDetail; and the record rule
+  (`get#RecordLinkInfo`, behind Chatter, RecordFiles, Product360's connections and palette hits) fell through to the generic order
+  rule, so any user of the organization with the order filter saw a draft or ended template. Fixed: `check#QuoteAccess` answers a
+  template by `templateOf`, and the record rule sends a template there as it does an unplaced quote (CommunicationServices.xml);
+  CustomerService.js `readOrder` and `isSalesOrder` leave the purpose out. Spec checks: Mantle SalesQuoteTemplates feature 4 (a
+  clerk of A with the record rule sees no template; the rep the current one and not the ended one; the manager the ended one) and
+  mr-boss SalesQuoteTemplates feature 2 (Customer Service's lookup finds neither the template's id nor its name); each failed on the
+  unfixed code.
+- R2 (the user's call of Nov 14, §4): `approve#SalesOrder` records a decision on every approval: with no order rule left to decide,
+  one OrderDecision of purpose SapOrder with no rule (SalesApprovals.js `decideOrderRules`; decidedCount still counts rule
+  decisions). No requirement reads an order decision with no policy (the policy-less "default" key is only a quote's unconfigured
+  manual-price rule). Spec check: SalesOrderApproval feature 1 approves an order of A through Sales before any order rule exists
+  (one decision, no policy, the approver's) and feature 2 finds it read only in get#SalesOrder and find#SalesOrders; failed on the
+  unfixed code.
+- R3 (separation, low; the Built note's third finding): a template's fixed line kept the template author as the quote line's price
+  author, so the manager who wrote the template could never approve a quote's manual-price rule for it, while the price on this quote
+  was put there by the rep who chose the template. Fixed: `priceCopy` makes the quote's maker the author (priceOverrideUserId and
+  date), keeping the price and reason; the rep is refused the rule as owner and author, the template's author may decide it. Spec
+  check: SalesQuoteTemplates feature 2 (the fixed line's author is the rep); failed on the unfixed code.
+- Provisional findings (for the lead to number):
+  - the five report definitions above name only `OrpRecurringTemplate` in their "Not a recurring base order" filter; a template is
+    left out by the dataset's `placedDate` time field, not by the filter, so a panel without a time range would count its lines;
+  - the palette has no Sales link for a template (it falls through to no app); QuoteTemplateDetail is reached from Quote templates;
+  - `decidedBy` counts any decision of the caller, a SapQuote decision on the quote before it became the order included, as the
+    Nov 14 row reads ("a decision on it"); a quote approver who also approves orders keeps read-only sight of that order;
+  - the Built note's other findings stand as written (no per-template terms text, no category filter, the unpriced line at 0 on
+    the detail, Quote templates shown to every reader).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteTemplates, SalesOrderApproval,
+  SalesQuoteApprovals, SalesQuoteDrafts, SalesQuoteIssue, RecordVisibility, SalesWorkspace and StorelessOrderConfirmation 41 of 41
+  (8 specs, 48 s; SalesQuoteTemplates 1.7 s, SalesOrderApproval 3.5 s); mr-boss SalesQuoteTemplates, CustomerServiceOrders,
+  SalesOrders, SalesApprovals, SalesAccess and SalesQuotes 27 of 27 (35 s; SalesQuoteTemplates 0.3 s), CustomerServiceAccess and
+  CommerceOrders 24 of 24 (37 s). Each new check run once against the unfixed code and failed. Prettier clean on the changed
+  JavaScript. No screen changed, so no lint. Not run: test-apps, the acceptance suite (SalesTemplateUsable unchanged).
+- For the lead:
+  - budget share: mr-mantle about +0.1 s (feature 4's record-rule checks, feature 1's no-rule approval); mr-boss about +0.1 s
+    (SalesQuoteTemplates feature 2, no render);
+  - merge hot spots beyond the Built note's: mr-mantle `service/mantle/party/CommunicationServices.xml` (the quote branch of the
+    record rule and its description), `SalesQuotes.js` quoteAccess, `SalesQuoteServices.xml` check#QuoteAccess's description,
+    `SalesApprovals.js` decideOrderRules, `SalesOrderServices.xml` approve#SalesOrder's description; mr-boss
+    `service/ironstone/customerservice/CustomerService.js` (readOrder, isSalesOrder), `plan/design-sales.md` (§5 as built, §6);
+  - §4 row added (Nov 14, the user's call on the decision on every approval);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' orders: "Sales' quote templates (in
+    `mantle.order.SalesQuoteServices`, all `allow-remote="false"`): orders of purpose `OrpSalesQuoteTemplate`, which
+    `mantle.order.OrderServices.update#OrderStatus` keeps Open (so they are never proposed, placed, approved or cancelled), which
+    invoicing refuses and which reservation, credit, store mail, store worklists and the sales summaries leave out; a Sales reader
+    of the organization reads the current ones, and only a template manager (`SALES_QUOTE_EDIT` with `SALES_TEAM_MANAGE` or
+    `SALES_CONFIGURE`) reads the others and changes a draft, at its revision, a published one only through a dated successor;
+    another organization's, or one the caller may not read, answers as missing, and the record rule behind Chatter, files, product
+    connections and the palette (`check#QuoteAccess`) gives the same answer in every app, while Customer Service's orders leave
+    templates out; a template's lines go through the quote line verbs, priced by the seller's authority for no customer;
+    `create#Quote` copies only a current template of the quote's organization, in its currency, and reprices it for the quote's
+    customer as of the quote's date, a fixed line keeping its price and reason with the quote's maker as its price author;
+    `preview#QuoteTemplate` writes nothing and prices only for an account the caller reads. `approve#SalesOrder` records the
+    approver's decision on every approval, and an order approver reads an approved order only when they recorded a decision on
+    it." (It replaces the Built note's draft of the paragraph.)
+
 ### P13 — PASS Sales: quotes
 
 Design §10.1, CustomerQuotes, CustomerQuote and QuoteResponse, §4's Invite to Sales, §12.1 (public operation
@@ -3740,6 +3817,7 @@ the owner's design.
 | Nov 13, 2026 | A lifecycle transfer of a leaving rep's deals keeps each deal's team, as a manager's owner change does; a manager sets the team afterwards | The lead's call, as P6's review recommended: changing the team would widen or narrow who sees the deal without a Sales decision |
 | Nov 14, 2026 | With the seller's approval setting on and no order rule matching, the order's owner, enterer or placer who holds `SALES_ORDER_APPROVE` may approve it: the setting forces a manual approval, and separation applies per order rule | The user's call (P11's review) |
 | Nov 14, 2026 | An order approver keeps read-only sight of an order on which they recorded a decision, after it is approved; not of the organization's other approved orders. Built in P12 | The user's call (P11's review) |
+| Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
 | Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
