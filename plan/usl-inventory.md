@@ -875,6 +875,17 @@ impl-marketing P3), called by built screens:
 | party/MessageServices | find#Suppressions, store#Suppression | Marketing/Audiences/Suppressions (Shared/Suppressions: SuppressionFind, SuppressionList, SuppressionChange) | Marketing/Audiences/Suppressions (Shared/Suppressions) (Marketing P3) |
 | party/MessageServices | check#Suppressions | the ledger's attempt; Marketing/Audiences/MemberDetail | attempt#Delivery; get#Member; request#Subscriptions (Marketing P3) |
 
+Added in Marketing P4 (Nov 14, 2026; `mantle.marketing.AudienceServices`, impl-marketing P4), called by built screens and the
+framework's transfer services:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/AudienceServices | preview#AudienceImport, apply#AudienceImport, apply#AudienceImportRow, get#AudienceImport, get#AudienceImportErrors | Marketing/Audiences/AudienceImport (ImportFile, ImportEvidence, ImportMatches, ImportResults) | Marketing/Audiences/AudienceImport (Marketing P4) |
+| marketing/AudienceServices | find#AudienceImportRuns | Admin/Data/Imports (the target marketingAudience); Marketing/Audiences/AudienceImport | Admin's Imports (DataTransferServices find#TargetRuns); Marketing/Audiences/AudienceImport's recent imports (Marketing P4) |
+| marketing/AudienceServices | purge#AudienceImports | the daily job purge_MarketingAudienceImports | (job) (Marketing P4) |
+| marketing/AudienceServices | find#MemberExportScopes, export#MemberTransfer | Marketing/Audiences/ListDetail (membership export, design §18) | Marketing/Audiences/ListDetail's Export members (DataTransferServices run#Export of marketingAudienceMembers) (Marketing P4) |
+| marketing/AudienceServices | preview#ListMerge, merge#Lists | Marketing/Audiences/AudienceMerge (MergeSelection, MergePreview, ApplyMerge) | Marketing/Audiences/AudienceMerge (Marketing P4) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -1160,10 +1171,10 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactBookServices | filter#ContactAddresses |  | Comms/Settings/OutOfOffice (theme value STRT_EMAIL_CONTACT_SERVICE) |
 | ContactBookServices | find#OwnedContactBooks | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.contactBooks participant) (Admin P6) |
 | ContactBookServices | transfer#ContactBookOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
-| ContactImportServices | read#ContactFileText |  | Commons/Contacts/Import/Source; Projects/Time/Import/Source; Projects/WorkItems/Import/Source |
-| ContactImportServices | parse#ContactFile | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source |
-| ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview |
-| ContactImportServices | import#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Result |
+| ContactImportServices | read#ContactFileText |  | Commons/Contacts/Import/Source; Projects/Time/Import/Source; Projects/WorkItems/Import/Source; Marketing/Audiences/AudienceImport (an upload, through mantle.marketing.AudienceServices.preview#AudienceImport) (Marketing P4) |
+| ContactImportServices | parse#ContactFile | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source; Marketing/Audiences/AudienceImport (the columns, through preview#AudienceImport; read#ContactRows reads the rows) (Marketing P4) |
+| ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview; — Marketing/Audiences/AudienceImport previews through preview#AudienceImport over read#ContactRows and match#Contact by the list's address alone (preview#Contacts matches by name too) (Marketing P4) |
+| ContactImportServices | import#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Result; — Marketing/Audiences/AudienceImport makes a row's contact with import#ContactRow (a directory contact) in apply#AudienceImport (import#Contacts imports into a contact book) (Marketing P4) |
 | ContactImportServices | export#Contacts | Admin/Data/DataExport | Commons/Contacts/ContactDetail; Commons/Contacts/List; Admin/Data/DataExport |
 | DuplicateServices | mark#PartyNotDuplicate |  | Commons/Contacts/Compare; Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts; Sales/Accounts/MergeCompare (through Commons mark#NotDuplicate; Sales P3) |
 | PartyServices | get#ShellCounts |  | shell header (theme value STRT_SHELL_COUNTS_SERVICE) |

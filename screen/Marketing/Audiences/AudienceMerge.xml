@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › AudienceMerge (design-marketing §4 AudienceMerge: MergeSelection, MergePreview, ApplyMerge; style-guide
+    §3.9 Wizard; impl-marketing P4): members of other lists consolidated into a target list of the same organization and channel,
+    without changing consent. MergeSelection: the target, the source lists and whether to archive them; MergePreview
+    (preview#ListMerge): each member with its source states, its target state and the decision (accepted with the source's evidence,
+    pending confirmation, already on the target, not carried for a withdrawal), the totals and the conflicts; ApplyMerge: the previewed
+    merge with a reason (merge#Lists names the preview's key, so lists changed since are refused; a second submit answers the first).
+    Membership links only: never a party merge; the source rows stay. Hidden from the Audiences tabs; opened from Lists and
+    ListDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Merge" default-menu-include="false">
+    <parameter name="contactListId"/>
+    <parameter name="sourceListIds"/>
+    <parameter name="archiveSources"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="mergeLists" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <set field="canEdit" from="!!can.audienceEdit"/>
+        <set field="sourceListIdList" from="sourceListIds ? (sourceListIds instanceof Array ? sourceListIds : String(sourceListIds).split(',')).map(id =&gt; String(id).trim()).filter(Boolean) : []"/>
+        <if condition="canEdit &amp;&amp; contactListId &amp;&amp; sourceListIdList.length">
+            <service-call name="mantle.marketing.AudienceServices.preview#ListMerge" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{contactListId:contactListId, sourceListIdList:sourceListIdList, archiveSources:(archiveSources == 'Y'), pageIndex:pageIndex}"/>
+            <set field="previewFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="previewed" from="!!preview?.previewKey"/>
+        <set field="totals" from="preview?.totals || {}"/>
+        <set field="memberList" from="preview?.memberList || []"/>
+        <set field="memberListCount" from="preview?.memberListCount"/>
+        <set field="memberListPageIndex" from="preview?.memberListPageIndex"/>
+        <set field="memberListPageSize" from="preview?.memberListPageSize"/>
+        <set field="memberListPageMaxIndex" from="preview?.memberListPageMaxIndex"/>
+        <set field="memberListPageRangeLow" from="preview?.memberListPageRangeLow"/>
+        <set field="memberListPageRangeHigh" from="preview?.memberListPageRangeHigh"/>
+        <set field="selectionValues" from="{contactListId: contactListId || null, sourceListIds: sourceListIdList, archiveSources: archiveSources || 'N'}"/>
+        <set field="mergeValues" from="{contactListId: contactListId, sourceListIds: sourceListIdList.join(','), archiveSources: archiveSources || 'N',
+                previewKey: preview?.previewKey}"/>
+        <set field="totalsText" from="previewed ? [totals.accepted + ' accepted with the source evidence', totals.pending + ' pending confirmation',
+                totals.existing + ' already on the list', (totals.kept + totals.conflict) + ' not carried for a withdrawal', totals.skipped ? totals.skipped + ' not carried' : null]
+                .filter(Boolean).join(' · ') : ''"/>
+        <set field="listsPath" from="sharedLinks['Audiences/Lists']"/>
+    </actions>
+    <widgets>
+        <label text="Merging lists needs MARKETING_AUDIENCE_EDIT." type="p" style="m-muted" condition="!canEdit"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Merge lists" type="h5"/></container>
+            <container style="col-auto"><link url="${listsPath}" text="Lists" link-type="anchor-button" icon="sym_o_list"/></container>
+        </container>
+        <section name="MergeSelectionBox" condition="canEdit">
+            <widgets>
+                <container-box>
+                    <box-header title="1. Lists"/>
+                    <box-body>
+                        <label text="Members are linked to the target as their consent allows: an acceptance is carried only with its evidence and for the same purpose, anything else waits for the person's confirmation, and a withdrawal is never undone. No contact is merged, and the source lists keep their members."
+                                type="p" style="m-muted"/>
+                        <form-single name="MergeSelection" transition="." map="selectionValues">
+                            <field name="contactListId">
+                                <default-field title="Into list">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'audienceLists', selected:selectionValues.contactListId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sourceListIds">
+                                <default-field title="Lists to merge">
+                                    <drop-down allow-multiple="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'audienceLists'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="archiveSources">
+                                <default-field title="Afterwards"><check><option key="Y" text="Archive the merged lists (their history stays)"/></check></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="contactListId"/><field-ref name="sourceListIds"/></field-row>
+                                <field-ref name="archiveSources"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <label text="${previewFailure}" type="p" style="text-negative" condition="previewFailure"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MergePreviewBox" condition="previewed">
+            <widgets>
+                <container-box>
+                    <box-header title="2. Preview: ${preview.sourceNames.join(', ')} into ${preview.targetName}"/>
+                    <box-toolbar>
+                        <container-dialog id="ApplyMergeDialog" button-text="Merge" icon="sym_o_merge" type="primary"
+                                title="Merge into ${preview.targetName}" width="560" condition="preview.carriedCount &gt; 0 || preview.archiveSources">
+                            <label text="${preview.carriedCount} members will be filed on ${preview.targetName}: ${totals.accepted} accepted with their evidence, ${totals.pending} pending confirmation. A withdrawal since this preview still wins."
+                                    type="p"/>
+                            <form-single name="ApplyMerge" transition="mergeLists" map="mergeValues">
+                                <field name="contactListId"><default-field><hidden/></default-field></field>
+                                <field name="sourceListIds"><default-field><hidden/></default-field></field>
+                                <field name="archiveSources"><default-field><hidden/></default-field></field>
+                                <field name="previewKey"><default-field><hidden/></default-field></field>
+                                <field name="reasonText"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Merge lists"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${totalsText}" type="p"/>
+                        <label text="${preview.conflictCount} members are not carried: they withdrew from a source or from the target." type="p"
+                                style="text-caption text-warning" condition="preview.conflictCount"/>
+                        <label text="Accepting needs MARKETING_CONSENT_EDIT: every member is filed pending confirmation." type="p"
+                                style="text-caption m-muted" condition="!preview.canAccept"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="MergeMembers" list="memberList" skip-form="true" paginate="true">
+                            <field name="partyName"><default-field title="Contact"><display/></default-field></field>
+                            <field name="addressMasked"><default-field title="Address"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="On the merged lists"><display/></default-field></field>
+                            <field name="targetText"><default-field title="On the target"><display/></default-field></field>
+                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyName"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="decisionText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

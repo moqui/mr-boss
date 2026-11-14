@@ -148,7 +148,10 @@ const linkPaths = [
     "Audiences/Suppressions",
     "Leads",
     "Leads/Accounts",
-    "QuickCreate/NewList"
+    "QuickCreate/NewList",
+    // P4: the audience import (Admin's Imports opens a run there) and the list merge (design §4)
+    "Audiences/AudienceImport",
+    "Audiences/AudienceMerge"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"

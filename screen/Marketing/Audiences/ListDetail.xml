@@ -31,6 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="storePolicy" location="component://mr-boss/template/MarketingAudiences.xml"/>
     <transition-include name="storeListEmail" location="component://mr-boss/template/MarketingAudiences.xml"/>
     <transition-include name="requestSubscriptions" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="exportMembers" location="component://mr-boss/template/MarketingAudiences.xml"/>
     <actions>
         <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="listCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'list', recordId:contactListId}"/>
@@ -69,6 +70,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="policyValues" from="Object.assign({contactListId: contactListId, expectedRevision: policy?.revision || null, publicOffer: 'N',
                 confirmationRequired: 'Y', purposeEnumId: list.purposeEnumId}, policy || {}, {expectedRevision: policy?.revision || null})"/>
         <set field="requestValues" from="{contactListId: contactListId, sourceEnumId: 'PcsStaff'}"/>
+        <!-- P4: the import, merge and export actions -->
+        <set field="importPath" from="sharedLinks['Audiences/AudienceImport']"/>
+        <set field="mergePath" from="sharedLinks['Audiences/AudienceMerge']"/>
+        <set field="canImport" from="!!(can.canRequest &amp;&amp; marketing.capabilities.audienceImport)"/>
+        <set field="canExport" from="!!marketing.capabilities.audienceExport"/>
     </actions>
     <widgets>
         <section name="ListNotFound" condition="!recordFound">
@@ -149,6 +155,13 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </container-dialog>
                             <button-menu text="More" icon="more_horiz">
+                                <!-- P4: the audience import into this list, a merge of other lists into it, and its members' export -->
+                                <link url="${importPath}" text="Import members" icon="sym_o_upload_file" parameter-map="{contactListId:contactListId}"
+                                        condition="canImport"/>
+                                <link url="${mergePath}" text="Merge lists into this one" icon="sym_o_merge" parameter-map="{contactListId:contactListId}"
+                                        condition="can.canRequest"/>
+                                <link url="exportMembers" text="Export members" icon="sym_o_download" parameter-map="{contactListId:contactListId}"
+                                        condition="canExport" link-type="anchor"/>
                                 <container-dialog id="EditListDialog" button-text="Edit list" icon="sym_o_edit" title="Edit ${list.contactListName}"
                                         width="760" condition="can.canEdit">
                                     <form-single name="EditList" transition="storeList" map="listValues">
