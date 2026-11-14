@@ -53,7 +53,11 @@ along with this software (see the LICENSE.md file). If not, see
     Commerce (appRoot Commerce, mounted at Commerce/Orders/OrderDetail; crosscut §3.6, design-commerce §10, impl-commerce P8;
     mantle.order.StoreOperationsServices.get#StoreOrder; template/CommerceOrderDetail.xml): a submitted order of the user's
     stores, read only, its Payment hold shown for Accounting to release, cancellation proposals linking Customer Service, and
-    Order again (a new open order at today's prices). -->
+    Order again (a new open order at today's prices).
+    Sales (appRoot Sales, mounted at Sales/Orders/OrderDetail, the one route; crosscut §3.6's Sales row, design-sales §5, impl-sales
+    P7; mantle.order.SalesQuoteServices.get#Quote; template/SalesOrderDetail.xml): a quote of the user's sales scope, its draft's
+    lines priced by the one resolver with their provenance and entered prices, the shipping charge, X1's tax, validity, history,
+    Chatter and Files; P11 adds the sales-order context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Order" default-menu-include="false">
 
@@ -117,6 +121,11 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="confirmationFile" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
     <!-- Commerce (impl-commerce P8): Order again -->
     <transition-include name="commerceReorder" location="component://mr-boss/template/CommerceOrderDetail.xml"/>
+    <!-- Sales (impl-sales P7): a quote draft's lines, its terms and the product choices -->
+    <transition-include name="salesChoices" location="component://mr-boss/template/SalesOrderDetail.xml"/>
+    <transition-include name="salesStoreLine" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesDeleteLine" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesUpdateQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
     <!-- Insights (appRoot Insights, mounted at Insights/Records/OrderDetail; design-insights §10, crosscut's Insights row, impl-insights
         P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
         below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads
@@ -174,6 +183,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="operationLinks" from="linksOut?.links || {}"/>
             <set field="recordFound" from="false"/>
+        </else-if><else-if condition="appRoot == 'Sales'">
+            <!-- Sales (crosscut §3.6's Sales row, impl-sales P7, F68): a quote of the user's sales scope, before Projects' default -->
+            <service-call name="mantle.order.SalesQuoteServices.get#Quote" in-map="{orderId:orderId}" out-map="salesQuoteOut"
+                    transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="salesQuote" from="salesQuoteOut?.quoteFound ? salesQuoteOut : null"/>
+            <set field="recordFound" from="false"/>
         </else-if><else>
         <script><![CDATA[
         const out = ec.service.sync().name('ironstone.projects.BillingServices.get#OrderDetail').parameters({orderId: orderId || ''}).call() || {}
@@ -209,8 +225,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="CustomerServiceOrder" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
         <section-include name="CommerceOrder" location="component://mr-boss/template/CommerceOrderDetail.xml"/>
         <section-include name="MaintenanceOrder" location="component://mr-boss/template/MaintenancePurchaseParts.xml"/>
+        <section-include name="SalesOrder" location="component://mr-boss/template/SalesOrderDetail.xml"/>
         <section name="OrderNotFound"
-                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing', 'CustomerService', 'Commerce', 'Maintenance'].includes(appRoot)"><widgets>
+                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing', 'CustomerService', 'Commerce', 'Maintenance', 'Sales'].includes(appRoot)"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Order ${orderId} is not available: it does not exist, it is not linked to a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>

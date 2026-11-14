@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The quote transitions of IronStone Sales (design-sales §5; impl-sales P7), each one a call of Mantle's guarded quote service
+    (mantle.order.SalesQuoteServices, which checks SALES_QUOTE_EDIT, the selling organization, the assignment and the revision
+    itself): createQuote (NewQuote, from Quotes, quick create, OpportunityDetail and Customer360; it opens the new quote's
+    OrderDetail), and OrderDetail's quote context: salesStoreLine (a product line or a shipping charge, new or changed),
+    salesDeleteLine and salesUpdateQuote (name, validity, customer reference, address). A screen includes each transition it uses
+    by name. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.create#Quote" out-map="created"
+                    in-map="{organizationPartyId:(organizationPartyId || null), customerPartyId:customerPartyId,
+                        contactPartyId:(contactPartyId || null), salesOpportunityId:(salesOpportunityId || null),
+                        currencyUomId:(currencyUomId || null), productStoreId:(productStoreId || null), orderName:(orderName || null),
+                        otherPartyOrderId:(otherPartyOrderId || null), validFromDate:(validFromDate || null),
+                        validThruDate:(validThruDate || null)}"/>
+            <set field="detailPath" from="sales.sharedLinks['Orders/OrderDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote ${created.orderId} created</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath</expression></condition>
+            <parameter name="orderId" from="created.orderId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="salesStoreLine">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.store#QuoteLine"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, orderItemSeqId:(orderItemSeqId || null),
+                        itemTypeEnumId:(itemTypeEnumId || null), productId:(productId || null), quantity:(quantity || null),
+                        unitAmount:(unitAmount || null), freeLine:(freeLine || null), useCalculatedPrice:(useCalculatedPrice || null),
+                        overrideReason:(overrideReason || null), itemDescription:itemDescription, requiredByDate:(requiredByDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Line saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesDeleteLine">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.delete#QuoteLine"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, orderItemSeqId:orderItemSeqId}"/>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesUpdateQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.update#Quote"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, orderName:(orderName ?? ''), validFromDate:(validFromDate || null),
+                        validThruDate:(validThruDate || null), otherPartyOrderId:(otherPartyOrderId ?? ''),
+                        postalContactMechId:(postalContactMechId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <widgets/>
+</screen>

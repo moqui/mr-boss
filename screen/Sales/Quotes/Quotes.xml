@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Quotes › Quotes (design-sales §5 Quotes: QuoteFind, QuoteList, NewQuote; style-guide §3.2 List; impl-sales P7): the quotes
+    of the user's sales scope (Mantle's find#Quotes: orders of purpose SalesQuote of the scope's sellers, the user's and their
+    teams' or, for SALES_TEAM_VIEW, the organization's; never a cart or a recurring base), paged in the query, with the saved lists
+    Draft, Proposed, Expiring and Expired (RFQ received and Responded join with P8 and P10), found by text, organization, customer,
+    opportunity, mine and validity; each row opens the one OrderDetail route with its customer, total, validity and owner. New quote
+    for a holder of SALES_QUOTE_EDIT (create#Quote checks the organization, customer, opportunity and store). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quotes" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="salesOpportunityId"/>
+    <parameter name="mine"/>
+    <parameter name="state"/>
+    <parameter name="validity"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.order.SalesQuoteServices.find#Quotes" out-map="context"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                        salesOpportunityId:salesOpportunityId, mine:mine, state:(state || 'open'), validity:validity, pageIndex:pageIndex,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+        </if>
+        <set field="quoteList" from="quoteList || []"/>
+        <set field="detailPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || salesOpportunityId || mine || validity || (state &amp;&amp; state != 'open'))"/>
+        <set field="newQuoteDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, customerPartyId: customerPartyId || null,
+                salesOpportunityId: salesOpportunityId || null}"/>
+        <!-- the saved lists (design §5): each a link to this list with its filter -->
+        <set field="savedLists" from="[{label: 'Open', state: 'open', validity: ''}, {label: 'Draft', state: 'draft', validity: ''},
+                {label: 'Proposed', state: 'proposed', validity: ''}, {label: 'Expiring', state: 'open', validity: 'expiring'},
+                {label: 'Expired', state: 'open', validity: 'expired'}, {label: 'Cancelled', state: 'cancelled', validity: ''}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read quotes in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="QuotesRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Quotes" type="h5"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewQuoteDialog" button-text="New quote" title="New quote" icon="sym_o_add"
+                                width="760" type="primary" condition="can.quoteEdit">
+                            <section-include name="NewQuoteForm" location="component://mr-boss/template/SalesQuoteForms.xml"/>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row q-gutter-xs q-mb-sm">
+                    <section-iterate name="QuoteSavedLists" list="savedLists" entry="saved">
+                        <widgets>
+                            <link url="." text="${saved.label}" link-type="anchor-button"
+                                    style="${(state || 'open') == saved.state &amp;&amp; (validity || '') == saved.validity ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{state:saved.state, validity:saved.validity, text:'', customerPartyId:'', salesOpportunityId:'', mine:'', pageIndex:''}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <form-list name="QuoteList" list="quoteList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <field name="text">
+                        <header-field title="Name or id"><text-line size="20"/></header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="salesOpportunityId">
+                        <header-field title="Opportunity">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'deals', selected:salesOpportunityId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="mine">
+                        <header-field title="Mine"><check><option key="Y" text="My quotes"/></check></header-field>
+                    </field>
+                    <field name="state">
+                        <header-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="open" text="Open"/>
+                                <option key="draft" text="Draft"/>
+                                <option key="proposed" text="Proposed"/>
+                                <option key="cancelled" text="Cancelled"/>
+                                <option key="all" text="Any"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="validity">
+                        <header-field title="Validity">
+                            <drop-down allow-empty="true">
+                                <option key="expiring" text="Expiring within a week"/>
+                                <option key="expired" text="Expired"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="orderName">
+                        <conditional-field title="Quote" condition="detailPath">
+                            <link url="${detailPath}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                        </conditional-field>
+                        <default-field title="Quote"><display/></default-field>
+                    </field>
+                    <field name="orderId"><default-field title="Id"><display/></default-field></field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'OrderOpen' ? 'secondary' : statusId == 'OrderCancelled' ? 'grey' : 'primary'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="totalText" align="right">
+                        <default-field title="Total"><label text="${totalText}" type="span" style="text-no-wrap"/></default-field>
+                    </field>
+                    <field name="validThruText">
+                        <default-field title="Valid through">
+                            <label text="${validThruText}" type="span" style="${expired ? 'text-negative' : ''}"/>
+                            <label text="${validityText}" type="div" style="text-caption m-muted" condition="validityText"/>
+                        </default-field>
+                    </field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <field name="entryText"><default-field title="Entered"><display/></default-field></field>
+                    <columns>
+                        <column><field-ref name="orderName"/><field-ref name="orderId"/></column>
+                        <column><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/></column>
+                        <column><field-ref name="totalText"/></column>
+                        <column><field-ref name="validThruText"/></column>
+                        <column><field-ref name="ownerName"/></column>
+                        <column><field-ref name="organizationName"/></column>
+                        <column><field-ref name="entryText"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="orderName"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoQuotes" condition="!quoteList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No quotes match' : 'No quotes yet' + (can.quoteEdit ? ' · Create one with New quote' : '')}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

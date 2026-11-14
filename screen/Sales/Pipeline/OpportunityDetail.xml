@@ -20,8 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     for an open lead, Close for an open opportunity until P7's New quote takes its place, Reopen for a closed one), Schedule activity
     beside it and the others (Change stage, Disqualify a lead, the account) in More. The
     boxes: Overview (the facts, Edit), People (the owner, team and contacts, dated: Change owner, Set team, Add contact, End),
-    Competitors, Activities (the linked tasks, each opening WorkItemDetail; Schedule activity), Quotes and orders (the linked documents
-    an organization reader sees, until the quote and order scopes, P7 and P11), Conversation (Chatter) and Files (RecordFiles), the
+    Competitors, Activities (the linked tasks, each opening WorkItemDetail; Schedule activity), Quotes (P7: the deal's quotes the user
+    sees, find#Quotes; New quote the primary of an open opportunity), Orders (the linked orders an organization reader sees, until
+    the order scope, P11), Conversation (Chatter) and Files (RecordFiles), the
     opportunity being a Chatter and files host (get#RecordLinkInfo, F69). Every change is Mantle's guarded service at the revision
     read; a stage move is not a closure. An account the user may not see is unnamed. P5: Inquiries, the intakes that made or
     joined a lead (what the inquirer submitted, until purged), which QualifyLead's new account and contact start from. -->
@@ -37,6 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="storeParty" location="component://mr-boss/template/SalesOpportunities.xml"/>
     <transition-include name="storeCompetitor" location="component://mr-boss/template/SalesOpportunities.xml"/>
     <transition-include name="addActivity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <!-- P7: New quote from the deal -->
+    <transition-include name="createQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
     <actions>
         <service-call name="ironstone.sales.ContextServices.check#Record" out-map="dealCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'opportunity', recordId:salesOpportunityId}"/>
@@ -53,6 +56,16 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="competitorList" from="detail?.competitors || []"/>
         <set field="activityList" from="detail?.activities || []"/>
         <set field="orderList" from="detail?.orders || []"/>
+        <!-- P7: the deal's quotes the user sees (Mantle's scoped find#Quotes), and New quote's values from the deal -->
+        <if condition="recordFound">
+            <service-call name="mantle.order.SalesQuoteServices.find#Quotes" out-map="dealQuotes" transaction="force-new" ignore-error="true"
+                    in-map="{salesOpportunityId:salesOpportunityId, state:'all', pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="dealQuoteList" from="dealQuotes?.quoteList || []"/>
+        <set field="quoteDetailPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="newQuoteDefaults" from="{organizationPartyId: deal.organizationPartyId, customerPartyId: deal.accountPartyId || null,
+                salesOpportunityId: salesOpportunityId, orderName: deal.opportunityName, currencyUomId: deal.currencyUomId || null}"/>
         <!-- P5: what came in for the lead (its intakes), and the first one's submitted details as QualifyLead's new account and contact -->
         <set field="intakeList" from="detail?.intakes || []"/>
         <set field="firstIntake" from="intakeList.find(row =&gt; !row.purged) || {}"/>
@@ -126,9 +139,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     title="Qualify ${deal.opportunityName}" width="760" condition="detail.canQualify">
                                 <section-include name="QualifyLeadForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
                             </container-dialog>
-                            <!-- the primary action by state: Qualify an open lead, Close an open opportunity (P7's New quote takes its place),
+                            <!-- the primary action by state: Qualify an open lead, New quote for an open opportunity (P7: Close beside it),
                                 Reopen a closed deal -->
-                            <container-dialog id="CloseDialog" button-text="Close" icon="sym_o_flag" type="primary"
+                            <container-dialog id="DealNewQuoteDialog" button-text="New quote" icon="sym_o_request_quote" type="primary"
+                                    title="New quote for ${deal.opportunityName}" width="760"
+                                    condition="detail.canClose &amp;&amp; !deal.isLead &amp;&amp; sales.capabilities.quoteEdit">
+                                <section-include name="NewQuoteForm" location="component://mr-boss/template/SalesQuoteForms.xml"/>
+                            </container-dialog>
+                            <container-dialog id="CloseDialog" button-text="Close" icon="sym_o_flag"
                                     title="Close ${deal.opportunityName}" width="560" condition="detail.canClose &amp;&amp; !deal.isLead">
                                 <form-single name="CloseOpportunity" transition="closeOpportunity" map="dealRef">
                                     <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
@@ -519,10 +537,35 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-box>
                     </row-col>
                 </container-row>
+                <!-- P7: the deal's quotes, each opening the one OrderDetail route -->
+                <section name="DealQuotes" condition="dealQuoteList.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Quotes · ${dealQuoteList.length}"/>
+                            <box-body-nopad>
+                                <form-list name="DealQuoteList" list="dealQuoteList" skip-form="true" paginate="false">
+                                    <field name="orderName">
+                                        <conditional-field title="Quote" condition="quoteDetailPath">
+                                            <link url="${quoteDetailPath}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                        </conditional-field>
+                                        <default-field title="Quote"><display/></default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="validThruText"><default-field title="Valid through"><display/></default-field></field>
+                                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="orderName"/><field-ref name="statusText"/></column>
+                                        <column><field-ref name="totalText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
                 <section name="RelatedSales" condition="orderList.length">
                     <widgets>
                         <container-box>
-                            <box-header title="Quotes and orders"/>
+                            <box-header title="Orders"/>
                             <box-body-nopad>
                                 <form-list name="RelatedSalesList" list="orderList" skip-form="true" paginate="false">
                                     <field name="orderName"><default-field title="Document"><display/></default-field></field>

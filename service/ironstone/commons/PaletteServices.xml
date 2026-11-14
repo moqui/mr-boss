@@ -46,7 +46,8 @@ along with this software (see the LICENSE.md file). If not, see
                 user's own week in My time, the same way),
                 mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
                 opens under Manufacturing for its users), mantle.order.OrderHeader or mantle.party.agreement.Agreement (a purchase
-                order, supplier quote or purchase agreement opens under Purchasing for its users; a sales order under Customer Service for its users),
+                order, supplier quote or purchase agreement opens under Purchasing for its users; a sales quote under Sales for its users; a
+                sales order under Customer Service for its users),
                 mantle.product.store.ProductStore (a store opens under Commerce for its users), moqui.security.DeviceCredential (a
                 shared device opens Admin's Security › Devices for one who may read it there)</description></parameter>
             <parameter name="id" required="true"/>
@@ -69,6 +70,17 @@ along with this software (see the LICENSE.md file). If not, see
                 url = ec.resource.script('component://mr-boss/service/ironstone/sales/Sales.js').recordLink('opportunity', id)
                 icon = 'sym_o_trending_up'
                 return
+            }
+            // a sales quote (IronStone Sales P7, F39, impl-purchasing F46): its OrderDetail under Sales for a Sales reader of it; one
+            // Sales does not take (another user's, or one Sales does not admit) falls through to the order branches below
+            if (recordEntityName === 'mantle.order.OrderHeader' && ec.entity.find('mantle.order.OrderHeader').condition('orderId', id)
+                    .disableAuthz().one()?.orderPurposeEnumId === 'OrpSalesQuote') {
+                const quoteUrl = ec.resource.script('component://mr-boss/service/ironstone/sales/Sales.js').recordLink('quote', id)
+                if (quoteUrl) {
+                    url = quoteUrl
+                    icon = 'sym_o_request_quote'
+                    return
+                }
             }
             // a shared device (Admin P18; the clocking kiosk's refusals notice, impl-people follow-up 4): Admin's Security › Devices
             // with the device, where it is revoked, for one who may read it there and whose groups open that screen, else nowhere

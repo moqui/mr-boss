@@ -6,13 +6,13 @@ const ids = {
     // sales.rep3 works alone
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SALES",
-    // the menu of design §1.2 built so far: every Sales user's (Pipeline since P4, Accounts since P3), and with Reports a report
-    // reader's
-    staffMenu: ["Home", "Pipeline", "Accounts"],
-    reportMenu: ["Home", "Pipeline", "Accounts", "Reports"],
+    // the menu of design §1.2 built so far: every Sales user's (Pipeline since P4, Accounts since P3, Quotes since P7), and with
+    // Reports a report reader's
+    staffMenu: ["Home", "Pipeline", "Accounts", "Quotes"],
+    reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Reports"],
     reportsMenu: ["SalesSummary", "SalesAnalysis"],
     accountsMenu: ["Accounts", "Contacts"],
-    keys: ["g s", "g a", "g c", "g o", "g l"],
+    keys: ["g s", "g a", "g c", "g o", "g l", "g q"],
     // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
     // Wingtip Group), Contoso Labs (a prospect, sales.rep2's), Kim Park (an individual customer) and the duplicate pair Adatum
     // Corporation and Adatum Corp; Dana Morales, a contact of Wingtip Traders and Contoso Labs; Ziziwork Sales' Fabrikam
@@ -29,7 +29,7 @@ const ids = {
     },
     contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"},
     // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
-    managerMenu: ["Home", "Pipeline", "Accounts", "Reports", "Settings"],
+    managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Reports", "Settings"],
     settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons"],
     // P4: Pipeline's tabs, and the demo deals (data/BossZSalesDemoData.xml): Retail East's (sales.rep's) Wingtip refit in Proposal with
     // an activity, its maintenance plan (recurring), Kim Park's renewal (won), a website lead and the trade fair lead in East's queue;
@@ -50,7 +50,11 @@ const ids = {
         westQueueLead: "BOSS_SAL_OPP_LEAD_WEST_QUEUE",
         callsLead: "BOSS_SAL_OPP_LEAD_CALLS"
     },
-    wingtipActivity: "BOSS_SAL_ACT_WINGTIP"
+    wingtipActivity: "BOSS_SAL_ACT_WINGTIP",
+    // P7: the demo quotes (data/BossZSalesDemoData.xml): Retail East's draft for Wingtip (sales.rep; a customer price line and an
+    // entered price), Ziziwork Sales' storeless draft for Fabrikam (sales.rep3; taxed through the seller's gateway); Quotes' tabs
+    quotes: {wingtip: "BOSS_SAL_QTE_WINGTIP", fabrikam: "BOSS_SAL_QTE_FABRIKAM"},
+    quotesMenu: ["Quotes"]
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork
 // Sales only) and sales.manager2 and sales.admin (both), none in ADMIN; a Projects client contact, a PASS public account and another
