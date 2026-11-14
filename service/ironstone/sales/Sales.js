@@ -857,7 +857,9 @@ recordKinds.shipment = {
     read: (userScope, shipmentId) => {
         const found = orderChanges().getShipment({shipmentId})
         if (!found.shipmentFound) return null
-        const part = one("mantle.order.OrderPart", {orderId: found.orderIds[0], orderPartSeqId: "01"})
+        const part = Array.from(
+            find("mantle.order.OrderPart").condition("orderId", found.orderIds[0]).orderBy("orderPartSeqId").list()
+        )[0]
         return {
             organizationPartyId: part?.vendorPartyId || null,
             label: "Shipment " + shipmentId,

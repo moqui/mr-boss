@@ -3905,6 +3905,87 @@ in; mr-moqui and mr-pass unchanged, no Rust built.
     shipment and invoice reads answer only for an order the user sees, an invoice only for a receivable reader.";
   - nothing needs the user's call; the first and third findings may be worth the user's look.
 
+**Review 2026-11-14 (P14).** A fresh review of `sal/p14` (mr-mantle a717108c, mr-boss 37ce50c1; master had nothing newer, so no
+merge) against P14, §2, §4, design §6 (OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail) and design-customer-service §4.
+- Checked and sound:
+  - the owner contract: OrderChanges.js keeps Customer Service's filing, decision and apply paths for cancel and substitute (apply asks
+    ORDER_CHANGE_APPLY for them, PERMISSION_DENIED otherwise); a commercial kind is applied only under SALES_ORDER_CHANGE (the order desk
+    FORBIDDEN, as before) and SalesOrderChanges.js `requireApply` then asks the seller's sales scope (RECORD_UNAVAILABLE); changeOf's
+    facility scope answers another organization's change as missing first; Customer Service's OrderChanges and SupportPortal specs pass
+    unchanged;
+  - apply under the order's lock: the proposal and the order locked (changeOf lock, lockOrder), the approval current at both revisions,
+    its expiry and the fiscal period checked in OrderChanges.js' shared head, then every conflict refused by name in checkLines strict
+    and STOCK_CHANGED against the preview's version (which carries a new line's price); the writes in design §6's order, each through
+    lib.call (one transaction: an error throws and apply#OrderChange, use-or-begin, rolls back; evaluate#OrderCredit at preview places
+    no hold and writes nothing); only its own Change hold released (a Credit hold stays, stillHeld);
+  - a new line at `get#SellerProductPrice` for the order's customer (no cost, no other party's price), check#ProductUsable first;
+  - finding 3 judged: apply does not borrow Accounting's authority: `release#ShipmentDraftInvoice` runs under the applier's own
+    RECEIVABLE_EDIT (Accounting checks it in the shipping organization); without it the change waits with BILLING_CONFLICT naming the
+    receivables editor, which is design §6's "application waits for the owning operator". Routing it to Accounting is a notice, not a
+    correctness gap (the finding stands as written);
+  - the change operator's widened read (SalesAccess.js changeStatuses, find#SalesOrders' changeReach) is read only (approverOnly, no
+    canEdit), as design §1.1 BOSS_SALES_CHANGE needs to propose and apply; orderOf's other branches unchanged;
+  - OrderChangeApproval's link (F58): Sales' recordLink answers null for a cancel or substitute and for a user without Sales, so the
+    order desk still opens Customer Service's OrderChangeDetail; a Sales approver gets Sales' (SalesOrderChanges' link check);
+  - OrderChangeDetail's Sales branch: each transition Sales' check#Record first, Customer Service's form, Edit and reminder hidden;
+    ShipmentDetail (get#SalesShipment: only the orders the user sees, other orders' lines left out, missing and unseen alike) and
+    InvoiceDetail (check#SalesInvoice: a receivable reader and an order the user sees, then Accounting's own get#InvoiceFinanceDetail;
+    Send with pay link on Accounting's canSend, RECEIVABLE_EDIT; the transition checks the record and send#Invoice checks again).
+- Fixed:
+  - R1 (medium, confidentiality): preview#OrderChange's credit effect evaluated the customer's credit for every previewer and said
+    "within / near / over its credit limit now" to a change operator, a Sales rep who sees the order and Customer Service's requester,
+    none of whom holds CUSTOMER_CREDIT_VIEW (Accounting's sensitive grant). The standing is now evaluated and shown only for
+    CUSTOMER_CREDIT_VIEW, ACCOUNTING_VIEW or an approver (SALES_APPROVE, SALES_ORDER_APPROVE, ORDER_APPROVE, who see an order's credit
+    warning when approving it, P11); others read that the check runs again at apply. Mantle SalesOrderChanges checks both (the change
+    operator's preview has no standing, the approver's has).
+  - R2 (low, scope; finding 7): `SALES_TEAM_VIEW` among find#OrderChanges' read permissions let a Sales manager or reader list the
+    organization's cancel and substitute proposals (Customer Service's service work, case links and consent references) and get any of
+    them. It is now out of readPermissions: alone it lists the organization's commercial kinds only (Sales' Changes, as design §6
+    ChangeFind "commercial proposals"), and an order's own changes of every kind are read through `seesOrder` (OrderDetail's Changes,
+    the order's owner). Descriptions and design §6's As built updated.
+  - R3 (low): Sales.js recordKinds.shipment took the order's part "01" for the organization; now the order's first part.
+  - R4 (tests): Mantle SalesOrderChanges gains a feature: a part-packed price line's draft invoice waits (BILLING_CONFLICT) for the
+    change operator and is released and repriced by one who also holds RECEIVABLE_EDIT (invoice cancelled, billing gone); a failure after
+    the first writes (an applier without ORDER_CHANGE_HOLD_RELEASE: hold placed, price written, release refused) leaves the price, the
+    holds, the request, the PDF, the revision and the status as they were, and the change operator then applies it. mr-boss
+    SalesOrderChanges gains ShipmentDetail's and InvoiceDetail's one qvt render each under Sales (finding 9: their template has its own
+    logic; a spec-local Sales manager with RECEIVABLE_VIEW/EDIT sees Send with pay link), a rep refused check#SalesInvoice, and the order
+    desk's apply now asserted FORBIDDEN alone (it was "FORBIDDEN or RECORD_UNAVAILABLE").
+- Provisional findings (for the lead to number):
+  - a fully packed sales order goes Completed before it ships, so a commercial change of it is refused by hold#Order's ORDER_HOLD_STATE
+    (not a named change conflict, and the preview does not show it), and it leaves the change operator's sight; met while writing R4;
+  - a new line's price is the seller's price at apply; the approval binds the proposal's revision, not that price, so a price list
+    change between the decision and apply is applied at the new price under the old approval (STOCK_CHANGED only against the
+    applier's own preview). Storing the previewed price on the RequestItem (in the revision) would bind it;
+  - save#OrderChange admits a Sales filer editing another person's commercial proposal on an order they may file on (as Customer
+    Service's staff may); Sales offers no Edit, so only a direct call reaches it.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOrderChanges (3 features: 1.7, 1.1, 0.8 s),
+  OrderChanges, SalesOrderApproval, SalesWorkspace, SupportPortal, PurchaseHoldPermission 26 of 26 (6 specs, 47 s); mr-boss
+  SalesOrderChanges (0.9 and 0.2 s), SalesApprovals, SalesOrders, SalesAccess, CustomerServiceOrderChanges, CustomerServiceOrders,
+  AccountingReceivables 38 of 38 (7 specs, 37 s). Prettier (the repository's config) on the changed JavaScript. No
+  screen changed, so no screen lint. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle SalesOrderChanges about 3.6 s (was 2.2 s; the review's feature 0.8 s); mr-boss SalesOrderChanges about
+    1.1 s warm (the review's renders 0.2 s); client none;
+  - merge hot spots (P15, P17 beside it): as the Built note's, plus mr-mantle `OrderChanges.js` readPermissions and findChanges' head
+    (R2), `SalesOrderChanges.js` effects (R1), `OrderChangeServices.xml` get's and find's descriptions;
+  - Attack-Surface (mr-moqui), a paragraph after Sales' quote templates: "Sales' commercial order changes
+    (`mantle.order.OrderChangeServices`, all `allow-remote="false"`, over OrderChanges.js and SalesOrderChanges.js): a price, quantity
+    increase or new line, ship date, address, ship method or carrier change of a sales order is filed under Customer Service's
+    `ORDER_CHANGE_REQUEST`, Sales' `SALES_ORDER_CHANGE` or as the order's editor in Sales, decided under `SALES_APPROVE` (not by its
+    filer unless the organization's policy allows), and applied only under `SALES_ORDER_CHANGE` in the seller's sales scope (Customer
+    Service's order desk is refused `FORBIDDEN`), under the order's lock, at the proposal's and the order's revisions with a current,
+    unexpired approval and an open fiscal period, in one transaction; an active pick, a shipped quantity or a finalized invoice refuses
+    it by name, a packed line's draft invoice is released only through Accounting's `release#ShipmentDraftInvoice` under the
+    applier's own `RECEIVABLE_EDIT`, a new line is priced by `get#SellerProductPrice`, a higher total meets Accounting's credit check,
+    and only its own Change hold is released; another organization's change answers as missing. The preview shows the customer's
+    credit standing only to `CUSTOMER_CREDIT_VIEW`, `ACCOUNTING_VIEW` or an approver. A change operator reads the organization's
+    placed, processing, approved and held orders and never edits them; `SALES_TEAM_VIEW` alone lists only the commercial kinds;
+    Sales' shipment and invoice reads (`get#SalesShipment`, `check#SalesInvoice`) answer only for an order the user sees in Sales, an
+    invoice only for a receivable reader (`ACCOUNTING_VIEW` or `RECEIVABLE_VIEW`), and a missing or unseen record alike.";
+  - the user's call: none needed; the first provisional finding (a fully packed order's change refused by hold state) and the
+    worker's finding 3 (no notice to Accounting when a change waits on a draft invoice) may be worth the user's look.
+
 ### P15 — Agreements and customer prices
 
 Design §7 Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail and PriceExplain (the agreement

@@ -1244,7 +1244,9 @@ otherwise; no unguarded entity read. Crosscut §3.16 row:
   order); `evaluate#OrderCredit` with a hold on a higher total; only its own Change hold released; the approvals of the order's
   other open proposals ended; the PDF stored. `preview#OrderChange` adds the effects: the total before and after, a tax estimate at
   the order's rate, the freight (a storeless order's charge line unchanged, a store's recalculated) and the customer's credit now.
-  Reads: a Sales reader who sees the order reads its changes and their prices; `SALES_TEAM_VIEW` lists the organization's.
+  Reads: a Sales reader who sees the order reads its changes and their prices; `SALES_TEAM_VIEW` alone lists the organization's
+  commercial ones (a cancel or substitute only on an order's own Changes; P14 review). The preview's credit standing is shown only
+  to a credit reader or an approver.
 - **Order scope.** A change operator (`SALES_ORDER_CHANGE`) sees the organization's Placed, Processing, Approved and held orders read
   only (SalesAccess.js `changeStatuses`, find#SalesOrders' reach), to propose and apply changes; a completed order leaves their sight.
 - **Screens.** Changes (`Sales/Orders/OrderChanges`, BOSS_SAL_CHANGES: the change operator, the approver, the manager): ChangeList

@@ -7,11 +7,14 @@
 // OrderChanges. Demo data: Retail East's Wingtip Traders.
 // Run: ./moq test mr-boss --spec SalesOrderChanges
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
-const {ids, users, asUser, invoke, page} = lib
+const {ids, users, asUser, system, invoke, page} = lib
 const O = "mantle.order.SalesOrderServices."
 const C = "mantle.order.OrderChangeServices."
 const capture = ec.factory.getTool("MailCapture")
-let orderId, change
+let orderId, change, shipped
+// P14 review: a spec-local Sales manager of Retail East who also reads and edits receivables (no demo Sales user does), for
+// InvoiceDetail's one render under Sales
+const arManager = "SAL_SPEC_AR_MANAGER"
 
 // a call as a user, its result or its error text
 function attempt(user, service, parameters) {
@@ -71,9 +74,88 @@ spec({
         })
         attempt(users.approver, C + "decide#OrderChange", {requestId: saved.requestId, sourceRevision: saved.sourceRevision})
         change = saved
+        // P14 review: a second order of the rep's, part shipped and invoiced, for ShipmentDetail's and InvoiceDetail's renders
+        const shippedOrderId = asUser(users.rep, () =>
+            lib.system(() => {
+                const id = invoke(O + "create#SalesOrder", {
+                    organizationPartyId: ids.organizationId,
+                    customerPartyId: ids.accounts.wingtip,
+                    contactPartyId: ids.contacts.dana,
+                    orderName: "Wingtip shipped shelving"
+                }).orderId
+                invoke(O + "store#SalesOrderLine", {
+                    orderId: id,
+                    orderRevision: revisionOf(id),
+                    productId: "DEMO_1_1",
+                    quantity: 3
+                })
+                invoke(O + "place#SalesOrder", {orderId: id, orderRevision: revisionOf(id)})
+                return id
+            })
+        )
+        asUser(users.approver, () =>
+            lib.system(() =>
+                invoke(O + "approve#SalesOrder", {
+                    orderId: shippedOrderId,
+                    orderRevision: revisionOf(shippedOrderId),
+                    operationKey: "soc-approve-" + shippedOrderId
+                })
+            )
+        )
+        login("john.doe")
+        system(() => {
+            const shipment = invoke("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+                orderId: shippedOrderId,
+                orderPartSeqId: "01"
+            })
+            invoke("mantle.shipment.ShipmentServices.pack#ShipmentProduct", {
+                shipmentId: shipment.shipmentId,
+                shipmentPackageSeqId: shipment.shipmentPackageSeqId,
+                productId: "DEMO_1_1",
+                quantity: 1
+            })
+            invoke("mantle.shipment.ShipmentServices.pack#Shipment", {shipmentId: shipment.shipmentId})
+            invoke("mantle.shipment.ShipmentServices.ship#Shipment", {shipmentId: shipment.shipmentId})
+            const billing = ec.entity.find("mantle.order.OrderItemBilling").condition("orderId", shippedOrderId).list()
+            shipped = {
+                orderId: shippedOrderId,
+                shipmentId: shipment.shipmentId,
+                invoiceId: billing.size() ? billing.get(0).invoiceId : null
+            }
+            call("create#moqui.security.UserGroup", {userGroupId: arManager, description: "Sales spec: receivables"})
+            for (const userPermissionId of ["RECEIVABLE_VIEW", "RECEIVABLE_EDIT"])
+                call("create#moqui.security.UserGroupPermission", {userGroupId: arManager, userPermissionId, fromDate: 0})
+            call("create#mantle.party.Party", {partyId: arManager, partyTypeEnumId: "PtyPerson"})
+            call("create#mantle.party.Person", {partyId: arManager, firstName: "Sales spec", lastName: "Receivables"})
+            call("create#mantle.party.PartyRelationship", {
+                relationshipTypeEnumId: "PrtAgent",
+                fromPartyId: arManager,
+                toPartyId: ids.organizationId,
+                toRoleTypeId: "OrgInternal",
+                fromDate: 0
+            })
+            call("create#moqui.security.UserAccount", {
+                userId: arManager,
+                username: "sales.spec.armanager",
+                partyId: arManager,
+                currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                passwordHashType: "SHA"
+            })
+            for (const userGroupId of ["BOSS_USERS", "BOSS_SALES", "BOSS_SALES_MANAGER", arManager])
+                call("create#moqui.security.UserGroupMember", {userId: arManager, userGroupId, fromDate: 0})
+        })
     },
     cleanupSpec() {
         capture.reset()
+        ec.message.clearErrors()
+        login("john.doe")
+        // the spec user's memberships end, so no later spec meets a Sales user it does not know
+        system(() =>
+            ec.entity
+                .find("moqui.security.UserGroupMember")
+                .condition("userId", arManager)
+                .updateAll({thruDate: ec.user.nowTimestamp})
+        )
     }
 })
 
@@ -120,8 +202,35 @@ feature("OrderChangeDetail shows a commercial change in Sales with Apply and its
         !detail.output.includes("The order's owner (Sales) decides and applies this kind")
         // the change operator reaches the preview's check; the order desk is refused for the kind, a rep for the permission
         operator.error.includes("STOCK_CHANGED")
-        orderDesk.error.includes("FORBIDDEN") || orderDesk.error.includes("RECORD_UNAVAILABLE")
+        orderDesk.error.includes("FORBIDDEN")
         rep.error.includes("PERMISSION_DENIED")
         link.includes("/Sales/Orders/OrderChangeDetail")
+    }
+})
+
+// P14 review: Sales' rows of the shared ShipmentDetail and InvoiceDetail, one qvt render each (their template, SalesHandoffs.xml):
+// the shipment of the rep's order read only, and the invoice for a receivables editor with Send with pay link; a rep reads no invoice
+feature("ShipmentDetail and InvoiceDetail open under Sales: the shipment read only, the invoice for a receivable reader", {
+    when() {
+        return {
+            shipped,
+            shipmentPage: asUser(users.rep, () => page("Orders/ShipmentDetail", {shipmentId: shipped.shipmentId})),
+            invoicePage: asUser("sales.spec.armanager", () => page("Orders/InvoiceDetail", {invoiceId: shipped.invoiceId})),
+            repInvoice: attempt(users.rep, O + "check#SalesInvoice", {invoiceId: shipped.invoiceId})
+        }
+    },
+    then({shipped, shipmentPage, invoicePage, repInvoice}) {
+        shipped.invoiceId != null
+        shipmentPage.errors.length == 0
+        shipmentPage.output.includes("Shipment " + shipped.shipmentId)
+        shipmentPage.output.includes("Items and sources")
+        shipmentPage.output.includes("Order " + shipped.orderId)
+        !shipmentPage.output.includes("Shipment not available")
+        invoicePage.errors.length == 0
+        invoicePage.output.includes("Invoice " + shipped.invoiceId)
+        invoicePage.output.includes("Payments and settlement")
+        invoicePage.output.includes("Send with pay link")
+        !invoicePage.output.includes("Invoice not available")
+        repInvoice.error.includes("RECORD_UNAVAILABLE")
     }
 })
