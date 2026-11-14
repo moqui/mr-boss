@@ -342,7 +342,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | built and reviewed Nov 14, merged |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | built and reviewed Nov 14, merged |
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | built and reviewed Nov 14, merged |
-| P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | — |
+| P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | built and reviewed Nov 14, merged |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | — |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | — |
@@ -3861,7 +3861,7 @@ in; mr-moqui and mr-pass unchanged, no Rust built.
   ss-inventory unchanged (no baseline form maps to OrderChanges, and its ShipmentDetail rows name no Sales path).
 - Design edits: design-sales §6 "As built (impl-sales P14)"; design-customer-service §4 (the commercial kinds applied in the same
   services; OrderChangeApproval's link asked of Sales first).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F240 to F249 in order:
   - editing a filed commercial proposal is not offered in Sales: save#OrderChange's edit (`actions.save`) asks ORDER_CHANGE_REQUEST
     and Customer Service's Edit form has its own kinds' fields; a Sales filer withdraws and files again;
   - BILLING_CONFLICT for a finalized invoice is checked at apply but the spec meets it only in the preview: a shipped and invoiced
@@ -3951,7 +3951,7 @@ merge) against P14, §2, §4, design §6 (OrderChanges, OrderChangeDetail, Shipm
     SalesOrderChanges gains ShipmentDetail's and InvoiceDetail's one qvt render each under Sales (finding 9: their template has its own
     logic; a spec-local Sales manager with RECEIVABLE_VIEW/EDIT sees Send with pay link), a rep refused check#SalesInvoice, and the order
     desk's apply now asserted FORBIDDEN alone (it was "FORBIDDEN or RECORD_UNAVAILABLE").
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F250 to F252 in order:
   - a fully packed sales order goes Completed before it ships, so a commercial change of it is refused by hold#Order's ORDER_HOLD_STATE
     (not a named change conflict, and the preview does not show it), and it leaves the change operator's sight; met while writing R4;
   - a new line's price is the seller's price at apply; the approval binds the proposal's revision, not that price, so a price list
@@ -4568,6 +4568,19 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F237 | P13 (Review Nov 14): a refusal from below the checks that is not a listed code (`place#Order`, P11's net-terms approval) reaches the page with its text when the authority's internal-text filter passes it | P13: as its Review note says |
 | F238 | P13 (Review Nov 14): `invite#Contact` for `sales` (not remote) takes any address and any Customer of the organization; only invite#SalesContact narrows it to an account of the scope and the contact's own address. Only BOSS's template calls it for `sales` today | P13: as its Review note says |
 | F239 | P13 (Review Nov 14): the Built note's findings stand; the two user's calls are recorded in §4 (Nov 14) and design §10 | P13: as its Review note says |
+| F240 | P14 (Built Nov 14): editing a filed commercial proposal is not offered in Sales: save#OrderChange's edit (`actions.save`) asks ORDER_CHANGE_REQUEST and Customer Service's Edit form has its own kinds' fields; a Sales filer withdraws and files again | P14: as its Built note says |
+| F241 | P14 (Built Nov 14): BILLING_CONFLICT for a finalized invoice is checked at apply but the spec meets it only in the preview: a shipped and invoiced line answers ALREADY_SHIPPED first, and a line billed but not shipped needs an invoice made outside the order's flow | P14: as its Built note says |
+| F242 | P14 (Built Nov 14): a packed price line's draft invoice is released only by an applier who also holds RECEIVABLE_EDIT; otherwise the change waits and nothing tells Accounting (no handoff notice) | P14: as its Built note says |
+| F243 | P14 (Built Nov 14): the change operator's read-only reach shows the organization's Placed, Processing, Approved and held orders on Orders too, and a completed order (all shipped) leaves their sight, so a change operator cannot open the shipment of a completed order | P14: as its Built note says |
+| F244 | P14 (Built Nov 14): the preview's tax effect is an estimate at the order's current tax rate; a store order's shipping and promotions are recalculated by handle#OrderMajorChange while the order is held | P14: as its Built note says |
+| F245 | P14 (Built Nov 14): a price change marks the line's manual price with the applier as `priceOverrideUserId`, the change and its reason as the reason | P14: as its Built note says |
+| F246 | P14 (Built Nov 14): `SALES_TEAM_VIEW` among find#OrderChanges' read permissions lets a Sales manager or reader also list the organization's cancel and substitute proposals | P14: as its Built note says |
+| F247 | P14 (Built Nov 14): SalesAccess has no P14 feature: the holder and non-holder on apply are in mr-boss SalesOrderChanges and another organization's refusal in Mantle SalesOrderChanges (one setup each) | P14: as its Built note says |
+| F248 | P14 (Built Nov 14): Sales' ShipmentDetail and InvoiceDetail have no regression render (their reads are Mantle-checked; the acceptance test opens the shipment) | P14: as its Built note says |
+| F249 | P14 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the commercial apply; P14 had no mr-moqui worktree | P14: as its Built note says |
+| F250 | P14 (Review Nov 14): a fully packed sales order goes Completed before it ships, so a commercial change of it is refused by hold#Order's ORDER_HOLD_STATE (not a named change conflict, and the preview does not show it), and it leaves the change operator's sight; met while writing R4 | P14: as its Review note says |
+| F251 | P14 (Review Nov 14): a new line's price is the seller's price at apply; the approval binds the proposal's revision, not that price, so a price list change between the decision and apply is applied at the new price under the old approval (STOCK_CHANGED only against the applier's own preview). Storing the previewed price on the RequestItem (in the revision) would bind it | P14: as its Review note says |
+| F252 | P14 (Review Nov 14): save#OrderChange admits a Sales filer editing another person's commercial proposal on an order they may file on (as Customer Service's staff may); Sales offers no Edit, so only a direct call reaches it | P14: as its Review note says |
 
 ## 7. Later
 
