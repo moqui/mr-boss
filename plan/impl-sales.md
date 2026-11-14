@@ -332,7 +332,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | built and reviewed Nov 13, merged |
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | built and reviewed Nov 13, merged |
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | built and reviewed Nov 13, merged |
-| P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | — |
+| P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | built and reviewed Nov 13, merged |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | — |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | — |
@@ -2014,7 +2014,7 @@ Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability
   check#ProductUsable rows, and an "Added in the Sales build: quote drafts, pricing and storeless tax" table.
 - Design edits: design-sales §5 "As built (impl-sales P7)"; design-crosscut CX-PRICING (X1 as built); design-products §7
   (get#SellerProductPrice and PriceExplain's Sales branch, owner contracts).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F144 to F150 in order:
   - F62 is wrong for a BOSS install: Accounting's demo names `LOCAL` on BOSS_ACCT_ORG, so X1 taxes its storeless sales orders with an
     addressed customer from now on (none of the Accounting specs run changed); a storeless part with no address is left untaxed
     rather than refused, which an invoice from that order then carries untaxed (ORDER_TAX), as before X1;
@@ -2082,7 +2082,7 @@ Marketing P1, no conflict) against P7, §2, §4, design-sales §5 and §7 and CX
     without `PRICE_VIEW` was refused the line; `listOf` reads it as the seller's authority (still kept to the seller's published
     lists). SalesQuoteDrafts' base-list feature fails on the unfixed code.
   - R4 (low): `get#Quote`'s tax note tells a storeless quote with no address of its own that choosing one in Edit quote taxes it.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F151 to F155 in order:
   - X1 retaxes a storeless quote at the customer's party address only on the quote's next change: a customer address added after the
     last change leaves the draft untaxed until then (the note says so). P10's issue should recalculate tax before it issues.
   - `calculate#OrderSalesTax` itself has no status or billing guard, for a store order as before and now for a storeless one of a
@@ -2866,6 +2866,18 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F141 | P6 (Review Nov 13): Home's funnel is over every organization of the scope, not Home's organization filter (report-embed is given no filter) | P6: as its Review note says |
 | F142 | P6 (Review Nov 13): get#OrganizationFacts is `authenticate="false"`: with no user it answers the userId given. It is not remote and the facade calls it as the user; a caller without a user is the runtime's own | P6: as its Review note says |
 | F143 | P6 (Review Nov 13): the Built note's findings stand (the repeat key's hash, the funnel's three years, no due-activities counter, the people-policy skill's description) | P6: as its Review note says |
+| F144 | P7 (Built Nov 13): F62 is wrong for a BOSS install: Accounting's demo names `LOCAL` on BOSS_ACCT_ORG, so X1 taxes its storeless sales orders with an addressed customer from now on (none of the Accounting specs run changed); a storeless part with no address is left untaxed rather than refused, which an invoice from that order then carries untaxed (ORDER_TAX), as before X1 | P7: as its Built note says |
+| F145 | P7 (Built Nov 13): no permission names a quote's free line: P7 asks SALES_APPROVE of the one who enters it (a rep cannot, an approver can); P9's approval policies, or a permission of its own, is the user's call | P7: as its Built note says |
+| F146 | P7 (Built Nov 13): Sales' lifecycle participant (P6) transfers deals and managed accounts, not open quotes as F54 and design-admin §14 say; a quote's owner row can follow in P10 or a follow-up | P7: as its Built note says |
+| F147 | P7 (Built Nov 13): get#RecordLinkInfo shows a quote's Chatter and files by its organization rule (orderVisible), wider than Sales' assignment scope; the Sales root admits only a quote the user sees (check#Record quote), so the gap is the other roots' and Commons' | P7: as its Built note says |
+| F148 | P7 (Built Nov 13): a quote's owner and team are undated OrderPartParty rows (the entity has no dates), so a team change does not end a quote's team from a date, as it does for a deal | P7: as its Built note says |
+| F149 | P7 (Built Nov 13): Product360's "add to quote" (design §5's action set) is not built: a line is added from the quote | P7: as its Built note says |
+| F150 | P7 (Built Nov 13): `docs/security/Attack-Surface.md` (mr-moqui) does not name `get#SellerProductPrice`, the second in-process price authority beside Shop's; P7 had no mr-moqui worktree | P7: as its Built note says |
+| F151 | P7 (Review Nov 13): X1 retaxes a storeless quote at the customer's party address only on the quote's next change: a customer address added after the last change leaves the draft untaxed until then (the note says so). P10's issue should recalculate tax before it issues | P7: as its Review note says |
+| F152 | P7 (Review Nov 13): `calculate#OrderSalesTax` itself has no status or billing guard, for a store order as before and now for a storeless one of a gateway seller; the change rules guard it, but mantle.rest.xml's `orders/{orderId}/salesTax/calculate` reaches it directly for a REST user with that grant | P7: as its Review note says |
+| F153 | P7 (Review Nov 13): `modify#ProductPriceList` declares `pricingContext` (a Map) and is `allow-remote="false"`: an in-process caller passing one could set `storeAuthority` or `sellerAuthority`; no screen or service does today (Shop's pattern, not P7's) | P7: as its Review note says |
+| F154 | P7 (Review Nov 13): find#Quotes' `state: all` includes a quote placed later, so OpportunityDetail's Quotes box and its Orders box will both show an accepted quote once P11 places one; P11 to decide which list owns it | P7: as its Review note says |
+| F155 | P7 (Review Nov 13): The Built note's findings stand but the two fixed here (Chatter and files, R1; the lifecycle transfer, R2) | P7: as its Review note says |
 
 ## 7. Later
 
