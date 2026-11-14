@@ -5,7 +5,10 @@
 // shows the edit actions, the routes of the four screens under the app (its sharedLinks keys) and the app's words. Customer
 // Service's is the first (its case feedback, with the rating; its behavior and specs as built in its P13), People's the second
 // (its private purposes over mantle.party.FormDefinitionServices, no responses screens: a People response is read through the
-// People service of the record it belongs to). Marketing adds its own (impl-marketing P12).
+// People service of the record it belongs to). Marketing's is the third (impl-marketing P12): its public purposes (the survey, the
+// lead form and the registration questions) over mantle.party.FormDefinitionServices, its responses read through
+// mantle.marketing.MarketingFormServices with publication scope (publicationScope: the response screens' publication branch, never a
+// case's), option scores (scores: the builder's Score column, "value | label | score") and the distribution screen (links.distribution).
 //
 // A registration is data, never authority: the services it names check the user's permissions and organization themselves,
 // and the capability only shows or hides an action. An app with no registration sees "not available". A registration may
@@ -13,6 +16,75 @@
 // to the mount's name), with its own purposes, edit capabilities (any one of which shows the edit actions), routes and words over the
 // app's (People's Development: the learning administrator's training assessments, impl-people P19 review).
 const D = "mantle.party.FormDefinitionServices."
+// impl-marketing P12: Marketing's registration
+const M = "mantle.marketing.MarketingFormServices."
+const marketingApp = {
+    purposes: ["DbfpSurvey", "DbfpLead", "DbfpRegistration"],
+    rating: false,
+    scores: true,
+    publicationScope: true,
+    services: {
+        list: D + "find#Forms",
+        create: D + "create#Form",
+        get: D + "get#Form",
+        publish: D + "publish#Form",
+        rename: D + "rename#Form",
+        saveField: D + "save#FormField",
+        endPart: D + "end#FormPart",
+        saveCondition: D + "save#FormCondition",
+        conditionValues: null,
+        responses: M + "find#Responses",
+        response: M + "get#Response",
+        followUp: null
+    },
+    capabilities: {context: "marketing", edit: "contentEdit"},
+    links: {
+        forms: "Surveys/Surveys",
+        formDetail: "Surveys/SurveyDetail",
+        distribution: "Surveys/SurveyDistribution",
+        responses: "Surveys/Responses",
+        response: "Surveys/ResponseDetail"
+    },
+    words: {
+        listTitle: "Surveys and forms",
+        listCaption:
+            "Marketing's surveys, lead forms and registration questions. A form changes by dated questions and options, so earlier answers keep the questions they answered; publish it to a site or to a campaign's list from Distribution.",
+        newButton: "New survey or form",
+        empty: "No survey or form yet. Make one with New survey or form, add its questions and publish them, then open Distribution to share it.",
+        formLabel: "Survey",
+        formsLink: "All surveys and forms",
+        backLink: "Back to surveys and forms",
+        unavailable: "it does not exist or is not one of your organization's Marketing forms.",
+        previewTitle: "Preview: what a respondent answers",
+        previewCaption:
+            "The public page (PASS Marketing's SubmitForm) asks the published questions with these rules, and the server checks the answer again.",
+        firstQuestion:
+            "No question yet. Add the questions a respondent answers; a choice's options may carry scores (value | label | score).",
+        distributionLink: "Distribution: publish and share"
+    },
+    accessRows: [
+        {
+            who: "Content authors of its organization",
+            what: "Change and publish the form, and publish it to a site or a campaign",
+            how: "Marketing content edit (MARKETING_CONTENT_EDIT)"
+        },
+        {
+            who: "Send authors",
+            what: "Make an invitation send to a campaign's list, approved and released as every send",
+            how: "Marketing send edit (MARKETING_SEND_EDIT)"
+        },
+        {
+            who: "Audience and report readers",
+            what: "Read the responses and their summary; respondents are named for audience readers only",
+            how: "MARKETING_AUDIENCE_VIEW or MARKETING_REPORT_VIEW"
+        },
+        {
+            who: "A respondent",
+            what: "Answer on the public page, or once from their invitation link",
+            how: "The publication's site and access (PASS Marketing)"
+        }
+    ]
+}
 const apps = {
     CustomerService: {
         purposes: ["DbfpCaseFeedback"],
@@ -208,7 +280,8 @@ const apps = {
                 ]
             }
         }
-    }
+    },
+    Marketing: marketingApp
 }
 // The registration of an app root, or null.
 const app = appRoot => (appRoot && Object.hasOwn(apps, appRoot) ? apps[appRoot] : null)

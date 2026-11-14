@@ -1401,6 +1401,21 @@ registration/service follow-up. Field publication does not authorize direct enti
 
 **Source:** research §8; Frappe Web Form gating, Nextcloud sharing/QR and Odoo survey Share.
 
+As built (impl-marketing P12): `Marketing/Surveys` (BOSS_MKT_SURVEYS: the authors', audience managers' and analysts' ALWAYS) mounts
+the shared builder at `Surveys/Surveys` and `Surveys/SurveyDetail` and the response screens at `Surveys/Responses` and
+`Surveys/ResponseDetail` with Marketing's registration (SurveyApps.js: the purposes survey `DbfpSurvey`, lead form `DbfpLead` and
+registration questions `DbfpRegistration`, each a FormPurpose edited with MARKETING_CONTENT_EDIT and read with MARKETING_AUDIENCE_VIEW
+or MARKETING_REPORT_VIEW, every field customer-visible; option scores as `value | label | score`; the response screens' publication
+branch). `Surveys/SurveyDistribution` takes a form (its publications, New publication) or a publication: the record header with
+Publish (an opening date once the readiness holds: published questions, a site whose Marketing mount serves the organization, a
+campaign for invitations), New invitation send and More's Close; FormPublication (who answers, how often, the site, the campaign as
+context record and CampaignAssociation, the subscription choice, the closing date, the page's words), Sharing (the public link and
+its QR, or by invitation only), Readiness, What a respondent sees and Invitations. An invitation is an ordinary CampaignSend of the
+publication's campaign naming it (create#Invitations): its preparation, approval, release and dispatch decide who is invited, and
+`build#CampaignDelivery` makes each recipient's FormInvitation once and a `MarketingSurvey` capability per attempt for their link.
+A response is read only through a submission to a Marketing publication (no case feedback of the same form), its respondent named
+for an audience reader only; the summary adds the scores of the answered scored questions as of each response's date.
+
 ### Responses and ResponseDetail — Context passed
 
 Mount the Commons-owned response list/detail/statistics vocabulary, initially described by Customer
@@ -1846,6 +1861,15 @@ acceptance. This is the one public lead page: a publication with purpose lead is
 LeadIntake context, and its handoff calls Sales' `store#LeadIntake` (X15, X16). **Needs:** MKT-FORMS, MKT-LEAD, MKT-PUBLIC.
 
 **Source:** research §§6, 8; Frappe Web Form and Nextcloud public Submit.
+
+As built (impl-marketing P12): `PASS:Marketing/SubmitForm` over the operations `getMarketingForm` and `submitMarketingForm` (camelCase,
+as P7's; the answer an anonymous write the transport lets through by name and a `TOKEN_WRITES` bearer write with an invitation's token).
+A public or account publication is opened by `?publication=`, an invited one only by its link's `?token=`; a draft, closed or another
+site's one and a wrong link answer one NotFound. Inputs are named `f_<field>` with the rules for `/js/moqui-form-when.js`; the
+subscription choice is its own box and address, filed as Subscribe's public request with its verification message after the answer
+is kept. The receipt is the publication's completion words whatever was kept; an answer past the client's (30 in ten minutes) or
+site's (1,000 an hour) limit, over 64 KB or naming a field the page never offered keeps nothing; a value to fix answers what to fix.
+The lead purpose's handoff is P13's.
 
 ### Event
 
