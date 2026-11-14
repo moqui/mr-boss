@@ -67,7 +67,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.marketing.AudienceServices.store#SubscriptionPolicy"
                     in-map="{contactListId:contactListId, expectedRevision:(expectedRevision || null), publicOffer:(publicOffer || 'N'),
                         confirmationRequired:(confirmationRequired || 'Y'), purposeEnumId:(purposeEnumId || null), evidenceText:(evidenceText || null),
-                        confirmEmailTemplateId:(confirmEmailTemplateId || null), noticeEmailTemplateId:(noticeEmailTemplateId || null)}"/>
+                        confirmEmailTemplateId:(confirmEmailTemplateId || null), noticeEmailTemplateId:(noticeEmailTemplateId || null),
+                        publicSiteId:(publicSiteId || null), offerFromDate:(offerFromDate || null), offerThruDate:(offerThruDate || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Subscription policy saved</message></if>
         </actions>
         <default-response url="."/>

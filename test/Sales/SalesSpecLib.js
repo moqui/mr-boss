@@ -10,7 +10,8 @@ const ids = {
     // P11, Agreements since P15), and with Reports a report reader's
     staffMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements"],
     reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements", "Reports"],
-    reportsMenu: ["SalesSummary", "SalesAnalysis"],
+    // P18 adds Target attainment
+    reportsMenu: ["SalesSummary", "SalesAnalysis", "TargetAttainment"],
     accountsMenu: ["Accounts", "Contacts"],
     keys: ["g s", "g a", "g c", "g o", "g l", "g q", "g r", "g m"],
     // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
@@ -33,13 +34,25 @@ const ids = {
     // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
     managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements", "Reports", "Settings"],
     // P9 adds Defaults and Approval rules
-    settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons", "SalesDefaults", "ApprovalPolicies"],
+    // P18 adds Targets, the manager's too
+    settingsMenu: [
+        "Readiness",
+        "Stages",
+        "Teams",
+        "LeadSources",
+        "Targets",
+        "TypesAndReasons",
+        "SalesDefaults",
+        "ApprovalPolicies"
+    ],
+    managerSettingsMenu: ["Teams", "Targets"],
     // P4: Pipeline's tabs, and the demo deals (data/BossZSalesDemoData.xml): Retail East's (sales.rep's) Wingtip refit in Proposal with
     // an activity, its maintenance plan (recurring), Kim Park's renewal (won), a website lead and the trade fair lead in East's queue;
     // Retail West's (sales.rep2's) Contoso pilot on West's pipeline, Adatum's racks (lost), Contoso's second site (a lead) and a partner
     // referral in West's queue (no owner);
     // Ziziwork Sales' (sales.rep3's) Fabrikam line upgrade and its outbound-call lead
-    pipelineMenu: ["Opportunities", "Leads"],
+    // P18 adds Forecast
+    pipelineMenu: ["Opportunities", "Leads", "Forecast"],
     deals: {
         wingtip: "BOSS_SAL_OPP_WINGTIP_Q4",
         wingtipPlan: "BOSS_SAL_OPP_WINGTIP_SVC",
@@ -68,7 +81,16 @@ const ids = {
     approvalRules: {discount: "BOSS_SAL_APR_RETAIL_DISCOUNT", free: "BOSS_SAL_APR_RETAIL_FREE"},
     // P12: Retail's demo quote templates (data/BossZSalesDemoData.xml): the published store refit starter (sales.manager's: Demo
     // Product One-One priced on the quote's date, Demo Product One-Two at a fixed bundle rate, an installation charge) and a draft
-    templates: {refit: "BOSS_SAL_TPL_REFIT", service: "BOSS_SAL_TPL_SERVICE"}
+    templates: {refit: "BOSS_SAL_TPL_REFIT", service: "BOSS_SAL_TPL_SERVICE"},
+    // P18: Retail's 2026 Q4 sales period and its targets (data/BossZSalesDemoData.xml): Retail's, Retail East's under it and sales.rep's
+    // under East (with the rep's submitted forecast), and sales.rep2's measured on placed orders
+    periods: {q4: "BOSS_SAL_TP_2026Q4"},
+    forecasts: {
+        retail: "BOSS_SAL_FC_RETAIL_Q4",
+        east: "BOSS_SAL_FC_EAST_Q4",
+        rep: "BOSS_SAL_FC_REP_Q4",
+        rep2: "BOSS_SAL_FC_REP2_Q4"
+    }
 }
 // The demo users of each group (each but the administrator also in BOSS_SALES), agents of Ziziwork Retail but sales.rep3 (Ziziwork
 // Sales only) and sales.manager2 and sales.admin (both), none in ADMIN; a Projects client contact, a PASS public account and another

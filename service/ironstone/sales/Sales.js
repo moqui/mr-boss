@@ -232,7 +232,7 @@ function sharedContext(p) {
 // ===== record kinds =====
 // Each kind a Sales screen or mount may be given: its name, icon, screen (once built) and its check, which refuses a record that
 // does not exist and one outside the scope alike (RECORD_UNAVAILABLE). P1: an organization; later phases add theirs (an account
-// P3, an opportunity P4, a quote P7, an order P11, an agreement P15, a forecast P18).
+// P3, an opportunity P4, a quote P7, an order P11, an agreement P15; a forecast has no record panel, P18).
 const recordKinds = {
     organization: {
         name: "Organization",
@@ -1042,6 +1042,59 @@ choiceSources.timeZones = (userScope, term, selected) => {
     )
 }
 // ===== end of P16 =====
+
+// ===== P18: forecasts and targets (impl-sales P18; design-sales §8 Forecast, TargetAttainment, §9 Targets) =====
+linkPaths.push("Pipeline/Forecast", "Settings/Targets", "Reports/TargetAttainment")
+const forecasts = () => ec.resource.script("component://mr-mantle/service/mantle/sales/SalesForecasts.js")
+Object.assign(choiceSources, {
+    // a forecast's or target's period: the sales and fiscal periods of the organization, the latest first
+    salesPeriods: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        return organizationPartyId ? forecasts().periodOptions(organizationPartyId, term, choiceLimit) : []
+    },
+    // whose forecast: the parties whose forecasts the user sees in the organization (SalesAccess.js forecastSees): the organization,
+    // its teams and their members for a reader of its whole pipeline, else the user and the teams they manage with their members
+    forecastSubjects: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        return organizationPartyId ? forecasts().subjectOptions(userScope.mantle, organizationPartyId, term, choiceLimit) : []
+    },
+    // a target's parent: the forecasts of the organization and period the user sees (store#Target checks the parent again)
+    forecastParents: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        return organizationPartyId
+            ? forecasts().parentOptions(userScope.mantle, organizationPartyId, p.timePeriodId || null, term, choiceLimit)
+            : []
+    },
+    // a forecast allocation's category: the product categories of the organization and the shared ones, by name or id
+    productCategories: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        const owners = (organizationPartyId ? [organizationPartyId] : organizationIds(userScope)).concat(["_NA_"])
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.category.ProductCategory")
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("ownerPartyId", "in", owners), factory.makeCondition("ownerPartyId", "is-null", null)],
+                    "or"
+                )
+            )
+            .orderBy("^categoryName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["productCategoryId", "categoryName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        return Array.from(query.list()).map(row => ({
+            value: row.productCategoryId,
+            label: row.categoryName || row.productCategoryId
+        }))
+    }
+})
+// ===== end of P18 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(

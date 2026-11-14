@@ -18,8 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     second mount, impl-sales §2) and TypesAndReasons (the opportunity types and the lost reasons). The Sales administrator's
     (SALES_CONFIGURE); a sales manager (SALES_TEAM_MANAGE) opens Teams alone and lands there. BOSS_SAL_SETTINGS denies the root user
     group; each tab is gated by permission too, as the menu is, so a custom group given Sales in Admin opens only what its permissions
-    give (impl-maintenance F346's lesson). Mantle's OpportunityServices check the permission and the organization again. Targets,
-    SalesDefaults and ApprovalPolicies join with their phases (P18, P9). -->
+    give (impl-maintenance F346's lesson). Mantle's OpportunityServices check the permission and the organization again. SalesDefaults and ApprovalPolicies joined with P9; Targets (P18) is the
+    manager's (SALES_TEAM_MANAGE) and the administrator's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="8" menu-image="sym_o_settings" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE') || ec.user.hasPermission('SALES_TEAM_MANAGE')">

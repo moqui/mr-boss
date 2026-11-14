@@ -345,8 +345,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | built and reviewed Nov 14, merged |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | built and reviewed Nov 14, merged |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
-| P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | — |
-| P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | — |
+| P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
+| P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | built and reviewed Nov 14, merged |
 | P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | — |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
@@ -4280,6 +4280,220 @@ Design §10 CustomerOrders and CustomerOrder; SAL-PORTAL (SAL-R01).
   `test/acceptance/client/SalesOrderHttp`): a contact follows a direct order's shipment and opens its invoice in Billing;
   the confirmation's link shows that one order; the page offers no edit, cancel or payment.
 
+**Built Nov 14 (P17).** mr-mantle, mr-pass and mr-boss on branch `sal/p17` (hashes in the worker's reply), from master (P13 merged);
+mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P11's and P13's Built and Review notes, §4 (the `SalesOrder` scope row, the Nov 14 calls),
+  F17, F18, F42, F48, F73, F235 and F236; ExternalAccess.js (the `SalesOrder` kind, `pageOf`, `create`, `check`, `actingParties`),
+  SalesPortal.js, SalesOrders.js `send#OrderConfirmation` and its build, OrderConfirmations.js (the stored confirmation), Shop's
+  order pages (ShopCustomer.js `invoicesOf`, `shipmentsOf`, `actionsOf`; mr-pass ShopAccount.js), SupportPortal.js `askers` and
+  mr-pass Support.js `orderLink`, Billing's InvoicePay and Portal.js `checkInvoice`, PublicApps.js, the schema and route copies,
+  PassAuthority's lists; mr-pass README, Deployment ("Sales app", "Adding an app") and impl-shop. The code over the plan:
+  - the operations are camelCase GET reads, as P13's: `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument` (the plan's
+    `sales.findOrders` and `sales.getOrder`); none is a bearer write, so no `TOKEN_WRITES` list changes; the PDF is in
+    PassAuthority's `DOWNLOADS`;
+  - "the order's PDF" is the stored confirmation as placed (Customer Service's OctOrderConfirmation, the one the confirmation mail
+    attaches; P11 built no order print); a read never makes one, so an order with none shows no PDF;
+  - the OrderView page by the order's store is a `recordPage` of the `SalesOrder` kind (a storeless order's OrderView opens the Sales
+    mount targeting the organization; a store order's keeps Shop's page on the store's site), and the link is made in the ledger's
+    build at each attempt, as P13's quote links are (the ledger keeps no token), lasting 366 days as Shop's order link;
+  - one public page an order (F42): CustomerOrders and CustomerOrder show storeless orders only, and refuse a store order's link;
+  - the Billing and Support links are each app's own pages under its own access: Billing's InvoicePay by `invoiceId` for a
+    signed-in account (Billing's self relationship or a Billing contact grant), and Support's NewCustomerCase and RequestReturn by
+    `orderId`, which take a link's reader's order link from the session as Shop's guest's (Support.js `orderLink` reads
+    `passSalesOrders:<site>` too, an owner contract); each only where the site's mount of that app serves the same organization
+    (another organization's Billing would not know the invoice);
+  - F236 (the P13 review: an answered quote read the order as it is now): kept simple, as the lead asked: once accepted, an order whose
+    revision moved past the issue's (a commercial change; the seller counts commercial changes only, which an issue requires) shows
+    no lines or totals on the quote's page, list or receipt, says the order changed and links the order's page; the PDF stays the offer;
+  - master's two schema copies had diverged in order (P13's Sales block and Dogfood DG6's mailing-list block merged in opposite
+    orders), failing mr-pass Forum's copies check; Mantle's ForumSchema.js is made equal to mr-pass's Schema.js.
+- Mantle:
+  - `service/mantle/order/SalesPortal.js` (a P17 block before the operations map): `find#CustomerOrders` (a signed-in account's
+    orders of the customers it acts for; state open or all; reference the order or the PO, in the query, ignoring case; paged; each
+    row's delivery and billing state), `get#CustomerOrder` (lines and totals as text, needed-by and ship-by and delivery-by dates, the
+    accepted quote, shipments with carrier and tracking, a carrier's link only when https, invoices with due date and open amount,
+    Billing's and Support's links as above, the PDF's name) and `get#OrderDocument`; which orders: a placed sales order of the
+    organization whose every part is the seller's to the customer, storeless, not a recurring base or a template, not being changed,
+    cancelled or rejected; the asker a token's OrderView (an order ID beside it its own) or the signed-in account's `actingFor`; one
+    NotFound for every miss. `quoteView`'s and the list's F236 rule; `get#AccountCard` counts open orders with My orders.
+  - `SalesPortalServices.xml` (three services at the end, all `allow-remote="false"`); `ExternalAccess.js` (owner contract: the
+    `SalesOrder` kind's `recordPage`, `pageOf` by record, `create`'s page); `SalesOrders.js` (a P17 `orderLink` before the build;
+    the build's `orderUrl`) and `template/order/SalesOrderConfirmationEmail.html.fancy` (the link); `ForumSchema.js`,
+    `script/PassRoutes.js` (after the quote operations) and `PassAuthority.js` (`DOWNLOADS`).
+- PASS:
+  - `screen/Sales/CustomerOrders` (MyOrderFind: open or all, the order or your PO; MyOrders: reference, PO, customer when several,
+    placed, total, state, delivery, billing, 20 to a page) and `screen/Sales/CustomerOrder` (OrderSummary, OrderShipments,
+    OrderInvoices, the PDF through a `document` transition, Help with this order; no form), plain HTML `.html.fancy` pages over
+    `Sales/Sales.js` (`download` by operation, `keepOrderLink`); CustomerQuote and QuoteResponse say when the order changed and link
+    the order for a signed-in contact; `Support/Support.js` `orderLink`; the header's My orders, Account › Settings' Quotes and
+    orders card; `Schema.js` and `Routes.js` (equal to Mantle's), `Apps.js` and `Sales.xml` comments; README, Deployment "Sales app".
+- Specs:
+  - Mantle `test/order/SalesPortal` (2 P17 features, 1.9 s of the spec's 6.5 s): the confirmation mails its recipient's link to the
+    Sales mount; the link reads its one order (PO, one line, total, shipment with two tracked packages, the script URL dropped, the
+    open invoice without a Billing link, the PDF, no location) and no list; a changed ID, the order token on a quote page, a quote
+    link on the order page and an order ID with no sign-in give nothing; a store order's link is Shop's `/shop/Orders/Status` and the
+    Sales page refuses it; a contact lists the direct order and the accepted quote and no draft, base, store order or other
+    customer's, finds by PO, gets Billing's link where the site's Billing serves the organization and the accepted quote; an outsider
+    none; the Account hub's card counts open orders; the accepted quote shows its lines until a commercial change and none after,
+    its receipt no total.
+  - mr-pass `test/Sales/SalesPortalAccess` (a P17 feature, 0.02 s; the order set placed directly, so no mail or print): CustomerOrder's
+    one render by a link (the order, its PO and customer, Delivery and Invoices, no form, no cancellation link); a forged link and a
+    quote link read "This order is not available" with nothing of the order; My orders asks a visitor to sign in; the three order
+    reads in both copies, GETs, and in no `TOKEN_WRITES` list.
+  - Acceptance, written and not run: mr-pass `test/acceptance/SalesOrderScenarios` (3 features: the confirmation's link shows that one
+    order read only and its PDF, another order not; once shipped and invoiced a contact finds it under My orders, follows its tracking,
+    opens the invoice in Billing (InvoicePay), and the hub counts it; no changed ID, quote link or other account shows another
+    customer's order) and `test/acceptance/client/SalesOrderHttp` (2 features: the link at 390 px with tracking, the open invoice and
+    no form; plain requests, also through a remote frontend: the invited contact's My orders, forged and crossed links and another
+    customer's order), with `test/Sales/SalesOrderFixtures.js` and `SalesOrderFixtures` on PASS_HTTP after SalesQuoteFixtures,
+    registered in `client/suite.js`.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPortal 6 of 6 (twice); mr-pass SalesPortalAccess 3 of
+  3; mr-mantle and mr-pass StorelessOrderConfirmation, SalesOrderApproval, SalesQuoteIssue, SupportPortal, AccountingPortals,
+  ShopCheckout, ShopCustomer, SupplierPortal, StoreFulfillment, Forum, ShopCart, Portals, SupportAccess, ShopAccount, PassAuthority and
+  Transport 102 of 105, Forum's copies check failing on master's diverged schema (above) and its two later features skipped, then
+  Forum 13 of 13 after the fix; mr-pass whole suite 214 of 214 (22.7 s, over its 20 s under the parallel workers' load; P13 read 16.6
+  s, P11 13.4 s; P17's share 0.02 s); mr-boss CustomerServiceAccess, CustomerServiceOrders, SalesAccess, SalesOrders and
+  CommerceAccess 58 of 58. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen; parse
+  failures 0; the new `.html.fancy` pages compile. Prettier (mr-moqui's config) on the changed and new JavaScript. Not run: the client
+  walk (no BOSS screen changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in the Sales build: PASS Sales orders" table; ss-inventory has no row naming a PASS Sales path.
+- Design edits: design-sales §10 "As built (impl-sales P17)" (and P13's note's forward reference); design-crosscut CX-CUSTOMER-ACCOUNT
+  (OrderView's page by the order's store). design-shop (mr-pass) unchanged: Shop's contract holds.
+- Findings, numbered by the lead F263 to F272 in order:
+  - the PASS operations are `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument`, GET reads; design §10.1 names them
+    `sales.findOrders` and `sales.getOrder`;
+  - the order's PDF is the stored confirmation as placed; an order with none (Projects' or Customer Service's storeless orders, which
+    send no confirmation, P11) shows no PDF, and has no link either, though a signed-in contact sees it under My orders;
+  - PASS Sales shows storeless orders only (F42): a customer who also buys in the organization's store follows those orders in Shop;
+  - an order being changed (OrderBeingChanged), cancelled or rejected is not shown, so while P14's commercial change holds an order in
+    a change its link and My orders show it as not available; a cancelled order disappears from My orders;
+  - a contact invited to Sales reaches Billing and Support only with its own invitation to each (contact grants are per app); a person
+    customer's own verified account reaches all three; the page links each only where the site's mount of it serves the same
+    organization;
+  - an order link lasts 366 days, as Shop's, is made at each delivery attempt (an uncertain attempt's earlier link stays valid, as P13's
+    quote links), is never revoked but by the order's cancellation (resolve refuses a cancelled order), and its token stays in the
+    stored confirmation mail as F235's;
+  - F236 is settled by the revision: it relies on the seller counting commercial changes only (required to issue); a placement or
+    approval that moved the revision would hide an accepted quote's lines too (not seen for an organization without a tax gateway;
+    not checked with a storeless tax gateway);
+  - master's ForumSchema.js and mr-pass Schema.js had diverged (P13 and Dogfood DG6 merged in opposite orders), failing mr-pass
+    Forum's copies check; fixed here by making Mantle's copy equal;
+  - My orders filters by state and by the order or PO, not by a date range (design's MyOrderFind);
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name PASS Sales' orders; P17 had no mr-moqui worktree (the text below).
+- For the lead:
+  - budget share: mr-mantle about 1.9 s (SalesPortal's two P17 features); mr-pass server about 0.02 s (SalesPortalAccess' P17 feature);
+    mr-boss none; client none. mr-pass's suite read 22.7 s of its 20 s under the parallel workers' load (see Tests run);
+  - merge hot spots: mr-mantle `service/mantle/order/SalesOrders.js` (a P17 `orderLink` before `buildConfirmation`, the build's map;
+    Sales P14 may touch this file), `service/mantle/party/ExternalAccess.js` (the `SalesOrder` kind's `recordPage`, `pageOf`,
+    `create`), `service/mantle/order/SalesPortal.js` (header, `quoteView`, find#CustomerQuotes' total, `accountCard`, the P17 block
+    before the operations map, the map), `SalesPortalServices.xml` (end), `service/mantle/forum/ForumSchema.js` (the whole file made
+    equal to mr-pass's, and the P17 entries after `getSalesQuoteResponse`), `script/PassRoutes.js` (after the quote routes),
+    `script/PassAuthority.js` (`DOWNLOADS`' end), `template/order/SalesOrderConfirmationEmail.html.fancy`,
+    `test/order/SalesPortal.spec.js` (setupSpec, a P17 section at the end); mr-pass `service/pass/Schema.js`, `Routes.js`, `Apps.js`,
+    `screen/Sales.xml`, `screen/Sales/Sales.js`, `CustomerQuote.html.fancy`, `QuoteResponse.html.fancy`, `screen/Support/Support.js`
+    (`orderLink`), `screen/Shared/Header.html.fancy`, `screen/Account/Settings.xml`, `test/Sales/SalesPortalAccess.spec.js`,
+    `test/acceptance/client/suite.js`, `README.md`, `docs/Deployment.md` ("Sales app"); mr-boss `plan/usl-inventory.md` (a table
+    after P13's), `plan/design-sales.md` (§10), `plan/design-crosscut.md` (CX-CUSTOMER-ACCOUNT). Sales P14 and P15's own files
+    (OrderChange*, agreements, BossSetupSalesData.xml, Sales.xml) are not touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after PASS Sales' customer quotes: "PASS Sales' customer
+    orders (`mantle.order.SalesPortalServices` find#CustomerOrders, get#CustomerOrder and get#OrderDocument, all
+    `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS operations `findSalesOrders`, `getSalesOrder` and
+    `getSalesOrderDocument` of the authority's allowlist, reads with no bearer write): each finds the organization from the site's
+    `sales` mount and the customer from the bearer link's capability (the `SalesOrder` kind's OrderView, made for each recipient of the
+    storeless confirmation at each delivery attempt, lasting a year, only its digest kept; or issued by `create#AccessCapability` under
+    the kind's permission as before) or from a signed-in account's contact grant of the `sales` app or its own verified customer party,
+    never from the request; a link reaches its one order and never lists, and an order ID beside it must be its own; only a placed
+    storeless sales order of that organization whose every part is the seller's to that customer, not a recurring base or template and
+    not being changed, cancelled or rejected, is shown; a store order's OrderView link opens Shop's page and the Sales page refuses it,
+    and a quote link never opens an order nor an order link a quote; a wrong, expired, revoked or crossed link and another customer's
+    order answer the same NotFound; every token lookup counts against the requester's limit; answers are allow-listed projections (no
+    cost, margin, internal note or other party; a carrier's tracking link only when https); Billing and Support are linked only where
+    the site mounts them for the same organization, each checking its own access (a link's reader reaches Support for that order
+    through the link the page keeps in its session, never in a URL); the order's PDF, the stored confirmation as placed, is streamed by
+    the facade, its location never answered. A link's token is in the sent confirmation the organization keeps.";
+  - nothing needs the user's call; the storeless-only rule (F42) and hiding an order while it is being changed may be worth the user's
+    look once P14's commercial change lands.
+
+**Review 2026-11-14 (P17).** A fresh review of `sal/p17` (mr-mantle 5c2127b6, mr-pass 030b247, mr-boss ea8706dc) against P17, §2, §4,
+design §10, F42, F48 and F236, as a public, unauthenticated surface with P13's review as the standard. Master (Sales P14, P15,
+Marketing P6) merged into mr-mantle (clean) and mr-boss (usl-inventory: P14's and P15's tables kept before P17's); mr-pass had
+nothing newer. ForumSchema.js equals mr-pass Schema.js and PassRoutes.js equals Routes.js after the merge; Dogfood DG6's four
+mailing-list operations and the eight Sales operations (five quote, three order) are in both.
+- Checked and sound:
+  - The three services are `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as `findSalesOrders`,
+    `getSalesOrder` and `getSalesOrderDocument` of the authority's allowlist (GET reads, in no `TOKEN_WRITES` list; the PDF in
+    `DOWNLOADS`, its location stripped). The organization is the site's `sales` mount's; the customer is the OrderView capability's
+    (`check` with the scope, the kind and the organization; an order ID beside the token must be its own) or the signed-in account's
+    `actingFor`, never the request's. "Sign in" is answered only with no token, before any lookup; every other miss (forged,
+    expired, revoked, a crossed ID, another customer's order, a store order's link, a quote link on the order page, an order link on
+    a quote page, a cancelled or rejected order, a base or template) is the one NotFound. Token lookups count in `check`, as P13's.
+  - Projections: lines and totals through `offerOf` as P13's quote (no cost, margin, price trace, internal note); shipments only
+    through this order's ShipmentItemSource rows, their items this order's; a tracking link only `https:` (the spec's script URL
+    dropped); invoices of the order's billing, from the organization to that customer, issued only; Billing's InvoicePay only for a
+    signed-in account where the site's Billing serves the organization; Support's pages only where its mount serves it. Every value
+    is escaped by the `.html.fancy` pages; no form on CustomerOrder. The PDF is the earliest stored OctOrderConfirmation, streamed.
+  - Support for a link's reader: Sales.js keeps the token in the session only after a successful read, never in a URL; Support's
+    `askers` checks it again (OrderView, the organization, the order ID) and serves storeless orders as Shop's guests'.
+  - The owner contract with Shop: `recordPage` changes the page only for a storeless order's OrderView; a store order's link stays
+    `/shop/Orders/Status` (the spec checks it), and ShopCheckout, ShopCustomer (mr-mantle) and ShopAccount (mr-pass) pass unchanged.
+  - Order links at each delivery attempt, 366 days, revoked only by cancelling: acceptable, as P13's per-attempt quote links. The
+    token exists only in that attempt's message; an uncertain attempt may have reached the customer; 366 days is Shop's order link;
+    `resolve` refuses a cancelled or rejected order; only the digest is kept. The link also admits Support requests for that one
+    order (as Shop's), so F235's stored-mail point applies to it too. Not made when the site has no published Sales mount.
+  - Built finding 4 against P14 as merged: not so. A placed order is never Being changed (the status flow has no Placed to Being
+    changed; only Open and Proposed); P14's apply holds it with the Change reason and releases that hold inside the one transaction,
+    so a pending or applied commercial change leaves the order shown; a Credit hold the change leaves shows as "Received, being
+    reviewed" (OrderHold is listed). The `OrderBeingChanged` exclusion is dead for orders; design §10's "Which orders" corrected.
+  - F236 against P14 and the storeless tax path: every P14 kind moves the revision where the seller counts commercial changes only
+    (a line's quantity or price is `item`, a ship date, method or carrier an OrderPart update, an address an OrderPartContactMech),
+    so the quote page shows "changed" after an applied change. The other way, a probe (a scratch spec, not kept) found the revision
+    unmoved through acceptance (`place#Order` with the PO), the confirmation's build and stored PDF, and `approve#Order`, both for
+    seller A (no gateway) and seller C (`taxGatewayConfigId` LOCAL): the storeless retax runs only on an item or address change and
+    not once Approved or billed. So the accepted quote keeps its lines until a real change.
+- Fixed (mr-mantle 7f67473b):
+  - R1 (low, correctness): find#CustomerOrders took up to 1,000 OrderPart rows of the organization and customers in no order, before
+    the store, status and placement filters, so a customer who also buys in the organization's store (or has many drafts) could see
+    its recent direct orders missing from My orders and the hub's count. The candidates now come from OrderHeaderAndPart filtered by
+    no store, a shown status and a placed date, newest first. No spec check (it needs over a thousand parts); the existing list checks
+    pass.
+- Findings, numbered by the lead F273 to F277 in order:
+  - Built finding 4 (orders being changed hidden) does not hold against P14 (above); a cancelled order still leaves My orders and its
+    link reads not available, which may be worth the user's look (a customer may want to see that it was cancelled);
+  - an order link admits Support's request pages for that order (a cancellation request is a write by the link's reader), as Shop's
+    order link does; with F235 a reader of the organization's sent mail can file one as the customer;
+  - signed-in reads by order ID are not rate limited (as P13's quote reads); every token lookup is;
+  - the PDF is the confirmation as placed; after a commercial change the page shows the order now and the PDF the order as placed
+    (P14 stores its changed document separately), with no label saying so;
+  - the Built note's other findings stand (operation names, storeless only, no date filter, contact grants per app).
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge and R1): mr-mantle SalesPortal 6 of 6 (27.8 s with
+  setup), StorelessOrderConfirmation 1 of 1, ShopCheckout 8 of 8, ShopCustomer 5 of 5, SalesOrderChanges 3 of 3; mr-pass
+  SalesPortalAccess 3 of 3, Forum 13 of 13 (the schema copies check), ShopAccount 3 of 3. Prettier (mr-moqui's config) on
+  SalesPortal.js. Not run: test-apps, test-framework, the acceptance suite; no screen changed in the review.
+- For the lead:
+  - budget share: as the Built note (mr-mantle about 1.9 s, mr-pass about 0.02 s); R1 adds none;
+  - merge hot spots: as the Built note; with Marketing P7 the schema copies (both equal here, DG6's block before the Sales block in
+    each; keep them equal) and mr-boss `plan/usl-inventory.md` (P14, P15, then P17 tables);
+  - Attack-Surface: the worker's paragraph is right but for two points: "not being changed" (a placed order never is; drop it) and the
+    link's reach into Support. Corrected: "PASS Sales' customer orders (`mantle.order.SalesPortalServices` find#CustomerOrders,
+    get#CustomerOrder and get#OrderDocument, all `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS
+    operations `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument` of the authority's allowlist, reads with no bearer
+    write): each finds the organization from the site's `sales` mount and the customer from the bearer link's capability (the
+    `SalesOrder` kind's OrderView, made for each recipient of the storeless confirmation at each delivery attempt, lasting a year,
+    only its digest kept, ended by the order's cancellation; or issued by `create#AccessCapability` under the kind's permission as
+    before) or from a signed-in account's contact grant of the `sales` app or its own verified customer party, never from the
+    request; a link reaches its one order and never lists, and an order ID beside it must be its own; only a placed storeless sales
+    order of that organization whose every part is the seller's to that customer, not a recurring base or template and not cancelled
+    or rejected, is shown; a store order's OrderView link opens Shop's page and the Sales page refuses it, and a quote link never
+    opens an order nor an order link a quote; a wrong, expired, revoked or crossed link and another customer's order answer the same
+    NotFound; every token lookup counts against the requester's limit; answers are allow-listed projections (no cost, margin,
+    internal note or other party; a carrier's tracking link only when https); Billing is linked only for a signed-in account and
+    Support only where the site mounts each for the same organization, each checking its own access; a link's reader reaches
+    Support's requests for that one order through the link the page keeps in its session after a successful read, never in a URL;
+    the order's PDF, the stored confirmation as placed, is streamed by the facade, its location never answered. A link's token is in
+    the sent confirmation the organization keeps.";
+  - user's calls: none required; the lead may put to the user whether a cancelled order should stay visible (as cancelled) on My
+    orders and its link.
+
 ### P18 — Forecast and targets
 
 Design §8 Forecast and TargetAttainment, §9 Targets; SAL-FORECAST.
@@ -4299,6 +4513,193 @@ Design §8 Forecast and TargetAttainment, §9 Targets; SAL-FORECAST.
 - **Usable when** (design §14.3 scenario 11; `test/acceptance/Sales/SalesForecastScenarios`): a rep submits a forecast for
   the quarter beside the calculated pipeline, the manager's roll-up drills to the same deals, and attainment against
   a won-deal target never adds order or invoice amounts to it.
+
+**Built Nov 14 (P18).** mr-mantle and mr-boss on branch `sal/p18` (hashes in the worker's reply); mr-moqui and mr-pass unchanged, no Rust
+built.
+- Checked first (the code over the plan): P4's, P6's and P11's Built and Review notes, §4, F53–F262; SalesForecast and
+  SalesForecastDetail as ported (no basis, no uniqueness, no service, `closedAmount`, `pipelineAmount` and the percent fields
+  unwritten); TimePeriod (SalesYear, SalesQuarter, SalesMonth seeded, no service that makes them for an organization but Payroll's);
+  SalesAccess.js (`assignedOpportunityIds`, `assignedOrderIds`, `orderExcludedPurposes`, `memberTeams`, `teamOrganization`);
+  find#Opportunities' totals by currency and find#SalesOrders' progress (never summed across currencies or units); team membership as
+  Manager (PrtSalesTeamMember with fromRoleTypeId Manager); OrderPartParty (undated) for an order's representative; OrderItemBilling for
+  an invoice's order. The code over the plan:
+  - design §1.1 gives SALES_FORECAST_EDIT to the manager and the administrator only, while §8's SubmitForecast is "a rep's judgement" and
+    the usable-when has a rep submit; P18 grants it to BOSS_SALES_REP too (BossSetupSalesData's P18 block, the bundle), and the rule
+    lets a holder enter only their own key's judgement, a team they manage, or with SALES_TEAM_VIEW a team or the organization (the
+    user's call, below; design §1.1's row changed);
+  - a target and a forecast are one SalesForecast row a key (the target its quota and basis, the judgement its forecast and best case),
+    so `store#Target` makes the row for a new key and `store#Forecast` for a key with no target; each refuses a key that has a row
+    (DUPLICATE_KEY, FORECAST_EXISTS) and changes a stored one by id and revision;
+  - the plan names no service that makes periods: `ensure#SalesPeriods` makes an organization's calendar-year Sales year, quarters and
+    months (SALES_TEAM_MANAGE or SALES_CONFIGURE), from Targets' Add sales periods;
+  - the calculated measures are never stored on the row (SalesForecast's `closedAmount`, `pipelineAmount` and percent fields stay
+    unwritten): a stored number would go stale with every deal moved;
+  - "manager roll-up uses unique opportunity ownership at the selected as-of date": a key's deals are those of its party and of its
+    descendant forecasts' parties at the as-of time, a person's owned, a team's on the team or owned by a current member, the
+    organization's all, as one set, so a deal counts once whoever owns it; only the deals the reader sees (`assignedOpportunityIds`);
+  - "an unambiguous dated primary representative": OrderPartParty has no dates, so an order (and its invoices, through
+    OrderItemBilling) is attributed to its part's one SalesRepresentative row, else its one SalesTeam row, else unassigned (two
+    representatives are unassigned too); an invoice of no order is unassigned and read only by a SALES_TEAM_VIEW holder;
+  - Forecast's measures box is number cards (quota, weighted, submitted, won) and a labelled list of every measure with its count and
+    what it is; the deals list carries "Counted", "Counted, not weighted" (no probability) or "Left out" with the reason.
+- Mantle:
+  - `entity/SalesEntities.xml`: SalesForecast's `basisEnumId` (SalesForecastBasis seeded: SfbWonOpportunity, SfbPlacedOrder,
+    SfbFinalInvoice), `forecastDate`, `forecastByUserId`; `quotaAmount`, `bestCaseAmount` and the basis audit-logged; the unique key
+    `SALES_FCST_KEY` (organization, internal party, period, currency).
+  - `SalesAccess.js` (a P18 block before the module value, exports at the end): `forecastBases`, `teamMemberIds`, `managedTeams`,
+    `forecastSubjectKind`, `forecastSees`, `forecastSubmits`, `targetManages`, `forecastOf`, `requireForecast`.
+  - `service/mantle/sales/ForecastServices.xml` and `SalesForecasts.js` (new): the interface `define#ForecastKey`; `get#Forecast` (the
+    measures: quota and basis, open and weighted pipeline, open and won monthly recurring revenue from the recurring plan's months,
+    submitted forecast, best case, won amount, placed orders, finalized invoices, and for the organization's key the unassigned orders
+    and invoices; the deals with their reasons, paged; the children with their own judgement; the allocations; `noPeriod` when the
+    organization has no period), `store#Forecast` (AMOUNT_REQUIRED, BEST_CASE_INVALID, DETAIL_OVER_FORECAST, FORECAST_EXISTS, the reason
+    in the audit log), `store#ForecastDetail` (DIMENSION_REQUIRED, DETAIL_OVERLAP through ProductCategoryMember, DETAIL_OVER_FORECAST,
+    FORECAST_REQUIRED), `store#Target` (DUPLICATE_KEY, BASIS_INVALID, PARENT_INVALID, HIERARCHY_CYCLE, `clearParent`), `find#Targets`,
+    `get#TargetAttainment` (the actual on each target's own basis, variance, percent, source count; the unassigned apart for a team
+    reader) and `ensure#SalesPeriods`; every stored write at the revision read (the row's and its details' latest stamp). All
+    `allow-remote="false"`.
+- BOSS:
+  - Screens: `Sales/Pipeline/Forecast.xml` (new, menu index 3: ForecastFind, the measures, Deals behind the pipeline with CSV, Forecasts
+    below this one, Allocation by product or category; Submit forecast, Allocate, Remove), `Sales/Settings/Targets.xml` (new, menu index
+    5, SALES_TEAM_MANAGE: the targets with CSV, New target, Change, Add sales periods), `Sales/Reports/TargetAttainment.xml` (new, menu
+    index 3: TargetOptions, TargetResults with CSV, With no representative). Settings' TypesAndReasons, SalesDefaults and
+    ApprovalPolicies move to menu index 6, 7 and 8 (design §1.2's order); `Sales.xml`, `Pipeline.xml`, `Settings.xml` and `Reports.xml`
+    comments.
+  - `Sales.js` (a P18 block after P15's): linkPaths, the choices `salesPeriods`, `forecastSubjects`, `forecastParents` and
+    `productCategories` (over SalesForecasts.js `periodOptions`, `subjectOptions`, `parentOptions`); `ContextServices.xml` get#Choices
+    and `template/SalesParts.xml`'s choices transition pass `timePeriodId`.
+  - `data/BossSetupSalesData.xml` (a P18 block at the end): SALES_FORECAST_EDIT for BOSS_SALES_REP, in its bundle.
+  - Demo (`data/BossZSalesDemoData.xml`, a P18 block at the end): Ziziwork Retail's 2026 Sales year, Q4 and its months; Retail's Q4
+    target (120,000 USD, won deals), Retail East's under it (50,000) and sales.rep's under East (30,000, with the rep's forecast 24,000
+    and best case 40,000); sales.rep2's measured on placed orders (40,000) under Retail.
+- Specs:
+  - Mantle `test/sales/SalesForecasts` (new, 5 features, 1.8 s): the weighted pipeline equals its deals' (a manual probability used), an
+    undated deal, a lead and a euro deal left out with their reasons, the won amount and its monthly recurring revenue, the rep's
+    placed order counted and a recurring base not; a team's roll-up counting the stage deal once before and after its owner changes,
+    the mate's forecast then holding it and the rep's not, the team's own judgement not the children's, a zero quota with no
+    percentage; a duplicate target and forecast, a cycle, a stale revision, a rep's target and another's judgement refused, a team
+    manager reading their member's and team's forecast, another team's rep and another organization's refused as missing, a best case
+    under the forecast refused; allocations over the forecast and a product counted twice refused; attainment on each target's own
+    basis (the order target's 250, the won target's 200), the unassigned order apart, the basis change's reason in the audit log, a rep
+    refused the report.
+  - mr-boss `test/Sales/SalesForecast` (new, 1 feature, 0.18 s): Forecast's one qvt render as sales.rep for Retail's 2026 Q4. `SalesAccess`
+    (a P18 feature, 0.21 s: store#Target refused the rep for the permission, the manager reaching the revision check, Ziziwork Sales' rep
+    refused the rep's forecast as missing; the rep's capabilities with forecastEdit). `SalesSpecLib.js` (the Pipeline, Reports and
+    Settings tabs, the manager's Settings tabs, the demo period and forecasts), `SalesSettings` (the manager's tabs Teams and Targets).
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesForecastScenarios` (4 features: sales.rep submits through Forecast's
+    transition beside an unchanged pipeline; East's roll-up drills to the rep's deals, each once, its own judgement empty and the rep's
+    among its children; a manager's target through Targets' transition; attainment of the won targets equal to the won amount alone).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesForecasts 5 of 5; with SalesOrganizationScope,
+  SalesOpportunities, SalesPipelineSetup, SalesWorkspace, SalesPipelineDataset and SalesAccounts 31 of 31 (7 specs, 8.8 s of features).
+  mr-boss SalesForecast, SalesAccess, SalesSettings, SalesReports, SalesOpportunities, SalesHome, AdminCapabilities, AdminRegistries,
+  SalesQuotes, SalesOrders, SalesAgreements and SalesApprovals 47 of 47 (12 specs, 15.4 s of features). Client SalesPipelineWalk 1 of 1
+  (7.1 s). Targets (html and qvt as the manager, refused to the rep), Target attainment (html as the manager and the reader), Forecast
+  in tui and html (the organization's key with its children) and with no period (Ziziwork Sales) were rendered once by hand without
+  errors and not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean
+  on the new and changed JavaScript. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in the Sales build: forecast and targets" table; no ss-inventory row names Forecast, Targets or
+  TargetAttainment (the baseline has no forecast screens).
+- Design edits: design-sales §1.1's BOSS_SALES_REP row (SALES_FORECAST_EDIT, own forecast only), §8 "As built (impl-sales P18)", §9
+  Targets.
+- Findings, numbered by the lead F278 to F286 in order:
+  - SALES_FORECAST_EDIT is granted to the representative, beside the manager and the administrator, so a rep submits their own
+    forecast as design §8 and the usable-when have it; design §1.1's table did not list it for the rep (the user's call);
+  - OrderPartParty carries no dates, so order and invoice attribution is the order part's current representative, not one dated at the
+    order's placement; an order whose owner changes later moves its amount to the new owner, and two representative rows leave it
+    unassigned;
+  - an invoice is attributed only through OrderItemBilling to its order; a sales invoice of no order is unassigned and shown only to a
+    SALES_TEAM_VIEW holder; a written-off invoice counts as finalized;
+  - the won amount is a won deal's estimated amount (SalesOpportunity has no separate won amount), counted in the period of its latest
+    close; a deal reopened and won again counts once, in its latest close's period;
+  - a target's audit history (quota, basis, the reason) is kept in the audit log but no screen shows it (AuditChanges reads no
+    SalesForecast projection, F57's rule);
+  - `ensure#SalesPeriods` makes calendar-year periods only; an organization whose sales year is offset enters its periods otherwise
+    (the forecast accepts its Fiscal periods too);
+  - an allocation's overlap check reads a category's direct members, not its sub-categories (ProductCategoryRollup);
+  - a deal's list is capped at 2,000 deals for one key, as are a period's orders and invoices; past that a measure would undercount
+    without saying so;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the forecast services; P18 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 1.8 s (SalesForecasts); mr-boss server about 0.4 s (SalesForecast 0.18 s, SalesAccess' P18 feature
+    0.21 s); client none;
+  - merge hot spots (P16 and P17 beside it): mr-mantle `entity/SalesEntities.xml` (SalesForecast), `service/mantle/sales/SalesAccess.js`
+    (a P18 block after P15's end, exports at the end); mr-boss `service/ironstone/sales/Sales.js` (a P18 block after P15's first block
+    end; the recordKinds comment), `service/ironstone/sales/ContextServices.xml` (get#Choices' `timePeriodId` and description),
+    `template/SalesParts.xml` (the choices transition's map), `data/BossSetupSalesData.xml` (a P18 block at the end),
+    `data/BossZSalesDemoData.xml` (a P18 block at the end), `screen/Sales.xml` (the header comment only), `screen/Sales/Settings/*.xml`
+    (three menu indexes), `test/Sales/SalesSpecLib.js` (pipelineMenu, reportsMenu, settingsMenu, managerSettingsMenu, the P18 ids after
+    templates), `test/Sales/SalesAccess.spec.js` (the rep's capabilities, a feature at the end), `test/Sales/SalesSettings.spec.js`,
+    `plan/usl-inventory.md`, `plan/design-sales.md` §1.1, §8, §9;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' agreements: "Sales' forecasts and targets
+    (`mantle.sales.ForecastServices`, all `allow-remote="false"`): a SalesForecast row a key (organization, a person, sales team or the
+    organization itself, a period of the organization, a currency), unique; a Sales reader sees their own key, a team's manager their
+    teams' and members', a holder of `SALES_TEAM_VIEW` the organization's, another organization's answering as missing; a judgement
+    needs `SALES_FORECAST_EDIT` on one's own key, a team one manages or, with `SALES_TEAM_VIEW`, a team or the organization, never
+    another person's; a target needs `SALES_TEAM_MANAGE` on a key the caller sees, its parent of the same organization, period and
+    currency and never a cycle; every write names the revision read. The measures are read from the deals, orders and invoices the
+    reader sees, never stored, never added across currencies, and no template or recurring base counts.";
+  - the user's call: SALES_FORECAST_EDIT for the representative (the first finding).
+
+**Review Nov 14 (P18).** A fresh reviewer, over `sal/p18` with master merged first (Sales P17, Marketing P7; one conflict in
+`plan/usl-inventory.md`, both tables kept).
+- Checked and sound: every ForecastServices verb is `allow-remote="false"`, reads the caller's scope and checks the organization
+  again, and answers a forecast another organization's, another person's or an unseen team's as missing (RECORD_UNAVAILABLE); a judgement
+  needs `SALES_FORECAST_EDIT` on one's own key, a managed team or (with `SALES_TEAM_VIEW`) a team or the organization, never another
+  person's (now also checked for a team manager on their member's forecast); a target needs `SALES_TEAM_MANAGE` on a key the caller sees;
+  the unique key `SALES_FCST_KEY` with FORECAST_EXISTS and DUPLICATE_KEY, the cycle check and every stored write at the revision read
+  (a removed allocation can only return the revision to a state equal to the one read). The deal measures read only the deals of
+  `assignedOpportunityIds`, the orders only those of `assignedOrderIds`, a roll-up's deals as one set (each once across an owner
+  change), no template or recurring base (`orderExcludedPurposes`), and nothing across currencies (another currency's deal listed as
+  left out; orders and invoices by the key's currency). The probability used is the stored one (stage or manual, P4 writes it). The
+  unassigned orders and invoices are shown only to a `SALES_TEAM_VIEW` reader. The CSV exports read the same scoped service, capped as
+  its lists are. Screens follow one render per mode (SalesForecast's qvt).
+- Built finding 2 (orders attributed to the order part's current representative; two representative rows unassigned) and 3 (an invoice of
+  no order unassigned): sound as provisional findings. OrderPartParty carries no dates, so the current representative is the only one
+  there is; leaving an ambiguous order unassigned and showing it apart is the conservative reading of "an unambiguous primary
+  representative", and an invoice of no order cannot be attributed without inventing a rule.
+- Fixed:
+  - R1 (medium): each measure read at most 2,000 rows (deals, placed orders, finalized invoices, Targets' forecasts) and would have counted
+    short without saying so. `limitedList` reads one row past the limit and refuses (TOO_MANY_RECORDS, naming a shorter period, a team or
+    a person to narrow to); Forecast and Target attainment now show a refusal's text instead of "not available". Spec: a 2,001-deal
+    organization refused.
+  - R2 (medium): an invoice billing several orders was attributed to an arbitrary one of them and shown to a reader who saw that one, so
+    its total carried the amounts of orders the reader does not see. Now a reader without `SALES_TEAM_VIEW` counts an invoice only when
+    they see every order it bills, and an invoice of differently attributed orders is unassigned. Spec: the rep's invoices 250 (not 580),
+    the organization's 580 with 330 unassigned.
+  - R3 (low): a target's parent could be a person's forecast (whose measures would then take in every deal below it) and the
+    organization's own forecast could have a parent; now a parent is the organization's or a team's forecast and the organization's
+    takes none (PARENT_INVALID). The cycle spec builds its cycle through two teams.
+  - R4 (low): an allocation's overlap check missed a product counted through two categories, and accepted another organization's product
+    or category (showing its name). Now two categories sharing a member overlap (DETAIL_OVERLAP) and the product or category is the
+    forecast organization's or a shared one, as Sales' choices offer (PRODUCT_INVALID, CATEGORY_INVALID).
+- Recorded: the user's call on `SALES_FORECAST_EDIT` for the representative (§4 row; design §1.1's row names it).
+- Findings, numbered by the lead F287 to F289 in order:
+  - `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on
+    `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged);
+  - a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets);
+  - Targets' list refuses past 2,000 forecasts of one organization without a screen message (find#Targets' refusal is cleared like any
+    load error there).
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge): mr-mantle SalesForecasts 7 of 7 (4.2 s of features,
+  the row-limit feature 1.9 s of it), SalesOrganizationScope 3 of 3; mr-boss SalesForecast 1 of 1 (0.97 s), SalesAccess 16 of 16,
+  SalesSettings 3 of 3, SalesReports 2 of 2, SalesHome 4 of 4. `moqui lint --screens` (release): 141 flagged sites, as before, none in
+  P18's screens. Prettier clean on the changed JavaScript. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about 4.2 s (SalesForecasts, 2.4 s above the Built note's for the two review features); mr-boss server
+    about 0.4 s as built; client none;
+  - merge hot spots as the Built note's, and `plan/usl-inventory.md` (P17's table before P18's);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' agreements: "Sales' forecasts and targets
+    (`mantle.sales.ForecastServices`, all `allow-remote="false"`): a SalesForecast row a key (organization; a person, a sales team or the
+    organization itself; a period of the organization; a currency), unique (`SALES_FCST_KEY`). A Sales reader sees their own key, a
+    team's manager their teams' and current members', a holder of `SALES_TEAM_VIEW` the organization's; another organization's, another
+    person's or an unseen team's answers as missing. A judgement needs `SALES_FORECAST_EDIT` on one's own key, a team one manages or,
+    with `SALES_TEAM_VIEW`, a team or the organization, never another person's; a target needs `SALES_TEAM_MANAGE` on a key the caller
+    sees, its parent the organization's or a team's forecast of the same organization, period and currency, never a cycle; every write
+    names the revision read; an allocation names a product or category of the organization or a shared one. The measures are computed
+    as read, never stored, from the deals, orders and invoices the reader sees (an invoice only when the reader sees every order it
+    bills), each deal once in a roll-up, never added across currencies, no template or recurring base; a measure past 2,000 rows is
+    refused, never counted short. Orders and invoices with no single representative are shown apart, to a `SALES_TEAM_VIEW` reader
+    only.";
+  - the user's call on the representative's `SALES_FORECAST_EDIT` is recorded (§4); nothing else waits on the user.
 
 ### P19 — Reports and Insights registrations
 
@@ -4509,6 +4910,8 @@ the owner's design.
 | Nov 14, 2026 | An order approver keeps read-only sight of an order on which they recorded a decision, after it is approved; not of the organization's other approved orders. Built in P12 | The user's call (P11's review) |
 | Nov 14, 2026 | A quote link's token stays in the stored body of the sent mail, as Billing's and Support's links do; a cross-app redaction of stored links is later (§7) | The user's call (P13's review) |
 | Nov 14, 2026 | An agreement with no status keeps pricing by its dates alone, as Products' price lists and Customer Service's service agreements rely on; Sales' own agreements always carry a status. A raw Agreement row written by REST or an import is the remaining gap (F-row of P15) | The user's call (P15) |
+| Nov 14, 2026 | `SALES_FORECAST_EDIT` is granted to `BOSS_SALES_REP` (in its bundle) beside the manager and the administrator, so a representative submits their own forecast (design §8 SubmitForecast); Mantle confines it: a holder enters the judgement of their own key, a team they manage or, with `SALES_TEAM_VIEW`, a team or the organization, never another person's (SalesAccess.js `forecastSubmits`) | The user's call (the P18 Built note's first finding); design-sales §1.1 changed |
+| Nov 14, 2026 | A cancelled order stays on the customer's My orders and opens from its link, marked Cancelled and read only, instead of disappearing (the order link is no longer revoked by the cancellation; a Support request on it stays the customer's way to ask). Built in P19 | The user's call (P17's review) |
 | Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
@@ -4808,6 +5211,33 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F260 | P15 (Review Nov 14): Products' price-list editor (`store#ProductPriceList`, PriceLists.js) may still attach a price list to a customer agreement under `PRICE_EDIT`; the guard applies it only while the agreement is active, but the list is not on the agreement's revision or activation checks | P15: as its Review note says |
 | F261 | P15 (Review Nov 14): `salesAgreementContent` (BOSS) adds a document, which counts as acceptance evidence, to an agreement of any status and names no revision (it checks `agreementEdit` and the organization) | P15: as its Review note says |
 | F262 | P15 (Review Nov 14): the Built note's fourth and fifth findings stand (the keeper sees linked lines only of quotes and orders they read; the template print, contract schedules and the other apps' AgreementDetail contexts are not built) | P15: as its Review note says |
+| F263 | P17 (Built Nov 14): the PASS operations are `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument`, GET reads; design §10.1 names them `sales.findOrders` and `sales.getOrder` | P17: as its Built note says |
+| F264 | P17 (Built Nov 14): the order's PDF is the stored confirmation as placed; an order with none (Projects' or Customer Service's storeless orders, which send no confirmation, P11) shows no PDF, and has no link either, though a signed-in contact sees it under My orders | P17: as its Built note says |
+| F265 | P17 (Built Nov 14): PASS Sales shows storeless orders only (F42): a customer who also buys in the organization's store follows those orders in Shop | P17: as its Built note says |
+| F266 | P17 (Built Nov 14): an order being changed (OrderBeingChanged), cancelled or rejected is not shown, so while P14's commercial change holds an order in a change its link and My orders show it as not available; a cancelled order disappears from My orders | P17: as its Built note says |
+| F267 | P17 (Built Nov 14): a contact invited to Sales reaches Billing and Support only with its own invitation to each (contact grants are per app); a person customer's own verified account reaches all three; the page links each only where the site's mount of it serves the same organization | P17: as its Built note says |
+| F268 | P17 (Built Nov 14): an order link lasts 366 days, as Shop's, is made at each delivery attempt (an uncertain attempt's earlier link stays valid, as P13's quote links), is never revoked but by the order's cancellation (resolve refuses a cancelled order), and its token stays in the stored confirmation mail as F235's | P17: as its Built note says |
+| F269 | P17 (Built Nov 14): F236 is settled by the revision: it relies on the seller counting commercial changes only (required to issue); a placement or approval that moved the revision would hide an accepted quote's lines too (not seen for an organization without a tax gateway; not checked with a storeless tax gateway) | P17: as its Built note says |
+| F270 | P17 (Built Nov 14): master's ForumSchema.js and mr-pass Schema.js had diverged (P13 and Dogfood DG6 merged in opposite orders), failing mr-pass Forum's copies check; fixed here by making Mantle's copy equal | P17: as its Built note says |
+| F271 | P17 (Built Nov 14): My orders filters by state and by the order or PO, not by a date range (design's MyOrderFind) | P17: as its Built note says |
+| F272 | P17 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name PASS Sales' orders; P17 had no mr-moqui worktree (the text below) | P17: as its Built note says |
+| F273 | P17 (Review Nov 14): Built finding 4 (orders being changed hidden) does not hold against P14 (above); a cancelled order still leaves My orders and its link reads not available, which may be worth the user's look (a customer may want to see that it was cancelled) | P17: as its Review note says |
+| F274 | P17 (Review Nov 14): an order link admits Support's request pages for that order (a cancellation request is a write by the link's reader), as Shop's order link does; with F235 a reader of the organization's sent mail can file one as the customer | P17: as its Review note says |
+| F275 | P17 (Review Nov 14): signed-in reads by order ID are not rate limited (as P13's quote reads); every token lookup is | P17: as its Review note says |
+| F276 | P17 (Review Nov 14): the PDF is the confirmation as placed; after a commercial change the page shows the order now and the PDF the order as placed (P14 stores its changed document separately), with no label saying so | P17: as its Review note says |
+| F277 | P17 (Review Nov 14): the Built note's other findings stand (operation names, storeless only, no date filter, contact grants per app) | P17: as its Review note says |
+| F278 | P18 (Built Nov 14): SALES_FORECAST_EDIT is granted to the representative, beside the manager and the administrator, so a rep submits their own forecast as design §8 and the usable-when have it; design §1.1's table did not list it for the rep (the user's call) | P18: as its Built note says |
+| F279 | P18 (Built Nov 14): OrderPartParty carries no dates, so order and invoice attribution is the order part's current representative, not one dated at the order's placement; an order whose owner changes later moves its amount to the new owner, and two representative rows leave it unassigned | P18: as its Built note says |
+| F280 | P18 (Built Nov 14): an invoice is attributed only through OrderItemBilling to its order; a sales invoice of no order is unassigned and shown only to a SALES_TEAM_VIEW holder; a written-off invoice counts as finalized | P18: as its Built note says |
+| F281 | P18 (Built Nov 14): the won amount is a won deal's estimated amount (SalesOpportunity has no separate won amount), counted in the period of its latest close; a deal reopened and won again counts once, in its latest close's period | P18: as its Built note says |
+| F282 | P18 (Built Nov 14): a target's audit history (quota, basis, the reason) is kept in the audit log but no screen shows it (AuditChanges reads no SalesForecast projection, F57's rule) | P18: as its Built note says |
+| F283 | P18 (Built Nov 14): `ensure#SalesPeriods` makes calendar-year periods only; an organization whose sales year is offset enters its periods otherwise (the forecast accepts its Fiscal periods too) | P18: as its Built note says |
+| F284 | P18 (Built Nov 14): an allocation's overlap check reads a category's direct members, not its sub-categories (ProductCategoryRollup) | P18: as its Built note says |
+| F285 | P18 (Built Nov 14): a deal's list is capped at 2,000 deals for one key, as are a period's orders and invoices; past that a measure would undercount without saying so | P18: as its Built note says |
+| F286 | P18 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the forecast services; P18 had no mr-moqui worktree | P18: as its Built note says |
+| F287 | P18 (Review Nov 14): `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged) | P18: as its Review note says |
+| F288 | P18 (Review Nov 14): a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets) | P18: as its Review note says |
+| F289 | P18 (Review Nov 14): Targets' list refuses past 2,000 forecasts of one organization without a screen message (find#Targets' refusal is cleared like any load error there) | P18: as its Review note says |
 
 ## 7. Later
 
