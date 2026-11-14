@@ -38,7 +38,7 @@ const areas = {
     // P5: AudiencePreview, the audience managers' and, past the area's deny, the authors' and dispatchers'
     // (BOSS_MKT_AUDIENCE_PREVIEW)
     audiencePreview: "Audiences/AudiencePreview",
-    // P6: Sends (Comms' templates; P8 adds the sends), the authors' (BOSS_MKT_SENDS)
+    // P6: Sends (Comms' templates; P8 the sends), the authors', approvers' and dispatchers' (BOSS_MKT_SENDS)
     sends: "Sends"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
@@ -114,7 +114,10 @@ function scope() {
         capabilities.sendEdit ||
         capabilities.dispatch
     )
-    capabilities.sendsRead = capabilities.templateRead
+    // P8: the sends are read by a Marketing reader who writes, approves or dispatches them (design §2: authors, approvers and
+    // dispatchers work there; Mantle's get#Send reads for any Marketing reader of the organization), the templates by their readers
+    capabilities.sendRead = !!capabilities.anyRead && !!(capabilities.sendEdit || capabilities.approve || capabilities.dispatch)
+    capabilities.sendsRead = capabilities.templateRead || capabilities.sendRead
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -186,7 +189,11 @@ const linkPaths = [
     "Sends",
     "Sends/MessageTemplates",
     "Sends/MessageTemplateDetail",
-    "Settings/SendingProfiles"
+    "Settings/SendingProfiles",
+    // P8: the sends and the composer (design §5)
+    "Sends/Sends",
+    "Sends/SendDetail",
+    "Sends/Compose"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -266,8 +273,25 @@ const recordKinds = {
             if (!row || !covers(userScope, row.ownerPartyId)) return null
             return {organizationPartyId: row.ownerPartyId, label: segmentLabel(row), detail: "Segment"}
         }
+    },
+    // P8: a send (CampaignSend), by its organization: SendDetail
+    send: {
+        name: "Send",
+        icon: "sym_o_forward_to_inbox",
+        destination: {path: "Sends/SendDetail", parameter: "campaignSendId"},
+        read: (userScope, campaignSendId) => {
+            if (!userScope.capabilities.anyRead) return null
+            const row = one(SEND, {campaignSendId})
+            if (!row || !covers(userScope, row.organizationPartyId)) return null
+            return {
+                organizationPartyId: row.organizationPartyId,
+                label: row.sendName || campaignSendId,
+                detail: statusName(row.statusId)
+            }
+        }
     }
 }
+const SEND = "mantle.marketing.campaign.CampaignSend"
 function recordOf(userScope, kind, recordId) {
     const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
     const unavailable = () => denied("RECORD_UNAVAILABLE", (definition?.name || "Record") + " " + recordId + " is not available")
@@ -522,6 +546,99 @@ const choiceSources = {
             label: row.templateName || row.messageTemplateId
         }))
     },
+    // P8: the topics a send may take: the organization's Marketing lists of email, not archived, by name
+    sendTopics: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.marketing.contact.ContactList")
+            .condition("ownerPartyId", "in", ids)
+            .condition("contactListTypeEnumId", "in", ["MARKETING", "NEWSLETTER", "ANNOUNCEMENT"])
+            .condition(factory.makeCondition("contactMechTypeEnumId", "not-equals", "CmtTelecomNumber", true))
+            .condition(factory.makeCondition("archivedDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^contactListName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["contactListId", "contactListName"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.contactListId,
+            label: row.contactListName || row.contactListId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => !!recordKinds.list.read(userScope, id),
+            id => one("mantle.marketing.contact.ContactList", {contactListId: id})?.contactListName || id
+        )
+    },
+    // P8: the sending profiles a promotional send may name: the organization's, in effect, promotional or for both, by name
+    sendProfiles: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.profileRead) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.MessageSendingProfile")
+            .condition("organizationPartyId", "in", ids)
+            .condition(factory.makeCondition("purposeEnumId", "not-equals", "MtpTransactional", true))
+            .condition(factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^profileName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["sendingProfileId", "profileName"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.sendingProfileId,
+            label: row.profileName || row.sendingProfileId
+        }))
+    },
+    // P8: the files a send's message may attach: the send's own and its campaign's, by name (each the caller sees through the send)
+    sendFiles: (userScope, term, selected, p) => {
+        const send = p.campaignSendId ? one(SEND, {campaignSendId: p.campaignSendId}) : null
+        if (!send || !userScope.capabilities.sendEdit || !covers(userScope, send.organizationPartyId)) return []
+        const files = Array.from(
+            find("mantle.marketing.campaign.CampaignSendContent", {campaignSendId: send.campaignSendId}).list()
+        )
+            .concat(
+                Array.from(
+                    find("mantle.marketing.campaign.CampaignAsset", {marketingCampaignId: send.marketingCampaignId}).list()
+                )
+            )
+            .filter(row => row.contentLocation && row.thruDate == null)
+        const seen = new Set()
+        const options = []
+        for (const row of files) {
+            if (seen.has(row.contentLocation)) continue
+            seen.add(row.contentLocation)
+            const name = String(row.contentLocation).split("/").pop()
+            if (term && !name.toLowerCase().includes(term.toLowerCase())) continue
+            options.push({value: row.contentLocation, label: name + (row.campaignAssetId ? " · campaign" : "")})
+        }
+        return options.slice(0, choiceLimit)
+    },
+    // P8: a person on a send's topic to preview it as, by name, for an audience reader (MARKETING_AUDIENCE_VIEW; Mantle's preview#Send
+    // checks it and the topic again)
+    sendMembers: (userScope, term, selected, p) => {
+        const send = p.campaignSendId ? one(SEND, {campaignSendId: p.campaignSendId}) : null
+        if (!send || !userScope.capabilities.audienceRead || !covers(userScope, send.organizationPartyId)) return []
+        const partyIds = Array.from(
+            find("mantle.marketing.contact.ContactListParty", {contactListId: send.contactListId})
+                .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
+                .selectField("partyId")
+                .distinct(true)
+                .limit(500)
+                .list()
+        ).map(row => row.partyId)
+        if (!partyIds.length) return []
+        let query = find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("^firstName").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["firstName", "lastName"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.partyId,
+            label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId
+        }))
+        return withSelected(
+            options,
+            selected,
+            partyId => partyIds.includes(partyId),
+            partyId => lib.partyNames([partyId])[partyId] || partyId
+        )
+    },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
     emailTemplates: (userScope, term, selected) => {
         let query = find("moqui.basic.email.EmailTemplate").orderBy("^description").limit(choiceLimit)
@@ -623,6 +740,31 @@ const searchFinds = [
                 url: path + "?contactListId=" + encodeURIComponent(row.contactListId),
                 recordEntity: "mantle.marketing.contact.ContactList",
                 recordId: row.contactListId
+            }))
+        }
+    },
+    // P8: the sends of the scope by id, name or subject, for a reader of sends
+    {
+        kind: "send",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.sendRead) return []
+            const ids = organizationIds(userScope)
+            if (!ids.length) return []
+            const path = sharedPath("Marketing", "Sends/SendDetail")
+            return Array.from(
+                find(SEND)
+                    .condition("organizationPartyId", "in", ids)
+                    .condition(textCondition(["campaignSendId", "sendName", "subject"], text))
+                    .orderBy("-createdDate")
+                    .limit(limit)
+                    .list()
+            ).map(row => ({
+                title: row.sendName || row.campaignSendId,
+                subtitle: "Send · " + statusName(row.statusId) + " · " + organizationName(row.organizationPartyId),
+                icon: recordKinds.send.icon,
+                url: path + "?campaignSendId=" + encodeURIComponent(row.campaignSendId),
+                recordEntity: SEND,
+                recordId: row.campaignSendId
             }))
         }
     }

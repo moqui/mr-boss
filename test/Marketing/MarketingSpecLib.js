@@ -7,13 +7,16 @@ const ids = {
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's
     staffMenu: ["Home", "Campaigns"],
+    // P8: Sends for the approvers and dispatchers too (its Sends tab; the templates stay their readers')
+    sendsStaffMenu: ["Home", "Campaigns", "Sends"],
+    approverSendsMenu: ["Sends"],
     // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
     audienceMenu: ["Home", "Campaigns", "Audiences"],
     adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Settings"],
     systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Leads", "Settings"],
     // P6: Sends (Comms' templates) for the authors and the administrator
     authorMenu: ["Home", "Campaigns", "Sends"],
-    sendsMenu: ["MessageTemplates"],
+    sendsMenu: ["Sends", "MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
     settingsMenu: ["Index", "Adoption", "CampaignDefaults", "Vocabularies", "SendingProfiles"],
@@ -23,7 +26,7 @@ const ids = {
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
     // P6: an author opens the templates (g t)
-    authorKeys: ["g m", "g c", "g t"],
+    authorKeys: ["g m", "g c", "g t", "g n"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
@@ -51,7 +54,12 @@ const ids = {
     newsletterTemplateId: "BOSS_MKT_TPL_NEWS",
     draftTemplateId: "BOSS_MKT_TPL_SPRING",
     retailProfileId: "BOSS_MKT_PROFILE_RETAIL",
-    servicesProfileId: "BOSS_MKT_PROFILE_SERVICES"
+    servicesProfileId: "BOSS_MKT_PROFILE_SERVICES",
+    // P8's demo sends of the running campaign: a draft from the spring invitation, the November newsletter prepared and approved
+    // (Maya its one recipient), and the December one approved for 1 December
+    draftSendId: "BOSS_MKT_SEND_PREVIEW",
+    approvedSendId: "BOSS_MKT_SEND_NOV",
+    scheduledSendId: "BOSS_MKT_SEND_DEC"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

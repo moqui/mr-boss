@@ -22,8 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     segments it plans with), Decisions (requests and decisions, a self-approval marked, those ended by a later change) and Activity
     (the native notes, read only, the conversation and the files: the campaign is a Chatter and files host). Every change is Mantle's
     guarded service at the revision read; a material change (organization, parent, dates, budget, managers) returns an approved plan
-    to review. The Audience, Sends, Automation, Content, Tracking links, Promotions, Events and Results boxes join with their
-    phases. -->
+    to review. Sends lists its sends with QuickSend (P8); the Audience, Automation, Content, Tracking links, Promotions, Events and Results boxes
+    join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
@@ -37,6 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="decideApproval" location="component://mr-boss/template/MarketingCampaigns.xml"/>
     <transition-include name="changeStatus" location="component://mr-boss/template/MarketingCampaigns.xml"/>
     <transition-include name="duplicateCampaign" location="component://mr-boss/template/MarketingCampaigns.xml"/>
+    <transition-include name="createSend" location="component://mr-boss/template/MarketingSends.xml"/>
     <actions>
         <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="campaignCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'campaign', recordId:marketingCampaignId}"/>
@@ -75,6 +76,16 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="partyValues" from="{marketingCampaignId:marketingCampaignId, expectedRevision:campaign.revision, organizationPartyId:campaign.organizationPartyId}"/>
         <set field="costValues" from="{marketingCampaignId:marketingCampaignId, operationKey:ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + marketingCampaignId}"/>
         <set field="printParameters" from="{marketingCampaignId:marketingCampaignId, renderMode:'html-print', lastStandalone:'true'}"/>
+        <!-- P8: the campaign's sends (design §3 CampaignDetail's Sends), with QuickSend (design §14.3: the campaign fixed) -->
+        <if condition="recordFound &amp;&amp; marketing.capabilities.sendRead">
+            <service-call name="mantle.marketing.CampaignSendServices.find#Sends" out-map="sendsFound" transaction="force-new" ignore-error="true"
+                    in-map="{marketingCampaignId:marketingCampaignId, statusId:'all', pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignSendList" from="sendsFound?.sendList || []"/>
+        <set field="sendDetailPath" from="sharedLinks['Sends/SendDetail'] || null"/>
+        <set field="sendsPath" from="sharedLinks['Sends/Sends'] || null"/>
+        <set field="newSendValues" from="{marketingCampaignId:marketingCampaignId, organizationPartyId:campaign.organizationPartyId, campaignFixed:true}"/>
     </actions>
     <widgets>
         <section name="CampaignNotFound" condition="!recordFound">
@@ -484,6 +495,37 @@ along with this software (see the LICENSE.md file). If not, see
                             <columns type="mobile">
                                 <column><field-ref name="label"/><field-ref name="kindText"/></column>
                                 <column><field-ref name="fromDateText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="marketing.capabilities.sendRead">
+                    <box-header title="Sends"/>
+                    <box-toolbar>
+                        <container-dialog id="QuickSendDialog" button-text="New send" icon="sym_o_add" title="New send of ${campaign.campaignName}"
+                                width="640" condition="sendsFound?.canCreate &amp;&amp; ['MKTG_CAMP_PLANNED', 'MKTG_CAMP_APPROVED', 'MKTG_CAMP_INPROGRESS'].includes(campaign.statusId)">
+                            <section-include name="NewSendForm" location="component://mr-boss/template/MarketingSends.xml"/>
+                        </container-dialog>
+                        <link url="${sendsPath}" text="All its sends" link-type="anchor-button" icon="sym_o_list" condition="sendsPath &amp;&amp; campaignSendList.length"
+                                parameter-map="{marketingCampaignId:marketingCampaignId, statusId:'all'}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No sends yet." type="p" style="m-muted" condition="!campaignSendList.length"/>
+                        <form-list name="CampaignSends" list="campaignSendList" skip-form="true" paginate="false" condition="campaignSendList.length">
+                            <field name="sendName">
+                                <conditional-field title="Send" condition="sendDetailPath">
+                                    <link url="${sendDetailPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                                </conditional-field>
+                                <default-field title="Send"><display/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                            <field name="scheduledText"><default-field title="Schedule"><display/></default-field></field>
+                            <field name="eligibleText" align="right"><default-field title="Eligible"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="sendName"/><field-ref name="subject"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="eligibleText"/></column>
                             </columns>
                         </form-list>
                     </box-body>

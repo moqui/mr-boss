@@ -831,7 +831,7 @@ the screens that call it.
 | PaymentAutoPostServices | revert#PaymentApplicationPost |  |  |
 | PaymentAutoPostServices | repost#PaymentAndApplications |  |  |
 
-## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices and P6's Comms templates and sending profiles below)
+## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices, P6's Comms templates and sending profiles and P8's CampaignSendServices below)
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 
@@ -922,6 +922,20 @@ checkout:
 | marketing/AudienceServices | store#SubscriptionPolicy (publicSiteId, offerFromDate, offerThruDate) | Marketing/Audiences/ListDetail (SubscriptionPolicy's public offer) | Marketing/Audiences/ListDetail (Marketing P7) |
 | party/ConsentServices | unsubscribe#ContactListParty (organizationPartyId) | PASS:Account/EmailPreferences (Marketing's context) | AccountHub.js store#EmailPreferences, "No more email from" (Marketing P7) |
 | public/AccountHubServices | get#EmailPreferences, store#EmailPreferences (Marketing's context) | PASS:Account/EmailPreferences (Marketing's context, design-marketing §13) | PASS:Account/EmailPreferences (Marketing P7) |
+
+Added in Marketing P8 (Nov 14, 2026; `mantle.marketing.CampaignSendServices`, the send kind of the approvals, the policy's test list
+and the ledger's promotional profile check, impl-marketing P8), called by built screens and the ledger:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/CampaignSendServices | find#Sends, create#Send | Marketing/Sends (SendFind, SendList, NewSend); CampaignDetail's QuickSend; MessageTemplates' Use | Marketing/Sends/Sends; Marketing/Campaigns/CampaignDetail (Sends, New send); Shared/MessageTemplates (Use opens New send) (Marketing P8) |
+| marketing/CampaignSendServices | get#Send, store#Send, schedule#Send, prepare#Send, duplicate#Send | Marketing/Sends/SendDetail (SendSummary, SendAudience, SendSchedule) | Marketing/Sends/SendDetail (Marketing P8) |
+| marketing/CampaignSendServices | store#SendContent, store#SendAssets, preview#Send, test#Send | Marketing/Sends/Compose (MessageContent, MessageAssets, MessagePreview, TestSend) | Marketing/Sends/Compose; Marketing/Sends/SendDetail (the content preview) (Marketing P8) |
+| marketing/CampaignSendServices | build#TestDelivery | the ledger's source MdsrcCampaignSendTest | attempt#Delivery (Marketing P8) |
+| marketing/CampaignSendServices | check#SendAccess, create#CampaignSendContent | Marketing/Chatter; Marketing/RecordFiles (the send host, design §14.3) | Marketing/Sends/SendDetail (Activity and Files: get#RecordLinkInfo's send rule, RecordFiles' get#ContentType) (Marketing P8) |
+| marketing/CampaignServices | request#, decide#MarketingApproval (targetKind send) | Marketing/Sends/SendDetail (SendDecision) | Marketing/Sends/SendDetail (Request approval, Approve); Commons' Notifications (MarketingSendApproval) (Marketing P8) |
+| marketing/CampaignServices | store#MarketingPolicy (testAddresses) | Marketing/Settings/CampaignDefaults | Marketing/Settings/CampaignDefaults (Test addresses) (Marketing P8) |
+| party/MessageServices | queue#Delivery (a promotional delivery never names a transactional profile) | the ledger's contract (F172) | test#Send (Marketing P8) |
 
 ## Order (89 services)
 

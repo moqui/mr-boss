@@ -12,20 +12,25 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Sends area of IronStone Marketing (design-marketing §5, §1.2; impl-marketing P6): MessageTemplates (Comms' shared template
-    library, Marketing's mount, F16) and MessageTemplateDetail (hidden, opened from it; a sibling of the list, as ListDetail is of
-    Lists). Sends, SendDetail and Compose join in P8, CampaignDelivery in P9. For the authors and the administrator (BOSS_MKT_SENDS
-    denies the root user group and gives the author group an ALWAYS; the root's menu shows it to a holder of MESSAGE_TEMPLATE_VIEW or
-    MESSAGE_TEMPLATE_EDIT); the area's check asks the capability too (sends), so a custom group given Marketing is shown no area its
-    services refuse. Every read and write is mantle.party.MessageServices, which checks the template permissions and the
-    organization again. -->
+<!-- The Sends area of IronStone Marketing (design-marketing §5, §1.2; impl-marketing P6, P8): Sends (the list, the default), SendDetail
+    and Compose (hidden, opened from it), MessageTemplates (Comms' shared template library, Marketing's mount, F16) and
+    MessageTemplateDetail (hidden; a sibling of the list, as ListDetail is of Lists). CampaignDelivery joins in P9. For the authors,
+    approvers, dispatchers and the administrator (BOSS_MKT_SENDS denies the root user group and gives those groups an ALWAYS; the
+    root's menu shows it to a template reader or a Marketing reader who writes, approves or dispatches sends); the area's check asks
+    the capability too (sends), so a custom group given Marketing is shown no area its services refuse. Every read and write is
+    mantle.marketing.CampaignSendServices or mantle.party.MessageServices, which check the permissions and the organization again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sends" default-menu-index="4" menu-image="sym_o_forward_to_inbox" menu-image-type="icon">
     <always-actions>
-        <script>if(!marketing.capabilities.sends)throw new Error('PERMISSION_DENIED: Sends are for the Marketing authors')</script>
+        <script>if(!marketing.capabilities.sends)throw new Error('PERMISSION_DENIED: Sends are for the Marketing authors, approvers and dispatchers')</script>
     </always-actions>
-    <subscreens default-item="MessageTemplates" always-use-full-path="true">
-        <subscreens-item name="MessageTemplates" location="component://mr-boss/screen/Shared/MessageTemplates.xml" menu-index="2"/>
+    <subscreens default-item="Sends" always-use-full-path="true">
+        <subscreens-item name="Sends" location="component://mr-boss/screen/Marketing/Sends/Sends.xml" menu-index="1"
+                menu-include="ec.user.hasPermission('MARKETING_SEND_EDIT') || ec.user.hasPermission('MARKETING_APPROVE') || ec.user.hasPermission('MARKETING_DISPATCH')"/>
+        <subscreens-item name="SendDetail" location="component://mr-boss/screen/Marketing/Sends/SendDetail.xml" menu-include="false"/>
+        <subscreens-item name="Compose" location="component://mr-boss/screen/Marketing/Sends/Compose.xml" menu-include="false"/>
+        <subscreens-item name="MessageTemplates" location="component://mr-boss/screen/Shared/MessageTemplates.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('MESSAGE_TEMPLATE_VIEW') || ec.user.hasPermission('MESSAGE_TEMPLATE_EDIT')"/>
         <subscreens-item name="MessageTemplateDetail" location="component://mr-boss/screen/Shared/MessageTemplateDetail.xml" menu-include="false"/>
     </subscreens>
     <widgets>

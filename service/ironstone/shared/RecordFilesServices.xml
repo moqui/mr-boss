@@ -84,7 +84,10 @@ along with this software (see the LICENSE.md file). If not, see
                     'salesOpportunityContentId', 'SalesOpportunityContentType'],
                 // IronStone Marketing's campaign files host (impl-marketing P2, design §14.3 CampaignAsset)
                 'mantle.marketing.campaign.MarketingCampaign': ['mantle.marketing.CampaignServices.create#CampaignAsset',
-                    'campaignAssetId', 'CampaignAssetType']}
+                    'campaignAssetId', 'CampaignAssetType'],
+                // IronStone Marketing's send files host (impl-marketing P8, design §14.3 CampaignSendContent)
+                'mantle.marketing.campaign.CampaignSend': ['mantle.marketing.CampaignSendServices.create#CampaignSendContent',
+                    'campaignSendContentId', 'CampaignSendContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
@@ -188,6 +191,12 @@ along with this software (see the LICENSE.md file). If not, see
             if (info.recordEntityName === 'mantle.marketing.campaign.MarketingCampaign') {
                 const access = ec.service.sync().name('mantle.marketing.CampaignServices.check#CampaignAccess')
                     .parameters({marketingCampaignId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
+            }
+            // Marketing P8: a send's files: its authors add them while its content may change (Mantle's check#SendAccess)
+            if (info.recordEntityName === 'mantle.marketing.campaign.CampaignSend') {
+                const access = ec.service.sync().name('mantle.marketing.CampaignSendServices.check#SendAccess')
+                    .parameters({campaignSendId:info.recordId}).disableAuthz().call()
                 contentType.catalogCanChange = !!access?.canEdit
             }
             if (info.recordEntityName === 'mantle.party.Party') {

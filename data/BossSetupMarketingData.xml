@@ -260,4 +260,25 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SENDING_CONFIGURE" fromDate="0"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SENDING_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
     <!-- ===== end of Marketing P6 ===== -->
+
+    <!-- ===== Marketing P8: sends and the composer (impl-marketing P8; design-marketing §2, §5) ===== -->
+    <!-- Sends (design §2: the sends, SendDetail and Compose) for the approvers and dispatchers beside the authors: each gets an ALWAYS
+        on the area (BOSS_MKT_SENDS denies the root user group), with the root's filter sets, so an approver opens SendDetail to decide
+        and a dispatcher (P9) to release; the area's check asks the capability (sendsRead: a template reader, or a Marketing reader who
+        writes, approves or dispatches sends), and Mantle's CampaignSendServices check the permissions and the organization again.
+        Templates stay their readers' (an approver or dispatcher reads none). -->
+    <artifactGroups artifactGroupId="BOSS_MKT_SENDS" description="Marketing sends and templates">
+        <authz artifactAuthzId="BOSS_MKT_SENDS_APPROVER" userGroupId="BOSS_MARKETING_APPROVER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_SENDS_DISPATCH" userGroupId="BOSS_MARKETING_DISPATCH" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- a send's approval notice (Mantle seeds MarketingSendApproval with its decision services) opens its SendDetail -->
+    <moqui.security.user.NotificationTopic topic="MarketingSendApproval"
+            linkTemplate="/qapps/Marketing/Sends/SendDetail?campaignSendId=${campaignSendId}"/>
+    <!-- ===== end of Marketing P8 ===== -->
 </entity-facade-xml>

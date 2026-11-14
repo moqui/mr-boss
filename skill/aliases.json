@@ -109,6 +109,11 @@
         "target group",
         "dynamic list"
     ],
+    "send": [
+        "mailing",
+        "email blast",
+        "campaign email"
+    ],
     "opportunity": [
         "deal",
         "pipeline deal",
