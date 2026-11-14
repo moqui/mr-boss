@@ -410,7 +410,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F89) |
 | P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | built and reviewed Nov 13, merged |
-| P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | — |
+| P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | built and reviewed Nov 13, merged |
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | — |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | — |
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | — |
@@ -917,7 +917,7 @@ RecordFiles hosts), §18 (the campaign plan print); MKT-CAMPAIGN, MKT-APPROVAL, 
   screens (no baseline form).
 - Design edits: design-marketing §3 Campaigns, CampaignDetail and Approvals and §12 CampaignDefaults and Vocabularies (as built);
   design-admin §14's Marketing participant (as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F103 to F112 in order:
   - the one-person-team flag admits an author's own campaign approval too (recorded as a self-approval): the user's call names a
     send under 500; a campaign sends nothing itself and each of its sends is approved on its own. Needs the user's confirmation;
   - an approved campaign returns to Planned on a material change through a new flow transition; a material change of a campaign in
@@ -989,7 +989,7 @@ record link branches), against P2, §2, §4 and design §3, §12, §14.3.
     missing one RECORD_UNAVAILABLE, telling which ids exist elsewhere; both now answer RECORD_UNAVAILABLE (the spec updated).
   - R5 (scope, low). `duplicate#Campaign` copied the current links without checking their records are still the organization's; one
     re-owned since is left behind.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F113 to F117 in order:
   - the reviser as an author (R1), Accounting's own scope for cost lines (R2), the locked allocation (R3), the uniform link refusal
     (R4), duplicate's link check (R5);
   - a refused campaign may be asked again at the same revision with no change, so another approver can be sought; Purchasing's rule
@@ -1985,6 +1985,21 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F100 | P1 (Review Nov 13): Comms' `get#ConsentOptions` gated on the contact admin (R3) | P1: as its Review note says |
 | F101 | P1 (Review Nov 13): `create#ContactList` lets a contact administrator create a non-mailbox list with no owner, which is then unowned (awaiting adoption, reached only by contact administrators): kept, as the plan gives the contact administrator every list | P1: as its Review note says |
 | F102 | P1 (Review Nov 13): the readiness check and the Adoption preview are instance-wide (unowned records are no organization's): a configurer of one organization sees every unowned record's name; today only `BOSS_MARKETING_ADMIN` (every organization) holds the permission | P1: as its Review note says |
+| F103 | P2 (Built Nov 13): the one-person-team flag admits an author's own campaign approval too (recorded as a self-approval): the user's call names a send under 500; a campaign sends nothing itself and each of its sends is approved on its own. Needs the user's confirmation | P2: as its Built note says |
+| F104 | P2 (Built Nov 13): an approved campaign returns to Planned on a material change through a new flow transition; a material change of a campaign in progress is refused rather than re-approved (the design names no in-progress re-approval) | P2: as its Built note says |
+| F105 | P2 (Built Nov 13): completion refuses with the pending work's counts; the design's confirmed stop-then-complete command is not built (nothing to stop before sends, P9) | P2: as its Built note says |
+| F106 | P2 (Built Nov 13): a cost's source must be in the campaign's currency (CURRENCY_MISMATCH): the design's rate and date evidence for a conversion is not built | P2: as its Built note says |
+| F107 | P2 (Built Nov 13): a campaign links lists, segments, store promotions and form publications; an event (P16) and a page (P14) are KIND_UNAVAILABLE until their phases keep an organization (a Commons event's owner may be a person; a site page has none) | P2: as its Built note says |
+| F108 | P2 (Built Nov 13): `MARKETING_OWNER_CHANGE` is a new permission on Sales' pattern (SALES_OWNER_CHANGE, the user's call for Sales), held by Admin's identity operator and administrator, seeded in MarketingSeedData | P2: as its Built note says |
+| F109 | P2 (Built Nov 13): the Approvals area gives the approver group an ALWAYS (Sales' areas do the same), so the transitions under it skip artifact checks below; the decision services check `MARKETING_APPROVE` and the organization themselves | P2: as its Built note says |
+| F110 | P2 (Built Nov 13): CampaignDetail is one screen of boxes, not tabs (Sales' OpportunityDetail pattern); the later phases' tabs become boxes or the screen moves to tabs when they land | P2: as its Built note says |
+| F111 | P2 (Built Nov 13): Home's period and mine or team filters wait for more sources than P2's two counts | P2: as its Built note says |
+| F112 | P2 (Built Nov 13): `skill/people-policy-question.md` is left out of the skill index (its description is 201 characters, over 160), found running `--skills`; not P2's | P2: as its Built note says |
+| F113 | P2 (Review Nov 13): the reviser as an author (R1), Accounting's own scope for cost lines (R2), the locked allocation (R3), the uniform link refusal (R4), duplicate's link check (R5) | P2: as its Review note says |
+| F114 | P2 (Review Nov 13): a refused campaign may be asked again at the same revision with no change, so another approver can be sought; Purchasing's rule is the same; kept | P2: as its Review note says |
+| F115 | P2 (Review Nov 13): `store#MarketingPolicy`'s stale check is not locked: two first policies stored at once could both start (low; configurers are few) | P2: as its Review note says |
+| F116 | P2 (Review Nov 13): `create#CampaignAsset` takes `userId` and `contentDate` from its parameters (the auto-parameters), as Sales' `create#OpportunityContent`: an editor could name another uploader; left for a shared fix of the content hosts | P2: as its Review note says |
+| F117 | P2 (Review Nov 13): Attention's approvals list shows an approver the requests they authored too, which they may not decide | P2: as its Review note says |
 
 ## 7. Later
 
