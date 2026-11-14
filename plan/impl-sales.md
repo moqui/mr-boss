@@ -3435,6 +3435,99 @@ mr-moqui unchanged, no Rust built.
     contact does (built so), and whether a Sales contact should see only quotes addressed to them unless made a customer
     administrator (built: every issued quote of the customer).
 
+**Review 2026-11-14 (P13).** A fresh review of `sal/p13` (mr-mantle 2c581fcb, mr-pass e582ca9, mr-boss 70f4c25d; master had nothing
+newer in any of the three, so no merge; Sales P12 is not on master yet, so its `printOf` and SalesQuotes.js work meets this at the
+merge) against P13, §2, §4, design §10 and §12.1, X6, F17, F18, F36 and F48, as a public, unauthenticated surface.
+- Checked and sound:
+  - The five services are `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS operations of the
+    authority's allowlist (ForumSchema.js and PassRoutes.js equal mr-pass's Schema.js and Routes.js, SalesPortalAccess checks it); the
+    authority sets `siteId` from the request's site and refuses a different one in the input, and each operation takes the
+    organization from that site's `sales` mount (published, an internal organization). The customer is the capability's or the
+    signed-in account's (a contact grant of the `sales` app, or its own verified party), never the request's; an order ID beside a
+    token must be the token's; a token of another organization, scope or record kind, a forged, expired or revoked one, an ended,
+    superseded or expired issue and another customer's quote all answer the same NotFound (a token's NotFound comes from one check;
+    "sign in" is answered only when no token is given, before any lookup).
+  - Tokens: 48 random characters, only the digest kept; every lookup counts against the requester's limit (100 in ten minutes) and
+    every response post against its own (30). QuoteView and QuoteRespond are made only by `send#Quote` (`quoteLink`, through
+    ExternalAccess `create`, which has no permission check of its own and is called only from the issue's send and the ledger's build):
+    `create#AccessCapability` asks SALES_QUOTE_SEND for them and then refuses them for want of a bound revision (SCOPE_INVALID; a check
+    added below), a bound scope is never mixed with an order's, a token's thruDate is the issue's validity, `revise#Quote` and
+    `withdraw#Quote` revoke every quote link of the order, and a native change leaves the link bound to a superseded issue. A quote
+    link never opens Shop's OrderView page or the reverse (the scope is checked).
+  - The retried delivery's earlier link (the Built note's finding): acceptable. Its token existed only in that attempt's message; an
+    uncertain attempt may have reached the customer, so leaving it valid is right, and it is bound to the same issue and revision, ends
+    with the validity and is revoked by revise and withdraw like the others.
+  - respondSalesQuote is the only bearer write, in the three `TOKEN_WRITES` lists (equal); the authority's exemption from the session
+    check is for a registered deployment only, and the local page posts with the session token (the transition's CSRF check). It goes
+    through `respondTo`, the staff path's lifecycle: the operation key read under the order's lock, one response an issue (a repeat of
+    an acceptance answers the first, any other second response RESPONSE_RECORDED), `place#Order` once, the response's source SqsPortal
+    with the capability or the signed-in party, staff-only evidence and contact fields ignored, the date now. The operation key binds
+    the capability or party, the organization, the issue and the payload (another link's same key is a conflict).
+  - Projections: no cost, margin, price trace, internal note, other contact, approval data or PDF location (the facade streams the PDF;
+    the authority strips `location`); terms as plain text; every page value HTML-escaped (`.html.fancy`).
+  - Pages: no-store (the default route policy), `Referrer-Policy: same-origin` and a CSP whose `img-src` is the site and its brand
+    logo's origin, so the token in a link page's URL never travels to a third party; the sign-in link from a link page returns to the
+    quote by its order ID, never its token; reads are GETs a mail scanner may fetch without effect.
+  - Invite to Sales: SALES_CUSTOMER_INVITE (in SalesAccess and again in `invite#Contact` with the organization), a customer account of
+    the caller's sales scope (another answers as missing), a current contact of it or the person account itself, one of the contact's
+    own addresses, an organization of the scope with a published Sales site. The BOSS template shows the link once.
+  - The SalesDefaults threshold keeps the other currencies' thresholds; P10's two fields now show (the Built note's fix).
+- Fixed (mr-mantle 6e7864fb):
+  - R1 (medium, confidentiality): a signed-in contact reached the latest issue with no check that the order was still at its revision,
+    so after `revise#Quote` and a new `propose#Quote` not yet sent, `getSalesQuote` showed the new revision's lines and totals (the
+    seller's unissued, possibly unapproved work) and My quotes listed a revised quote with its draft total. An unanswered quote whose
+    revision moved past its latest issue, or that is back in a revision's draft, is now neither shown nor listed. SalesPortal checks it
+    (both checks fail on the unfixed code).
+  - R2 (low): respond#CustomerQuote checked the revision, the terms and the threshold against the order read before its lock; it now
+    locks first and checks the locked order and the response read under the lock (design §10: eligibility revalidated under lock). A
+    request without a token, which ExternalAccess admitted as the customer's contact or own party, is now signed in for it even where
+    the self party lacks the Customer role (it was taken as a bearer, its identity `party:null`).
+  - R3 (low): an acceptance needed no acceptor: the page asks the name, the service did not (a remote frontend's or a scripted post
+    accepted nameless). The name is required now (ACCEPTOR_REQUIRED); SalesPortal checks it (the unfixed code placed the order).
+  - R4 (low, spec coverage): nothing checked that `create#AccessCapability` refuses the quote scopes; SalesPortal checks it for a quote
+    sender (SCOPE_INVALID).
+- Provisional findings (for the lead to number):
+  - a quote link's token is in the sent mail's stored body (the rep's own send saves a draft; the ledger's `send#EmailTemplate` keeps
+    the message), so a reader of the organization's sent mail can open the link and, below the threshold, accept or decline as the
+    customer (the response records the capability); Billing's and Support's links are kept the same way;
+  - once answered, a link and a contact read the quote's lines and totals from the order as it is now (`offerOf(order)`), so a later
+    commercial change of the placed order (P14) would show as the quote; the PDF stays the issued offer. For P14 or P17 to read the
+    issue's own lines or show the order instead;
+  - a refusal from below the checks that is not a listed code (`place#Order`, P11's net-terms approval) reaches the page with its
+    text when the authority's internal-text filter passes it;
+  - `invite#Contact` for `sales` (not remote) takes any address and any Customer of the organization; only invite#SalesContact narrows
+    it to an account of the scope and the contact's own address. Only BOSS's template calls it for `sales` today;
+  - the Built note's findings stand; the two user's calls are recorded in §4 (Nov 14) and design §10.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPortal 4 of 4 (feature time 3.7 s; 28 s with
+  setup), and with each fix taken out its check fails (R1's two, R3's); mr-pass SalesPortalAccess 2 of 2 (0.1 s). Prettier (mr-moqui's
+  config) on the two changed files. Not run: test-apps, test-framework, the acceptance suite; no screen changed.
+- For the lead:
+  - budget share: mr-mantle about 3.7 s (SalesPortal, about 0.6 s more for the review's checks); mr-pass and mr-boss as the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/order/SalesPortal.js` and `test/order/SalesPortal.spec.js`
+    (only this branch); with Sales P12, SalesQuoteIssues.js `printOf` (P13 split `offerOf` out of it and adds the page link and QR)
+    and the exports at its end;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`): the worker's paragraph is right but for three points (a contact's
+    reach, the checks under the lock and the acceptor, and the stored mail); corrected: "PASS Sales' customer quotes
+    (`mantle.order.SalesPortalServices`, all `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS
+    operations `findSalesQuotes`, `getSalesQuote`, `getSalesQuoteDocument`, `respondSalesQuote` and `getSalesQuoteResponse` of the
+    authority's allowlist): each finds the organization from the site's `sales` mount and the customer from the bearer link's
+    capability (the `SalesOrder` kind's QuoteView and QuoteRespond scopes, bound to one issue's commercial revision, ending with the
+    quote's validity, made only by `send#Quote` for each recipient's mail, revoked by `revise#Quote` and `withdraw#Quote`;
+    `create#AccessCapability` refuses those scopes) or from a signed-in account's contact grant of the `sales` app or its own verified
+    customer party, never from the request; a link reaches its one issue while it stands and its receipt after a response, never a
+    list; a signed-in account sees a quote of a customer it acts for only at its issued revision or once answered; a wrong, expired,
+    revoked, crossed or ended link answers the same NotFound; every token lookup and every response counts against the requester's
+    limit; `respondSalesQuote` is the only bearer write (`TOKEN_WRITES`), runs respond#Quote's lifecycle under the order's lock (the
+    revision seen, the terms acknowledged, the acceptor named and the threshold checked there; one response an issue, `place#Order`
+    once), and its operation key binds the capability or the customer, the organization, the issue and the payload; above the
+    seller's acceptance threshold a link alone cannot accept; answers are allow-listed projections and the issued PDF is streamed by
+    the facade, its location never answered; link pages are no-store with a same-origin referrer policy. A link's token is in the
+    sent mail the organization keeps. Invite to Sales (`mantle.sales.AccountServices.invite#SalesContact`) needs
+    `SALES_CUSTOMER_INVITE`, a customer account of the caller's sales scope, one of the contact's own addresses and an organization
+    of the scope with a published Sales site.";
+  - the user's calls of Nov 14 are recorded (§4, design §10); none open from this review, unless the lead wants the stored-mail
+    finding decided (keep, or keep links out of the stored body).
+
 ### P14 — Commercial changes and the fulfillment and billing handoffs
 
 Design §6 OrderChanges, OrderChangeDetail, ShipmentDetail and InvoiceDetail; SAL-CHANGE, CX-POSTING. Starts stage 3.
@@ -3779,6 +3872,8 @@ the owner's design.
 | Nov 13, 2026 | An entered zero price or a free quote line keeps requiring `SALES_APPROVE` of the one who enters it until P9 (P7); in P9 a free or zero line becomes a rule in Sales' approval policies, so a rep can draft it and the approver decides at issue (P7, P9) | The user's call (the P7 Built note's free-line finding) |
 | Nov 13, 2026 | A mail rule's `createQuoteRequest` action (Create RFQ from mail) needs its owner to hold `SALES_QUOTE_EDIT`, when the rule is saved (`check#LeadRuleOwner`) and each time it runs (`create#QuoteRequestFromEmail`), as built (P8) | The user's call (the P8 Built note's first finding), by analogy with createLead's owner |
 | Nov 13, 2026 | A chargeable repair's warranty claim stays visible to Sales as built (holders of `SALES_QUOTE_EDIT` or `SALES_TEAM_VIEW` in the claim's organization, its customer and products only, under RFQs' "Repairs to quote"), with notices both ways: Customer Service's chargeable decision tells the organization's default Sales team (P9's SalesPolicy; topic SalesRepairToQuote), and a repair quote made tells the claim's assignee or queue (SalesRepairQuoted); neither title carries fault text or an amount (P8 review) | The user's call (the P8 Built note's second finding); written into design-sales §5 and design-customer-service §13 |
+| Nov 14, 2026 | Above the seller's acceptance threshold, a person customer's own verified account (the self relationship) may accept signed in, beside an invited contact of a company customer. Built in P13 | The user's call (P13's Built note) |
+| Nov 14, 2026 | A contact invited to PASS Sales sees every issued quote of its customer at that organization, not only the quotes addressed to it; `invite#Contact` takes no administrator flag for `sales`. Built in P13 | The user's call (P13's Built note) |
 
 ## 5. Open questions
 
