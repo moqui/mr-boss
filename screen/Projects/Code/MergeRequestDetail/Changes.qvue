@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     comments, Reply and Resolve (or Reopen), and "outdated" when a later push changed the line; a thread whose line is no longer
     in the diff shows at the top of its file. Submit review opens the review dialog (approve, request changes or comment, with
     a summary; an author does not approve their own); review=true opens it at once. A merged or closed merge request is read
-    only. The diff's lines are text, never html (impl-projects.md F32); comments are markdown, shown through m-markdown (which
+    only. The diff's lines are text, never html (impl-projects.md F32); a comment of a public conversation (bodyFormat html, a post
+    of a repository Smithy keeps) is its cleaned html with no image (a remote one would be fetched by a staff browser), cleaned again by DOMPurify, which the component loads, and shown only once that is loaded; any other comment is markdown, shown through m-markdown (which
     sanitizes). Keys: j and k the next and previous file, v marks the file viewed. -->
 <template><div class="boss-mr-changes">
     <div v-if="loading && !changes" class="q-pa-md">
@@ -90,7 +91,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     <m-avatar :name="comment.authorName" :user-id="comment.userId || undefined" size="26px" class="q-mr-sm"></m-avatar>
                                     <div class="col" style="min-width:0">
                                         <div class="text-caption"><span class="text-weight-medium">{{comment.authorName}}</span> <span class="m-muted">{{comment.whenText}}</span></div>
-                                        <m-markdown :text="comment.body"></m-markdown>
+                                        <div v-if="comment.bodyFormat === 'html'" class="m-markdown"><div v-if="purifyReady" class="m-markdown-body" v-html="cleanBody(comment.body)"></div></div>
+                                        <m-markdown v-else :text="comment.body"></m-markdown>
                                     </div>
                                 </div>
                                 <div class="row items-center q-gutter-sm">
@@ -161,7 +163,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                             <m-avatar :name="comment.authorName" :user-id="comment.userId || undefined" size="26px" class="q-mr-sm"></m-avatar>
                                                             <div class="col" style="min-width:0">
                                                                 <div class="text-caption"><span class="text-weight-medium">{{comment.authorName}}</span> <span class="m-muted">{{comment.whenText}}</span></div>
-                                                                <m-markdown :text="comment.body"></m-markdown>
+                                                                <div v-if="comment.bodyFormat === 'html'" class="m-markdown"><div v-if="purifyReady" class="m-markdown-body" v-html="cleanBody(comment.body)"></div></div>
+                                                                <m-markdown v-else :text="comment.body"></m-markdown>
                                                             </div>
                                                         </div>
                                                         <div class="row items-center q-gutter-sm">
@@ -216,7 +219,7 @@ module.exports = {
     name: 'BossMergeRequestChanges',
     data() {
         return {
-            loading: false, notFound: false, changes: null, seq: 0, contextSeq: 0, disposed: false,
+            loading: false, notFound: false, changes: null, seq: 0, contextSeq: 0, disposed: false, purifyReady: false,
             layout: 'unified', viewed: {}, collapsed: {}, expanded: {}, hoverKey: null, focusKey: null,
             composer: { key: null, path: null, oldLine: null, newLine: null, lineText: '', body: '' }, replyTo: null, replyBody: '', busy: false,
             review: { open: false, decision: 'comment', note: '', busy: false }, selectedPath: null, reviewAsked: false
@@ -392,6 +395,9 @@ module.exports = {
         threadClass(thread) { return (this.dark ? 'bg-grey-9' : 'bg-blue-grey-1') + (thread.resolved ? ' m-muted' : ''); },
         commentStyle(key) { return { position: 'absolute', left: '-10px', top: 0, opacity: this.touch || this.hoverKey === key || this.focusKey === key ? 1 : 0 }; },
         composerOn(file, row) { return this.composer.key && this.composer.path === file.path && row.keys.includes(this.composer.key); },
+        // a post's body: html the server cleaned (Mantle, then CodeServices, which also takes its images out); cleaned here
+        // once more, and shown only once the cleaner is loaded (purifyReady)
+        cleanBody(html) { return window.DOMPurify.sanitize(String(html || ''), { FORBID_TAGS: ['img', 'picture', 'source', 'video', 'audio', 'style', 'form', 'input', 'button', 'textarea', 'select'], FORBID_ATTR: ['style'] }); },
         startComment(file, line) {
             this.replyTo = null;
             this.composer = { key: line.tag === 'delete' ? 'o' + line.oldNo : 'n' + line.newNo, path: file.path, oldLine: line.tag === 'delete' ? line.oldNo : null,
@@ -476,6 +482,8 @@ module.exports = {
         }
     },
     mounted() {
+        // the cleaner of a post's html body, as WebrootChat loads it; such a body is not shown before it is there
+        moqui.loadScript('/libs/dompurify/purify.min.js', null, () => !!window.DOMPurify).then(() => { if (!this.disposed) this.purifyReady = true; }, () => { /* the bodies stay hidden */ });
         try { const saved = localStorage.getItem('boss.mr.layout'); if (saved === 'split' || saved === 'unified') this.layout = saved; } catch (err) { /* private mode */ }
         if (moqui.keymap && moqui.keymap.registerScope) this.keysOff = moqui.keymap.registerScope('mrChanges', this.keyBindings());
         this.load();

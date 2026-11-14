@@ -297,6 +297,7 @@ along with this software (see the LICENSE.md file). If not, see
             const topicRecords = {MantleTask: ['mantle.work.effort.WorkEffort', 'workEffortId'], MantleEvent: ['mantle.work.effort.WorkEffort', 'workEffortId'],
                 MantleRequest: ['mantle.request.Request', 'requestId'], MantleCommunicationEvent: ['mantle.party.communication.CommunicationEvent', 'communicationEventId']}
             const titles = appTitles || {}
+            const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
             for (const row of Array.from(notificationList || [])) {
                 const message = row.message && typeof row.message === 'object' ? row.message : {}
                 let recordEntityName = row.recordEntityName || null
@@ -305,6 +306,10 @@ along with this software (see the LICENSE.md file). If not, see
                     recordEntityName = topicRecords[row.topic][0]
                     recordId = message[topicRecords[row.topic][1]]
                 }
+                // a notification of a task the user may not see (no longer on its project, or a confidential issue's the user is
+                // no Owner of) is not shown: its title and summary would name it (projects/HiddenItems.js mayName)
+                if (recordEntityName === 'mantle.work.effort.WorkEffort' && recordId && !hiddenItems.mayName(recordId)
+                        && ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', recordId).disableAuthz().one()?.workEffortTypeEnumId === 'WetTask') continue
                 let openUrl = null
                 // an approval topic's card opens the topic's own screen link first (the place its approver decides it, such as
                 // Maintenance's BookingRequests for ResourceBooking, impl-maintenance P16 review R8), else the record's as any card

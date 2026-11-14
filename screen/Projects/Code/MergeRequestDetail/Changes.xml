@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     with its review threads. The component is Changes.qvue next to this file; every read and change goes through the JSON
     transitions below, services of ironstone.projects.CodeServices that check the repository's view right (get#MergeRequestChanges over
     org.moqui.git.GitReviewServices.get#MergeRequestDiff and mantle.work.GitServices.get#ReviewThreads; comment#MergeRequest over
-    create#ReviewComment; submit#Review; mantle.work.GitServices.resolve#ReviewThread). The diff's lines are data the component
+    create#ReviewComment (on a merge request of a repository Smithy keeps a post of its public conversation, which may be held for
+    review: the answer then says so, and a post's body is html, cleaned, shown as such); submit#Review; mantle.work.GitServices.resolve#ReviewThread). The diff's lines are data the component
     shows as text, never html, so nothing pushed to the repository runs in the app's origin (impl-projects.md F32). review=true
     opens the review dialog (MergeRequestDetail's Review). The terminal: ChangesTui beside this file, the files, one
     file's diff (path), the threads, line comments, replies and resolve (impl-projects.md P11). A client contact (impl-projects.md P10b) gets the diff alone: no threads (the team's review notes), and the
@@ -42,7 +43,9 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('ironstone.projects.CodeServices.comment#MergeRequest').parameters({mergeRequestId: mergeRequestId || '', body: body || '',
                 path: path || null, oldLine: oldLine ? Number(oldLine) : null, newLine: newLine ? Number(newLine) : null, lineText: lineText || null,
                 parentCommEventId: parentCommEventId || null}).call() || {}
-            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {communicationEventId: out.communicationEventId})
+            // a comment on a merge request with a public conversation may be held for review: it is then in no thread yet
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {communicationEventId: out.communicationEventId, held: !!out.held,
+                ...(out.held ? {messageInfos: [{type: 'info', message: ec.l10n.localize('Your comment is held for review: it shows here once a moderator approves it')}]} : {})})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>

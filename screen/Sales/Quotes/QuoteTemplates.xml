@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Quotes › Quote templates (design-sales §5 QuoteTemplates: TemplateFind, TemplateList, NewTemplate; style-guide §3.2 List;
+    impl-sales P12): the quote templates of the user's sales scope (Mantle's find#QuoteTemplates: orders of purpose SalesQuoteTemplate
+    of the scope's organizations), paged in the query. A Sales reader sees the published ones, to start a quote from; a template
+    manager (a Sales manager or administrator who edits quotes) the saved lists Open, Published, Drafts, Scheduled and Ended, and New
+    template (store#QuoteTemplate checks the organization). Found by text, organization and product; each row opens
+    QuoteTemplateDetail with its organization, published interval, line count and state. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quote templates" default-menu-index="3">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="productId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createQuoteTemplate" location="component://mr-boss/template/SalesQuoteTemplates.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="canManage" from="!!(can.quoteEdit &amp;&amp; (can.teamManage || can.configure))"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.order.SalesQuoteServices.find#QuoteTemplates" out-map="context"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, productId:productId, state:(state || null),
+                        pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+        </if>
+        <set field="templateList" from="templateList || []"/>
+        <set field="detailPath" from="sharedLinks['Quotes/QuoteTemplateDetail'] || null"/>
+        <set field="filtered" from="!!(text || organizationPartyId || productId || (state &amp;&amp; state != 'open'))"/>
+        <set field="newTemplateDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId}"/>
+        <set field="savedLists" from="canManage ? [{label: 'Open', state: 'open'}, {label: 'Published', state: 'current'},
+                {label: 'Drafts', state: 'draft'}, {label: 'Scheduled', state: 'scheduled'}, {label: 'Ended', state: 'ended'}] : []"/>
+    </actions>
+    <widgets>
+        <label text="You do not read quotes in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="TemplatesRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Quote templates" type="h5"/>
+                        <label text="Standard offers to start a quote from: their lines are priced for the customer on the quote's own date."
+                                type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewTemplateDialog" button-text="New template" title="New quote template" icon="sym_o_add"
+                                width="640" type="primary" condition="canManage">
+                            <form-single name="NewTemplate" transition="createQuoteTemplate" map="newTemplateDefaults">
+                                <field name="organizationPartyId">
+                                    <default-field title="Selling organization">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="orderName"><default-field title="Name"><text-line/></default-field></field>
+                                <field name="templateDescription"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency" tooltip="The organization's currency when empty; a quote from the template is in it">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="templateValidityDays">
+                                    <default-field title="Quotes valid for (days)" tooltip="The organization's quote validity when empty"><text-line size="6"/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Start template"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="organizationPartyId"/><field-ref name="orderName"/></field-row>
+                                    <field-ref name="templateDescription"/>
+                                    <field-row><field-ref name="currencyUomId"/><field-ref name="templateValidityDays"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row q-gutter-xs q-mb-sm">
+                    <section-iterate name="TemplateSavedLists" list="savedLists" entry="saved">
+                        <widgets>
+                            <link url="." text="${saved.label}" link-type="anchor-button"
+                                    style="${(state || 'open') == saved.state ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{state:saved.state, text:'', organizationPartyId:'', productId:'', pageIndex:''}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <form-list name="TemplateList" list="templateList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <field name="text">
+                        <header-field title="Name or id"><text-line size="20"/></header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId, organizationPartyId:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="orderName">
+                        <conditional-field title="Template" condition="detailPath">
+                            <link url="${detailPath}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                            <label text="${description}" type="div" style="text-caption m-muted" condition="description"/>
+                        </conditional-field>
+                        <default-field title="Template"><display/></default-field>
+                    </field>
+                    <field name="orderId"><default-field title="Id"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${state == 'current' ? 'positive' : state == 'draft' ? 'secondary' : state == 'scheduled' ? 'primary' : 'grey'}">${stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="intervalText"><default-field title="Published"><display/></default-field></field>
+                    <field name="lineCount" align="right"><default-field title="Lines"><display/></default-field></field>
+                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <columns>
+                        <column><field-ref name="orderName"/><field-ref name="orderId"/></column>
+                        <column><field-ref name="stateText"/></column>
+                        <column><field-ref name="intervalText"/></column>
+                        <column><field-ref name="lineCount"/></column>
+                        <column><field-ref name="currencyUomId"/></column>
+                        <column><field-ref name="organizationName"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="orderName"/><field-ref name="intervalText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="lineCount"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoTemplates" condition="!templateList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No templates match' : canManage ? 'No templates yet · Start one with New template' : 'No published templates yet'}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
