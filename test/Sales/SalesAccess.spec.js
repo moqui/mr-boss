@@ -480,7 +480,7 @@ feature(
 )
 
 feature(
-    "Admin's registry holds each Sales bundle with exactly its group's grants; SALES_OWNER_CHANGE is the identity operator's alone",
+    "Admin's registry holds each Sales bundle with exactly its group's grants; SALES_OWNER_CHANGE is the identity operator's and Admin's administrator's",
     {
         when() {
             const problems = []
@@ -523,7 +523,8 @@ feature(
                     problems.push(`SALES_IMPORT's bundles: ${importers}`)
                 for (const entity of ["moqui.security.UserGroupPermission", "moqui.security.CapabilityBundlePermission"]) {
                     const owners = holders(entity, "SALES_OWNER_CHANGE")
-                    if (JSON.stringify(owners) !== '["BOSS_ADMIN_IDENTITY"]')
+                    // P6 (the user's call of Nov 13, F80): Admin's administrator holds it too, as every other owner change
+                    if (JSON.stringify(owners) !== '["BOSS_ADMIN_ADMIN","BOSS_ADMIN_IDENTITY"]')
                         problems.push(`SALES_OWNER_CHANGE's ${entity}: ${owners}`)
                 }
             })

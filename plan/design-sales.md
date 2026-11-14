@@ -353,6 +353,18 @@ As built (impl-sales P1): Home's frame, an organization filter of the user's sal
 SalesWork's five counters, AssignedWork and MyPipeline, each "Not configured" until P4 and P6 answer them, never zero; a
 report reader gets a Sales summary shortcut, and a user who reads nothing of Sales is told so.
 
+As built (impl-sales P6): SalesWork's counters come from `S.get#SalesHome`, each the count of the scoped list it opens with that
+list's own filters (Leads to work, My open opportunities, Past their expected close), a failed one "Unavailable"; RFQs, quotes
+and blocked orders stay "Not configured" until P7–P11. "My activities due" is not a counter: there is no Sales list of a user's
+due activities to open (they are Commons tasks, in Today and on each deal), so AssignedWork shows each deal's next activity. The
+funnel counts open opportunities by stage (its label sorts by the stage's order); amounts by currency are MyPipeline's and
+Opportunities' totals, since one funnel value cannot add currencies. Home's actions: New opportunity (primary), New lead, Schedule
+activity (QuickCreate's Activity) and Import for a manager who imports. QuickCreate is Lead, Opportunity, Account, Contact and
+Activity over the hosts' own forms (template/SalesOpportunityForms.xml, template/SalesAccountForms.xml); Today's Sales source is
+the user's open deals due to close; Assist's "Log as note" and "Send as message" are Sales/LogNote and Sales/SendMessage on
+Maintenance's pattern. The Mantle user-facts provider is `mantle.party.UserFactServices.get#OrganizationFacts` (generic: the
+user's organizations and the active one).
+
 **Actions.** New opportunity is primary; New lead, quote and activity are contextual shortcuts.
 An unavailable metric leaves other independent panels usable. **Source:** research §1, §8, §13.
 **Needs:** SAL-CRM, SAL-SHELL, SAL-REPORT.
@@ -382,7 +394,11 @@ the batch. The target's import permission is `SALES_IMPORT` with `SALES_OPPORTUN
 `SALES_TEAM_MANAGE`, all required, and no `ADMIN_*` permission (impl-sales §4, Nov 11, 2026): each
 app has an import permission of its own, so a Sales manager runs the import from Sales' mount
 without being Admin's data operator, and Admin's Imports lists the run for a data operator who
-also holds Sales' view permission.
+also holds Sales' view permission. As built (impl-sales P6): Sales/Pipeline/OpportunityImport mounts the wizard (Leads' and
+Opportunities' Import, for a holder of SALES_TEAM_VIEW with SALES_IMPORT); a row is kept by its source system and key
+(`SalesOpportunity.importSourceKey`, one deal of the organization a key) or names a deal's ID; a match is skipped, or changed
+under the "Update matched deals" option; a stage is named by ID or name; the row's operation key answers a repeat with its first
+result (a PostingOperation of the key, hashed, as the framework's key is longer than an operation key).
 
 **Actions.** Stage moves are not closure. The service checks pipeline membership and refuses stale
 writes; failed dragging restores the original lane and explains why. Won/Lost are explicit detail
@@ -400,7 +416,11 @@ record, not on the deal and not as a new Party. A Party with the Prospect role i
 at qualification, or earlier when the inquirer verifies the email. Intake maps the UTM source and
 medium of a tracked link to the lead's DataSource (§9, X10) and routes to the fixed team queue
 named by the intake publication or mail rule; rule-based assignment is §11 later. Unverified
-intake records that never qualify are purged after the SalesDefaults retention period.
+intake records that never qualify are purged after the SalesDefaults retention period; the purge also clears the lead an intake
+made when that lead is untouched since its intake (its name and description blanked, the mail filed on it unlinked, closed Lost
+with the reason "Unverified inquiry purged"), and keeps whole a lead someone worked on (impl-sales §4, Nov 13; built P6). A mail
+rule's `createLead` action needs its owner to hold `SALES_OPPORTUNITY_EDIT`, when the rule is saved and when it runs (impl-sales
+§4, Nov 13; built P6).
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |

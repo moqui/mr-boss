@@ -1,0 +1,72 @@
+{
+  "id": "boss-sales-pipeline",
+  "type": "dashboard",
+  "title": "Sales pipeline",
+  "body": {
+    "folder": "Sales",
+    "description": "Open opportunities by stage, among the deals each viewer's sales scope reads: their own and their teams', or their organizations' for a holder of SALES_TEAM_VIEW. Counts only; amounts by currency are on Opportunities. Sales Home shows the funnel; Sales' reports add their panels.",
+    "panels": {
+      "funnel": {
+        "title": "Open opportunities by stage",
+        "visualization": "funnel",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-pipeline",
+            "aggregations": [
+              {
+                "id": "stage",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "stageLabel",
+                  "size": 20,
+                  "order": {
+                    "_key": "asc"
+                  }
+                }
+              },
+              {
+                "id": "opportunities",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "salesOpportunityId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "statusId",
+                    "op": "eq",
+                    "value": "SalesOppOpen"
+                  }
+                },
+                "label": "Open"
+              },
+              {
+                "query": {
+                  "field": {
+                    "name": "typeEnumId",
+                    "op": "eq",
+                    "value": "SotOpportunity"
+                  }
+                },
+                "label": "Opportunities"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

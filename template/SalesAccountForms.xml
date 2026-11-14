@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The account and contact forms of the IronStone Sales screens (impl-sales P3, P6; design-sales §4 NewAccount, NewPerson, Contacts'
+    NewContact; §12.2 QuickCreate), included where a screen offers them (section-include): Accounts' and Contacts' dialogs and Sales'
+    quick create. Each posts to the transition of the same name the screen includes from template/SalesAccounts.xml, and its
+    drop-downs are the screen's `choices` (template/SalesParts.xml); Mantle's AccountServices checks every value again.
+    - NewAccountForm, NewPersonForm: map newAccountDefaults (the organization, the role Customer).
+    - NewContactForm: map newContactDefaults (an account, when the screen has one). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="NewAccountForm">
+            <widgets>
+                <form-single name="NewAccount" transition="createAccount" map="newAccountDefaults">
+                    <field name="partyTypeEnumId" from="'PtyOrganization'"><default-field><hidden/></default-field></field>
+                    <field name="organizationName">
+                        <default-field title="Name">
+                            <text-line required="true"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization" tooltip="The organization the account belongs to">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="roleTypeId">
+                        <default-field title="Role">
+                            <drop-down allow-empty="false">
+                                <option key="Customer" text="Customer"/>
+                                <option key="Prospect" text="Prospect"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="parentAccountPartyId">
+                        <default-field title="Parent account">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:parentAccountPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="managerPartyId">
+                        <default-field title="Account manager" tooltip="You, when left empty and you work for the organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'managers', selected:managerPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="emailAddress">
+                        <default-field title="Email">
+                            <text-line input-type="email"/>
+                        </default-field>
+                    </field>
+                    <field name="contactNumber">
+                        <default-field title="Phone">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Create account"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="organizationName"/>
+                            <field-ref name="organizationPartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="roleTypeId"/>
+                            <field-ref name="parentAccountPartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="emailAddress"/>
+                            <field-ref name="contactNumber"/>
+                        </field-row>
+                        <field-ref name="managerPartyId"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="NewPersonForm">
+            <widgets>
+                <form-single name="NewPerson" transition="createAccount" map="newAccountDefaults">
+                    <field name="partyTypeEnumId" from="'PtyPerson'"><default-field><hidden/></default-field></field>
+                    <field name="firstName">
+                        <default-field title="First name">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="lastName">
+                        <default-field title="Last name">
+                            <text-line required="true"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization" tooltip="The organization the customer belongs to">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="roleTypeId">
+                        <default-field title="Role">
+                            <drop-down allow-empty="false">
+                                <option key="Customer" text="Customer"/>
+                                <option key="Prospect" text="Prospect"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="emailAddress">
+                        <default-field title="Email">
+                            <text-line input-type="email"/>
+                        </default-field>
+                    </field>
+                    <field name="contactNumber">
+                        <default-field title="Phone">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Create customer"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="firstName"/>
+                            <field-ref name="lastName"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="roleTypeId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="emailAddress"/>
+                            <field-ref name="contactNumber"/>
+                        </field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="NewContactForm">
+            <widgets>
+                <form-single name="NewContact" transition="createContact" map="newContactDefaults">
+                    <field name="accountPartyId">
+                        <default-field title="Account">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="firstName">
+                        <default-field title="First name">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="lastName">
+                        <default-field title="Last name">
+                            <text-line required="true"/>
+                        </default-field>
+                    </field>
+                    <field name="relationshipName">
+                        <default-field title="Title" tooltip="The contact's title at the account">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="emailAddress">
+                        <default-field title="Email">
+                            <text-line input-type="email"/>
+                        </default-field>
+                    </field>
+                    <field name="contactNumber">
+                        <default-field title="Phone">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Add contact"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-ref name="accountPartyId"/>
+                        <field-row>
+                            <field-ref name="firstName"/>
+                            <field-ref name="lastName"/>
+                        </field-row>
+                        <field-ref name="relationshipName"/>
+                        <field-row>
+                            <field-ref name="emailAddress"/>
+                            <field-ref name="contactNumber"/>
+                        </field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

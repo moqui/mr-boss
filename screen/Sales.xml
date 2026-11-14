@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     every subscreen, and each Mantle sales service checks the permissions and the organization again (mantle/sales/SalesAccess.js).
     The menu of design §1.2 grows by phase: P1 builds Home (every Sales user's) and Reports (a holder of SALES_REPORT_VIEW,
     BOSS_SAL_REPORTS), P2 Settings (BOSS_SAL_SETTINGS), P3 Accounts, P4 Pipeline (Opportunities and Leads, a Sales reader's); each later
-    phase adds its area, and the design's later entries stay absent. -->
+    phase adds its area, and the design's later entries stay absent. P6: Home's work, QuickCreate, LogNote and SendMessage (hidden
+    from the menu), and the shell's quick create, Today and Assist providers. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
 
@@ -87,8 +88,8 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-include="ec.user.hasPermission('SALES_CONFIGURE') || ec.user.hasPermission('SALES_TEAM_MANAGE')"/>
     </subscreens>
 
-    <!-- P1: the sales keymap (design §1.2). The palette source (P3, P4), quick create (P6), Today (P6), the Comms providers (P5)
-        and the notification topics (P9, P14) arrive with their records. -->
+    <!-- P1: the sales keymap (design §1.2). The palette source (P3, P4), quick create (P6), Today (P6), the Comms providers (P5),
+        Assist's chips and answer actions (P6) and the notification topics (P9, P14) arrive with their records. -->
     <shell-providers>
         <!-- P3: the palette's Sales records, accounts first, P4 the open leads and opportunities (ironstone.sales.ContextServices.search#Records,
             Mantle's scoped finds) -->
@@ -101,6 +102,33 @@ along with this software (see the LICENSE.md file). If not, see
         <record-lookup name="sales.records" service="ironstone.sales.ContextServices.lookup#Records" sequence="-5"/>
         <call-context name="sales.deals" service="ironstone.sales.ContextServices.get#CallContext"/>
         <contact-card name="sales.leads" service="ironstone.sales.ContextServices.get#ContactCard" sequence="50"/>
+        <!-- P6 (design §12.2 QuickCreate, §1.3): the + menu's Sales kinds over the hosts' own forms (Sales/QuickCreate; Quote in P7),
+            each telling a user without its capability so, Mantle refusing them anyway; Today's source, the user's deals expected to
+            close (their activities are Commons' tasks, in Today already) -->
+        <quick-create kind="salesLead" label="Lead" icon="sym_o_person_add" screen="Sales/QuickCreate/NewLead" sequence="87"/>
+        <quick-create kind="salesOpportunity" label="Opportunity" icon="sym_o_trending_up" screen="Sales/QuickCreate/NewOpportunity"
+                sequence="88"/>
+        <quick-create kind="salesAccount" label="Account" icon="sym_o_storefront" screen="Sales/QuickCreate/NewAccount" sequence="89"/>
+        <quick-create kind="salesContact" label="Contact of an account" icon="sym_o_contact_page" screen="Sales/QuickCreate/NewContact"
+                sequence="90"/>
+        <quick-create kind="salesActivity" label="Activity on a deal" icon="sym_o_event" screen="Sales/QuickCreate/NewActivity"
+                sequence="91"/>
+        <today-source service="ironstone.sales.ContextServices.get#TodayItems" label="Sales"/>
+        <!-- P6 (design §1.4 CX-ASSIST): Assist's chips on OpportunityDetail and Customer360 (each also needs its screen's grant) and its
+            answer actions, filed through Sales' own record check: Log as note on the page's deal or account, Send as message (Comms'
+            internal message, filed on the page's record when Sales admits the user to it) -->
+        <assist-prompt label="Summarize this deal" text="Summarize this deal: its stage, amount, people, activities and what is next"
+                screen="Sales/Pipeline/OpportunityDetail" entity="mantle.sales.opportunity.SalesOpportunity" sequence="60"/>
+        <assist-prompt label="Draft a follow-up" text="Draft a follow-up message to this deal's contact about the next step"
+                screen="Sales/Pipeline/OpportunityDetail" entity="mantle.sales.opportunity.SalesOpportunity" sequence="61"/>
+        <assist-prompt label="What changed?" text="What changed on this deal since its last activity?"
+                screen="Sales/Pipeline/OpportunityDetail" entity="mantle.sales.opportunity.SalesOpportunity" sequence="62"/>
+        <assist-prompt label="Open work for this account" text="What open work does this account have: deals, activities and the next steps?"
+                screen="Sales/Accounts/Customer360" entity="mantle.party.Party" sequence="63"/>
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Sales/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="70"/>
+        <response-action label="Send as message" icon="sym_o_send" screen="Sales/SendMessage" text-parameter="messageText"
+                sequence="71"/>
         <keymap scope="sales">
             <key keys="g s" label="Sales home" screen="Sales/Home"/>
             <!-- P3 -->

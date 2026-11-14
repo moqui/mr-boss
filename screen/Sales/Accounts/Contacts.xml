@@ -38,6 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="contactList" from="contactList || []"/>
         <set field="filtered" from="!!(text || accountPartyId || organizationPartyId)"/>
+        <set field="newContactDefaults" from="{accountPartyId: accountPartyId || null}"/>
     </actions>
     <widgets>
         <label text="You do not read contacts in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
@@ -50,59 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="col-auto row q-gutter-sm">
                         <container-dialog id="NewContactDialog" button-text="New contact" title="New contact of an account"
                                 icon="sym_o_person_add" width="760" type="primary" condition="can.accountEdit">
-                            <form-single name="NewContact" transition="createContact">
-                                <field name="accountPartyId">
-                                    <default-field title="Account">
-                                        <drop-down allow-empty="false">
-                                            <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                    parameter-map="{choice:'accounts', selected:accountPartyId}"/>
-                                        </drop-down>
-                                    </default-field>
-                                </field>
-                                <field name="firstName">
-                                    <default-field title="First name">
-                                        <text-line/>
-                                    </default-field>
-                                </field>
-                                <field name="lastName">
-                                    <default-field title="Last name">
-                                        <text-line required="true"/>
-                                    </default-field>
-                                </field>
-                                <field name="relationshipName">
-                                    <default-field title="Title" tooltip="The contact's title at the account">
-                                        <text-line/>
-                                    </default-field>
-                                </field>
-                                <field name="emailAddress">
-                                    <default-field title="Email">
-                                        <text-line input-type="email"/>
-                                    </default-field>
-                                </field>
-                                <field name="contactNumber">
-                                    <default-field title="Phone">
-                                        <text-line/>
-                                    </default-field>
-                                </field>
-                                <field name="submitButton">
-                                    <default-field title="">
-                                        <submit text="Add contact"/>
-                                    </default-field>
-                                </field>
-                                <field-layout>
-                                    <field-ref name="accountPartyId"/>
-                                    <field-row>
-                                        <field-ref name="firstName"/>
-                                        <field-ref name="lastName"/>
-                                    </field-row>
-                                    <field-ref name="relationshipName"/>
-                                    <field-row>
-                                        <field-ref name="emailAddress"/>
-                                        <field-ref name="contactNumber"/>
-                                    </field-row>
-                                    <field-ref name="submitButton"/>
-                                </field-layout>
-                            </form-single>
+                            <section-include name="NewContactForm" location="component://mr-boss/template/SalesAccountForms.xml"/>
                         </container-dialog>
                     </container>
                 </container>

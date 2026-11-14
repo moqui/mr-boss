@@ -1620,6 +1620,149 @@ funnel). Ends stage 1.
   five deals, one with an unknown stage, imports four and names the one; disabling an offboarded rep in Admin lists
   their deals and moves them to a new owner; Assist qualifies a lead only after the user approves the step.
 
+**Built Nov 13 (P6).** mr-mantle and mr-boss on branch `sal/p6` (hashes in the worker's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P1–P5's Built and Review notes, follow-up 1 and F74–F129; the import targets of Admin P15,
+  People P7 and Maintenance P18 (PartyInvitationData.xml, MaintenanceImport.js) and the framework's rows contract
+  (DataTransferServices.xml validate#/apply#TargetRow, DataTransferBatch.js `itemKey`); the owned-resource contract and Admin's
+  Lifecycle.js (find#OwnedResources calls each lookup as the caller with authorization on); crates/moqui-llm facts.rs and conf.rs
+  (`user-facts`, fenced, called with the user's authorization); the report engine's registered scope policies and admission
+  (business.rs) and Maintenance's and Customer Service's dataset rows; `report-embed` and the funnel visualization; Maintenance's
+  LogNote, SendMessage, today-source and quick create; the framework's EmailRule services (no save hook for an app's action) and
+  the pre-service SECA (an error stops the service). The code over the plan:
+  - the framework's row operation key is `tr.` and 40 hex characters, longer than a PostingOperation key, so the import keeps the
+    repeat's first result under a PostingOperation of the key hashed (`soi-…`); a deal keeps its source key in a new
+    `SalesOpportunity.importSourceKey`, so a file imported again matches its deals rather than making second ones;
+  - "My activities due" is not a Home counter: no Sales list of a user's due activities exists to open (they are Commons tasks, in
+    Today and on each deal), so AssignedWork shows each deal's next activity; Home's counters are Leads to work, My open
+    opportunities and Past their expected close, the four of later records "Not configured";
+  - the funnel counts open opportunities by stage only: one funnel value cannot add currencies (amounts by currency are MyPipeline's
+    and Opportunities' totals); its stage label sorts by the stage's order (`stageLabel` in the document);
+  - the lifecycle transfer writes the owner and manager rows itself after checking SALES_OWNER_CHANGE and the new owner, rather than
+    through store#OpportunityParty and set#AccountManager, which check a Sales editor's scope the identity operator does not have;
+    the deal's team is kept; the transfer's reason is logged, as the party rows carry no reason;
+  - the user-facts provider is a new `mantle.party.UserFactServices.get#OrganizationFacts` (generic, for Marketing P21 too), reading
+    the active organization as get#ScopedConstitution does, never get#PartyOrganizationInfo, which clears a stale preference (a
+    write the read fence refuses);
+  - the rule-save half of carry-over 3 is a pre-service SECA on the framework's create#EmailRule and update#EmailRule
+    (`SalesIntake.secas.xml`), as the framework has no save hook for an app's rule action;
+  - the purge's "untouched since intake" is: open and unqualified, every intake of it unverified and past the retention (none
+    joined since), its party rows as the intake started them (none ended, none started later), its stamp and the records filed on
+    it not later than two minutes after it was made, and no activity, file, competitor or order; the purge reason
+    `SlrIntakePurged` is seeded ended, so it is offered to no one;
+  - QuickCreate's Account and Contact needed the Accounts and Contacts forms in a template (`template/SalesAccountForms.xml`), which
+    those lists now include.
+- Mantle:
+  - `entity/SalesEntities.xml`: SalesOpportunity's `importSourceKey` (indexed with the organization), the `parties` and `stage`
+    short aliases the document reads.
+  - `SalesWorkspace.js` (new) and SalesWorkspaceServices: `get#SalesHome` (each counter find#Opportunities' count with its list's
+    filters, failed alone as unavailable; the user's own open deals), `get#PipelineRowFilter` (the organizations of the scope and,
+    without SALES_TEAM_VIEW, the deals assigned now to the viewer or a team of theirs; nothing for a non-reader; another user's
+    refused), `find#OwnedSalesAssignments` and `transfer#SalesAssignment` (the owned-resource contract; SALES_OWNER_CHANGE; NOT_EMPLOYED,
+    OWNER_INVALID, RECORD_UNAVAILABLE, RECORD_CLOSED).
+  - `SalesImport.js` (new) and OpportunityServices: `validate#OpportunityImportRow`, `apply#OpportunityImportRow` and
+    `find#OpportunityImportScopes` (SALES_IMPORT with SALES_OPPORTUNITY_EDIT, the organization; a named error for an unknown
+    stage, currency, pipeline, account, contact, owner, team or source, a row of another organization refused whole; a match skipped
+    or, under "Update matched deals", changed through qualify#Lead, update#, move#Opportunity and store#OpportunityParty; new deals
+    through create#Opportunity; no account made); `check#LeadRuleOwner`.
+  - `data/SalesWorkspaceData.xml` (new, seed): the TransferTarget `opportunities` (rows, keyed by source system and key, the
+    duplicate strategy option, permissions SALES_IMPORT, SALES_OPPORTUNITY_EDIT and SALES_TEAM_MANAGE, view SALES_TEAM_VIEW, owner
+    route salesOpportunityImport), the ReportScopePolicy MantleSalesScope, the ALL_USERS grant of the row, scope, lifecycle and
+    rule-check services (each checks itself), the lost reason SlrIntakePurged. `data/SalesPipelineReportData.xml` (new,
+    seed-initial): the DataDocument MantleSalesOpportunity (type, outcome, organization, pipeline, stage with name, order and label,
+    account, source, campaign, amounts, dates, current owner and team) and the push feed MantleSalesPipeline. `report/
+    mantle-sales-pipeline.json`: the dataset, its row filter Sales' scope.
+  - `service/mantle/party/UserFactServices.xml` (new) get#OrganizationFacts, named in `MoquiConf.xml`'s llm-facade `user-facts`.
+  - Carry-over 2 (the user's call of Nov 13): purge#LeadIntakes clears an untouched lead (name, description and next step blanked,
+    its filed mail unlinked, Lost with SlrIntakePurged) with its intake in one transaction and error frame a row (leadsClosedCount);
+    a worked lead keeps everything but the intake's details.
+  - Carry-over 3: create#LeadFromEmail refuses a rule owner without SALES_OPPORTUNITY_EDIT (RULE_NOT_ALLOWED, nothing filed);
+    `service/SalesIntake.secas.xml` runs check#LeadRuleOwner before create#EmailRule (a rule naming createLead) and update#EmailRule
+    (its actions given or stored), so such a rule is not saved by an owner without it.
+- BOSS:
+  - Carry-over 1: SALES_OWNER_CHANGE to BOSS_ADMIN_ADMIN and its bundle (BossSetupSalesData's P6 block).
+  - `data/BossSetupSalesData.xml` (a P6 block): the LifecycleParticipant `sales.assignments`; the dataset's artifact and document for
+    every Sales user (BOSS_SALES, BOSS_SALES_ADMIN; their rows their own scope) and the Insights groups, its admission, class
+    (operations), readiness and index refresh; the wizard export targets salesOpportunityList and salesLeadList; the
+    AgentToolExposure rows sales_find_opportunities (Assistant and MCP) and sales_create_, sales_move_ and sales_close_opportunity
+    (Assistant, AgclWrite, no MCP) with BOSS_SAL_ASSIST_TOOLS granting the four services to the Sales groups.
+  - `Admin.js` mountRoutes salesOpportunityImport, salesOpportunities, salesLeads; `DataImport.js` the Sales branch (target
+    opportunities; SALES_TEAM_VIEW reads, SALES_IMPORT with SALES_OPPORTUNITY_EDIT and SALES_TEAM_MANAGE runs) before the catalog's.
+  - `Sales.js`: linkPaths (OpportunityImport, QuickCreate, LogNote, SendMessage), the choice `deals`, `today`; ContextServices
+    `get#TodayItems`.
+  - Screens: `Sales/Home.xml` rewritten (SalesWork's counter cards opening their lists, AssignedWork, MyPipeline, the funnel through
+    `report-embed`, New opportunity primary, New lead, Schedule activity, Import); `Sales/QuickCreate.xml` and its NewLead,
+    NewOpportunity, NewAccount, NewContact, NewActivity; `Sales/LogNote.xml`, `Sales/SendMessage.xml`;
+    `Sales/Pipeline/OpportunityImport.xml` (Shared/DataImport); Opportunities and Leads: XLSX beside CSV and Import;
+    `template/SalesAccountForms.xml` (NewAccount, NewPerson, NewContact, moved from Accounts and Contacts). `Sales.xml`: the five
+    quick-create kinds, the today-source, four assist-prompts (OpportunityDetail's three, Customer360's) and the two response actions.
+  - `report/boss-sales-pipeline.json`: the dashboard with its one funnel panel (P19 adds the others).
+  - Assist: `skill/sales-qualify-lead.md` (risk confirm: Qualify is the user's), `sales-follow-up.md`, `sales-log-call.md`;
+    `skill/aliases.json` (lead, opportunity, quote, rfq, account); seven cases in `test/skill-retrieval.json`.
+- Specs:
+  - Mantle `test/sales/SalesOpportunityImport` (new, 3 features, 0.81 s): an unknown stage, currency and another organization's account
+    named, a rep and another organization refused; a row's deal with its key, a repeat under its operation key the first result and one
+    deal; a match skipped, then updated only under update, by key, and an ID under another key refused. `SalesPipelineDataset` (new,
+    2 features, 0.42 s): the row filter of a rep (organization and assigned ids), a manager (organization), another organization's rep,
+    a non-reader (nothing) and another user's refused; the document's stage label, owner and team; through query#Documents (search
+    available) each reader's own rows. `SalesWorkspace` (new, 3 features, 0.83 s): each counter equal to its list's count (2, 2, 1),
+    later counters not configured, the assigned work the rep's own, another organization and a non-reader refused; the participant to
+    SALES_OWNER_CHANGE only, NOT_EMPLOYED, RECORD_UNAVAILABLE, a deal and an account moved; the user facts (organizations, none
+    active, the active one; another user's none). `SalesLeadIntake`: the purge feature (0.49 s) gains an untouched lead closed Lost
+    and blanked and a worked one kept; a new feature (0.18 s) for the rule owner, run and save. `SalesOpportunities`: its lost reason is
+    now a current one (the ended purge reason exists).
+  - mr-boss `test/Sales/SalesHome` (new, 4 features, 0.7 s): Home's one qvt render (the Leads card's value equal to the Leads list's
+    count, Not configured, the rep's assigned deal and pipeline, the funnel's box, no other team's deal); Today and its refusal of
+    another user's; quick create's activity through its transition; the import mount for the manager, refused to the rep; Admin's
+    find#OwnedResources lists the rep's deal under sales.assignments for admin.identity and admin.admin (carry-over 1).
+    `SalesAccess`: the registry feature expects SALES_OWNER_CHANGE for BOSS_ADMIN_ADMIN too.
+  - Skill retrieval (`./moq test mr-boss --skills`): 46 of 46.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesHomeUsable` (4 features: each ready counter's list opened with its
+    parameters counts the same; a five-row CSV through the wizard under Sales, four applied and the unknown stage named; a spec-local
+    rep's disable in Admin, the deal's transfer step moved to sales.rep; the tools (no qualify tool, writes AgclWrite, none on MCP),
+    the skill's "Do not press Qualify", and the rep's own Qualify).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle the five specs above 17 of 17; with SalesLeadQualify,
+  SalesAccounts, SalesPipelineSetup, SalesOrganizationScope, CrmMiscServices, RecordVisibility, OrganizationRowFilter, BusinessEvents,
+  ProjectedAddressBook, ContactBooks, WorkProjectRequests, SupportChannels, MaintenanceIntake and SalesReports 118 of 118 (one fixed
+  on the way: SalesOpportunities' reason); mr-boss SalesHome and SalesAccess 13 of 13; with SalesOpportunities, SalesAccounts,
+  SalesIntake, SalesSettings, SalesReports, InsightsDatasets, InsightsAccess, InsightsSettings, AdminImports, AdminAccess,
+  AdminLifecycle, InsightsDelivery, InsightsAlerts, Tasks, TodayPanel, QuickCreate and Contacts 161 of 161; ProjectRequests,
+  CustomerServiceChannels, MailSettings, PeopleLifecycle, MaintenanceStack, PeopleAccess, MaintenanceAccess, ContactsDuplicates,
+  Chatter, RecordFiles, WorkItemDetail, CustomerServiceAccess and ProjectsAccess 206 of 206 (one spec of that run, not a Sales one,
+  over 15 s at load 13: MaintenanceAccess's known overrun, follow-up 1's review). `moqui lint --screens` (release): 141 flagged
+  sites, as before, none in a new or changed screen. Prettier clean on the new and changed JavaScript (SalesIntake.js, not clean
+  before, now is). Not run: ./moq test-apps, the acceptance suite, the client suite (no client change; SalesPipelineWalk unchanged).
+- Inventories: usl-inventory's "Added in the Sales build: Home, shell, Assist and the pipeline dataset" table; no ss-inventory row
+  names Sales/Home or QuickCreate.
+- Design edits: design-sales §3 Home's "As built (impl-sales P6)", OpportunityImport's as-built, Leads' purge and rule owner;
+  design-admin §11.1's Sales import row and §14's Sales participant (owner contracts).
+- Findings (provisional, numbered by the lead):
+  - the import's repeat key is a hash of the framework's 43-character row key, as a PostingOperation key holds 40; a framework
+    row key within 40 characters (or a PostingOperation key of 64) would let an owner use it as is;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the `opportunities` import target, the pipeline dataset's row filter
+    or Mantle's user-facts provider; P6 had no mr-moqui worktree, so they are for the next framework docs pass;
+  - the lifecycle transfer of a deal keeps its team: a deal of East moved to a rep of West shows to the new owner and to East, not
+    West's other reps, until a manager sets its team;
+  - Home's funnel counts open opportunities created in the last three years (`createdDate` is the dataset's time field); an older
+    open deal is not in it, while My pipeline shows it;
+  - "My activities due" is not a counter (above): a Sales list of due activities, or a Commons task filter by record kind, would let
+    Home count them;
+  - the purge's "untouched" margin (two minutes after the lead was made) treats an edit in the first two minutes as part of the
+    intake;
+  - `skill/people-policy-question.md`'s description is 201 characters, over the index's 160, so the skill is left out of the index
+    (`./moq test mr-boss --skills` logs it); not Sales', seen while running the retrieval.
+- For the lead:
+  - budget share: mr-mantle about 2.4 s (SalesOpportunityImport 0.81 s, SalesPipelineDataset 0.42 s, SalesWorkspace 0.83 s,
+    SalesLeadIntake's added feature and checks about 0.3 s); mr-boss server about 0.7 s (SalesHome); client none;
+  - merge hot spots: mr-mantle `entity/SalesEntities.xml` (SalesOpportunity), `OpportunityServices.xml` and
+    `SalesWorkspaceServices.xml` (appended), `SalesIntake.js` (purge, the rule owner, Prettier), `MoquiConf.xml` (llm-facade),
+    `test/sales/SalesLeadIntake.spec.js`; mr-boss `screen/Sales.xml` (shell-providers), `Sales.js` (linkPaths, choices, operations),
+    `ContextServices.xml`, `service/ironstone/shared/DataImport.js` and `service/ironstone/admin/Admin.js` (Marketing P4 adds its
+    branch and route beside), `data/BossSetupSalesData.xml` (a P6 block at the end), `screen/Sales/Accounts/{Accounts,Contacts}.xml`
+    (forms moved to a template; Marketing mounts Accounts next), `screen/Sales/Pipeline/{Leads,Opportunities}.xml`,
+    `skill/aliases.json`, `test/skill-retrieval.json`, `test/Sales/SalesAccess.spec.js`, `plan/usl-inventory.md`,
+    `plan/design-sales.md` §3, `plan/design-admin.md` §11.1, §14;
+  - the user's call: none new. Marketing P21 can name Mantle's `get#OrganizationFacts` as the facts its skills rest on.
+
 ### P7 — Quote drafts, pricing and storeless tax
 
 Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability), Product360, InventoryAvailability,
