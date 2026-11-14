@@ -2267,6 +2267,95 @@ Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff
     no second request";
   - the user's call: the rule owner's permission and the repair sources' reach (above).
 
+**Review 2026-11-14 (P8).** A fresh review of `sal/p8` (mr-mantle f60a8505, mr-boss 3b8cea0a), with master merged in first (Marketing
+P2) and again after Sales P9 merged (conflicts in SalesQuoteServices.xml, BossZSalesDemoData.xml, Sales.js, Sales.xml, SalesSpecLib.js
+and usl-inventory.md, both phases' blocks kept; SalesSpecLib's approver tabs are now Quotes, RFQs, Approvals), against P8, §2, §4, design
+§5 and §6.
+- Checked and sound:
+  - `quoteRequestOf` is the one scope on every Sales path: find#QuoteRequests (the organization filter, then the assigned ids or
+    SALES_TEAM_VIEW, each page row read again through it), get#QuoteRequest (requestFound false for another team's or organization's),
+    Home's count (find#QuoteRequests itself), the palette (Sales.js searchFinds over find#QuoteRequests), the record link (Sales.js
+    recordLink reads recordKinds' quoteRequestOf; PaletteServices sends an RqtQuote nowhere else), the record panel host (Sales.xml
+    panelHosts through recordKinds), Chatter and RecordFiles (CommunicationServices' RqtQuote block over check#QuoteRequestAccess, no
+    user none) and RequestDetail's Sales branch (get#QuoteRequest; "Request not available" otherwise). Every write checks
+    SALES_QUOTE_EDIT, the request's revision (request, lines and parties) and that it is open; update#QuoteRequest ends replaced party
+    rows; owner and team are bounded by the caller's teams unless SALES_TEAM_MANAGE.
+  - Create RFQ and the mail rule: create#QuoteRequest checks Sales, SALES_QUOTE_EDIT and the organization, then reads the message as the
+    user (get#Thread, get#InternalThread, findOrCreate#ChatCommunicationEvent) before anything is written, a message they cannot read
+    answering as a missing one (the BOSS spec's sales.rep3); the sender is matched to an account or the contact of exactly one account,
+    never a party made; Message-ID ignoring case and the event make one request; a repeat of a request the caller cannot open is
+    REQUEST_TAKEN naming none (P5 R1's lesson). create#QuoteRequestFromEmail is allow-remote false, fixes every value from the stored
+    message, checks the owner's SALES_QUOTE_EDIT each run and takes only a team of an organization the owner works for.
+  - The chargeable repair handoff: an RqtWarranty claim is a source only with a current chargeable decision (or a quote already made),
+    answered by its customer and its lines' products and quantities; the quote is "Repair estimate" with no line description or date;
+    the claim and its decision are not changed; a quote is linked by RequestItemOrder, which Warranty.js does not read (its order
+    evidence is RequestRecord). Customer Service sees the quote's state, total and validity only (get#WarrantyClaim `salesQuotes`,
+    WarrantyAssessment's box, no link to the quote). SupportWarranty and CustomerServiceWarranty pass unchanged.
+  - F31, F63: RequestTriageNotice, notify#RequestTriage and complete#RequestFromWork leave RqtQuote out beside RqtHrCase; the case rules
+    need no guard; the Mantle spec shows Projects' triage taking a support request but not the RFQ.
+  - Decline: the reason is required and noted, the recipient is the first received message's Reply-To or From (else the contact's or
+    customer's email) and must be the one previewed (RECIPIENT_CHANGED), the text is the rep's own, and the request closes, so one mail
+    per RFQ; a send that fails waits in the Outbox.
+- Fixed:
+  - R1 (confidentiality, medium). An RFQ was also a Commons request: its filer or owner found it in Commons' Requests (and a Projects
+    triage list of an organization triaging RqtQuote) and could cancel or edit it there, around decline's reason and Sales' rules.
+    Commons' get#RequestAccess and find#RequestRows and Projects' request list now leave RqtQuote out as they do RqtPurchaseRfq. BOSS
+    SalesQuoteRequests: the rep's own RFQ is not visible to Commons' access and is in no Commons list (failed on the unfixed code).
+  - R2 (authority, medium). decline#QuoteRequest sent the rep's own text as the system from the mailbox of the RFQ's first received
+    message, whatever the mailbox: a rep who could only read a mailbox (Create RFQ needs reading alone) could mail its correspondents
+    from it. Sales now answers only from an RFQ intake mailbox (an enabled createQuoteRequest rule whose owner holds SALES_QUOTE_EDIT
+    runs on it) or one the rep may send from; otherwise the preview says to tell the requester yourself and a notify is
+    NOTIFY_UNAVAILABLE. Mantle SalesQuoteRequests: with the mailbox's rule off the preview cannot notify and the decline is refused.
+  - R3 (scope, low). A request's quotes listed every quote made from it by title, and the list counted them: a quote of another
+    assignment (a manager's, which takes no team) gave its title and count to the RFQ's team. Such a quote now shows only that it exists
+    ("A quote you cannot open", no total), its id is left out of the line's "quoted in", and find#QuoteRequests counts readable quotes.
+    Mantle SalesQuoteRequests: the manager's quote of the rep's RFQ (failed on the unfixed code).
+  - R4 (confidentiality, low). "Repairs to quote" searched and sorted claims by their name, which is Customer Service's and often the
+    fault: a search probed the claim's text. A repair is found by its id and sorted by date only. Spec: a search for the fault word finds
+    nothing, the claim's id finds it.
+  - R5 (low). A message on two RFQs (one of another organization's mailbox) answered REQUEST_TAKEN when the first found was not the
+    caller's; the one the caller sees is answered first.
+  - R6 (the user's calls of Nov 13, §4). The repair notices both ways: decide#WarrantyClaim's commit runs notify#RepairToQuote
+    (service/SalesQuoteRequest.secas.xml; a replay tells nobody), which tells the current members of the organization's default team
+    (P9's SalesPolicy, `SalesApprovals.js policyOf`) who work for it and hold SALES_QUOTE_EDIT or SALES_TEAM_VIEW (SalesRepairToQuote:
+    claim, customer, product); no default team, no notice (logged). create#QuoteFromRequest on a claim tells its assignee, else its
+    queue's team or fallback assignee, not the maker (SalesRepairQuoted: quote, claim, customer, maker; the claim as the record). Topics
+    in data/SalesIntakeData.xml with TopicRegistration rows (Sales, Customer Service); links in BossSetupSalesData.xml (QuoteRequestDetail)
+    and BossSetupData.xml (WarrantyAssessment); the shells' notification-topic entries. Mantle SalesQuoteRequests: the chargeable
+    decision tells East's quote maker and not its SALES_VIEW member, a covered one nobody, the quote tells the claim's agent, no title
+    with the fault or the amount. The rule-owner call needed no change.
+- Provisional findings (for the lead to number):
+  - a quote made from an RFQ takes its maker's team (SalesQuotes.js teamFor), not the RFQ's: a manager's quote of a team's RFQ is no
+    quote of that team, whose members see only that it exists (R3); passing the RFQ's team to createQuote is the user's call;
+  - Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another
+    organization's mailbox answers the first organization's request; a decline goes to the message's Reply-To, as forgeable as its From,
+    shown in the preview;
+  - with no default team in the organization's SalesPolicy a chargeable decision tells nobody (the list still shows it);
+  - update#QuoteRequest given a new customer alone ends the contact row.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): before the P9 merge mr-mantle SalesQuoteRequests 4 of 4 (2.6 s) and
+  mr-boss SalesQuoteRequests 3 of 3; after it mr-mantle SalesQuoteRequests, SalesQuoteApprovals, SalesQuoteDrafts and SupportWarranty 20
+  of 20, and mr-boss SalesQuoteRequests, SalesApprovals, SalesQuotes, SalesAccess, CustomerServiceWarranty, Requests, ProjectRequests and
+  SalesHome 46 of 46. R1 and R3 checks failed on the unfixed code (the stepwise spec stops at R3's feature, so R2's, R4's and R6's ran
+  only on the fixed code). Prettier clean on the changed JavaScript; `moqui lint --screens` (release) flags neither Sales.xml nor
+  CustomerService.xml. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +0.5 s on the Built note's (SalesQuoteRequests' manager quote, previews and notices); mr-boss about
+    +0.1 s (the Commons checks);
+  - merge hot spots: mr-mantle `SalesQuoteRequests.js`, `SalesQuoteServices.xml` (notify#RepairToQuote at the P8 block's end, before
+    P9's), `data/SalesIntakeData.xml` (the two topics), `service/SalesQuoteRequest.secas.xml` (new); mr-boss
+    `service/ironstone/commons/RequestServices.xml`, `service/ironstone/projects/ProjectRequestServices.xml`,
+    `data/BossSetupSalesData.xml` (after P9's SalesQuoteApproval link), `data/BossSetupData.xml` (after WarrantyRepairFinished),
+    `screen/Sales.xml`, `screen/CustomerService.xml`, `plan/design-sales.md` §5, `plan/design-customer-service.md` §13;
+  - mr-moqui `docs/security/Attack-Surface.md`: in the intake paragraph replace "(`createLead`, Mantle `create#LeadFromEmail`; the
+    request for quote address `createQuoteRequest` follows in Sales P8)" with "(`createLead`, Mantle `create#LeadFromEmail`)", and
+    after "The mail text decides only the lead's name and description." add: "The request for quote address (`createQuoteRequest`,
+    Mantle `create#QuoteRequestFromEmail`) takes the team the same way, its rule's owner holding `SALES_QUOTE_EDIT` when the rule is
+    saved and each time it runs, and makes an `RqtQuote` request in that team's queue with the message and its files on it, never a
+    party (the sender is matched to an account or to the contact of exactly one account of the organization); the same `Message-ID`
+    again makes no second request. A decline is mailed as the system only from such an intake mailbox, or one the rep may send from,
+    to the address the rep previewed, once per request.";
+  - the user's calls are recorded in §4 (Nov 13 rows) and built (R6).
+
 ### P9 — Sales defaults, approval policies and approvals
 
 Design §9 SalesDefaults and ApprovalPolicies, §5 Approvals and the approval binding, §13.1 (OrderPlacedAutoApprove,
@@ -3046,6 +3135,8 @@ the owner's design.
 | Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
 | Nov 13, 2026 | `merge#Parties`' guards keep admitting a caller that disabled authorization or runs as the system (jobs, Shop's verified guest claim) (P3) | The user's call (the P3 Built note's last question) |
 | Nov 13, 2026 | An entered zero price or a free quote line keeps requiring `SALES_APPROVE` of the one who enters it until P9 (P7); in P9 a free or zero line becomes a rule in Sales' approval policies, so a rep can draft it and the approver decides at issue (P7, P9) | The user's call (the P7 Built note's free-line finding) |
+| Nov 13, 2026 | A mail rule's `createQuoteRequest` action (Create RFQ from mail) needs its owner to hold `SALES_QUOTE_EDIT`, when the rule is saved (`check#LeadRuleOwner`) and each time it runs (`create#QuoteRequestFromEmail`), as built (P8) | The user's call (the P8 Built note's first finding), by analogy with createLead's owner |
+| Nov 13, 2026 | A chargeable repair's warranty claim stays visible to Sales as built (holders of `SALES_QUOTE_EDIT` or `SALES_TEAM_VIEW` in the claim's organization, its customer and products only, under RFQs' "Repairs to quote"), with notices both ways: Customer Service's chargeable decision tells the organization's default Sales team (P9's SalesPolicy; topic SalesRepairToQuote), and a repair quote made tells the claim's assignee or queue (SalesRepairQuoted); neither title carries fault text or an amount (P8 review) | The user's call (the P8 Built note's second finding); written into design-sales §5 and design-customer-service §13 |
 
 ## 5. Open questions
 

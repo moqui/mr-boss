@@ -737,14 +737,19 @@ plus tag as `createLead`'s, its owner needing `SALES_QUOTE_EDIT`; it stops the l
 account of the organization; mail never makes a party. The request's revision is the latest stamp of the request, its lines and
 parties. A quote links to its request line by line (RequestItemOrder), not by a record link; a first quote puts the RFQ In progress;
 a decline is Cancelled with the resolution Rejected and its reason a RequestNote, and tells the requester (the first message's
-sender, else the contact's or customer's email) only at the address the preview showed, from the mailbox the RFQ came in by. A
+sender, else the contact's or customer's email) only at the address the preview showed, from the mailbox the RFQ came in by when it is an RFQ intake mailbox (an enabled
+createQuoteRequest rule runs on it) or one the rep may send from. A
 request with no line products cannot be quoted until a line has one. QuoteRequestDetail is Shared/RequestDetail's Sales branch
 (template/SalesQuoteRequestDetail.xml) at `Sales/Quotes/QuoteRequestDetail`: the header with Create quote, More (Add line, Edit
 request, Assign, Decline), Overview, Lines, Quotes, Conversation and Files; the Parties and Activities of the table above are the
 Overview's people and Conversation. The chargeable repair (§6): a warranty claim whose current decision has a charge estimate, or
 that a quote was made from, is listed under RFQs' "Repairs to quote" for a holder of `SALES_QUOTE_EDIT` or `SALES_TEAM_VIEW` of
 its organization, shown by its customer and its lines' products and quantities alone, and quoted as "Repair estimate" with no
-line description; get#WarrantyClaim answers the quotes made from it (`salesQuotes`), which WarrantyAssessment shows.
+line description; get#WarrantyClaim answers the quotes made from it (`salesQuotes`), which WarrantyAssessment shows. Notices go
+both ways (the user's call, impl-sales §4 Nov 13): a chargeable decision tells the organization's default Sales team
+(SalesPolicy, topic SalesRepairToQuote), and a repair's quote tells the claim's assignee, else its queue (SalesRepairQuoted);
+neither names the fault text, diagnosis, decision or an amount. A customer's request for quote is Sales' alone: Commons' and
+Projects' requests neither list nor open it.
 
 ### OrderDetail — Quote context passed
 
