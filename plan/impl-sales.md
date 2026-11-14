@@ -5238,6 +5238,121 @@ then P19's. mr-pass had nothing to merge.
 - The inventories' **Implemented in** columns, the design's Impl column, Remaining-Work, the mr-boss README's Sales
   line, and mr-pass's README and Deployment for the Sales app.
 
+**Built Nov 14 (P20).** mr-mantle, mr-boss, mr-pass and mr-moqui (docs only) on branch `sal/p20`; master (follow-up 2) merged into
+mr-mantle and mr-boss first, both sides kept (nothing conflicted). No Rust built.
+- Checked first (the code over the plan): P6's and P19's Built and Review notes (the pipeline and stage-age datasets, the stalled-deal
+  alert), §4's Nov 14 call on the quote-expiring alert, impl-maintenance's and impl-people's finish phases (the sweeps' helpers, the
+  access walk, the inventories' bullets, the Impl column), People's qualification-expiring alert (a future window on an admitted
+  dataset), the report engine's alert evaluation (one rule as its owner, a copy paused until activated) and its search mapping
+  (moqui-core `search/mapping.rs`: a DataDocument field given by an expression is mapped as a number unless `fieldType` names
+  another), §16's outputs against the screens. The code over the plan:
+  - the pipeline document's derived `ownerPartyId`, `teamPartyId` and `stageLabel` were mapped as numbers, so a terms split on them
+    answered no rows: the stalled-deal alert (split by owner, P19) could never fire and the pipeline dashboard's owner panel was
+    empty. They are typed `keyword` now (SalesPipelineReportData.xml), with the new document's owner and team; a database made
+    before reloads the document file and refreshes the index (mr-mantle `docs/Upgrading.md` "Sales' report datasets");
+  - InsightsAlerts' list of shipped business templates had failed since P19 (it did not name `boss-sales-stalled-deals`); it names
+    both Sales templates now;
+  - §16: the change confirmation's mail existed (Customer Service's `send#OrderChangeConfirmation`) but refused Sales' change
+    operator, who applies the change; it admits them now (below). The RFQ decline mail is P8's; the RFQ acknowledgement and the
+    agreement print are not built (findings).
+- Mantle:
+  - The quote dataset (§4 Nov 14): `report/mantle-sales-quotes.json` (timed by `validThruDate`, business signal) over the document
+    `MantleSalesQuote` (an OrderPart of an order of purpose `OrpSalesQuote`, so never a template: its vendor, customer, validity,
+    total, the header's name, status, entry and placed dates, currency, grand total and purpose, its owner and team from the part's
+    party rows), fed by the MantleSalesPipeline push feed, granted to ADMIN (`data/SalesPipelineReportData.xml`). Its row filter
+    `SalesWorkspaceServices.get#QuoteRowFilter` (SalesWorkspace.js `quoteRowFilter`, `allow-remote="false"`), the ReportScopePolicy
+    `MantleSalesQuoteScope` (`data/SalesWorkspaceData.xml`): purpose `OrpSalesQuote`, no `placedDate`, the organizations of the
+    scope and, without SALES_TEAM_VIEW, the quotes assigned to the viewer or a team of theirs (SalesAccess `assignedQuoteOrderIds`);
+    nothing for a non-reader, another userId refused. An approver's sight of a quote that asked them stays the quote's screen's,
+    not the dataset's.
+  - `OrderChanges.js` `confirm` and the change's `confirm` action: Sales' change operator (`SalesOrderChanges.js` mayApply,
+    SALES_ORDER_CHANGE in the order's organization of their scope) sends the applied change's confirmation, as Customer Service's
+    applier; another organization's change answers as missing. OrderChangeServices' description.
+  - `docs/Upgrading.md` "Sales' report datasets (Sales P20, November 2026)".
+- BOSS:
+  - `report/boss-sales-quotes-expiring.json` (alert template "Quotes expiring": open quotes, Open, Being changed, Requested or
+    Proposed, valid through `now` to `now+7d` as Home's counter, by owner, above 0; a manager's copy counts their organization's).
+  - `data/BossSetupSalesData.xml` (a P20 block at the end): the dataset's artifact in BOSS_SAL_DATASETS (every Sales user and the
+    Insights groups), its document for the same groups, admission, class (operations), readiness provider and index refresh.
+  - Acceptance tests (written, not run): `test/acceptance/Sales/SalesTui.spec.js` and `SalesServerStatic.spec.js` (every screen file
+    under `screen/Sales`, the eighteen Shared mounts and the tabs their menus show, 123 paths and four second records in tui, the
+    plain-XML set in ServerStaticLib's check, as john.doe on the demo's Sales records and the orders, change, shipment, invoice and
+    recurring base `SalesSpecLib.sweepOrders()` makes; Commons' Notifications under Approvals left out, it needs a message id), over
+    SalesSpecLib's new `mountedScreens`, `mountTabs`, `sweepOrders`, `sweepRecords`, `sweepParameters` and `sweepExtras` (a P20 block
+    at its end); `SalesLeadToInvoiceWalk.spec.js` (§14.3 scenario 12: a spec-local seller holding only SALES_VIEW, the opportunity,
+    quote and send edits, from a lead through qualification, an RFQ, a quote under an approval rule decided by `sales.approver`, its
+    send and acceptance to the order's approval; the shipment by Warehouse's users and the invoice it makes, the seller refused the
+    shipment and the invoice and a spec-local billing reader seeing it); `SalesAccessWalk.spec.js` (each Sales group's user and
+    `sales.rep3` of Ziziwork Sales refused the other organization's and other teams' leads, deals, quotes, RFQs and orders through 30
+    routes and their CSV and print, Marketing's mount, the palette, choices, record checks and panels, Assist's seven tools, the
+    Comms providers, the import, direct Mantle services, costs, finance and borrowed hold releases, with each record's owner as the
+    control); `SalesHomeUsable` fixed (it expected the four opportunity tools among every `sales_` tool, stale since P10's quote
+    tools).
+  - Inventories: usl-inventory's 39 Sales rows with no Sales part filled (each naming the Sales screen and the Mantle Sales service
+    the call goes through, or "—" with why) and the agreement and order-item rows corrected, with a header bullet; ss-inventory's
+    118 Sales rows checked, three corrected (AgreementDetail's `AgreementEditForm`, QuoteRequestList's find, Customer360's Orders tab
+    still read only), its Sales bullet completed.
+  - design-sales: §2's Impl column names the phase that built each screen (built paths checked; PriceListDetail is at
+    `Sales/Agreements/PriceLists/PriceListDetail` and PriceExplain at `Sales/Products/PriceExplain`), the later rows later, and a
+    header line naming the eight built screens §2 does not list (LogNote, SendMessage, LogCall, OpportunityImport, QuoteSend,
+    MergeCompare, Catalogue, Readiness). README's Sales paragraph.
+- PASS: `test/acceptance/client/SalesPhonePages.spec.js` (written, not run: CustomerQuotes, CustomerQuote, QuoteResponse,
+  CustomerOrders and CustomerOrder at 390 px, signed in and by a link, none scrolling sideways) with `test/acceptance/
+  SalesPhoneFixtures.spec.js` (one more issued quote of the fixture's account, declined through its link) registered in
+  `test/acceptance/client/suite.js`; README (the acceptance list) and `docs/Deployment.md` (a cancelled order's page).
+- mr-moqui: `docs/security/Attack-Surface.md` checked against the code from Sales' quote lines through Sales' reports: added the quote
+  dataset's row filter (and the stage-age dataset's), a paragraph on Sales' scope (the three reads, `SALES_ALL_ORGANIZATIONS`,
+  assignment and team, records answering as missing), accounts and Commons' contact access, `merge#Parties`' guards, the lifecycle
+  participant, Assist's Sales tools and the Comms hooks, and the change confirmation from Sales; follow-up 2's corrected text in the
+  recurring orders paragraph (the lead's note). `plans/Remaining-Work.md`: a Sales row; the stale "Sales/Reports has no spec that
+  renders it" removed from the IronStone row.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge): mr-mantle SalesQuoteDataset (new, 2 features,
+  0.39 s), SalesPipelineDataset, SalesPipelineReports, SalesWorkspace, SalesRecurrence and SalesQuoteDrafts 23 of 23;
+  SalesOrderChanges (the confirmation added to its first feature) and OrderChanges 9 of 9. mr-boss SalesQuoteAlert (new, 1
+  feature, 0.15 s: sales.rep's copy evaluated as its owner fires with 1 for their quote valid through 3 days, not the one through 30;
+  sales.rep2's copy has no series of it), SalesHome, SalesReportCatalog, InsightsDatasets, InsightsSettings, AdminRegistries,
+  SalesSettings, InsightsDashboards, SalesRecurrence and SalesReports 38 of 38; InsightsAlerts and PeopleInsights 10 of 10;
+  InsightsCatalog, InsightsAccess, SalesAccess, InsightsFlowMaps, InsightsHome and InsightsDelivery 49 of 49; SalesOrderChanges,
+  SalesRecurrence and CustomerServiceOrderChanges 4 of 4. No screen changed, so no lint. Prettier on the new and changed
+  JavaScript. Not run: ./moq test-apps, test-framework, the acceptance suite (the new and changed acceptance specs included).
+- Findings (provisional, numbered by the lead):
+  - the RFQ acknowledgement and the agreement print of §16 (P20's list) are not built: the RFQ's decline mail is P8's, and
+    AgreementDetail has no print or stored approved PDF (F257); a later row (§7) or a follow-up, for the lead or the user;
+  - the pipeline document's derived owner, team and stage label were mapped as numbers from P6 on (fixed above): the stalled-deal
+    alert never fired and the owner panel showed nothing; any other app's DataDocument with an expression field it splits or
+    filters on as text has the same trap (not swept);
+  - InsightsAlerts failed from P19 to here (fixed above): P19's runs did not include it;
+  - Sales' record-lookup provider answers leads and opportunities only (SalesComms.js `lookup`), where design §1.4 also names
+    quotes and orders; coverage, not a leak;
+  - QuoteRequestDetail's "Create quote" (`template/SalesQuoteRequests.xml` rfqCreateQuote) passes no `salesOpportunityId`, so a quote
+    made from an RFQ cannot carry its deal from the screen, though `create#QuoteFromRequest` takes one;
+  - `ironstone.sales` Sales.js defines `recordKinds.orderChange` twice (P9's and P14's); the later silently replaces the first;
+  - several native services the design has Sales call are not called: header, part, line, address and agreement price edits are
+    written inside Sales' own services (update#Quote, store#QuoteLine, apply#OrderChange, store#AgreementItem); the inventories say
+    so;
+  - john.doe's Customer360 under Sales also offers Customer Service's tabs beside Sales' (Orders and SalesOrders, Agreements and
+    SalesAgreements, Activities and ServiceActivities): probably ADMIN holding both apps' permissions, not checked with a plain
+    Sales user;
+  - `screen/Shared/Customer360/SalesOrders.xml`'s comment says the tab is SALES_TEAM_VIEW-only "until P11"; P11 did not widen it;
+  - Marketing's public lead page (`PASS:Marketing/SubmitForm`, impl-marketing P13) is not built yet; the inventories say so.
+- For the lead:
+  - budget share: mr-mantle about 0.45 s (SalesQuoteDataset 0.39 s, SalesOrderChanges' added calls about 0.05 s); mr-boss server
+    about 0.15 s (SalesQuoteAlert); mr-pass and client none;
+  - merge hot spots: mr-mantle `data/SalesPipelineReportData.xml`, `service/mantle/sales/SalesWorkspace.js` and
+    `SalesWorkspaceServices.xml` (a P20 block each), `data/SalesWorkspaceData.xml` (one enumeration), `service/mantle/order/
+    OrderChanges.js` (`confirm`), `OrderChangeServices.xml`, `docs/Upgrading.md` (a section at the end); mr-boss
+    `data/BossSetupSalesData.xml` (a P20 block at the end), `test/Sales/SalesSpecLib.js` (a P20 block at the end and its export
+    line), `test/Insights/InsightsAlerts.spec.js`, `test/acceptance/Sales/SalesHomeUsable.spec.js`, `README.md`,
+    `plan/design-sales.md` (§2 and the header), `plan/usl-inventory.md`, `plan/ss-inventory.md`; mr-pass `test/acceptance/client/
+    suite.js`, `README.md`, `docs/Deployment.md`; mr-moqui `docs/security/Attack-Surface.md`, `plans/Remaining-Work.md`;
+  - the gate 3 status line is not written: the RFQ acknowledgement and the agreement print (first finding) are on P20's list and not
+    built. Once the lead moves them to §7 or a follow-up, the line can read: "Nov 14, 2026 — gate 3 built: P14–P20 (stage S3),
+    commercial changes and the handoffs, agreements and customer prices, recurring orders, PASS Sales' orders, forecasts and
+    targets, reports with Insights' registrations and the quote dataset, each phase reviewed by a fresh agent and merged on its
+    focused specs, with follow-up 2 (recurring orders' invoicing, every line and retax), beside Marketing. The user's calls of the
+    build are in §4. Sales' first release; the full suites and the acceptance tests run once at the end of the build.";
+  - nothing else needs the user's call.
+
 ### Follow-up 1 — a new record's organization default (F111)
 
 **Built Nov 13 (follow-up 1).** mr-mantle and mr-boss on branch `fix/orgdefault` (hashes in the worker's reply); mr-moqui
