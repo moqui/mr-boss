@@ -424,7 +424,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | built and reviewed Nov 14, merged |
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | built and reviewed Nov 14, merged |
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | built and reviewed Nov 14, merged |
-| P10 Experiments | Mantle, BOSS | ExperimentDetail | — |
+| P10 Experiments | Mantle, BOSS | ExperimentDetail | built and reviewed Nov 14, merged |
 | P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | — |
 | P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | — |
 | P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | — |
@@ -2884,7 +2884,7 @@ unchanged, no Rust built. Built beside Marketing P11 (on `mkt/p11`) and Sales P2
   JavaScript. Not run: test-apps, the acceptance suite.
 - Inventories: usl-inventory's "Added in Marketing P10" table; ss-inventory has no row for P10's screen.
 - Design edits: design-marketing §5 (the as-built paragraph after ExperimentDetail).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F224 to F233 in order:
   - the flows' new states, Sample sent and Held for the winner (the code over the plan above);
   - the winner's release evaluates the send's audience again as the releasing dispatcher: a person only the preparer could see (a personal
     contact, F157) is left out, the stricter way, and the release costs a preparation's evaluation; an archived list or segment is still read
@@ -2970,7 +2970,7 @@ ExperimentDetail, §14.1; master (Sales P20) merged into both first without conf
   - R6 (low; the preview). Over 2,000 held, or when a page could not be checked, ExperimentDetail said "N of the M checked" and confirmed
     "Release to X recipients" as if all were checked; it now says only part was checked (the release checks every one) and confirms "up
     to X". SendDetail's A/B box no longer reads the variant bodies to show their subjects.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F234 to F237 in order:
   - the winner's release names the winner read (WINNER_CHANGED; R1); a paused experiment's resume counts the whole audience (R2);
   - any change of an experiment's setup ends the send's approval, the measure and the observation period too (R4; the Built note had them
     as the reading's);
@@ -3786,6 +3786,20 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F221 | P9 (Review Nov 14): the New send dialog's profile default is a small UX change to Marketing's own screen, made for the walk | P9: as its Review note says |
 | F222 | P9 (Review Nov 14): `resumeSend` takes no stamp and does not recheck the audience limit (each claim rechecks the campaign and the profile); `resolveDelivery`'s `checkReach` is never passed (not a parameter); CampaignDelivery shows the Address filter to a masked reader, which ignores it | P9: as its Review note says |
 | F223 | P9 (Review Nov 14): the Built note's findings stand as written (the event key prefix, the reviewer's reach, the in-flight deliveries of a stopped send, an uncertain delivery keeping the send Sending, throughput, the list rows' Message-IDs by the sweep, MarketingApprovals' kind), but its "a send released with no web request would get a relative link" (R2: worse, another site's page; fixed) | P9: as its Review note says |
+| F224 | P10 (Built Nov 14): the flows' new states, Sample sent and Held for the winner (the code over the plan above) | P10: as its Built note says |
+| F225 | P10 (Built Nov 14): the winner's release evaluates the send's audience again as the releasing dispatcher: a person only the preparer could see (a personal contact, F157) is left out, the stricter way, and the release costs a preparation's evaluation; an archived list or segment is still read there, so an archive never holds a winner back | P10: as its Built note says |
+| F226 | P10 (Built Nov 14): a variant changes parts of the send's content; a part cannot be made empty in a variant (empty is the send's); sender variants are not built | P10: as its Built note says |
+| F227 | P10 (Built Nov 14): clicks and conversions are not available before P15 and P20: every experiment's decision reads undecided until then; a person chooses | P10: as its Built note says |
+| F228 | P10 (Built Nov 14): choosing the winner is a dispatcher's (no separation from the authors at the choice; it holds at the release); the observation runs from the later of the release and the schedule | P10: as its Built note says |
+| F229 | P10 (Built Nov 14): the audience limit and the one-person team's count read the whole prepared audience (samples and remainder) at both releases | P10: as its Built note says |
+| F230 | P10 (Built Nov 14): the send's CommunicationEvent carries the send's own subject (variant A's unless A was changed); variant B's recipients' list rows name it too | P10: as its Built note says |
+| F231 | P10 (Built Nov 14): duplicate#Send does not copy an experiment | P10: as its Built note says |
+| F232 | P10 (Built Nov 14): ExperimentDetail's release preview runs P9's page check over up to 2,000 held recipients on each render for a dispatcher who may release (none otherwise) | P10: as its Built note says |
+| F233 | P10 (Built Nov 14): the demo gains a draft subject test (the plan listed no demo for P10) | P10: as its Built note says |
+| F234 | P10 (Review Nov 14): the winner's release names the winner read (WINNER_CHANGED; R1); a paused experiment's resume counts the whole audience (R2) | P10: as its Review note says |
+| F235 | P10 (Review Nov 14): any change of an experiment's setup ends the send's approval, the measure and the observation period too (R4; the Built note had them as the reading's) | P10: as its Review note says |
+| F236 | P10 (Review Nov 14): no attention row for a send in Sample sent waiting for a winner (troubledSends lists it only with a failed or uncertain delivery) | P10: as its Review note says |
+| F237 | P10 (Review Nov 14): release#ExperimentWinner's `operationKey` names nothing (the experiment is the identity), as release#Send's stamp | P10: as its Review note says |
 
 ## 7. Later
 
