@@ -187,7 +187,10 @@ feature("disabling an offboarded rep in Admin lists their deals and moves them t
 
 feature("Assist qualifies a lead only after the user approves the step; the user's Qualify makes the opportunity", {
     when() {
-        const tools = rows("moqui.agent.AgentToolExposure", {}).filter(row => String(row.toolName).startsWith("sales_"))
+        // the opportunity tools (P6); P10's quote tools (sales_find_quotes, sales_preview_quote, sales_send_quote) are left out here
+        const tools = rows("moqui.agent.AgentToolExposure", {}).filter(row =>
+            /^sales_[a-z]+_opportunit/.test(String(row.toolName))
+        )
         const skill = String(ec.resource.getLocationText("component://mr-boss/skill/sales-qualify-lead.md", false) || "")
         // a lead of the rep's, qualified by the rep's own Qualify on its OpportunityDetail
         const leadId = asUser(users.rep, () =>
