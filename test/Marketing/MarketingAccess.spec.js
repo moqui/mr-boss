@@ -166,10 +166,18 @@ feature("the Marketing menu and keys follow the groups; the launcher shows Marke
         if (JSON.stringify(sendsTabs.names) !== JSON.stringify(ids.sendsMenu))
             problems.push(`the author's Sends tabs: ${sendsTabs.status} ${sendsTabs.names}`)
         if (!author.apps.includes("Marketing")) problems.push(`the author's launcher has no Marketing: ${author.apps}`)
-        for (const user of [users.approver, users.dispatch, users.events, users.analyst, users.reader]) {
+        for (const user of [users.events, users.analyst, users.reader]) {
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.staffMenu)) problems.push(`${user}'s menu: ${names}`)
         }
+        // P8: the approver and the dispatcher open Sends, its Sends tab and not the templates
+        for (const user of [users.approver, users.dispatch]) {
+            const names = shell(user, true).names
+            if (JSON.stringify(names) !== JSON.stringify(ids.sendsStaffMenu)) problems.push(`${user}'s menu: ${names}`)
+        }
+        const approverSends = shell(users.approver, true, "Sends/Sends", "Sends")
+        if (JSON.stringify(approverSends.names) !== JSON.stringify(ids.approverSendsMenu))
+            problems.push(`the approver's Sends tabs: ${approverSends.status} ${approverSends.names}`)
         // P3: Audiences for the audience manager and the administrator, Leads for a Sales reader
         for (const [user, menu] of [
             [users.audience, ids.audienceMenu],
@@ -237,7 +245,9 @@ const capabilityNames = [
     "templateRead",
     "profileRead",
     "sendsRead",
-    "sends"
+    "sends",
+    // P8: the sends' read (a Marketing reader who writes, approves or dispatches sends)
+    "sendRead"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
@@ -257,15 +267,29 @@ const capabilityUsers = [
             "templateRead",
             "profileRead",
             "sendsRead",
-            "sends"
+            "sends",
+            "sendRead"
         ]
     },
     {
         user: users.audience,
         granted: ["view", ...audienceGrants, "anyRead", "audienceRead", "audiences", "previewRead", "audiencePreview"]
     },
-    {user: users.approver, granted: ["view", "approve", "anyRead", "approvals"]},
-    {user: users.dispatch, granted: ["view", "dispatch", "anyRead", "previewRead", "audiencePreview", "profileRead"]},
+    {user: users.approver, granted: ["view", "approve", "anyRead", "approvals", "sendsRead", "sends", "sendRead"]},
+    {
+        user: users.dispatch,
+        granted: [
+            "view",
+            "dispatch",
+            "anyRead",
+            "previewRead",
+            "audiencePreview",
+            "profileRead",
+            "sendsRead",
+            "sends",
+            "sendRead"
+        ]
+    },
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
     {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead"]},
     {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead"]},
@@ -436,6 +460,11 @@ feature(
                 otherCampaign: panelRequest("apps/Marketing/RecordFiles/filesData", {
                     recordEntity: "mantle.marketing.campaign.MarketingCampaign",
                     recordId: ids.servicesCampaignId
+                }),
+                // P8: the send is a host too
+                ownSend: panelRequest("apps/Marketing/RecordFiles/filesData", {
+                    recordEntity: "mantle.marketing.campaign.CampaignSend",
+                    recordId: ids.draftSendId
                 })
             }))
             // P2: Approvals for the approver alone (the area's grant or its own check)
@@ -455,7 +484,14 @@ feature(
                 author: screenRefusal(users.author, "Sends/MessageTemplates"),
                 reader: screenRefusal(users.reader, "Sends/MessageTemplates"),
                 admin: screenRefusal(users.admin, "Settings/SendingProfiles"),
-                authorProfiles: screenRefusal(users.author, "Settings/SendingProfiles")
+                authorProfiles: screenRefusal(users.author, "Settings/SendingProfiles"),
+                // P8: the sends for an approver (and an author), not a reader; another organization's send is no one else's
+                approver: screenRefusal(users.approver, "Sends/Sends"),
+                readerSends: screenRefusal(users.reader, "Sends/Sends"),
+                otherSend: asUser(users.otherAuthor, () =>
+                    refusal(checkRecord, {recordType: "send", recordId: ids.approvedSendId})
+                ),
+                ownSend: asUser(users.approver, () => refusal(checkRecord, {recordType: "send", recordId: ids.approvedSendId}))
             }
             return {
                 authorHome,
@@ -504,6 +540,11 @@ feature(
             sends.admin == ""
             unauthorized(sends.reader) || sends.reader.includes("PERMISSION_DENIED")
             unauthorized(sends.authorProfiles) || sends.authorProfiles.includes("PERMISSION_DENIED")
+            sends.approver == ""
+            unauthorized(sends.readerSends) || sends.readerSends.includes("PERMISSION_DENIED")
+            sends.otherSend.includes("RECORD_UNAVAILABLE")
+            sends.ownSend == ""
+            !panels.ownSend.errors.includes("RECORD_PANEL_UNAVAILABLE") && panels.ownSend.status == 200
             // P6: the settings index links the sending profiles, templates, consent and suppressions
             adminSettings.output.includes("Sending profiles") && adminSettings.output.includes("Message templates")
             adminSettings.output.includes("Suppressions")

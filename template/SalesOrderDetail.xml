@@ -662,6 +662,10 @@ along with this software (see the LICENSE.md file). If not, see
                                             parameter-map="{orderId:orderId}" condition="soCanChange"/>
                                     <link url="salesCloneOrder" link-type="hidden-form" text="Copy as a new order" icon="sym_o_content_copy"
                                             condition="soCan.clone" parameter-map="{orderId:orderId}" confirmation="Copy order ${orderId} into a new draft?"/>
+                                    <!-- P16: an approved order repeated on a schedule, in Recurring orders (a keeper of recurrence's) -->
+                                    <link url="${sharedLinks['Agreements/RecurringOrders']}" url-type="plain" text="Make recurring" icon="sym_o_event_repeat"
+                                            parameter-map="{sourceOrderId:orderId, _openDialog:'NewRecurrence'}"
+                                            condition="so.statusId == 'OrderApproved' &amp;&amp; sales.capabilities.recurrenceManage &amp;&amp; sharedLinks['Agreements/RecurringOrders']"/>
                                     <link url="${soCustomerUrl}" url-type="plain" text="Customer" parameter-map="{customerPartyId:so.customerPartyId}"
                                             condition="soCustomerUrl"/>
                                     <link url="${soOpportunityUrl}" url-type="plain" text="Opportunity"

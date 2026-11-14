@@ -98,6 +98,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="recipientRetentionDays"><default-field title="Keep recipients (days)"><text-line size="6"/></default-field></field>
                             <field name="statisticsRetentionDays"><default-field title="Keep statistics (days)"><text-line size="6"/></default-field></field>
                             <field name="explanation"><default-field title="Explanation"><text-area rows="2" cols="60"/></default-field></field>
+                            <field name="testAddresses">
+                                <default-field title="Test addresses" tooltip="A send's test message goes only to these, one a line, at most ten">
+                                    <text-area rows="3" cols="60"/></default-field>
+                            </field>
                             <field name="submitButton">
                                 <default-field title=""><submit text="Save from now" confirmation="Start these campaign defaults now, ending the ones in effect?"/></default-field>
                             </field>
@@ -107,6 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field-row><field-ref name="frequencyCapCount"/><field-ref name="frequencyCapDays"/></field-row>
                                 <field-row><field-ref name="recipientRetentionDays"/><field-ref name="statisticsRetentionDays"/></field-row>
                                 <field-ref name="explanation"/>
+                                <field-ref name="testAddresses"/>
                                 <field-ref name="submitButton"/>
                             </field-layout>
                         </form-single>
@@ -145,7 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box condition="preview">
                     <box-header title="What this would change"/>
                     <box-body>
-                        <label text="${preview.effectiveText}" type="p" style="text-caption m-muted"/>
+                        <label text="${preview?.effectiveText}" type="p" style="text-caption m-muted"/>
                         <label text="Nothing else changes." type="p" style="m-muted" condition="!findingList.length"/>
                         <form-list name="PolicyPreview" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
                             <field name="text"><default-field title="Finding"><display/></default-field></field>

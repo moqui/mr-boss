@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Sends › Compose (design-marketing §5 Compose: MessageContent, MessageAssets, MessagePreview, TestSend; style-guide §3.9
+    Editor; impl-marketing P8): one send's content (check#Record send; else "Not available", linking back), in XML so its terminal
+    fields are plain text with the same validation (Mantle's store#SendContent parses and refuses on every channel). MessageContent:
+    the subject, preheader, body in the rich editor with its inline text actions, the text alternative and the declared variables
+    (name | label | fallback | required; a recipient's first name, last name and name are the values a send has). MessageAssets: the
+    files the message attaches, chosen from the send's and its campaign's files. MessagePreview: the draft rendered for a person on
+    the topic (an audience reader) or with synthetic values, with what to check. TestSend: to an address of the organization's test
+    list, marked TEST. Save, Preview, Test; Request approval is on SendDetail, once it is prepared. A saved change ends an approval. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Compose" default-menu-include="false">
+    <parameter name="campaignSendId" required="true"/>
+    <parameter name="samplePartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeSendContent" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="storeSendAssets" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="testSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="sendCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'send', recordId:campaignSendId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="sendCheck?.recordId">
+            <service-call name="mantle.marketing.CampaignSendServices.get#Send" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.send"/>
+        <set field="sampleError" from="null"/>
+        <if condition="recordFound">
+            <service-call name="mantle.marketing.CampaignSendServices.preview#Send" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId, samplePartyId:(samplePartyId || null)}"/>
+            <if condition="ec.message.hasError()">
+                <set field="sampleError" from="ec.message.getErrorsString()"/>
+                <script>ec.message.clearErrors()</script>
+                <service-call name="mantle.marketing.CampaignSendServices.preview#Send" out-map="preview" transaction="force-new" ignore-error="true"
+                        in-map="{campaignSendId:campaignSendId}"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="send" from="detail?.send || {}"/>
+        <set field="content" from="detail?.content || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="assetList" from="detail?.assets || []"/>
+        <set field="testList" from="detail?.tests || []"/>
+        <set field="testOptions" from="(detail?.testAddresses || []).map(address =&gt; ({value: address, label: address}))"/>
+        <set field="findingList" from="(preview?.findings || []).map(text =&gt; ({text}))"/>
+        <set field="safeBody" from="preview?.safeBody || ''"/>
+        <set field="listPath" from="sharedLinks['Sends/Sends']"/>
+        <set field="detailPath" from="sharedLinks['Sends/SendDetail']"/>
+        <set field="contentValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision, subject:content.subject,
+                preheader:content.preheader, body:content.body, bodyText:content.bodyText, variablesText:content.variablesText}"/>
+        <set field="assetValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision}"/>
+        <set field="testValues" from="{campaignSendId:campaignSendId, toAddress:testOptions.length == 1 ? testOptions[0].value : null}"/>
+        <set field="sampleValues" from="{campaignSendId:campaignSendId, samplePartyId:samplePartyId}"/>
+    </actions>
+    <widgets>
+        <section name="ComposeNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Send ${campaignSendId} is not available: it does not exist, or it is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to sends" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ComposeFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.marketing.campaign.CampaignSend" record-id="${campaignSendId}" title="${send.sendName}"/>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Compose ${send.sendName}" type="h5" style="q-my-none"/>
+                        <label text="${send.statusText} · revision ${send.sendRevision} · topic ${send.topicName}" type="div" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="TestSendDialog" button-text="Send a test" icon="sym_o_science" title="Send a test of ${send.sendName}"
+                                width="520" condition="can.canTest">
+                            <label text="A test goes only to an address of the organization's test list, marked TEST, with sample values; no recipient gets it and it counts nowhere." type="p" style="m-muted"/>
+                            <label text="The organization has no test addresses yet: an administrator adds them in Campaign defaults." type="p" style="text-warning"
+                                    condition="!testOptions.length"/>
+                            <form-single name="TestSend" transition="testSend" map="testValues">
+                                <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                <field name="toAddress">
+                                    <default-field title="To"><drop-down><list-options list="testOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                </field>
+                                <field name="note"><default-field title="Note" tooltip="Shown on the test's TEST line"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Send the test"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="${detailPath}" text="Back to the send" link-type="anchor-button" icon="sym_o_arrow_back"
+                                parameter-map="{campaignSendId:campaignSendId}"/>
+                    </container>
+                </container>
+                <label text="This send is ${send.statusText}: its content no longer changes. Duplicate it to start again." type="p" style="text-warning"
+                        condition="!can.canEdit &amp;&amp; marketing.capabilities.sendEdit"/>
+
+                <container-box>
+                    <box-header title="Message"/>
+                    <box-body>
+                        <label text="Variables are written as ${'$'}{name} and declared below: firstName, lastName and fullName are each recipient's own; any other takes its fallback. A link to a staff page or a stored file is refused: attach the file instead."
+                                type="p" style="m-muted"/>
+                        <form-single name="MessageContent" transition="storeSendContent" map="contentValues" condition="can.canEdit">
+                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><text-line size="60"/></default-field></field>
+                            <field name="preheader"><default-field title="Preheader"><text-line size="60"/></default-field></field>
+                            <field name="body"><default-field title="Body"><text-area rows="12" cols="80" editor-type="rich"/></default-field></field>
+                            <field name="bodyText"><default-field title="Text alternative"><text-area rows="6" cols="80"/></default-field></field>
+                            <field name="variablesText">
+                                <default-field title="Variables" tooltip="One a line: name | label | fallback | required">
+                                    <text-area rows="4" cols="80"/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                        </form-single>
+                        <section name="ContentReadOnly" condition="!can.canEdit">
+                            <widgets>
+                                <label text="Subject: ${content.subject}" type="p"/>
+                                <label text="Text: ${content.bodyText}" type="p" style="m-muted"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Attachments"/>
+                    <box-toolbar>
+                        <container-dialog id="AttachFileDialog" button-text="Attach a file" icon="sym_o_attach_file" title="Attach a file to ${send.sendName}"
+                                width="560" condition="can.canEdit">
+                            <label text="A file of this send (its Files on the send) or of its campaign goes with the message as an attachment." type="p" style="m-muted"/>
+                            <form-single name="MessageAssets" transition="storeSendAssets" map="assetValues">
+                                <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="action" from="'add'"><default-field><hidden/></default-field></field>
+                                <field name="contentLocation">
+                                    <default-field title="File">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'sendFiles', campaignSendId:campaignSendId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="assetLabel"><default-field title="Label"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Attach"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No attachment." type="p" style="m-muted" condition="!assetList.length"/>
+                        <form-list name="AssetList" list="assetList" skip-form="true" paginate="false" condition="assetList.length">
+                            <field name="assetLabel"><default-field title="File"><display/></default-field></field>
+                            <field name="usageText"><default-field title="Used as"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="RemoveAsset_${campaignSendContentId}" button-text="Remove" icon="sym_o_link_off"
+                                            title="Remove ${assetLabel} from the message" width="440" condition="can.canEdit">
+                                        <form-single name="RemoveAsset" transition="storeSendAssets"
+                                                map="{campaignSendId:campaignSendId, expectedRevision:send.revision, campaignSendContentId:campaignSendContentId}">
+                                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="campaignSendContentId"><default-field><hidden/></default-field></field>
+                                            <field name="action" from="'end'"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title=""><submit text="Remove" type="danger" confirmation="Remove ${assetLabel} from the message?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="assetLabel"/><field-ref name="usageText"/></column>
+                                <column><field-ref name="fromDateText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Preview"/>
+                    <box-body>
+                        <form-single name="MessagePreview" transition="." map="sampleValues" condition="can.canPreviewRecipient">
+                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                            <field name="samplePartyId">
+                                <default-field title="As" tooltip="A person on the topic; empty shows sample values">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'sendMembers', campaignSendId:campaignSendId, selected:samplePartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                        </form-single>
+                        <label text="${sampleError}" type="p" style="text-negative" condition="sampleError"/>
+                        <label text="As ${preview?.sampleText}" type="p" style="text-caption m-muted"/>
+                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium"/>
+                        <label text="${preview?.renderedPreheader}" type="p" style="m-muted" condition="preview?.renderedPreheader"/>
+                        <render-mode>
+                            <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 390px">${safeBody}</div>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
+                        </render-mode>
+                        <label text="Text: ${preview?.renderedText}" type="p" style="m-muted" condition="preview?.renderedText"/>
+                        <form-list name="PreviewFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
+                            <field name="text"><default-field title="To check"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="testList.length">
+                    <box-header title="Tests"/>
+                    <box-body>
+                        <form-list name="TestList" list="testList" skip-form="true" paginate="false">
+                            <field name="createdDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="toAddress"><default-field title="To"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="toAddress"/><field-ref name="createdDateText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

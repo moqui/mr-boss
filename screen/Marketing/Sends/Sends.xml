@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Sends › Sends (design-marketing §5 Sends: SendFind, SendList, NewSend; style-guide §3.2 List, §3.6 Board;
+    impl-marketing P8): the sends of the user's organizations (mantle.marketing.CampaignSendServices.find#Sends, scoped in the query),
+    open ones by default, as a list (the default), a board by state and a calendar by schedule; the views share the filters, sort and
+    page. New send is the primary action (MARKETING_SEND_EDIT; a template's Use opens it with the template chosen); each row opens
+    SendDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sends" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="statusId"/>
+    <parameter name="rangeFrom"/>
+    <parameter name="rangeThru"/>
+    <parameter name="mine"/>
+    <parameter name="orderByField"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <parameter name="messageTemplateId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <if condition="can.sendRead">
+            <service-call name="mantle.marketing.CampaignSendServices.find#Sends" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, marketingCampaignId:marketingCampaignId,
+                        statusId:(statusId || 'open'), rangeFrom:(rangeFrom || null), rangeThru:(rangeThru || null), mine:mine,
+                        orderByField:orderByField, pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="sendList" from="found?.sendList || []"/>
+        <set field="sendListCount" from="found?.sendListCount"/>
+        <set field="sendListPageIndex" from="found?.sendListPageIndex"/>
+        <set field="sendListPageSize" from="found?.sendListPageSize"/>
+        <set field="sendListPageMaxIndex" from="found?.sendListPageMaxIndex"/>
+        <set field="sendListPageRangeLow" from="found?.sendListPageRangeLow"/>
+        <set field="sendListPageRangeHigh" from="found?.sendListPageRangeHigh"/>
+        <set field="detailPath" from="sharedLinks['Sends/SendDetail'] || null"/>
+        <set field="canEdit" from="!!found?.canCreate"/>
+        <set field="filtered" from="!!(text || organizationPartyId || marketingCampaignId || (statusId &amp;&amp; statusId != 'open') || rangeFrom || rangeThru || mine)"/>
+        <set field="emptyText" from="filtered ? 'No send matches these filters.' : 'No open sends' + (canEdit ? ' · Start one with New send, or Use a template.' : '.')"/>
+        <set field="newSendValues" from="{marketingCampaignId: marketingCampaignId || null, messageTemplateId: messageTemplateId || null,
+                organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
+        <set field="boardColumns" from="['Draft', 'Awaiting approval', 'Approved', 'Scheduled', 'Sending', 'Paused', 'Completed', 'Completed with failures', 'Cancelled']"/>
+        <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
+                {key:'awaiting', text:'Awaiting approval', icon:'sym_o_approval', parameters:{statusId:'CsAwaitingApproval'}},
+                {key:'all', text:'Every state', icon:'sym_o_view_list', parameters:{statusId:'all'}}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read sends in Marketing." type="p" style="m-muted" condition="!can.sendRead"/>
+        <section name="SendsRegister" condition="can.sendRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Sends" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewSendDialog" button-text="New send" title="New send" icon="sym_o_add" width="640"
+                                type="primary" condition="canEdit">
+                            <section-include name="NewSendForm" location="component://mr-boss/template/MarketingSends.xml"/>
+                        </container-dialog>
+                        <section-iterate name="SavedFinds" list="savedFinds" entry="saved">
+                            <widgets>
+                                <link url="." text="${saved.text}" link-type="anchor-button" icon="${saved.icon}" parameter-map="saved.parameters"/>
+                            </widgets>
+                        </section-iterate>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="SendList" list="sendList" skip-form="true" paginate="true" header-dialog="true"
+                                select-columns="true" views="list,board,calendar" show-csv-button="true">
+                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                            <field name="text"><header-field title="Name, subject or id"><text-line size="20"/></header-field></field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="marketingCampaignId">
+                                <header-field title="Campaign">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="open" text="Open"/>
+                                        <option key="CsDraft" text="Draft"/>
+                                        <option key="CsAwaitingApproval" text="Awaiting approval"/>
+                                        <option key="CsApproved" text="Approved"/>
+                                        <option key="CsScheduled" text="Scheduled"/>
+                                        <option key="CsSending" text="Sending"/>
+                                        <option key="CsPaused" text="Paused"/>
+                                        <option key="CsCompleted" text="Completed"/>
+                                        <option key="CsCompletedFailures" text="Completed with failures"/>
+                                        <option key="CsCancelled" text="Cancelled"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="rangeFrom"><header-field title="Scheduled from"><date-time type="date"/></header-field></field>
+                            <field name="rangeThru"><header-field title="Scheduled before"><date-time type="date"/></header-field></field>
+                            <field name="mine">
+                                <header-field title="Mine"><check><option key="Y" text="Sends I started"/></check></header-field>
+                            </field>
+                            <field name="sendName">
+                                <conditional-field title="Send" condition="detailPath">
+                                    <link url="${detailPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                                </conditional-field>
+                                <default-field title="Send"><display/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="State name"><display/></default-field></field>
+                            <field name="campaignName"><default-field title="Campaign"><display/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                            <field name="channelText"><default-field title="Channel"><display/></default-field></field>
+                            <field name="topicName"><default-field title="Topic"><display/></default-field></field>
+                            <field name="scheduledText"><default-field title="Schedule"><display/></default-field></field>
+                            <field name="scheduledDate"><default-field title="Scheduled"><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                            <field name="eligibleText" align="right"><default-field title="Eligible"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <columns>
+                                <column><field-ref name="sendName"/><field-ref name="campaignName"/></column>
+                                <column><field-ref name="statusId"/></column>
+                                <column><field-ref name="subject"/><field-ref name="topicName"/></column>
+                                <column><field-ref name="channelText"/></column>
+                                <column><field-ref name="scheduledText"/></column>
+                                <column><field-ref name="eligibleText"/></column>
+                                <column><field-ref name="organizationName"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="sendName"/><field-ref name="subject"/></column>
+                                <column><field-ref name="statusId"/><field-ref name="eligibleText"/></column>
+                            </columns>
+                            <view-board group-field="statusText" card-title-field="sendName" card-fields="campaignName,subject,eligibleText"
+                                    key-fields="campaignSendId" column-order="${boardColumns}"/>
+                            <view-calendar start-field="scheduledDate" title-field="sendName" key-fields="campaignSendId"
+                                    card-fields="statusText,campaignName"/>
+                        </form-list>
+                        <section name="NoSends" condition="!sendList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

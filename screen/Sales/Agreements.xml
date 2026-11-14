@@ -15,8 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Agreements area of IronStone Sales (design-sales §7, §1.2 "Agreements and prices"; impl-sales P15): Agreements (AgreementFind,
     AgreementList, NewAgreement) and the shared AgreementDetail (hidden from the menu), a Sales reader's, every read and write
     Mantle's guarded agreement service (mantle.party.SalesAgreementServices); Customer prices (Shared/Prices) and Price lists
-    (Shared/PriceLists, PriceListDetail) in Products' Sales context, shown to a holder of Products' price permissions only. Recurring
-    orders and Subscriptions are P16's. -->
+    (Shared/PriceLists, PriceListDetail) in Products' Sales context, shown to a holder of Products' price permissions only. P16:
+    Recurring orders (the one editor of recurrence, a keeper's of SALES_RECURRENCE_MANAGE, read by SALES_TEAM_VIEW;
+    mantle.order.SalesRecurrenceServices) and Subscriptions (the shared Subscriptions in Sales' context, every Sales reader's). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Agreements" default-menu-index="6" menu-image="sym_o_contract" menu-image-type="icon">
     <subscreens default-item="Agreements" always-use-full-path="true">
@@ -26,6 +27,10 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-include="ec.user.hasPermission('PRICE_VIEW') || ec.user.hasPermission('PRICE_EDIT')"/>
         <subscreens-item name="PriceLists" location="component://mr-boss/screen/Sales/Agreements/PriceLists.xml" menu-index="3"
                 menu-include="ec.user.hasPermission('PRICE_VIEW') || ec.user.hasPermission('PRICE_EDIT')"/>
+        <!-- P16: recurring orders and subscriptions -->
+        <subscreens-item name="RecurringOrders" location="component://mr-boss/screen/Sales/Agreements/RecurringOrders.xml" menu-index="4"
+                menu-include="ec.user.hasPermission('SALES_RECURRENCE_MANAGE') || ec.user.hasPermission('SALES_TEAM_VIEW')"/>
+        <subscreens-item name="Subscriptions" location="component://mr-boss/screen/Shared/Subscriptions.xml" menu-index="5"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="SalesAgreementsPanel" type="tab"/>

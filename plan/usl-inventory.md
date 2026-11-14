@@ -831,7 +831,7 @@ the screens that call it.
 | PaymentAutoPostServices | revert#PaymentApplicationPost |  |  |
 | PaymentAutoPostServices | repost#PaymentAndApplications |  |  |
 
-## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices and P6's Comms templates and sending profiles below)
+## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices, P6's Comms templates and sending profiles and P8's CampaignSendServices below)
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 
@@ -923,6 +923,20 @@ checkout:
 | party/ConsentServices | unsubscribe#ContactListParty (organizationPartyId) | PASS:Account/EmailPreferences (Marketing's context) | AccountHub.js store#EmailPreferences, "No more email from" (Marketing P7) |
 | public/AccountHubServices | get#EmailPreferences, store#EmailPreferences (Marketing's context) | PASS:Account/EmailPreferences (Marketing's context, design-marketing §13) | PASS:Account/EmailPreferences (Marketing P7) |
 
+Added in Marketing P8 (Nov 14, 2026; `mantle.marketing.CampaignSendServices`, the send kind of the approvals, the policy's test list
+and the ledger's promotional profile check, impl-marketing P8), called by built screens and the ledger:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/CampaignSendServices | find#Sends, create#Send | Marketing/Sends (SendFind, SendList, NewSend); CampaignDetail's QuickSend; MessageTemplates' Use | Marketing/Sends/Sends; Marketing/Campaigns/CampaignDetail (Sends, New send); Shared/MessageTemplates (Use opens New send) (Marketing P8) |
+| marketing/CampaignSendServices | get#Send, store#Send, schedule#Send, prepare#Send, duplicate#Send | Marketing/Sends/SendDetail (SendSummary, SendAudience, SendSchedule) | Marketing/Sends/SendDetail (Marketing P8) |
+| marketing/CampaignSendServices | store#SendContent, store#SendAssets, preview#Send, test#Send | Marketing/Sends/Compose (MessageContent, MessageAssets, MessagePreview, TestSend) | Marketing/Sends/Compose; Marketing/Sends/SendDetail (the content preview) (Marketing P8) |
+| marketing/CampaignSendServices | build#TestDelivery | the ledger's source MdsrcCampaignSendTest | attempt#Delivery (Marketing P8) |
+| marketing/CampaignSendServices | check#SendAccess, create#CampaignSendContent | Marketing/Chatter; Marketing/RecordFiles (the send host, design §14.3) | Marketing/Sends/SendDetail (Activity and Files: get#RecordLinkInfo's send rule, RecordFiles' get#ContentType) (Marketing P8) |
+| marketing/CampaignServices | request#, decide#MarketingApproval (targetKind send) | Marketing/Sends/SendDetail (SendDecision) | Marketing/Sends/SendDetail (Request approval, Approve); Commons' Notifications (MarketingSendApproval) (Marketing P8) |
+| marketing/CampaignServices | store#MarketingPolicy (testAddresses) | Marketing/Settings/CampaignDefaults | Marketing/Settings/CampaignDefaults (Test addresses) (Marketing P8) |
+| party/MessageServices | queue#Delivery (a promotional delivery never names a transactional profile) | the ledger's contract (F172) | test#Send (Marketing P8) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -977,9 +991,9 @@ checkout:
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
 | OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3); Commerce/Orders/OrderDetail (Order again, through mantle.order.StoreOperationsServices.reorder#StoreOrder: copyPayment false, then repriced; Commerce P8); Sales/Quotes/QuoteTemplateDetail and Sales/Quotes/Quotes (New quote from a template, through SalesQuoteServices.create#Quote: copyPayment false, then priced as of the quote's date; a successor through store#QuoteTemplate) (Sales P12) |
-| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
-| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
-| OrderServices | create#RecurringOrder |  |  |
+| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders | Sales/Agreements/RecurringOrders (New recurring order, Edit, through SalesRecurrenceServices.store#SalesRecurrence on the base, a copy of the approved order; OrderDetail's Make recurring opens it) (Sales P16) |
+| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run); its guards are Sales' (the base's zone, dates, pause, one order for an occurrence, a failure named and the next base run) (Sales P16) |
+| OrderServices | create#RecurringOrder |  | Sales/Agreements/RecurringOrders (Make the due order now, through SalesRecurrenceServices.change#SalesRecurrence retry) (Sales P16) |
 | OrderServices | handle#OrderItemChange |  |  |
 | OrderServices | handle#OrderPartChange |  |  |
 | OrderServices | handle#OrderMajorChange |  | — (no screen; the order rules) X1: a storeless order's tax step through the seller's gateway (Sales P7) |
@@ -2433,6 +2447,16 @@ remain historical; these rows add no implementation claim.
 | sales/ForecastServices | store#Target, find#Targets | Sales/Settings/Targets (SalesTargets) | Sales/Settings/Targets (New target, Change, the list with CSV) |
 | sales/ForecastServices | ensure#SalesPeriods | — (not in the design) | Sales/Settings/Targets (Add sales periods) |
 | sales/ForecastServices | get#TargetAttainment | Sales/Reports/TargetAttainment (TargetOptions, TargetResults) | Sales/Reports/TargetAttainment (with CSV) |
+
+### Added in the Sales build: recurring orders and subscriptions (P16, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesRecurrenceServices | find#RecurringSalesOrders | Sales/Agreements/RecurringOrders (RecurrenceFind, RecurrenceList) | Sales/Agreements/RecurringOrders (the list with Active, Paused, Last run failed, Ended and All) |
+| order/SalesRecurrenceServices | store#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceSettings) | Sales/Agreements/RecurringOrders (New recurring order, Edit); Sales/Orders/OrderDetail (Make recurring opens it) |
+| order/SalesRecurrenceServices | change#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceAction) | Sales/Agreements/RecurringOrders (Make the due order now, Pause, Resume, End) |
+| order/SalesRecurrenceServices | find#SalesSubscriptions | Sales/Agreements/Subscriptions (Commerce's Subscriptions with a Sales context) | Shared/Subscriptions in Sales' context at Sales/Agreements/Subscriptions |
+| order/SalesRecurrenceServices | add#SubscriptionFollowUp | Sales/Agreements/Subscriptions (Follow up, over mantle.work.TaskServices.create#SimpleTask) | Shared/Subscriptions in Sales' context (Follow up) |
 
 ### Added in the Sales build: reports and Insights registrations (P19, Nov 14, 2026)
 

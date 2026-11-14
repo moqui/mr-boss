@@ -12,7 +12,7 @@
 // its panels and Marketing's mount.
 // Run: ./moq test mr-boss --spec SalesAccess
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
-const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell} = lib
+const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell, recurringBase} = lib
 const contextServices = "ironstone.sales.ContextServices."
 const context = contextServices + "get#SharedContext"
 const checkRecord = contextServices + "check#Record"
@@ -728,6 +728,29 @@ feature("inviting a customer's contact to PASS Sales is an inviter's, for an acc
     then({manager, rep, other}) {
         manager.includes("EMAIL_INVALID")
         rep.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})
+// P16: keeping a recurring base is SALES_RECURRENCE_MANAGE's in its organization (a manager reads it; Ziziwork Sales' rep does not see it)
+feature("a recurring base is its keeper's to change, in its organization", {
+    when() {
+        const base = recurringBase().baseOrderId
+        const pause = user =>
+            asUser(user, () =>
+                system(() =>
+                    refusal("mantle.order.SalesRecurrenceServices.change#SalesRecurrence", {
+                        baseOrderId: base,
+                        recurRevision: "99",
+                        operation: "pause",
+                        reason: "Spec"
+                    })
+                )
+            )
+        return {keeper: pause(users.agreement), manager: pause(users.manager), other: pause(users.otherRep)}
+    },
+    then({keeper, manager, other}) {
+        keeper.includes("REVISION_CHANGED")
+        manager.includes("PERMISSION_DENIED")
         other.includes("RECORD_UNAVAILABLE")
     }
 })

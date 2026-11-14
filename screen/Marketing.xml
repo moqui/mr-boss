@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle/marketing/MarketingAccess.js). The menu of design §1.2 grows by phase and shows built areas only: P1 builds Home (every
     Marketing user's), P2 Campaigns (with Approvals, the approvers'), P3 Audiences (the audience managers') and Leads (Sales' Leads and
     Accounts with the bulk action, a Sales reader's) and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
-    redirects of their old links (F2), to Audiences and Sends once those exist (P5, P8). -->
+    redirects of their old links (F2), to Audiences and Sends (P5, P8); Sends gains the sends, SendDetail and Compose (P8). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -33,14 +33,14 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the record panels serve Marketing's own record hosts only (the People P2, Insights P12, Maintenance P1 and Sales P1 mount
             lesson): this root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to
             a user given Marketing without Commons. P2: the campaign, checked by check#Record (a Marketing reader of its
-            organization); the send (P8) and the event registration (P17) join with their checks (design §14.3). Any other record is
+            organization); P8: the send, by check#Record the same way; the event registration (P17) joins with its check (design §14.3). Any other record is
             refused; a panel request with no record (a person search, an avatar) names none. -->
         <script><![CDATA[
             const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
             const panelName = pathNames[pathNames.indexOf('Marketing') + 1]
             panelRecordType = null
             if ((panelName === 'Chatter' || panelName === 'RecordFiles') && ec.context.recordEntity) {
-                const panelHosts = {'mantle.marketing.campaign.MarketingCampaign': 'campaign'}
+                const panelHosts = {'mantle.marketing.campaign.MarketingCampaign': 'campaign', 'mantle.marketing.campaign.CampaignSend': 'send'}
                 const entityName = String(ec.context.recordEntity)
                 if (!Object.hasOwn(panelHosts, entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
@@ -69,11 +69,11 @@ along with this software (see the LICENSE.md file). If not, see
             permissions and the organization again -->
         <subscreens-item name="Audiences" location="component://mr-boss/screen/Marketing/Audiences.xml" menu-index="3"
                 menu-include="ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')"/>
-        <!-- P6: Sends (design §5): Comms' shared MessageTemplates and MessageTemplateDetail, for the authors and the administrator
-            (BOSS_MKT_SENDS denies the root user group); Mantle's template services check the permissions and the organization again.
-            Sends, SendDetail and Compose join in P8 -->
+        <!-- P6, P8: Sends (design §5): the sends, SendDetail and Compose, Comms' shared MessageTemplates and MessageTemplateDetail, for
+            the authors, approvers, dispatchers and the administrator (BOSS_MKT_SENDS denies the root user group); Mantle's send and
+            template services check the permissions and the organization again -->
         <subscreens-item name="Sends" location="component://mr-boss/screen/Marketing/Sends.xml" menu-index="4"
-                menu-include="ec.user.hasPermission('MESSAGE_TEMPLATE_VIEW') || ec.user.hasPermission('MESSAGE_TEMPLATE_EDIT')"/>
+                menu-include="ec.user.hasPermission('MESSAGE_TEMPLATE_VIEW') || ec.user.hasPermission('MESSAGE_TEMPLATE_EDIT') || ec.user.hasPermission('MARKETING_SEND_EDIT') || ec.user.hasPermission('MARKETING_APPROVE') || ec.user.hasPermission('MARKETING_DISPATCH')"/>
         <!-- P3: Leads (design §10, F64): Sales' Leads and Accounts in Sales' context for this root, with the bulk "Add to list
             (evidenced)", for a user who reads Sales; Sales' own services decide what they read -->
         <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="8"
@@ -85,7 +85,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Settings" location="component://mr-boss/screen/Marketing/Settings.xml" menu-index="10"
                 menu-include="ec.user.hasPermission('MARKETING_CONFIGURE')"/>
         <!-- the old placeholders' links (F2, design §1.2), hidden from the menu: Segments to Audiences › Segments (P5), Newsletters to
-            Sends (P8; until then Home) -->
+            Sends (P8) -->
         <subscreens-item name="Segments" location="component://mr-boss/screen/Marketing/Segments.xml" menu-include="false"/>
         <subscreens-item name="Newsletters" location="component://mr-boss/screen/Marketing/Newsletters.xml" menu-include="false"/>
     </subscreens>
@@ -111,6 +111,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P5 (design §1.3 CX-ASSIST): SegmentDetail's chip, skill/marketing-audience-check.md -->
         <assist-prompt label="Explain this segment" text="Explain this segment: who it finds and by which rule, who it leaves out and why, and what a send to it would still need"
                 screen="Marketing/Audiences/SegmentDetail" entity="mantle.marketing.segment.MarketSegment" sequence="65"/>
+        <!-- P8 (design §1.3 CX-ASSIST): SendDetail's chip, skill/marketing-prepare-send.md -->
+        <assist-prompt label="Why were recipients excluded?" text="Why were recipients of this send excluded? Explain its audience's buckets and what the send still needs before approval"
+                screen="Marketing/Sends/SendDetail" entity="mantle.marketing.campaign.CampaignSend" sequence="66"/>
         <!-- P2 (design §1.3 CX-ASSIST): CampaignDetail's chip; its results arrive with the reports (P20) -->
         <assist-prompt label="Summarize this campaign's results" text="Summarize this campaign's results: its plan, budget and actual cost, approvals and what is next"
                 screen="Marketing/Campaigns/CampaignDetail" entity="mantle.marketing.campaign.MarketingCampaign" sequence="64"/>
@@ -124,6 +127,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g s" label="Segments" screen="Marketing/Audiences/Segments"/>
             <!-- P6 -->
             <key keys="g t" label="Message templates" screen="Marketing/Sends/MessageTemplates"/>
+            <!-- P8 -->
+            <key keys="g n" label="Sends" screen="Marketing/Sends/Sends"/>
         </keymap>
     </shell-providers>
 

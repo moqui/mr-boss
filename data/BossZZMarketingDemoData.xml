@@ -368,4 +368,76 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.marketing.contact.ContactListPolicy contactListId="BOSS_MKT_LIST_GARDEN" fromDate="2026-10-01 09:00:00" publicOffer="Y"
             publicSiteId="ZIZI_SHOP" offerFromDate="2026-10-01 09:00:00" confirmEmailTemplateId="MT_BOSS_MKT_TPL_CONFIRM"/>
     <!-- ===== end of Marketing P7 ===== -->
+
+    <!-- ===== Marketing P8: sends and the composer (impl-marketing P8; design-marketing §5) ===== -->
+    <!-- Retail's test list (Campaign defaults): a send's test goes only to these -->
+    <mantle.marketing.campaign.MarketingPolicy marketingPolicyId="BOSS_MKT_POLICY_RETAIL"
+            testAddresses="marketing.author@retail.example&#10;marketing.review@retail.example"/>
+    <!-- Three sends of the running spring campaign: a draft from the spring preview invitation; the November garden newsletter, prepared
+        (Maya the one eligible member of the garden newsletter) and approved by the approver at revision 1; and the December one,
+        approved for 1 December. The contents are the demo's component files, an edit writing a file of its own. Nothing is released
+        (P9). -->
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_PREVIEW" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Spring preview invitation" channelEnumId="MdcEmail"
+            contactListId="BOSS_MKT_LIST_VIP" purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_SPRING"
+            sendingProfileId="BOSS_MKT_PROFILE_RETAIL" subject="You are invited, ${firstName}"
+            bodyLocation="component://mr-boss/template/marketing/DemoSpringPreview.html.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;friend&quot;,&quot;required&quot;:false}]" localeId="en"
+            statusId="CsDraft" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-11-12 10:00:00"/>
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_NOV" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Garden newsletter, November" channelEnumId="MdcEmail"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_NEWS"
+            sendingProfileId="BOSS_MKT_PROFILE_RETAIL" subject="Garden news for ${firstName}" preheader="Autumn planting days"
+            bodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            bodyTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]" localeId="en"
+            statusId="CsApproved" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-11-03 09:00:00" preparedRevision="1" preparedDate="2026-11-04 10:00:00" preparedByUserId="BOSS_MKT_AUTHOR"
+            contentDate="2026-11-04 10:00:00" marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00"
+            preparedSubject="Garden news for ${firstName}" preparedPreheader="Autumn planting days"
+            preparedBodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            preparedTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" preparedVariablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]"
+            eligibleCount="1" untrackedCount="1"
+            bucketCountsJson="{&quot;unavailable&quot;:0,&quot;destination&quot;:0,&quot;suppressed&quot;:1,&quot;withdrawn&quot;:1,&quot;evidence&quot;:1,&quot;duplicate&quot;:0,&quot;eligible&quot;:1}"/>
+    <mantle.marketing.campaign.CampaignRecipient campaignRecipientId="BOSS_MKT_RCPT_NOV_MAYA" campaignSendId="BOSS_MKT_SEND_NOV"
+            preparedRevision="1" partyId="BOSS_MKT_CON_MAYA" contactMechId="BOSS_MKT_CON_MAYA_EM"
+            destinationKey="maya.lindqvist@zizi-customers.example" channelEnumId="MdcEmail" selectedDate="2026-11-04 10:00:00" tracked="N"
+            executionKey="demoNovMayaExecution01" statusId="CrsSelected"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_NOV_REQ" targetKindEnumId="MdtSend"
+            targetId="BOSS_MKT_SEND_NOV" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddRequested"
+            recipientCount="1" marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00"
+            decisionDate="2026-11-04 10:30:00" decidedByUserId="BOSS_MKT_AUTHOR" decidedByPartyId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_NOV_OK" targetKindEnumId="MdtSend"
+            targetId="BOSS_MKT_SEND_NOV" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddApproved"
+            requestDecisionId="BOSS_MKT_DEC_NOV_REQ" selfApproval="N" recipientCount="1" marketingPolicyId="BOSS_MKT_POLICY_RETAIL"
+            policyFromDate="2026-01-01 00:00:00" decisionDate="2026-11-05 09:00:00" decidedByUserId="BOSS_MKT_APPROVER"
+            decidedByPartyId="BOSS_MKT_APPROVER" reason="Content and audience as planned"/>
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_DEC" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Garden newsletter, December" channelEnumId="MdcEmail"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_NEWS"
+            sendingProfileId="BOSS_MKT_PROFILE_RETAIL" subject="Garden news for ${firstName}" preheader="Winter care"
+            bodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            bodyTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]" localeId="en"
+            scheduledDate="2026-12-01 08:00:00" scheduleTimeZone="America/Chicago"
+            statusId="CsApproved" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-11-10 09:00:00" preparedRevision="1" preparedDate="2026-11-11 10:00:00" preparedByUserId="BOSS_MKT_AUTHOR"
+            contentDate="2026-11-11 10:00:00" marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00"
+            preparedSubject="Garden news for ${firstName}" preparedPreheader="Winter care"
+            preparedBodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            preparedTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" preparedVariablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]"
+            eligibleCount="1" untrackedCount="1"
+            bucketCountsJson="{&quot;unavailable&quot;:0,&quot;destination&quot;:0,&quot;suppressed&quot;:1,&quot;withdrawn&quot;:1,&quot;evidence&quot;:1,&quot;duplicate&quot;:0,&quot;eligible&quot;:1}"/>
+    <mantle.marketing.campaign.CampaignRecipient campaignRecipientId="BOSS_MKT_RCPT_DEC_MAYA" campaignSendId="BOSS_MKT_SEND_DEC"
+            preparedRevision="1" partyId="BOSS_MKT_CON_MAYA" contactMechId="BOSS_MKT_CON_MAYA_EM"
+            destinationKey="maya.lindqvist@zizi-customers.example" channelEnumId="MdcEmail" selectedDate="2026-11-11 10:00:00" tracked="N"
+            executionKey="demoDecMayaExecution01" statusId="CrsSelected"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_DEC_REQ" targetKindEnumId="MdtSend"
+            targetId="BOSS_MKT_SEND_DEC" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddRequested"
+            recipientCount="1" marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00"
+            decisionDate="2026-11-11 10:30:00" decidedByUserId="BOSS_MKT_AUTHOR" decidedByPartyId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_DEC_OK" targetKindEnumId="MdtSend"
+            targetId="BOSS_MKT_SEND_DEC" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddApproved"
+            requestDecisionId="BOSS_MKT_DEC_DEC_REQ" selfApproval="N" recipientCount="1" marketingPolicyId="BOSS_MKT_POLICY_RETAIL"
+            policyFromDate="2026-01-01 00:00:00" decisionDate="2026-11-12 09:00:00" decidedByUserId="BOSS_MKT_APPROVER"
+            decidedByPartyId="BOSS_MKT_APPROVER" reason="For the first of December"/>
+    <!-- ===== end of Marketing P8 ===== -->
 </entity-facade-xml>

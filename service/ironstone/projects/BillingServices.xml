@@ -1430,6 +1430,8 @@ along with this software (see the LICENSE.md file). If not, see
                 const words = String(term || '').trim().toLowerCase()
                 for (const part of parts) {
                     const header = ec.entity.find('mantle.order.OrderHeader').condition('orderId', part.orderId).one()
+                    // a recurring base or a quote template is no order a project fulfils (impl-sales P16 review; link#ProjectOrderItem refuses it)
+                    if (['OrpRecurringTemplate', 'OrpSalesQuoteTemplate'].includes(header?.orderPurposeEnumId)) continue
                     for (const item of ec.entity.find('mantle.order.OrderItem').condition({orderId: part.orderId, orderPartSeqId: part.orderPartSeqId}).orderBy('orderItemSeqId').list()) {
                         const key = item.orderId + ':' + item.orderItemSeqId
                         if (linked.has(key)) continue

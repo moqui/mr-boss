@@ -206,4 +206,49 @@ function shell(user, menuOnly = false, path = "Home", group = "Sales") {
     })
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell})
+// ===== P16: a recurring base =====
+// An approved sales order of Retail for an account (one line of Demo Product One-One, approved in place: no reservation, mail or
+// approval rule) and, made from it by the agreement keeper, a monthly recurring base: {sourceOrderId, baseOrderId}.
+function recurringBase(customerPartyId = ids.accounts.wingtip) {
+    const sourceOrderId = system(() => {
+        const created = invoke("mantle.order.OrderServices.create#Order", {
+            vendorPartyId: ids.organizationId,
+            customerPartyId,
+            currencyUomId: "USD",
+            orderName: "Monthly restock"
+        })
+        invoke("mantle.order.OrderServices.create#OrderItem", {
+            orderId: created.orderId,
+            orderPartSeqId: created.orderPartSeqId,
+            productId: "DEMO_1_1",
+            itemTypeEnumId: "ItemProduct",
+            quantity: 4,
+            unitAmount: 25,
+            requireInventory: false
+        })
+        for (const value of [
+            ec.entity.find("mantle.order.OrderHeader").condition("orderId", created.orderId).one(),
+            ec.entity.find("mantle.order.OrderPart").condition("orderId", created.orderId).one()
+        ]) {
+            value.set("statusId", "OrderApproved")
+            value.update()
+        }
+        return created.orderId
+    })
+    // the keeper's call, the service's own permission check deciding
+    const stored = asUser(users.agreement, () =>
+        system(() =>
+            invoke("mantle.order.SalesRecurrenceServices.store#SalesRecurrence", {
+                orderId: sourceOrderId,
+                frequency: "monthly",
+                dayOfMonth: "1",
+                hourOfDay: "6",
+                recurTimeZone: "America/Denver",
+                recurFromDate: String(Date.now() - 60 * 24 * 60 * 60 * 1000)
+            })
+        )
+    )
+    return {sourceOrderId, baseOrderId: stored.baseOrderId}
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell, recurringBase})

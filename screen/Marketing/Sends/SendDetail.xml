@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Sends › SendDetail (design-marketing §5 SendDetail: SendSummary, SendAudience, SendSchedule, SendDecision; the Content
+    preview and Activity; §14.3 Chatter and RecordFiles; style-guide §3.3 Detail; impl-marketing P8): one send of the user's
+    organizations (check#Record send; else "Not available", linking back). The record header: its id and name, campaign, topic,
+    revision and schedule, the state chip; one primary action by state (Prepare a draft, Request approval of a prepared draft that
+    approval is ready for, Approve for an approver while it awaits a decision) and the others in More (Edit content in Compose, Edit
+    the topic, audience and sender, Duplicate). The boxes: Summary (what approval still needs, the profile's readiness), Content (the
+    prepared content, else the draft, rendered with sample values), Audience (its sources, the buckets counted at the preparation of
+    the current revision and the AudiencePreview link), Schedule, Decisions and Activity (the conversation and the files: a send is a
+    Chatter and files host). Every change is Mantle's guarded service at the revision read; a change of the content, sender, audience
+    or schedule ends the approval. The Delivery and Experiment boxes join in P9 and P10. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Send" default-menu-include="false">
+    <parameter name="campaignSendId" required="true"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="scheduleSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="prepareSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="requestSendApproval" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="decideSendApproval" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="duplicateSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="sendCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'send', recordId:campaignSendId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="sendCheck?.recordId">
+            <service-call name="mantle.marketing.CampaignSendServices.get#Send" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.send"/>
+        <if condition="recordFound">
+            <service-call name="mantle.marketing.CampaignSendServices.preview#Send" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId, prepared:!!detail.prepared?.current}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="send" from="detail?.send || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="audience" from="detail?.audience || {}"/>
+        <set field="bucketList" from="audience.bucketList || []"/>
+        <set field="decisionList" from="detail?.decisions || []"/>
+        <set field="problemList" from="(detail?.approvalProblems || []).map(text =&gt; ({text}))"/>
+        <set field="findingList" from="(preview?.findings || []).map(text =&gt; ({text}))"/>
+        <set field="safeBody" from="preview?.safeBody || ''"/>
+        <set field="listPath" from="sharedLinks['Sends/Sends']"/>
+        <set field="composePath" from="sharedLinks['Sends/Compose']"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+        <set field="previewPath" from="marketing.capabilities.previewRead ? sharedLinks['Audiences/AudiencePreview'] : null"/>
+        <set field="captionText" from="[send.campaignName, 'topic ' + send.topicName, send.organizationName, 'revision ' + send.sendRevision].filter(Boolean).join(' · ')"/>
+        <set field="factsText" from="[send.subject ? 'subject ' + send.subject : 'no subject yet', send.profileName ? 'from ' + send.profileName : 'no sending profile',
+                'schedule: ' + send.scheduledText].join(' · ')"/>
+        <set field="preparedText" from="send.prepared ? 'Prepared ' + send.preparedDateText + ' by ' + (send.preparedByName || 'an author') + ': ' + send.eligibleCount + ' eligible, ' + send.untrackedCount + ' untracked'
+                : send.preparedStale ? 'Prepared at revision ' + send.preparedRevision + '; changed since: prepare again' : 'Not prepared yet'"/>
+        <set field="sendRef" from="{campaignSendId:campaignSendId, expectedRevision:send.revision}"/>
+        <set field="decisionRef" from="{campaignSendId:campaignSendId, targetRevision:send.sendRevision}"/>
+        <set field="headerValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision, sendName:send.sendName,
+                contactListId:send.contactListId, sendingProfileId:send.sendingProfileId, replyToAddress:send.replyToAddress,
+                organizationPartyId:send.organizationPartyId}"/>
+        <set field="audienceValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision, audienceForm:'Y',
+                listIds:audience.listIds, segmentIds:audience.segmentIds, excludeListIds:audience.excludeListIds,
+                excludeSegmentIds:audience.excludeSegmentIds, organizationPartyId:send.organizationPartyId}"/>
+        <set field="scheduleValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision,
+                scheduledDate:send.scheduledDate ? ec.l10n.format(send.scheduledDate, 'yyyy-MM-dd HH:mm') : null,
+                scheduleTimeZone:send.scheduleTimeZone || ''}"/>
+        <set field="previewParameters" from="{topicListId:send.contactListId, listIds:(audience.listIds || []).join(','),
+                segmentIds:(audience.segmentIds || []).join(','), excludeListIds:(audience.excludeListIds || []).join(','),
+                excludeSegmentIds:(audience.excludeSegmentIds || []).join(',')}"/>
+        <set field="sourcesText" from="[(audience.lists || []).map(row =&gt; row.name).join(', '), (audience.segments || []).map(row =&gt; row.name).join(', ')].filter(Boolean).join('; ') || 'All the topic members'"/>
+        <set field="exclusionsText" from="[(audience.excludeLists || []).map(row =&gt; row.name).join(', '), (audience.excludeSegments || []).map(row =&gt; row.name).join(', ')].filter(Boolean).join('; ') || 'None'"/>
+    </actions>
+    <widgets>
+        <section name="SendNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Send ${campaignSendId} is not available: it does not exist, or it is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to sends" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SendFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.marketing.campaign.CampaignSend" record-id="${campaignSendId}" title="${send.sendName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${campaignSendId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${send.sendName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${factsText}" type="div" style="text-caption m-muted"/>
+                            <label text="${preparedText}" type="div" style="text-caption m-muted"/>
+                            <label text="Awaiting approval" type="div" style="text-caption text-warning" condition="detail.awaitingApproval"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${send.statusColor}">${WebUtilities.encodeHtml(send.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(send.statusText ?? "")})}]]></text>
+                                <text type="html">${send.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <!-- the primary action by state: Prepare, Request approval, Approve -->
+                            <container-dialog id="PrepareDialog" button-text="Prepare" icon="sym_o_playlist_add_check" type="primary"
+                                    title="Prepare ${send.sendName}" width="520" condition="can.canPrepare &amp;&amp; !send.prepared">
+                                <label text="Preparing selects the eligible recipients now and keeps the content as it is: approval is asked of what is prepared." type="p" style="m-muted"/>
+                                <form-single name="PrepareSend" transition="prepareSend" map="sendRef">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="resultDigest" from="''"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Prepare" confirmation="Prepare ${send.sendName} now?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RequestSendApprovalDialog" button-text="Request approval" icon="sym_o_approval" type="primary"
+                                    title="Request approval of ${send.sendName}" width="520" condition="can.canRequestApproval &amp;&amp; send.prepared">
+                                <label text="${send.eligibleCount} eligible recipients at revision ${send.sendRevision}." type="p"/>
+                                <form-single name="RequestSendApproval" transition="requestSendApproval" map="decisionRef">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="targetRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Note for the approver"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Request approval"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="SendDecisionDialog" button-text="Approve" icon="sym_o_check_circle" type="primary"
+                                    title="Decide on ${send.sendName}, revision ${send.sendRevision}" width="560" condition="can.canDecide">
+                                <label text="${send.eligibleCount} eligible recipients, prepared ${send.preparedDateText}; subject: ${send.subject}" type="p"/>
+                                <form-single name="SendDecision" transition="decideSendApproval" map="decisionRef">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="targetRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision">
+                                        <default-field title="Decision">
+                                            <radio><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason" tooltip="A refusal needs its reason"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Decide" confirmation="Decide on ${send.sendName} for ${send.eligibleCount} recipients at revision ${send.sendRevision}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="${composePath}" text="${can.canEdit ? 'Edit content' : 'Content'}" link-type="anchor" icon="sym_o_edit_note"
+                                        parameter-map="{campaignSendId:campaignSendId}"/>
+                                <container-dialog id="PrepareAgainDialog" button-text="Prepare again" icon="sym_o_refresh"
+                                        title="Prepare ${send.sendName} again" width="480" condition="can.canPrepare &amp;&amp; send.prepared">
+                                    <form-single name="PrepareAgain" transition="prepareSend" map="sendRef">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="resultDigest" from="''"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Prepare again" confirmation="Select the recipients again now?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EditSendDialog" button-text="Edit topic and sender" icon="sym_o_edit"
+                                        title="Edit ${send.sendName}" width="640" condition="can.canEdit">
+                                    <label text="A change of the topic or sender ends an approval." type="p" style="m-muted"/>
+                                    <form-single name="EditSend" transition="storeSend" map="headerValues">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="sendName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="contactListId">
+                                            <default-field title="Topic">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'sendTopics', organizationPartyId:send.organizationPartyId, selected:send.contactListId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="sendingProfileId">
+                                            <default-field title="Sending profile">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'sendProfiles', organizationPartyId:send.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="replyToAddress"><default-field title="Reply-to"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="DuplicateSendDialog" button-text="Duplicate" icon="sym_o_content_copy"
+                                        title="Duplicate ${send.sendName}" width="480" condition="can.canDuplicate">
+                                    <form-single name="DuplicateSend" transition="duplicateSend" map="{campaignSendId:campaignSendId}">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="sendName"><default-field title="Name" tooltip="Copy of this one when empty"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Duplicate as a draft"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${campaignPath}" text="Open the campaign" link-type="anchor" icon="sym_o_campaign"
+                                        parameter-map="{marketingCampaignId:send.marketingCampaignId}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Summary"/>
+                    <box-body>
+                        <label text="Campaign: ${send.campaignName} · topic: ${send.topicName} (${send.purposeText}) · channel: ${send.channelText}" type="p"/>
+                        <label text="From ${send.profileName || 'no sending profile yet'}${send.profileName ? (send.profileReady ? ', ready' : ', not ready: ' + send.profileReasons.join('; ')) : ''}${send.replyToAddress ? ' · reply-to ' + send.replyToAddress : ''}"
+                                type="p"/>
+                        <label text="Content from ${send.templateName}, copied when the send was started: a later change of the template does not reach it." type="p" style="m-muted"
+                                condition="send.templateName"/>
+                        <label text="Content time ${send.contentDateText}; policy in effect since ${send.policyFromDateText || 'none: the defaults'}." type="p" style="m-muted"
+                                condition="send.prepared"/>
+                        <section name="ApprovalNeeds" condition="problemList.length &amp;&amp; send.statusId == 'CsDraft'">
+                            <widgets>
+                                <label text="Before approval" type="h6"/>
+                                <form-list name="ApprovalProblems" list="problemList" skip-form="true" paginate="false">
+                                    <field name="text"><default-field title="Still needed"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="${preview?.prepared ? 'Prepared content' : 'Draft content'}"/>
+                    <box-toolbar>
+                        <link url="${composePath}" text="${can.canEdit ? 'Edit in Compose' : 'Open Compose'}" link-type="anchor-button" icon="sym_o_edit_note"
+                                parameter-map="{campaignSendId:campaignSendId}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium"/>
+                        <label text="${preview?.renderedPreheader}" type="p" style="m-muted" condition="preview?.renderedPreheader"/>
+                        <label text="${preview?.sampleText}: a recipient's own first and last name take their place" type="p" style="text-caption m-muted"/>
+                        <render-mode>
+                            <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 640px">${safeBody}</div>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
+                        </render-mode>
+                        <form-list name="ContentFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
+                            <field name="text"><default-field title="To check"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Audience"/>
+                    <box-toolbar>
+                        <link url="${previewPath}" text="Preview the audience" link-type="anchor-button" icon="sym_o_groups" condition="previewPath"
+                                parameter-map="previewParameters"/>
+                        <container-dialog id="EditAudienceDialog" button-text="Edit audience" icon="sym_o_edit" title="The audience of ${send.sendName}"
+                                width="640" condition="can.canEdit">
+                            <label text="The recipients are the topic's subscribers whom these find, less those these leave out. A change ends an approval." type="p" style="m-muted"/>
+                            <form-single name="EditAudience" transition="storeSend" map="audienceValues">
+                                <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="audienceForm"><default-field><hidden/></default-field></field>
+                                <field name="listIds">
+                                    <default-field title="Lists">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'lists', organizationPartyId:send.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="segmentIds">
+                                    <default-field title="Segments">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'segments', organizationPartyId:send.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="excludeListIds">
+                                    <default-field title="Leave out lists">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'lists', organizationPartyId:send.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="excludeSegmentIds">
+                                    <default-field title="Leave out segments">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'segments', organizationPartyId:send.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Save the audience"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Finds: ${sourcesText} · leaves out: ${exclusionsText}" type="p"/>
+                        <label text="Counted when it is prepared: the topic's members, each in one bucket." type="p" style="m-muted" condition="!bucketList.length"/>
+                        <form-list name="SendBuckets" list="bucketList" skip-form="true" paginate="false" condition="bucketList.length">
+                            <field name="label"><default-field title="Bucket"><display/></default-field></field>
+                            <field name="count" align="right"><default-field title="People"><display format="#,##0"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/></column>
+                                <column><field-ref name="count"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Schedule"/>
+                    <box-toolbar>
+                        <container-dialog id="SendScheduleDialog" button-text="Schedule" icon="sym_o_schedule" title="Schedule ${send.sendName}"
+                                width="520" condition="can.canEdit">
+                            <label text="When it may go out once released; empty sends it at its release. A change ends an approval." type="p" style="m-muted"/>
+                            <form-single name="SendSchedule" transition="scheduleSend" map="scheduleValues">
+                                <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="scheduledDate"><default-field title="At"><date-time type="timestamp"/></default-field></field>
+                                <field name="scheduleTimeZone"><default-field title="Time zone"><text-line size="30"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Save the schedule"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${send.scheduledText}${send.scheduleTimeZone ? ' (' + send.scheduleTimeZone + ')' : ''}" type="p"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Decisions"/>
+                    <box-body>
+                        <label text="No approval asked yet." type="p" style="m-muted" condition="!decisionList.length"/>
+                        <form-list name="SendDecisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
+                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                            <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Activity"/>
+                    <box-body>
+                        <chatter id="SendChatter" record-entity="mantle.marketing.campaign.CampaignSend" record-id="${campaignSendId}"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Files"/>
+                    <box-body>
+                        <record-files id="SendFiles" record-entity="mantle.marketing.campaign.CampaignSend" record-id="${campaignSendId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

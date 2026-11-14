@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The recurring order and subscription transitions of IronStone Sales (design-sales §7 RecurringOrders and Subscriptions; impl-sales
+    P16), each a call of Mantle's guarded service (mantle.order.SalesRecurrenceServices, which checks SALES_RECURRENCE_MANAGE or
+    SALES_ACCOUNT_EDIT, the organization and the base's revision itself): salesRecurrenceChoices (the drop-downs: an order to repeat, an
+    agreement, a zone, a customer, an organization), salesStoreRecurrence (RecurrenceSettings: a new base from an approved order, or a
+    base's schedule at its revision), salesChangeRecurrence (RecurrenceAction: pause, resume, end or retry at the revision shown) and
+    salesSubscriptionFollowUp (Subscriptions' Follow up, a task on the customer). A screen includes each transition it uses by name. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="salesRecurrenceChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:'Sales', choice:choice, term:(term || null), selected:(selected || null),
+                        organizationPartyId:(organizationPartyId || null), accountPartyId:(accountPartyId || null)}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="salesStoreRecurrence">
+        <actions>
+            <service-call name="mantle.order.SalesRecurrenceServices.store#SalesRecurrence" out-map="stored"
+                    in-map="{baseOrderId:(baseOrderId || null), orderId:(sourceOrderId || null), recurRevision:(recurRevision || null),
+                        frequency:(frequency || null), dayOfMonth:(dayOfMonth || null), dayOfWeek:(dayOfWeek || null), month:(month || null),
+                        hourOfDay:(hourOfDay ?? null), recurCronExpression:(recurCronExpression || null), recurTimeZone:(recurTimeZone || null),
+                        recurFromDate:(recurFromDate || null), recurThruDate:(recurThruDate || null), recurAgreementId:(recurAgreementId ?? null),
+                        recurAutoInvoice:(recurAutoInvoice || 'N'), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${stored.created ? 'Recurring order ' + stored.baseOrderId + ' started' : 'Recurrence saved'}${stored.nextText ? ' · next order ' + stored.nextText : ''}</message></if>
+        </actions>
+        <default-response url="."><parameter name="sourceOrderId" value=""/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="salesChangeRecurrence">
+        <actions>
+            <service-call name="mantle.order.SalesRecurrenceServices.change#SalesRecurrence" out-map="changed"
+                    in-map="{baseOrderId:baseOrderId, recurRevision:recurRevision, operation:operation, reason:(reason || null),
+                        endDate:(endDate || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; changed.failure">
+                <message type="warning">Not made: ${changed.failure}</message></if>
+            <if condition="!ec.message.hasError() &amp;&amp; !changed.failure">
+                <message type="success">${changed.operation == 'retry' ? 'Order ' + changed.orderId + ' made' : changed.operation == 'pause'
+                    ? 'Recurrence paused' : changed.operation == 'resume' ? 'Recurrence resumed' : 'Recurrence ended'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="salesSubscriptionFollowUp">
+        <actions>
+            <service-call name="mantle.order.SalesRecurrenceServices.add#SubscriptionFollowUp" out-map="followed"
+                    in-map="{contractId:(contractId || null), subscriptionId:(subscriptionId || null), workEffortName:(workEffortName || null),
+                        description:(description || null), estimatedCompletionDate:(estimatedCompletionDate || null),
+                        assignToPartyId:(assignToPartyId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Follow-up scheduled · it is in Today</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets/>
+</screen>
