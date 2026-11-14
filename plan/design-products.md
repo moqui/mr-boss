@@ -876,6 +876,17 @@ lists, for a caller without `PRICE_VIEW` too; never an agreement's row, an avera
 PriceExplain's Sales branch shows a quote line's safe explanation (`explain#QuoteLinePrice`: the selected price, its source, an
 entered price's reason) to anyone who sees the quote, and its trace only to a price reader.
 
+As built (impl-sales P15, F20, owner contract): the resolver's agreement guard. A price row or price list naming an agreement applies
+only for the agreement named (and its item, when the row names one) and only while that agreement is active (or has no status at
+all, an agreement outside the status flow, judged by its dates alone), in its dates at the price date, not a template, of the price
+organization and with the transaction's counterparty when it names one (`PriceResolver.js` `agreementApplies`); a draft, expired,
+closed, cancelled, future or another customer's agreement prices nothing and the trace says why. `get#SellerProductPrice` now also
+reads the rows and lists of the selling organization's current customer agreements (AgrSales, AgrProduct) with the customer, ranked
+first, the latest agreement first; the store's authority still reads no agreement's. The obsolete TODO comment is removed. Sales
+mounts Shared/Prices as `Sales/Agreements/CustomerPrices` and Shared/PriceLists and PriceListDetail under `Sales/Agreements/PriceLists`
+in `salesContext()`, which passes a holder's own `PRICE_EDIT` through as Commerce's does; PriceExplain's Sales branch names a quote
+line's agreement and passes it to a price reader's trace.
+
 **Per-app context (PriceLists, PriceListDetail and PriceExplain)**
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |

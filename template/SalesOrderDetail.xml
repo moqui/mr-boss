@@ -498,6 +498,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                             </box-body-nopad>
                         </container-box>
+                        <!-- P15: the quote's agreements, those whose prices its lines took -->
+                        <section-include name="SalesOrderAgreements" location="component://mr-boss/template/SalesAgreementParts.xml"/>
                         <container-box>
                             <box-header title="History · ${quoteHistory.length}"/>
                             <box-body-nopad>
@@ -796,6 +798,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label type="p" style="m-muted q-pa-sm q-mb-none" text="No lines yet${soCan.editDraft ? ' · Add one with Add line' : ''}." condition="!soLines.length"/>
                             </box-body-nopad>
                         </container-box>
+                        <!-- P15: the order's agreements, those whose prices its lines took -->
+                        <section-include name="SalesOrderAgreements" location="component://mr-boss/template/SalesAgreementParts.xml"/>
                         <container-box>
                             <box-header title="History · ${soHistory.length}"/>
                             <box-body-nopad>

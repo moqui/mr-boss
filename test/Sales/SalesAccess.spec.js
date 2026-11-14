@@ -671,3 +671,33 @@ feature("a quote template is a manager's to keep and its organization's to read"
         otherSees == false
     }
 })
+
+// P15 (impl-sales P15): a customer agreement is the agreement keeper's to change and its organization's to read: with the same
+// parameters (a stale revision, so nothing is written) the rep is refused the change for the permission and the keeper reaches the
+// revision check; the rep reads Retail's agreement and Ziziwork Sales' rep does not (another organization's answers as missing)
+feature("a customer agreement is the keeper's to change and its organization's to read", {
+    when() {
+        const G = "mantle.party.SalesAgreementServices."
+        const store = user =>
+            asUser(user, () =>
+                system(() =>
+                    refusal(G + "store#SalesAgreement", {
+                        agreementId: ids.agreements.contoso,
+                        agreementRevision: "0",
+                        description: "Contoso supply terms"
+                    })
+                )
+            )
+        const seen = user =>
+            asUser(user, () =>
+                system(() => !!invoke(G + "get#SalesAgreement", {agreementId: ids.agreements.contoso}).agreementFound)
+            )
+        return {rep: store(users.rep), keeper: store(users.agreement), repSees: seen(users.rep), otherSees: seen(users.otherRep)}
+    },
+    then({rep, keeper, repSees, otherSees}) {
+        rep.includes("PERMISSION_DENIED")
+        keeper.includes("REVISION_CHANGED")
+        repSees == true
+        otherSees == false
+    }
+})

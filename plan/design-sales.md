@@ -1295,6 +1295,29 @@ launcher. Read-only quote users get a safe selected-price explanation; full trac
 and cost/margin additionally requires cost authority. Promotion editing remains Commerce-owned.
 **Source:** research §§5, 7; Products §7; CX §3.21. **Needs:** SAL-AGREEMENT; PRD-PRICE, PRD-ACCESS.
 
+### As built (impl-sales P15, Nov 14, 2026)
+
+- Mantle `mantle.party.SalesAgreementServices` over `SalesAgreements.js`: `find#`, `get#`, `create#`, `store#`, `activate#`, `end#` and
+  `renew#SalesAgreement`, `store#AgreementParty`, `store#AgreementTerm`, `store#AgreementItem` and the daily `expire#SalesAgreements`
+  (job `expire_SalesAgreements`, beside Purchasing's). A customer agreement is an AgrSales or AgrProduct Agreement of a selling
+  organization with its customer on Purchasing's status flow and audited fields; its revision is `agreementRevision`, counted by
+  each change and named by every write. A Sales reader of the organization reads its agreements and templates (agreements are the
+  organization's terms, not assigned work); a change needs `SALES_AGREEMENT_EDIT`; another organization's answers as missing.
+- The parties activation needs are the customer and a signer of the customer's (the customer or a current contact, AgreementParty);
+  the acceptance evidence is an AgreementContent of type AcntDocument, or the evidence typed at activation, kept as one. The prices
+  are ProductPrice rows naming the agreement and item, kept on the agreement by `store#AgreementItem` under `SALES_AGREEMENT_EDIT`
+  (not through Products' price editor, which needs `PRICE_EDIT`); a draft's change in place, an active agreement's ended and started
+  anew. End cancels a draft, closes an active agreement now or ends it at a later date; a renewal is a draft copy linked by
+  AgreementAssoc of the new type AatRenewal whose activation ends its predecessor at its start. AgreementParty keeps no dates.
+- The resolver's guard (design-products §7 as built) stops an agreement's prices outside its active dates; a quote line priced
+  earlier keeps its price, and PriceExplain names the agreement. A template's terms and print text, contract schedules and
+  amendments with stored approved PDFs are not built (§11).
+- Screens: Agreements (AgreementFind, AgreementList with Open, Active, Expiring, Drafts, Ended and Templates, NewAgreement), the shared
+  AgreementDetail at `Sales/Agreements/AgreementDetail` (Sales' only; it shares no form with Purchasing's, §4 Q5), Customer prices
+  and Price lists (Products' shared screens, for a holder of Products' price permissions), OrderDetail's Agreements box (the
+  agreements whose prices the lines took) and Customer360's Agreements tab. PriceExplain stays at `Sales/Products/PriceExplain` (P7's
+  one route), not `Sales/Agreements/PriceExplain`. An agreement is a record panel host of the root and in the palette.
+
 ### RecurringOrders
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

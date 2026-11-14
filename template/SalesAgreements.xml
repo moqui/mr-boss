@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The customer agreement transitions of IronStone Sales (design-sales §7 Agreements and AgreementDetail; impl-sales P15), each a call
+    of Mantle's guarded agreement service (mantle.party.SalesAgreementServices, which checks SALES_AGREEMENT_EDIT, the organization and
+    the revision itself): createSalesAgreement (NewAgreement; it opens the new agreement), and on AgreementDetail salesStoreAgreement,
+    salesStoreAgreementParty, salesStoreAgreementTerm, salesStoreAgreementItem, salesActivateAgreement, salesEndAgreement and
+    salesRenewAgreement (it opens the renewal), each at the revision shown, and salesAgreementContent (a document or the customer's
+    acceptance, through Mantle's create#AgreementContent once the user may change the agreement). A screen includes each transition it
+    uses by name. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createSalesAgreement">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.create#SalesAgreement" out-map="created"
+                    in-map="{organizationPartyId:(organizationPartyId || null), customerPartyId:(customerPartyId || null),
+                        agreementTypeEnumId:(agreementTypeEnumId || null), templateAgreementId:(templateAgreementId || null),
+                        isTemplate:(isTemplate || null), description:(description || null), currencyUomId:(currencyUomId || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
+            <set field="detailPath" from="sales.sharedLinks['Agreements/AgreementDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Agreement ${created.agreementId} started · add its items and parties</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; !ec.message.hasError()</expression></condition>
+            <parameter name="agreementId" from="created.agreementId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="salesStoreAgreement">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.store#SalesAgreement"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision, description:(description ?? null),
+                        textData:(textData ?? null), customerPartyId:(customerPartyId ?? null), currencyUomId:(currencyUomId ?? null),
+                        fromDate:(fromDate ?? null), thruDate:(thruDate ?? null), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Agreement saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesStoreAgreementParty">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.store#AgreementParty"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision, partyId:partyId, roleTypeId:(roleTypeId || null),
+                        remove:(remove || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove ? 'Party removed' : 'Party added'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesStoreAgreementTerm">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.store#AgreementTerm"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision, agreementTermId:(agreementTermId || null),
+                        termTypeEnumId:(termTypeEnumId || null), settlementTermId:(settlementTermId ?? null), termText:(termText ?? null),
+                        termNumber:(termNumber ?? null), remove:(remove || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove ? 'Term removed' : 'Term saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesStoreAgreementItem">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.store#AgreementItem"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision, agreementItemSeqId:(agreementItemSeqId || null),
+                        agreementItemTypeEnumId:(agreementItemTypeEnumId || null), productId:(productId || null), price:(price || null),
+                        minQuantity:(minQuantity || null), itemText:(itemText ?? null), remove:(remove || null),
+                        changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove ? 'Item removed' : 'Item saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesActivateAgreement">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.activate#SalesAgreement" out-map="activated"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision, fromDate:(fromDate || null),
+                        acceptanceEvidence:(acceptanceEvidence || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Agreement ${agreementId} active${activated.predecessorEnded ? ' · it ends ' + activated.predecessorEnded : ''}</message></if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesEndAgreement">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.end#SalesAgreement" out-map="ended"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision, endDate:(endDate || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Agreement ${agreementId} ${ended.statusId == 'AgmStActive' ? 'ends on its new date' : 'ended'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesRenewAgreement">
+        <actions>
+            <service-call name="mantle.party.SalesAgreementServices.renew#SalesAgreement" out-map="renewed"
+                    in-map="{agreementId:agreementId, fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Renewal ${renewed.agreementId} started · check it, then activate it</message></if>
+        </actions>
+        <conditional-response url="."><condition><expression>!ec.message.hasError()</expression></condition>
+            <parameter name="agreementId" from="renewed.agreementId"/></conditional-response>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <transition name="salesAgreementContent">
+        <actions>
+            <service-call name="ironstone.sales.ContextServices.check#Record" out-map="checkedAgreement"
+                    in-map="{appRoot:'Sales', recordType:'agreement', recordId:agreementId, capability:'agreementEdit'}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.party.AgreementServices.create#AgreementContent" disable-authz="true"
+                        in-map="{agreementId:agreementId, contentTypeEnumId:(contentTypeEnumId || 'AcntDocument'), description:(description || null),
+                            contentFile:contentFile}"/>
+                <message type="success">Document added</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."><parameter name="agreementId"/></error-response>
+    </transition>
+    <widgets/>
+</screen>

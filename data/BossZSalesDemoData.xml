@@ -412,4 +412,36 @@ along with this software (see the LICENSE.md file). If not, see
             productId="DEMO_1_1" itemDescription="Demo Product One-One" quantity="2" unitAmount="19.99" unitListPrice="19.99"
             calculatedUnitAmount="19.99" priceSource="list-price-fallback" isModifiedPrice="N"/>
     <!-- ===== end of Sales P12 ===== -->
+    <!-- ===== Sales P15 (design-sales §7 Agreements, AgreementDetail; impl-sales P15): Retail's customer agreements ===== -->
+    <!-- Contoso Labs' supply terms with Retail East, active since Nov 1 for a year: Demo Product One-One at 17.50 and One-Two at
+        10,800 (negotiated price rows naming the agreement and its items), net 30, signed by Dana Morales (Contoso's advisor) on the
+        signed copy recorded as its acceptance; sales.agreement keeps it. A rep's quote for Contoso takes these prices while it is
+        active. And the keeper's draft template of standard supply terms. -->
+    <mantle.party.agreement.Agreement agreementId="BOSS_SAL_AGR_CONTOSO" agreementTypeEnumId="AgrSales" statusId="AgmStActive"
+            organizationPartyId="ORG_ZIZI_RETAIL" organizationRoleTypeId="OrgInternal" otherPartyId="BOSS_SAL_ACC_CONTOSO"
+            otherRoleTypeId="Customer" agreementDate="2026-10-28 10:00:00" fromDate="2026-11-01 00:00:00" thruDate="2027-11-01 00:00:00"
+            description="Contoso supply terms" currencyUomId="USD" isTemplate="N" agreementRevision="5" revisionDate="2026-10-28 10:00:00"
+            textData="Retail East supplies Contoso Labs at the negotiated prices below for the agreement's term."/>
+    <mantle.party.agreement.AgreementParty agreementId="BOSS_SAL_AGR_CONTOSO" partyId="BOSS_SAL_CON_DANA" roleTypeId="AgreementSigner"/>
+    <mantle.party.agreement.AgreementItem agreementId="BOSS_SAL_AGR_CONTOSO" agreementItemSeqId="01" agreementItemTypeEnumId="AitPricing"
+            productId="DEMO_1_1"/>
+    <mantle.party.agreement.AgreementItem agreementId="BOSS_SAL_AGR_CONTOSO" agreementItemSeqId="02" agreementItemTypeEnumId="AitPricing"
+            productId="DEMO_1_2"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_SAL_AGR_CONTOSO_01" productId="DEMO_1_1" vendorPartyId="ORG_ZIZI_RETAIL"
+            customerPartyId="BOSS_SAL_ACC_CONTOSO" agreementId="BOSS_SAL_AGR_CONTOSO" agreementItemSeqId="01" priceTypeEnumId="PptCurrent"
+            pricePurposeEnumId="PppPurchase" priceUomId="USD" minQuantity="0" price="17.50"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_SAL_AGR_CONTOSO_02" productId="DEMO_1_2" vendorPartyId="ORG_ZIZI_RETAIL"
+            customerPartyId="BOSS_SAL_ACC_CONTOSO" agreementId="BOSS_SAL_AGR_CONTOSO" agreementItemSeqId="02" priceTypeEnumId="PptCurrent"
+            pricePurposeEnumId="PppPurchase" priceUomId="USD" minQuantity="0" price="10800"/>
+    <mantle.party.agreement.AgreementTerm agreementTermId="BOSS_SAL_AGR_CONTOSO_NET" agreementId="BOSS_SAL_AGR_CONTOSO"
+            termTypeEnumId="TtFinPaymentDays" termNumber="30" termText="Net 30 days from invoice"/>
+    <mantle.party.agreement.AgreementContent agreementContentId="BOSS_SAL_AGR_CONTOSO_SIGNED" agreementId="BOSS_SAL_AGR_CONTOSO"
+            contentTypeEnumId="AcntDocument" description="Signed by Dana Morales, Oct 28" contentDate="2026-10-28 10:00:00"
+            userId="BOSS_SAL_AGREEMENT"/>
+    <mantle.party.agreement.Agreement agreementId="BOSS_SAL_AGR_STANDARD" agreementTypeEnumId="AgrSales" statusId="AgmStDraft"
+            organizationPartyId="ORG_ZIZI_RETAIL" organizationRoleTypeId="OrgInternal" description="Standard supply terms"
+            currencyUomId="USD" isTemplate="Y" agreementRevision="1" revisionDate="2026-10-20 09:00:00"/>
+    <mantle.party.agreement.AgreementTerm agreementTermId="BOSS_SAL_AGR_STANDARD_NET" agreementId="BOSS_SAL_AGR_STANDARD"
+            termTypeEnumId="TtFinPaymentDays" termNumber="30" termText="Net 30 days from invoice"/>
+    <!-- ===== end of Sales P15 ===== -->
 </entity-facade-xml>
