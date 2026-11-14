@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This software is in the public domain under CC0 1.0 Universal plus a 
+This software is in the public domain under CC0 1.0 Universal plus a
 Grant of Patent License.
 
 To the extent possible under law, the author(s) have dedicated all
@@ -12,117 +12,194 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
+<!-- Sales analysis (design-sales §8 SalesAnalysis: AnalysisOptions, SalesAnalysis; design-accounting §13; impl-sales P19, F2, F76,
+    F79): Sales' report, at Sales/Reports/SalesAnalysis, and Accounting's Reports/SalesAnalysis as a mount of this same definition
+    (Z10; owner contract: Accounting/Reports.xml mounts this file). An organization's sales in a period or between two days, by
+    product, customer or customer class, as ordered, shipped, invoiced and returned, quantities and values in each document's currency,
+    never added across currencies, over mantle.sales.SalesReportServices.run#SalesAnalysis alone: Mantle answers a report reader
+    (ACCOUNTING_VIEW) of the organization and a holder of SALES_REPORT_VIEW for an organization of their sales scope, and decides the
+    finance columns (the cost of what shipped and its margin): a report reader's who also holds PRODUCT_COST_VIEW, or a holder of both
+    PRICE_VIEW and PRODUCT_COST_VIEW (P19 review R1), withheld from anyone else, so they are left out rather than shown as zero. Under Accounting the reader is Accounting's and the
+    finance columns are shown over the same rows. The choices and links follow the root the screen is mounted under (appRoot): Sales'
+    choices and its Product360 and Customer360, or Accounting's. Exports to CSV and XLSX; prints. No entity read, no cost search and
+    no SQL dialog (P1's ported screen read OrderItemSalesSummary itself). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales analysis" default-menu-index="2" menu-image="sym_o_table_chart" menu-image-type="icon">
-
-    <transition-include name="searchPartyList" location="component://mr-boss/template/SearchTransitions.xml"/>
-    <transition-include name="getProductList" location="component://mr-boss/template/SearchTransitions.xml"/>
-
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="groupBy"/>
+    <parameter name="currencyUomId"/>
+    <!-- the root's own choices: Sales' (organizations of the sales scope, the organization's sales and fiscal periods, currencies) or
+        Accounting's (its organizations, fiscal periods and currencies) -->
+    <transition name="analysisChoices" read-only="true">
+        <actions>
+            <if condition="appRoot == 'Accounting'">
+                <service-call name="ironstone.accounting.AccessServices.get#Choices" out-map="found"
+                        in-map="{choice:choice, term:(term || null), selected:(selected || null),
+                            organizationPartyId:(organizationPartyId || null)}"/>
+                <else>
+                    <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"
+                            in-map="{appRoot:'Sales', choice:({periods:'salesPeriods'}[choice] || choice), term:(term || null),
+                                selected:(selected || null), organizationPartyId:(organizationPartyId || null)}"/>
+                </else>
+            </if>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <actions>
-        <set field="pageSize" from="pageSize || '100'"/>
-        <!-- the cost and margin columns for a holder of PRODUCT_COST_VIEW or report read only (design §8 SalesAnalysis); this ported
-            screen reads the summary view itself until P19 rebuilds it over the guarded run#SalesAnalysis (impl-sales P1, F2) -->
-        <set field="costShown" from="!!sales.capabilities.reportCosts"/>
-        <!-- nor sorted by cost for one who may not see it (its order would rank the hidden costs); the find skips totalCost's
-            search parameters for everyone (skip-fields), as no header filters on it and a range on it would test hidden costs -->
-        <if condition="!costShown &amp;&amp; orderByField &amp;&amp; String(orderByField).includes('totalCost')">
-            <set field="orderByField" from="null"/></if>
-
-        <set field="orderStatusList" from="['OrderPlaced', 'OrderProcessing', 'OrderApproved', 'OrderSent', 'OrderCompleted', 'OrderHold']"/>
-        <entity-find entity-name="moqui.basic.EnumGroupMember" list="productItemTypeEgms" cache="true">
-            <econdition field-name="enumGroupEnumId" value="EngItemsProduct"/></entity-find>
-        <set field="productItemTypes" from="productItemTypeEgms.map(it => it.enumId)"/>
+        <set field="underAccounting" from="appRoot == 'Accounting'"/>
+        <set field="organizationPartyId" from="organizationPartyId || (underAccounting ? null
+                : (sales?.defaultOrganizationPartyId || (sales?.organizationPartyIds || [])[0] || null))"/>
+        <set field="groupBy" from="['product', 'customer', 'customerClass'].includes(groupBy) ? groupBy : 'product'"/>
+        <set field="reportOptions" from="{organizationPartyId, timePeriodId, fromDate, thruDate, groupBy, currencyUomId}"/>
+        <set field="report" from="null"/>
+        <set field="reportError" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.sales.SalesReportServices.run#SalesAnalysis" in-map="reportOptions" out-map="report"
+                    transaction="force-new" ignore-error="true"/>
+            <if condition="ec.message.hasError()">
+                <set field="reportError" from="ec.message.getErrorsString()"/>
+                <set field="report" from="null"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <!-- the finance columns only where Mantle answered them (costShown); never a zero for a withheld cost -->
+        <set field="costShown" from="!!report?.costShown"/>
+        <set field="productPath" from="sharedLinks?.[underAccounting ? 'Records/Product360' : 'Products/Product360'] || null"/>
+        <set field="customerPath" from="sharedLinks?.[underAccounting ? 'Receivables/Customer360' : 'Accounts/Customer360'] || null"/>
+        <set field="analysisRows" from="Array.from(report?.analysisRows || []).map(row =&gt; Object.assign({}, row,
+                {linkPath: row.productId ? productPath : row.customerPartyId ? customerPath : null,
+                linkParameters: row.productId ? {organizationPartyId, productId: row.productId}
+                    : {organizationPartyId, customerPartyId: row.customerPartyId},
+                marginPercentText: row.marginPercent == null ? '' : ec.l10n.format(row.marginPercent, '0.0') + ' %'}))"/>
+        <set field="groupTitle" from="{product: 'Product', customer: 'Customer', customerClass: 'Customer class'}[groupBy]"/>
+        <set field="reportAsOf" from="report?.asOf"/>
+        <set field="reportIncomplete" from="[report &amp;&amp; !report.complete ? report.incompleteReason : null, report?.costIncomplete].filter(Boolean)"/>
+        <set field="printUrl" from="'/apps/' + (appRoot || 'Sales') + '/Reports/SalesAnalysis?' + Object.entries(Object.assign({renderMode:
+                'html-print'}, reportOptions)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
     </actions>
     <widgets>
-        <form-list name="SalesAnalysis" list="summaryList" skip-form="true" header-dialog="true" select-columns="true"
-                saved-finds="true" show-csv-button="true" show-xlsx-button="true" show-all-button="true">
-            <entity-find entity-name="mantle.order.OrderItemSalesSummary" list="summaryList" use-clone="true">
-                <search-form-inputs default-order-by="vendorPartyId,pseudoId" skip-fields="totalCost">
-                    <default-parameters placedDate_poffset="0" placedDate_period="month"/></search-form-inputs>
-                <econdition field-name="vendorRoleTypeId" value="OrgInternal"/>
-                <econdition field-name="orderStatusId" operator="in" from="orderStatusList"/>
-                <econdition field-name="partStatusId" operator="in" from="orderStatusList" or-null="true"/>
-                <econdition field-name="itemTypeEnumId" operator="in" from="productItemTypes"/>
-                <!-- <econdition field-name="productId" operator="is-not-null"/> -->
-                <select-field field-name="totalSales,totalCost"/>
-            </entity-find>
-
-            <field name="placedDate"><header-field title="Placed Date"><date-period/></header-field></field>
-
-            <field name="vendorPartyId">
-                <header-field title="Vendor" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
-                    <dynamic-options transition="searchPartyList" server-search="true" min-length="0" parameter-map="{roleTypeId:'OrgInternal'}"/></drop-down></header-field>
-                <default-field><display-entity entity-name="mantle.party.PartyDetail" key-field-name="partyId" text="PartyNameTemplate"/></default-field>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Sales analysis" type="h5"/>
+            </container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="organizationPartyId"/>
+            </container>
+        </container>
+        <label text="Ordered by placed date, invoiced by book day, returns by entry; values in each document's currency, never added across currencies."
+                type="p" style="text-caption m-muted"/>
+        <form-single name="SalesAnalysisOptions" transition="." map="reportOptions">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="analysisChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
             </field>
-            <field name="customerPartyId">
-                <header-field title="Customer" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
-                    <dynamic-options transition="searchPartyList" server-search="true" min-length="0" parameter-map="{roleTypeId:'Customer'}"/></drop-down></header-field>
-                <default-field><display-entity entity-name="mantle.party.PartyDetail" key-field-name="partyId" text="PartyNameTemplate"/></default-field>
+            <field name="groupBy">
+                <default-field title="By">
+                    <radio>
+                        <option key="product" text="Product"/>
+                        <option key="customer" text="Customer"/>
+                        <option key="customerClass" text="Customer class"/>
+                    </radio>
+                </default-field>
             </field>
-            <field name="productStoreId">
-                <header-field title="Store" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
-                    <entity-options key="${productStoreId}" text="${productStoreId}: ${storeName}">
-                        <entity-find entity-name="mantle.product.store.ProductStore">
-                            <order-by field-name="storeName"/></entity-find></entity-options>
-                </drop-down></header-field>
-                <default-field><display-entity entity-name="mantle.product.store.ProductStore" text="${storeName}"/></default-field>
+            <field name="timePeriodId">
+                <default-field title="Period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="analysisChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId, selected:timePeriodId}">
+                            <depends-on field="organizationPartyId"/></dynamic-options>
+                    </drop-down>
+                </default-field>
             </field>
-
-            <field name="productId">
-                <header-field title="Product" show-order-by="true"><drop-down allow-empty="true" allow-multiple="true">
-                    <dynamic-options transition="getProductList" server-search="true" min-length="0"/></drop-down></header-field>
+            <field name="fromDate">
+                <default-field title="From"><date-time type="date"/></default-field>
             </field>
-            <field name="pseudoId"><header-field title="Prod ID" show-order-by="true"/>
-                <default-field><display/></default-field></field>
-            <field name="productName"><header-field title="Product Name" show-order-by="true"/>
-                <default-field><display/></default-field></field>
-
-            <field name="orderId"><header-field show-order-by="true"><text-find size="15" hide-options="ignore-case"/></header-field>
-                <default-field><display/></default-field></field>
-
-            <field name="minUnitAmount" align="right" show-total="min"><default-field title="Min"><display format="#,##0.00"/></default-field></field>
-            <field name="maxUnitAmount" align="right" show-total="max"><default-field title="Max"><display format="#,##0.00"/></default-field></field>
-            <field name="averageAmount" from="quantity != null &amp;&amp; !toDecimal(quantity).isZero() ? toDecimal(totalSales || 0).divide(toDecimal(quantity), 6, 'HALF_UP') : toDecimal(0)" align="right" show-total="avg">
-                <default-field title="Avg"><display format="#,##0.00"/></default-field></field>
-
-            <field name="quantity" align="right" show-total="sum"><header-field show-order-by="true"/>
-                <default-field><display format="#,##0"/></default-field></field>
-            <field name="totalSales" align="right" show-total="sum"><header-field show-order-by="true"/>
-                <default-field><display format="#,##0.00"/></default-field></field>
-            <field name="issuedQuantity" align="right" show-total="sum"><header-field show-order-by="true"/>
-                <default-field><display format="#,##0"/></default-field></field>
-            <field name="totalIssued" align="right" show-total="sum"><header-field show-order-by="true"/>
-                <default-field><display format="#,##0.00"/></default-field></field>
-            <field name="totalCost" align="right" show-total="sum" hide="!costShown"><header-field show-order-by="true"/>
-                <default-field><display format="#,##0.00"/></default-field></field>
-
-            <field name="marginAmount" from="toDecimal(totalIssued || 0).subtract(toDecimal(totalCost || 0))" align="right" show-total="true" hide="!costShown">
-                <default-field title="Margin Amount"><display format="#,##0.00"/></default-field></field>
-            <field name="marginPercent" align="right" hide="!costShown"><default-field title="Margin Percent">
-                <display text="${ec.l10n.format(totalIssued != null &amp;&amp; !toDecimal(totalIssued).isZero() ? toDecimal(totalIssued).subtract(toDecimal(totalCost || 0)).divide(toDecimal(totalIssued), 10, 'HALF_EVEN').multiply(toDecimal(100)) : toDecimal(0), '0.00')}"/></default-field></field>
-
-            <field name="find"><header-field title="Find"><submit/></header-field></field>
-
-            <columns>
-                <column><field-ref name="pseudoId"/><field-ref name="productName"/></column>
-                <column><field-ref name="vendorPartyId"/><field-ref name="productStoreId"/></column>
-                <column><field-ref name="minUnitAmount"/><field-ref name="maxUnitAmount"/><field-ref name="averageAmount"/></column>
-                <column><field-ref name="quantity"/><field-ref name="issuedQuantity"/></column>
-                <column><field-ref name="totalSales"/><field-ref name="totalIssued"/><field-ref name="totalCost"/></column>
-                <column><field-ref name="marginAmount"/><field-ref name="marginPercent"/></column>
-            </columns>
-            <columns type="mobile">
-                <column><field-ref name="pseudoId"/><field-ref name="productName"/></column>
-                <column><field-ref name="totalSales"/><field-ref name="marginPercent"/></column>
-            </columns>
-        </form-list>
-        <section name="ShowSql" condition="summaryList_xafind?.getQueryTextList()"><widgets>
-            <container-dialog id="ShowSqlDialog" button-text="Show SQL" type="info">
-                <section-iterate name="ShowSqlIter" list="summaryList_xafind?.getQueryTextList()" entry="queryText"><widgets>
-                    <label text="${queryText}" type="p"/>
-                    <label text="${summaryList_xafind}" type="p"/>
-                </widgets></section-iterate>
-            </container-dialog>
-        </widgets></section>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="The report includes documents before this day, not on it"><date-time type="date"/></default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="analysisChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'currencies', organizationPartyId:organizationPartyId, selected:currencyUomId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title=""><submit text="Run report" type="primary"/></default-field>
+            </field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="groupBy"/><field-ref name="currencyUomId"/></field-row>
+                <field-row><field-ref name="timePeriodId"/><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and run the report." type="p" condition="!organizationPartyId"/>
+        <section-include name="ReportState" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <section name="SalesResults" condition="report">
+            <widgets>
+                <label text="No sales orders, invoices or returns in these days." type="p" condition="!analysisRows.length"/>
+                <form-list name="SalesAnalysisRows" list="analysisRows" skip-form="true" paginate="false" select-columns="true"
+                        show-csv-button="true" show-xlsx-button="true" saved-finds="true">
+                    <field name="label">
+                        <conditional-field condition="linkPath" title="${groupTitle}">
+                            <link url="${linkPath}" text="${label}" link-type="anchor" parameter-map="linkParameters"/>
+                        </conditional-field>
+                        <default-field title="${groupTitle}"><display/></default-field>
+                    </field>
+                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                    <field name="orderedQuantity" align="right">
+                        <default-field title="Ordered"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="orderedValue" align="right">
+                        <default-field title="Ordered value"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="issuedQuantity" align="right">
+                        <default-field title="Shipped"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="issuedValue" align="right">
+                        <default-field title="Shipped value"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="invoicedQuantity" align="right">
+                        <default-field title="Invoiced"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="invoicedValue" align="right">
+                        <default-field title="Invoiced value"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="returnedQuantity" align="right">
+                        <default-field title="Returned"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="returnedValue" align="right">
+                        <default-field title="Returned value"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="netValue" align="right">
+                        <default-field title="Net invoiced"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="issuedCost" align="right" hide="!costShown">
+                        <default-field title="Cost of shipped"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="marginValue" align="right" hide="!costShown">
+                        <default-field title="Margin"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="marginPercentText" align="right" hide="!costShown">
+                        <default-field title="Margin %"><display/></default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="label"/><field-ref name="orderedQuantity"/></column>
+                        <column><field-ref name="invoicedValue"/><field-ref name="netValue"/></column>
+                    </columns>
+                </form-list>
+                <label text="The cost and margin are shown to a reader of product costs: a finance reader who reads costs, or one who reads both prices and costs."
+                        type="p" style="text-caption m-muted" condition="!costShown"/>
+            </widgets>
+        </section>
     </widgets>
 </screen>

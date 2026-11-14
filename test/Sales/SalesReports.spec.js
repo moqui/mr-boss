@@ -1,13 +1,12 @@
-// Sales reports (screen/Sales/Reports): the order analysis's average, margin and margin percent are decimal arithmetic in its
-// form-list fields, evaluated on each row; one html render over the demo orders of every date shows them, to a holder of report
-// read (ADMIN), who is shown the cost and margin columns a Sales report reader without PRODUCT_COST_VIEW is not (impl-sales P1;
-// the reader's side is SalesAccess's render of SalesSummary). The Sales administrator's one csv export of it (no cost rights;
-// SALES_ALL_ORGANIZATIONS and the root's MANTLE_ACTIVE_ORG, every organization while none is active) searches and sorts by the
-// hidden cost and gets every organization's rows of no cost search, without the cost columns (Sales P1 review: the ported find
-// took totalCost_from as a having condition, a test of the hidden costs).
+// Sales reports (screen/Sales/Reports; impl-sales P19): each rebuilt screen's one html render over Mantle's services, with all its
+// checks on that render. Sales analysis over run#SalesAnalysis for every date of the demo orders, as a holder of report read (ADMIN),
+// who is shown the finance columns (cost of shipped, margin) Mantle answers them; the Sales administrator's csv export of it (no cost
+// rights) carries no cost or margin column and no cost search (P1 review R1: the ported screen read OrderItemSalesSummary itself and
+// took totalCost from the request; the rebuilt one reads no entity and passes no cost parameter). Pipeline analysis and Win/loss as
+// the report reader, with their options and lists. Mantle's rules are tested in mr-mantle (SalesPipelineReports, SalesReports).
 // Run: ./moq test mr-boss --spec SalesReports
-const webroot = "component://webroot/screen/webroot.xml"
-const {asUser, page} = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
+const {ids, asUser, page} = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
+const allDates = {organizationPartyId: ids.organizationId, fromDate: "2000-01-01", thruDate: "2100-01-01"}
 
 spec({
     setupSpec() {
@@ -15,36 +14,26 @@ spec({
     }
 })
 
-feature("SalesAnalysis renders its rows with the average, margin and margin percent", {
+feature("SalesAnalysis renders run#SalesAnalysis's rows with the finance columns for a report reader", {
     when() {
-        const str = ec.screen
-            .makeTest()
-            .rootScreen(webroot)
-            .renderMode("html")
-            .render("apps/Sales/Reports/SalesAnalysis", {placedDate_from: "2000-01-01", placedDate_thru: "2100-01-01"}, null)
-        const output = String(str.output || "")
-        const errors = str.errorMessages.join(" | ")
-        ec.message.clearErrors()
-        return {output, errors}
+        return page("Reports/SalesAnalysis", allDates, "html")
     },
-    then({output, errors}) {
-        errors == ""
-        !/Error rendering|Exception in render/.test(output)
-        output.includes("Margin Percent")
+    then({errors, output}) {
+        errors.length == 0
+        output.includes("Net invoiced")
+        output.includes("Shipped value")
+        output.includes("Cost of shipped")
+        output.includes("Margin %")
+        !output.includes("Show SQL")
     }
 })
 
-feature("the Sales administrator without cost rights reads every organization's analysis, neither seeing nor searching cost", {
+feature("the Sales administrator without cost rights exports the analysis with no cost or margin column", {
     when() {
         return asUser("sales.admin", () =>
             page(
                 "Reports/SalesAnalysis",
-                {
-                    placedDate_from: "2000-01-01",
-                    placedDate_thru: "2100-01-01",
-                    totalCost_from: "999999999",
-                    orderByField: "-totalCost"
-                },
+                Object.assign({totalCost_from: "999999999", orderByField: "-totalCost"}, allDates),
                 "csv"
             )
         )
@@ -52,12 +41,32 @@ feature("the Sales administrator without cost rights reads every organization's 
     then({status, output, errors}) {
         status == 200
         errors.length == 0
-        output.startsWith("Prod ID,")
-        !output.includes("Total Cost")
+        output.includes("Ordered value")
+        !output.includes("Cost of shipped")
         !output.includes("Margin")
-        // every organization's rows, of one the administrator does not work for too (Accounting's demo company), which a cost
-        // search over a billion would have left out
-        output.includes("ZIRET")
-        output.includes("ACCTDEMO")
+    }
+})
+
+feature("Pipeline analysis and Win/loss render for the report reader with their measures and lists", {
+    when() {
+        return asUser("sales.reader", () => ({
+            pipeline: page("Reports/PipelineAnalysis", {organizationPartyId: ids.organizationId, groupBy: "source"}, "html"),
+            winLoss: page(
+                "Reports/WinLoss",
+                {organizationPartyId: ids.organizationId, fromDate: "2000-01-01", thruDate: "2100-01-01"},
+                "html"
+            )
+        }))
+    },
+    then({pipeline, winLoss}) {
+        pipeline.errors.length == 0
+        pipeline.output.includes("Pipeline by source")
+        pipeline.output.includes("Time in each stage")
+        pipeline.output.includes("Funnel of the lead cohort")
+        pipeline.output.includes("Not available")
+        winLoss.errors.length == 0
+        winLoss.output.includes("Final outcome as of the report time")
+        winLoss.output.includes("Win rate")
+        winLoss.output.includes("Loss reasons")
     }
 })

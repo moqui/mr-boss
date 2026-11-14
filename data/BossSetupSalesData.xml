@@ -483,4 +483,125 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_REP" userPermissionId="SALES_FORECAST_EDIT" fromDate="0"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_REP" userPermissionId="SALES_FORECAST_EDIT" capabilityKindEnumId="CpkEdit"/>
     <!-- ===== end of Sales P18 ===== -->
+    <!-- ===== Sales P19 (impl-sales P19; design-sales §8 Reports, §1.4 CX-OPS-REPORTS, §13.2): reports and Insights registrations ===== -->
+    <!-- The stage-age dataset (mr-mantle report/mantle-sales-pipeline-stage-age.json): the pipeline dataset's document and row filter
+        (Sales' scope), timed by when each deal entered its stage, read by the stalled-deal alert template (report/boss-sales-stalled-deals.json);
+        granted, admitted and classed as the pipeline dataset is (its index is the same document's). -->
+    <artifactGroups artifactGroupId="BOSS_SAL_DATASETS" description="Sales: the pipeline datasets">
+        <artifacts artifactName="org.moqui.report.dataset.mantle-sales-pipeline-stage-age" artifactTypeEnumId="AT_SERVICE"/>
+    </artifactGroups>
+    <moqui.report.BusinessDataset datasetId="mantle-sales-pipeline-stage-age" admittedDate="2026-11-14 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-sales-pipeline-stage-age" version="1" domainOwner="Sales" classEnumId="InsDcOperations"/>
+    <!-- Sales' reports in Insights' catalog (owner contract, impl-insights §7; design-insights §6.1; F3, F24, F59), read through Sales'
+        catalogue, mantle.sales.SalesWorkspaceServices.get#SalesReports (answering the app root Sales only); Sales.SalesAnalysis, moved
+        to Sales' route, is in BossSetupData beside Accounting's own entry for its mount -->
+    <ironstone.insights.ReportCatalogEntry entryId="Sales.SalesSummary" version="1" ownerApp="Sales" title="Sales summary"
+            description="Orders placed and invoices issued by period in one currency, with top products and customer classes."
+            purpose="Sales" basis="Placed date (orders), invoice date (invoices), one currency" routePath="Sales/Reports/SalesSummary"
+            parameterContract="organizationPartyId,interval,currencyUomId"
+            sourceReference="mantle.sales.SalesReportServices.get#SalesOrderSummary"
+            metricIds="Sales.Orders,Sales.OrderValue,Accounting.InvoicedRevenue"
+            catalogueService="mantle.sales.SalesWorkspaceServices.get#SalesReports" catalogueKey="Sales.SalesSummary"
+            exportFormats="CSV" sequenceNum="245"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Sales.PipelineAnalysis" version="1" ownerApp="Sales" title="Pipeline analysis"
+            description="Open pipeline by stage, source, owner or age as of a time; stage durations, lead conversion and the funnel."
+            purpose="Sales" basis="Deals as of a time, from their audit log; leads by created date" routePath="Sales/Reports/PipelineAnalysis"
+            parameterContract="organizationPartyId,asOfDate,groupBy"
+            sourceReference="mantle.sales.ForecastServices.get#PipelineAnalysis"
+            metricIds="Sales.OpenPipeline,Sales.WeightedPipeline"
+            catalogueService="mantle.sales.SalesWorkspaceServices.get#SalesReports" catalogueKey="Sales.PipelineAnalysis"
+            exportFormats="CSV,XLSX" sequenceNum="252"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Sales.WinLoss" version="1" ownerApp="Sales" title="Win/loss"
+            description="Won and lost deals of a close cohort, win rate, loss reasons, cycle time and reopenings; disqualified leads apart."
+            purpose="Sales" basis="Close date in the period; final outcome as of the report time, or each close event"
+            routePath="Sales/Reports/WinLoss" parameterContract="organizationPartyId,fromDate,thruDate,mode"
+            sourceReference="mantle.sales.ForecastServices.get#WinLoss" metricIds="Sales.WonValue,Sales.WinRate"
+            catalogueService="mantle.sales.SalesWorkspaceServices.get#SalesReports" catalogueKey="Sales.WinLoss"
+            exportFormats="CSV,XLSX" sequenceNum="254"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Sales.TargetAttainment" version="1" ownerApp="Sales" title="Target attainment"
+            description="Each target's quota against the one basis it is measured on, with variance; unassigned amounts apart."
+            purpose="Sales" basis="The target's basis: won deals, placed orders or finalized invoices, in the period"
+            routePath="Sales/Reports/TargetAttainment" parameterContract="organizationPartyId,timePeriodId,currencyUomId"
+            sourceReference="mantle.sales.ForecastServices.get#TargetAttainment"
+            catalogueService="mantle.sales.SalesWorkspaceServices.get#SalesReports" catalogueKey="Sales.TargetAttainment"
+            exportFormats="CSV" sequenceNum="256"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Sales.Forecast" version="1" ownerApp="Sales" title="Forecast"
+            description="A forecast's quota, pipeline, weighted and won amounts and submitted judgement, with the deals behind them."
+            purpose="Sales" basis="Deals expected to close in the period, as of a time" routePath="Sales/Pipeline/Forecast"
+            parameterContract="organizationPartyId,timePeriodId,currencyUomId"
+            sourceReference="mantle.sales.ForecastServices.get#Forecast" metricIds="Sales.WeightedPipeline"
+            catalogueService="mantle.sales.SalesWorkspaceServices.get#SalesReports" catalogueKey="Sales.Forecast"
+            exportFormats="CSV" sequenceNum="258"/>
+    <!-- Sales' measures (owner contract, design-insights §6.2; design-sales §8 metric owners), beside Sales.Orders and Sales.OrderValue -->
+    <ironstone.insights.MetricRegistration metricId="Sales.OpenPipeline" version="1" ownerApp="Sales" title="Open pipeline"
+            description="The estimated amount of open qualified opportunities, in each deal's own currency, as of a time."
+            serviceName="mantle.sales.ForecastServices.get#PipelineAnalysis" datasetIds="mantle-sales-pipeline"
+            catalogEntryId="Sales.PipelineAnalysis" grain="Opportunity" recordKey="salesOpportunityId"
+            dateBasis="As of a time, from the deal's audit log" statusBasis="Open (not Won or Lost) opportunities; leads apart"
+            aggregation="snapshot" numerator="The sum of the deals' estimated amounts" unitPolicy="currency"
+            additiveDimensions="stage, source, owner, team, age (within one currency)" nonAdditiveDimensions="currency, date"
+            allowedDimensions="stage, source, owner, team, age, currency"
+            supportedFilters="organizationPartyId, teamPartyId, ownerPartyId, salesPipelineId, opportunityStageId, dataSourceId, currencyUomId, asOfDate"
+            exclusions="Leads, won and lost deals; a deal with no estimate is counted apart, never as zero"
+            drillContract="The open deals of the selected bucket" scopePolicy="The viewer's sales scope (MantleSalesScope)"
+            freshness="Live; the dataset by the MantleSalesPipeline feed" sequenceNum="30"/>
+    <ironstone.insights.MetricRegistration metricId="Sales.WeightedPipeline" version="1" ownerApp="Sales" title="Weighted pipeline"
+            description="Open qualified opportunities' estimated amounts times their probability, in each deal's own currency, as of a time."
+            serviceName="mantle.sales.ForecastServices.get#PipelineAnalysis" datasetIds="mantle-sales-pipeline"
+            catalogEntryId="Sales.PipelineAnalysis" grain="Opportunity" recordKey="salesOpportunityId"
+            dateBasis="As of a time, from the deal's audit log" statusBasis="Open (not Won or Lost) opportunities; leads apart"
+            aggregation="snapshot" numerator="The sum of each deal's estimated amount times its probability (stage or manual)"
+            unitPolicy="currency" additiveDimensions="stage, source, owner, team, age (within one currency)"
+            nonAdditiveDimensions="currency, date" allowedDimensions="stage, source, owner, team, age, currency"
+            supportedFilters="organizationPartyId, teamPartyId, ownerPartyId, salesPipelineId, opportunityStageId, dataSourceId, currencyUomId, asOfDate"
+            exclusions="Leads, won and lost deals; a deal with no estimate or no probability adds nothing and is named"
+            drillContract="The open deals of the selected bucket" scopePolicy="The viewer's sales scope (MantleSalesScope)"
+            freshness="Live" sequenceNum="32"/>
+    <ironstone.insights.MetricRegistration metricId="Sales.WonValue" version="1" ownerApp="Sales" title="Won value"
+            description="The estimated amount of opportunities closed won in a period, in each deal's own currency; not invoiced revenue."
+            serviceName="mantle.sales.ForecastServices.get#WinLoss" datasetIds="mantle-sales-pipeline" catalogEntryId="Sales.WinLoss"
+            grain="Opportunity" recordKey="salesOpportunityId" dateBasis="Close date"
+            statusBasis="Won, each deal once by its final outcome as of the report time" aggregation="sum"
+            numerator="The sum of the won deals' estimated amounts at their close" unitPolicy="currency"
+            additiveDimensions="owner, team, account, source, period (within one currency)" nonAdditiveDimensions="currency"
+            allowedDimensions="owner, team, account, source, currency, period"
+            supportedFilters="organizationPartyId, teamPartyId, ownerPartyId, accountPartyId, dataSourceId, currencyUomId, fromDate, thruDate"
+            exclusions="Leads; a deal reopened after the report time counts by its outcome then"
+            drillContract="The won deals of the period" scopePolicy="The viewer's sales scope (MantleSalesScope)" freshness="Live"
+            sequenceNum="34"/>
+    <ironstone.insights.MetricRegistration metricId="Sales.WinRate" version="1" ownerApp="Sales" title="Win rate"
+            description="Won opportunities over won and lost opportunities closed in a period."
+            serviceName="mantle.sales.ForecastServices.get#WinLoss" datasetIds="mantle-sales-pipeline" catalogEntryId="Sales.WinLoss"
+            grain="Opportunity" recordKey="salesOpportunityId" dateBasis="Close date"
+            statusBasis="Won and lost opportunities, each deal once by its final outcome as of the report time" aggregation="ratio"
+            numerator="Won opportunities" denominator="Won and lost opportunities" unitPolicy="percent"
+            additiveDimensions="none (recompute from the parts)" nonAdditiveDimensions="every dimension"
+            allowedDimensions="owner, team, account, source, period"
+            supportedFilters="organizationPartyId, teamPartyId, ownerPartyId, accountPartyId, dataSourceId, fromDate, thruDate"
+            exclusions="Leads disqualified before qualification are counted apart, never in the denominator"
+            drillContract="The won and lost deals of the period" scopePolicy="The viewer's sales scope (MantleSalesScope)"
+            freshness="Live" sequenceNum="36"/>
+    <!-- Sales' work lists for the flow maps (owner contract, design-insights §9; BossSetupData's flow targets): the suite's customer
+        flow's quote step opens Quotes -->
+    <ironstone.insights.FlowTarget targetId="Sales.Leads" version="1" ownerApp="Sales" title="Leads"
+            description="Leads to work: yours and your teams' queues, or the organization's."
+            routePath="Sales/Pipeline/Leads" parameterContract='{"organizationPartyId":{"type":"organization"},"statusId":{"type":"choice","values":["SalesOppOpen","SalesOppLost","all"]}}'
+            sequenceNum="5"/>
+    <ironstone.insights.FlowTarget targetId="Sales.Opportunities" version="1" ownerApp="Sales" title="Opportunities"
+            description="Opportunities you see, by stage, owner or expected close."
+            routePath="Sales/Pipeline/Opportunities" parameterContract='{"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="6"/>
+    <ironstone.insights.FlowTarget targetId="Sales.Quotes" version="1" ownerApp="Sales" title="Quotes"
+            description="Quotes, by state: drafts, sent, expiring and expired."
+            routePath="Sales/Quotes/Quotes" parameterContract='{"organizationPartyId":{"type":"organization"},"state":{"type":"choice","values":["draft","proposed","open","expiring","expired","cancelled","all"]}}'
+            sequenceNum="7"/>
+    <ironstone.insights.FlowTarget targetId="Sales.Orders" version="1" ownerApp="Sales" title="Sales orders"
+            description="Sales orders, by what needs doing: awaiting approval, held, to fulfil, to invoice."
+            routePath="Sales/Orders/Orders" parameterContract='{"organizationPartyId":{"type":"organization"},"list":{"type":"choice","values":["recent","draft","awaiting","held","blocked","toFulfill","partFulfilled","toInvoice","cancelled"]}}'
+            sequenceNum="8"/>
+    <ironstone.insights.FlowTarget targetId="Sales.OrderChanges" version="1" ownerApp="Sales" title="Order changes"
+            description="Commercial changes to sales orders, waiting for a decision or applied."
+            routePath="Sales/Orders/OrderChanges" parameterContract='{"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="9"/>
+    <!-- ===== end of Sales P19 ===== -->
 </entity-facade-xml>

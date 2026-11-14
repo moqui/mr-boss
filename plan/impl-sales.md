@@ -4995,6 +4995,237 @@ SAL-REPORT, SAL-ANALYTICS.
   with its drill-down and export agreeing with the screen; Accounting's SalesAnalysis shows its finance columns over
   the same rows; a manager subscribes to the weekly digest and copies the stalled-deal alert so it fires.
 
+**Built Nov 14 (P19).** mr-mantle, mr-boss and mr-pass on branch `sal/p19` (hashes in the worker's reply); mr-moqui unchanged, no Rust
+built.
+- Checked first (the code over the plan): P1's, P6's, P11's and P18's Built and Review notes, §4 (the Nov 14 cancelled-order call), F2,
+  F3, F24, F59, F76, F77, F79, F81; `run#SalesAnalysis` (Accounting P16's, report read only, no cost column), the summaries'
+  `organizations` (SalesAnalysis.js) and their `currencyUomIds` (none on `get#InvoicesByCustomerClass`), Insights' catalogue contract
+  (Registry.js: a catalogue service is called with `appRoot`, its `reports` keyed by `entryId` or `reportId`), its metrics (descriptive
+  registrations), flow targets (FlowMaps.js appends the map's organization to a target's organization parameter), report-embed as Home
+  uses it, the alert and digest JSON of Customer Service and Insights, the audit log (creates and updates of audited fields, one
+  `changedDate` an update). The code over the plan:
+  - `run#SalesAnalysis` keeps Accounting's reader as it was and adds Sales' report scope beside it (a holder of `SALES_REPORT_VIEW`, an
+    organization of their sales scope, its periods the organization's own, read without Accounting's period check); the finance
+    columns are the shipped value, the cost of shipped (issuances at their asset's acquire cost; unknown, named, where a cost is
+    missing or in another currency) and the margin over the shipped value, for a report reader or a holder of both `PRICE_VIEW` and
+    `PRODUCT_COST_VIEW`. "Accounting's finance columns" are read as these: Accounting's reader always has them;
+  - the mount is Accounting/Reports.xml's subscreens-item over Sales' file (Accounting's own file removed); one screen takes the
+    root's choices (its own `analysisChoices` transition calls Accounting's or Sales' get#Choices by `appRoot`) and links;
+  - `get#SalesReports` is Mantle's (as the plan says) and answers the root Sales only; Forecast is every Sales reader's entry, the
+    others the report reader's; the design's saved filters and last run are not kept (a list's saved finds are);
+  - "deal with no activity for N days" is built as "no stage movement": the alert needs a dataset timed by the field, so Mantle ships
+    `mantle-sales-pipeline-stage-age`, the pipeline's document and row filter timed by `stageEnteredDate`; a logged task does not touch
+    the deal. "Quote expiring in N days" is not built: no quote dataset exists (finding);
+  - the visit step of the funnel (Marketing P20) reads `mantle.marketing.MarketingReportServices.count#SalesVisits` when it exists
+    (`{visitCount}` for organization, days, campaign, source), else "Not available";
+  - the five panels of the P12 review are six filters in four files (mantle-sales' three, Commerce's, Insights' two), each now
+    `orderPurposeEnumId in [OrpRecurringTemplate, OrpSalesQuoteTemplate]`, negated;
+  - the recurrence worker's `operation` is on `create#RecurringOrders` (OrderServices.xml), where P16 works beside this phase.
+- Mantle:
+  - `service/mantle/sales/SalesPipelineReports.js` (new) and ForecastServices' `get#PipelineAnalysis` and `get#WinLoss` (a P19 block at
+    the end, `allow-remote="false"`, read-only): a deal at a time from its audit log (a field's value then is the old value of its first
+    change after it, else now; owner and team by their dated rows); open qualified deals by stage, source, owner or age band and by
+    currency (count, estimated, weighted, monthly recurring, average age, missing estimates, next-activity coverage now); stage
+    durations from chained audited changes, unknown where the log shows no entry or exit; conversion over a lead-created cohort
+    (`convertedDate`); the funnel's counts; the close cohort in the final-outcome (default) or event mode, win rate over won and lost
+    opportunities, a lead closed Lost apart, loss reasons as written with the close, cycle times, reopenings; every amount by
+    currency; past 2,000 deals TOO_MANY_RECORDS.
+  - `SalesAnalysis.js` `analysisReader`, `salesOptions`, the cost and margin, `costShown` and `costIncomplete`
+    (`SalesReportServices.xml` run#SalesAnalysis description and out-parameters); `get#InvoicesByCustomerClass` gains `currencyUomIds`.
+  - `SalesWorkspace.js` and SalesWorkspaceServices' `get#SalesReports` (P19 blocks at the end).
+  - `SalesSettings.js` readiness (a P19 block after the checks): `sales.jobs` (the three Sales jobs, none missing, paused or failing on
+    its last run), `sales.templates` (the organization's or Mantle's quote, reminder and confirmation templates with a from address and
+    a mail server with a host), `sales.approvalPolicies` (the approval setting on with no rule; route `salesApprovalPolicies`).
+  - `report/mantle-sales-pipeline-stage-age.json` (new); `report/mantle-sales.json` (quote templates excluded).
+  - `operation`/`operation-ref`: `apply#OpportunityImportRow` (`sales.opportunity.import.row`, `operationKey`), `apply#QuoteBatch`
+    (`operationKey` added), `create#RecurringOrders` (`sales.recurrence.run`).
+  - Carry-over (the user's call, §4 Nov 14): `ExternalAccess.js` resolves a storeless order's OrderView link after its cancellation (a
+    store order's link and every other scope still end with it); `SalesPortal.js` lists and opens a placed order later cancelled,
+    marked Cancelled (`cancelled`), read only: Support's ask page alone, no cancellation, return or Billing pay link, never counted
+    open (the account card); a rejected order stays hidden. SalesPortalServices' descriptions.
+- BOSS:
+  - Screens: `Sales/Reports/Catalogue.xml` (All reports, the default, menu index 0), `PipelineAnalysis.xml` (4) and `WinLoss.xml` (5),
+    each with options, CSV and XLSX lists and print; `SalesAnalysis.xml` rebuilt (above; no entity read, cost search or Show SQL,
+    F76, F79); `SalesSummary.xml` (one organization and currency, the base currency by default; Sales' choices for organization,
+    stores, accounts and products, F77; the top products and classes for the same organization and currency, F81; the basis named);
+    `Accounting/Reports.xml` (the mount; `Accounting/Reports/SalesAnalysis.xml` removed); `Sales/Reports.xml` and
+    `Settings/Readiness.xml` comments.
+  - `Sales.js` (a P19 block after P18's): linkPaths Catalogue, PipelineAnalysis, WinLoss.
+  - Data: `BossSetupData.xml` `Sales.SalesAnalysis` at Sales' route under `get#SalesReports` and `Accounting.SalesAnalysis` under
+    Accounting's catalogue (F59); `BossSetupSalesData.xml` (a P19 block at the end): the stage-age dataset's artifact, admission and
+    class; catalog entries Sales.SalesSummary, .PipelineAnalysis, .WinLoss, .TargetAttainment, .Forecast; metrics Sales.OpenPipeline,
+    .WeightedPipeline, .WonValue, .WinRate; flow targets Sales.Leads, .Opportunities, .Quotes, .Orders, .OrderChanges.
+  - Reports: `boss-sales-pipeline.json` (panels by source, owner, open amount by currency, leads by source, outcomes),
+    `boss-sales-stalled-deals.json` (alert template, 14 days), `boss-sales-weekly-digest.json` (digest of the pipeline dashboard),
+    `insights-flowmap-customer.json` (the quote step opens Sales.Quotes), Commerce's and Insights' order panels (quote templates
+    excluded).
+- PASS (carry-over): `screen/Sales/CustomerOrder.html.fancy` (a cancelled order's note; "Ask about this order").
+- Specs:
+  - Mantle `test/sales/SalesPipelineReports` (new, 4 features, 0.6 s): win rate 50 % over won and lost, a disqualified lead apart, the
+    reopened deal once (Lost, one reopening) in the final mode and twice as events, dollars and euros apart, the reason's count; a
+    chained stage stay measured and a gap unknown, open deals by currency, a cohort's two leads (one qualified, one disqualified), the
+    visit step not available; a representative and another organization refused, the catalogue by capability (six entries, the rep's
+    Forecast alone) and Accounting's root refused; Sales analysis for a Sales reader without cost and with it (cost 40, margin 60,
+    60 %), another organization refused. `test/order/SalesPortal` (a P19 feature, 0.68 s): a cancelled order's link not revoked, read
+    marked Cancelled with no cancel, return or pay link, listed under all and not open, the account card's count down.
+  - mr-boss `test/Sales/SalesReports` (rewritten, 3 features, 0.25 s): SalesAnalysis's one html render with the finance columns and no
+    SQL dialog; the Sales administrator's csv with no cost or margin column; PipelineAnalysis's and WinLoss's one html render each.
+    `SalesReportCatalog` (new, 2 features, 0.3 s): Sales.SalesAnalysis at Sales' route for the Sales reader (with the other five),
+    the rep's Forecast alone, Accounting.SalesAnalysis alone for the Insights finance reader; All reports' one html render.
+    `AccountingReporting` (its SalesAnalysis render now shows "Cost of shipped" under the mount), `InsightsCatalog` (the two
+    SalesAnalysis entries), `InsightsFlowMaps` (the quote step links), `SalesSpecLib.js` (reportsMenu).
+  - mr-pass `test/Sales/SalesPortalAccess` (a P19 feature, 0.04 s): a cancelled order's render by its link shows Cancelled and no
+    Support change, return or Billing link.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesReportsUsable` (3 features: the reader's six reports with the
+    pipeline and win/loss exports equal to the services' counts; Accounting's and Sales' analysis CSV over the same rows, Accounting's
+    with the finance columns; a manager given Insights' distributor grant subscribes to the weekly digest and copies the stalled-deal
+    alert, which fires once a deal has sat 30 days). `test/acceptance/Insights/InsightsCatalogUsable` changed (the finance reader's
+    entry is Accounting.SalesAnalysis), not run.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPipelineReports, SalesWorkspace, SalesPipelineSetup,
+  SalesPortal, SalesReports, SalesReportStoreScope, SalesOpportunityImport and SalesForecasts 37 of 37; OrderLifecycle,
+  ShopSubscriptions, AccountingStatements, MantleSearch, SalesQuoteIssue and SalesPipelineDataset with them 70 of 70; ShopCheckout,
+  ShopCustomer, ShopOperations and ShopCart 21 of 21. mr-boss SalesReports, SalesReportCatalog, SalesAccess, SalesSettings, SalesHome,
+  AccountingReporting, InsightsCatalog, InsightsFlowMaps, CommerceReports and InsightsDashboards 58 of 58; InsightsAccess,
+  AdminRegistries and AccountingAccess 3 specs passing. mr-pass SalesPortalAccess 4 of 4, ShopAccount 3 of 3. Catalogue,
+  PipelineAnalysis, WinLoss, SalesAnalysis, SalesSummary and Readiness rendered once by hand in qvt, tui and html-print without
+  errors, not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on
+  the new and changed JavaScript that was clean before (SalesAnalysis.js, InsightsCatalog.spec.js, AccountingReporting.spec.js and
+  ExternalAccess.js were not and are left so). Not run: ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: ss-inventory's SalesAnalysis and SalesSummary rows; usl-inventory's summaries, run#SalesAnalysis and the new "Added in
+  the Sales build: reports and Insights registrations" table.
+- Design edits: design-sales §8 "As built (impl-sales P19)", §10 a P19 bullet on cancelled orders; design-accounting §13 SalesAnalysis
+  "As built (impl-sales P19)" and its Insights registration paragraph (owner contracts).
+- Findings (provisional, numbered by the lead):
+  - "Quote expiring in N days" is not shipped as an alert template: an alert reads a dataset and no quote dataset exists; Home's counter
+    and Insights' Sales.QuotesExpiring attention provider show them. A quote dataset (document, feed, Sales' quote row filter) would
+    let it be built;
+  - the stalled-deal alert measures stage movement (`stageEnteredDate`), not every activity: a logged call or task does not touch the
+    deal, so a worked deal sitting in one stage still fires;
+  - Pipeline analysis' next-activity coverage is of the open tasks now, not as of the report time (said on the screen);
+  - a deal's past state is read from its audit log; a deal loaded with audit off (data files) reads as it is now before its first logged
+    change, and a deal closed before the log counts by its stored close only;
+  - Sales analysis for a Sales reader takes the organization's own fiscal and sales periods, not those of an organization it rolls up
+    to (Accounting's reader keeps the rollup), and with no period or days the organization's fiscal month holding today, else the
+    calendar month; an issued line's cost in another currency than the sale's is unknown, never converted;
+  - the readiness checks for jobs and mail templates have no place of their own to fix them (Admin's jobs and mail relays are framework
+    routes with no route key), so they point to Readiness; a development instance with no SMTP host shows the templates check as a
+    warning;
+  - the report catalogue keeps no saved filters or last run (design §8's SalesReportCatalogue fields); a list's saved finds are kept;
+  - a flow target with an organization parameter is opened with the map's organization (FlowMaps.js), so the quote step links to
+    Quotes of that organization;
+  - carry-over: staff may now issue a new OrderView link for a cancelled storeless order (create resolves by the same rule); a link's
+    reader can still file a Support question on a cancelled order (intended by §4); the cancelled order's PDF is the confirmation as
+    placed, with no cancelled label;
+  - `docs/security/Attack-Surface.md` (mr-moqui) is not updated: P19 had no mr-moqui worktree (texts below).
+- For the lead:
+  - budget share: mr-mantle about 1.3 s (SalesPipelineReports 0.6 s, SalesPortal's P19 feature 0.68 s); mr-boss server about 0.45 s
+    (SalesReportCatalog 0.3 s, SalesReports 0.25 s for 0.1 s before); mr-pass about 0.04 s; client none;
+  - merge hot spots (P16 and Marketing P8 beside it): mr-mantle `service/mantle/order/OrderServices.xml` (`create#RecurringOrders`'
+    line, P16), `service/mantle/sales/SalesSettings.js` (routes and a P19 readiness block before `usesSales`), `SalesWorkspace.js` and
+    `SalesWorkspaceServices.xml` (P19 blocks at the end), `ForecastServices.xml` (P19 block at the end), `SalesAnalysis.js`,
+    `SalesReportServices.xml`, `OpportunityServices.xml` and `SalesQuoteIssueServices.xml` (one service line each),
+    `SalesPortal.js`, `ExternalAccess.js` (the `SalesOrder` kind's resolve), `report/mantle-sales.json`; mr-boss
+    `data/BossSetupSalesData.xml` (a P19 block at the end), `data/BossSetupData.xml` (the Sales.SalesAnalysis entry),
+    `service/ironstone/sales/Sales.js` (a P19 block after P18's), `screen/Sales/Reports.xml`, `screen/Accounting/Reports.xml`,
+    `report/insights-suite-*.json`, `report/boss-commerce-store-operations.json`, `report/insights-flowmap-customer.json`,
+    `test/Sales/SalesSpecLib.js` (reportsMenu), `test/Insights/InsightsCatalog.spec.js`, `InsightsFlowMaps.spec.js`,
+    `plan/design-sales.md` §8 and §10, `plan/design-accounting.md` §13, `plan/usl-inventory.md` (after P18's table),
+    `plan/ss-inventory.md`; mr-pass `screen/Sales/CustomerOrder.html.fancy`, `test/Sales/SalesPortalAccess.spec.js`;
+  - Marketing P20: the funnel's visit step calls `mantle.marketing.MarketingReportServices.count#SalesVisits` (in: organizationPartyId,
+    fromDate, thruDate, marketingCampaignId, dataSourceId; out: visitCount) once it exists (SalesPipelineReports.js `visitService`);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`): beside Sales' forecasts, "Sales' reports (`mantle.sales.ForecastServices`
+    get#PipelineAnalysis and get#WinLoss, `SalesWorkspaceServices.get#SalesReports`, all `allow-remote="false"`): a Sales report reader
+    (`SALES_REPORT_VIEW`) of the organizations of their scope, the deals they see (their own and their teams', the organization's with
+    `SALES_TEAM_VIEW`); another organization ORGANIZATION_DENIED; amounts never added across currencies; past 2,000 deals refused. The
+    catalogue answers the root Sales only. `run#SalesAnalysis` also answers a Sales report reader for an organization of their scope;
+    the cost of shipped and the margin only for a report reader or a holder of both PRICE_VIEW and PRODUCT_COST_VIEW, withheld (null)
+    otherwise; Accounting's Reports/SalesAnalysis is a mount of Sales' screen." And in the PASS Sales orders paragraph: "…ended by the
+    order's cancellation…" becomes "…not ended by the order's cancellation (a storeless order's OrderView link opens it marked
+    Cancelled, read only)…", and "…not a recurring base or template and not cancelled or rejected, is shown…" becomes "…not a recurring
+    base or template and not rejected, is shown; a cancelled one is shown read only, marked Cancelled, with Support's ask page alone
+    and no cancellation, return or payment link, and never counted open…";
+  - nothing needs the user's call; the lead may put the quote-expiring alert (first finding) to the user.
+
+**Review Nov 14 (P19).** Master (Sales P16, Marketing P8) merged into the three worktrees first, both sides kept: mr-mantle
+`OrderServices.xml` `create#RecurringOrders` keeps P16's description with P19's `operation="sales.recurrence.run"`; `SalesAnalysis.js`
+took P16 review R5's template and base exclusion beside P19's reader and cost (auto-merged); mr-boss `usl-inventory.md` has P16's table
+then P19's. mr-pass had nothing to merge.
+- Checked and sound:
+  - `run#SalesAnalysis`: Accounting's reader path unchanged (organization, periods, rollup); a Sales report reader is answered only for
+    an organization of their sales scope (`reportOrganizations`, ORGANIZATION_DENIED outside), its periods the organization's own; the
+    Sales reader's cost and margin need PRICE_VIEW and PRODUCT_COST_VIEW, so P1's rule (a SALES_REPORT_VIEW holder without
+    PRODUCT_COST_VIEW gets no cost) is kept and narrowed, not widened; withheld costs are null, never zero, and the assets' cost is not
+    read at all for a non-cost reader. The rebuilt screen reads no entity, has no cost search, cost sort or SQL dialog (F76, F79); its
+    cost columns are hidden and null for a non-cost reader in html, CSV, XLSX and saved finds (SalesReports' csv with a cost filter
+    and sort as the Sales administrator).
+  - SalesSummary: one organization of the scope and one currency, the four summaries asked for both (F77, F81), Sales' choices.
+  - Pipeline reports: `reader` requires SALES_REPORT_VIEW and an organization of the scope; `deals` reads only the reader's
+    organizations and the deals they see (`assignedOpportunityIds`; the organization's all only with SALES_TEAM_VIEW), owner and team
+    filters intersected with that; every amount keyed by currency, counts apart; past 2,000 deals TOO_MANY_RECORDS before anything is
+    counted; win rate over won and lost opportunities, a disqualified lead apart; stage stays unknown where the log does not chain.
+  - Catalogue: `get#SalesReports` answers the root Sales only, Forecast to every Sales reader and the rest to a report reader;
+    `Sales.SalesAnalysis` at Sales' route under it, `Accounting.SalesAnalysis` under Accounting's `get#Catalog` (F59); the new
+    services are `allow-remote="false"` and admitted to no Assist or MCP tool.
+  - Accounting's mount: a subscreens-item of Accounting/Reports.xml, so its authorization is Accounting's root (BOSS_SAL_REPORTS
+    names Sales/Reports.xml only); Accounting's choices by `appRoot`; AccountingReporting unchanged in behavior.
+  - Insights: the stage-age dataset is the pipeline's document with the same row filter (`get#PipelineRowFilter`, MantleSalesScope),
+    in BOSS_SAL_DATASETS with the pipeline dataset's grants; metrics descriptive; the alert and digest run as their owner under the
+    framework's business-schedule rule (Monitoring.md: only owner-equivalent recipients get the result); the dashboard's amount panel
+    is split by currency; flow targets' routes and organization parameter.
+  - The cancelled-order carry-over (§4): only a storeless order's OrderView resolves after cancellation (Download, renewal, quote
+    scopes and a store order's link still end); listed under all, never open, not on the account card's count; no cancel, return or
+    Billing link, the ask link alone ("Ask about this order"). Staff issuing a new OrderView link for a cancelled storeless order
+    (create resolves by the same rule) only gives the customer the read-only page §4 keeps reachable: acceptable. The PDF is the
+    confirmation as placed, with no cancelled mark, beside a page that says Cancelled: acceptable for now, a provisional finding.
+  - `operation`/`operation-ref` on QuoteBatch, the import row and the recurrence worker.
+- Fixed:
+  - R1 (high, confidentiality): `run#SalesAnalysis` gave Accounting's report reader the cost of shipped and the margin with
+    `ACCOUNTING_VIEW` alone (`costShown: true`), so Accounting's approvers (BOSS_ACCOUNTING_APPROVE: ACCOUNTING_VIEW, no
+    PRODUCT_COST_VIEW) and a Sales report reader who also holds ACCOUNTING_VIEW saw per-product costs; design §8 says margin columns only
+    where both price and cost rights permit, and design-accounting §13's "finance columns" are the ordered, shipped, invoiced and returns
+    columns, not cost. Now Accounting's reader needs PRODUCT_COST_VIEW too (their report read is their read of the sales values).
+    SalesPipelineReports' analysis feature checks an ACCOUNTING_VIEW and SALES_REPORT_VIEW holder without cost read (failed before:
+    costShown true). Screen, Accounting's mount comment and catalog entry, design-sales §8, design-accounting §13 and the inventories say so.
+  - R2 (low): readiness' scheduled jobs leave out the recurrence worker (`create_RecurringOrders`), which places Sales' recurring
+    orders (P16); added.
+  - R3 (low, wording): the weekly digest said each recipient's rows are their own scope's; it renders as its owner and reaches only an
+    owner-equivalent recipient.
+- Provisional findings (for the lead to number):
+  - the plan (P19's Insights registrations) and design §8 L6 ship the alert template "quote expiring in N days"; it is not built (no
+    quote dataset). Building it needs a quote dataset (document, feed, Sales' quote row filter, grants and admission) beside the alert
+    JSON; Home's counter and Insights' Sales.QuotesExpiring attention provider show expiring quotes now. Required by the plan, so the
+    user's call: build it (a follow-up) or accept the attention provider in its place;
+  - "deal with no activity for N days" is built as "no stage movement" (`stageEnteredDate`): a logged call or task does not reset it,
+    so a worked deal sitting in one stage fires; the design's wording asks for activity;
+  - the "weekly pipeline and forecast digest" is the pipeline dashboard alone; forecasts are not in it (no forecast dashboard exists);
+  - the readiness additions (jobs, templates, approval rules) have no spec;
+  - a cancelled storeless order's confirmation PDF carries no cancelled mark.
+- Tests (release binary, `--nobuild`, this worktree's runtime, after the merge and the fixes): mr-mantle SalesPipelineReports,
+  SalesWorkspace, SalesReports, SalesReportStoreScope, SalesPortal, SalesPipelineSetup, SalesOpportunityImport, SalesForecasts,
+  SalesRecurrence, OrderLifecycle and SalesQuoteIssue 57 of 57 (52 s run; SalesPipelineReports 0.57 s of features); mr-boss SalesReports,
+  SalesReportCatalog, SalesAccess, SalesSettings, AccountingReporting, InsightsCatalog, InsightsFlowMaps, CommerceReports,
+  InsightsDashboards and SalesRecurrence 56 of 56 (45 s); mr-pass SalesPortalAccess 4 of 4. SalesPipelineReports with R1's check on
+  the unfixed SalesAnalysis.js: 3 of 4 (the check failed, as it should). `moqui lint --screens`: nothing in Sales/Reports or
+  Accounting/Reports.xml. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: as the Built note; R1's check adds one user and one call to an existing feature (about 0.01 s);
+  - merge hot spots: as the Built note, plus mr-mantle `SalesSettings.js` (`salesJobs`), mr-boss `data/BossSetupData.xml` (the
+    Accounting.SalesAnalysis entry's description) and `report/boss-sales-weekly-digest.json`;
+  - the user's call: the quote-expiring alert (first finding); nothing else;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' forecasts: "Sales' reports
+    (`mantle.sales.ForecastServices` get#PipelineAnalysis and get#WinLoss, `SalesWorkspaceServices.get#SalesReports`, all
+    `allow-remote="false"`): a Sales report reader (`SALES_REPORT_VIEW`) of the organizations of their scope, over the deals they see
+    (their own and their teams', the organization's with `SALES_TEAM_VIEW`); another organization ORGANIZATION_DENIED; amounts never
+    added across currencies; past 2,000 deals refused (TOO_MANY_RECORDS). The catalogue answers the root Sales only.
+    `run#SalesAnalysis` also answers a Sales report reader for an organization of their scope; the cost of shipped and the margin
+    only for a holder of PRODUCT_COST_VIEW who is Accounting's report reader (`ACCOUNTING_VIEW`) or also holds PRICE_VIEW, withheld
+    (null) otherwise, the assets' costs not read; Accounting's Reports/SalesAnalysis is a mount of Sales' screen under Accounting's
+    root authorization." And in the PASS Sales orders paragraph: "…ended by the order's cancellation…" becomes "…not ended by the
+    order's cancellation for a storeless order's OrderView link (it opens the order marked Cancelled, read only; Download and a store
+    order's link still end)…", and "…not a recurring base or template and not cancelled or rejected, is shown…" becomes "…not a
+    recurring base or template and not rejected, is shown; a cancelled one is shown read only, marked Cancelled, with Support's ask
+    page alone and no cancellation, return or payment link, and never counted open…".
+
 ### P20 — Finish
 
 - The tui and server-static screen sweeps of Sales, one acceptance test per mode (each screen's twin is built in its

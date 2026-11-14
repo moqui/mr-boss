@@ -125,6 +125,8 @@ feature("the partner ledger, posted amounts and sales analysis run for the demo 
         postedPrint.output.includes("Accounts Receivable")
         sales.errors == []
         sales.output.includes("Net invoiced")
+        // Sales' report mounted under Accounting (impl-sales P19): a report reader is shown the finance columns
+        sales.output.includes("Cost of shipped")
     }
 })
 

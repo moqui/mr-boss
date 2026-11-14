@@ -1,0 +1,75 @@
+{
+  "id": "boss-sales-stalled-deals",
+  "type": "alert",
+  "title": "Deals with no stage movement",
+  "body": {
+    "description": "Fires when open opportunities have stayed in their stage for more than 14 days, by owner, among the deals its owner's sales scope reads. A template: copy it in Insights \u203a Business alerts, set the days (the query's thru, now-14d), the threshold and the audience, then activate it.",
+    "query": {
+      "datasetId": "mantle-sales-pipeline-stage-age",
+      "from": "now-3650d",
+      "thru": "now-14d",
+      "aggregations": [
+        {
+          "id": "owner",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "ownerPartyId",
+            "size": 50
+          }
+        },
+        {
+          "id": "deals",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "salesOpportunityId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "field": {
+              "name": "statusId",
+              "op": "eq",
+              "value": "SalesOppOpen"
+            }
+          },
+          "label": "Open"
+        },
+        {
+          "query": {
+            "field": {
+              "name": "typeEnumId",
+              "op": "eq",
+              "value": "SotOpportunity"
+            }
+          },
+          "label": "Opportunities"
+        }
+      ]
+    },
+    "field": "deals",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "sales",
+      "severity": "warning"
+    }
+  }
+}

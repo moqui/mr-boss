@@ -56,7 +56,9 @@
         "laneId": "selling",
         "title": "Quote and negotiate",
         "sequenceNum": 1,
-        "description": "A salesperson qualifies the opportunity and sends a quote. The Sales app is not part of this installation yet, so this step is information only.",
+        "description": "A salesperson qualifies the opportunity and sends a quote; the customer accepts it and it becomes a sales order. Quotes waiting to be sent or expiring are in Sales.",
+        "targetRegistrationId": "Sales.Quotes",
+        "catalogEntryId": "Sales.PipelineAnalysis",
         "next": [
           "order"
         ]
