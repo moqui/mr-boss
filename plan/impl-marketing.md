@@ -1,3 +1,6 @@
+Nov 14, 2026 — gate 1 built: P1–P5 (stage M0–M1), campaigns and audiences, each phase reviewed by a fresh agent and merged on its
+focused specs, beside Sales P7–P11. The user's calls of the build are in §4. Next: P6 (templates, sending profiles and bounce intake),
+P7, then the sends (P8, with a paged evaluation past the 5,000 preview cap).
 # IronStone BOSS — Marketing implementation
 
 Nov 13, 2026 — P0 done: the checks left after the plan's review, F64–F89 (§6), against master as People, Maintenance,
@@ -413,7 +416,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | built and reviewed Nov 13, merged |
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | built and reviewed Nov 14, merged |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | built and reviewed Nov 14, merged |
-| P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | — |
+| P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | built and reviewed Nov 14, merged |
 | P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | — |
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | — |
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | — |
@@ -1570,7 +1573,7 @@ unchanged, no Rust built. Built beside P4 (`mkt/p4`), which appends to the same 
   flagged sites, as before, none in Marketing. Prettier clean on the changed JavaScript. Not run: test-apps, the acceptance suite.
 - Inventories: usl-inventory's Marketing section gains P5's SegmentServices rows; ss-inventory has no row for P5's screens.
 - Design edits: design-marketing §4 AudiencePreview's as-built paragraph (segments, sources, eligibility, the preview's route grant).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F144 to F152 in order:
   - a rule segment is evaluated over its organization's audience, bounded at 5,000 (the code over the plan above);
   - SegmentList shows no match count or freshness: an evaluation is the caller's own, under their sources;
   - the purchases source reads with `COMMERCE_ORDER_VIEW`, the orders the organization sold, totals in its base currency only;
@@ -1647,7 +1650,7 @@ Segments, SegmentDetail and AudiencePreview; master had nothing newer in either 
   - R5 (confidentiality, low). resultDigest was an unkeyed SHA over the party, the normalized address and the tracking flag: an author
     holding it and a masked address ("j***@domain") of a one-person preview could confirm a guessed address offline. It is now over
     the contact mech id (an address changed is a new contact mech, so P8's comparison still moves with it).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F153 to F159 in order:
   - the universe is the organization's whole audience (every Marketing list's members and its own contacts), so an organization with
     more than 5,000 people on its lists can evaluate no rule segment and preview no segment, and a preview of a list over 5,000 is
     refused: refused, never truncated (R1), but P8's sends to a large list need a paged or streamed evaluation or a universe narrowed
@@ -2407,6 +2410,9 @@ design-marketing.md or the owner's design.
 | Nov 13, 2026 | `MARKETING_ALL_ORGANIZATIONS` is kept, granted to `ADMIN` and `BOSS_MARKETING_ADMIN` alone, as Sales', People's and Maintenance's all-organizations permissions | The user's call (P1) |
 | Nov 13, 2026 | `BOSS_MARKETING_ADMIN` keeps the grants P1 built: every Marketing view and edit, `MESSAGE_TEMPLATE_VIEW` and all-organizations; no approve, dispatch or Comms configuration, so approval and dispatch stay with their own groups | The user's call (P1), as Sales' administrator |
 | Nov 13, 2026 | Comms' explicit permissions are split by Marketing role: `MESSAGE_TEMPLATE_EDIT` to the Marketing content author group, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` to `BOSS_MARKETING_ADMIN`; Comms' own groups gain them when Comms' settings area exists (§7). Granted in P6 with the screens that use them | The user's call (P1) |
+| Nov 14, 2026 | A merge of lists carries a member's grant on a same-purpose source list as an acceptance on the target, evidenced by the source list; a member withdrawn on any source is never carried (P4) | The user's call: design §4's independent target consent is read as a list of another purpose |
+| Nov 14, 2026 | `request#Subscriptions` refuses personal (non-directory) contacts, as the audience import does; built in P6 | The user's call (P4's review) |
+| Nov 14, 2026 | The 5,000-person cap stays for an interactive segment evaluation and audience preview; P8 evaluates a send's audience in pages, over the universe narrowed to the send's lists and segments, so a large list can be sent to | The user's call (P5's review) |
 | Nov 13, 2026 | The one-person-team flag also admits an author's own campaign approval, recorded as a self-approval, as built in P2: a campaign sends nothing itself, and each of its sends is approved on its own under the 500-recipient limit | The user's call (P2) |
 | Nov 13, 2026 | `MARKETING_OWNER_CHANGE` (the lifecycle participant `marketing.campaigns`) is granted to `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`, as built in P2, as Sales' `SALES_OWNER_CHANGE`; no Marketing group holds it | The user's call (P2) |
 | Nov 14, 2026 | The consent mutators keep P3's rule, an owner contract of Comms and Commons: `subscribe#ContactListParty`, `store#PartyConsent` and the signed-in `unsubscribe#ContactListParty` change another party's consent only for the party's own user, a contact administrator or Marketing's consent editor of the list's or purpose's organization; the callers' specs pass unchanged | The user's call (P3). The services that decide who may by a link's token or code (the unsubscribe and preferences links, a checkout opt-in's confirmation) record through the internal `record#PartyConsent`, so a visitor signed in as someone else still unsubscribes (P3 review R1) |
@@ -2573,6 +2579,22 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F141 | P4 (Review Nov 14): request#Subscriptions (P3) admits the caller's own personal contact onto an organization's list, which the import refuses for the reason above; aligning P3 (refuse personal contacts there too) is suggested | P4: as its Review note says |
 | F142 | P4 (Review Nov 14): an import stuck in Applying past its expiry has its file purged and its remaining rows stay not applied, shown so, with no retry; import the file again | P4: as its Review note says |
 | F143 | P4 (Review Nov 14): `get#AudienceImport` names a matched party to an importer by the file's address (a directory lookup by address), as P3's request screens name parties; noted, not changed | P4: as its Review note says |
+| F144 | P5 (Built Nov 14): a rule segment is evaluated over its organization's audience, bounded at 5,000 (the code over the plan above) | P5: as its Built note says |
+| F145 | P5 (Built Nov 14): SegmentList shows no match count or freshness: an evaluation is the caller's own, under their sources | P5: as its Built note says |
+| F146 | P5 (Built Nov 14): the purchases source reads with `COMMERCE_ORDER_VIEW`, the orders the organization sold, totals in its base currency only; registration waits for P16 and tracking events for P15 | P5: as its Built note says |
+| F147 | P5 (Built Nov 14): a withdrawal or unsubscription of anyone at an address blocks every person at it (DESTINATION_WITHDRAWN): the design's "duplicates with conflicting consent require review" built as a block; the duplicate kept is the lowest party id | P5: as its Built note says |
+| F148 | P5 (Built Nov 14): an accepted member is eligible on a granted consent of the topic list or of the purpose (the organization's, else the global one); a legacy member with neither needs evidence; the address's solicitation flag N blocks as a withdrawal | P5: as its Built note says |
+| F149 | P5 (Built Nov 14): Sales' sources evaluate per caller (a representative's own leads, a manager's whole pipeline), so one segment answers differently for two readers; an account counts when the organization owns it or it is shared | P5: as its Built note says |
+| F150 | P5 (Built Nov 14): an "excludes" condition on a multi-valued field matches a known empty set (empty is known, not missing) | P5: as its Built note says |
+| F151 | P5 (Built Nov 14): MarketSegmentParty's dates are fields, not a key, and the native rule rows are not dated (the filter is): their history is the audit log's | P5: as its Built note says |
+| F152 | P5 (Built Nov 14): AudiencePreview's route grant for authors and dispatchers is an ALWAYS on Audiences.xml that is not inherited, a pattern new to the apps' area denies | P5: as its Built note says |
+| F153 | P5 (Review Nov 14): the universe is the organization's whole audience (every Marketing list's members and its own contacts), so an organization with more than 5,000 people on its lists can evaluate no rule segment and preview no segment, and a preview of a list over 5,000 is refused: refused, never truncated (R1), but P8's sends to a large list need a paged or streamed evaluation or a universe narrowed to the preview's lists first | P5: as its Review note says |
+| F154 | P5 (Review Nov 14): purchases are store orders only (R2): a Sales order with no store is no purchase fact, a won Sales opportunity being the Sales source's | P5: as its Review note says |
+| F155 | P5 (Review Nov 14): a withdrawal blocks an address for the matched people only: someone outside the selection who withdrew at the same address does not block it (a suppression does, address-wide) | P5: as its Review note says |
+| F156 | P5 (Review Nov 14): resultDigest and previewKey stay unkeyed hashes (over ids now); a keyed digest needs a server-keyed hash the script host lacks | P5: as its Review note says |
+| F157 | P5 (Review Nov 14): `classify#Recipients` puts another user's personal contact in "not available" by the calling user, so a P8 or P11 caller running as a job user (no user) sees every personal contact as not available; P8 and P11 should call it as the user who prepares | P5: as its Review note says |
+| F158 | P5 (Review Nov 14): SegmentDetail describes a stored Sales condition (its lead sources or campaigns in words) to an editor without Sales, marked unreadable; a definition, not Sales data | P5: as its Review note says |
+| F159 | P5 (Review Nov 14): "has an open lead is false" matches a person whose leads the caller cannot see: it reads as "none you can see" and discloses nothing | P5: as its Review note says |
 
 ## 7. Later
 
