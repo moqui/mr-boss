@@ -585,3 +585,26 @@ feature("Approvals and a quote's decision are a sales approver's, of their organ
         problems.join("\n") == ""
     }
 })
+
+// P10 (impl-sales P10): sending a quote is its rep's, of their organization: with the same parameters (a preview, so nothing is
+// written), the rep reaches the quote's own state check and Ziziwork Sales' rep is refused it as missing; a holder of
+// SALES_QUOTE_EDIT without SALES_QUOTE_SEND is refused in Mantle's SalesQuoteIssue (no demo group holds one without the other)
+feature("a quote's send is its rep's, of their organization", {
+    when() {
+        const send = user =>
+            asUser(user, () =>
+                system(() =>
+                    refusal("mantle.order.SalesQuoteIssueServices.send#Quote", {
+                        orderId: ids.quotes.wingtip,
+                        orderRevision: "1",
+                        previewOnly: "Y"
+                    })
+                )
+            )
+        return {rep: send(users.rep), other: send(users.otherRep)}
+    },
+    then({rep, other}) {
+        rep.includes("QUOTE_NOT_PROPOSED")
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})

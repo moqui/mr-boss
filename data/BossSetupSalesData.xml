@@ -373,4 +373,34 @@ along with this software (see the LICENSE.md file). If not, see
         organization's default team) opens it in Sales' RFQ context, answered by its customer and products alone -->
     <moqui.security.user.NotificationTopic topic="SalesRepairToQuote" linkTemplate="/qapps/Sales/Quotes/QuoteRequestDetail?requestId=${requestId}"/>
     <!-- ===== end of Sales P9 ===== -->
+
+    <!-- ===== Sales P10 (impl-sales P10; design-sales §1.4 CX-ASSIST, SAL-ASSIST): Assist's quote tools ===== -->
+    <!-- find#Quotes for the Assistant and MCP (a read, the user's own sales scope), preview#Quote for the Assistant (the rules a draft
+        meets, never a cost), and send#Quote for the Assistant alone, a write the user approves before it runs (AgclWrite), none on MCP.
+        A tool runs as the user outside Sales' screens, so the Sales groups are granted these three services (each checks its permission,
+        the organization and the assignment itself), as P6's opportunity tools. -->
+    <artifactGroups artifactGroupId="BOSS_SAL_QUOTE_TOOLS" description="Sales: the quote services Assist's tools call">
+        <artifacts artifactName="mantle\.order\.SalesQuoteServices\.find#Quotes" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.order\.SalesApprovalServices\.preview#Quote" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.order\.SalesQuoteIssueServices\.send#Quote" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SAL_QUOTE_TOOLS_SALES" userGroupId="BOSS_SALES" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_SAL_QUOTE_TOOLS_ADMIN" userGroupId="BOSS_SALES_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.agent.AgentToolExposure toolName="sales_find_quotes" serviceName="mantle.order.SalesQuoteServices.find#Quotes"
+            title="Sales quotes"
+            description="find#Quotes: the quotes the user may see in Sales (their own and their teams', or their organizations' for a manager), narrowed by text, organizationPartyId, customerPartyId, salesOpportunityId, mine (Y), state (open, draft, proposed, cancelled or all) and validity (expiring or expired), paged; each with its customer, total, validity, owner and revision (orderRevision, which send needs)."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="sales_preview_quote" serviceName="mantle.order.SalesApprovalServices.preview#Quote"
+            title="Approvals a quote needs"
+            description="preview#Quote: the approval rules a quote (orderId) meets at its revision, each with what meets it, the approver it needs and its state (needs approval, waiting, approved, refused). It shows no cost."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="sales_send_quote" serviceName="mantle.order.SalesQuoteIssueServices.send#Quote"
+            title="Send a quote"
+            description="send#Quote: a proposed quote (orderId) issued and sent at the revision read with find#Quotes (orderRevision) to recipientPartyIds (the customer or its contacts; empty for the quote's contact), from the user's own mail (sendMode own, the quote's owner) or the organization's (organization); previewOnly Y first says who gets it and the PDF's name. Needs an operationKey. The user approves it first."
+            classificationEnumId="AgclWrite" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <!-- ===== end of Sales P10 ===== -->
 </entity-facade-xml>

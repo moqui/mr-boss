@@ -335,7 +335,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | built and reviewed Nov 13, merged |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | built and reviewed Nov 13, merged |
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
-| P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | — |
+| P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | built and reviewed Nov 14, merged |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | — |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | — |
@@ -2665,6 +2665,233 @@ CX-DELIVERY (X8), X2, X3.
   their PO and sees one placed order, read only at the one OrderDetail route until P11 gives it its actions;
   revising the quote ends the old issue's authority and keeps its PDF.
 
+**Built Nov 14 (P10).** mr-mantle and mr-boss on branch `sal/p10` (hashes in the worker's reply), with master (Sales P8) merged in first;
+mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P7's and P9's Built and Review notes, P8's merged code, §4 (the commercial revision row, the
+  acceptance threshold, the build order), F9, F10, F15, F16, F70, F151, F166 and F167; `increment#OrderRevision` and the revision EECAs,
+  `handle#OrderPartChange`, `propose#Order`, `place#Order`, `cancel#Order`, `clone#Order`, the Proposed and Being changed transitions;
+  the delivery ledger (MessageDeliveries.js), cart recovery's source; OrderConfirmations.js' stored PDF and resend; the framework's
+  `send#EmailTemplate` (body, attachments) and the mail capture. The code over the plan:
+  - the ledger hands `send#EmailTemplate` only body parameters, and a template with no body screen needs `body`: the ledger now passes a
+    source's `body`, `bodyText` and `attachments`, and the PDF goes as bytes (the mail sender reads a file path, not the content store);
+  - a send's ledger attempt in a transaction of its own cannot see the issue the send has not committed: the attempts run on the send's
+    commit (`attempt#QuoteDeliveries`, `registerOnCommit`), and a failed delivery is queued again by a new ledger verb,
+    `requeue#Delivery` (a failed or waiting one only; an uncertain one is reviewed, never resent);
+  - `place#Order` marks a first order's part `isNewCustomer` and the customer's PO is a part field, each an OrderPart update counted as a
+    commercial change, which moved an accepted quote's revision past its issue and decisions (P9's pre-approval warnings would then
+    have read its quote rules as open): under the seller's commercial revision a part update changing only the customer's reference or
+    the new-customer mark is a `reference` revision, not counted;
+  - F166 (the lead's question): an owner or team reassignment is counted as not commercial under the flag (`OrderPartPartyRevision`
+    passes `assignment` for SalesRepresentative and SalesTeam), so it keeps the issue and the approvals; the contact stays commercial;
+  - recipients are parties (the customer and its current contacts, employees and representatives), each sent to at its current email,
+    so a contact with no email fails and is retried once it has one; the ledger's key is the party, so two addresses of one party get
+    one delivery an issue;
+  - Mantle names no BOSS route, so the print's QR and the customer's link wait for P13's PASS link; the PDF carries none until then;
+  - a send issues a new issue only with every approval current at its revision, since a change made after the proposal outside Sales'
+    draft verbs (the native order entry) moves the revision of a proposed quote;
+  - "the rep's own send through Comms Compose": the dialog sends from the owner's own mail account directly (a mail client draft with
+    the PDF, `send#EmailDraft`, filed on the order), as Customer Service's confirmation resend does, rather than opening Compose;
+  - the reminder job runs daily and sends nothing until an organization sets its reminder days, so reminders are off by default and the
+    field SalesDefaults shows does what it says.
+- Mantle:
+  - `entity/SalesQuoteIssueEntities.xml` (new): SalesQuoteIssue (order, commercial revision, seller, customer, issued, issuer, validity,
+    the PDF's OrderContent and location, end and reason: SqeRevised, SqeWithdrawn, SqeDeclined, SqeSuperseded) and SalesQuoteResponse
+    (SqrAccept or SqrDecline of one issue, SqsStaff or SqsPortal, responded and recorded, contact, PO, evidence mail or file, reason,
+    the order's status after it, operation key); SalesPolicy's `quoteTextLocation` and `reminderTextLocation` (F70).
+  - `data/SalesQuoteIssueData.xml` (new): OctSalesQuoteIssued, the ledger sources MdsrcSalesQuote and MdsrcSalesQuoteReminder with their
+    builds, the EmailTemplates MANTLE_SALES_QUOTE and MANTLE_SALES_QUOTE_REMINDER, the daily `send_SalesQuoteReminders` job.
+  - `template/order/`: `SalesQuote.print.html.fancy` (trusted print, a draft marked so), `SalesQuoteEmail.html.fancy` (the mail body),
+    `SalesQuoteText.html.fancy-locked` (the default cover and terms) and `SalesQuoteReminder.html.fancy-locked`, the locked text
+    rendered with an explicit map (quote, customer, contact, seller, rep, dates, total, link; an unknown location renders empty).
+  - `service/mantle/order/SalesQuoteIssues.js` and `SalesQuoteIssueServices.xml` (new): `get#QuoteIssues`, `send#Quote`
+    (COMMERCIAL_REVISION_OFF, QUOTE_NOT_PROPOSED, VALIDITY_REQUIRED, QUOTE_EXPIRED, RECIPIENT_INVALID, SEND_ACCOUNT_REQUIRED, the
+    approvals, the operation key; previewOnly), `attempt#QuoteDeliveries`, `build#QuoteMessage`, `build#QuoteReminderMessage`,
+    `send#QuoteReminders`, `respond#Quote` (under the order's lock: ISSUE_UNAVAILABLE, RESPONSE_EXISTS, ISSUE_ENDED, ISSUE_SUPERSEDED,
+    ISSUE_EXPIRED, DATE_INVALID, CONTACT_INVALID, EVIDENCE_INVALID, REASON_REQUIRED, PO_REQUIRED; a second acceptance answers the first;
+    `place#Order` once, outcome placed, approved or held; a decline through Cancel Quote), `withdraw#Quote`, `revise#Quote` (Begin
+    Changes and a commercial revision), `clone#Quote` (clone#Order without files, notes or payments; the caller its owner; retaxed),
+    `apply#QuoteBatch` (send or withdraw, "orderId@revision", each its own transaction and key), `get#QuotePrint`,
+    `get#QuoteIssueDocument`.
+  - `SalesQuoteServices.xml` propose#Quote over SalesQuoteIssues.js `proposeQuote` (P9's guard after P10's checks: PARTS_INVALID,
+    PRICE_UNAVAILABLE, PRODUCT_NOT_USABLE, TOTAL_INVALID, VALIDITY_REQUIRED, QUOTE_EXPIRED, VALIDITY_INVALID, F151's TAX_UPDATED and
+    ADDRESS_REQUIRED); `SalesApprovals.js` (Being changed a draft, the two text locations among the policy's fields, `requireApproved`
+    and `linesOf` exported, `proposeQuote` moved); `SalesQuotes.js` (Being changed a draft and in the open states; an RFQ's team).
+  - Owner contracts: `entity/Order.eecas.xml` (OrderPartPartyRevision's `assignment` kind, F166), `OrderServices.xml`
+    (`handle#OrderPartChange`'s `reference` kind; `increment#OrderRevision`'s description), `MessageDeliveries.js` and
+    `MessageServices.xml` (a source's body and attachments; `requeue#Delivery`).
+  - P8's review (the lead's note): `create#QuoteFromRequest` gives an RFQ's quote the RFQ's team (the maker stays its owner), through an
+    internal value of `createQuote` that no service declares.
+- BOSS:
+  - `template/SalesQuotes.xml` (a P10 block: salesProposeQuote, salesRespondQuote, salesWithdrawQuote, salesReviseQuote, salesCloneQuote,
+    salesQuotePrint, salesQuoteDocument, applyQuoteBatch) and F167: salesDecideQuote passes an operation key, which OrderDetail's
+    Approve and Refuse forms now make, so a double submit answers the first decision.
+  - `template/SalesOrderDetail.xml`: the state's one primary (Propose, Send, Record acceptance; Add line for an empty draft), More with
+    Record decline, Revise, Withdraw, Copy as a new quote and Print (PDF), the commercial revision's warning, and Issues and responses;
+    `screen/Shared/OrderDetail.xml` includes the transitions (owner contract, beside P7's and P9's).
+  - `screen/Sales/Orders/QuoteSend.xml` (new; mounted in `Sales/Orders.xml`): the send's dialog with its preview (recipients and their
+    email, from whose mail, template, the PDF's name, who has it already).
+  - `screen/Sales/Quotes/Quotes.xml`: QuoteBatch (Send, Withdraw) on the rows' selection; `Sales/Settings/SalesDefaults.xml`: the PO
+    requirement and the reminder days.
+  - Assist: `skill/sales-issue-quote.md`, two chips on OrderDetail (`screen/Sales.xml`), and in `data/BossSetupSalesData.xml` (a P10
+    block) the tools `sales_find_quotes` (Assistant and MCP), `sales_preview_quote` and `sales_send_quote` (Assistant; the send a write
+    the user approves) with BOSS_SAL_QUOTE_TOOLS granting the three services to the Sales groups; `test/skill-retrieval.json` two cases.
+- Specs:
+  - Mantle `test/order/SalesQuoteIssue` (new, 5 features, 2.7 s): propose refused with no validity, a storeless quote taxed at the
+    customer's address added since (TAX_UPDATED, then proposed) and one with no address refused; a send issues the quote at its revision
+    with its PDF (OctSalesQuoteIssued), the mailed contact sent and the unmailed one failed, and a note, a file and a team row leave the
+    revision (F166); a second send skips the one sent and retries the failed one, which succeeds once it has an email, one issue; the
+    flag off, a rep without SALES_QUOTE_SEND, another organization's rep and a stale revision refused; revise ends the issue (SqeRevised)
+    and keeps its PDF, the revised quote issued anew, a native line change supersedes that issue. `test/order/SalesQuoteResponse` (new,
+    3 features, 2.6 s): one key and two keys give one response and one placed order, the PO on the part, the revision unchanged, a
+    decline after it refused; a decline needs its reason, cancels the quote and ends its issue; an expired issue, a withdrawn one and
+    another organization's rep refused. Shared fixtures in `test/order/SalesQuoteIssueFixtures.js`. `SalesQuoteRequests` (P8's): the
+    manager's quote of the rep's RFQ is the RFQ's team's and the rep opens it.
+  - mr-boss `test/Sales/SalesQuoteSend` (new, 1 feature, 1.4 s): QuoteSend's one html render after an issue (the stored PDF's name, its
+    recipient, issued already). `SalesQuotes`' one OrderDetail qvt render checks Propose, Copy and Print and no Record acceptance;
+    `SalesAccess` (a P10 feature, 0.1 s): the rep reaches the send's state check and Ziziwork Sales' rep is refused the quote, with the
+    same parameters.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesQuoteScenarios` (3 features: proposed and sent through QuoteSend to
+    two contacts, the one with no email retried alone under the one issue; the acceptance with the PO through salesRespondQuote, one
+    placed order, a second acceptance answering the first; a revised quote's old issue refused with its PDF kept). It places only
+    through respond#Quote (place#Order).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteIssue 5 of 5, SalesQuoteResponse 3 of 3,
+  SalesQuoteRequests 4 of 4, and with them CartRecovery, DeliveryLedger, DropShip, OrderBulk, OrderChanges, PurchaseApprovals,
+  PurchaseOrders, PurchaseRevisions, RecordVisibility, SalesQuoteApprovals, SalesQuoteDrafts, SalesWorkspace, ShopSubscriptions,
+  StoreFulfillment, StoreOperations, StoreReviews, StorelessOrderTax, SupplierPortal, OrderLifecycle, OrderConfirmations, ShopCheckout,
+  StoreCheckout, OrderToCashBasicFlow, WorkProjectMilestones, AccountingCredit, ReturnToResponseBasicFlow, SalesLeadIntake and
+  SalesOpportunities 231 features, all passing but SalesQuoteResponse's setup (its first prefix was P8's; renamed and run again, 7 of
+  7 with SalesQuoteRequests). mr-boss SalesQuotes, SalesQuoteSend, SalesAccess, SalesApprovals, SalesQuoteRequests, SalesSettings,
+  SalesHome, SalesOpportunities, SalesAccounts, CustomerServiceOrders, CustomerServiceOrderChanges, CommerceOrders, PurchasingOrders,
+  ProjectsAccess, AccountingCollections, AccountingReceivables, Notifications, QuickCreate, AdminRegistries, AdminCapabilities,
+  InsightsRecords, ProductsSharedContext, Chat and RecordFiles 170 of 170 (25 specs). `./moq test mr-boss --skills`: recall@3 1.00 (50
+  of 50). `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on the new
+  and changed JavaScript. Not run: the client walk (no screen it walks changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's propose#Quote row and an "Added in the Sales build: issue, send and the customer's response" table;
+  ss-inventory's OrderDetail SendPlacedEmailForm, EmailMessageList and CloseOrderPartItems rows (Sales P10).
+- Design edits: design-sales §5 "As built (impl-sales P10)"; design-crosscut's X2 row (the assignment and reference kinds, owner
+  contract with Customer Service's proposals and Purchasing's revisions, which pass unchanged).
+- Findings, numbered by the lead F183 to F191 in order:
+  - F166 decided as built: an owner or team reassignment and the customer's reference or new-customer mark alone are not commercial
+    changes under the seller's commercial revision; the contact, addresses, terms, lines and validity still are;
+  - the rep's own send goes from the send dialog straight through their mail account (no Compose window, so the message's text is
+    the dialog's message and the organization's cover); a send by anyone else, or a batch, is the organization's on the ledger;
+  - recipients are the customer and its current contacts, employees and representatives, by party; one delivery an issue and party;
+  - the quote PDF has no QR or customer link until P13's PASS link (Mantle names no staff route);
+  - a credit-held acceptance (design scenario 7) has no regression: a hold comes only from an automatic approval on a covering
+    payment, which a net-terms acceptance never has; respond#Quote reports held from the order's holds, and P11's approval path is
+    where its spec belongs;
+  - Quotes' "Responded" saved list and QuoteList's "last send/response" columns (design §5) are not built: an accepted quote is
+    placed and a declined one is cancelled; the issues show on OrderDetail;
+  - the quote and reminder templates and the stored text locations are set through store#SalesPolicy, not on SalesDefaults (the
+    text has no editor yet; F156 continues for them);
+  - an acceptance's evidence mail (`evidenceEmailMessageId`) is checked to exist, not to be filed on the quote; the dialog offers
+    the quote's files only;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the issue verbs; P10 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 5.3 s (SalesQuoteIssue 2.7 s, SalesQuoteResponse 2.6 s; SalesQuoteRequests unchanged in time);
+    mr-boss server about 1.5 s (SalesQuoteSend 1.4 s, SalesAccess' P10 feature 0.1 s); client none;
+  - merge hot spots: mr-mantle `service/mantle/order/OrderServices.xml` (handle#OrderPartChange's parameters and revision step,
+    increment#OrderRevision's description), `entity/Order.eecas.xml` (OrderPartPartyRevision), `service/mantle/party/MessageDeliveries.js`
+    and `MessageServices.xml` (attempt's pass-through, requeue), `service/mantle/order/SalesQuoteServices.xml` (propose#Quote's
+    actions and description in P9's block), `SalesQuotes.js` (draft states, create's team), `SalesApprovals.js` (draft states, policy
+    fields, exports, propose removed), `SalesQuoteRequests.js` (the RFQ's team), `test/order/SalesQuoteRequests.spec.js`; mr-boss
+    `template/SalesQuotes.xml` (P10 block; salesDecideQuote's key), `template/SalesOrderDetail.xml`, `screen/Shared/OrderDetail.xml`
+    (P10 includes), `screen/Sales/Quotes/Quotes.xml`, `screen/Sales/Orders.xml`, `screen/Sales.xml` (two assist-prompts),
+    `screen/Sales/Settings/SalesDefaults.xml`, `data/BossSetupSalesData.xml` (P10 block at the end), `test/Sales/SalesAccess.spec.js`
+    (a feature at the end), `test/Sales/SalesQuotes.spec.js`, `test/skill-retrieval.json`, `plan/usl-inventory.md`,
+    `plan/ss-inventory.md`, `plan/design-sales.md` (§5 as built), `plan/design-crosscut.md` (X2's row). Marketing P3's files are not
+    touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), the line: "- Sales' quote issue (`mantle.order.SalesQuoteIssueServices`,
+    all `allow-remote="false"`): each verb needs `SALES_QUOTE_EDIT` on a quote of the caller's sales scope (another's answers as
+    missing), and `send#Quote` also `SALES_QUOTE_SEND`, the seller's commercial revision on and every approval current; recipients are
+    only the customer and its current contacts; `respond#Quote` locks the order and admits one response an issue, within its validity
+    and at its revision, and places only through `place#Order`; sends, responses and batches carry operation keys; the ledger's
+    builds read the issue alone and are suppressed once it no longer stands; the stored cover, terms and reminder text render locked
+    with an explicit map.";
+  - nothing needs the user's call; F166 is decided as the lead asked (counted not commercial), and the own-mail send's form (no
+    Compose window) may be worth the user's look.
+
+**Review 2026-11-14 (P10).** A fresh review of `sal/p10` (mr-mantle 582e3eca, mr-boss 37b40bd6; master had nothing newer, so no merge)
+against P10, §2, §4, design §5, §13.2 and §16, F9, F16, F70, F151, F166 and F167.
+- Checked and sound:
+  - Owner contracts: `assignment` (OrderPartParty SalesRepresentative or SalesTeam) and `reference` are skipped only where the order
+    counts commercial changes only (the seller's flag, or a buying organization's PurchasePolicy), and counted as before everywhere
+    else; P9's supersession (`revisionChanged`) compares each decision's revision with the order's, so an uncounted call supersedes
+    nothing. Customer Service's order changes, Purchasing's orders, approvals and revisions, Shop, Store, the storeless tax, the
+    approvals and the ledger's callers pass unchanged (below). `requeue#Delivery` is `allow-remote="false"`, called only by send#Quote
+    (no screen, Assist tool or job), and moves only a failed or waiting delivery: a sent, suppressed or uncertain one is left. The
+    ledger's new pass-through of a build's `body`, `bodyText` and `attachments` changes nothing for a build that returns none.
+  - send#Quote: SALES_QUOTE_EDIT on a quote of the caller's scope and SALES_QUOTE_SEND; the own-mail mode only for the quote's owner
+    from an account `get#EmailAccountAccess` gives the caller as sendable (another's account id answers SEND_ACCOUNT_REQUIRED);
+    recipients only the customer and its current contacts, employees and representatives; a second send reuses the standing issue,
+    skips who has it and requeues who failed; the PDF is rendered and stored at the revision the issue binds (its OrderContent is not
+    counted under the flag). The PDF's location is in no operation result, audit field, notice, preview or Assist answer;
+    `salesQuoteDocument` streams it.
+  - respond#Quote: one response an issue, a second acceptance answering the first and a decline after it refused; within the
+    validity and at the issue's revision; a decline needs its reason and cancels through `cancel#Order`; an acceptance places once
+    through `place#Order` (no other placement in the phase; the acceptance spec places only so); staff record it with SALES_QUOTE_EDIT
+    and the scope; the PO goes on the part as a `reference` change.
+  - Assist: `sales_send_quote` is AgclWrite on the Assistant only (the user approves it), `sales_find_quotes` is find#Quotes, scoped to
+    the user's sales scope, on MCP; the skill tells the agent never to send, accept or decline for the user.
+  - Screens: one html render of QuoteSend and one qvt render of OrderDetail in the regression suite; the batch keys name the revision
+    listed, each quote on its own transaction; the Settings fields are those P10 reads.
+- Fixed:
+  - R1 (medium, sender identity): the organization's quote and reminder mail fell back to the issuer's own address when the
+    organization had no primary email, so a later send or reminder by someone else went out as the rep who issued it (and the demo
+    seller, Ziziwork Retail, has no primary email, so every organization send did). The build now sends from the organization's own
+    email only (its primary first, else another current one) and fails, to be sent again, while it has none. Fails on the unfixed
+    code (the mail went from the rep's address).
+  - R2 (medium, §2 operation keys): send#Quote did not lock the order, so two sends at once could each make an issue at one
+    revision; send#Quote and respond#Quote read the operation key before the lock, so a concurrent double submit with one key hit
+    the key's duplicate row instead of answering the first. Both now lock the order first (a preview does not lock). No concurrent
+    spec.
+  - R3 (medium, owner contract): `handle#OrderPartChange` called an update `reference` (uncounted) when the reference or the
+    new-customer mark changed and the address, carrier, customer, status and validity did not, so an update writing the reference
+    with any other field (the vendor, facility, ship-by dates, terms) was not counted. It now compares every field of the stored part
+    with its original value, the reference fields aside. Fails on the unfixed code.
+  - R4 (low, failure tolerance): the reminder job queued every issue in its own try but one transaction, so a failing service call
+    could roll back all the reminders (and its attempts, in transactions of their own, could not see the queued rows); each issue now
+    queues in a transaction of its own. The new feature checks no reminder without the organization's days and one with them.
+- Findings, numbered by the lead F192 to F196 in order:
+  - an acceptance's evidence mail (`evidenceEmailMessageId`) is any existing EmailMessage, not one filed on the quote (no screen or
+    tool passes it today; the Built note's finding stands);
+  - the reminder job reads the oldest 500 unended unexpired issues, and an accepted issue stays unended until it expires, so with
+    many open issues newer ones wait;
+  - `applyQuoteBatch` makes its operation key on the server, so a double submit of the batch is two batches (the ledger and the
+    states keep it from sending twice: a sent recipient is skipped, a withdrawn quote refused);
+  - Marketing P3's suppression at the attempt reads the organization from the delivery's store; a quote or reminder delivery has
+    none, so only blocks of every organization apply to it, not the selling organization's own;
+  - the Built note's findings stand.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteIssue 6 of 6 (a sixth feature, about 0.7 s)
+  and SalesQuoteResponse 3 of 3 (38 s, twice more after the fixes); SalesQuoteIssue, SalesQuoteResponse, SalesQuoteRequests,
+  DeliveryLedger, CartRecovery, OrderChanges, PurchaseRevisions, PurchaseOrders, PurchaseApprovals, OrderLifecycle, OrderConfirmations,
+  ShopCheckout, SalesQuoteApprovals, SalesQuoteDrafts, StoreCheckout, StorelessOrderTax, OrderToCashBasicFlow, SupplierPortal, DropShip
+  and OrderBulk 149 of 149 (22 specs with dependencies, 157 s). mr-boss SalesQuoteSend, SalesQuotes, SalesAccess, SalesApprovals,
+  SalesSettings, CustomerServiceOrders, CustomerServiceOrderChanges, PurchasingOrders and CommerceOrders 33 of 33 (69 s). R1's and
+  R3's checks were run against the unfixed code and failed there. Prettier clean. Not run: test-apps, test-framework, acceptance
+  (SalesQuoteScenarios unchanged; with R1 the demo seller sends from its billing or shipping address).
+- For the lead:
+  - budget share: mr-mantle about 6 s for P10 (SalesQuoteIssue's sixth feature adds about 0.7 s); mr-boss as the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/order/OrderServices.xml` (handle#OrderPartChange's script),
+    `test/order/SalesQuoteIssue.spec.js`. Marketing P3 (`mkt/p3`) overlaps P10 in two ledger files, and both merge without conflict
+    (`git merge-tree`): `service/mantle/party/MessageDeliveries.js` attemptStep, where P3 adds the suppression line after the
+    recipient's address check and P10 adds the body, bodyText and attachments to the send#EmailTemplate parameters a few lines below,
+    and P10's requeue/requeueStep in the operations map (P3 adds `suppressedFor` above attemptStep and a require at the top);
+    `service/mantle/party/MessageServices.xml`, where P3 edits attempt#Delivery's description and appends its suppression services
+    at the end, and P10 adds requeue#Delivery and requeue#DeliveryStep after receipt#Delivery. A requeued delivery passes P3's check
+    at its next attempt;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' approvals: "Sales' quote issue
+    (`mantle.order.SalesQuoteIssueServices`, all `allow-remote="false"`): each verb needs `SALES_QUOTE_EDIT` on a quote of the
+    caller's sales scope (another's answers as missing), and `send#Quote` also `SALES_QUOTE_SEND`, the seller's commercial revision
+    on and every approval current; recipients are only the customer and its current contacts; only the quote's owner sends from
+    their own mail account, and the organization's mail goes from the organization's own address, never a person's; `send#Quote`
+    and `respond#Quote` lock the order, and `respond#Quote` admits one response an issue, within its validity and at its revision,
+    and places only through `place#Order`; sends, responses and batches carry operation keys; the ledger's builds read the issue
+    alone and are suppressed once it no longer stands, and `mantle.party.MessageServices.requeue#Delivery` queues again only a
+    failed or waiting delivery; the stored cover, terms and reminder text render locked with an explicit map; the issued PDF is
+    streamed, its location never answered.";
+  - nothing new needs the user's call.
+
 ### P11 — Orders, approval and the storeless confirmation
 
 Design §6 Orders and OrderDetail's sales-order context, §5 (acceptance and approval), §13.1 (the store and storeless
@@ -3346,6 +3573,20 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F180 | P8 (Review Nov 13): Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another organization's mailbox answers the first organization's request; a decline goes to the message's Reply-To, as forgeable as its From, shown in the preview | P8: as its Review note says |
 | F181 | P8 (Review Nov 13): with no default team in the organization's SalesPolicy a chargeable decision tells nobody (the list still shows it) | P8: as its Review note says |
 | F182 | P8 (Review Nov 13): update#QuoteRequest given a new customer alone ends the contact row | P8: as its Review note says |
+| F183 | P10 (Built Nov 14): F166 decided as built: an owner or team reassignment and the customer's reference or new-customer mark alone are not commercial changes under the seller's commercial revision; the contact, addresses, terms, lines and validity still are | P10: as its Built note says |
+| F184 | P10 (Built Nov 14): the rep's own send goes from the send dialog straight through their mail account (no Compose window, so the message's text is the dialog's message and the organization's cover); a send by anyone else, or a batch, is the organization's on the ledger | P10: as its Built note says |
+| F185 | P10 (Built Nov 14): recipients are the customer and its current contacts, employees and representatives, by party; one delivery an issue and party | P10: as its Built note says |
+| F186 | P10 (Built Nov 14): the quote PDF has no QR or customer link until P13's PASS link (Mantle names no staff route) | P10: as its Built note says |
+| F187 | P10 (Built Nov 14): a credit-held acceptance (design scenario 7) has no regression: a hold comes only from an automatic approval on a covering payment, which a net-terms acceptance never has; respond#Quote reports held from the order's holds, and P11's approval path is where its spec belongs | P10: as its Built note says |
+| F188 | P10 (Built Nov 14): Quotes' "Responded" saved list and QuoteList's "last send/response" columns (design §5) are not built: an accepted quote is placed and a declined one is cancelled; the issues show on OrderDetail | P10: as its Built note says |
+| F189 | P10 (Built Nov 14): the quote and reminder templates and the stored text locations are set through store#SalesPolicy, not on SalesDefaults (the text has no editor yet; F156 continues for them) | P10: as its Built note says |
+| F190 | P10 (Built Nov 14): an acceptance's evidence mail (`evidenceEmailMessageId`) is checked to exist, not to be filed on the quote; the dialog offers the quote's files only | P10: as its Built note says |
+| F191 | P10 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the issue verbs; P10 had no mr-moqui worktree | P10: as its Built note says |
+| F192 | P10 (Review Nov 14): an acceptance's evidence mail (`evidenceEmailMessageId`) is any existing EmailMessage, not one filed on the quote (no screen or tool passes it today; the Built note's finding stands) | P10: as its Review note says |
+| F193 | P10 (Review Nov 14): the reminder job reads the oldest 500 unended unexpired issues, and an accepted issue stays unended until it expires, so with many open issues newer ones wait | P10: as its Review note says |
+| F194 | P10 (Review Nov 14): `applyQuoteBatch` makes its operation key on the server, so a double submit of the batch is two batches (the ledger and the states keep it from sending twice: a sent recipient is skipped, a withdrawn quote refused) | P10: as its Review note says |
+| F195 | P10 (Review Nov 14): Marketing P3's suppression at the attempt reads the organization from the delivery's store; a quote or reminder delivery has none, so only blocks of every organization apply to it, not the selling organization's own | P10: as its Review note says |
+| F196 | P10 (Review Nov 14): the Built note's findings stand | P10: as its Review note says |
 
 ## 7. Later
 

@@ -16,8 +16,10 @@ along with this software (see the LICENSE.md file). If not, see
     Sales defaults in effect (mantle.order.SalesApprovalServices.get#SalesPolicy), published as a dated successor with its reason
     (store#SalesPolicy; Preview answers the changes and saves nothing), the scheduled and earlier versions, and the commercial
     revision a quote's issue binds (store#SalesCommercialRevision, X2, F9). The defaults shown are those Sales reads today: a new
-    quote's validity and default team, and the unverified intake retention; the templates, response requirements, acceptance
-    thresholds, the approval setting and the net-terms option join this form with the phases that read them (P10, P11, P13).
+    quote's validity and default team, and the unverified intake retention; P10 adds whether an acceptance needs the customer's
+    purchase order and the reminder days (the daily reminder job sends none while they are empty); the templates and the stored
+    text locations are set through store#SalesPolicy; the acceptance thresholds, the approval setting and the net-terms option
+    join this form with the phases that read them (P11, P13).
     SALES_CONFIGURE, which Mantle checks with the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Defaults" default-menu-index="6"
@@ -29,7 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.order.SalesApprovalServices.store#SalesPolicy" out-map="stored"
                     in-map="{organizationPartyId:organizationPartyId, revision:(revision || null), fromDate:(fromDate || null),
                         defaultTeamPartyId:(defaultTeamPartyId ?? ''), quoteValidityDays:(quoteValidityDays ?? ''),
-                        intakeRetentionDays:(intakeRetentionDays ?? ''), changeReason:(changeReason || null),
+                        intakeRetentionDays:(intakeRetentionDays ?? ''), responsePoRequired:(responsePoRequired ?? ''),
+                        reminderDays:(reminderDays ?? ''), changeReason:(changeReason || null),
                         previewOnly:(previewOnly == 'Y' ? 'Y' : null)}"/>
             <if condition="!ec.message.hasError()">
                 <set field="changeText" from="(stored.changes || []).map(change =&gt; ec.l10n.localize(change.field) + ': '
@@ -69,11 +72,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="findValues" from="{organizationPartyId: organizationPartyId}"/>
         <set field="publishValues" from="{organizationPartyId: organizationPartyId, revision: policy?.revision || null,
                 defaultTeamPartyId: policy?.defaultTeamPartyId || null, quoteValidityDays: policy?.quoteValidityDays ?? null,
-                intakeRetentionDays: policy?.intakeRetentionDays ?? null}"/>
+                intakeRetentionDays: policy?.intakeRetentionDays ?? null, responsePoRequired: policy?.responsePoRequired || 'N',
+                reminderDays: policy?.reminderDays ?? null}"/>
         <set field="revisionValues" from="{organizationPartyId: organizationPartyId, commercialRevisionOnly: found?.commercialRevisionOnly ? 'N' : 'Y'}"/>
         <set field="policyRows" from="policy ? [['Default team', policy.teamName || 'None: the author\'s only team, else none'],
                 ['Quote validity', policy.quoteValidityDays ? policy.quoteValidityDays + ' days' : 'No end set'],
                 ['Unverified intakes kept', (policy.intakeRetentionDays || 30) + ' days'],
+                ['Acceptance needs the customer\'s PO', policy.responsePoRequired == 'Y' ? 'Yes' : 'No'],
+                ['Quote reminder', policy.reminderDays ? policy.reminderDays + ' days after it is sent' : 'None'],
                 ['In effect', policy.fromText + (policy.thruText ? ' until ' + policy.thruText : '')],
                 ['Published by', [policy.changedByName, policy.changeReason].filter(Boolean).join(' · ')]]
                 .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]})) : []"/>
@@ -107,6 +113,15 @@ along with this software (see the LICENSE.md file). If not, see
                         </field>
                         <field name="intakeRetentionDays">
                             <default-field title="Keep unverified inquiries for days" tooltip="Empty: 30 days"><text-line size="6" input-type="number"/></default-field>
+                        </field>
+                        <!-- P10: what an issued quote's response and reminder read -->
+                        <field name="responsePoRequired">
+                            <default-field title="An acceptance needs the customer's purchase order">
+                                <drop-down allow-empty="false"><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="reminderDays">
+                            <default-field title="Remind the customer days after a quote is sent" tooltip="Empty: no reminder"><text-line size="6" input-type="number"/></default-field>
                         </field>
                         <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
                         <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>

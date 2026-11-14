@@ -2285,7 +2285,24 @@ remain historical; these rows add no implementation claim.
 | order/SalesApprovalServices | approve#QuoteMessage, refuse#QuoteMessage | Sales/Quotes/Approvals | Sales/Quotes/Approvals and Commons/Notifications (the SalesQuoteApproval topic's approve and refuse) |
 | order/SalesApprovalServices | handle#SalesApprovalRevision | — (the OrderRevisionSalesApproval SECA on increment#OrderRevision) | no screen |
 | order/SalesApprovalServices | check#SalesPreApprove | — (the OrderPreApproveSales SECA on check#OrderPreApprove) | no screen (autoApprove#Order) |
-| order/SalesQuoteServices | propose#Quote | Sales/Orders/OrderDetail | — (its approval guard, P9; OrderDetail's Propose is P10's) |
+| order/SalesQuoteServices | propose#Quote | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Propose, P10; its approval guard P9's, its issue checks P10's) |
+
+### Added in the Sales build: issue, send and the customer's response (P10, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesQuoteIssueServices | get#QuoteIssues | Sales/Orders/OrderDetail (QuoteOffer, QuoteResponse) | Shared/OrderDetail (Sales: Issues and responses, the state's actions); Sales/Orders/QuoteSend |
+| order/SalesQuoteIssueServices | send#Quote | Sales/Orders/OrderDetail (QuoteSend); Sales/Quotes/Quotes (QuoteBatch) | Sales/Orders/QuoteSend (the preview and Send); apply#QuoteBatch; Assist's sales_send_quote |
+| order/SalesQuoteIssueServices | attempt#QuoteDeliveries | — (on the send's commit) | no screen |
+| order/SalesQuoteIssueServices | build#QuoteMessage, build#QuoteReminderMessage | — (the delivery ledger's MdsrcSalesQuote and MdsrcSalesQuoteReminder) | no screen |
+| order/SalesQuoteIssueServices | send#QuoteReminders | — (the send_SalesQuoteReminders job) | Sales/Settings/SalesDefaults (the reminder days) |
+| order/SalesQuoteIssueServices | respond#Quote | Sales/Orders/OrderDetail (QuoteResponse: Record acceptance, Record decline) | Shared/OrderDetail (Sales: Record acceptance, Record decline) |
+| order/SalesQuoteIssueServices | withdraw#Quote | Sales/Orders/OrderDetail; Sales/Quotes/Quotes (QuoteBatch) | Shared/OrderDetail (Sales: Withdraw); Sales/Quotes/Quotes (QuoteBatch's Withdraw) |
+| order/SalesQuoteIssueServices | revise#Quote | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Revise) |
+| order/SalesQuoteIssueServices | clone#Quote | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Copy as a new quote) |
+| order/SalesQuoteIssueServices | apply#QuoteBatch | Sales/Quotes/Quotes (QuoteBatch) | Sales/Quotes/Quotes (the rows' Send and Withdraw) |
+| order/SalesQuoteIssueServices | get#QuotePrint, get#QuoteIssueDocument | Sales/Orders/OrderDetail (html-print and PDF, design §16) | Shared/OrderDetail (Sales: Print (PDF); an issue's PDF) |
+| party/MessageServices | requeue#Delivery | — (a source's retry of a failed delivery) | no screen (send#Quote) |
 
 ## Marketing design — source-verified service additions
 
