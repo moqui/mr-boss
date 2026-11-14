@@ -301,6 +301,53 @@ function customerServiceContext() {
         facilityIds: read ? customerServiceFacilities(organizationPartyIds) : []
     }
 }
+// Sales' mounts (impl-sales P7, F67; design-sales §5 Product360 and InventoryAvailability, §7 PriceExplain; crosscut §3.5, §3.7,
+// §3.21): Shared/Product360, InventoryAvailability and PriceExplain under Sales/Products, reached from a quote's lines. A Sales reader
+// (SALES_VIEW, SALES_TEAM_VIEW or SALES_REPORT_VIEW) who reads the catalog (PRODUCT_CATALOG_VIEW, which BOSS_SALES holds) reads the
+// product master read only with Sales' tabs: Summary, Features (variants), Identifiers, Documents, Stock (availability at the
+// selling organizations' facilities: their stores' inventory facilities, else their warehouses; read only, Warehouse's actions stay
+// Warehouse's) and Prices with their trace for a price reader (PRICE_VIEW). No product edit, cost, supplier price, margin, method or
+// stock policy, whatever the user holds; a rep's price is the quote line's safe explanation (PriceExplain's Sales branch).
+const salesTabs = ["Summary", "Features", "Identifiers", "Documents", "Stock", "Prices"]
+const salesPaths = {
+    "": "Quotes",
+    "Products/Product360": "Products/Product360",
+    "Prices/PriceExplain": "Products/PriceExplain",
+    "Availability/InventoryAvailability": "Products/InventoryAvailability"
+}
+function salesContext() {
+    const userScope = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesAccess.js").scope()
+    if (!userScope.capabilities.anyRead) throw new Error("Shared catalog context is not available")
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        source = a.capabilities || {},
+        read = !!source.read
+    const capabilities = {systemAdmin: !!source.systemAdmin, read, priceRead: read && !!source.priceRead}
+    for (const name of ["catalogEdit", "catalogAdmin", "priceEdit", "supplierPriceRead", "supplierPriceEdit"])
+        capabilities[name] = false
+    for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove", "methodAdmin"])
+        capabilities[name] = false
+    Object.assign(capabilities, {stockPlan: false, stockManage: false, glPost: false, marginRead: false})
+    const organizationPartyIds =
+        userScope.organizationPartyIds == null
+            ? Array.from(
+                  ec.entity.find("mantle.party.PartyRole").condition("roleTypeId", "OrgInternal").disableAuthz().list()
+              ).map(row => row.partyId)
+            : Array.from(userScope.organizationPartyIds)
+    return {
+        capabilities,
+        appRoot: "Sales",
+        linkBase: "//Sales",
+        webBase: "/qapps/Sales",
+        printBase: "/apps/Sales",
+        sharedLinks: Object.fromEntries(Object.entries(salesPaths).map(([key, path]) => [key, "//Sales/" + path])),
+        productTabs: read ? salesTabs.filter(tab => tab !== "Prices" || capabilities.priceRead) : [],
+        connectionTypes: [],
+        ownerPartyIds: read ? a.ownerPartyIds : [],
+        organizationPartyIds: read ? a.organizationPartyIds : [],
+        activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null,
+        facilityIds: read ? customerServiceFacilities(organizationPartyIds) : []
+    }
+}
 // Commerce's mounts (impl-commerce P3, F4, F46, F47; design-commerce §10): Shared/Product360, CategoryDetail, CategoryContent,
 // Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain and InventoryAvailability under Merchandising. A
 // Commerce user who reads the catalog (PRODUCT_CATALOG_VIEW, every Commerce user) reads the product master with Commerce's
@@ -442,6 +489,7 @@ function context(p) {
     if (appRoot === "Maintenance") return maintenanceContext()
     if (appRoot === "Commerce") return commerceContext()
     if (appRoot === "CustomerService") return customerServiceContext()
+    if (appRoot === "Sales") return salesContext()
     if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot === "Manufacturing") return manufacturingContext()
     if (appRoot === "Purchasing") return purchasingContext()

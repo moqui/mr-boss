@@ -832,6 +832,33 @@ promises unknown stock or reserves. Crosscut §3.7 row:
 | --- | --- | --- | --- | --- |
 | Sales | Available, promised and projected by facility and date | product, quantity/UOM, required date, permitted facilities | read only; reserve only with a Warehouse grant | a promise date the rep can quote |
 
+### As built (impl-sales P7, Nov 13, 2026)
+
+- **Records.** A quote is an order of purpose `OrpSalesQuote` (Mantle seeds it and `OrpSalesOrder` beside Shop's
+  `OrpRecurringTemplate`) with one selling part; its owner, team and contact are the part's SalesRepresentative, SalesTeam and
+  Contact OrderPartParty rows (not dated: the native entity has no dates), its opportunity a SalesOpportunityOrder row. A line keeps
+  the resolver's `productPriceId`, `priceListId`, `priceRuleId` and `unitListPrice`, and OrderItem gains `calculatedUnitAmount`
+  (audit-logged), `priceSource` and, for an entered price or a free line, `priceOverrideReason`, `priceOverrideUserId` and
+  `priceOverrideDate`.
+- **Scope.** SalesAccess.js `quoteOf`: a Sales reader sees the quotes of the scope's sellers assigned to them or a team of theirs, a
+  holder of SALES_TEAM_VIEW the organization's; an edit needs SALES_QUOTE_EDIT; another's answers as missing. A quote not placed
+  (`placedDate` empty) is listed in Quotes, not among Customer360's or OpportunityDetail's orders.
+- **Q.** `find#Quotes`, `create#Quote`, `get#Quote`, `update#Quote` (name, validity, the customer's reference, address),
+  `store#QuoteLine` (a product line at `get#SellerProductPrice`'s price, the seller's authority after Sales' checks, so a rep without
+  PRICE_VIEW gets the customer's price; or a shipping-charge line), `delete#QuoteLine` and `explain#QuoteLinePrice`. Every change
+  names the order revision and is refused once the quote is no longer a draft. A missing price blocks the line (PRICE_UNAVAILABLE)
+  until the rep enters one with its reason; an entered zero or a free line needs SALES_APPROVE until P9's policies. A configured zero
+  price is a price, not a missing one.
+- **X1.** A storeless order whose part's internal seller names a tax gateway is retaxed on each line, shipping-charge line, address
+  and customer change through that gateway; a part with no address yet (its own, the customer's or its facility's) gets no tax lines
+  until it has one; every other storeless order is untouched. OrderDetail says which gateway taxes the quote, or that none does.
+- **Screens.** Quotes (the saved lists Open, Draft, Proposed, Expiring, Expired and Cancelled; New quote); OrderDetail's quote context
+  at `Sales/Orders/OrderDetail` (header with Add line, More: Add shipping charge, Edit quote; totals; Overview; Terms; Items with each
+  line's source, basis, reason and tax, and Edit, Explain price, Availability, Remove; History; Conversation and Files); the Orders
+  area and `Sales/Products` (Product360, InventoryAvailability, PriceExplain in Products' Sales context) hidden from the menu until
+  P11; quick create's Quote; OpportunityDetail's Quotes box with New quote as an open opportunity's primary (Close beside it); and
+  Customer360's Quotes tab. Product360's "add to quote" is not built: a line is added from the quote.
+
 ### QuoteTemplates
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

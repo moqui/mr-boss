@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Products' screens in Sales' context (design-sales §5 Product360 and InventoryAvailability, §7 PriceExplain; crosscut §3.5, §3.7,
+    §3.21; impl-sales P7, F67), reached from a quote's lines and hidden from the menu: the shared Product360 (read only: the product,
+    its variants, identifiers, documents, stock and, for a price reader, prices), InventoryAvailability (read only, the selling
+    organizations' facilities) and PriceExplain (a quote line's safe explanation; the trace for a price reader), each in Products'
+    Sales context (ironstone.products.CatalogServices.get#SharedContext salesContext: no cost, supplier price or edit). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Products" default-menu-index="9" menu-image="sym_o_inventory_2" menu-image-type="icon">
+    <subscreens default-item="Product360" always-use-full-path="true">
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+        <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"
+                menu-include="false"/>
+        <subscreens-item name="PriceExplain" location="component://mr-boss/screen/Shared/PriceExplain.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

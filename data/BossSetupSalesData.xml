@@ -335,4 +335,15 @@ along with this software (see the LICENSE.md file). If not, see
             description="close#Opportunity: an open deal closed Won or Lost (Lost needs a current lost reason), at the revision read (expectedRevision); a lead closed Lost is disqualified. The user approves it first."
             classificationEnumId="AgclWrite" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
     <!-- ===== end of Sales P6 ===== -->
+
+    <!-- ===== Sales P7 (impl-sales P7, F67): quote drafts, pricing and Products' screens in Sales' context ===== -->
+    <!-- the catalogue read Products' shared Product360, InventoryAvailability and PriceExplain ask (CatalogServices.get#CatalogAccess),
+        for every Sales user and the administrator, as Customer Service's and Purchasing's users hold it: a read of the product master
+        only; prices beyond a quote line's own stay Products' PRICE_VIEW, cost and stock actions their owners' (impl-sales §2). The
+        quote services are Mantle's guarded ones, called by the root's screens (its inheritable grant), so no service row is added. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <!-- ===== end of Sales P7 ===== -->
 </entity-facade-xml>

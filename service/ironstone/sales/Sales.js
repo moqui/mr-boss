@@ -178,7 +178,14 @@ const linkPaths = [
     "Pipeline/OpportunityImport",
     "QuickCreate",
     "LogNote",
-    "SendMessage"
+    "SendMessage",
+    // P7: quotes (design §5), the one OrderDetail route, and Products' screens in Sales' context (F67)
+    "Quotes",
+    "Quotes/Quotes",
+    "Orders/OrderDetail",
+    "Products/Product360",
+    "Products/InventoryAvailability",
+    "Products/PriceExplain"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -250,6 +257,23 @@ const recordKinds = {
                 organizationPartyId: found.organizationPartyId,
                 label: row.opportunityName || row.salesOpportunityId,
                 detail: row.typeEnumId === "SotLead" ? "Lead" : "Opportunity"
+            }
+        }
+    },
+    // P7: a quote the user sees (SalesAccess.js quoteOf: of a seller of the scope, assigned to them or a team of theirs, or the
+    // organization's every quote for SALES_TEAM_VIEW), the one OrderDetail route
+    quote: {
+        name: "Quote",
+        icon: "sym_o_request_quote",
+        destination: "Orders/OrderDetail",
+        parameter: "orderId",
+        read: (userScope, orderId) => {
+            const found = salesAccess.quoteOf(userScope.mantle, orderId)
+            if (!found) return null
+            return {
+                organizationPartyId: found.organizationPartyId,
+                label: found.order.orderName || "Quote " + orderId,
+                detail: "Quote"
             }
         }
     },
@@ -597,6 +621,73 @@ choiceSources.deals = (userScope, term, selected) =>
             return row?.opportunityName || salesOpportunityId
         }
     )
+// ===== P7: a quote's choices (impl-sales P7) =====
+Object.assign(choiceSources, {
+    // a quote line's product: the catalogue products of the seller (its own, of an organization of the scope when none is named, and
+    // the shared catalogue's), not virtual and not barred from sale, by name or id (store#QuoteLine checks the product again)
+    products: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        const owners = (organizationPartyId ? [organizationPartyId] : organizationIds(userScope)).concat(["_NA_"])
+        const readable = productId => {
+            const product = productId ? one("mantle.product.Product", {productId}) : null
+            return !!product && owners.includes(product.ownerPartyId || "_NA_") && product.productTypeEnumId !== "PtVirtual"
+        }
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product")
+            .condition("ownerPartyId", "in", owners)
+            .condition("productTypeEnumId", "not-equals", "PtVirtual")
+            .condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("salesAllowed", "is-null", null),
+                        factory.makeCondition("salesAllowed", "not-equals", "N")
+                    ],
+                    "or"
+                )
+            )
+            .orderBy("^productName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["productId", "productName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        const label = row => (row.productName ? row.productName + " · " + row.productId : row.productId)
+        return withSelected(
+            Array.from(query.list()).map(row => ({value: row.productId, label: label(row)})),
+            selected,
+            readable,
+            productId => label(one("mantle.product.Product", {productId}))
+        )
+    },
+    // a quote's currency: the currencies
+    currencies: (userScope, term) =>
+        byTerm(
+            Array.from(find("moqui.basic.Uom").condition("uomTypeEnumId", "UT_CURRENCY_MEASURE").orderBy("uomId").list()).map(
+                row => ({
+                    value: row.uomId,
+                    label: row.uomId + (row.description ? " · " + row.description : "")
+                })
+            ),
+            term
+        ),
+    // a quote's store: the stores of the selling organization (none: a storeless quote)
+    stores: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        if (!organizationPartyId) return []
+        return byTerm(
+            Array.from(
+                find("mantle.product.store.ProductStore").condition("organizationPartyId", organizationPartyId).list()
+            ).map(row => ({
+                value: row.productStoreId,
+                label: row.storeName || row.productStoreId
+            })),
+            term
+        )
+    }
+})
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(
@@ -720,6 +811,22 @@ searchFinds.push({
             recordEntity: "mantle.sales.opportunity.SalesOpportunity",
             recordId: row.salesOpportunityId,
             url: recordUrl("opportunity", row.salesOpportunityId)
+        }))
+    }
+})
+// P7: quotes, through Mantle's scoped find (find#Quotes' text: name or id), open ones
+searchFinds.push({
+    kind: "quote",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.order.SalesQuoteServices.find#Quotes", {text, pageSize: limit})
+        return Array.from(found.quoteList || []).map(row => ({
+            title: row.orderName,
+            subtitle: ["Quote " + row.orderId, row.customerName, row.statusText, row.totalText].filter(Boolean).join(" · "),
+            icon: recordKinds.quote.icon,
+            recordEntity: "mantle.order.OrderHeader",
+            recordId: row.orderId,
+            url: recordUrl("quote", row.orderId)
         }))
     }
 })

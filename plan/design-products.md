@@ -869,6 +869,13 @@ The research-era agreement TODO is obsolete: current `PriceResolver.js` and `Pri
 implement agreement/list matching and explanation output, despite the remaining TODO comment.
 **Needs.** PRD-PRICE, PRD-ACCESS.
 
+As built (impl-sales P7, owner contract): a quote line is priced by the one resolver as the selling organization's authority,
+`mantle.product.PriceServices.get#SellerProductPrice` (in process only, after Sales' own checks of the seller and the customer),
+on the pattern of Shop's `get#StoreProductPrice`: the public rows, the seller's and the customer's own, and the seller's published
+lists, for a caller without `PRICE_VIEW` too; never an agreement's row, an average cost or another party's, and no trace.
+PriceExplain's Sales branch shows a quote line's safe explanation (`explain#QuoteLinePrice`: the selected price, its source, an
+entered price's reason) to anyone who sees the quote, and its trace only to a price reader.
+
 **Per-app context (PriceLists, PriceListDetail and PriceExplain)**
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |

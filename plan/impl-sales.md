@@ -1909,6 +1909,145 @@ Design §5 Quotes and OrderDetail's quote context (drafts, pricing, availability
   gateway change with each line, an unavailable price told apart from zero, and no cost; Projects', Accounting's,
   Purchasing's, Customer Service's and Commerce's order contexts read as before.
 
+**Built Nov 13 (P7).** mr-mantle and mr-boss on branch `sal/p7` (hashes in the worker's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P1–P6's Built and Review notes, follow-up 1 and F53–F143; §4's Nov 13 rows (§5 Q2: freight a
+  shipping-charge line taxed by X1); X1's code (TaxServices `calculate#OrderSalesTax`, OrderServices `handle#OrderItemChange`,
+  `handle#OrderPartChange`, `handle#OrderMajorChange`, SalesTax.js `gateway()`, `calculate#SalesTaxLocal`); the resolver
+  (PriceResolver.js, `get#StoreProductPrice`'s store authority, PriceLists.js' guard); `create#Order`, `create#OrderItem` and
+  `update#OrderItem`; Purchasing's draft lines (PurchaseOrders.js) as the line pattern; Shared/OrderDetail's app branches and the
+  Commerce and Purchasing templates; Products' SharedContext.js (Customer Service's context), Inventory.js and PriceExplain.xml;
+  PaletteServices `get#RecordLink`; get#RecordLinkInfo's OrderHeader host. The code over the plan:
+  - F62 does not hold for a BOSS install: Accounting's demo (Demo.js `taxSetup`) names `LOCAL` on BOSS_ACCT_ORG's preference with a
+    Utah nexus, so X1 reaches its storeless orders; its collections order's customer has no address, and the local gateway refuses a
+    taxed sale without one (TAX_ADDRESS_MISSING), which failed the Accounting demo's load on the first try. X1 therefore leaves a
+    storeless part with no address yet (its own, the customer's or its facility's) untaxed until it has one, and retaxes a storeless
+    order only when a part's internal seller names a gateway (`check#OrderTaxGateway`), so every other storeless order (Customer
+    Service's replacements, Projects' estimates of ORG_ZIZI_SERVICES) is untouched, revision included;
+  - the resolver gives a caller without PRICE_VIEW no scoped row and no price list (`readable`, `applyList`), so a rep would never get
+    a customer price: a quote line is priced through a new in-process `get#SellerProductPrice`, the seller's authority after Sales'
+    checks, on Shop's `get#StoreProductPrice` pattern (public rows, the seller's and the customer's own, the seller's published
+    lists; no agreement row, average cost, other party or trace). Agreement prices are P15's;
+  - OrderPartParty has no dates, so a quote's owner and team (design §1.1 "dated OrderPartParty roles") are plain rows;
+  - no permission names a free line: an entered zero or a free line needs SALES_APPROVE until P9's policies (a finding);
+  - Shared/OrderDetail already includes Accounting's `choices`, so the quote context's drop-down is `salesChoices`;
+  - an accepted quote keeps its purpose, so "not placed" (`placedDate` empty) tells a quote in Quotes from an order in Customer360's
+    and OpportunityDetail's order lists.
+- Mantle:
+  - `entity/SalesQuoteEntities.xml` (new): the purposes `OrpSalesQuote` and `OrpSalesOrder` (with the OrderPurpose type, as the file
+    loads before Shop's); OrderItem's `calculatedUnitAmount` (audit-logged), `priceSource`, `priceOverrideReason` (audited),
+    `priceOverrideUserId` (audited) and `priceOverrideDate`.
+  - X1: `SalesTax.js` `order` and `orderTaxed`; TaxServices `calculate#OrderSalesTax` (its storeless branch; the store path as
+    before) and `check#OrderTaxGateway` (new); OrderServices' three change rules run the tax step alone for a storeless order whose
+    seller names a gateway (a shipping-charge line retaxes it too; promotions and carrier estimates stay store-only).
+  - `PriceResolver.js` `sellerAuthority` (context, `readable`, `extras`, `applyList`) and PriceServices `get#SellerProductPrice`
+    (new, `allow-remote="false"`).
+  - `SalesAccess.js` (a P7 block): `quoteRoles`, `quotePurpose`, `assignedQuoteOrderIds`, `quoteOf`, `requireQuote`.
+  - `service/mantle/order/SalesQuotes.js` and `SalesQuoteServices.xml` (new): `find#Quotes` (states open, draft, requested, proposed,
+    cancelled before placement, all; validity expiring or expired; organization, customer, opportunity, owner or mine, team,
+    currency, text; paged), `create#Quote` (one seller of the scope, an account of it or shared, the opportunity of that
+    organization and account, a contact of the customer, a store of the seller or none, the currency given or the opportunity's or
+    the seller's, validity, the customer's address, the owner, team and contact rows, the opportunity link), `get#Quote` (lines with
+    source, basis, reason, actor and tax; totals of products, shipping and tax; the gateway note; history from the audit log; the
+    customer's addresses; no cost), `update#Quote`, `store#QuoteLine`, `delete#QuoteLine`, `explain#QuoteLinePrice`. Each change
+    names the order revision (REVISION_REQUIRED, REVISION_CHANGED) and refuses a quote no longer a draft (QUOTE_NOT_DRAFT); the
+    refusals PRICE_UNAVAILABLE, OVERRIDE_REASON_REQUIRED, FREE_LINE_DENIED, PRODUCT_NOT_USABLE, CUSTOMER_INVALID,
+    OPPORTUNITY_INVALID, CONTACT_INVALID, STORE_INVALID, ADDRESS_INVALID, ITEM_UNAVAILABLE.
+  - `SalesOpportunities.js` (get#Opportunity's orders leave out a quote not placed) and `SalesAccounts.js` (`ordersOf` likewise).
+- BOSS:
+  - `Sales.js`: linkPaths (Quotes, Quotes/Quotes, Orders/OrderDetail, Products/Product360, Products/InventoryAvailability,
+    Products/PriceExplain), the record kind `quote`, the choices `products` (the seller's and the shared catalogue's, not virtual,
+    not barred from sale), `currencies` and `stores`, the palette's quotes (find#Quotes).
+  - Screens: `Sales.xml` (Quotes, menu index 4; the hidden Orders and Products areas; the record panels admit a quote; quick create's
+    Quote; key `g q`); `Sales/Quotes.xml`, `Sales/Quotes/Quotes.xml` (QuoteFind, QuoteList with the saved lists Open, Draft, Proposed,
+    Expiring, Expired and Cancelled, NewQuote); `Sales/Orders.xml` (the one OrderDetail route); `Sales/Products.xml` (Product360,
+    InventoryAvailability, PriceExplain); `Sales/QuickCreate/NewQuote.xml`; `template/SalesQuotes.xml` (createQuote, salesStoreLine,
+    salesDeleteLine, salesUpdateQuote) and `template/SalesQuoteForms.xml` (NewQuote); `Sales/Pipeline/OpportunityDetail.xml` (a Quotes
+    box, New quote the primary of an open opportunity with Close beside it, the Orders box); `Shared/Customer360/SalesQuotes.xml` (new
+    tab, with New quote).
+  - Owner contracts: `Shared/OrderDetail.xml` (the Sales branch before Projects' default, `template/SalesOrderDetail.xml`, Sales in the
+    not-found list; crosscut §3.6's Sales row, F68); Products' `SharedContext.js` `salesContext()` (Summary, Features, Identifiers,
+    Documents, Stock and, for a price reader, Prices; the selling organizations' facilities; no edit, cost or stock action) and
+    `Inventory.js`' scoped roots (F67); `Shared/PriceExplain.xml`'s Sales branch (a quote line's safe explanation for anyone who sees
+    the quote, the trace only for PRICE_VIEW); `PaletteServices` `get#RecordLink` (a sales quote opens under Sales, F39 and
+    Purchasing's F46).
+  - `data/BossSetupSalesData.xml` (a P7 block): PRODUCT_CATALOG_VIEW for BOSS_SALES and BOSS_SALES_ADMIN, in their bundles.
+  - Demo (`data/BossZSalesDemoData.xml`, a P7 block): ORG_ZIZI_SALES' own preference naming `LOCAL` (with Ziziwork Industries'
+    commercial revision and kit cost flags it inherited), its Utah nexus and 6.1 % rate, Fabrikam's Utah address, two Ziziwork Sales
+    products with the seller's prices, Wingtip's own price of Demo Product One-One; Retail East's draft for Wingtip (a customer price
+    line and an entered price below the calculated one, with its reason) and Ziziwork Sales' storeless draft for Fabrikam (two kits,
+    installation and freight, taxed 178.73 through the seller's gateway by `handle#OrderMajorChange` at load).
+- Specs:
+  - Mantle `test/order/StorelessOrderTax` (new, 3 features, 0.19 s): a storeless order taxed through its seller's gateway and retaxed
+    on a quantity change; a shipping-charge line taxed, a removed line's tax gone; a store order taxed through its store's gateway as
+    before; a storeless order of a seller without a gateway no tax line, no error and no revision change. `test/order/SalesQuoteDrafts`
+    (new, 5 features, 1.7 s warm, 3.1 s on a first run): a cart and a recurring base no quotes, the rep's and the team's quotes, the
+    manager's organization, another team's and organization's not available; another organization's account and organization and
+    a reader refused; the customer's price for a rep without PRICE_VIEW, an entered price keeping its basis, reason and actor, a
+    stale revision refused, a quantity change keeping the entered price, the safe explanation; a missing price refused, then
+    entered; a free line refused to the rep and admitted to an approver; a shipping charge; another team's rep and a reader refused a
+    removal.
+  - mr-boss `test/Sales/SalesQuotes` (new, 3 features, 0.5 s): OrderDetail's one qvt render in the quote context (header, lines,
+    the entered price's reason, no tax note, Chatter and Files, no cost or margin) with the storeless quote's tax and total (html) and
+    another organization's "not available"; Quotes' one html render; PriceExplain's one html render for a rep (the customer's own
+    price, no trace form). `SalesSpecLib.js`: the menus with Quotes, the key `g q`, the demo quotes.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesQuoteDraftUsable` (3 features: a storeless quote through the screens'
+    transitions at Fabrikam's own price, its tax 48.80, 73.20 and 75.64 as lines and freight are added; the explanation, a zero price
+    admitted and a missing one refused, no cost; the other apps' OrderDetail contexts render as before).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle StorelessOrderTax 3 of 3 and SalesQuoteDrafts 5 of 5;
+  the specs that tax or price orders and the Sales ones, unchanged: AccountingReturns, ReturnPolicies, OrderToCashBasicFlow,
+  ReturnToResponseBasicFlow, AccountingTax, ProductPriceLists, ShopCatalog, ProductEffectivePrices, StoreCheckout,
+  WorkProjectMilestones, WorkProjectClients, ShopCheckout, OrderConfirmations, Subscriptions, OrderChanges, OrderLifecycle,
+  StoreOperations, CartRecovery, StoreEmailOnce, CalcGridSales, SalesAccounts, SalesOpportunities and SalesWorkspace 200 of 200 (26
+  specs with their dependencies); after the later changes SalesQuoteDrafts, StorelessOrderTax, SalesOpportunities, SalesAccounts,
+  SalesLeadQualify, SalesWorkspace, CrmMiscServices, SalesOrganizationScope, SalesPipelineDataset and RecordVisibility 49 of 49.
+  mr-boss SalesQuotes 3 of 3; SalesAccess, SalesAccounts, SalesOpportunities, SalesHome, SalesIntake, SalesSettings, SalesReports,
+  QuickCreate, AccountingCollections, AccountingReceivables, AccountingAccess, AccountingTax, CustomerServiceOrders,
+  CustomerServiceAccess, CommerceOrders, PurchasingOrders, ProductsPriceLists, ProductsSharedContext, ProductsInventory,
+  InsightsRecords, ClientBilling, ManufacturingSubcontracting, MaintenancePurchasing, WarehousePicking, ProjectsAccess, Chat and
+  RecordFiles 219 of 219. Client SalesPipelineWalk 1 of 1 (6.9 s). The demo loads with no data file failing (the first try's
+  Accounting demo failure fixed as above). `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed
+  screen. Prettier clean on the new and changed JavaScript but Products' SharedContext.js, not clean before and left so. Not run:
+  ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: ss-inventory's Order rows naming Sales/Orders/OrderDetail and Sales/Quotes/Quotes (FindOrder's CreateSalesOrder and
+  OrderList; OrderDetail's forms, covered or "—" with their owner or phase, F71); usl-inventory's create#Order, create#OrderPart,
+  create#OrderItem, add#OrderProductQuantity, handle#OrderMajorChange, calculate#OrderSalesTax, get#OrderProductPrice and
+  check#ProductUsable rows, and an "Added in the Sales build: quote drafts, pricing and storeless tax" table.
+- Design edits: design-sales §5 "As built (impl-sales P7)"; design-crosscut CX-PRICING (X1 as built); design-products §7
+  (get#SellerProductPrice and PriceExplain's Sales branch, owner contracts).
+- Findings (provisional, numbered by the lead):
+  - F62 is wrong for a BOSS install: Accounting's demo names `LOCAL` on BOSS_ACCT_ORG, so X1 taxes its storeless sales orders with an
+    addressed customer from now on (none of the Accounting specs run changed); a storeless part with no address is left untaxed
+    rather than refused, which an invoice from that order then carries untaxed (ORDER_TAX), as before X1;
+  - no permission names a quote's free line: P7 asks SALES_APPROVE of the one who enters it (a rep cannot, an approver can); P9's
+    approval policies, or a permission of its own, is the user's call;
+  - Sales' lifecycle participant (P6) transfers deals and managed accounts, not open quotes as F54 and design-admin §14 say; a quote's
+    owner row can follow in P10 or a follow-up;
+  - get#RecordLinkInfo shows a quote's Chatter and files by its organization rule (orderVisible), wider than Sales' assignment scope;
+    the Sales root admits only a quote the user sees (check#Record quote), so the gap is the other roots' and Commons';
+  - a quote's owner and team are undated OrderPartParty rows (the entity has no dates), so a team change does not end a quote's team
+    from a date, as it does for a deal;
+  - Product360's "add to quote" (design §5's action set) is not built: a line is added from the quote;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name `get#SellerProductPrice`, the second in-process price authority beside
+    Shop's; P7 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 1.9 s (StorelessOrderTax 0.19 s, SalesQuoteDrafts 1.7 s warm, up to 3.1 s cold); mr-boss server about
+    0.5 s (SalesQuotes); client none (SalesPipelineWalk unchanged at 6.9 s);
+  - merge hot spots: mr-mantle `service/mantle/order/OrderServices.xml` (the three change rules), `service/mantle/other/TaxServices.xml`
+    and `SalesTax.js`, `service/mantle/product/PriceResolver.js` and `PriceServices.xml` (appended), `service/mantle/sales/SalesAccess.js`
+    (a P7 block before the module value and the export), `SalesOpportunities.js`, `SalesAccounts.js`; mr-boss `screen/Shared/OrderDetail.xml`
+    (a Sales branch, include and not-found entry beside the other apps'), `screen/Shared/PriceExplain.xml`,
+    `service/ironstone/products/SharedContext.js` and `Inventory.js`, `service/ironstone/commons/PaletteServices.xml`,
+    `service/ironstone/sales/Sales.js`, `screen/Sales.xml` (subscreens, shell-providers, keymap), `screen/Sales/Pipeline/OpportunityDetail.xml`,
+    `data/BossSetupSalesData.xml` and `data/BossZSalesDemoData.xml` (P7 blocks at the end), `test/Sales/SalesSpecLib.js` (menus, keys),
+    `plan/ss-inventory.md`, `plan/usl-inventory.md`, `plan/design-sales.md` §5, `plan/design-products.md` §7, `plan/design-crosscut.md`
+    CX-PRICING. No shared file of Marketing P1's (BossSetupData's deny rows, BossUsersDemoData, MantleSetupData) is touched;
+  - mr-moqui `docs/security/Attack-Surface.md`, a line for the lead to add beside Shop's store authority: "- Sales' quote lines are
+    priced by `mantle.product.PriceServices.get#SellerProductPrice` (not remote), the selling organization's authority: the public
+    price rows, the seller's and the customer's own, and the seller's published lists, for a caller without `PRICE_VIEW`; never an
+    agreement's row, an average cost or another party's, and no trace. Only `mantle.order.SalesQuoteServices` calls it, after its own
+    checks of the seller (the caller's sales scope), the customer (an account of it) and the quote (the caller's).";
+  - the user's call: the free-line permission (above).
+
 ### P8 — Requests for quote
 
 Design §5 QuoteRequests and QuoteRequestDetail, §6's chargeable repair handoff; SAL-QUOTE, SAL-MAIL-INTAKE.
