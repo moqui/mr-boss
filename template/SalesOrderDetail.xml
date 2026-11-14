@@ -33,7 +33,8 @@ along with this software (see the LICENSE.md file). If not, see
     primary (Add line for an empty direct draft, Place, Approve) and More (Hold, Cancel remainder, Copy as a new order); the approval
     while it waits (the seller's setting, each order rule and its state, the pre-approval warnings, which tell the person approving
     and refuse nothing); Overview; Items with shipped and billed quantities (Add line and Remove on a direct draft); Fulfillment
-    (shipments) and Invoices and payments for a finance reader, each without a link until P14 mounts ShipmentDetail and
+    (shipments) and Invoices and payments for a finance reader (P14: each row opens ShipmentDetail or InvoiceDetail under Sales; a
+    Changes box lists the order's changes and More offers New change, opening OrderChangeDetail), each without a link until P14 mounts ShipmentDetail and
     InvoiceDetail; History; Chatter and Files. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="salesChoices" read-only="true">
@@ -555,6 +556,17 @@ along with this software (see the LICENSE.md file). If not, see
                         <set field="soInvoices" from="salesOrder.invoices || []"/>
                         <set field="soPayments" from="salesOrder.payments || []"/>
                         <set field="soHistory" from="salesOrder.history || []"/>
+                        <!-- P14: the order's changes (Mantle's find#OrderChanges, its own check), New change, and the shipment and
+                            invoice rows' links to ShipmentDetail and InvoiceDetail under Sales -->
+                        <service-call name="mantle.order.OrderChangeServices.find#OrderChanges" out-map="soChangesOut"
+                                in-map="{orderId:orderId, pageSize:20}" transaction="force-new" ignore-error="true"/>
+                        <script>ec.message.clearErrors()</script>
+                        <set field="soChanges" from="soChangesOut?.changeList || []"/>
+                        <set field="soChangePath" from="sharedLinks['Orders/OrderChangeDetail'] || null"/>
+                        <set field="soShipmentPath" from="sharedLinks['Orders/ShipmentDetail'] || null"/>
+                        <set field="soInvoicePath" from="sharedLinks['Orders/InvoiceDetail'] || null"/>
+                        <set field="soCanChange" from="!!soChangePath &amp;&amp; !!(sales.capabilities.orderChange || soCan.clone)
+                                &amp;&amp; ['OrderPlaced', 'OrderProcessing', 'OrderApproved', 'OrderHold'].includes(so.statusId)"/>
                         <set field="soCustomerUrl" from="so.customerPartyId &amp;&amp; sharedLinks['Accounts/Customer360'] ? sharedLinks['Accounts/Customer360'] : null"/>
                         <set field="soOpportunityUrl" from="so.salesOpportunityId &amp;&amp; sharedLinks['Pipeline/OpportunityDetail'] ? sharedLinks['Pipeline/OpportunityDetail'] : null"/>
                         <set field="soPrimary" from="soCan.place ? 'place' : soCan.editDraft ? 'addLine' : soCan.approve ? 'approve' : ''"/>
@@ -646,6 +658,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     <link url="salesCancelRemainder" link-type="hidden-form" text="Cancel remainder" icon="sym_o_block"
                                             condition="soCan.cancelRemainder" parameter-map="soState"
                                             confirmation="Cancel what is left to ship of order ${orderId}? What was shipped and billed stays."/>
+                                    <link url="${soChangePath}" url-type="plain" text="New change" icon="sym_o_edit_note"
+                                            parameter-map="{orderId:orderId}" condition="soCanChange"/>
                                     <link url="salesCloneOrder" link-type="hidden-form" text="Copy as a new order" icon="sym_o_content_copy"
                                             condition="soCan.clone" parameter-map="{orderId:orderId}" confirmation="Copy order ${orderId} into a new draft?"/>
                                     <link url="${soCustomerUrl}" url-type="plain" text="Customer" parameter-map="{customerPartyId:so.customerPartyId}"
@@ -735,7 +749,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-header title="Fulfillment · ${soShipments.length}"/>
                                     <box-body-nopad>
                                         <form-list name="SalesOrderShipments" list="soShipments" skip-form="true" paginate="false">
-                                            <field name="shipmentId"><default-field title="Shipment"><display/></default-field></field>
+                                            <field name="shipmentId">
+                                                <default-field title="Shipment">
+                                                    <link url="${soShipmentPath}" url-type="plain" text="${shipmentId}" link-type="anchor"
+                                                            parameter-map="{shipmentId:shipmentId}" condition="soShipmentPath"/>
+                                                    <label text="${shipmentId}" type="span" condition="!soShipmentPath"/>
+                                                </default-field>
+                                            </field>
                                             <field name="statusText"><default-field title="State"><display/></default-field></field>
                                             <field name="shippedText"><default-field title="Date"><display/></default-field></field>
                                         </form-list>
@@ -746,7 +766,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-header title="Invoices and payments"/>
                                     <box-body-nopad>
                                         <form-list name="SalesOrderInvoices" list="soInvoices" skip-form="true" paginate="false">
-                                            <field name="invoiceId"><default-field title="Invoice"><display/></default-field></field>
+                                            <field name="invoiceId">
+                                                <default-field title="Invoice">
+                                                    <link url="${soInvoicePath}" url-type="plain" text="${invoiceId}" link-type="anchor"
+                                                            parameter-map="{invoiceId:invoiceId}" condition="soInvoicePath"/>
+                                                    <label text="${invoiceId}" type="span" condition="!soInvoicePath"/>
+                                                </default-field>
+                                            </field>
                                             <field name="statusText"><default-field title="State"><display/></default-field></field>
                                             <field name="dateText"><default-field title="Date"><display/></default-field></field>
                                             <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
@@ -758,6 +784,28 @@ along with this software (see the LICENSE.md file). If not, see
                                         </form-list>
                                         <label type="p" style="m-muted q-pa-sm q-mb-none" text="No invoice or payment yet."
                                                 condition="!soInvoices.length &amp;&amp; !soPayments.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <!-- P14: the order's commercial and service changes, each opening OrderChangeDetail under Sales -->
+                                <container-box>
+                                    <box-header title="Changes · ${soChanges.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="SalesOrderChanges" list="soChanges" skip-form="true" paginate="false">
+                                            <field name="requestId">
+                                                <default-field title="Change">
+                                                    <link url="${soChangePath}" url-type="plain" text="${requestId}" link-type="anchor"
+                                                            parameter-map="{requestId:requestId}" condition="soChangePath"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                            <field name="linesText"><default-field title="Lines"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="requestId"/><field-ref name="kindText"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No change proposed." condition="!soChanges.length"/>
                                     </box-body-nopad>
                                 </container-box>
                             </row-col>

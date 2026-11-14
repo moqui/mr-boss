@@ -205,7 +205,8 @@ const capabilityUsers = [
     },
     // P9: the approver holds SALES_APPROVE (F43)
     {user: users.approver, granted: ["view", "orderApprove", "approve", "anyRead"]},
-    {user: users.change, granted: ["view", "anyRead"]},
+    // P14: the change operator holds SALES_ORDER_CHANGE (F43)
+    {user: users.change, granted: ["view", "orderChange", "anyRead"]},
     {user: users.agreement, granted: ["view", "agreementEdit", "recurrenceManage", "anyRead"]},
     {user: users.reader, granted: ["view", "teamView", "reportView", "anyRead", "teamRead", "reportRead", "reports"]},
     {

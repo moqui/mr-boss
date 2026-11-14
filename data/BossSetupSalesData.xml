@@ -441,4 +441,36 @@ along with this software (see the LICENSE.md file). If not, see
             routePath="Sales/Orders/Orders" routeParameters="list=awaiting"
             organizationScope="Your orders and your teams', the organization's for an approver" sequenceNum="30"/>
     <!-- ===== end of Sales P11 ===== -->
+    <!-- ===== Sales P14 (impl-sales P14, F43, F58; design-sales §1.1, §6): commercial changes and the fulfillment and billing handoffs ===== -->
+    <!-- SALES_ORDER_CHANGE and ORDER_CHANGE_HOLD_RELEASE for the change operator (F43, §4: granted with its screens): it files and
+        applies a commercial order change the sales approver decided (mantle.order.OrderChangeServices, SalesOrderChanges.js), placing
+        the Change hold its apply uses and releasing that hold; in its bundle. No other Sales group holds them, the administrator
+        neither (§4 Nov 13). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_CHANGE" userPermissionId="SALES_ORDER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_CHANGE" userPermissionId="ORDER_CHANGE_HOLD_RELEASE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_CHANGE" userPermissionId="SALES_ORDER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_CHANGE" userPermissionId="ORDER_CHANGE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <!-- Changes (design §6 OrderChanges, Sales/Orders/OrderChanges.xml): denied to the root user group, ALWAYS for the change operator,
+        the approver and the manager (design §2 C, A, M) with the root's filter sets; the administrator and ADMIN open it through their
+        ALWAYS on the root. The screen and its tab also ask SALES_ORDER_CHANGE, SALES_APPROVE or SALES_TEAM_VIEW (Sales.js areaReads),
+        so a custom group given Sales in Admin is shown no list find#OrderChanges refuses. OrderChangeDetail, ShipmentDetail and
+        InvoiceDetail stay under the Orders area's grant: each checks its record (Sales.js recordKinds) and Mantle checks it again. -->
+    <artifactGroups artifactGroupId="BOSS_SAL_CHANGES" description="Sales order changes">
+        <artifacts artifactName="component://mr-boss/screen/Sales/Orders/OrderChanges.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SAL_CHANGES_DENY" userGroupId="BOSS_SALES" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_SAL_CHANGES_OPERATOR" userGroupId="BOSS_SALES_CHANGE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_SAL_CHANGES_APPROVER" userGroupId="BOSS_SALES_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_SAL_CHANGES_MANAGER" userGroupId="BOSS_SALES_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- ===== end of Sales P14 ===== -->
 </entity-facade-xml>
