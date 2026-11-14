@@ -143,6 +143,60 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
 
+    <!-- ===== Marketing P9: the send's control and its delivery (design §5 SendControl, CampaignDelivery RetryRecipients,
+        RecipientDetail ResolveDelivery) ===== -->
+    <!-- SendControl: release (or resume a paused send), pause, cancel -->
+    <transition name="releaseSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.release#Send" out-map="released"
+                    in-map="{campaignSendId:campaignSendId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${released.resumed ? 'Resumed' : released.alreadyReleased ? 'Released already' : released.statusId == 'CsScheduled' ? 'Released for its schedule' : 'Released'}: ${released.recipientCount} recipients${released.selfDispatch ? ' (one-person team)' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="pauseSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.pause#Send" out-map="paused"
+                    in-map="{campaignSendId:campaignSendId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Paused; ${paused.inFlightCount} messages already with the delivery service may still go out</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.cancel#Send" out-map="cancelled"
+                    in-map="{campaignSendId:campaignSendId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Cancelled: ${cancelled.cancelledCount} recipients not sent; ${cancelled.inFlightCount} messages already with the delivery service may still go out</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- RetryRecipients: the chosen recipients' known retryable failures (or every one of the send) asked of the ledger again -->
+    <transition name="retryRecipients">
+        <actions>
+            <set field="chosenIds" from="campaignRecipientId == null || campaignRecipientId === '' ? [] : Array.from(typeof campaignRecipientId === 'string' ? campaignRecipientId.split(',') : campaignRecipientId).filter(Boolean)"/>
+            <service-call name="mantle.marketing.CampaignSendServices.retry#Recipients" out-map="retried"
+                    in-map="{campaignSendId:campaignSendId, campaignRecipientIdList:chosenIds}"/>
+            <if condition="!ec.message.hasError()"><message type="${retried.retriedCount ? 'success' : 'warning'}">${retried.retriedCount} recipients tried again${retried.results.length &gt; retried.retriedCount ? '; ' + (retried.results.length - retried.retriedCount) + ' not: no longer eligible or not a retryable failure' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ResolveDelivery: a dispatcher's evidence on an uncertain delivery -->
+    <transition name="reconcileRecipient">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.reconcile#Recipient" out-map="reconciled"
+                    in-map="{campaignRecipientId:campaignRecipientId, outcome:outcome, providerReference:(providerReference || null),
+                        evidenceText:(evidenceText || null), reason:(reason || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Recorded: ${outcome == 'sent' ? 'sent' : outcome == 'failed' ? 'failed' : 'to be tried again'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ===== end of Marketing P9 ===== -->
+
     <widgets>
         <section name="NewSendForm">
             <widgets>
@@ -179,7 +233,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <default-field title="Sending profile">
                             <drop-down allow-empty="true">
                                 <dynamic-options transition="choices" server-search="true" min-length="0"
-                                        parameter-map="{choice:'sendProfiles', organizationPartyId:newSendValues.organizationPartyId}"/>
+                                        parameter-map="{choice:'sendProfiles', organizationPartyId:newSendValues.organizationPartyId, selected:newSendValues.sendingProfileId}"/>
                             </drop-down>
                         </default-field>
                     </field>

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Sends › RecipientDetail (design-marketing §5 RecipientDetail: Recipient, Attempts, ResolveDelivery; style-guide §3.3
+    Detail; impl-marketing P9): one recipient of a send of the user's organizations (mantle.marketing.CampaignSendServices
+    get#Recipient; else "Not available", linking back to the sends). The record header: the recipient, the send, the recipient's and
+    the delivery's states; the primary action by state: Reconcile an uncertain delivery (a dispatcher who reviews deliveries, with the
+    provider's record or the investigation's evidence and a reason: reconcile#Recipient through the ledger's resolve#Delivery), or
+    Retry a known retryable failure (retry#Recipients). The boxes: Recipient (topic, when selected, the address masked without
+    MARKETING_AUDIENCE_VIEW, the consent snapshot, the reason of a skip, a resolution), Attempts (the ledger's, in order, never an
+    address in an error) and the receipts. No token or body is shown. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Recipient" default-menu-include="false">
+    <parameter name="campaignRecipientId" required="true"/>
+    <transition-include name="reconcileRecipient" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="retryRecipients" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <service-call name="mantle.marketing.CampaignSendServices.get#Recipient" out-map="detail" transaction="force-new" ignore-error="true"
+                in-map="{campaignRecipientId:campaignRecipientId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!detail?.recipient"/>
+        <set field="recipient" from="detail?.recipient || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="attemptList" from="detail?.attemptList || []"/>
+        <set field="receiptList" from="detail?.receiptList || []"/>
+        <set field="listPath" from="sharedLinks['Sends/Sends']"/>
+        <set field="sendPath" from="sharedLinks['Sends/SendDetail']"/>
+        <set field="deliveryPath" from="sharedLinks['Sends/CampaignDelivery']"/>
+        <set field="captionText" from="[recipient.sendName, 'topic ' + recipient.topicName, 'selected ' + recipient.selectedDateText,
+                'revision ' + recipient.preparedRevision].filter(Boolean).join(' · ')"/>
+        <set field="stateText" from="recipient.deliveryStateText || recipient.statusText"/>
+        <set field="reconcileValues" from="{campaignRecipientId:campaignRecipientId, expectedRevision:recipient.revision, outcome:'sent'}"/>
+    </actions>
+    <widgets>
+        <section name="RecipientNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Recipient ${campaignRecipientId} is not available: it does not exist, or its send is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to sends" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RecipientFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${campaignRecipientId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${recipient.recipientName || recipient.addressText}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${recipient.addressText}${recipient.tracked ? '' : ' · untracked'}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${recipient.uncertain ? 'warning' : recipient.deliveryStateEnumId == 'MdsSent' ? 'positive' : recipient.deliveryStateEnumId == 'MdsFailed' ? 'negative' : 'grey-7'}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(stateText ?? "")})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <container-dialog id="ResolveDeliveryDialog" button-text="Reconcile" icon="sym_o_fact_check" type="primary"
+                                    title="Reconcile the delivery to ${recipient.addressText}" width="640" condition="can.canReconcile">
+                                <label text="The delivery service's acceptance of this message is unknown. Record what the provider's records or an investigation show; it is never sent again unless they show it did not go out."
+                                        type="p" style="m-muted"/>
+                                <form-single name="ResolveDelivery" transition="reconcileRecipient" map="reconcileValues">
+                                    <field name="campaignRecipientId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="outcome">
+                                        <default-field title="Outcome">
+                                            <radio>
+                                                <option key="sent" text="It went out"/>
+                                                <option key="failed" text="It failed"/>
+                                                <option key="retry" text="It never went: try again"/>
+                                            </radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="providerReference"><default-field title="Provider reference"><text-line size="40"/></default-field></field>
+                                    <field name="evidenceText"><default-field title="Evidence" tooltip="The provider's record or what the investigation found"><text-area rows="3" cols="60"/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-area rows="2" cols="60"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Record" confirmation="Record this outcome for recipient ${campaignRecipientId}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RetryRecipientDialog" button-text="Retry" icon="sym_o_replay" type="primary"
+                                    title="Retry the delivery to ${recipient.addressText}" width="480" condition="can.canRetry &amp;&amp; !can.canReconcile">
+                                <label text="It failed after its retryable tries; it is tried again only if the recipient is still eligible." type="p" style="m-muted"/>
+                                <form-single name="RetryRecipient" transition="retryRecipients"
+                                        map="{campaignSendId:recipient.campaignSendId, campaignRecipientId:campaignRecipientId}">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="campaignRecipientId"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Retry" confirmation="Try this delivery again?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="${deliveryPath}" text="The send's delivery" link-type="anchor" icon="sym_o_outgoing_mail"
+                                        parameter-map="{campaignSendId:recipient.campaignSendId}"/>
+                                <link url="${sendPath}" text="Open the send" link-type="anchor" icon="sym_o_forward_to_inbox"
+                                        parameter-map="{campaignSendId:recipient.campaignSendId}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Recipient"/>
+                    <box-body>
+                        <label text="Recipient: ${recipient.statusText}${recipient.reasonText ? ' · ' + recipient.reasonText : ''}" type="p"/>
+                        <label text="Delivery ${recipient.deliveryId}: ${recipient.deliveryStateText} · ${recipient.attempts} attempts${recipient.providerMessageId ? ' · message ' + recipient.providerMessageId : ''}"
+                                type="p" condition="recipient.deliveryId"/>
+                        <label text="Consent at the hand-off: ${recipient.consentText}" type="p" condition="recipient.consentText"/>
+                        <label text="${recipient.resolvedText}" type="p" style="m-muted" condition="recipient.resolvedText"/>
+                        <label text="Not handed off: no delivery was made for this recipient." type="p" style="m-muted" condition="!recipient.deliveryId"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Attempts"/>
+                    <box-body>
+                        <label text="No attempt yet." type="p" style="m-muted" condition="!attemptList.length"/>
+                        <form-list name="Attempts" list="attemptList" skip-form="true" paginate="false" condition="attemptList.length">
+                            <field name="attemptSeqId"><default-field title="Attempt"><display/></default-field></field>
+                            <field name="attemptDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="outcome"><default-field title="Outcome"><display/></default-field></field>
+                            <field name="providerMessageId"><default-field title="Message"><display/></default-field></field>
+                            <field name="error"><default-field title="Error"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="attemptSeqId"/><field-ref name="attemptDateText"/></column>
+                                <column><field-ref name="outcome"/><field-ref name="error"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="receiptList.length">
+                    <box-header title="Reports after the hand-off"/>
+                    <box-body>
+                        <form-list name="Receipts" list="receiptList" skip-form="true" paginate="false">
+                            <field name="receiptText"><default-field title="Report"><display/></default-field></field>
+                            <field name="receiptDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="detail"><default-field title="Detail"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="receiptText"/></column>
+                                <column><field-ref name="receiptDateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

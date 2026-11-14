@@ -54,6 +54,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="emptyText" from="filtered ? 'No send matches these filters.' : 'No open sends' + (canEdit ? ' · Start one with New send, or Use a template.' : '.')"/>
         <set field="newSendValues" from="{marketingCampaignId: marketingCampaignId || null, messageTemplateId: messageTemplateId || null,
                 organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
+        <!-- the organization's one sending profile a send may use, chosen for a new send (P9 review), as its one organization is -->
+        <if condition="canEdit &amp;&amp; newSendValues.organizationPartyId">
+            <service-call name="ironstone.marketing.ContextServices.get#Choices" out-map="profileChoices" transaction="force-new" ignore-error="true"
+                    in-map="{choice:'sendProfiles', organizationPartyId:newSendValues.organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="newSendValues" from="Object.assign({}, newSendValues, {sendingProfileId: profileChoices?.options?.length == 1 ? profileChoices.options[0].value : null})"/>
+        </if>
         <set field="boardColumns" from="['Draft', 'Awaiting approval', 'Approved', 'Scheduled', 'Sending', 'Paused', 'Completed', 'Completed with failures', 'Cancelled']"/>
         <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
                 {key:'awaiting', text:'Awaiting approval', icon:'sym_o_approval', parameters:{statusId:'CsAwaitingApproval'}},

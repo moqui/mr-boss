@@ -281,4 +281,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="MarketingSendApproval"
             linkTemplate="/qapps/Marketing/Sends/SendDetail?campaignSendId=${campaignSendId}"/>
     <!-- ===== end of Marketing P8 ===== -->
+
+    <!-- ===== Marketing P9: dispatch and delivery (impl-marketing P9; design-marketing §5 RecipientDetail ResolveDelivery) ===== -->
+    <!-- The dispatcher reconciles an uncertain delivery of a send (RecipientDetail's Reconcile, through the ledger's resolve#Delivery):
+        Comms' MESSAGE_DELIVERY_REVIEW, an explicit grant Comms owns, given to the dispatcher (F13); the ledger reaches only the
+        deliveries of the dispatcher's organizations (every one for a system administrator alone). In its bundle. CampaignDelivery and
+        RecipientDetail are in the Sends area (BOSS_MKT_SENDS), whose services check the permissions and the organization again. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_DISPATCH" userPermissionId="MESSAGE_DELIVERY_REVIEW" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_DISPATCH" userPermissionId="MESSAGE_DELIVERY_REVIEW" capabilityKindEnumId="CpkEdit"/>
+    <!-- ===== end of Marketing P9 ===== -->
 </entity-facade-xml>
