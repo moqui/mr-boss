@@ -386,14 +386,15 @@ for an approver while it awaits a decision, Start, Complete; Duplicate, the plan
 (CampaignHeader), People (CampaignParties, with Change organization), Budget and costs (Budget, CostEntries), Links (RelatedWork:
 lists and segments), Decisions and Activity (the native MarketingCampaignNote rows read only, Chatter) and Files (RecordFiles,
 CampaignAsset); the other tabs join with their phases as boxes. MarketingCampaign gains `campaignRevision` (raised by a material
-change: the organization, parent, dates, currency, budget or a manager; never by a status change) and `createdByUserId` (the
-author), and its dates, budget and currency are audit-logged. Every write names the revision it read (`expectedRevision`, the
+change: the organization, parent, dates, currency, budget or a manager; never by a status change) `createdByUserId` (the
+author) and `revisedByUserId` (who made the current revision's material change, an author of it too: P2 review), and its dates, budget and currency are audit-logged. Every write names the revision it read (`expectedRevision`, the
 lastUpdatedStamp). A material change of an approved campaign ends its approval and returns it to Planned (a new flow transition,
 Approved → Planned); an in-progress campaign takes no material change (CAMPAIGN_IN_PROGRESS), a closed one none at all.
 Completion refuses with the pending work's counts (P2: open child campaigns; the sends and enrollments of later phases); the
 confirmed stop-then-complete command is not built. The organization's successor is refused while the campaign has costs, links or
 child campaigns (ORGANIZATION_IN_USE). CampaignCost: a manual cost or one purchase invoice item (the invoice billed to the
-organization; PAYABLE_VIEW or ACCOUNTING_VIEW) or one posted ledger debit (ACCOUNTING_VIEW), counted once by a campaign and within
+organization; PAYABLE_VIEW or ACCOUNTING_VIEW) or one posted ledger debit (ACCOUNTING_VIEW), each in Accounting's own scope of the
+organization, counted once by a campaign and within
 the line's amount over every campaign, in the campaign's currency (no conversion: CURRENCY_MISMATCH), corrected by a negative
 reversal row; `actualCost` is the sum of the rows. CampaignAssociation links a list (not a mailbox), a segment, a store promotion
 or a form publication of the campaign's organization; an event and a page wait for their phases to keep an organization.

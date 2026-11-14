@@ -948,6 +948,69 @@ RecordFiles hosts), §18 (the campaign plan print); MKT-CAMPAIGN, MKT-APPROVAL, 
     visibility branch before the agreement's), `entity/MarketingEntities.xml`, `data/MarketingSeedData.xml`;
   - the user's calls: the campaign self-approval under the flag (first finding) and `MARKETING_OWNER_CHANGE` (as Sales').
 
+**Review Nov 13 (P2).** A fresh review of `mkt/p2` (mr-mantle a2f44809, mr-boss e5352c40), after merging master (Sales P7) into
+both worktrees (conflicts kept both sides: mantle get#RecordLinkInfo's description and visibility branches, BOSS PaletteServices'
+record link branches), against P2, §2, §4 and design §3, §12, §14.3.
+- Checked and sound:
+  - revision binding: `campaignRevision` rises only in `materialChange` (the organization, parent, dates, currency, budget, a manager)
+    and on cancel; `store#Campaign` writes only its four plan fields beside the dates and parent it compares, so no plan write carries a
+    material field; every write locks the campaign and names its lastUpdatedStamp; an in-progress campaign refuses a material change, a
+    closed one any change; an approved one returns to Planned through the seeded Approved → Planned transition;
+  - decided once: request and decide lock the campaign; a decision answers the pending request at the named revision, a second is
+    ALREADY_DECIDED, a stale revision STALE_REVISION naming the current one; supersession marks the earlier revision's rows and reads
+    their notices; start needs the live approval of the current revision;
+  - separation: approve needs `MARKETING_APPROVE` and the organization in the decider's scope; with no policy, or the flag off (the
+    default, `selfApprovalAllowed` N), an author is SELF_APPROVAL, and a decision under the flag is recorded `selfApproval` Y; the
+    topics' handlers `approve#`/`refuse#MarketingTarget` go through `decide`, so the Approvals area's ALWAYS (screen only) adds no right;
+    the notice titles name the campaign and revision only;
+  - costs: rows are created, never changed but by the reversal mark (a reversal is negative, once, never reversed); a source line is
+    counted once by a campaign until reversed and within its amount over every campaign; amounts positive and in the campaign's
+    currency; masking of a source line's reference and description without its read permission;
+  - the host: get#RecordLinkInfo admits MarketingCampaign and CampaignAsset only through `check#CampaignAccess` (a Marketing reader of
+    its organization; never unowned; no user sees none); RecordFiles' add needs the campaign's editor while open; Chatter's title is
+    the name only; the palette's link and search go through Marketing.js's record check and scope;
+  - the lifecycle participant: `find#OwnedCampaignRoles` lists another user's rows only with `MARKETING_OWNER_CHANGE`;
+    `transfer#CampaignRole` needs it, moves only the leaving user's manager or contributor row of an open campaign, to an enabled
+    person who works for the campaign's organization, never an approval;
+  - the policy and vocabulary services need `MARKETING_CONFIGURE` in the organization; the screens call the services only.
+- Fixed:
+  - R1 (separation, medium). The author was the creator and the requester only, so a member of a one-person team (edit and approve)
+    who raised a colleague's budget could approve that budget once the colleague asked. MarketingCampaign gains `revisedByUserId`
+    (the maker of the current revision's material change; the creator on a new campaign), an author too: refused SELF_APPROVAL and
+    left out of the notice. New MarketingApprovals feature (fails on the unfixed code).
+  - R2 (confidentiality, medium). A source line was read with `PAYABLE_VIEW`/`ACCOUNTING_VIEW` alone, inside the Marketing scope: a
+    holder of `MARKETING_ALL_ORGANIZATIONS` with Accounting in one organization could link, and read unmasked, another organization's
+    Accounting lines. The line's read and its masking now also need Accounting's own scope of the organization (AccountingPolicy
+    `access`: the organizations the user works in, every internal one for its administrator). Campaigns' cost feature gains a user
+    with Marketing everywhere and Accounting in B only: refused and masked (fails on the unfixed code).
+  - R3 (integrity, low). Two campaigns allocating one line at once could pass its amount (each read the allocations unlocked); the
+    invoice item or ledger entry is now read for update.
+  - R4 (disclosure, low). A link to another organization's list, segment, promotion or form answered ORGANIZATION_MISMATCH and a
+    missing one RECORD_UNAVAILABLE, telling which ids exist elsewhere; both now answer RECORD_UNAVAILABLE (the spec updated).
+  - R5 (scope, low). `duplicate#Campaign` copied the current links without checking their records are still the organization's; one
+    re-owned since is left behind.
+- Provisional findings (for the lead to number):
+  - the reviser as an author (R1), Accounting's own scope for cost lines (R2), the locked allocation (R3), the uniform link refusal
+    (R4), duplicate's link check (R5);
+  - a refused campaign may be asked again at the same revision with no change, so another approver can be sought; Purchasing's rule
+    is the same; kept;
+  - `store#MarketingPolicy`'s stale check is not locked: two first policies stored at once could both start (low; configurers are few);
+  - `create#CampaignAsset` takes `userId` and `contentDate` from its parameters (the auto-parameters), as Sales'
+    `create#OpportunityContent`: an editor could name another uploader; left for a shared fix of the content hosts;
+  - Attention's approvals list shows an approver the requests they authored too, which they may not decide.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge): mr-mantle Campaigns 7 of 7 (2.9 s),
+  MarketingApprovals 5 of 5 (1.7 s), MarketingScope 6 of 6, RecordLinks 19 of 19, RecordVisibility 11 of 11, SalesQuoteDrafts 6 of 6;
+  mr-boss MarketingAccess 7 of 7, MarketingCampaigns 1 of 1, Chatter 27 of 27, RecordFiles 11 of 11, SalesQuotes 3 of 3 (all
+  passing). Not run: test-apps, the
+  acceptance MarketingCampaignsWalk (unchanged by the review).
+- For the lead:
+  - budget share: mr-mantle about 4.6 s (Campaigns 2.9 s, MarketingApprovals 1.7 s, +0.3 s for the review's feature); mr-boss as the
+    Built note;
+  - merge hot spots as the Built note; the master merge commits are on both branches; `entity/MarketingEntities.xml` gains
+    `revisedByUserId`;
+  - the user's two calls are answered and recorded in §4 (Nov 13): the flag covers the author's own campaign, and
+    `MARKETING_OWNER_CHANGE` for Admin's identity operator and administrator.
+
 ### P3 — Lists, consent and suppressions
 
 Design §4 Lists, ListDetail, MemberDetail, Consent and ConsentDetail, Suppressions; §10 Leads' bulk action and
@@ -1799,6 +1862,8 @@ design-marketing.md or the owner's design.
 | Nov 13, 2026 | `MARKETING_ALL_ORGANIZATIONS` is kept, granted to `ADMIN` and `BOSS_MARKETING_ADMIN` alone, as Sales', People's and Maintenance's all-organizations permissions | The user's call (P1) |
 | Nov 13, 2026 | `BOSS_MARKETING_ADMIN` keeps the grants P1 built: every Marketing view and edit, `MESSAGE_TEMPLATE_VIEW` and all-organizations; no approve, dispatch or Comms configuration, so approval and dispatch stay with their own groups | The user's call (P1), as Sales' administrator |
 | Nov 13, 2026 | Comms' explicit permissions are split by Marketing role: `MESSAGE_TEMPLATE_EDIT` to the Marketing content author group, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` to `BOSS_MARKETING_ADMIN`; Comms' own groups gain them when Comms' settings area exists (§7). Granted in P6 with the screens that use them | The user's call (P1) |
+| Nov 13, 2026 | The one-person-team flag also admits an author's own campaign approval, recorded as a self-approval, as built in P2: a campaign sends nothing itself, and each of its sends is approved on its own under the 500-recipient limit | The user's call (P2) |
+| Nov 13, 2026 | `MARKETING_OWNER_CHANGE` (the lifecycle participant `marketing.campaigns`) is granted to `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`, as built in P2, as Sales' `SALES_OWNER_CHANGE`; no Marketing group holds it | The user's call (P2) |
 
 ## 5. Open questions
 
