@@ -2010,6 +2010,157 @@ offer; MKT-PUBLIC, MKT-AUDIENCE, MKT-CONSENT; gate 2.
   nothing, the confirm button grants that topic alone, the preferences page withdraws it with a reason, and a
   mailbox membership is untouched throughout.
 
+**Built Nov 14 (P7).** mr-mantle, mr-pass and mr-boss on branch `mkt/p7` (hashes in the worker's reply), from master after P6's merge
+(Sales P13 merged); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P3's and P6's Built and Review notes, F24–F26, F43, F75, F88, F120, F127, F160–F174 and §4
+  (a public subscriber is a party, the BOSS `/u/` page stays, the consent rule and `record#PartyConsent`, personal contacts refused);
+  impl-sales P13's Built and Review notes and its code (SalesPortal.js: the mount's organization, one NotFound, `record#Attempt`
+  limits, allow-listed projections; mr-pass Sales.xml, Sales.js, Portal.js, Headers.js); PublicApps.js, ForumSchema.js and
+  PassRoutes.js with mr-pass's copies, the three TOKEN_WRITES lists and the transport's anonymous-write rule; AccountHub.js,
+  StoreTopics.js, ConsentServices' token services; MarketingAudiences.js fileOne; the ledger (MessageDeliveries.js: the delivery and
+  each attempt and build in transactions of their own) and P6's templates and profiles. The code over the plan:
+  - the operations are camelCase, as PASS Sales' are: `getMarketingPublication`, `requestSubscription`, `getSubscriptionRequest`,
+    `verifySubscription` (the plan's `marketing.getPublication` …); the reads are GET routes, the request and the confirmation
+    POSTs and both in the three TOKEN_WRITES lists (the request has no token: the transport lets it through by name, as
+    `addCartItem`, and the authority accepts it from a registered deployment);
+  - the ledger keeps no token, so each attempt's build makes the confirmation link (SubscriptionRequestToken keeps its digest, as
+    Sales' quote links are made per attempt); the request is one or more SubscriptionRequest rows sharing `requestGroupId`;
+  - the subscriber and each topic's filing are committed before the verification is queued (its attempt and build read them in
+    transactions of their own); the confirmation files in its own transaction under the group's lock;
+  - a public offer is the P3 policy's `publicOffer` with `publicSiteId` and the interval `offerFromDate`/`offerThruDate`; P3's
+    offers name no site (its spec and demo), so an offer with no site is offered nowhere rather than refused;
+  - Mantle's spec is `test/marketing/MarketingSubscriptions` (a spec name is unique in a component and `Subscriptions` is Shop's);
+  - "rate limited verification mail": the framework's attempt buckets (`record#Attempt`, as Sales'): requests per client, site and
+    address answer the receipt and keep nothing; verification messages per address keep the request and send nothing;
+  - "a party made or matched": the first directory party by id with the address as a current email (never a personal contact,
+    merged or disabled), else a new person; the display name goes on a new person only and never into the message (the template's
+    `firstName` keeps its fallback), so the form cannot carry text to an arbitrary address;
+  - the Forum spec's check that the two schema copies are identical failed on master (DG6's mailing-list block and Sales P13's quotes
+    in a different order in the two files); mr-pass Schema.js is now a copy of Mantle's.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P7 block): ContactListPolicy `publicSiteId`, `offerFromDate`, `offerThruDate`; SubscriptionRequest
+    `siteId`, `requestGroupId`, `requestKey`, `expireDate`, `verifiedDate`, `verificationDeliveryId` (kind SrkCheckout); the new
+    SubscriptionRequestToken (digest only). `data/MarketingSeedData.xml` (a P7 block): the ledger source MdsrcSubscriptionVerify.
+  - `MarketingPortalServices.xml` over `MarketingPortal.js` (new, P): `get#Publication`, `request#Subscription`,
+    `get#SubscriptionRequest`, `verify#Subscription`, `check#MarketingAppReadiness`, `build#VerificationDelivery` (the source's build:
+    the confirmation template's published content, the topics' names and this attempt's link), `file#CheckoutSubscription` (internal);
+    `preferencesContext` and `changeTopics` for the Account page. Every miss is the same NotFound; the request always answers the same
+    receipt; the confirmation accepts only the request's topics for its address, once, with the request's own evidence date.
+  - `MarketingAudiences.js`: `fileOne` takes `extra` (a public request's fields), `subscriptionRequestId` (decide that row: the
+    confirmation) and `byPerson` (the person's own act: a withdrawn purpose renewed, F120, and the grant through `record#PartyConsent`),
+    and answers the row's id; `store#SubscriptionPolicy` takes the site (one whose marketing mount targets the list's organization,
+    SITE_INVALID) and the interval (OFFER_INTERVAL_INVALID); `get#List` answers them, the offer's state and the site choices.
+  - Owner contracts: `PublicApps.js` `marketing` (organization target, readiness); `ForumSchema.js`, `PassRoutes.js`, `PassApi.js`,
+    `PassAuthority.js` (the four operations, two TOKEN_WRITES); `SmithyCore.js` reserves `marketing`; Comms'
+    `ConsentServices.unsubscribe#ContactListParty` takes `organizationPartyId` (with `allMarketing`: that organization's lists and a
+    scoped withdrawal; a token's must be its list's; without it as before, so a legacy token keeps working); `AccountHub.js` the Email
+    preferences page's Marketing context (the organization's offered lists with the recipient's state, off with a reason kept on the
+    withdrawal's comments, on sent for confirmation first or accepted for a signed-in verified address, "No more email from" the
+    organization); `StoreTopics.js` (Shop's, impl-shop §7, F26): the store-news choice through `file#CheckoutSubscription` (source
+    PcsCheckout), pending until the receipt's link or a verified sign-in, accepted at once for a verified account; the topics as built.
+- PASS (Deployment.md "Adding an app"): `screen/Marketing.xml` with Subscribe (SubscriptionRequest, SubscriptionReceipt) and
+  VerifySubscription (VerifyIntent), plain HTML in `.html.fancy` pages over `Marketing/Marketing.js` and `Shared/Portal.js`, no
+  JavaScript; the default headers (no-store, `Referrer-Policy: same-origin`, the shell's CSP) hold for both. Registrations: `Apps.js`,
+  `Pass.xml`, the header's branch (Subscriptions), `Schema.js` and `Routes.js` (copies of Mantle's), `Transport.js` (TOKEN_WRITES and
+  the request's anonymous write), `Contracts.d.ts`, the test runtime's `/marketing` mounts (PASS_HTTP, ZIZI_SHOP), Portals' targeted
+  apps, Smithy's app count; `Account/Hub.js` renders the Marketing context (the lists, the reasons, "No more email from").
+  `docs/Deployment.md` "Marketing app"; README.
+- BOSS: ListDetail's SubscriptionPolicy (the offer's site and opening interval; the box shows the offer's state);
+  `template/MarketingAudiences.xml` passes them. Demo (`BossZZMarketingDemoData.xml`, a P7 block): ZIZI_SHOP's Marketing mount for
+  Retail (F88) and the garden newsletter's offer there with the published Subscription confirmation.
+- Specs:
+  - Mantle `test/marketing/MarketingSubscriptions` (new, 5 features, 0.8 s): the same receipt for a known and a new address, neither
+    echoed; the link's GET (twice) changes nothing; the confirm grants only the requested topic for that address (PcsEmailLink, the
+    address's contact); a replay answers the first result, after a withdrawal it regrants nothing, a withdrawal before the confirm is
+    kept; a forged, expired or another site's token, a site without the mount, an unoffered, closed or another organization's list
+    disclose nothing alike, the consent box required; the checkout's news choice a request of kind checkout (pending, then accepted,
+    source PcsCheckout); the preferences context (states, off with the reason on the withdrawal, on pending with its message, "No more
+    email from" a scoped withdrawal).
+  - mr-pass `test/Marketing/MarketingAccess` (new, 3 features, 0.15 s; fixtures `MarketingFixtures.js`): Subscribe's one html render
+    (the offered lists unchecked, the consent box in the offer's words) and VerifySubscription's one (the masked address, Confirm, the
+    membership still pending); the operations refused alike for a site without the mount, an unoffered list and a mailbox; six requests
+    for one address: one receipt, three messages, five requests kept; the four operations in both copies and route lists, the request
+    and confirmation in the three TOKEN_WRITES lists. Portals' targeted apps and Smithy's count follow the new app.
+  - Acceptance, written and not run: mr-pass `test/acceptance/client/MarketingSubscribeHttp` (2 features: scenario 5 with plain
+    requests: subscribe to one of two lists, the scanner's GET, Confirm, the preferences page's withdrawal with a reason, the mailbox
+    membership untouched; a forged link and an unoffered list) and `MarketingRemoteHttp` (the same walk through a remote frontend,
+    the records read on `params.authority`), with `test/acceptance/MarketingSubscribeFixtures` on PASS_HTTP, in `client/suite.js`.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingSubscriptions, Audiences, AudienceImport,
+  ListMerge, ShopCheckout, CartRecovery, ShopCustomer, PassAuthority, SmithyPaths, SmithyGitAccess, Consent, ContactListSend,
+  DeliveryLedger, MarketingScope, Suppressions, SalesPortal, StoreReviews, StoreCheckout (104 of 104 and 55 of 55); mr-pass
+  MarketingAccess, SalesPortalAccess, ShopCart, ShopPreview, ShopAccess, ShopReviews, ShopCheckout, ShopAccount, ShopSubscriptions,
+  Portals, Transport, Smithy, Forum, Outbox (83 of 83; Forum failed before the schema copy, as on master); mr-boss MarketingLists,
+  MarketingAccess, Consent, Unsubscribe, CommerceStores, AdminRegistries, MarketingTemplates, MarketingImport (43 of 43). `moqui lint
+  --screens` (release): 141 flagged sites, as before, none in a new or changed screen; parse failures 0. Prettier (mr-moqui's config) on
+  the new JavaScript and the two changed files that were clean (MarketingAudiences.js, StoreTopics.js). Not run: test-apps, the client
+  walks, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P7" table; ss-inventory has no row naming a PASS Marketing path.
+- Design edits: design-marketing §13 Subscribe and VerifySubscription and EmailPreferences (as built); design-drawers-commons'
+  Mailboxes row (owner contract: the organization scope of `unsubscribe#ContactListParty`, the page's Marketing context).
+- Findings (provisional, numbered by the lead):
+  - the operations are camelCase and the request is an anonymous write named in the transport (the code over the plan above);
+  - a confirmation link per verification attempt (SubscriptionRequestToken), any of a request's links confirming it for seven days;
+  - a public offer with no site is offered nowhere (P3's offers and demo), not refused;
+  - the verification goes from a ready profile of the organization, a transactional one first, else any ready one (Retail's demo
+    profile is promotional; F172), and waits out the profile's quiet hours like any delivery; with no ready profile or no published
+    confirmation template the request is kept and nothing is sent (readiness says which);
+  - the visitor's display name is never put in the message; the matched party is the first directory party with the address, so a
+    request may put a pending membership on a customer's or staff member's party, which only that address can confirm;
+  - a list confirmation renews the list's grant and passes a withdrawn purpose (F120) but does not undo a global marketing email
+    withdrawal (PcpMarketingEmail with no organization); whether that blocks the list's sends is P9's dispatch check;
+  - the limits' client key is the framework's requester key: server-side callers with no request (a spec, a job) share one bucket;
+  - a marketing mount with no list offered makes the site not ready (every check must be ready), so mounting Marketing before
+    publishing a list holds the site's readiness;
+  - on the preferences page a topic turned on by a list link is sent for confirmation (the legacy page's resubscribe of a list the
+    party is on stays as built); "No more email from" the organization is scoped to it, the legacy "No marketing email at all" global;
+  - the checkout's news grant now records a request and a list grant with source PcsCheckout (was PcsForm through
+    `set#ContactListPartySubscription`); a news choice the audience refuses (a personal contact, no address) is the outcome failed,
+    logged;
+  - the Forum spec's schema identity check failed on master (the DG6 and Sales P13 blocks in different orders); fixed by copying
+    Mantle's ForumSchema.js to mr-pass Schema.js.
+- For the lead:
+  - budget share: mr-mantle about 0.8 s (MarketingSubscriptions); mr-pass server about 0.15 s (MarketingAccess); mr-boss none; client
+    none;
+  - merge hot spots (Sales P15 and P17 beside): mr-pass `service/pass/Schema.js` (now a copy of Mantle's ForumSchema.js; the
+    Marketing block after getSalesQuoteResponse, the DG6 block moved after it), `service/pass/Routes.js` and Mantle's
+    `script/PassRoutes.js` (a Marketing block after Sales' quotes), `service/pass/Transport.js` (TOKEN_WRITES' end and a line in
+    routeOf), `service/pass/Apps.js` (before Shop), `screen/Pass.xml` (before Shop), `screen/Shared/Header.html.fancy` (the branch's
+    condition and nav label), `service/pass/Contracts.d.ts` (MountInput), `test/MoquiConf.xml` (PASS_HTTP and ZIZI_SHOP mounts),
+    `test/Billing/Portals.spec.js` (targeted apps), `test/Smithy/Smithy.spec.js` (the count, 11), `test/acceptance/client/suite.js`,
+    `screen/Account/Hub.js`, `README.md`, `docs/Deployment.md` (a section before Shop); Mantle `service/mantle/forum/ForumSchema.js`
+    (a Marketing block before DG6), `script/PassApi.js` and `script/PassAuthority.js` (TOKEN_WRITES' end),
+    `service/mantle/public/PublicApps.js` (before Shop), `service/mantle/smithy/SmithyCore.js` (reservedNames),
+    `service/mantle/public/AccountHub.js`, `StoreTopics.js`, `AccountHubServices.xml`, `service/mantle/party/ConsentServices.xml`
+    (unsubscribe#ContactListParty), `service/mantle/marketing/MarketingAudiences.js`, `AudienceServices.xml`,
+    `entity/MarketingEntities.xml` and `data/MarketingSeedData.xml` (P7 blocks); mr-boss `data/BossZZMarketingDemoData.xml` (a P7
+    block), `screen/Marketing/Audiences/ListDetail.xml`, `template/MarketingAudiences.xml`, `plan/usl-inventory.md`,
+    `plan/design-marketing.md`, `plan/design-drawers-commons.md`, this file;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, no mr-moqui worktree), a paragraph after PASS Sales': "PASS
+    Marketing's public subscription (`mantle.marketing.MarketingPortalServices`, all `allow-remote="false"`,
+    `authenticate="anonymous-all"`, reached only as the PASS operations `getMarketingPublication`, `requestSubscription`,
+    `getSubscriptionRequest` and `verifySubscription` of the authority's allowlist): each finds the organization from the site's
+    `marketing` mount (a published site, an internal organization) and a list only by its explicit public offer on that site (the
+    policy's offer, site and open interval; the legacy `isPublic` flag offers nothing), never from the request; a site without the
+    mount, an unoffered, closed, archived, mailbox or another organization's list and a forged, expired or another site's link answer
+    the same NotFound. `requestSubscription` is an anonymous write (the transport lets it through by name; the authority takes it from
+    a registered deployment as a TOKEN_WRITES operation) bounded by PASS's request key (a repeat answers the first request), at most
+    ten topics, and limits per client (30 in ten minutes), site (1,000 an hour) and address (5 an hour), over which it answers the same
+    receipt and keeps nothing; it always answers the same receipt (a known or new address, a member already, a refusal), echoes no
+    address and never says whether a party was matched or made (never a personal contact). Its verification message is a transactional
+    delivery of Comms' ledger from a ready sending profile of the organization with the list policy's published confirmation template,
+    at most 3 a day to an address; it carries the template's own wording, the topics' names and a link, never the visitor's text. Each
+    message's link is a 40-character random token whose digest alone is kept, ending with the request (seven days); every lookup counts
+    against the requester's limit (100 in ten minutes). `getSubscriptionRequest` is read only (a scanner's GET changes nothing) and
+    answers the address masked; `verifySubscription` (a TOKEN_WRITES bearer write, a POST with the session token locally) accepts exactly
+    the request's topics for its address under the request's lock, once (a replay answers the first result), with the request's own
+    evidence date, so a withdrawal after the request is never undone by its link. The Account Email preferences page's Marketing context
+    changes only the token's or the signed-in account's own party: a topic turned on is a request with its verification message (a
+    signed-in verified address accepted at once), `unsubscribe#ContactListParty` with `organizationPartyId` withdraws for the token
+    list's organization only. Shop's store-news choice is filed through the same evidenced path (source PcsCheckout), pending until the
+    receipt's link or a verified sign-in.";
+  - the user's call: none required; to confirm, the display name kept off the message, a site-less offer offered nowhere, and the
+    verification from a promotional profile when the organization has no transactional one.
+
 ### P8 — Sends and the composer
 
 Design §5 Sends, SendDetail (its Summary, Content, Audience, Schedule and Decision) and Compose, §18 (the email,

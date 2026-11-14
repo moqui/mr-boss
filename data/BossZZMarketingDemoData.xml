@@ -352,4 +352,14 @@ along with this software (see the LICENSE.md file). If not, see
             channelEnumId="MdcEmail" emailServerId="BOSS_COM_DEMO_MAIL" fromAddress="hello@services.example" fromName="Ziziwork Services"
             trackingPolicyEnumId="MtrNone" bounceDomain="bounce.services.example" fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_ADMIN"/>
     <!-- ===== end of Marketing P6 ===== -->
+
+    <!-- ===== Marketing P7: PASS Marketing, subscription and preferences (impl-marketing P7, F88) ===== -->
+    <!-- ZIZI_SHOP (Commerce's demo site, Ziziwork Retail's) gains the Marketing mount, and Retail's garden newsletter its public offer
+        there, open from October, with the published Subscription confirmation (P6) as its confirmation message; the store
+        announcements stay unoffered. Its PASS Subscribe page is shop.zizi.localhost/marketing once the site is published. -->
+    <mantle.public.PublicSiteApp siteId="ZIZI_SHOP" appMountId="marketing" app="marketing" pathPrefix="/marketing" enabled="Y"
+            targetId="ORG_ZIZI_RETAIL"/>
+    <mantle.marketing.contact.ContactListPolicy contactListId="BOSS_MKT_LIST_GARDEN" fromDate="2026-10-01 09:00:00" publicOffer="Y"
+            publicSiteId="ZIZI_SHOP" offerFromDate="2026-10-01 09:00:00" confirmEmailTemplateId="MT_BOSS_MKT_TPL_CONFIRM"/>
+    <!-- ===== end of Marketing P7 ===== -->
 </entity-facade-xml>

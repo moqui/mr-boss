@@ -908,6 +908,21 @@ impl-marketing P6), called by built screens, the ledger and the intake:
 | party/MessageServices | find#DeliveryReceipts | CampaignDelivery and RecipientDetail (P9) | (no screen until P9) |
 | party/MessageServices | queue#Delivery (sendingProfileId) | the sends' release (P9) | attempt#Delivery sends from the profile (Marketing P6) |
 
+Added in Marketing P7 (Nov 14, 2026; PASS Marketing's public subscription in `mantle.marketing.MarketingPortalServices`, the list
+policy's public offer and the consent services' organization scope, impl-marketing P7), called by PASS pages, the ledger and Shop's
+checkout:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingPortalServices | get#Publication, request#Subscription | PASS:Marketing/Subscribe (SubscriptionRequest, SubscriptionReceipt) | PASS:Marketing/Subscribe (the operations getMarketingPublication, requestSubscription) (Marketing P7) |
+| marketing/MarketingPortalServices | get#SubscriptionRequest, verify#Subscription | PASS:Marketing/VerifySubscription (VerifyIntent) | PASS:Marketing/VerifySubscription (getSubscriptionRequest, verifySubscription) (Marketing P7) |
+| marketing/MarketingPortalServices | check#MarketingAppReadiness | the site's readiness (PublicApps.js) | Forum.js site readiness for a marketing mount (Marketing P7) |
+| marketing/MarketingPortalServices | build#VerificationDelivery | the ledger's source MdsrcSubscriptionVerify | attempt#Delivery (Marketing P7) |
+| marketing/MarketingPortalServices | file#CheckoutSubscription | Shop's checkout opt-in (impl-shop §7, F26) | StoreTopics.js apply#CheckoutOptIn, the store-news choice (Marketing P7) |
+| marketing/AudienceServices | store#SubscriptionPolicy (publicSiteId, offerFromDate, offerThruDate) | Marketing/Audiences/ListDetail (SubscriptionPolicy's public offer) | Marketing/Audiences/ListDetail (Marketing P7) |
+| party/ConsentServices | unsubscribe#ContactListParty (organizationPartyId) | PASS:Account/EmailPreferences (Marketing's context) | AccountHub.js store#EmailPreferences, "No more email from" (Marketing P7) |
+| public/AccountHubServices | get#EmailPreferences, store#EmailPreferences (Marketing's context) | PASS:Account/EmailPreferences (Marketing's context, design-marketing §13) | PASS:Account/EmailPreferences (Marketing P7) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

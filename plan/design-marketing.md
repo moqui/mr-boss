@@ -1697,6 +1697,24 @@ its verification. **Needs:** MKT-AUDIENCE, MKT-CONSENT, MKT-PUBLIC.
 
 **Source:** research §3; double opt-in list statuses and ridgecrest public mailing-list subscription; existing consent-token patterns.
 
+**As built (impl-marketing P7).** The PASS operations are camelCase, as PASS Sales' are: `getMarketingPublication`,
+`requestSubscription`, `getSubscriptionRequest` and `verifySubscription`, each mapping to `mantle.marketing.MarketingPortalServices`
+(`get#Publication`, `request#Subscription`, `get#SubscriptionRequest`, `verify#Subscription`), all `allow-remote="false"`. A list
+is offered by its policy alone: `publicOffer`, `publicSiteId` (a site whose marketing mount targets the list's organization) and the
+interval `offerFromDate`–`offerThruDate`; P3's site-less offers are offered nowhere. A request files each topic through the audience's
+`fileOne` as one public request (SubscriptionRequest rows sharing `requestGroupId`, `siteId`, a hashed `requestKey`, a seven-day
+`expireDate`) for the address's first directory party (never a personal contact) or a new person; its verification message is a
+transactional ledger delivery (source MdsrcSubscriptionVerify) from a ready profile of the organization (a transactional one first)
+with the policy's confirmation template (`confirmEmailTemplateId`, the EmailTemplate of a published Comms template of the
+organization), and the template's own wording and the topics' names only: the visitor's name is never put in it. Each attempt makes
+its own link (SubscriptionRequestToken keeps its digest). Limits: 30 requests in ten minutes a client, 1,000 an hour a site, 5 an
+hour an address (over: the receipt, nothing kept) and 3 verification messages a day an address (over: the request kept, no message);
+link lookups 100 in ten minutes a requester. The confirmation runs under the request's lock, uses the request's own evidence date
+(so a withdrawal after it is never undone) and records the person's own grant (a withdrawn purpose renewed by it); a topic no longer
+offered is refused OFFER_CLOSED. The checkout's store-news choice is filed through the same path (`file#CheckoutSubscription`,
+request kind SrkCheckout, source PcsCheckout), pending until the receipt's link or a verified sign-in, accepted at once for a verified
+account; the other opt-ins stay as built.
+
 ### EmailPreferences — Context passed
 
 There is one unsubscribe and preferences page, the PASS Account "Email preferences" page owned by
@@ -1721,6 +1739,14 @@ blocks dispatch. The page never leaves a Forum/MAILBOX membership on the recipie
 | Marketing | The organization's topics by channel, with the recipient's state | the token's or signed-in user's destinations; the sending organization | unsubscribe from one, all marketing, change topics, give a reason | leaving cleanly |
 
 **Source:** Comms §16; current ConsentServices; Odoo mailing opt-out reasons. **Needs:** MKT-CONSENT, MKT-PUBLIC.
+
+**As built (impl-marketing P7).** `AccountHub.js` asks `MarketingPortal.js` for the context: by a list link's token, its list's
+organization; signed in, the site's marketing mount's organization; the organization's lists offered on this site with the recipient's
+state (subscribed, pending, unsubscribed, none), apart from the page's other lists. Off unsubscribes (the reason, one of too frequent,
+not relevant, never signed up, other with its text, on the withdrawal's comments); on files a public request for the recipient's
+address and sends its verification (a signed-in account's verified address accepted at once); "No more email from" the
+organization is `unsubscribe#ContactListParty` with `allMarketing` and `organizationPartyId` (its lists, and a withdrawal scoped to
+it). The global "No marketing email at all" stays as built.
 
 ### SubmitForm
 
