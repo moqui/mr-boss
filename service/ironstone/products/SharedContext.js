@@ -308,12 +308,18 @@ function customerServiceContext() {
 // selling organizations' facilities: their stores' inventory facilities, else their warehouses; read only, Warehouse's actions stay
 // Warehouse's) and Prices with their trace for a price reader (PRICE_VIEW). No product edit, cost, supplier price, margin, method or
 // stock policy, whatever the user holds; a rep's price is the quote line's safe explanation (PriceExplain's Sales branch).
+// P15 (impl-sales; design-sales §7 CustomerPrices, PriceLists, PriceListDetail): Shared/Prices as Agreements/CustomerPrices and
+// Shared/PriceLists and PriceListDetail under Agreements/PriceLists, for a holder of Products' price permissions: price read by
+// PRICE_VIEW or PRICE_EDIT and price edits by PRICE_EDIT, passed through as Products has them and checked again in Mantle (Commerce's
+// pattern, F46); no Sales permission reads or edits a price, and cost, margin and supplier prices stay off.
 const salesTabs = ["Summary", "Features", "Identifiers", "Documents", "Stock", "Prices"]
 const salesPaths = {
     "": "Quotes",
     "Products/Product360": "Products/Product360",
     "Prices/PriceExplain": "Products/PriceExplain",
-    "Availability/InventoryAvailability": "Products/InventoryAvailability"
+    "Availability/InventoryAvailability": "Products/InventoryAvailability",
+    // P15
+    "Prices/PriceLists/PriceListDetail": "Agreements/PriceLists/PriceListDetail"
 }
 function salesContext() {
     const userScope = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesAccess.js").scope()
@@ -321,9 +327,14 @@ function salesContext() {
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {},
         read = !!source.read
-    const capabilities = {systemAdmin: !!source.systemAdmin, read, priceRead: read && !!source.priceRead}
-    for (const name of ["catalogEdit", "catalogAdmin", "priceEdit", "supplierPriceRead", "supplierPriceEdit"])
-        capabilities[name] = false
+    const capabilities = {
+        systemAdmin: !!source.systemAdmin,
+        read,
+        priceRead: read && !!source.priceRead,
+        // P15: a price editor's own PRICE_EDIT (CustomerPrices, PriceLists)
+        priceEdit: read && !!source.priceRead && !!source.priceEdit
+    }
+    for (const name of ["catalogEdit", "catalogAdmin", "supplierPriceRead", "supplierPriceEdit"]) capabilities[name] = false
     for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove", "methodAdmin"])
         capabilities[name] = false
     Object.assign(capabilities, {stockPlan: false, stockManage: false, glPost: false, marginRead: false})

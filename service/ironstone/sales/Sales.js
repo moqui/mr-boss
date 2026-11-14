@@ -815,6 +815,192 @@ choiceSources.quoteTemplates = (userScope, term, selected, p) => {
     )
 }
 // ===== end of P12 =====
+// ===== P14: commercial changes and the fulfillment and billing handoffs (impl-sales P14; design-sales §6) =====
+linkPaths.push("Orders/OrderChanges", "Orders/OrderChangeDetail", "Orders/ShipmentDetail", "Orders/InvoiceDetail")
+const orderChanges = () => ec.resource.script("component://mr-mantle/service/mantle/order/SalesOrderChanges.js")
+// Changes (Sales/Orders/OrderChanges, BOSS_SAL_CHANGES): the change operator's, the approver's and the manager's (design §2 C, A, M),
+// each holding a permission find#OrderChanges reads by (SALES_ORDER_CHANGE, SALES_APPROVE, SALES_TEAM_VIEW)
+areas.changes = "Orders/OrderChanges"
+areaReads.changes = caps => !!(caps.orderChange || caps.approve || caps.teamView)
+// A commercial order change now opens its OrderChangeDetail under Sales (F58: OrderChangeApproval's one link, resolved per recipient
+// by Commons' get#RecordLink): a commercial-kind change of a sales order of the scope, for its approver (SALES_APPROVE), its change
+// operator (SALES_ORDER_CHANGE) or a Sales reader who sees the order (its owner, its team, the organization's manager); Mantle's
+// OrderChangeServices checks the permission of each verb and the organization again.
+recordKinds.orderChange = {
+    name: "Order change",
+    icon: "sym_o_edit_note",
+    destination: "Orders/OrderChangeDetail",
+    parameter: "requestId",
+    read: (userScope, requestId) => {
+        const request = one("mantle.request.Request", {requestId})
+        if (!request || request.requestTypeEnumId !== "RqtOrderChange" || !request.orderId) return null
+        if (["OckCancel", "OckSubstitute"].includes(request.orderChangeKindEnumId)) return null
+        const part = Array.from(
+            find("mantle.order.OrderPart").condition("orderId", request.orderId).orderBy("orderPartSeqId").list()
+        )[0]
+        if (!part || !covers(userScope, part.vendorPartyId)) return null
+        const caps = userScope.capabilities
+        if (!caps.approve && !caps.orderChange && !salesAccess.orderOf(userScope.mantle, request.orderId)) return null
+        return {
+            organizationPartyId: part.vendorPartyId,
+            label: request.requestName || "Order change " + requestId,
+            detail: "Order change"
+        }
+    }
+}
+// A shipment of a sales order the user sees (ShipmentDetail's Sales row; Mantle's get#SalesShipment answers the rest).
+recordKinds.shipment = {
+    name: "Shipment",
+    icon: "sym_o_local_shipping",
+    destination: "Orders/ShipmentDetail",
+    parameter: "shipmentId",
+    read: (userScope, shipmentId) => {
+        const found = orderChanges().getShipment({shipmentId})
+        if (!found.shipmentFound) return null
+        const part = Array.from(
+            find("mantle.order.OrderPart").condition("orderId", found.orderIds[0]).orderBy("orderPartSeqId").list()
+        )[0]
+        return {
+            organizationPartyId: part?.vendorPartyId || null,
+            label: "Shipment " + shipmentId,
+            detail: found.shipment.statusText
+        }
+    }
+}
+// An invoice of a sales order the user sees, for a receivable reader (InvoiceDetail's Sales row; Mantle's check#SalesInvoice).
+recordKinds.invoice = {
+    name: "Invoice",
+    icon: "sym_o_receipt",
+    destination: "Orders/InvoiceDetail",
+    parameter: "invoiceId",
+    read: (userScope, invoiceId) => {
+        const found = orderChanges().checkInvoice({invoiceId})
+        return {organizationPartyId: found.organizationPartyId, label: "Invoice " + invoiceId, detail: "Invoice"}
+    }
+}
+// NewChange's order: the scope's placed, approved and held orders (Mantle's find#SalesOrders, the change operator's reach included)
+choiceSources.changeOrders = (userScope, term, selected) => {
+    const found =
+        ec.service
+            .sync()
+            .name("mantle.order.SalesWorkspaceServices.find#SalesOrders")
+            .parameters({list: "recent", text: term || null, pageSize: choiceLimit})
+            .call() || {}
+    const changeable = salesAccess.changeStatuses
+    const options = Array.from(found.orderList || [])
+        .filter(row => changeable.includes(row.statusId))
+        .map(row => ({value: row.orderId, label: [row.orderId, row.customerName, row.statusText].filter(Boolean).join(" · ")}))
+    return withSelected(
+        options,
+        selected,
+        orderId => !!salesAccess.orderOf(userScope.mantle, orderId),
+        orderId => one("mantle.order.OrderHeader", {orderId})?.orderName || orderId
+    )
+}
+// A change's order line: the product lines of an order the user sees
+choiceSources.orderLines = (userScope, term, selected, p) => {
+    const so = p.orderId ? salesAccess.orderOf(userScope.mantle, p.orderId) : null
+    if (!so) return []
+    const lower = String(term || "").toLowerCase()
+    return Array.from(find("mantle.order.OrderItem").condition("orderId", p.orderId).orderBy("orderItemSeqId").list())
+        .filter(row => row.productId && row.itemTypeEnumId !== "ItemSalesTax")
+        .map(row => ({
+            value: row.orderItemSeqId,
+            label:
+                row.orderItemSeqId +
+                " · " +
+                (row.itemDescription || row.productId) +
+                " · " +
+                ec.l10n.format(row.quantity ?? 0, "#,##0.###")
+        }))
+        .filter(option => !lower || option.label.toLowerCase().includes(lower))
+}
+// An address change's address: the postal addresses of the order's customer
+choiceSources.customerAddresses = (userScope, term, selected, p) => {
+    const so = p.orderId ? salesAccess.orderOf(userScope.mantle, p.orderId) : null
+    if (!so) return []
+    const ids = Array.from(
+        find("mantle.party.contact.PartyContactMech")
+            .condition("partyId", so.customerPartyId)
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .list()
+    ).map(row => row.contactMechId)
+    if (!ids.length) return []
+    const lower = String(term || "").toLowerCase()
+    return Array.from(find("mantle.party.contact.PostalAddress").condition("contactMechId", "in", ids).list())
+        .map(row => ({
+            value: row.contactMechId,
+            label: [row.toName, row.address1, row.city, row.postalCode].filter(Boolean).join(", ")
+        }))
+        .filter(option => !lower || option.label.toLowerCase().includes(lower))
+}
+// A carrier change's carrier: the parties with the Carrier role
+choiceSources.carriers = (userScope, term) => {
+    const ids = Array.from(find("mantle.party.PartyRole").condition("roleTypeId", "Carrier").selectField("partyId").list()).map(
+        row => row.partyId
+    )
+    const lower = String(term || "").toLowerCase()
+    return ids
+        .map(partyId => ({value: partyId, label: partyLabel(one("mantle.party.Party", {partyId}))}))
+        .filter(option => !lower || option.label.toLowerCase().includes(lower))
+        .slice(0, choiceLimit)
+}
+// ===== end of P14 =====
+// ===== P15: customer agreements and prices (impl-sales P15; design-sales §7 Agreements, AgreementDetail, CustomerPrices, PriceLists) =====
+linkPaths.push(
+    "Agreements",
+    "Agreements/Agreements",
+    "Agreements/AgreementDetail",
+    "Agreements/CustomerPrices",
+    "Agreements/PriceLists",
+    "Agreements/PriceLists/PriceListDetail"
+)
+// An agreement the user sees (SalesAccess.js agreementOf: of an organization of the scope, for a Sales reader), the shared
+// AgreementDetail under Agreements; a record panel host of the root
+recordKinds.agreement = {
+    name: "Agreement",
+    icon: "sym_o_contract",
+    destination: "Agreements/AgreementDetail",
+    parameter: "agreementId",
+    read: (userScope, agreementId) => {
+        const found = salesAccess.agreementOf(userScope.mantle, agreementId)
+        if (!found) return null
+        return {
+            organizationPartyId: found.organizationPartyId,
+            label: found.agreement.description || "Agreement " + agreementId,
+            detail: found.agreement.isTemplate === "Y" ? "Agreement template" : "Agreement",
+            accountPartyId: found.agreement.otherPartyId || null
+        }
+    }
+}
+// NewAgreement's template: the agreement templates of the selling organization (Mantle's scoped find#SalesAgreements)
+choiceSources.agreementTemplates = (userScope, term, selected, p) => {
+    const organizationPartyId = choiceOrganization(userScope, p)
+    if (!organizationPartyId) return []
+    const found = lib.probe("mantle.party.SalesAgreementServices.find#SalesAgreements", {
+        organizationPartyId,
+        state: "templates",
+        text: term || null,
+        pageSize: choiceLimit
+    })
+    return Array.from(found.agreementList || [])
+        .filter(row => row.statusId !== "AgmStCancelled")
+        .map(row => ({value: row.agreementId, label: row.description + " · " + row.currencyUomId}))
+}
+// AgreementParties' party: the customer (accountPartyId) and its current contacts, and the people working for the organization
+// (store#AgreementParty checks the party again)
+choiceSources.agreementParties = (userScope, term, selected, p) => {
+    const organizationPartyId = choiceOrganization(userScope, p)
+    const account = p.accountPartyId ? salesAccess.accountOf(userScope.mantle, p.accountPartyId) : null
+    const ids = (account ? [p.accountPartyId].concat(accountContactIds(p.accountPartyId) || []) : []).concat(
+        organizationPartyId ? memberIds([organizationPartyId]) : []
+    )
+    const options = peopleOptions(ids, term, userScope)
+    if (account && (!term || partyLabel(account.party).toLowerCase().includes(term.toLowerCase())))
+        options.unshift({value: p.accountPartyId, label: partyLabel(account.party)})
+    return options
+}
+// ===== end of P15 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(
@@ -989,6 +1175,23 @@ searchFinds.push({
         }))
     }
 })
+// ===== P15: the palette's agreements, through Mantle's scoped find (find#SalesAgreements' text: name or id), open ones
+searchFinds.push({
+    kind: "agreement",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.party.SalesAgreementServices.find#SalesAgreements", {text, pageSize: limit})
+        return Array.from(found.agreementList || []).map(row => ({
+            title: row.description,
+            subtitle: ["Agreement " + row.agreementId, row.customerName, row.statusText].filter(Boolean).join(" · "),
+            icon: recordKinds.agreement.icon,
+            recordEntity: "mantle.party.agreement.Agreement",
+            recordId: row.agreementId,
+            url: recordUrl("agreement", row.agreementId)
+        }))
+    }
+})
+// ===== end of P15 =====
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}

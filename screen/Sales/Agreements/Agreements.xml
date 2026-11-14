@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Agreements (design-sales §7 Agreements: AgreementFind, AgreementList, NewAgreement; style-guide §3.2 List; impl-sales P15):
+    the customer agreements of the user's sales scope (Mantle's find#SalesAgreements: AgrSales and AgrProduct agreements of the scope's
+    organizations), paged in the query, with the saved lists Open, Active, Expiring, Drafts, Ended and Templates; found by name or id,
+    organization, customer and dates. Each row opens AgreementDetail with its customer, organization, dates, state and an expiry
+    badge. New agreement (from terms or a template) for a holder of SALES_AGREEMENT_EDIT; create#SalesAgreement checks again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreements" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createSalesAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.party.SalesAgreementServices.find#SalesAgreements" out-map="context"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, customerPartyId:customerPartyId, fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), state:(state || null), pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+        </if>
+        <set field="agreementList" from="agreementList || []"/>
+        <set field="detailPath" from="sharedLinks['Agreements/AgreementDetail'] || null"/>
+        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || fromDate || thruDate || (state &amp;&amp; state != 'open'))"/>
+        <set field="newAgreementDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, agreementTypeEnumId: 'AgrSales'}"/>
+        <set field="savedLists" from="[{label: 'Open', state: 'open'}, {label: 'Active', state: 'active'}, {label: 'Expiring', state: 'expiring'},
+                {label: 'Drafts', state: 'draft'}, {label: 'Ended', state: 'ended'}, {label: 'Templates', state: 'templates'}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read agreements in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="AgreementsRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Agreements" type="h5"/>
+                        <label text="Customer terms and negotiated prices: a quote for the customer takes an agreement's prices while it is active."
+                                type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewAgreementDialog" button-text="New agreement" title="New agreement" icon="sym_o_add"
+                                width="640" type="primary" condition="can.agreementEdit">
+                            <form-single name="NewAgreement" transition="createSalesAgreement" map="newAgreementDefaults">
+                                <field name="organizationPartyId">
+                                    <default-field title="Selling organization">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="customerPartyId">
+                                    <default-field title="Customer" tooltip="An account of the organization; none for a template">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Name"><text-line/></default-field></field>
+                                <field name="agreementTypeEnumId">
+                                    <default-field title="Type">
+                                        <drop-down allow-empty="false">
+                                            <option key="AgrSales" text="Sales"/>
+                                            <option key="AgrProduct" text="Product"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="templateAgreementId">
+                                    <default-field title="From template" tooltip="Its items, prices and terms are copied">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'agreementTemplates', organizationPartyId:organizationPartyId, selected:templateAgreementId}">
+                                                <depends-on field="organizationPartyId"/></dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency" tooltip="The template's or the organization's when empty">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                <field name="isTemplate">
+                                    <default-field title="Template"><check><option key="Y" text="A template to start agreements from"/></check></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Start agreement"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="organizationPartyId"/><field-ref name="customerPartyId"/></field-row>
+                                    <field-row><field-ref name="description"/><field-ref name="agreementTypeEnumId"/></field-row>
+                                    <field-row><field-ref name="templateAgreementId"/><field-ref name="currencyUomId"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="isTemplate"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row q-gutter-xs q-mb-sm">
+                    <section-iterate name="AgreementSavedLists" list="savedLists" entry="saved">
+                        <widgets>
+                            <link url="." text="${saved.label}" link-type="anchor-button"
+                                    style="${(state || 'open') == saved.state ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{state:saved.state, text:'', organizationPartyId:'', customerPartyId:'', fromDate:'', thruDate:'', pageIndex:''}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <form-list name="AgreementList" list="agreementList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <field name="text">
+                        <header-field title="Name or id"><text-line size="20"/></header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="fromDate"><header-field title="In effect from"><date-time type="date"/></header-field></field>
+                    <field name="thruDate"><header-field title="In effect through"><date-time type="date"/></header-field></field>
+                    <field name="description">
+                        <conditional-field title="Agreement" condition="detailPath">
+                            <link url="${detailPath}" text="${description}" link-type="anchor" parameter-map="{agreementId:agreementId}"/>
+                            <label text="${typeText}" type="div" style="text-caption m-muted"/>
+                        </conditional-field>
+                        <default-field title="Agreement"><display/></default-field>
+                    </field>
+                    <field name="agreementId"><default-field title="Id"><display/></default-field></field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'AgmStActive' ? (expiring ? 'warning' : 'positive') : statusId == 'AgmStDraft' ? 'secondary' : 'grey'}">${statusText}${expiring ? ' · ' + ec.l10n.localize('expiring') : ''}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "") + (expiring ? " · expiring" : "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="intervalText"><default-field title="In effect"><display/></default-field></field>
+                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <columns>
+                        <column><field-ref name="description"/><field-ref name="agreementId"/></column>
+                        <column><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/></column>
+                        <column><field-ref name="intervalText"/></column>
+                        <column><field-ref name="currencyUomId"/></column>
+                        <column><field-ref name="organizationName"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="intervalText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoAgreements" condition="!agreementList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No agreements match' : can.agreementEdit ? 'No agreements yet · Start one with New agreement' : 'No agreements yet'}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

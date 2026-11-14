@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales' agreement parts of other screens (impl-sales P15; design-sales §6 OrderDetail's Agreements): SalesOrderAgreements, a sales
+    order's or quote's agreements in OrderDetail's Sales context, those whose negotiated prices its lines took (Mantle's
+    find#SalesAgreements with the orderId, of an order the user sees), each opening AgreementDetail; shown only when there is one. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="SalesOrderAgreements">
+            <actions>
+                <service-call name="mantle.party.SalesAgreementServices.find#SalesAgreements" out-map="orderAgreements" transaction="force-new"
+                        ignore-error="true" in-map="{orderId:orderId, state:'all', pageSize:20}"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="orderAgreementRows" from="orderAgreements?.agreementList || []"/>
+                <set field="agreementDetailPath" from="sharedLinks['Agreements/AgreementDetail'] || null"/>
+            </actions>
+            <widgets>
+                <container-box condition="orderAgreementRows.length">
+                    <box-header title="Agreements · ${orderAgreementRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="SalesOrderAgreementList" list="orderAgreementRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <conditional-field title="Agreement" condition="agreementDetailPath">
+                                    <link url="${agreementDetailPath}" text="${description}" link-type="anchor" parameter-map="{agreementId:agreementId}"/>
+                                    <label text="${agreementId} · ${intervalText}" type="div" style="text-caption m-muted"/>
+                                </conditional-field>
+                                <default-field title="Agreement"><display/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="text-caption m-muted q-pa-sm q-mb-none"
+                                text="The lines priced from an agreement keep their prices when it ends."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

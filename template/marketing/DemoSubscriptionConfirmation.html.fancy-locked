@@ -1,0 +1,3 @@
+<p>Hello ${firstName},</p>
+<p>Please confirm that you want to receive ${listName}. If you did not ask for it, ignore this message and nothing is sent.</p>
+<p>Ziziwork Retail</p>

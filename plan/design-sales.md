@@ -1226,6 +1226,39 @@ otherwise; no unguarded entity read. Crosscut §3.16 row:
 | --- | --- | --- | --- | --- |
 | Sales | Overview, Items and source lines, Payments and settlement (by grant) | invoices of permitted sales orders; receivable view | read only; send a PASS Billing pay link when the Accounting issuer grant is held | what the customer was billed and still owes |
 
+### As built (impl-sales P14, Nov 14, 2026)
+
+- **C, the commercial kinds.** `mantle.order.OrderChangeServices` stays Customer Service's (OrderChanges.js); for a commercial kind
+  it calls Sales' `SalesOrderChanges.js`. Filing (`save#OrderChange`): Customer Service's `ORDER_CHANGE_REQUEST` as before, or in
+  Sales `SALES_ORDER_CHANGE` or the order's editor; each kind's fields checked (a new price, a quantity above the line's or a new
+  line's product, a date, the part and a customer's address, a ship method or a carrier; the part is the new
+  `Request.orderPartSeqId`, audit-logged, so in the proposal's revision). Deciding stays `SALES_APPROVE`. Applying
+  (`apply#OrderChange`) needs `SALES_ORDER_CHANGE` in the seller's sales scope (the order desk FORBIDDEN as before); under the
+  order's lock the proposal's and the order's revisions, the approval's expiry and the fiscal period are checked as for Customer
+  Service's kinds, then each conflict refused by name: ACTIVE_PICK (picked and not packed, or a shipment of the part being
+  prepared), ALREADY_SHIPPED, BILLING_CONFLICT (a finalized invoice, or a packed quantity's draft invoice when the applier is no
+  receivables editor), PRICE_UNAVAILABLE and PRODUCT_NOT_USABLE for a new line, STOCK_CHANGED against the preview. The writes: the
+  Change hold; Accounting's `release#ShipmentDraftInvoice` for a packed price line (RECEIVABLE_EDIT); `update#OrderItem` (whose
+  reservation rule releases and rebuilds the line's open reservations), `create#OrderItem` at the seller's price
+  (`get#SellerProductPrice`, as a quote line's), `update#OrderPart`; `handle#OrderMajorChange` per part (X1 retax for a storeless
+  order); `evaluate#OrderCredit` with a hold on a higher total; only its own Change hold released; the approvals of the order's
+  other open proposals ended; the PDF stored. `preview#OrderChange` adds the effects: the total before and after, a tax estimate at
+  the order's rate, the freight (a storeless order's charge line unchanged, a store's recalculated) and the customer's credit now.
+  Reads: a Sales reader who sees the order reads its changes and their prices; `SALES_TEAM_VIEW` alone lists the organization's
+  commercial ones (a cancel or substitute only on an order's own Changes; P14 review). The preview's credit standing is shown only
+  to a credit reader or an approver.
+- **Order scope.** A change operator (`SALES_ORDER_CHANGE`) sees the organization's Placed, Processing, Approved and held orders read
+  only (SalesAccess.js `changeStatuses`, find#SalesOrders' reach), to propose and apply changes; a completed order leaves their sight.
+- **Screens.** Changes (`Sales/Orders/OrderChanges`, BOSS_SAL_CHANGES: the change operator, the approver, the manager): ChangeList
+  over find#OrderChanges' commercial kinds with To decide, Approved, Applied, Stale and All, New change. OrderChangeDetail in Sales'
+  context: Sales' check#Record, the commercial proposal form (template/SalesOrderChanges.xml), the Effects box, Decide and Apply;
+  editing a filed commercial proposal is not offered in Sales (withdraw and file again). OrderChangeApproval's link opens it for a
+  Sales approver, change operator or reader of the order. ShipmentDetail (`get#SalesShipment`, read only: items and sources of the
+  orders the user sees, packages, tracking) and InvoiceDetail (`check#SalesInvoice` for a receivable reader, then Accounting's
+  `get#InvoiceFinanceDetail`; Send with pay link through `send#Invoice` for a receivables editor) under Orders; OrderDetail's
+  shipment and invoice rows link to them, a Changes box lists the order's changes and More offers New change.
+- **Grants.** `BOSS_SALES_CHANGE` holds `SALES_ORDER_CHANGE` and `ORDER_CHANGE_HOLD_RELEASE` (F43), in its bundle.
+
 ## 7. Agreements, pricing and recurrence
 
 ### Agreements
@@ -1294,6 +1327,29 @@ A business using only Sales can receive Products' pricing capabilities without t
 launcher. Read-only quote users get a safe selected-price explanation; full trace requires PRICE_VIEW,
 and cost/margin additionally requires cost authority. Promotion editing remains Commerce-owned.
 **Source:** research §§5, 7; Products §7; CX §3.21. **Needs:** SAL-AGREEMENT; PRD-PRICE, PRD-ACCESS.
+
+### As built (impl-sales P15, Nov 14, 2026)
+
+- Mantle `mantle.party.SalesAgreementServices` over `SalesAgreements.js`: `find#`, `get#`, `create#`, `store#`, `activate#`, `end#` and
+  `renew#SalesAgreement`, `store#AgreementParty`, `store#AgreementTerm`, `store#AgreementItem` and the daily `expire#SalesAgreements`
+  (job `expire_SalesAgreements`, beside Purchasing's). A customer agreement is an AgrSales or AgrProduct Agreement of a selling
+  organization with its customer on Purchasing's status flow and audited fields; its revision is `agreementRevision`, counted by
+  each change and named by every write. A Sales reader of the organization reads its agreements and templates (agreements are the
+  organization's terms, not assigned work); a change needs `SALES_AGREEMENT_EDIT`; another organization's answers as missing.
+- The parties activation needs are the customer and a signer of the customer's (the customer or a current contact, AgreementParty);
+  the acceptance evidence is an AgreementContent of type AcntDocument, or the evidence typed at activation, kept as one. The prices
+  are ProductPrice rows naming the agreement and item, kept on the agreement by `store#AgreementItem` under `SALES_AGREEMENT_EDIT`
+  (not through Products' price editor, which needs `PRICE_EDIT`); a draft's change in place, an active agreement's ended and started
+  anew. End cancels a draft, closes an active agreement now or ends it at a later date; a renewal is a draft copy linked by
+  AgreementAssoc of the new type AatRenewal whose activation ends its predecessor at its start. AgreementParty keeps no dates.
+- The resolver's guard (design-products §7 as built) stops an agreement's prices outside its active dates; a quote line priced
+  earlier keeps its price, and PriceExplain names the agreement. A template's terms and print text, contract schedules and
+  amendments with stored approved PDFs are not built (§11).
+- Screens: Agreements (AgreementFind, AgreementList with Open, Active, Expiring, Drafts, Ended and Templates, NewAgreement), the shared
+  AgreementDetail at `Sales/Agreements/AgreementDetail` (Sales' only; it shares no form with Purchasing's, §4 Q5), Customer prices
+  and Price lists (Products' shared screens, for a holder of Products' price permissions), OrderDetail's Agreements box (the
+  agreements whose prices the lines took) and Customer360's Agreements tab. PriceExplain stays at `Sales/Products/PriceExplain` (P7's
+  one route), not `Sales/Agreements/PriceExplain`. An agreement is a record panel host of the root and in the palette.
 
 ### RecurringOrders
 

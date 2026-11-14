@@ -417,7 +417,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | built and reviewed Nov 14, merged |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | built and reviewed Nov 14, merged |
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | built and reviewed Nov 14, merged |
-| P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | — |
+| P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | built and reviewed Nov 14, merged |
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | — |
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | — |
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | — |
@@ -1735,6 +1735,240 @@ Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §1
   show on the delivery; a profile with no
   bounce account reads not ready with its reason and a link to Admin.
 
+**Built Nov 14 (P6).** mr-moqui, mr-mantle and mr-boss on branch `mkt/p6` (hashes in the worker's reply), from master after gate 1
+(P1–P5 and Sales P11 merged); the framework change built Debug in the mr-moqui worktree.
+- Checked first (the code over the plan): P4's and P5's Built and Review notes, F13–F18, F60, F76, F78, F90–F159 and §4's rows (Comms'
+  permissions by Marketing role; personal contacts refused by request#Subscriptions; suppressions promotional only but a hard bounce);
+  the ledger (MessageDeliveries.js, its `organizationPartyId` from P3's review and Sales P10's body and attachments); Sales P10's
+  SalesQuoteIssues.js (a stored `.html.fancy-locked` text rendered by location with an explicit map); moqui-mail's send path, its edge
+  DSN reader and the SMTP listener's store (a report's parts are EmailMessageAttachment files; the raw message is not kept); Admin's
+  relay model (an EmailServer no mail account owns, `disabled`, ConnectionCheck) and the framework's RecoveryDescriptor kinds
+  (SystemMessage or ServiceJob only). The code over the plan:
+  - F17 needed more than a subject and a bounce address: to send "from the profile's server, sender and reply-to" one call also gives
+    `fromAddress`, `fromName` and `emailServerId` (`replyToAddresses` was there), so no EmailTemplate per profile is made; a call's
+    subject is used as given, never expanded (a person's text runs as no expression);
+  - F18's ARF reader and the stored-message reader are one new module, moqui-mail `report.rs` (`read#DeliveryReport` on a stored
+    message, from its report part and returned message, never its body text); the edge's `parse_dsn` stays and shares its field
+    parsing; the mail capture gains `bounceAddress` (moqui-core `mail_capture.rs`), so a spec sees the envelope sender;
+  - "the intake is a registered recovery for the reports it could not read": RecoveryDescriptor covers SystemMessages and jobs, not
+    EmailMessages, so the recovery is the poll job's (`run_DeliveryReports`, targetKind ServiceJob, retry native), which reads again
+    what failed (five tries); unknown keys and unreadable messages are recorded once and left, never retried;
+  - the ledger's existing `record#DeliveryReceipt` (an attempt's outcome, Shop's contract, its spec unchanged) is kept; F14's receipt
+    facts are a new MessageDeliveryReceipt with the delivery's strongest fact on MessageDelivery (`receiptEnumId`);
+  - Marketing had no Sends area: P6 makes `Marketing/Sends` (the authors', BOSS_MKT_SENDS) with MessageTemplates only; the detail is
+    `Sends/MessageTemplateDetail`, a sibling of the list (as ListDetail is), not the design's nested path; P8 adds the sends;
+  - a template's content is published by date (a draft, one at a time), not reviewed by a second person: design §5's "review" in
+    TemplateRelease is the reason and the editor's own publication (MESSAGE_TEMPLATE_EDIT);
+  - "Settings gains Templates, Consent and Suppressions links": settings entries (Sending profiles, Message templates, Consent,
+    Suppressions) with their places on Settings' index and Admin's settingsRoutes.
+- Framework (mr-moqui):
+  - `org.moqui.EmailServices.send#EmailTemplate` (and so `send#Email`) take `subject`, `fromAddress`, `fromName`, `bounceAddress` and
+    `emailServerId` for one call over the template's (implementation.rs `CallHeaders`; a value with a line break or an address without
+    an @ left out with a warning; the stored message names the call's relay, sender and subject);
+  - `org.moqui.mail.EmailServices.read#DeliveryReport` (report.rs): reportType dsn or arf, a DSN's recipients (address, action, status
+    code, diagnostic), an ARF's feedback type and original envelope sender and recipients, the returned message's Message-ID and the
+    addresses the report came to (Delivered-To, else To); `parse_arf` beside `parse_dsn`;
+  - MailCapture's messages carry `bounceAddress` (docs/dev/JS-Testkit.md); docs/interfaces/Mail-Inbound.md says how an app reads its
+    own bounces and that the edge's bounce domain replaces an app's bounce address.
+- Mantle:
+  - `entity/MessageDeliveryEntities.xml` (a P6 block): MessageTemplate (MessageTemplatePurpose), MessageTemplateContent (dated, its
+    files), MessageSendingProfile (MessageTrackingPolicy), MessageDeliveryReceipt (MessageDeliveryReceipt: delivered, soft bounce, hard
+    bounce, complaint), MessageDeliveryReport (MessageDeliveryReportKind, MessageDeliveryReportStatus; one row a message);
+    MessageDelivery gains `sendingProfileId`, `receiptEnumId`, `receiptDate`.
+  - `MessageServices.xml` (a P6 block) over `MessageTemplates.js`: `find#`, `get#`, `create#`, `store#Template`, `store#TemplateContent`,
+    `preview#`, `publish#`, `end#Template` and `build#TemplateDelivery` (the ledger source MdsrcMessageTemplate); over
+    `MessageSendingProfiles.js`: `find#SendingProfiles`, `get#`, `store#`, `check#SendingProfile`; over `MessageDeliveryReports.js`:
+    `process#DeliveryReport`, `run#DeliveryReports`, `handle#BouncedMessage`, `find#DeliveryReceipts`. `queue#Delivery` takes
+    `sendingProfileId`; the attempt (MessageDeliveries.js) sends from the profile (VERP `bounces+<deliveryId>@` its bounce domain), waits
+    out its quiet hours and throttle untried, and counts a profile not ready as a retryable outcome; a source may give `subject`.
+    MessageSuppressions.js `addFromIntake` (the intake's internal block, never doubled). Rules and refusals in each service's
+    description.
+  - `service/MessageReports.emecas.xml` (DeliveryReportIntake: a multipart/report of delivery-status or feedback-report, or mail to a
+    `bounces+` address); `entity/EmailMessage.eecas.xml` DeliveryReportEdgeBounce (a template's message turning ES_BOUNCED, read after
+    the commit); `data/MessageTemplateSetupData.xml` (the source, the job run_DeliveryReports with its JobRegistration and its
+    RecoveryDescriptor, MESSAGE_SENDING_CONFIGURE).
+  - Marketing: `MarketingWorkspace.js` readiness `marketing.sending` (no profile, or none ready: a warning, fixed at
+    marketingSendingProfiles) and the settings entries; `MarketingAudiences.js` request#Subscriptions refuses the caller's own personal
+    contact (PERSONAL_CONTACT) as another user's (RECORD_UNAVAILABLE) (§4 Nov 14).
+- BOSS:
+  - Screens: `Shared/MessageTemplates` (TemplateFind, TemplateList, NewTemplate with Copy), `Shared/MessageTemplateDetail` (header,
+    content with the rich editor's inline text actions and the variables as name | label | fallback | required, preview with synthetic
+    samples shown cleaned in a `v-pre` box, publish, end, published contents), `Shared/SendingProfiles` (Profiles, SendingProfile,
+    SenderReadiness with each check's fix: Admin's relays, Comms' mail accounts); `Marketing/Sends` (area); Settings' SendingProfiles
+    tab; Settings' index places; the root's Sends item and `g t`.
+  - `Marketing.js` (P6 lines): the area `sends` (read `sendsRead`), capabilities `templateRead`, `profileRead`, `sendsRead`, the link
+    paths, the choice `messageTemplates`. `Admin.js` settingsRoutes: marketingSendingProfiles, marketingTemplates, marketingConsent,
+    marketingSuppressions.
+  - `BossSetupMarketingData.xml` (a P6 block): BOSS_MKT_SENDS; MESSAGE_TEMPLATE_EDIT to BOSS_MARKETING_AUTHOR and
+    MESSAGE_SENDING_CONFIGURE to BOSS_MARKETING_ADMIN, each in its bundle (§4 Nov 13). Demo (`BossZZMarketingDemoData.xml`, a P6
+    block; contents as component files under `template/marketing/`): Retail's published Garden newsletter and Subscription
+    confirmation and draft Spring preview invitation; Retail's profile ready on the demo relay BOSS_COM_DEMO_MAIL with the shared
+    account bounces@bounce.retail.example, Services' not ready (no bounce account).
+- Specs:
+  - framework (`cargo test -p moqui-mail`, 162 passed, 1 ignored as before): implementation_tests
+    `a_call_gives_its_subject_sender_relay_and_bounce_address`; report_tests (a DSN part, an ARF report and a whole message, a stored
+    report's parts and address, `read#DeliveryReport` on a stored message); `cargo clippy -p moqui-mail -p moqui-core --tests` clean.
+  - Mantle `test/party/MessageTemplates` (3 features, 1.2 s: the refusals of the parse, a reader and another organization; the preview's
+    fallback and escaping; a published content unchanged, a change a new draft whose publication ends it; the ledger source sends the
+    content in effect, suppressed without a required value or once ended), `test/party/SendingProfiles` (3 features, 0.7 s: not ready
+    without the bounce account with its reason and fix, ready with it, no host or credential in any answer, an account's server refused,
+    a reader, a non-holder and another organization; a delivery naming the profile with its relay, sender, reply-to and bounce address,
+    one naming none as before; quiet hours wait untried, a stale change refused), `test/party/DeliveryReports` (3 features, 0.5 s: a hard
+    bounce and a complaint each one fact and one suppression, a duplicate and a copy no change; a soft bounce no suppression, a later
+    delivered fact not moving a bounce back; an unknown key and an unreadable message recorded and the next processed, the edge's
+    ES_BOUNCED matched through its ECA, the poll finding nothing left); `Audiences` (+2 checks: the personal contacts refused).
+  - mr-boss `MarketingTemplates` (2 features, 0.2 s: MessageTemplateDetail's one qvt render; SendingProfiles' one html render, Services
+    not ready); `MarketingAccess` (the author's menu, keys and Sends tab, the P6 capabilities per group, Sends for an author and not a
+    reader, SendingProfiles the administrator's, the settings index's entries, the two new grants' holders; +0.3 s); `MarketingSpecLib`
+    (ids, menus).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingReadinessWalk` (4 features: the administrator binds a profile,
+    not ready then ready; an author publishes a template with a fallback; a DSN and an ARF to the VERP addresses of two deliveries naming
+    the profile each suppress once and show on the delivery; a profile with no bounce account not ready with the mail accounts' link).
+- Tests run (the Debug binary of this worktree, `--debug --nobuild`, this worktree's runtime; they need the framework change):
+  mr-mantle MessageTemplates, SendingProfiles, DeliveryReports, DeliveryLedger, Suppressions, Audiences, ContactListSend,
+  SalesQuoteIssue, SalesQuoteResponse, MarketingScope, Consent, AudienceImport, CartRecovery, StoreReviews, Eligibility (86 of 86);
+  mr-boss MarketingTemplates, MarketingAccess, MarketingLists, MarketingSegments, MarketingImport, MarketingCampaigns, AdminRegistries,
+  SalesQuoteSend, QuickCreate (49 of 49); mr-pass ShopAccount, Outbox (16 of 16); framework AdminMailOutcomes, BusinessAlerts and
+  basic-comms BasicCommsComposeRef (28 of 28). A throwaway render of MessageTemplates, MessageTemplateDetail (a draft, a missing one),
+  SendingProfiles (list and a profile) and Settings' index with each organization's readiness in qvt, tui and html, and the screens'
+  create, content, publish, header, profile and check transitions passed and was not kept. `moqui lint --screens` (the Debug binary):
+  141 flagged sites, as before, none in the P6 screens. Prettier clean on the changed JavaScript; rustfmt on the changed Rust files.
+  Not run: test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's Marketing P6 block (MessageServices' templates, profiles, intake and receipts); ss-inventory has no row
+  for P6's screens.
+- Design edits: design-marketing §5 MessageTemplateDetail and §12 SendingProfiles (as built); design-drawers-commons' Mailboxes row
+  (owner contract: the templates, profiles, receipts and intake).
+- Findings, numbered by the lead F160 to F168 in order:
+  - F17 is five per-call values, not two (`fromAddress`, `fromName`, `emailServerId` beside `subject` and `bounceAddress`), and the
+    call's subject is never expanded (the code over the plan above);
+  - the stored message keeps the call's relay, sender and subject but not its bounce address: a send again of the stored message (the
+    mail queue's retry) would use the template's; the ledger owns its messages' retries (OWNER_RETRIES), so none is resent that way;
+  - the bounce intake's recovery is its poll job's registration (RecoveryDescriptor has no EmailMessage kind); a report recorded
+    unknown or unreadable is not read again; its EmailMessage stays in the bounce account;
+  - sender domain verification is a warning, not a block: Admin has no domain verification (design-admin MailDomains is later), so
+    "verified" is a domain this server signs or a relay that passed Admin's test; an untested relay is a warning too;
+  - a hard bounce suppresses the address for every organization, a complaint for the delivery's organization only (the delivery's own,
+    else its store's); repeated soft bounces suppress nothing yet (MsrSoftFailures has no rule);
+  - the email ECA's condition (multipart/report or a `bounces+` address) and the edge ECA are not exercised through the SMTP listener in
+    the regression suite: the specs call process#DeliveryReport on a stored report, and the edge path through the EmailMessage ECA;
+  - the poll reads the bounce accounts of the profiles' bounce domains; a bounce account that also receives other mail has each
+    message read once (an ordinary message recorded unreadable);
+  - MessageTemplateDetail's variables are a text area (name | label | fallback | required) and TextBlocks are not offered; Use (a draft
+    send) waits for P8;
+  - Sales' quote templates still expand a `${subject}` body parameter in the EmailTemplate's subject (SalesQuoteIssues.js); they could
+    pass `subject` per call now; not changed here (Sales' file).
+- For the lead:
+  - budget share: mr-mantle about 2.4 s (MessageTemplates 1.2 s, SendingProfiles 0.7 s, DeliveryReports 0.5 s); mr-boss server about
+    0.5 s (MarketingTemplates 0.2 s, MarketingAccess +0.3 s); no client spec; moqui-mail about 0.1 s of cargo tests;
+  - merge hot spots (Sales P12 and P13 beside): mr-mantle `entity/MessageDeliveryEntities.xml` (MessageDelivery's fields and a P6 block),
+    `service/mantle/party/MessageServices.xml` (queue#Delivery's parameter, a P6 block), `MessageDeliveries.js` (the attempt's profile
+    and subject lines), `MessageSuppressions.js` (addBlock/addFromIntake), `entity/EmailMessage.eecas.xml`,
+    `service/mantle/marketing/MarketingWorkspace.js`, `MarketingAudiences.js`, `AudienceServices.xml`, `test/marketing/Audiences.spec.js`;
+    mr-boss `data/BossSetupMarketingData.xml` and `data/BossZZMarketingDemoData.xml` (P6 blocks), `service/ironstone/marketing/Marketing.js`,
+    `service/ironstone/admin/Admin.js` (settingsRoutes), `screen/Marketing.xml`, `screen/Marketing/Settings.xml`, `Settings/Index.xml`,
+    `test/Marketing/MarketingAccess.spec.js`, `MarketingSpecLib.js`, `plan/usl-inventory.md`, `plan/design-marketing.md`,
+    `plan/design-drawers-commons.md`, this file; mr-moqui `crates/moqui-mail/src/implementation.rs`, `edge_mail.rs`, `lib.rs`,
+    `crates/moqui-core/src/service/mail_capture.rs`, the two EmailServices.xml, `docs/dev/JS-Testkit.md`, `docs/interfaces/Mail-Inbound.md`.
+    Not touched: Sales files, SalesQuoteIssues.js, PASS;
+  - the user's calls: none required; to confirm, the complaint's organization-scoped suppression, the sender domain as a warning until
+    Admin verifies domains, and the five per-call values of F17.
+
+**Review Nov 14 (P6).** A fresh review of `mkt/p6` (mr-moqui 32bcc345, mr-mantle 977925fd, mr-boss 4fa00f42) against P6, §2, §4
+and design §5, §12, §15.1–15.2. Master merged first into each worktree (mr-moqui dc4e8977: Edge-Node2 and Dogfood DG4–DG6; mr-mantle
+ae35c809 and mr-boss 2e97d266: Sales P12 and P13), with no conflict: master changed neither moqui-mail's send path, the two
+EmailServices.xml nor MessageDeliveries.js, so the per-call values and the ledger's profile lines stand beside the quote mail as
+built. Debug rebuilt in the mr-moqui worktree.
+- Checked and sound:
+  - the framework change (F17, F18): `send#EmailTemplate` stays internal (`anonymous-view`, no screen or remote path hands request
+    parameters to it; send#ScreenRenderEmail's `in-map="context"` carries only its declared parameters; the tools REST
+    `email/templates/{id}/send` reaches send#Email, whose caller can already make a template with any sender and relay); every
+    existing caller passes subject, sender and relay inside `bodyParameters` only, so none changes; only Mantle's ledger passes
+    `fromAddress`, `emailServerId` and `bounceAddress`, from a profile of the delivery's organization (queue#Delivery refuses
+    another's). CR/LF in a per-call value is left out (the subject's become spaces), an address needs an @ and lettre parses it
+    again; the call's subject is never expanded. The ARF and stored-report readers index nothing past a part (lossy UTF-8, `get`,
+    caps of 256 KiB a part and 100 recipients); `cargo test -p moqui-mail` and clippy clean;
+  - templates (F78): the parse refuses an undeclared name, an expression, `<#`/`</#`/`<@`/`#{` tags, an unclosed `${`, a variable in
+    a link and reserved names; the escape `\${` is read exactly as the renderer's tokenizer reads it (template.rs `tokens_at`: a
+    backslash matters only right before `${` or `<#`, so `\\${a+b}` is literal in both), so no expression reaches the renderer;
+    each store writes a new `.html.fancy-locked` file the service names (no caller sets a location), rendered by location with the
+    declared variables' map only; the preview shows `StringUtilities.cleanHtml` output in a `v-pre` box; labels are data in qvt;
+    the reader and editor scope by MESSAGE_TEMPLATE_VIEW/EDIT and the organization, another's RECORD_UNAVAILABLE; revisions on every
+    write; a published content never changed;
+  - sending profiles: MESSAGE_SENDING_CONFIGURE and the organization for a write, Marketing's configurer, authors and dispatchers to
+    read; the relay an EmailServer no mail account owns; no answer carries a host, port, user or credential (relayId only); quiet
+    hours and the throttle return before an attempt row (no try counted); a profile not ready is a retryable outcome;
+  - the user's calls built here: MESSAGE_TEMPLATE_EDIT to BOSS_MARKETING_AUTHOR and MESSAGE_SENDING_CONFIGURE to BOSS_MARKETING_ADMIN
+    (each with its bundle row), request#Subscriptions refusing the caller's own personal contact (PERSONAL_CONTACT) and another's
+    as RECORD_UNAVAILABLE; a hard bounce suppresses for every organization and a complaint for the delivery's (its own, else its
+    store's), promotional only by MessageSuppressions' rule;
+  - screens: transitions call Mantle only; one qvt render (MessageTemplateDetail) and one html render (SendingProfiles) in
+    MarketingTemplates; no route fixture.
+- Fixed:
+  - R1 (forged bounces, high). The VERP address was `bounces+<deliveryId>@`, delivery ids are a sequence, and anyone can mail the
+    bounce address: a forged DSN or ARF naming a guessed id suppressed that delivery's address, for every organization on a hard
+    bounce, and the report's recipient was never compared with the delivery's. A delivery naming a profile now carries a random
+    `bounceKey` (MessageDelivery, made at queue, or at the first attempt for one queued before) and goes out from
+    `bounces+<deliveryId>.<bounceKey>@` the bounce domain; the intake takes a VERP address only with the delivery's key (else the
+    returned message's random Message-ID, as before), and a DSN counts only the recipients that are the delivery's own address
+    (another's is MrsIgnored). An ARF is bound by its key (Original-Rcpt-To is often redacted). The emeca's address pattern takes the
+    dot. DeliveryReports' new feature (no key, a wrong key, an ARF without a key, another recipient: nothing suppressed) fails on
+    the unfixed code; SendingProfiles and the acceptance walk read the key.
+  - R2 (confidentiality, high). The email ECA sends every stored multipart/report or bounces+ message of any account to the intake,
+    which read and recorded it (MessageDeliveryReport rows, a log line) whatever mailbox it was in: a person's own bounces, and a
+    forged report mailed to any hosted address. The intake now reads only a bounce account's messages (bounces@ a profile's bounce
+    domain); another mailbox's is left alone and nothing is recorded (`notBounceAccount`). DeliveryReports (fails on the unfixed
+    code).
+  - R3 (scope, medium). find#DeliveryReceipts gave any holder of MESSAGE_SUPPRESSION_REVIEW or CONTACT_ADMIN every delivery's
+    receipts across organizations (a Sales quote's, a Shop notice's), with the remote server's diagnostic, which names the address.
+    Now a reader other than MESSAGE_DELIVERY_REVIEW (or a system administrator, or MARKETING_ALL_ORGANIZATIONS) reads only the
+    deliveries of the organizations they work for, another's RECORD_UNAVAILABLE, and an address in a detail shows as [address].
+    DeliveryReports (fails on the unfixed code).
+  - R4 (unsafe HTML, low). The stored-body check missed an attribute after a slash (`<img/src=x/onerror=...>`) and a script link
+    written with character references (`&#106;ava&#x09;script&colon;`). The handler pattern takes a slash or quote before `on`, and
+    each attribute value is checked again decoded (references, and the white space a browser drops in a scheme). MessageTemplates
+    (fails on the unfixed code). The preview was already cleaned by cleanHtml; this guards the sent mail.
+  - R5 (scope, low). build#TemplateDelivery rendered a template for any delivery naming its EmailTemplate, whatever the delivery's
+    organization; it now suppresses one that is not the template's organization's (P8 queues these). MessageTemplates.
+  - Tests added in moqui-mail: a hostile and broken report (no separator, a fold first, non-UTF-8, a part cut inside a multi-byte
+    character at the limit, a feedback part with no body, 1,000 recipients capped at 100) never panics; a call's fromName and
+    emailServerId with a line break are left out (the template's name kept).
+- Findings, numbered by the lead F169 to F174 in order:
+  - the VERP key is a random value stored on the delivery, not a keyed hash (the script host has no HMAC); deliveries queued
+    before this review get a key at their next attempt;
+  - an ARF is bound to its delivery by the key alone; a recipient (or anyone who saw the message) holding the key or the Message-ID
+    can suppress only that recipient's address, which is the recipient's own choice anyway;
+  - a DSN whose Final-Recipient is a forwarding target (not the delivery's address, no Original-Recipient) is ignored: such a hard
+    bounce suppresses nothing (lettre sends no ORCPT);
+  - a profile's purpose (promotional or transactional) is not checked against the delivery's: a promotional delivery may name a
+    transactional-only profile; P8 should choose by purpose or queue#Delivery refuse it;
+  - the template body check is a pattern list, not a sanitizer: it refuses what it names (scripts, frames, forms, handlers, script
+    links) and leaves styles and remote images; mail clients clean the rest, and BOSS shows the preview through cleanHtml;
+  - the worker's findings stand (five per-call values; the stored message keeps no bounce address; recovery by the poll job;
+    sender domain a warning; no SMTP-listener path in the regression suite).
+- Tests run (the mr-moqui worktree's Debug binary, `--debug --nobuild`, this worktree's runtime):
+  - after the merge, before the fixes: mr-mantle MessageTemplates, SendingProfiles, DeliveryReports, DeliveryLedger, Suppressions,
+    Audiences, ContactListSend, SalesQuoteIssue, SalesQuoteResponse, MarketingScope, Consent, AudienceImport, CartRecovery,
+    StoreReviews, Eligibility (86 of 86, 188 s wall, 33 s of features); mr-boss's set ran during the entity edit and is counted
+    below;
+  - after the fixes: mr-mantle the 15 above with SalesQuoteTemplates and SalesPortal (96 of 96, 134 s wall, 38 s of
+    features), MessageTemplates again after R5 (3 of 3), DeliveryReports alone (5 of 5); mr-boss MarketingTemplates, MarketingAccess,
+    MarketingLists, MarketingSegments, MarketingImport, MarketingCampaigns, AdminRegistries, SalesQuoteSend, SalesQuoteTemplates,
+    QuickCreate (51 of 51, 24 s of features); mr-pass ShopAccount, Outbox (16 of 16); framework AdminMailOutcomes, BusinessAlerts and
+    basic-comms BasicCommsComposeRef (28 of 28);
+  - `cargo test -p moqui-mail` (163 passed, 1 ignored, 23 s), `cargo clippy -p moqui-mail --tests -D warnings` clean; rustfmt and
+    Prettier on the changed files. Not run: test-apps, test-framework; the acceptance walk MarketingReadinessWalk, changed for R1, ran once (4 of 4).
+- For the lead:
+  - budget share: mr-mantle DeliveryReports +2 features (about +0.4 s), MessageTemplates +3 checks (none measurable); mr-boss none;
+    moqui-mail +1 test (well under 0.1 s);
+  - merge hot spots: mr-mantle `entity/MessageDeliveryEntities.xml` (MessageDelivery `bounceKey`), `MessageDeliveries.js` (queue's
+    key, the attempt's key), `MessageDeliveryReports.js`, `MessageSendingProfiles.js` forDelivery's signature, `MessageServices.xml`
+    (process#DeliveryReport's out-parameter, two descriptions), `MessageReports.emecas.xml`, `MessageTemplates.js`; mr-boss the
+    acceptance walk and SendingProfiles.xml's tooltip; mr-moqui `docs/security/Attack-Surface.md` (Mail: three paragraphs after the
+    mail rule actions, committed here) and the moqui-mail tests;
+  - Attack-Surface: the per-call mail values, read#DeliveryReport and the bounce intake are in the worktree's
+    docs/security/Attack-Surface.md, Mail section (commit 62d76755), ready to merge with mkt/p6;
+  - the user's calls: none new; to confirm, an ARF bound by its key only and a forwarded hard bounce ignored (above).
+
 ### P7 — PASS Marketing: the app, subscription and preferences
 
 Design §13.1, §13 Subscribe and VerifySubscription, EmailPreferences (Marketing's context), §4 ListDetail's public
@@ -2595,6 +2829,21 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F157 | P5 (Review Nov 14): `classify#Recipients` puts another user's personal contact in "not available" by the calling user, so a P8 or P11 caller running as a job user (no user) sees every personal contact as not available; P8 and P11 should call it as the user who prepares | P5: as its Review note says |
 | F158 | P5 (Review Nov 14): SegmentDetail describes a stored Sales condition (its lead sources or campaigns in words) to an editor without Sales, marked unreadable; a definition, not Sales data | P5: as its Review note says |
 | F159 | P5 (Review Nov 14): "has an open lead is false" matches a person whose leads the caller cannot see: it reads as "none you can see" and discloses nothing | P5: as its Review note says |
+| F160 | P6 (Built Nov 14): F17 is five per-call values, not two (`fromAddress`, `fromName`, `emailServerId` beside `subject` and `bounceAddress`), and the call's subject is never expanded (the code over the plan above) | P6: as its Built note says |
+| F161 | P6 (Built Nov 14): the stored message keeps the call's relay, sender and subject but not its bounce address: a send again of the stored message (the mail queue's retry) would use the template's; the ledger owns its messages' retries (OWNER_RETRIES), so none is resent that way | P6: as its Built note says |
+| F162 | P6 (Built Nov 14): the bounce intake's recovery is its poll job's registration (RecoveryDescriptor has no EmailMessage kind); a report recorded unknown or unreadable is not read again; its EmailMessage stays in the bounce account | P6: as its Built note says |
+| F163 | P6 (Built Nov 14): sender domain verification is a warning, not a block: Admin has no domain verification (design-admin MailDomains is later), so "verified" is a domain this server signs or a relay that passed Admin's test; an untested relay is a warning too | P6: as its Built note says |
+| F164 | P6 (Built Nov 14): a hard bounce suppresses the address for every organization, a complaint for the delivery's organization only (the delivery's own, else its store's); repeated soft bounces suppress nothing yet (MsrSoftFailures has no rule) | P6: as its Built note says |
+| F165 | P6 (Built Nov 14): the email ECA's condition (multipart/report or a `bounces+` address) and the edge ECA are not exercised through the SMTP listener in the regression suite: the specs call process#DeliveryReport on a stored report, and the edge path through the EmailMessage ECA | P6: as its Built note says |
+| F166 | P6 (Built Nov 14): the poll reads the bounce accounts of the profiles' bounce domains; a bounce account that also receives other mail has each message read once (an ordinary message recorded unreadable) | P6: as its Built note says |
+| F167 | P6 (Built Nov 14): MessageTemplateDetail's variables are a text area (name \| label \| fallback \| required) and TextBlocks are not offered; Use (a draft send) waits for P8 | P6: as its Built note says |
+| F168 | P6 (Built Nov 14): Sales' quote templates still expand a `${subject}` body parameter in the EmailTemplate's subject (SalesQuoteIssues.js); they could pass `subject` per call now; not changed here (Sales' file) | P6: as its Built note says |
+| F169 | P6 (Review Nov 14): the VERP key is a random value stored on the delivery, not a keyed hash (the script host has no HMAC); deliveries queued before this review get a key at their next attempt | P6: as its Review note says |
+| F170 | P6 (Review Nov 14): an ARF is bound to its delivery by the key alone; a recipient (or anyone who saw the message) holding the key or the Message-ID can suppress only that recipient's address, which is the recipient's own choice anyway | P6: as its Review note says |
+| F171 | P6 (Review Nov 14): a DSN whose Final-Recipient is a forwarding target (not the delivery's address, no Original-Recipient) is ignored: such a hard bounce suppresses nothing (lettre sends no ORCPT) | P6: as its Review note says |
+| F172 | P6 (Review Nov 14): a profile's purpose (promotional or transactional) is not checked against the delivery's: a promotional delivery may name a transactional-only profile; P8 should choose by purpose or queue#Delivery refuse it | P6: as its Review note says |
+| F173 | P6 (Review Nov 14): the template body check is a pattern list, not a sanitizer: it refuses what it names (scripts, frames, forms, handlers, script links) and leaves styles and remote images; mail clients clean the rest, and BOSS shows the preview through cleanHtml | P6: as its Review note says |
+| F174 | P6 (Review Nov 14): the worker's findings stand (five per-call values; the stored message keeps no bounce address; recovery by the poll job; sender domain a warning; no SMTP-listener path in the regression suite) | P6: as its Review note says |
 
 ## 7. Later
 

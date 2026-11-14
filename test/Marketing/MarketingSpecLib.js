@@ -9,16 +9,21 @@ const ids = {
     staffMenu: ["Home", "Campaigns"],
     // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
     audienceMenu: ["Home", "Campaigns", "Audiences"],
-    adminMenu: ["Home", "Campaigns", "Audiences", "Settings"],
-    systemMenu: ["Home", "Campaigns", "Audiences", "Leads", "Settings"],
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Settings"],
+    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Leads", "Settings"],
+    // P6: Sends (Comms' templates) for the authors and the administrator
+    authorMenu: ["Home", "Campaigns", "Sends"],
+    sendsMenu: ["MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
-    settingsMenu: ["Index", "Adoption", "CampaignDefaults", "Vocabularies"],
+    settingsMenu: ["Index", "Adoption", "CampaignDefaults", "Vocabularies", "SendingProfiles"],
     // Campaigns' tabs: Approvals the approvers'
     campaignsMenu: ["Campaigns"],
     approverCampaignsMenu: ["Campaigns", "Approvals"],
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
+    // P6: an author opens the templates (g t)
+    authorKeys: ["g m", "g c", "g t"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
@@ -40,7 +45,13 @@ const ids = {
     // with Noah included by hand) and its spring preview guests (explicit: Maya included, Olive excluded)
     gardenSegmentId: "BOSS_MKT_SEG_GARDEN",
     vipSegmentId: "BOSS_MKT_SEG_VIP",
-    legacyPartyId: "BOSS_MKT_CON_PETE"
+    legacyPartyId: "BOSS_MKT_CON_PETE",
+    // P6's demo templates and sending profiles: Retail's published garden newsletter and subscription confirmation and its draft
+    // spring invitation; Retail's ready profile and Services' not ready one (no bounce account)
+    newsletterTemplateId: "BOSS_MKT_TPL_NEWS",
+    draftTemplateId: "BOSS_MKT_TPL_SPRING",
+    retailProfileId: "BOSS_MKT_PROFILE_RETAIL",
+    servicesProfileId: "BOSS_MKT_PROFILE_SERVICES"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

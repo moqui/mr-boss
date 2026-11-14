@@ -205,7 +205,8 @@ const capabilityUsers = [
     },
     // P9: the approver holds SALES_APPROVE (F43)
     {user: users.approver, granted: ["view", "orderApprove", "approve", "anyRead"]},
-    {user: users.change, granted: ["view", "anyRead"]},
+    // P14: the change operator holds SALES_ORDER_CHANGE (F43)
+    {user: users.change, granted: ["view", "orderChange", "anyRead"]},
     {user: users.agreement, granted: ["view", "agreementEdit", "recurrenceManage", "anyRead"]},
     {user: users.reader, granted: ["view", "teamView", "reportView", "anyRead", "teamRead", "reportRead", "reports"]},
     {
@@ -667,6 +668,36 @@ feature("a quote template is a manager's to keep and its organization's to read"
     then({rep, manager, repSees, otherSees}) {
         rep.includes("PERMISSION_DENIED")
         manager.includes("REVISION_CHANGED")
+        repSees == true
+        otherSees == false
+    }
+})
+
+// P15 (impl-sales P15): a customer agreement is the agreement keeper's to change and its organization's to read: with the same
+// parameters (a stale revision, so nothing is written) the rep is refused the change for the permission and the keeper reaches the
+// revision check; the rep reads Retail's agreement and Ziziwork Sales' rep does not (another organization's answers as missing)
+feature("a customer agreement is the keeper's to change and its organization's to read", {
+    when() {
+        const G = "mantle.party.SalesAgreementServices."
+        const store = user =>
+            asUser(user, () =>
+                system(() =>
+                    refusal(G + "store#SalesAgreement", {
+                        agreementId: ids.agreements.contoso,
+                        agreementRevision: "0",
+                        description: "Contoso supply terms"
+                    })
+                )
+            )
+        const seen = user =>
+            asUser(user, () =>
+                system(() => !!invoke(G + "get#SalesAgreement", {agreementId: ids.agreements.contoso}).agreementFound)
+            )
+        return {rep: store(users.rep), keeper: store(users.agreement), repSees: seen(users.rep), otherSees: seen(users.otherRep)}
+    },
+    then({rep, keeper, repSees, otherSees}) {
+        rep.includes("PERMISSION_DENIED")
+        keeper.includes("REVISION_CHANGED")
         repSees == true
         otherSees == false
     }

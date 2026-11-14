@@ -1911,8 +1911,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Customer Service P10: an order change to decide (Mantle's OrderChangeApproval, sent to ORDER_CHANGE_APPROVE holders of
         the order's organization, and SALES_APPROVE holders for a commercial kind) opens where Commons' record-link resolver sends
         each recipient (impl-sales P9, F58: one link for every recipient, resolved per user through PaletteServices.get#RecordLink's
-        order-change branch: Customer Service's OrderChangeDetail for one who works orders there, Sales' Approvals for a Sales
-        approver of a commercial kind until Sales' OrderChangeDetail, impl-sales P14); the decision is
+        order-change branch: Sales' OrderChangeDetail for a Sales approver, change operator or reader of a commercial kind's order,
+        impl-sales P14, else Customer Service's OrderChangeDetail for one who works orders there); the decision is
         mantle.order.OrderChangeServices.decide#OrderChange at the message's revision, from Notifications or the detail -->
     <moqui.security.user.NotificationTopic topic="OrderChangeApproval"
             linkTemplate="/apps/Commons/openRecord?recordEntityName=mantle.request.Request&amp;id=${requestId}"/>

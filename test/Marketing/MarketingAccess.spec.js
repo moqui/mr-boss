@@ -156,11 +156,15 @@ feature("the Marketing menu and keys follow the groups; the launcher shows Marke
     when() {
         const problems = []
         const author = shell(users.author)
-        if (author.status != 200 || JSON.stringify(author.names) !== JSON.stringify(ids.staffMenu))
+        // P6: the author opens Sends (Comms' templates) and its key
+        if (author.status != 200 || JSON.stringify(author.names) !== JSON.stringify(ids.authorMenu))
             problems.push(`the author's menu: ${author.status} ${author.names}`)
         const keymap = (author.providers?.keymaps || []).find(keymap => keymap.scope === "marketing")
         const keys = (keymap?.keys || []).map(key => key.keys)
-        if (JSON.stringify(keys) !== JSON.stringify(ids.keys)) problems.push(`the author's marketing keys: ${keys}`)
+        if (JSON.stringify(keys) !== JSON.stringify(ids.authorKeys)) problems.push(`the author's marketing keys: ${keys}`)
+        const sendsTabs = shell(users.author, true, "Sends/MessageTemplates", "Sends")
+        if (JSON.stringify(sendsTabs.names) !== JSON.stringify(ids.sendsMenu))
+            problems.push(`the author's Sends tabs: ${sendsTabs.status} ${sendsTabs.names}`)
         if (!author.apps.includes("Marketing")) problems.push(`the author's launcher has no Marketing: ${author.apps}`)
         for (const user of [users.approver, users.dispatch, users.events, users.analyst, users.reader]) {
             const names = shell(user, true).names
@@ -228,31 +232,48 @@ const capabilityNames = [
     "audiences",
     // P5: the audience preview's read (an audience reader, an author or a dispatcher) and its screen
     "previewRead",
-    "audiencePreview"
+    "audiencePreview",
+    // P6: Comms' templates and sending profiles read, and the Sends area (the template readers' until P8)
+    "templateRead",
+    "profileRead",
+    "sendsRead",
+    "sends"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
 const capabilityUsers = [
     {
         user: users.author,
-        granted: ["view", "campaignEdit", "sendEdit", "contentEdit", "templateView", "anyRead", "previewRead", "audiencePreview"]
+        granted: [
+            "view",
+            "campaignEdit",
+            "sendEdit",
+            "contentEdit",
+            "templateView",
+            "templateEdit",
+            "anyRead",
+            "previewRead",
+            "audiencePreview",
+            "templateRead",
+            "profileRead",
+            "sendsRead",
+            "sends"
+        ]
     },
     {
         user: users.audience,
         granted: ["view", ...audienceGrants, "anyRead", "audienceRead", "audiences", "previewRead", "audiencePreview"]
     },
     {user: users.approver, granted: ["view", "approve", "anyRead", "approvals"]},
-    {user: users.dispatch, granted: ["view", "dispatch", "anyRead", "previewRead", "audiencePreview"]},
+    {user: users.dispatch, granted: ["view", "dispatch", "anyRead", "previewRead", "audiencePreview", "profileRead"]},
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
     {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead"]},
     {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead"]},
     {
-        // no approval, dispatch, template edit or sending configuration (design §1.1); suppression review since P3 (the user's call
-        // of Nov 13)
+        // no approval, dispatch or template edit (design §1.1); suppression review since P3 and sending configuration since P6 (the
+        // user's call of Nov 13)
         user: users.admin,
-        granted: capabilityNames.filter(
-            name => !["approve", "dispatch", "templateEdit", "sendingConfigure", "approvals"].includes(name)
-        )
+        granted: capabilityNames.filter(name => !["approve", "dispatch", "templateEdit", "approvals"].includes(name))
     },
     {user: "marketing.spec.editonly", granted: ["campaignEdit"]},
     {user: users.system, granted: capabilityNames}
@@ -429,18 +450,26 @@ feature(
                 authorLists: screenRefusal(users.author, "Audiences/Lists"),
                 reader: screenRefusal(users.reader, "Audiences/AudiencePreview")
             }
+            // P6: Sends (Comms' templates) for an author, not a reader; the sending profiles the administrator's (Settings)
+            const sends = {
+                author: screenRefusal(users.author, "Sends/MessageTemplates"),
+                reader: screenRefusal(users.reader, "Sends/MessageTemplates"),
+                admin: screenRefusal(users.admin, "Settings/SendingProfiles"),
+                authorProfiles: screenRefusal(users.author, "Settings/SendingProfiles")
+            }
             return {
                 authorHome,
                 otherHome,
                 panels,
                 approvals,
                 preview,
+                sends,
                 adminSettings: asUser(users.admin, () => page("Settings/Index", {}, "html")),
                 adminAdoption: asUser(users.admin, () => page("Settings/Adoption", {}, "html")),
                 authorSettings: screenRefusal(users.author, "Settings/Index")
             }
         },
-        then({authorHome, otherHome, panels, approvals, preview, adminSettings, adminAdoption, authorSettings}) {
+        then({authorHome, otherHome, panels, approvals, preview, sends, adminSettings, adminAdoption, authorSettings}) {
             authorHome.errors.length == 0
             authorHome.output.includes("Marketing at a glance")
             authorHome.output.includes("Running campaigns")
@@ -471,6 +500,13 @@ feature(
             preview.author == ""
             unauthorized(preview.authorLists)
             unauthorized(preview.reader)
+            sends.author == ""
+            sends.admin == ""
+            unauthorized(sends.reader) || sends.reader.includes("PERMISSION_DENIED")
+            unauthorized(sends.authorProfiles) || sends.authorProfiles.includes("PERMISSION_DENIED")
+            // P6: the settings index links the sending profiles, templates, consent and suppressions
+            adminSettings.output.includes("Sending profiles") && adminSettings.output.includes("Message templates")
+            adminSettings.output.includes("Suppressions")
         }
     }
 )
@@ -521,12 +557,12 @@ feature(
                 expectHolders("MARKETING_AUDIENCE_IMPORT", ["BOSS_MARKETING_ADMIN", "BOSS_MARKETING_AUDIENCE"])
                 expectHolders("MARKETING_ALL_ORGANIZATIONS", ["BOSS_MARKETING_ADMIN"])
                 // approval and dispatch apart; Comms' explicit grants by Marketing role (the user's call of Nov 13): suppression review the
-                // administrator's since P3, template edit and sending configuration none until P6
+                // administrator's since P3, template edit the author's and sending configuration the administrator's since P6
                 expectHolders("MARKETING_APPROVE", ["BOSS_MARKETING_APPROVER"])
                 expectHolders("MARKETING_DISPATCH", ["BOSS_MARKETING_DISPATCH"])
                 expectHolders("MESSAGE_SUPPRESSION_REVIEW", ["BOSS_MARKETING_ADMIN"])
-                for (const userPermissionId of ["MESSAGE_TEMPLATE_EDIT", "MESSAGE_SENDING_CONFIGURE"])
-                    expectHolders(userPermissionId, [])
+                expectHolders("MESSAGE_TEMPLATE_EDIT", ["BOSS_MARKETING_AUTHOR"])
+                expectHolders("MESSAGE_SENDING_CONFIGURE", ["BOSS_MARKETING_ADMIN"])
                 const provider = ec.entity
                     .find("moqui.server.ReadinessProvider")
                     .condition("providerKey", "marketing.setup")

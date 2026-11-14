@@ -412,6 +412,12 @@ const settingsRoutes = {
     // Marketing P2: the campaign defaults and vocabularies (the readiness's "no policy" place)
     marketingCampaignDefaults: {url: "/qapps/Marketing/Settings/CampaignDefaults", plain: true},
     marketingVocabularies: {url: "/qapps/Marketing/Settings/Vocabularies", plain: true},
+    // Marketing P6: Comms' sending profiles and templates under Marketing's mount (the readiness's marketing.sending place) and the
+    // settings index's links to Consent and Suppressions
+    marketingSendingProfiles: {url: "/qapps/Marketing/Settings/SendingProfiles", plain: true},
+    marketingTemplates: {url: "/qapps/Marketing/Sends/MessageTemplates", plain: true},
+    marketingConsent: {url: "/qapps/Marketing/Audiences/Consent", plain: true},
+    marketingSuppressions: {url: "/qapps/Marketing/Audiences/Suppressions", plain: true},
     voice: {url: "/qapps/system/Voice", plain: true},
     toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
 }

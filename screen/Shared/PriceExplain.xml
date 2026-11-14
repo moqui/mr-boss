@@ -62,6 +62,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="customerPartyId" from="salesExplanation.customerPartyId"/>
                 <set field="priceUomId" from="salesExplanation.currencyUomId"/>
                 <set field="quantity" from="salesExplanation.quantityText"/>
+                <!-- P15: the customer agreement whose negotiated price the line took, for a price reader's trace too -->
+                <set field="agreementId" from="salesExplanation.agreementId || agreementId"/>
+                <set field="agreementItemSeqId" from="salesExplanation.agreementItemSeqId || agreementItemSeqId"/>
             </if>
         </if>
         <if condition="salesReader">
@@ -93,6 +96,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label type="h6" text="${salesExplanation.productName} · ${salesExplanation.quantityText} at ${salesExplanation.unitText}"/>
                                 <label type="p" text="${salesExplanation.overridden ? 'Entered price' : salesExplanation.priceSourceText}${salesExplanation.customerPrice ? ' · the customer’s own price' : ''}${salesExplanation.priceListName ? ' · price list ' + salesExplanation.priceListName : ''}"/>
+                                <label type="p" text="The negotiated price of agreement ${salesExplanation.agreementName} (${salesExplanation.agreementId}), in effect ${salesExplanation.agreementIntervalText}: it applies while the agreement is active."
+                                        condition="salesExplanation.agreementId"/>
                                 <label type="p" text="Calculated price: ${salesExplanation.calculatedText}${salesExplanation.listText ? ' · list price ' + salesExplanation.listText : ''}"/>
                                 <label type="p" text="Entered because: ${salesExplanation.overrideReason}" condition="salesExplanation.overridden"/>
                                 <label type="p" style="text-warning" text="Today's price is ${salesExplanation.currentText}; the line keeps the price it was given."
