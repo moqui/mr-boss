@@ -163,4 +163,87 @@ along with this software (see the LICENSE.md file). If not, see
             roleTypeId="MarketingCampaignManager" fromDate="2026-11-05 09:00:00"/>
     <mantle.party.PartyRole partyId="BOSS_MKT_AUTHOR2" roleTypeId="MarketingCampaignManager"/>
     <!-- ===== end of Marketing P2 ===== -->
+
+    <!-- ===== Marketing P3: lists, consent and suppressions (impl-marketing P3; design-marketing §4) ===== -->
+    <!-- A salesperson of Retail who also manages audiences (Sales' representative groups and Marketing's audience group), for the bulk
+        "Add to list (evidenced)" on Sales' Leads and Accounts; sales.rep holds no audience permission and sees no such action. -->
+    <mantle.party.Party partyId="BOSS_MKT_SALES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MKT_SALES" firstName="Marketing" lastName="Salesperson"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MKT_SALES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MKT_SALES" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MKT_SALES" username="marketing.sales"
+            userFullName="Marketing Salesperson" partyId="BOSS_MKT_SALES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MKT_SALES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES" userId="BOSS_MKT_SALES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_SALES_REP" userId="BOSS_MKT_SALES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MARKETING" userId="BOSS_MKT_SALES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MARKETING_AUDIENCE" userId="BOSS_MKT_SALES" fromDate="0"/>
+    <!-- Retail's customers on its lists -->
+    <mantle.party.Party partyId="BOSS_MKT_CON_MAYA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MKT_CON_MAYA" firstName="Maya" lastName="Lindqvist"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_MKT_CON_MAYA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="maya.lindqvist@zizi-customers.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_MKT_CON_MAYA" contactMechId="BOSS_MKT_CON_MAYA_EM" contactMechPurposeId="EmailPrimary" fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_MKT_CON_NOAH" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MKT_CON_NOAH" firstName="Noah" lastName="Brandt"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_MKT_CON_NOAH_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="noah.brandt@zizi-customers.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_MKT_CON_NOAH" contactMechId="BOSS_MKT_CON_NOAH_EM" contactMechPurposeId="EmailPrimary" fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_MKT_CON_OLIVE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MKT_CON_OLIVE" firstName="Olive" lastName="Harper"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_MKT_CON_OLIVE_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="olive.harper@zizi-customers.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_MKT_CON_OLIVE" contactMechId="BOSS_MKT_CON_OLIVE_EM" contactMechPurposeId="EmailPrimary" fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_MKT_CON_PETE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MKT_CON_PETE" firstName="Pete" lastName="Okafor"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_MKT_CON_PETE_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="pete.okafor@zizi-customers.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_MKT_CON_PETE" contactMechId="BOSS_MKT_CON_PETE_EM" contactMechPurposeId="EmailPrimary" fromDate="2026-01-01 00:00:00"/>
+    <!-- Retail's garden newsletter (confirmation required, offered publicly), its announcements and a single-use VIP list of the spring
+        campaign; none subscribes its creator -->
+    <mantle.marketing.contact.ContactList contactListId="BOSS_MKT_LIST_GARDEN" contactListName="Garden newsletter" contactListTypeEnumId="NEWSLETTER"
+            contactMechTypeEnumId="CmtEmailAddress" ownerPartyId="ORG_ZIZI_RETAIL" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            description="Planting guides and the season's arrivals, twice a month"/>
+    <mantle.marketing.contact.ContactListPolicy contactListId="BOSS_MKT_LIST_GARDEN" fromDate="2026-10-01 09:00:00" publicOffer="Y"
+            confirmationRequired="Y" purposeEnumId="PcpMarketingEmail" evidenceText="Yes, send me the garden newsletter twice a month"
+            changedByUserId="BOSS_MKT_AUDIENCE"/>
+    <mantle.marketing.contact.ContactList contactListId="BOSS_MKT_LIST_STORE" contactListName="Store announcements" contactListTypeEnumId="ANNOUNCEMENT"
+            contactMechTypeEnumId="CmtEmailAddress" ownerPartyId="ORG_ZIZI_RETAIL" description="Opening hours, closures and recalls"/>
+    <mantle.marketing.contact.ContactList contactListId="BOSS_MKT_LIST_VIP" contactListName="Spring VIP preview" contactListTypeEnumId="MARKETING"
+            contactMechTypeEnumId="CmtEmailAddress" ownerPartyId="ORG_ZIZI_RETAIL" marketingCampaignId="BOSS_MKT_CMP_SPRING" singleUse="Y"
+            description="One invitation to the spring preview evening"/>
+    <!-- Maya accepted with evidence; Noah pending his confirmation; Olive unsubscribed; Pete a legacy member with no evidence -->
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_GARDEN" partyId="BOSS_MKT_CON_MAYA" fromDate="2026-10-05 10:00:00"
+            statusId="CLPT_ACCEPTED" preferredContactMechId="BOSS_MKT_CON_MAYA_EM" revision="2"/>
+    <mantle.party.PartyConsent partyConsentId="BOSS_MKT_PC_MAYA" partyId="BOSS_MKT_CON_MAYA" contactMechId="BOSS_MKT_CON_MAYA_EM"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" statusId="PconGranted" consentDate="2026-10-06 11:00:00"
+            sourceEnumId="PcsForm" evidenceText="Garden newsletter sign-up card at the Spring fair, confirmed by phone" userId="BOSS_MKT_AUDIENCE"/>
+    <mantle.marketing.contact.SubscriptionRequest subscriptionRequestId="BOSS_MKT_SR_MAYA" contactListId="BOSS_MKT_LIST_GARDEN" partyId="BOSS_MKT_CON_MAYA"
+            contactMechId="BOSS_MKT_CON_MAYA_EM" organizationPartyId="ORG_ZIZI_RETAIL" purposeEnumId="PcpMarketingEmail" requestKindEnumId="SrkStaff"
+            sourceEnumId="PcsForm" evidenceDate="2026-10-04 15:00:00" evidenceText="Garden newsletter sign-up card at the Spring fair, confirmed by phone"
+            statusEnumId="SrsAccepted" requestedDate="2026-10-06 11:00:00" requestedByUserId="BOSS_MKT_AUDIENCE" decidedDate="2026-10-06 11:00:00"
+            partyConsentId="BOSS_MKT_PC_MAYA"/>
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_GARDEN" partyId="BOSS_MKT_CON_NOAH" fromDate="2026-11-10 09:30:00"
+            statusId="CLPT_PENDING" preferredContactMechId="BOSS_MKT_CON_NOAH_EM" revision="1"/>
+    <mantle.marketing.contact.SubscriptionRequest subscriptionRequestId="BOSS_MKT_SR_NOAH" contactListId="BOSS_MKT_LIST_GARDEN" partyId="BOSS_MKT_CON_NOAH"
+            contactMechId="BOSS_MKT_CON_NOAH_EM" organizationPartyId="ORG_ZIZI_RETAIL" purposeEnumId="PcpMarketingEmail" requestKindEnumId="SrkStaff"
+            sourceEnumId="PcsStaff" evidenceDate="2026-11-09 16:00:00" evidenceText="Asked at the till to get the newsletter"
+            statusEnumId="SrsPending" requestedDate="2026-11-10 09:30:00" requestedByUserId="BOSS_MKT_AUDIENCE" decidedDate="2026-11-10 09:30:00"/>
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_GARDEN" partyId="BOSS_MKT_CON_OLIVE" fromDate="2026-10-05 10:00:00"
+            statusId="CLPT_UNSUBSCRIBED" preferredContactMechId="BOSS_MKT_CON_OLIVE_EM" revision="2"/>
+    <mantle.party.PartyConsent partyConsentId="BOSS_MKT_PC_OLIVE1" partyId="BOSS_MKT_CON_OLIVE" contactMechId="BOSS_MKT_CON_OLIVE_EM"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" statusId="PconGranted" consentDate="2026-10-05 10:00:00"
+            sourceEnumId="PcsForm" evidenceText="Website sign-up form"/>
+    <mantle.party.PartyConsent partyConsentId="BOSS_MKT_PC_OLIVE2" partyId="BOSS_MKT_CON_OLIVE" contactMechId="BOSS_MKT_CON_OLIVE_EM"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" statusId="PconWithdrawn" consentDate="2026-11-02 08:00:00"
+            sourceEnumId="PcsEmailLink" evidenceText="Unsubscribe link of the October newsletter"/>
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_GARDEN" partyId="BOSS_MKT_CON_PETE" fromDate="2024-03-01 00:00:00"
+            statusId="CLPT_ACCEPTED" preferredContactMechId="BOSS_MKT_CON_PETE_EM" revision="0"/>
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_STORE" partyId="BOSS_MKT_CON_MAYA" fromDate="2025-06-01 00:00:00"
+            statusId="CLPT_ACCEPTED" preferredContactMechId="BOSS_MKT_CON_MAYA_EM" revision="0"/>
+    <!-- two suppressions: a hard bounce for every organization (a delivery status report) and Olive's complaint, Retail's -->
+    <mantle.party.MessageSuppression suppressionId="BOSS_MKT_SUP_BOUNCE" channelEnumId="MdcEmail" destinationKey="old.address@zizi-customers.example"
+            reasonEnumId="MsrHardBounce" sourceEnumId="MssReport" sourceRef="dsn-2026-10-28" evidenceText="550 5.1.1 The email account does not exist"
+            fromDate="2026-10-28 07:00:00"/>
+    <mantle.party.MessageSuppression suppressionId="BOSS_MKT_SUP_COMPLAINT" channelEnumId="MdcEmail" destinationKey="olive.harper@zizi-customers.example"
+            organizationPartyId="ORG_ZIZI_RETAIL" reasonEnumId="MsrComplaint" sourceEnumId="MssProvider" sourceRef="arf-2026-11-01"
+            evidenceText="Marked the October newsletter as spam" fromDate="2026-11-01 18:00:00"/>
+    <!-- ===== end of Marketing P3 ===== -->
 </entity-facade-xml>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › MemberDetail (design-marketing §4 MemberDetail: Membership, SubscriptionAction, ConsentHistory; style-guide
+    §3.3 Detail; impl-marketing P3): one party's membership of a list of the user's organizations (get#Member; else "Not available",
+    linking back to the list). The header: the contact, the whole address and whether it is suppressed, the state chip; the primary
+    action by state (Confirm with evidence for a pending request, a consent editor's) and Withdraw in More. The boxes: the membership
+    rows, the subscription requests with their evidence and outcome, and the consent history of the list and of its organization's
+    purposes. A staff member cannot undo a complaint or a hard bounce here: a suppression has its own review (Suppressions). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Member" default-menu-include="false">
+    <parameter name="contactListId" required="true"/>
+    <parameter name="partyId" required="true"/>
+    <transition-include name="requestSubscriptions" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="withdrawSubscription" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <actions>
+        <service-call name="mantle.marketing.AudienceServices.get#Member" out-map="detail" transaction="force-new" ignore-error="true"
+                in-map="{contactListId:contactListId, partyId:partyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!detail?.member"/>
+        <set field="member" from="detail?.member || {}"/>
+        <set field="list" from="detail?.list || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="rowList" from="detail?.rows || []"/>
+        <set field="requestList" from="detail?.requests || []"/>
+        <set field="historyList" from="detail?.consentHistory || []"/>
+        <set field="listPath" from="sharedLinks['Audiences/ListDetail']"/>
+        <set field="captionText" from="[member.addressText || 'no address', 'on ' + list.contactListName, member.fromText ? 'since ' + member.fromText : null].filter(Boolean).join(' · ')"/>
+        <set field="actionValues" from="{contactListId: contactListId, partyIdList: partyId, partyId: partyId, accept: 'Y', sourceEnumId: 'PcsStaff'}"/>
+    </actions>
+    <widgets>
+        <section name="MemberNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="This membership is not available: the list is not one of your organizations', or the contact is not on it." type="p"/>
+                        <link url="${listPath}" text="Back to the list" link-type="anchor" parameter-map="{contactListId:contactListId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MemberFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${partyId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${member.partyName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="The address is suppressed (${member.suppressionText}): nothing is sent to it until a reviewer ends the suppression."
+                                    type="div" style="text-caption text-negative" condition="member.suppressed"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${member.statusColor}">${WebUtilities.encodeHtml(member.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(member.statusText ?? "")})}]]></text>
+                                <text type="html">${member.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <link url="${listPath}" text="Back to the list" link-type="anchor-button" icon="arrow_back" parameter-map="{contactListId:contactListId}"/>
+                            <container-dialog id="ConfirmDialog" button-text="Confirm with evidence" icon="sym_o_verified" type="primary"
+                                    title="Confirm ${member.partyName} on ${list.contactListName}" width="620" condition="can.canConfirm">
+                                <form-single name="ConfirmMember" transition="requestSubscriptions" map="actionValues">
+                                    <field name="contactListId"><default-field><hidden/></default-field></field>
+                                    <field name="partyIdList"><default-field><hidden/></default-field></field>
+                                    <field name="accept"><default-field><hidden/></default-field></field>
+                                    <field name="sourceEnumId">
+                                        <default-field title="Evidence source">
+                                            <drop-down><option key="PcsStaff" text="Staff"/><option key="PcsForm" text="Form"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="evidenceDate"><default-field title="Evidence date"><date-time type="date-time"/></default-field></field>
+                                    <field name="evidenceText"><default-field title="Evidence"><text-area rows="3" cols="60"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Confirm" confirmation="Accept ${member.partyName} on ${list.contactListName} with this evidence?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="WithdrawDialog" button-text="Withdraw" icon="sym_o_unsubscribe"
+                                        title="Withdraw ${member.partyName} from ${list.contactListName}" width="560" condition="can.canWithdraw">
+                                    <form-single name="WithdrawMember" transition="withdrawSubscription" map="actionValues">
+                                        <field name="contactListId"><default-field><hidden/></default-field></field>
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="evidenceText"><default-field title="Where the request came from"><text-line size="50"/></default-field></field>
+                                        <field name="reasonText"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Withdraw" type="danger" confirmation="Withdraw ${member.partyName} from ${list.contactListName}? It takes effect at once."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Membership"/>
+                    <box-body-nopad>
+                        <form-list name="MembershipRows" list="rowList" skip-form="true" paginate="false">
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="revision" align="right"><default-field title="Revision"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="statusText"/></column>
+                                <column><field-ref name="fromText"/><field-ref name="thruText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Requests"/>
+                    <box-body-nopad>
+                        <form-list name="Requests" list="requestList" skip-form="true" paginate="false">
+                            <field name="requestedText"><default-field title="Filed"><display/></default-field></field>
+                            <field name="kindText"><default-field title="From"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="Outcome">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "") + (reasonCode ? " " + reasonCode : "")})}]]></text>
+                                        <text type="html">${statusText} ${reasonCode}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="reasonCode"><default-field title="Reason"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Evidence source"><display/></default-field></field>
+                            <field name="evidenceDateText"><default-field title="Evidence of"><display/></default-field></field>
+                            <field name="evidenceText"><default-field title="Evidence"><display/></default-field></field>
+                            <field name="requestedBy"><default-field title="By"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="requestedText"/><field-ref name="evidenceText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="reasonCode"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoRequests" condition="!requestList.length">
+                            <widgets><label text="No subscription request: this membership came before Marketing's requests." type="p" style="m-muted q-pa-sm"/></widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Consent history"/>
+                    <box-body-nopad>
+                        <form-list name="ConsentHistory" list="historyList" skip-form="true" paginate="false">
+                            <field name="consentDate"><default-field title="When"><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                            <field name="purposeDescription"><default-field title="Purpose"><display/></default-field></field>
+                            <field name="statusDescription"><default-field title="Consent"><display/></default-field></field>
+                            <field name="contactListName"><default-field title="List"><display/></default-field></field>
+                            <field name="sourceDescription"><default-field title="Source"><display/></default-field></field>
+                            <field name="evidenceText"><default-field title="Evidence"><display/></default-field></field>
+                            <field name="userName"><default-field title="By"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="consentDate"/><field-ref name="purposeDescription"/></column>
+                                <column><field-ref name="statusDescription"/><field-ref name="sourceDescription"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoHistory" condition="!historyList.length">
+                            <widgets><label text="No consent recorded for this list yet." type="p" style="m-muted q-pa-sm"/></widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

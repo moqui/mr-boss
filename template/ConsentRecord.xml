@@ -86,6 +86,8 @@ along with this software (see the LICENSE.md file). If not, see
                             .map((address) => ({key: address.contactMechId, text: address.addressText}))
                     consPurposeOptions = Array.from(cons.purposeOptions || [])
                     consSourceOptions = Array.from(cons.sourceOptions || [])
+                    // impl-marketing P3: the organizations a Marketing consent editor records for (the including screen's, if any)
+                    consOrgOptions = Array.from(ec.context.consentOrgOptions || [])
                     consStatusOptions = [{key: 'PconGranted', text: ec.l10n.localize('Granted')}, {key: 'PconWithdrawn', text: ec.l10n.localize('Withdrawn')}]
                 ]]></script>
             </actions>
@@ -119,8 +121,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="consentDate"><default-field title="When (empty: now)"><date-time type="date-time"/></default-field></field>
                                     <field name="evidenceText"><default-field title="Evidence"><text-area rows="3" cols="60"/></default-field></field>
                                     <field name="comments"><default-field title="Note"><text-line size="60"/></default-field></field>
+                                    <field name="organizationPartyId">
+                                        <conditional-field title="For" condition="consOrgOptions.length">
+                                            <drop-down><list-options list="consOrgOptions" key="${key}" text="${text}"/></drop-down></conditional-field>
+                                        <default-field><hidden/></default-field></field>
                                     <field name="submitButton"><default-field title="Record"><submit/></default-field></field>
                                     <field-layout>
+                                        <field-ref name="organizationPartyId"/>
                                         <field-row><field-ref name="purposeEnumId"/><field-ref name="statusId"/></field-row>
                                         <field-ref name="contactMechId"/>
                                         <field-row><field-ref name="sourceEnumId"/><field-ref name="consentDate"/></field-row>

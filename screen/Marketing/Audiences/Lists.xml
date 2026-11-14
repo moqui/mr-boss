@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › Lists (design-marketing §4 Lists: ListFind, ContactLists, NewList; style-guide §3.2 List; impl-marketing
+    P3): the lists of the user's organizations (mantle.marketing.AudienceServices.find#Lists, scoped and paged in the query; never a
+    mailbox), active ones by default, each with its kind, channel, organization, campaign, subscribed and pending counts and state.
+    New list is the primary action (MARKETING_AUDIENCE_EDIT); a list subscribes no one, its members come by evidenced requests on
+    ListDetail. Import and Merge join with P4. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Lists" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="contactListTypeEnumId"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="archived"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createList" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <if condition="can.audienceRead">
+            <service-call name="mantle.marketing.AudienceServices.find#Lists" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, contactListTypeEnumId:contactListTypeEnumId,
+                        marketingCampaignId:marketingCampaignId, archived:(archived || 'N'), pageIndex:pageIndex, pageSize:pageSize,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="contactListList" from="found?.contactListList || []"/>
+        <set field="contactListListCount" from="found?.contactListListCount"/>
+        <set field="contactListListPageIndex" from="found?.contactListListPageIndex"/>
+        <set field="contactListListPageSize" from="found?.contactListListPageSize"/>
+        <set field="contactListListPageMaxIndex" from="found?.contactListListPageMaxIndex"/>
+        <set field="contactListListPageRangeLow" from="found?.contactListListPageRangeLow"/>
+        <set field="contactListListPageRangeHigh" from="found?.contactListListPageRangeHigh"/>
+        <set field="detailPath" from="sharedLinks['Audiences/ListDetail'] || null"/>
+        <set field="canEdit" from="!!can.audienceEdit"/>
+        <set field="filtered" from="!!(text || organizationPartyId || contactListTypeEnumId || marketingCampaignId || (archived &amp;&amp; archived != 'N'))"/>
+        <set field="emptyText" from="filtered ? 'No list matches these filters.' : 'No lists yet' + (canEdit ? ' · Start one with New list.' : '.')"/>
+        <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read audiences in Marketing." type="p" style="m-muted" condition="!can.audienceRead"/>
+        <section name="ListsRegister" condition="can.audienceRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Lists" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewListDialog" button-text="New list" title="New list" icon="sym_o_add"
+                                width="760" type="primary" condition="canEdit">
+                            <section-include name="NewListForm" location="component://mr-boss/template/MarketingAudiences.xml"/>
+                        </container-dialog>
+                        <link url="." text="Archived" link-type="anchor-button" icon="sym_o_inventory_2" parameter-map="{archived:'Y'}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ContactLists" list="contactListList" skip-form="true" paginate="true" header-dialog="true"
+                                select-columns="true" show-csv-button="true">
+                            <field name="contactListId"><default-field><hidden/></default-field></field>
+                            <field name="text"><header-field title="Name or id"><text-line size="20"/></header-field></field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="contactListTypeEnumId">
+                                <header-field title="Kind">
+                                    <drop-down allow-empty="true">
+                                        <option key="NEWSLETTER" text="Newsletter"/>
+                                        <option key="MARKETING" text="Marketing"/>
+                                        <option key="ANNOUNCEMENT" text="Announcement"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="marketingCampaignId">
+                                <header-field title="Campaign">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="archived">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="N" text="Active"/>
+                                        <option key="Y" text="Archived"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="contactListName">
+                                <conditional-field title="List" condition="detailPath">
+                                    <link url="${detailPath}" text="${contactListName}" link-type="anchor" parameter-map="{contactListId:contactListId}"/>
+                                </conditional-field>
+                                <default-field title="List"><display/></default-field>
+                            </field>
+                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="channelText"><default-field title="Channel"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="campaignName"><default-field title="Campaign"><display/></default-field></field>
+                            <field name="subscribedCount" align="right"><default-field title="Subscribed"><display format="#,##0"/></default-field></field>
+                            <field name="pendingCount" align="right"><default-field title="Pending"><display format="#,##0"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns>
+                                <column><field-ref name="contactListName"/><field-ref name="typeText"/></column>
+                                <column><field-ref name="channelText"/></column>
+                                <column><field-ref name="organizationName"/><field-ref name="campaignName"/></column>
+                                <column><field-ref name="subscribedCount"/></column>
+                                <column><field-ref name="pendingCount"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="contactListName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="subscribedCount"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoLists" condition="!contactListList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

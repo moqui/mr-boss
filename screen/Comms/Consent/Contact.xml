@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     export of a data request: template/ConsentRecord.xml's ConsentRecordSection with the history. A page rather than the
     design's dialog: with the history it is longer than a dialog may be (style-guide §3.11); Record consent and each change
     are its dialogs. For contact admins only, as the registry; the contact record's Consent tab shows the same state to
-    anyone who may see the contact. -->
+    anyone who may see the contact. Marketing mounts it at Marketing/Audiences/Consent/Contact (impl-marketing P3): a Marketing
+    consent editor sees a contact of their organizations' lists only, without the link to Commons. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Contact consent" default-menu-include="false">
 
@@ -31,11 +32,15 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <service-call name="ironstone.comms.ConsentServices.check#ConsentAdmin" out-map="adminOut"/>
         <set field="isConsentAdmin" from="!!adminOut.isConsentAdmin"/>
+        <set field="isContactAdmin" from="!!adminOut.isContactAdmin"/>
+        <!-- impl-marketing P3: a Marketing consent editor records consent for one of their organizations -->
+        <set field="consentOrgOptions" from="adminOut.organizationPartyIds == null ? [] : Array.from(adminOut.organizationPartyIds).map(id =&gt; ({key: id,
+                text: ec.entity.find('mantle.party.Organization').condition('partyId', id).useCache(true).one()?.organizationName || id}))"/>
         <set field="consentPartyId" from="partyId"/>
         <set field="consentFull" from="true"/>
         <script><![CDATA[
             contactName = null
-            if (isConsentAdmin && partyId) {
+            if (isContactAdmin && partyId) {
                 const party = ec.entity.find('mantle.party.PartyDetail').condition('partyId', partyId).one()
                 if (party != null && (!party.privateOwnerUserId || party.privateOwnerUserId === ec.user.userId))
                     contactName = ec.resource.expand('PartyFullNameTemplate', '', party).trim() || partyId

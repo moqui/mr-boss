@@ -162,14 +162,22 @@ feature("the Marketing menu and keys follow the groups; the launcher shows Marke
         const keys = (keymap?.keys || []).map(key => key.keys)
         if (JSON.stringify(keys) !== JSON.stringify(ids.keys)) problems.push(`the author's marketing keys: ${keys}`)
         if (!author.apps.includes("Marketing")) problems.push(`the author's launcher has no Marketing: ${author.apps}`)
-        for (const user of [users.audience, users.approver, users.dispatch, users.events, users.analyst, users.reader]) {
+        for (const user of [users.approver, users.dispatch, users.events, users.analyst, users.reader]) {
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.staffMenu)) problems.push(`${user}'s menu: ${names}`)
         }
-        for (const user of [users.admin, users.system]) {
+        // P3: Audiences for the audience manager and the administrator, Leads for a Sales reader
+        for (const [user, menu] of [
+            [users.audience, ids.audienceMenu],
+            [users.admin, ids.adminMenu],
+            [users.system, ids.systemMenu]
+        ]) {
             const names = shell(user, true).names
-            if (JSON.stringify(names) !== JSON.stringify(ids.adminMenu)) problems.push(`${user}'s menu: ${names}`)
+            if (JSON.stringify(names) !== JSON.stringify(menu)) problems.push(`${user}'s menu: ${names}`)
         }
+        const audienceTabs = shell(users.audience, true, "Audiences/Lists", "Audiences")
+        if (JSON.stringify(audienceTabs.names) !== JSON.stringify(ids.audiencesMenu))
+            problems.push(`the audience manager's Audiences tabs: ${audienceTabs.status} ${audienceTabs.names}`)
         const settings = shell(users.admin, true, "Settings/Index", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
             problems.push(`the administrator's Settings tabs: ${settings.status} ${settings.names}`)
@@ -215,23 +223,26 @@ const capabilityNames = [
     // the Settings area, the administrator's
     "settings",
     // P2: the Approvals area, the approvers'
-    "approvals"
+    "approvals",
+    // P3: the Audiences area, the audience managers'
+    "audiences"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
 const capabilityUsers = [
     {user: users.author, granted: ["view", "campaignEdit", "sendEdit", "contentEdit", "templateView", "anyRead"]},
-    {user: users.audience, granted: ["view", ...audienceGrants, "anyRead", "audienceRead"]},
+    {user: users.audience, granted: ["view", ...audienceGrants, "anyRead", "audienceRead", "audiences"]},
     {user: users.approver, granted: ["view", "approve", "anyRead", "approvals"]},
     {user: users.dispatch, granted: ["view", "dispatch", "anyRead"]},
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
     {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead"]},
     {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead"]},
     {
-        // no approval, dispatch, template edit, sending configuration or suppression review (design §1.1)
+        // no approval, dispatch, template edit or sending configuration (design §1.1); suppression review since P3 (the user's call
+        // of Nov 13)
         user: users.admin,
         granted: capabilityNames.filter(
-            name => !["approve", "dispatch", "templateEdit", "sendingConfigure", "suppressionReview", "approvals"].includes(name)
+            name => !["approve", "dispatch", "templateEdit", "sendingConfigure", "approvals"].includes(name)
         )
     },
     {user: "marketing.spec.editonly", granted: ["campaignEdit"]},
@@ -490,14 +501,12 @@ feature(
                 }
                 expectHolders("MARKETING_AUDIENCE_IMPORT", ["BOSS_MARKETING_ADMIN", "BOSS_MARKETING_AUDIENCE"])
                 expectHolders("MARKETING_ALL_ORGANIZATIONS", ["BOSS_MARKETING_ADMIN"])
-                // approval and dispatch apart; Comms' explicit grants held by no Marketing group
+                // approval and dispatch apart; Comms' explicit grants by Marketing role (the user's call of Nov 13): suppression review the
+                // administrator's since P3, template edit and sending configuration none until P6
                 expectHolders("MARKETING_APPROVE", ["BOSS_MARKETING_APPROVER"])
                 expectHolders("MARKETING_DISPATCH", ["BOSS_MARKETING_DISPATCH"])
-                for (const userPermissionId of [
-                    "MESSAGE_TEMPLATE_EDIT",
-                    "MESSAGE_SENDING_CONFIGURE",
-                    "MESSAGE_SUPPRESSION_REVIEW"
-                ])
+                expectHolders("MESSAGE_SUPPRESSION_REVIEW", ["BOSS_MARKETING_ADMIN"])
+                for (const userPermissionId of ["MESSAGE_TEMPLATE_EDIT", "MESSAGE_SENDING_CONFIGURE"])
                     expectHolders(userPermissionId, [])
                 const provider = ec.entity
                     .find("moqui.server.ReadinessProvider")

@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     (Consent/Contact: change it, the history, the export of a data request). The bulk action unsubscribes the selected
     contacts from a list with the note of where the request came from; Export CSV gives every match (a suppression list);
     Record consent takes a contact and the grant or withdrawal with its evidence. For contact admins only: anyone else sees
-    a short note, and every transition checks again. -->
+    a short note, and every transition checks again. Marketing mounts it at Marketing/Audiences/Consent (impl-marketing P3, F50): a
+    Marketing consent editor sees and changes their organizations' lists and contacts only, and records consent for one of them
+    (ironstone.comms.ConsentServices decides). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Consent" default-menu-include="false">
 
@@ -86,6 +88,9 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <service-call name="ironstone.comms.ConsentServices.check#ConsentAdmin" out-map="adminOut"/>
         <set field="isConsentAdmin" from="!!adminOut.isConsentAdmin"/>
+        <!-- impl-marketing P3: a Marketing consent editor records consent for one of their organizations -->
+        <set field="consentOrgOptions" from="adminOut.organizationPartyIds == null ? [] : Array.from(adminOut.organizationPartyIds).map(id =&gt; ({key: id,
+                text: ec.entity.find('mantle.party.Organization').condition('partyId', id).useCache(true).one()?.organizationName || id}))"/>
         <script><![CDATA[
             if (!isConsentAdmin) return
             const param = (name) => { const value = ec.web.parameters[name]; return value == null || value === '' ? null : String(value) }
@@ -146,9 +151,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <drop-down no-current-selected-key="PcsStaff"><list-options list="sourceOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
                         <field name="consentDate"><default-field title="When (empty: now)"><date-time type="date-time"/></default-field></field>
                         <field name="evidenceText"><default-field title="Evidence"><text-area rows="3" cols="60"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <conditional-field title="For" condition="consentOrgOptions.length">
+                                <drop-down><list-options list="consentOrgOptions" key="${key}" text="${text}"/></drop-down></conditional-field>
+                            <default-field><hidden/></default-field></field>
                         <field name="submitButton"><default-field title="Record"><submit/></default-field></field>
                         <field-layout>
                             <field-ref name="partyId"/>
+                            <field-ref name="organizationPartyId"/>
                             <field-row><field-ref name="purposeEnumId"/><field-ref name="statusId"/></field-row>
                             <field-row><field-ref name="sourceEnumId"/><field-ref name="consentDate"/></field-row>
                             <field-ref name="evidenceText"/><field-ref name="submitButton"/>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Suppressions (design-marketing §4 Suppressions: SuppressionFind, SuppressionList, SuppressionChange; crosscut §3.29; impl-marketing
+    P3, F16): Comms' shared screen of the destinations no delivery may reach, built by Marketing for Comms with Marketing's mount only
+    (Marketing/Audiences/Suppressions); Comms' own mount comes with a Comms settings area. Everything is decided by
+    mantle.party.MessageServices: who reads (a suppression reviewer or contact administrator every block; a Marketing audience reader or
+    configurer every organization's blocks and those of their organizations), whether the address shows or is masked, who adds (an
+    audience editor for an organization of their scope) and who ends a block (MESSAGE_SUPPRESSION_REVIEW alone, with new evidence).
+    The mounting root adds nothing: no organization or capability is taken from its context. A new subscription never ends a block;
+    the row and its source stay. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Suppressions" default-menu-index="4">
+    <parameter name="text"/>
+    <parameter name="reasonEnumId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition name="storeSuppression">
+        <actions>
+            <service-call name="mantle.party.MessageServices.store#Suppression" out-map="stored"
+                    in-map="{action:(action || 'add'), suppressionId:(suppressionId || null), destination:(destination || null),
+                        organizationPartyId:(organizationPartyId || null), reasonEnumId:(reasonEnumId || null), evidenceText:(evidenceText || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stored.ended ? 'Suppression ended' : stored.created ? 'Suppression added' : 'Already suppressed'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.party.MessageServices.find#Suppressions" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{text:text, reasonEnumId:reasonEnumId, organizationPartyId:organizationPartyId, state:(state || 'active'), pageIndex:pageIndex}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="readable" from="found?.suppressionList != null"/>
+        <set field="suppressionList" from="found?.suppressionList || []"/>
+        <set field="suppressionListCount" from="found?.suppressionListCount"/>
+        <set field="suppressionListPageIndex" from="found?.suppressionListPageIndex"/>
+        <set field="suppressionListPageSize" from="found?.suppressionListPageSize"/>
+        <set field="suppressionListPageMaxIndex" from="found?.suppressionListPageMaxIndex"/>
+        <set field="suppressionListPageRangeLow" from="found?.suppressionListPageRangeLow"/>
+        <set field="suppressionListPageRangeHigh" from="found?.suppressionListPageRangeHigh"/>
+        <set field="organizationOptions" from="found?.organizationOptions || []"/>
+        <set field="filtered" from="!!(text || reasonEnumId || organizationPartyId || (state &amp;&amp; state != 'active'))"/>
+        <set field="addValues" from="{organizationPartyId: organizationOptions.length == 1 ? organizationOptions[0].value : null, reasonEnumId: 'MsrStaff'}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read suppressions." type="p" style="m-muted" condition="!readable"/>
+        <section name="SuppressionsRegister" condition="readable">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Suppressions" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="AddSuppressionDialog" button-text="Add a suppression" title="Suppress an address" icon="sym_o_block"
+                                width="640" type="primary" condition="found.canAdd">
+                            <label text="Nothing is sent to the address while the suppression lasts, whatever list it is on; only a suppression reviewer ends it."
+                                    type="p" style="m-muted"/>
+                            <form-single name="AddSuppression" transition="storeSuppression" map="addValues">
+                                <field name="destination"><default-field title="Email address"><text-line size="40"/></default-field></field>
+                                <field name="organizationPartyId">
+                                    <default-field title="For" tooltip="Empty: every organization (a reviewer's or administrator's)">
+                                        <drop-down allow-empty="true"><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reasonEnumId">
+                                    <default-field title="Reason">
+                                        <drop-down>
+                                            <option key="MsrStaff" text="Staff block"/>
+                                            <option key="MsrComplaint" text="Complaint"/>
+                                            <option key="MsrHardBounce" text="Hard bounce"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="evidenceText"><default-field title="Evidence"><text-area rows="3" cols="60"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Suppress" confirmation="Suppress this address? Nothing is sent to it until a reviewer ends it."/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="." text="Ended" link-type="anchor-button" icon="sym_o_history" parameter-map="{state:'ended'}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="SuppressionList" list="suppressionList" skip-form="true" paginate="true" header-dialog="true">
+                            <field name="text"><header-field title="Address"><text-line size="20"/></header-field></field>
+                            <field name="reasonEnumId">
+                                <header-field title="Reason">
+                                    <drop-down allow-empty="true">
+                                        <option key="MsrHardBounce" text="Hard bounce"/>
+                                        <option key="MsrComplaint" text="Complaint"/>
+                                        <option key="MsrSoftFailures" text="Repeated soft failures"/>
+                                        <option key="MsrStaff" text="Staff block"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="state">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="active" text="Active"/>
+                                        <option key="ended" text="Ended"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="destinationText"><default-field title="Address"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="organizationText"><default-field title="For"><display/></default-field></field>
+                            <field name="evidenceText"><default-field title="Evidence"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="EndSuppression_${suppressionId}" button-text="End" icon="sym_o_check_circle"
+                                            title="End the suppression of ${destinationText}" width="560" condition="canEnd">
+                                        <form-single name="EndSuppression" transition="storeSuppression" map="{suppressionId:suppressionId, action:'end'}">
+                                            <field name="suppressionId"><default-field><hidden/></default-field></field>
+                                            <field name="action"><default-field><hidden/></default-field></field>
+                                            <field name="evidenceText"><default-field title="New evidence" tooltip="What shows the address may be reached again"><text-area rows="3" cols="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="End suppression" type="danger"
+                                                    confirmation="End the suppression of ${destinationText}? Messages may reach it again; the record stays."/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns>
+                                <column><field-ref name="destinationText"/><field-ref name="organizationText"/></column>
+                                <column><field-ref name="reasonText"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="evidenceText"/></column>
+                                <column><field-ref name="fromText"/><field-ref name="thruText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                                <column><field-ref name="rowActions"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="destinationText"/><field-ref name="reasonText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoSuppressions" condition="!suppressionList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${filtered ? 'No suppression matches these filters.' : 'No address is suppressed.'}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

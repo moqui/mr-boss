@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.marketing.ContextServices.get#SharedContext checks the user and resolves their capabilities, organizations and links
     for every subscreen, and each Mantle marketing service checks the permissions and the organization again
     (mantle/marketing/MarketingAccess.js). The menu of design §1.2 grows by phase and shows built areas only: P1 builds Home (every
-    Marketing user's), P2 Campaigns (with Approvals, the approvers') and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
+    Marketing user's), P2 Campaigns (with Approvals, the approvers'), P3 Audiences (the audience managers') and Leads (Sales' Leads and
+    Accounts with the bulk action, a Sales reader's) and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
     redirects of their old links (F2), to Audiences and Sends once those exist (P5, P8). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
@@ -63,6 +64,15 @@ along with this software (see the LICENSE.md file). If not, see
             BOSS_MKT_APPROVALS), for a user who reads Marketing; Mantle's campaign services scope every read to the organizations -->
         <subscreens-item name="Campaigns" location="component://mr-boss/screen/Marketing/Campaigns.xml" menu-index="2"
                 menu-include="ec.user.hasPermission('MARKETING_VIEW') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW') || ec.user.hasPermission('MARKETING_REPORT_VIEW')"/>
+        <!-- P3: Audiences (design §4): lists, members, Comms' Consent and the shared Suppressions, for the audience managers and the
+            administrator (BOSS_MKT_AUDIENCES denies the root user group); Mantle's audience, consent and suppression services check the
+            permissions and the organization again -->
+        <subscreens-item name="Audiences" location="component://mr-boss/screen/Marketing/Audiences.xml" menu-index="3"
+                menu-include="ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')"/>
+        <!-- P3: Leads (design §10, F64): Sales' Leads and Accounts in Sales' context for this root, with the bulk "Add to list
+            (evidenced)", for a user who reads Sales; Sales' own services decide what they read -->
+        <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="8"
+                menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
         <!-- P2: quick create's campaign form (QuickCampaign), hidden from the menu -->
         <subscreens-item name="QuickCreate" location="component://mr-boss/screen/Marketing/QuickCreate.xml" menu-include="false"/>
         <!-- P1: Settings (design §12), the administrator's (MARKETING_CONFIGURE); BOSS_MKT_SETTINGS denies the root user group, and
@@ -85,6 +95,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P2 (design §14.3 QuickCreate): QuickCampaign, the Campaigns list's NewCampaign; a user without campaign edit is told so -->
         <quick-create kind="marketingCampaign" label="Campaign" icon="sym_o_campaign" screen="Marketing/QuickCreate/NewCampaign"
                 sequence="92"/>
+        <!-- P3 (design §14.3 QuickList): the Lists screen's NewList; a user without audience edit is told so -->
+        <quick-create kind="marketingList" label="Distribution list" icon="sym_o_contact_mail" screen="Marketing/QuickCreate/NewList"
+                sequence="93"/>
         <!-- P2: the approval topics (Mantle's MarketingSeedData; their links BossSetupMarketingData); sends' and automations' are sent
             from P8 and P11 -->
         <notification-topic topic="MarketingCampaignApproval"/>
@@ -97,6 +110,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g m" label="Marketing home" screen="Marketing/Home"/>
             <!-- P2 -->
             <key keys="g c" label="Campaigns" screen="Marketing/Campaigns/Campaigns"/>
+            <!-- P3 -->
+            <key keys="g l" label="Lists" screen="Marketing/Audiences/Lists"/>
         </keymap>
     </shell-providers>
 

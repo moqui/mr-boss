@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The audience transitions and forms of the IronStone Marketing screens (impl-marketing P3; design-marketing §4 Lists, ListDetail,
+    MemberDetail, §10 the bulk "Add to list (evidenced)"): each transition calls Mantle's guarded service
+    (mantle.marketing.AudienceServices, which checks MARKETING_AUDIENCE_VIEW, _EDIT or MARKETING_CONSENT_EDIT, the list's organization,
+    every party and Sales record it is given and the revision read), so a screen that includes one adds no authority. A screen
+    includes each transition it uses by name (transition-include); links go through the root's sharedLinks.
+    - addToList and audienceListChoices are the Sales bulk action's, included by Sales' Leads and Accounts (owner contract, F64,
+      F65): they post the selected leads or accounts with the chosen list and evidence, and Mantle resolves each one's contacts
+      under the caller's Sales read.
+    - NewListForm: the Lists screen's and QuickList's form (design §4 NewList, §14.3 QuickList). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new list: its ListDetail, else the list again -->
+    <transition name="createList">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.create#List" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, contactListName:contactListName, description:(description || null),
+                        contactListTypeEnumId:(contactListTypeEnumId || null), contactMechTypeEnumId:(contactMechTypeEnumId || null),
+                        marketingCampaignId:(marketingCampaignId || null), singleUse:(singleUse || 'N')}"/>
+            <set field="detailPath" from="sharedLinks['Audiences/ListDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">List ${created.contactListId} created; it has no members until requests are filed</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; created?.contactListId</expression></condition>
+            <parameter name="contactListId" from="created.contactListId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ListHeader: the list's identity at the revision read -->
+    <transition name="storeList">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.store#List"
+                    in-map="{contactListId:contactListId, expectedRevision:expectedRevision, contactListName:contactListName,
+                        description:(description || null), comments:(comments || null), contactListTypeEnumId:(contactListTypeEnumId || null),
+                        marketingCampaignId:(marketingCampaignId || null), singleUse:(singleUse || 'N')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">List saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="archiveList">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.archive#List"
+                    in-map="{contactListId:contactListId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">List archived</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- SubscriptionPolicy: a new dated policy, the one in effect named by its revision -->
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.store#SubscriptionPolicy"
+                    in-map="{contactListId:contactListId, expectedRevision:(expectedRevision || null), publicOffer:(publicOffer || 'N'),
+                        confirmationRequired:(confirmationRequired || 'Y'), purposeEnumId:(purposeEnumId || null), evidenceText:(evidenceText || null),
+                        confirmEmailTemplateId:(confirmEmailTemplateId || null), noticeEmailTemplateId:(noticeEmailTemplateId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Subscription policy saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ListTemplates: bind a template of a kind, or end a binding -->
+    <transition name="storeListEmail">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.store#ContactListEmail"
+                    in-map="{contactListId:contactListId, emailTypeEnumId:emailTypeEnumId, action:(action || 'add'),
+                        emailTemplateId:(emailTemplateId || null), fromDate:(fromDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'end' ? 'Template binding ended' : 'Template bound'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- AddMembers and MemberDetail's actions: evidenced requests of the chosen contacts, pending or accepted with the evidence -->
+    <transition name="requestSubscriptions">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.request#Subscriptions" out-map="filed"
+                    in-map="{contactListId:contactListId, partyIdList:(partyIdList ? (partyIdList instanceof Array ? partyIdList : String(partyIdList).split(',')) : []),
+                        sourceEnumId:(sourceEnumId || null), evidenceDate:(evidenceDate || null), evidenceText:(evidenceText || null),
+                        accept:(accept == 'Y')}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="info">${filed.pendingCount} pending, ${filed.acceptedCount} accepted, ${filed.existingCount} already on the list, ${filed.refusedCount} refused${filed.suppressedCount ? ', ' + filed.suppressedCount + ' with a suppressed address' : ''}${filed.refusedCount ? ': ' + filed.results.filter(r =&gt; r.outcome == 'refused').map(r =&gt; (r.partyName || r.recordId) + ' ' + r.reasonCode).join(', ') : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="withdrawSubscription">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.withdraw#Subscription"
+                    in-map="{contactListId:contactListId, partyId:partyId, evidenceText:(evidenceText || null), reasonText:(reasonText || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Withdrawn from the list</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <!-- ===== the Sales bulk action (owner contract: Sales' Leads and Accounts include these two by name) ===== -->
+    <!-- the selection (leads' id@revision keys or accounts' party ids, a comma list) filed to the chosen list with the evidence -->
+    <transition name="addToList">
+        <actions>
+            <set field="selection" from="String(selectedKeys || selectedPartyIds || '').split(',').map(key =&gt; key.trim()).filter(key =&gt; key)"/>
+            <service-call name="mantle.marketing.AudienceServices.request#Subscriptions" out-map="filed"
+                    in-map="{contactListId:addToListId, salesOpportunityIdList:(selectedKeys ? selection : []),
+                        salesAccountPartyIdList:(selectedPartyIds ? selection : []), sourceEnumId:(sourceEnumId || null),
+                        evidenceDate:(evidenceDate || null), evidenceText:(evidenceText || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="info">${filed.pendingCount} requests filed, pending confirmation; ${filed.existingCount} already on the list, ${filed.refusedCount} not filed${filed.refusedCount ? ': ' + filed.results.filter(r =&gt; r.outcome == 'refused').map(r =&gt; (r.partyName || r.recordId) + ' ' + r.reasonCode).join(', ') : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the lists the caller may file to (Marketing's choices, after its own check of the user) -->
+    <transition name="audienceListChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.marketing.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:'Marketing', choice:'audienceLists', term:(term || null), selected:(selected || null)}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <!-- NewList (design §4 NewList): never a mailbox; it subscribes no one -->
+        <section name="NewListForm">
+            <widgets>
+                <form-single name="NewList" transition="createList" map="newDefaults">
+                    <field name="contactListName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactListTypeEnumId">
+                        <default-field title="Kind">
+                            <drop-down no-current-selected-key="NEWSLETTER">
+                                <option key="NEWSLETTER" text="Newsletter"/>
+                                <option key="MARKETING" text="Marketing"/>
+                                <option key="ANNOUNCEMENT" text="Announcement"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactMechTypeEnumId">
+                        <default-field title="Channel">
+                            <drop-down no-current-selected-key="CmtEmailAddress">
+                                <option key="CmtEmailAddress" text="Email"/>
+                                <option key="CmtTelecomNumber" text="SMS"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="marketingCampaignId">
+                        <default-field title="Campaign">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'campaigns', organizationPartyId:organizationPartyId}">
+                                    <depends-on field="organizationPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="singleUse">
+                        <default-field title="Single use" tooltip="Only one send may use it: the first released send holds it">
+                            <check><option key="Y" text="Contact its members once"/></check>
+                        </default-field>
+                    </field>
+                    <field name="description"><default-field title="Description"><text-area rows="2" cols="60"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Create list"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="contactListName"/><field-ref name="organizationPartyId"/></field-row>
+                        <field-row><field-ref name="contactListTypeEnumId"/><field-ref name="contactMechTypeEnumId"/></field-row>
+                        <field-row><field-ref name="marketingCampaignId"/><field-ref name="singleUse"/></field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <label text="A new list has no members: add them with their evidence, and each waits for the person's confirmation unless accepted with evidence."
+                        type="p" style="text-caption m-muted"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

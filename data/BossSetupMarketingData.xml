@@ -191,4 +191,26 @@ along with this software (see the LICENSE.md file). If not, see
             transferService="mantle.marketing.CampaignServices.transfer#CampaignRole" resourceParameter="campaignResourceId"
             requiredPermission="MARKETING_OWNER_CHANGE" sequenceNum="85"/>
     <!-- ===== end of Marketing P2 ===== -->
+
+    <!-- ===== Marketing P3: lists, consent and suppressions (impl-marketing P3, F16, F50; design-marketing §4) ===== -->
+    <!-- Audiences (design §4: Lists, ListDetail, MemberDetail, Comms' Consent and the shared Suppressions) for the audience managers:
+        the area denies the root user group and gives the audience group an ALWAYS (a deny of a group the user is in wins over an
+        allow, as Approvals' approver group), with the root's filter sets; the administrator and ADMIN open
+        it through their ALWAYS on the root; the root's menu shows it to a holder of MARKETING_AUDIENCE_VIEW, and Mantle's audience,
+        consent and suppression services check the permissions and the organization again. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_AUDIENCES" description="Marketing audiences">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Audiences.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_AUDIENCES_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_AUDIENCES_AUDIENCE" userGroupId="BOSS_MARKETING_AUDIENCE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Comms' MESSAGE_SUPPRESSION_REVIEW to the Marketing administrator (the user's call of Nov 13: Comms' explicit permissions split
+        by Marketing role; granted with the screen that uses it, Suppressions' End). MESSAGE_TEMPLATE_EDIT and MESSAGE_SENDING_CONFIGURE
+        are granted in P6 with their screens. In the administrator's bundle. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SUPPRESSION_REVIEW" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SUPPRESSION_REVIEW" capabilityKindEnumId="CpkEdit"/>
+    <!-- ===== end of Marketing P3 ===== -->
 </entity-facade-xml>

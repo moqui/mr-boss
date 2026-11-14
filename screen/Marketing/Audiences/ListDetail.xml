@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › ListDetail (design-marketing §4 ListDetail: ListHeader, SubscriptionPolicy, Members, AddMembers,
+    ListTemplates; style-guide §3.3 Detail; impl-marketing P3): one list of the user's organizations (check#Record list; else "Not
+    available", linking back). The record header: its id and name, kind, channel, organization, campaign, single use and the counts,
+    the state chip; the primary action Add members (evidenced requests, pending until confirmed, or accepted with evidence by a
+    consent editor) and More (Edit list, Archive). The boxes: Subscription policy (the dated policy in effect, Edit; its history),
+    Members (every membership state, filtered, each opening MemberDetail, addresses masked) and Templates (the dated bindings, Bind,
+    End). Every change is Mantle's guarded audience service at the revision read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="List" default-menu-include="false">
+    <parameter name="contactListId" required="true"/>
+    <parameter name="memberStatus"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="contactSearch" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="storeList" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="archiveList" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="storePolicy" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="storeListEmail" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="requestSubscriptions" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="listCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'list', recordId:contactListId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="listCheck?.recordId">
+            <service-call name="mantle.marketing.AudienceServices.get#List" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{contactListId:contactListId}"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="mantle.marketing.AudienceServices.find#Members" out-map="members" transaction="force-new" ignore-error="true"
+                    in-map="{contactListId:contactListId, memberStatus:(memberStatus || 'current'), pageIndex:pageIndex}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.list"/>
+        <set field="list" from="detail?.list || {}"/>
+        <set field="policy" from="detail?.policy || null"/>
+        <set field="counts" from="detail?.counts || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="policyHistory" from="detail?.policyHistory || []"/>
+        <set field="templateList" from="(detail?.templates || []).filter(row =&gt; row.current)"/>
+        <set field="memberList" from="members?.memberList || []"/>
+        <set field="memberListCount" from="members?.memberListCount"/>
+        <set field="memberListPageIndex" from="members?.memberListPageIndex"/>
+        <set field="memberListPageSize" from="members?.memberListPageSize"/>
+        <set field="memberListPageMaxIndex" from="members?.memberListPageMaxIndex"/>
+        <set field="memberListPageRangeLow" from="members?.memberListPageRangeLow"/>
+        <set field="memberListPageRangeHigh" from="members?.memberListPageRangeHigh"/>
+        <set field="listsPath" from="sharedLinks['Audiences/Lists']"/>
+        <set field="memberPath" from="sharedLinks['Audiences/MemberDetail']"/>
+        <set field="captionText" from="[list.typeText, list.channelText, list.organizationName, list.campaignName ? 'campaign ' + list.campaignName : null,
+                list.singleUse == 'Y' ? 'single use' : null, list.reservationText || null].filter(Boolean).join(' · ')"/>
+        <set field="factsText" from="(counts.subscribed || 0) + ' subscribed · ' + (counts.pending || 0) + ' pending · ' + (counts.unsubscribed || 0) + ' unsubscribed'"/>
+        <set field="policyText" from="policy ? [policy.publicOffer == 'Y' ? 'Offered on a published page' : 'Not offered publicly',
+                policy.confirmationRequired == 'N' ? 'accepted with evidence' : 'confirmation required', list.purposeText].join(' · ')
+                : 'No policy yet: requests wait for confirmation, for ' + list.purposeText"/>
+        <set field="listValues" from="Object.assign({}, list, {expectedRevision: list.revision})"/>
+        <set field="policyValues" from="Object.assign({contactListId: contactListId, expectedRevision: policy?.revision || null, publicOffer: 'N',
+                confirmationRequired: 'Y', purposeEnumId: list.purposeEnumId}, policy || {}, {expectedRevision: policy?.revision || null})"/>
+        <set field="requestValues" from="{contactListId: contactListId, sourceEnumId: 'PcsStaff'}"/>
+    </actions>
+    <widgets>
+        <section name="ListNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="List ${contactListId} is not available: it does not exist, it is a mailbox, or it is not one of your organizations'."
+                                type="p"/>
+                        <link url="${listsPath}" text="Back to lists" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ListFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.marketing.contact.ContactList" record-id="${contactListId}" title="${list.contactListName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${contactListId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${list.contactListName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${factsText}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${list.stateColor}">${WebUtilities.encodeHtml(list.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(list.stateText ?? "")})}]]></text>
+                                <text type="html">${list.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <container-dialog id="AddMembersDialog" button-text="Add members" icon="sym_o_group_add" type="primary"
+                                    title="Add members to ${list.contactListName}" width="760" condition="can.canRequest">
+                                <label text="Each person is asked to confirm before anything is sent, unless you accept with evidence. A withdrawal or a suppression is never cleared here."
+                                        type="p" style="m-muted"/>
+                                <form-single name="AddMembers" transition="requestSubscriptions" map="requestValues">
+                                    <field name="contactListId"><default-field><hidden/></default-field></field>
+                                    <field name="partyIdList">
+                                        <default-field title="Contacts">
+                                            <drop-down allow-multiple="true">
+                                                <dynamic-options transition="contactSearch" server-search="true" min-length="2"
+                                                        parameter-map="{directoryOnly:'Y'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="sourceEnumId">
+                                        <default-field title="Evidence source">
+                                            <drop-down no-current-selected-key="PcsStaff">
+                                                <option key="PcsForm" text="Form"/>
+                                                <option key="PcsStaff" text="Staff"/>
+                                                <option key="PcsImport" text="Import"/>
+                                                <option key="PcsCheckout" text="Checkout"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="evidenceDate"><default-field title="Evidence date" tooltip="When the person asked; now when empty"><date-time type="date-time"/></default-field></field>
+                                    <field name="evidenceText"><default-field title="Evidence" tooltip="What the person did or said, and where"><text-area rows="3" cols="60"/></default-field></field>
+                                    <field name="accept">
+                                        <conditional-field title="Accept now" condition="can.canAccept">
+                                            <check><option key="Y" text="Accept with this evidence instead of asking for confirmation"/></check>
+                                        </conditional-field>
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title=""><submit text="File requests" confirmation="File a subscription request for each chosen contact?"/></default-field></field>
+                                    <field-layout>
+                                        <field-ref name="partyIdList"/>
+                                        <field-row><field-ref name="sourceEnumId"/><field-ref name="evidenceDate"/></field-row>
+                                        <field-ref name="evidenceText"/>
+                                        <field-ref name="accept"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="EditListDialog" button-text="Edit list" icon="sym_o_edit" title="Edit ${list.contactListName}"
+                                        width="760" condition="can.canEdit">
+                                    <form-single name="EditList" transition="storeList" map="listValues">
+                                        <field name="contactListId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="contactListName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="contactListTypeEnumId">
+                                            <default-field title="Kind">
+                                                <drop-down>
+                                                    <option key="NEWSLETTER" text="Newsletter"/>
+                                                    <option key="MARKETING" text="Marketing"/>
+                                                    <option key="ANNOUNCEMENT" text="Announcement"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="marketingCampaignId">
+                                            <default-field title="Campaign">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'campaigns', organizationPartyId:list.ownerPartyId, selected:list.marketingCampaignId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="singleUse"><default-field title="Single use"><check><option key="Y" text="Contact its members once"/></check></default-field></field>
+                                        <field name="description"><default-field title="Description"><text-area rows="2" cols="60"/></default-field></field>
+                                        <field name="comments"><default-field title="Notes"><text-area rows="2" cols="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ArchiveListDialog" button-text="Archive" icon="sym_o_inventory_2"
+                                        title="Archive ${list.contactListName}" width="520" condition="can.canArchive">
+                                    <form-single name="ArchiveList" transition="archiveList" map="listValues">
+                                        <field name="contactListId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Archive list" type="danger"
+                                                    confirmation="Archive ${list.contactListName}? It takes no new members or sends; its history and unsubscribe links stay."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Subscription policy"/>
+                    <box-toolbar>
+                        <container-dialog id="EditPolicyDialog" button-text="Edit" icon="sym_o_edit" title="Subscription policy of ${list.contactListName}"
+                                width="760" condition="can.canEdit">
+                            <form-single name="EditPolicy" transition="storePolicy" map="policyValues">
+                                <field name="contactListId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="publicOffer"><default-field title="Public offer" tooltip="Offered for subscription on a published page"><check><option key="Y" text="Offer it on a published page"/></check></default-field></field>
+                                <field name="confirmationRequired">
+                                    <default-field title="Confirmation">
+                                        <radio><option key="Y" text="The person confirms each request"/><option key="N" text="Staff may accept with evidence"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="purposeEnumId">
+                                    <default-field title="Purpose">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="PartyConsentPurpose"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="evidenceText"><default-field title="Wording of the offer"><text-area rows="3" cols="60"/></default-field></field>
+                                <field name="confirmEmailTemplateId">
+                                    <default-field title="Confirmation message">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'emailTemplates', selected:policyValues.confirmEmailTemplateId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="noticeEmailTemplateId">
+                                    <default-field title="Welcome notice">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'emailTemplates', selected:policyValues.noticeEmailTemplateId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Save policy" confirmation="Save a new policy? The one in effect ends now and stays in the history."/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${policyText}" type="p" style="q-mb-xs"/>
+                        <label text="Offer: ${policy?.evidenceText}" type="p" style="text-caption m-muted" condition="policy?.evidenceText"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Members · ${memberListCount || 0}"/>
+                    <box-body-nopad>
+                        <form-single name="MemberFilter" transition=".">
+                            <field name="contactListId"><default-field><hidden/></default-field></field>
+                            <field name="memberStatus">
+                                <default-field title="Show">
+                                    <drop-down no-current-selected-key="current" submit-on-change="true">
+                                        <option key="current" text="Current"/>
+                                        <option key="subscribed" text="Subscribed"/>
+                                        <option key="pending" text="Pending"/>
+                                        <option key="unsubscribed" text="Unsubscribed"/>
+                                        <option key="history" text="Every row"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <form-list name="Members" list="memberList" skip-form="true" paginate="true">
+                            <field name="partyName">
+                                <default-field title="Contact">
+                                    <link url="${memberPath}" text="${partyName}" link-type="anchor" parameter-map="{contactListId:contactListId, partyId:partyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="addressText"><default-field title="Address"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyName"/><field-ref name="addressText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="fromText"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoMembers" condition="!memberList.length">
+                            <widgets>
+                                <label text="No members here${can.canRequest ? ' · Add them with their evidence: Add members.' : '.'}" type="p" style="m-muted q-pa-sm"/>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Templates"/>
+                    <box-toolbar>
+                        <container-dialog id="BindTemplateDialog" button-text="Bind a template" icon="sym_o_mail" title="Bind a template to ${list.contactListName}"
+                                width="560" condition="can.canEdit">
+                            <form-single name="BindTemplate" transition="storeListEmail" map="{contactListId:contactListId}">
+                                <field name="contactListId"><default-field><hidden/></default-field></field>
+                                <field name="emailTypeEnumId">
+                                    <default-field title="Message">
+                                        <drop-down>
+                                            <option key="CONT_SUB_NOT" text="Subscribe notification"/>
+                                            <option key="CONT_UNSUB_VER" text="Unsubscribe verify"/>
+                                            <option key="CONT_UNSUB_NOT" text="Unsubscribe notification"/>
+                                            <option key="CONT_EMAIL_TEMPLATE" text="Outgoing email"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="emailTemplateId">
+                                    <default-field title="Template">
+                                        <drop-down><dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'emailTemplates'}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Bind" confirmation="Bind this template? The one of this kind in effect ends now."/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ListTemplates" list="templateList" skip-form="true" paginate="false">
+                            <field name="emailTypeText"><default-field title="Message"><display/></default-field></field>
+                            <field name="templateText"><default-field title="Template"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="EndTemplate_${emailTypeEnumId}" button-text="End" icon="sym_o_link_off"
+                                            title="End ${emailTypeText}" width="480" condition="can.canEdit">
+                                        <form-single name="EndTemplate" transition="storeListEmail"
+                                                map="{contactListId:contactListId, emailTypeEnumId:emailTypeEnumId, fromDate:fromDateMs, action:'end'}">
+                                            <field name="contactListId"><default-field><hidden/></default-field></field>
+                                            <field name="emailTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="fromDate"><default-field><hidden/></default-field></field>
+                                            <field name="action"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="End" type="danger" confirmation="End the ${emailTypeText} binding of ${list.contactListName}?"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="emailTypeText"/><field-ref name="templateText"/></column>
+                                <column><field-ref name="fromText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoTemplates" condition="!templateList.length">
+                            <widgets><label text="No templates bound: the list's notices use the defaults." type="p" style="m-muted q-pa-sm"/></widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="PolicyHistoryBox" condition="policyHistory.length &gt; 1">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Policy history"/>
+                            <box-body-nopad>
+                                <form-list name="PolicyHistory" list="policyHistory" skip-form="true" paginate="false">
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="publicOfferText"><default-field title="Offer"><display/></default-field></field>
+                                    <field name="confirmationText"><default-field title="Confirmation"><display/></default-field></field>
+                                    <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
+                                    <field name="changedBy"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromText"/><field-ref name="publicOfferText"/></column>
+                                        <column><field-ref name="confirmationText"/><field-ref name="changedBy"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
