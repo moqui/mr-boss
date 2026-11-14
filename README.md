@@ -48,6 +48,18 @@ walk `test/client/People/PeopleHireWalk`; its scenario walks, the screen sweeps 
 review walks PeopleReviewWalk and PeopleNavigationWalk are in `test/acceptance/People/`, the phone walk PeoplePhoneWalk in
 `test/acceptance/client/People/`.
 
+Sales (`screen/Sales/`) is built: leads and opportunities in pipelines with stages, teams and lead sources, lead intake
+from mail and Comms, accounts and contacts with merge, quotes with pricing, storeless tax, approvals, issue and send,
+requests for quote and quote templates, orders with approval and the storeless confirmation, commercial changes and the
+fulfillment and billing handoffs, customer agreements and prices, recurring orders and subscriptions, forecasts and
+targets, reports with Insights' datasets and alert templates, and Home, the palette, Assist and the import; the customer's
+side is PASS Sales in mr-pass ([design](plan/design-sales.md), [impl-sales](plan/impl-sales.md)). Its rules are tested in
+mr-mantle's `test/sales/` and `test/order/` and here in `test/Sales/` with the golden-path walk
+`test/client/Sales/SalesPipelineWalk`; its scenario walks, the screen sweeps SalesTui and SalesServerStatic and the review
+walks SalesLeadToInvoiceWalk and SalesAccessWalk are in `test/acceptance/Sales/`, the board walk in
+`test/acceptance/client/Sales/`. A database made before Sales' datasets loads them as
+[Upgrading](../mr-mantle/docs/Upgrading.md#sales-report-datasets-sales-p20-november-2026) says.
+
 UI review and refinement plans use `plan/ui-review-*.md`, starting with
 [drawers, Commons and Comms](plan/ui-review-drawers-commons.md): screen coverage, complete user processes,
 refinement criteria, findings and verification. The [document guide](plan/design-doc-guide.md#ui-review-and-refinement-phase)
