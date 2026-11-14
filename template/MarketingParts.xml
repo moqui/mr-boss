@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.marketing.ContextServices.get#Choices" out-map="found"
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
                         organizationPartyId:(organizationPartyId || null), excludeId:(excludeId || null),
-                        campaignSendId:(campaignSendId || null)}"/>
+                        campaignSendId:(campaignSendId || null), marketingAutomationId:(marketingAutomationId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>

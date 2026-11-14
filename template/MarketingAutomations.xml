@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The automation transitions and forms of the IronStone Marketing screens (impl-marketing P11; design-marketing §6 Automations,
+    AutomationDetail, EnrollmentDetail): each transition calls Mantle's guarded service (mantle.marketing.AutomationServices, and
+    CampaignServices' approvals with targetKind automation), which checks the permission, the organization, every record it is given and
+    the revision read, so a screen that includes one adds no authority. A screen includes each transition it uses by name
+    (transition-include); links go through the root's sharedLinks.
+    - NewAutomationForm: the Automations list's and CampaignDetail's (the campaign fixed) form (design §6 NewAutomation), over the map
+      newAutomationValues. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new draft automation: its AutomationDetail, else the screen again -->
+    <transition name="createAutomation">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.create#Automation" out-map="created"
+                    in-map="{marketingCampaignId:marketingCampaignId, automationName:automationName, description:(description || null),
+                        contactListId:contactListId, sendingProfileId:(sendingProfileId || null), triggerEnumId:(triggerEnumId || null),
+                        triggerSegmentId:(triggerSegmentId || null), productStoreId:(productStoreId || null), timeZone:(timeZone || null)}"/>
+            <set field="detailPath" from="sharedLinks?.['Automations/AutomationDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Automation ${created.marketingAutomationId} started as a draft: add its steps</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; created?.marketingAutomationId</expression></condition>
+            <parameter name="marketingAutomationId" from="created.marketingAutomationId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- EnrollmentRule: the trigger, topic, sender, goal, re-entry and zone at the revision read; a field the form leaves out is kept, an
+        emptied one cleared -->
+    <transition name="storeEnrollmentRule">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.store#EnrollmentRule" out-map="stored"
+                    in-map="{marketingAutomationId:marketingAutomationId, expectedRevision:expectedRevision, automationName:automationName,
+                        description:description, contactListId:(contactListId || null), sendingProfileId:sendingProfileId,
+                        triggerEnumId:(triggerEnumId || null), triggerSegmentId:triggerSegmentId, productStoreId:productStoreId,
+                        goalSegmentId:goalSegmentId, reentryEnumId:(reentryEnumId || null), reentryCooldownDays:(reentryCooldownDays || null),
+                        timeZone:(timeZone || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Enrollment rule saved${stored?.approvalEnded ? '; its approval ended: ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- Steps: add a step, or move or remove one (by its position), then the whole set stored at the revision read -->
+    <transition name="changeSteps">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.get#Automation" out-map="current" in-map="{marketingAutomationId:marketingAutomationId}"/>
+            <script><![CDATA[
+                const keep = step => ({kind: step.kind, stepName: step.stepName || null, messageTemplateId: step.messageTemplateId,
+                    waitAmount: step.waitAmount, waitUnitEnumId: step.waitUnitEnumId, conditionSegmentId: step.conditionSegmentId,
+                    conditionFalseEnumId: step.conditionFalseEnumId})
+                const list = Array.from(current?.steps || []).map(keep)
+                const at = Math.max(0, Math.min(list.length, Number(ec.context.position || list.length) ))
+                const action = String(ec.context.stepAction || 'add')
+                if (action === 'add') {
+                    list.splice(at, 0, {kind: ec.context.kind, stepName: ec.context.stepName || null,
+                        messageTemplateId: ec.context.messageTemplateId || null, waitAmount: ec.context.waitAmount || null,
+                        waitUnitEnumId: ec.context.waitUnitEnumId || null, conditionSegmentId: ec.context.conditionSegmentId || null,
+                        conditionFalseEnumId: ec.context.conditionFalseEnumId || null})
+                } else {
+                    const index = at - 1
+                    if (index >= 0 && index < list.length) {
+                        const [step] = list.splice(index, 1)
+                        if (action === 'up') list.splice(Math.max(0, index - 1), 0, step)
+                        if (action === 'down') list.splice(Math.min(list.length, index + 1), 0, step)
+                    }
+                }
+                ec.context.put('stepList', list)
+            ]]></script>
+            <service-call name="mantle.marketing.AutomationServices.store#Steps" out-map="stored"
+                    in-map="{marketingAutomationId:marketingAutomationId, expectedRevision:expectedRevision, steps:stepList}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Steps saved${stored?.approvalEnded ? '; its approval ended: ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- Simulation: the sample person and start time, read by the screen (a link) -->
+    <transition name="simulateAutomation"><default-response url="."/></transition>
+    <!-- AutomationControl: ask for approval, decide, activate or resume, pause, end -->
+    <transition name="requestAutomationApproval">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.request#MarketingApproval" out-map="asked"
+                    in-map="{targetKind:'automation', targetId:marketingAutomationId, targetRevision:(targetRevision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Approval requested; ${asked.notifiedCount} approvers told</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideAutomationApproval">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.decide#MarketingApproval" out-map="decided"
+                    in-map="{targetKind:'automation', targetId:marketingAutomationId, targetRevision:targetRevision, decision:decision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'approve' ? 'Approved: a dispatcher activates it' : 'Refused'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="activateAutomation">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.activate#Automation" out-map="activated"
+                    in-map="{marketingAutomationId:marketingAutomationId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${activated.resumed ? 'Resumed' : activated.alreadyActive ? 'Active already' : 'Activated'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="pauseAutomation">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.pause#Automation" out-map="paused"
+                    in-map="{marketingAutomationId:marketingAutomationId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Paused; ${paused.inFlightCount} messages already with the delivery service may still go out</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="endAutomation">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.end#Automation" out-map="ended"
+                    in-map="{marketingAutomationId:marketingAutomationId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Ended; ${ended.stoppedCount} enrollments stopped</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- staff enrollment with evidence, once per operation key -->
+    <transition name="enrollParty">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.enroll#Party" out-map="enrolled"
+                    in-map="{marketingAutomationId:marketingAutomationId, partyId:partyId, evidenceText:(evidenceText || null), operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()"><message type="${enrolled.admitted ? 'success' : 'warning'}">${enrolled.admitted ? 'Enrolled' : 'Not enrolled: ' + enrolled.reasonText}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- StopEnrollment -->
+    <transition name="stopEnrollment">
+        <actions>
+            <service-call name="mantle.marketing.AutomationServices.stop#Enrollment"
+                    in-map="{automationEnrollmentId:automationEnrollmentId, expectedRevision:(expectedRevision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Enrollment stopped: its pending steps will not run</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <section name="NewAutomationForm">
+            <widgets>
+                <label text="An automation starts as a draft: it enrolls and sends nothing until its steps are approved and a dispatcher activates it." type="p" style="m-muted"/>
+                <form-single name="NewAutomation" transition="createAutomation" map="newAutomationValues">
+                    <field name="marketingCampaignId">
+                        <conditional-field title="Campaign" condition="newAutomationValues.campaignFixed"><hidden/></conditional-field>
+                        <default-field title="Campaign">
+                            <drop-down>
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'campaigns', selected:newAutomationValues.marketingCampaignId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="automationName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                    <field name="contactListId">
+                        <default-field title="Topic" tooltip="The list whose subscribers, with their consent, its emails may reach">
+                            <drop-down>
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sendTopics', organizationPartyId:newAutomationValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="triggerEnumId">
+                        <default-field title="Trigger">
+                            <drop-down allow-empty="false">
+                                <option key="AtrSubscription" text="Confirmed subscription"/>
+                                <option key="AtrSegment" text="Newly matched segment member"/>
+                                <option key="AtrStaff" text="Staff enrollment with evidence"/>
+                                <option key="AtrOrderPlaced" text="Order placed"/>
+                                <option key="AtrCartAbandoned" text="Cart abandoned"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="triggerSegmentId">
+                        <default-field title="Segment" tooltip="For a segment trigger: who newly matches it is enrolled">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'segments', organizationPartyId:newAutomationValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productStoreId">
+                        <default-field title="Store" tooltip="For an order or cart trigger: the store it reads">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'automationStores', organizationPartyId:newAutomationValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="sendingProfileId">
+                        <default-field title="Sending profile">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sendProfiles', organizationPartyId:newAutomationValues.organizationPartyId, selected:newAutomationValues.sendingProfileId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="description"><default-field title="Description"><text-area rows="2" cols="50"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Start the draft"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

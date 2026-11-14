@@ -1004,6 +1004,29 @@ A completed send step is not replayed on restart; a stopped enrollment is not ed
 active. An authorized new enrollment follows configured reentry and current consent.
 **Needs:** MKT-AUTOMATION.
 
+**As built (impl-marketing P11).** The automation's owner (the user's call, Nov 14, 2026): it runs as its saved owner, the dispatcher
+who last activated or resumed it. Its admission and step jobs sign the owner in for each run and check again that the owner can sign in,
+holds MARKETING_DISPATCH, works for the organization and can read every segment the automation names; its trigger, goal and condition
+segments may use any of P5's sources, Sales and purchases too, under the owner's own access read at run time, and the classification's
+"not available" is the owner's. An owner who lost access pauses the automation with the reason, and activation refuses a dispatcher who
+could not run it, so a new activation makes its activator the owner; AutomationDetail names the owner (impl-marketing F157's question). A send step's content is a CampaignSend of the automation, status
+`CsAutomation`, copied from a template and prepared when the step is stored, which the send screens neither list, edit nor release; a
+participant who reaches the step becomes one of its recipients and is handed to the ledger through the dispatch's own checks
+(membership, consent within the organization, the suppression split, a withdrawal by anyone at the address, the frequency cap, which now
+counts the automations' deliveries too). Activation is apart from approval as a send's release is: a dispatcher who is none of the
+revision's authors nor its approver, never under the one-person-team flag (an automation has no recipient count). A change of the rule
+or steps returns the automation to draft and ends its approval; an enrollment admitted earlier keeps the steps in effect at its
+admission and runs again once the new revision is approved and activated. Before each step: a closed campaign stops the enrollment, a
+campaign no longer approved or a sending profile ended or turned transactional pauses the automation (its pause note), a topic
+withdrawal, an unsubscription or a suppression stops the enrollment, and the channel's purpose or the address's solicitation withdrawn
+skips that channel's sends only; quiet hours, a profile not ready and the frequency cap postpone a send with its note. The confirmed
+subscription trigger reads accepted subscription requests of the topic from the first activation on; the segment trigger's first scan
+after activation is a baseline; staff enrollment is a dispatcher's or an audience editor's, with evidence and an operation key; the
+order trigger's events are filed by `handle#OrderPlaced` (the Mantle SECA `OrderPlacedRecordAttribution`, after the placement commits);
+the cart trigger reads the carts Commerce's recovery reads for a store whose recovery sender is the automation (Commerce §8). Steps are
+replaced as a set (Add step; a row's Change moves or removes one); AutomationDetail's sections are boxes. EnrollmentDetail is the
+dispatchers' and audience managers', the automations' list and detail the authors', approvers', dispatchers' and audience managers'.
+
 **Source:** research §2; ERPNext Email Campaign and Frappe Workflow Runs.
 
 ## 7. Promotions

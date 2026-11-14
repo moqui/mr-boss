@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Automations › EnrollmentDetail (design-marketing §6 EnrollmentDetail: Enrollment, StepHistory, StopEnrollment;
+    style-guide §3.3 Detail; impl-marketing P11): one participant's run of an automation of the user's organizations (check#Record
+    enrollment; else "Not available", linking back). The record header: the participant (named for an audience reader, a masked address
+    otherwise), the automation, its source and the definition's time it follows, the state chip; Stop the one action (a dispatcher's or an
+    audience editor's) while it is active. The boxes: Enrollment (next step, due time and why it waits, the goal, why it ended) and Step
+    history (each step's time, outcome and reason, a wait's end in the rule's zone, a send's delivery state). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Enrollment" default-menu-include="false">
+    <parameter name="automationEnrollmentId" required="true"/>
+    <transition-include name="stopEnrollment" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="enrollmentCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'enrollment', recordId:automationEnrollmentId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="enrollmentCheck?.recordId">
+            <service-call name="mantle.marketing.AutomationServices.get#Enrollment" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{automationEnrollmentId:automationEnrollmentId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.enrollment"/>
+        <set field="enrollment" from="detail?.enrollment || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="historyList" from="detail?.history || []"/>
+        <set field="listPath" from="sharedLinks['Automations/Automations']"/>
+        <set field="automationPath" from="sharedLinks['Automations/AutomationDetail']"/>
+        <set field="captionText" from="[enrollment.automationName, enrollment.sourceText, 'definition of ' + enrollment.definitionDateText].filter(Boolean).join(' · ')"/>
+        <set field="stopValues" from="{automationEnrollmentId:automationEnrollmentId, expectedRevision:enrollment.revision}"/>
+    </actions>
+    <widgets>
+        <section name="EnrollmentNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Enrollment ${automationEnrollmentId} is not available: it does not exist, or it is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to automations" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="EnrollmentFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${automationEnrollmentId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${enrollment.participant}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="Admitted ${enrollment.admittedDateText} by ${enrollment.triggerText}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${enrollment.statusColor}">${WebUtilities.encodeHtml(enrollment.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(enrollment.statusText ?? "")})}]]></text>
+                                <text type="html">${enrollment.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <container-dialog id="StopEnrollmentDialog" button-text="Stop" icon="sym_o_stop_circle" type="primary"
+                                    title="Stop enrollment ${automationEnrollmentId}" width="480" condition="can.canStop">
+                                <label text="Its ${enrollment.pendingStepCount} pending steps never run, and it is not made active again." type="p" style="m-muted"/>
+                                <form-single name="StopEnrollment" transition="stopEnrollment" map="stopValues">
+                                    <field name="automationEnrollmentId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Stop" type="danger" confirmation="Stop enrollment ${automationEnrollmentId} of ${enrollment.participant}? This cannot be undone."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${automationPath}" text="Open the automation" link-type="anchor-button" icon="sym_o_route"
+                                    parameter-map="{marketingAutomationId:enrollment.marketingAutomationId}"/>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Enrollment"/>
+                    <box-body>
+                        <label text="Participant: ${enrollment.participant}${enrollment.address &amp;&amp; enrollment.address != enrollment.participant ? ' · ' + enrollment.address : ''}" type="p"/>
+                        <label text="Next: step ${enrollment.nextSequenceNum}, due ${enrollment.nextDueText}${enrollment.dueNote ? ' · waiting for: ' + enrollment.dueNote : ''}" type="p"
+                                condition="enrollment.statusId == 'AenActive'"/>
+                        <label text="Ended ${enrollment.endedDateText}: ${enrollment.endReason}" type="p" condition="enrollment.endedDateText"/>
+                        <label text="Goal: ${enrollment.goalSegmentName}" type="p" style="m-muted" condition="enrollment.goalSegmentName"/>
+                        <label text="Evidence: ${enrollment.evidenceText}" type="p" style="m-muted" condition="enrollment.evidenceText"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Step history"/>
+                    <box-body>
+                        <label text="No step has run yet." type="p" style="m-muted" condition="!historyList.length"/>
+                        <form-list name="StepHistory" list="historyList" skip-form="true" paginate="false" condition="historyList.length">
+                            <field name="sequenceNum" align="right"><default-field title="Step"><display/></default-field></field>
+                            <field name="stepText"><default-field title="What"><display/></default-field></field>
+                            <field name="executedDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Why"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Wait ends"><display/></default-field></field>
+                            <field name="deliveryText"><default-field title="Delivery"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="stepText"/><field-ref name="executedDateText"/></column>
+                                <column><field-ref name="outcomeText"/><field-ref name="reasonText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

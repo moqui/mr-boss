@@ -290,4 +290,37 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_DISPATCH" userPermissionId="MESSAGE_DELIVERY_REVIEW" fromDate="0"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_DISPATCH" userPermissionId="MESSAGE_DELIVERY_REVIEW" capabilityKindEnumId="CpkEdit"/>
     <!-- ===== end of Marketing P9 ===== -->
+
+    <!-- ===== Marketing P11: automation (impl-marketing P11; design-marketing §2, §6) ===== -->
+    <!-- Automations (design §2: Automations, AutomationDetail for the authors, approvers and dispatchers, EnrollmentDetail for the
+        dispatchers and audience managers): the area denies the root user group and gives those groups an ALWAYS, with the root's filter
+        sets; the administrator and ADMIN open it through their ALWAYS on the root; the root's menu shows it to a Marketing reader who
+        writes, approves or dispatches sends or reads audiences, and the area's check asks the capability (automationsArea), so a custom
+        group given Marketing is shown no area its services refuse. Mantle's AutomationServices check the permissions and the organization
+        again. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_AUTOMATIONS" description="Marketing automations">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Automations.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_AUTOMATIONS_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_AUTOMATIONS_AUTHOR" userGroupId="BOSS_MARKETING_AUTHOR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_AUTOMATIONS_APPROVER" userGroupId="BOSS_MARKETING_APPROVER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_AUTOMATIONS_DISPATCH" userGroupId="BOSS_MARKETING_DISPATCH" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_AUTOMATIONS_AUDIENCE" userGroupId="BOSS_MARKETING_AUDIENCE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- an automation's approval notice (Mantle seeds MarketingAutomationApproval with its decision services) opens its AutomationDetail -->
+    <moqui.security.user.NotificationTopic topic="MarketingAutomationApproval"
+            linkTemplate="/qapps/Marketing/Automations/AutomationDetail?marketingAutomationId=${marketingAutomationId}"/>
+    <!-- ===== end of Marketing P11 ===== -->
 </entity-facade-xml>

@@ -40,7 +40,9 @@ const areas = {
     // (BOSS_MKT_AUDIENCE_PREVIEW)
     audiencePreview: "Audiences/AudiencePreview",
     // P6: Sends (Comms' templates; P8 the sends), the authors', approvers' and dispatchers' (BOSS_MKT_SENDS)
-    sends: "Sends"
+    sends: "Sends",
+    // P11: Automations, the authors', approvers', dispatchers' and audience managers' (BOSS_MKT_AUTOMATIONS)
+    automations: "Automations"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
@@ -49,7 +51,8 @@ const areaReads = {
     approvals: "approve",
     audiences: "audienceRead",
     audiencePreview: "previewRead",
-    sends: "sendsRead"
+    sends: "sendsRead",
+    automations: "automationRead"
 }
 
 // ===== scope =====
@@ -119,6 +122,11 @@ function scope() {
     // dispatchers work there; Mantle's get#Send reads for any Marketing reader of the organization), the templates by their readers
     capabilities.sendRead = !!capabilities.anyRead && !!(capabilities.sendEdit || capabilities.approve || capabilities.dispatch)
     capabilities.sendsRead = capabilities.templateRead || capabilities.sendRead
+    // P11: the automations and their enrollments are read by a Marketing reader who writes, approves or dispatches sends or reads
+    // audiences (design §2: AutomationDetail A, V, D; EnrollmentDetail D, U), as Mantle's AutomationServices ask
+    capabilities.automationRead =
+        !!capabilities.anyRead &&
+        !!(capabilities.sendEdit || capabilities.approve || capabilities.dispatch || capabilities.audienceRead)
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -199,7 +207,12 @@ const linkPaths = [
     "Sends/CampaignDelivery",
     "Sends/RecipientDetail",
     // P10: a send's experiment (design §5 ExperimentDetail)
-    "Sends/ExperimentDetail"
+    "Sends/ExperimentDetail",
+    // P11: the automations, one automation and one enrollment (design §6)
+    "Automations",
+    "Automations/Automations",
+    "Automations/AutomationDetail",
+    "Automations/EnrollmentDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -295,9 +308,42 @@ const recordKinds = {
                 detail: statusName(row.statusId)
             }
         }
+    },
+    // P11: an automation and an enrollment, by their organization, for a reader of automations: AutomationDetail, EnrollmentDetail
+    automation: {
+        name: "Automation",
+        icon: "sym_o_route",
+        destination: {path: "Automations/AutomationDetail", parameter: "marketingAutomationId"},
+        read: (userScope, marketingAutomationId) => {
+            if (!userScope.capabilities.automationRead) return null
+            const row = one(AUTOMATION, {marketingAutomationId})
+            if (!row || !covers(userScope, row.organizationPartyId)) return null
+            return {
+                organizationPartyId: row.organizationPartyId,
+                label: row.automationName || marketingAutomationId,
+                detail: statusName(row.statusId)
+            }
+        }
+    },
+    enrollment: {
+        name: "Enrollment",
+        icon: "sym_o_person_play",
+        destination: {path: "Automations/EnrollmentDetail", parameter: "automationEnrollmentId"},
+        read: (userScope, automationEnrollmentId) => {
+            if (!userScope.capabilities.automationRead) return null
+            const row = one("mantle.marketing.automation.AutomationEnrollment", {automationEnrollmentId})
+            if (!row || !covers(userScope, row.organizationPartyId)) return null
+            const automation = one(AUTOMATION, {marketingAutomationId: row.marketingAutomationId})
+            return {
+                organizationPartyId: row.organizationPartyId,
+                label: "Enrollment " + automationEnrollmentId + " · " + (automation?.automationName || row.marketingAutomationId),
+                detail: statusName(row.statusId)
+            }
+        }
     }
 }
 const SEND = "mantle.marketing.campaign.CampaignSend"
+const AUTOMATION = "mantle.marketing.automation.MarketingAutomation"
 function recordOf(userScope, kind, recordId) {
     const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
     const unavailable = () => denied("RECORD_UNAVAILABLE", (definition?.name || "Record") + " " + recordId + " is not available")
@@ -352,6 +398,34 @@ function textCondition(fields, term) {
 // The organization a choice is narrowed to: one of the scope's, else every one of them.
 const choiceOrganizations = (userScope, p) =>
     p.organizationPartyId && covers(userScope, p.organizationPartyId) ? [p.organizationPartyId] : organizationIds(userScope)
+// The people on a topic (a send's or an automation's, whose organization the caller checked) to preview or enroll, by name: never
+// another user's personal contact, a disabled or a merged party (Mantle's preview#Send and enroll#Party refuse them too; P8 review).
+// The topic is never taken from the request (P11 review).
+function topicMembers(contactListId, term, selected) {
+    let partyIds = Array.from(
+        find("mantle.marketing.contact.ContactListParty", {contactListId})
+            .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
+            .selectField("partyId")
+            .distinct(true)
+            .limit(500)
+            .list()
+    ).map(row => row.partyId)
+    const inScope = segments().inScopeParties(partyIds)
+    partyIds = partyIds.filter(partyId => inScope.has(partyId))
+    if (!partyIds.length) return []
+    let query = find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("^firstName").limit(choiceLimit)
+    if (term) query = query.condition(textCondition(["firstName", "lastName"], term))
+    const options = Array.from(query.list()).map(row => ({
+        value: row.partyId,
+        label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId
+    }))
+    return withSelected(
+        options,
+        selected,
+        partyId => partyIds.includes(partyId),
+        partyId => lib.partyNames([partyId])[partyId] || partyId
+    )
+}
 const choiceSources = {
     // the organizations of the user's marketing scope
     organizations: (userScope, term, selected) =>
@@ -623,30 +697,26 @@ const choiceSources = {
     sendMembers: (userScope, term, selected, p) => {
         const send = p.campaignSendId ? one(SEND, {campaignSendId: p.campaignSendId}) : null
         if (!send || !userScope.capabilities.audienceRead || !covers(userScope, send.organizationPartyId)) return []
-        let partyIds = Array.from(
-            find("mantle.marketing.contact.ContactListParty", {contactListId: send.contactListId})
-                .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
-                .selectField("partyId")
-                .distinct(true)
-                .limit(500)
-                .list()
-        ).map(row => row.partyId)
-        // never another user's personal contact, a disabled or a merged party (Mantle's preview#Send refuses them too; P8 review)
-        const inScope = segments().inScopeParties(partyIds)
-        partyIds = partyIds.filter(partyId => inScope.has(partyId))
-        if (!partyIds.length) return []
-        let query = find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("^firstName").limit(choiceLimit)
-        if (term) query = query.condition(textCondition(["firstName", "lastName"], term))
-        const options = Array.from(query.list()).map(row => ({
-            value: row.partyId,
-            label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId
-        }))
-        return withSelected(
-            options,
-            selected,
-            partyId => partyIds.includes(partyId),
-            partyId => lib.partyNames([partyId])[partyId] || partyId
-        )
+        return topicMembers(send.contactListId, term, selected)
+    },
+    // P11: the stores of the organization named an order or cart trigger may read, by name
+    automationStores: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.automationRead) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find("mantle.product.store.ProductStore")
+            .condition("organizationPartyId", "in", ids)
+            .orderBy("^storeName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["productStoreId", "storeName"], term))
+        return Array.from(query.list()).map(row => ({value: row.productStoreId, label: row.storeName || row.productStoreId}))
+    },
+    // P11: a person on an automation's topic to enroll or simulate, by name, for an audience reader (Mantle's enroll#Party and
+    // preview#Automation check it and the person again)
+    automationMembers: (userScope, term, selected, p) => {
+        const automation = p.marketingAutomationId ? one(AUTOMATION, {marketingAutomationId: p.marketingAutomationId}) : null
+        if (!automation || !userScope.capabilities.audienceRead || !covers(userScope, automation.organizationPartyId)) return []
+        return topicMembers(automation.contactListId, term, selected)
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
     emailTemplates: (userScope, term, selected) => {
@@ -763,6 +833,8 @@ const searchFinds = [
             return Array.from(
                 find(SEND)
                     .condition("organizationPartyId", "in", ids)
+                    // P11: a send step's content is its automation's, found as the automation
+                    .condition("statusId", "not-equals", "CsAutomation")
                     .condition(textCondition(["campaignSendId", "sendName", "subject"], text))
                     .orderBy("-createdDate")
                     .limit(limit)
@@ -774,6 +846,31 @@ const searchFinds = [
                 url: path + "?campaignSendId=" + encodeURIComponent(row.campaignSendId),
                 recordEntity: SEND,
                 recordId: row.campaignSendId
+            }))
+        }
+    },
+    // P11: the automations of the scope by id or name, for a reader of automations
+    {
+        kind: "automation",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.automationRead) return []
+            const ids = organizationIds(userScope)
+            if (!ids.length) return []
+            const path = sharedPath("Marketing", "Automations/AutomationDetail")
+            return Array.from(
+                find(AUTOMATION)
+                    .condition("organizationPartyId", "in", ids)
+                    .condition(textCondition(["marketingAutomationId", "automationName"], text))
+                    .orderBy("-createdDate")
+                    .limit(limit)
+                    .list()
+            ).map(row => ({
+                title: row.automationName || row.marketingAutomationId,
+                subtitle: "Automation · " + statusName(row.statusId) + " · " + organizationName(row.organizationPartyId),
+                icon: recordKinds.automation.icon,
+                url: path + "?marketingAutomationId=" + encodeURIComponent(row.marketingAutomationId),
+                recordEntity: AUTOMATION,
+                recordId: row.marketingAutomationId
             }))
         }
     }
