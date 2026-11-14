@@ -124,13 +124,13 @@ along with this software (see the LICENSE.md file). If not, see
                 icon = 'sym_o_shield_person'
                 return
             }
-            // an order change (IronStone Sales P9, F58: OrderChangeApproval's one link, resolved per recipient): OrderChangeDetail under
-            // Customer Service for one who works orders there; else, for a commercial kind, Sales' Approvals for a sales approver of
-            // the seller, where they decide it (Sales' own OrderChangeDetail from impl-sales P14); else nowhere
+            // an order change (IronStone Sales P9, F58: OrderChangeApproval's one link, resolved per recipient): a commercial kind opens
+            // Sales' OrderChangeDetail for its sales approver, change operator or a Sales reader of the order (impl-sales P14), else
+            // OrderChangeDetail under Customer Service for one who works orders there; a cancel or substitute Customer Service's only
             if (ec.user.userId && (recordEntityName === 'mantle.request.Request' || docType === 'MantleRequest')
                     && ec.entity.find('mantle.request.Request').condition('requestId', id).disableAuthz().one()?.requestTypeEnumId === 'RqtOrderChange') {
-                url = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js').recordLink('orderChange', id)
-                    || ec.resource.script('component://mr-boss/service/ironstone/sales/Sales.js').recordLink('orderChange', id)
+                url = ec.resource.script('component://mr-boss/service/ironstone/sales/Sales.js').recordLink('orderChange', id)
+                    || ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js').recordLink('orderChange', id)
                 icon = 'sym_o_edit_note'
                 return
             }
