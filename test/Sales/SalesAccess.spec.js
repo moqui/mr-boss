@@ -672,3 +672,31 @@ feature("a quote template is a manager's to keep and its organization's to read"
         otherSees == false
     }
 })
+
+// P13 (impl-sales P13): inviting a customer's contact to PASS Sales is a holder of SALES_CUSTOMER_INVITE's, for an account of their
+// organization: with the same parameters (an address that is not the contact's, so nothing is written), the manager reaches the
+// address check, the rep is refused for the permission, and the manager is refused Ziziwork Sales' account as missing
+feature("inviting a customer's contact to PASS Sales is an inviter's, for an account of their organization", {
+    when() {
+        const invite = (user, accountPartyId, contactPartyId) =>
+            asUser(user, () =>
+                system(() =>
+                    refusal("mantle.sales.AccountServices.invite#SalesContact", {
+                        accountPartyId,
+                        contactPartyId,
+                        emailAddress: "nobody@invite.example.test"
+                    })
+                )
+            )
+        return {
+            manager: invite(users.manager, ids.accounts.wingtip, ids.contacts.dana),
+            rep: invite(users.rep, ids.accounts.wingtip, ids.contacts.dana),
+            other: invite(users.manager, ids.accounts.fabrikam, ids.contacts.lee)
+        }
+    },
+    then({manager, rep, other}) {
+        manager.includes("EMAIL_INVALID")
+        rep.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})
