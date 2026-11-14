@@ -983,6 +983,23 @@ sender, impl-marketing P11), called by built screens, the admission and step job
 | marketing/CampaignServices | request#MarketingApproval, decide#MarketingApproval (targetKind automation) | Marketing/Automations/AutomationDetail (AutomationControl: C.decide#MarketingApproval) | Marketing/Automations/AutomationDetail (Request approval, Approve); the MarketingAutomationApproval notice (Marketing P11) |
 | product/StoreAdminServices | get#CartRecoveryPolicy (view.senderOptions), store#CartRecoveryPolicy (sender automation) | Commerce/Settings/CheckoutSettings (RecoveryPolicy: a Marketing automation sender) | Commerce/Settings/CheckoutSettings (Change recovery's Sender) (Marketing P11) |
 
+Added in Marketing P12 (Nov 14, 2026; Commons' form publication services in `mantle.party.FormPublicationServices` over FormPublication.js,
+Marketing's thin wrappers `mantle.marketing.MarketingFormServices` over MarketingForms.js, the SubmitForm operations of
+`mantle.marketing.MarketingPortalServices`, and the survey builder's services used under Marketing's registration, impl-marketing P12),
+called by built screens, PASS pages and the delivery ledger:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| party/FormPublicationServices | store#Publication, preview#Publication, close#Publication | Marketing/Surveys/SurveyDistribution (FormPublication, FormSharing, PublishForm) | Marketing/Surveys/SurveyDistribution (through MarketingFormServices store#Publication; What a respondent sees; More: Close) (Marketing P12) |
+| party/FormPublicationServices | create#Invitations, accept#Submission | design-drawers-commons §19; Marketing §13 SubmitForm | build#CampaignDelivery (an invitation send's recipient, FormPublication.js invite); PASS:Marketing/SubmitForm (submitMarketingForm) (Marketing P12) |
+| party/FormDefinitionServices | find#Forms, create#Form, get#Form, rename#Form, save#FormField, save#FormCondition, end#FormPart, publish#Form (Marketing's purposes) | Marketing/Surveys, Marketing/Surveys/SurveyDetail | Marketing/Surveys/Surveys, Marketing/Surveys/SurveyDetail (Shared/SurveyForms and SurveyFormDetail with Marketing's registration; option scores) (Marketing P12) |
+| marketing/MarketingFormServices | get#FormScope | design §10 (the purposes' scope) | mantle.party.FormPurpose scopeServiceName of DbfpSurvey, DbfpLead, DbfpRegistration (Marketing P12) |
+| marketing/MarketingFormServices | store#Publication, publish#Publication, find#Publications, get#Publication | Marketing/Surveys/SurveyDistribution (FormPublication, PublishForm) | Marketing/Surveys/SurveyDistribution (New publication, the Publication box, Publish, the publications of a form) (Marketing P12) |
+| marketing/MarketingFormServices | create#Invitations | Marketing/Surveys/SurveyDistribution (Invitations: D.create#Send) | Marketing/Surveys/SurveyDistribution (New invitation send, the Invitations box) (Marketing P12) |
+| marketing/MarketingFormServices | find#Responses, get#Response, get#ResponseStats | Marketing/Surveys/Responses, Marketing/Surveys/ResponseDetail | Marketing/Surveys/Responses, Marketing/Surveys/ResponseDetail (Shared/SurveyResponses and SurveyResponseDetail's publication branch) (Marketing P12) |
+| marketing/MarketingPortalServices | get#Form, submit#Form | PASS:Marketing/SubmitForm (PublicForm, FormReceipt) | PASS:Marketing/SubmitForm (getMarketingForm, submitMarketingForm) (Marketing P12) |
+| marketing/AutomationServices | create#Automation, store#EnrollmentRule (trigger AtrFormSubmitted) | design §6 (the form-submission trigger) | the admission job's form trigger (collect#AdmissionEvents over FormSubmission) (Marketing P12) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

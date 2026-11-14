@@ -550,4 +550,76 @@ along with this software (see the LICENSE.md file). If not, see
             marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_2" sequenceNum="20" stepKindEnumId="AskWait"
             outcomeEnumId="AsoWaiting" executedDate="2026-10-05 10:10:00" dueDate="2026-10-08 10:10:00"/>
     <!-- ===== end of Marketing P11 ===== -->
+
+    <!-- ===== Marketing P12: surveys and form publication (impl-marketing P12; design-marketing §10) ===== -->
+    <!-- Retail's garden centre visit survey (a survey of the builder: a scored choice and a comment, every field customer-visible),
+        its "good" option relabelled "Very good" on 5 November (the old option ended, a new one of the same value and score started),
+        published to anyone on ZIZI_SHOP with the garden newsletter as its subscription choice, and by invitation to the garden
+        newsletter's members through an invitation send; an anonymous response from before the change and Maya's invited one after,
+        each reading the option text of its own date. -->
+    <moqui.screen.form.DbForm formId="BOSS_MKT_FORM_VISIT" purposeEnumId="DbfpSurvey" isDated="Y" ownerPartyId="ORG_ZIZI_RETAIL"
+            description="Garden centre visit" comments="How a visit to the garden centre went"/>
+    <moqui.screen.form.DbFormField formId="BOSS_MKT_FORM_VISIT" fieldName="rating" title="How was your visit?" fieldTypeEnumId="DBFFT_radio"
+            isRequired="Y" audienceEnumId="CfaCustomer" layoutSequenceNum="10" fromDate="2026-10-10 09:00:00"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_MKT_FORM_VISIT" fieldName="rating" sequenceNum="1" keyValue="good" text="Good"
+            scoreValue="2" fromDate="2026-10-10 09:00:00" thruDate="2026-11-05 09:00:00"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_MKT_FORM_VISIT" fieldName="rating" sequenceNum="2" keyValue="fair" text="Fair"
+            scoreValue="1" fromDate="2026-10-10 09:00:00"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_MKT_FORM_VISIT" fieldName="rating" sequenceNum="3" keyValue="poor" text="Poor"
+            scoreValue="0" fromDate="2026-10-10 09:00:00"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_MKT_FORM_VISIT" fieldName="rating" sequenceNum="4" keyValue="good" text="Very good"
+            scoreValue="2" fromDate="2026-11-05 09:00:00"/>
+    <moqui.screen.form.DbFormField formId="BOSS_MKT_FORM_VISIT" fieldName="comment" title="Anything we could do better?"
+            fieldTypeEnumId="DBFFT_text-area" isRequired="N" audienceEnumId="CfaCustomer" layoutSequenceNum="20" fromDate="2026-10-10 09:00:00"/>
+    <mantle.party.FormPublication publicationId="BOSS_MKT_PUB_VISIT" formId="BOSS_MKT_FORM_VISIT" purposeEnumId="FppSurvey"
+            organizationPartyId="ORG_ZIZI_RETAIL" contextEntityName="mantle.marketing.campaign.MarketingCampaign" contextId="BOSS_MKT_CMP_SPRING"
+            siteId="ZIZI_SHOP" accessEnumId="FpaAnonymous" repeatEnumId="FprMany" description="Visit survey on the shop"
+            titleText="How was your visit?" introText="Two questions about your last visit to the garden centre."
+            completionMessage="Thank you: your answer helps us plan the spring." subscriptionListId="BOSS_MKT_LIST_GARDEN"
+            fromDate="2026-10-10 09:00:00" publishedDate="2026-10-10 09:00:00" publishedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-10-10 08:30:00" createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.party.FormPublication publicationId="BOSS_MKT_PUB_VISIT_INVITED" formId="BOSS_MKT_FORM_VISIT" purposeEnumId="FppSurvey"
+            organizationPartyId="ORG_ZIZI_RETAIL" contextEntityName="mantle.marketing.campaign.MarketingCampaign" contextId="BOSS_MKT_CMP_SPRING"
+            siteId="ZIZI_SHOP" accessEnumId="FpaInvited" repeatEnumId="FprOnce" description="Visit survey for newsletter readers"
+            titleText="How was your visit?" completionMessage="Thank you for answering." fromDate="2026-11-05 09:00:00"
+            publishedDate="2026-11-05 09:00:00" publishedByUserId="BOSS_MKT_AUTHOR" createdDate="2026-11-05 08:30:00"
+            createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.CampaignAssociation campaignAssociationId="BOSS_MKT_CAS_VISIT" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            associationKindEnumId="CakForm" sourceId="BOSS_MKT_PUB_VISIT" purpose="Survey" fromDate="2026-10-10 08:30:00"
+            createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.CampaignAssociation campaignAssociationId="BOSS_MKT_CAS_VISIT_INV" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            associationKindEnumId="CakForm" sourceId="BOSS_MKT_PUB_VISIT_INVITED" purpose="Survey" fromDate="2026-11-05 08:30:00"
+            createdByUserId="BOSS_MKT_AUTHOR"/>
+    <!-- the invitation send to the garden newsletter (sent; Maya its one invited recipient) -->
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_SURVEY" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Invitation: visit survey" channelEnumId="MdcEmail"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" audienceJson="{}" sendingProfileId="BOSS_MKT_PROFILE_RETAIL"
+            subject="How was your visit, ${firstName}?" statusId="CsCompleted" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR"
+            revisedByUserId="BOSS_MKT_AUTHOR" createdDate="2026-11-05 10:00:00" formPublicationId="BOSS_MKT_PUB_VISIT_INVITED"/>
+    <!-- an anonymous answer on 20 October ("Good", before the change) -->
+    <moqui.screen.form.FormResponse formResponseId="BOSS_MKT_FR_VISIT_1" formId="BOSS_MKT_FORM_VISIT" formLocation="DbForm#BOSS_MKT_FORM_VISIT"
+            responseDate="2026-10-20 15:00:00"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_VISIT_1A" formResponseId="BOSS_MKT_FR_VISIT_1"
+            formId="BOSS_MKT_FORM_VISIT" fieldName="rating" valueText="good"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_VISIT_1B" formResponseId="BOSS_MKT_FR_VISIT_1"
+            formId="BOSS_MKT_FORM_VISIT" fieldName="comment" valueText="More seedlings at the front, please."/>
+    <!-- Maya's invited answer on 8 November ("Very good", after the change) -->
+    <moqui.screen.form.FormResponse formResponseId="BOSS_MKT_FR_VISIT_2" formId="BOSS_MKT_FORM_VISIT" formLocation="DbForm#BOSS_MKT_FORM_VISIT"
+            responseDate="2026-11-08 18:00:00"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_VISIT_2A" formResponseId="BOSS_MKT_FR_VISIT_2"
+            formId="BOSS_MKT_FORM_VISIT" fieldName="rating" valueText="good"/>
+    <mantle.party.FormInvitation invitationId="BOSS_MKT_FIN_VISIT_MAYA" publicationId="BOSS_MKT_PUB_VISIT_INVITED" formId="BOSS_MKT_FORM_VISIT"
+            organizationPartyId="ORG_ZIZI_RETAIL" partyId="BOSS_MKT_CON_MAYA" contactPartyId="BOSS_MKT_CON_MAYA"
+            emailAddress="maya.lindqvist@zizi-customers.example" recordEntityName="mantle.marketing.campaign.CampaignSend"
+            recordId="BOSS_MKT_SEND_SURVEY" invitationKey="mkt-send:BOSS_MKT_SEND_SURVEY:BOSS_MKT_CON_MAYA" statusEnumId="FinResponded"
+            scheduledDate="2026-11-05 10:30:00" sentDate="2026-11-05 10:30:00" lastSentDate="2026-11-05 10:30:00" expireDate="2026-12-05 10:30:00"
+            attemptCount="1" reminderCount="0" formResponseId="BOSS_MKT_FR_VISIT_2" responseDate="2026-11-08 18:00:00" createdDate="2026-11-05 10:30:00"/>
+    <mantle.party.FormSubmission formSubmissionId="BOSS_MKT_FSB_VISIT_1" publicationId="BOSS_MKT_PUB_VISIT" formId="BOSS_MKT_FORM_VISIT"
+            organizationPartyId="ORG_ZIZI_RETAIL" formResponseId="BOSS_MKT_FR_VISIT_1" siteId="ZIZI_SHOP" requestKey="demo-visit-1"
+            payloadDigest="demo" submittedDate="2026-10-20 15:00:00" statusEnumId="FsbApplied"/>
+    <mantle.party.FormSubmission formSubmissionId="BOSS_MKT_FSB_VISIT_2" publicationId="BOSS_MKT_PUB_VISIT_INVITED" formId="BOSS_MKT_FORM_VISIT"
+            organizationPartyId="ORG_ZIZI_RETAIL" formResponseId="BOSS_MKT_FR_VISIT_2" invitationId="BOSS_MKT_FIN_VISIT_MAYA"
+            partyId="BOSS_MKT_CON_MAYA" siteId="ZIZI_SHOP" requestKey="demo-visit-2" payloadDigest="demo"
+            submittedDate="2026-11-08 18:00:00" statusEnumId="FsbApplied"/>
+    <!-- ===== end of Marketing P12 ===== -->
 </entity-facade-xml>

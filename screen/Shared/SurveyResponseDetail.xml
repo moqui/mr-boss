@@ -20,7 +20,10 @@ along with this software (see the LICENSE.md file). If not, see
     the case and its resolution episode, the dates, the score and the customer's consent; the text answers for service
     management, and for the follow-up team only when the customer agreed to be contacted. The follow-up of a low score is
     recorded here (mantle.request.CaseFeedbackServices.record#FeedbackFollowUp: its assignee, due date, action, a note and its
-    state). The response itself is never changed: the framework's update and delete of it are refused. -->
+    state). The response itself is never changed: the framework's update and delete of it are refused.
+    impl-marketing P12: a registration with publication scope (Marketing's, mantle.marketing.MarketingFormServices.get#Response) shows a
+    response submitted to one of its publications: the answers with the form as of submission, the publication, the respondent as the
+    service names them, how it came, the date and the score; no case, no follow-up. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Survey response" default-menu-include="false">
     <parameter name="formResponseId"/>
@@ -47,9 +50,16 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="response" from="found?.response || null"/>
+        <set field="publicationScope" from="!!survey?.publicationScope"/>
         <set field="followUp" from="found?.followUp || null"/>
         <set field="answerRows" from="response?.answers || []"/>
-        <set field="detailLines" from="response ? [
+        <set field="detailLines" from="response &amp;&amp; publicationScope ? [
+                {label: 'Form', value: response.formText + (response.versionText ? ' · ' + response.versionText : '')},
+                {label: 'Publication', value: response.publicationText},
+                {label: 'Respondent', value: response.respondentText},
+                {label: 'By', value: response.viaText},
+                {label: 'Answered', value: response.submittedText},
+                {label: 'Score', value: response.scoreText ? response.scoreText + ' (' + response.scoreDetailText + ')' : '–'}] : response ? [
                 {label: 'Form', value: response.formText + ' · ' + response.versionText},
                 {label: 'Customer', value: response.customerText},
                 {label: 'Answered by', value: response.respondentText},
@@ -70,20 +80,21 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Not available"/>
                     <box-body>
-                        <label type="p" text="This response is not available: it does not exist, it answers no invitation of your organization's, or you do not follow it up."/>
-                        <link url="${resultsLink}" text="Back to satisfaction results" link-type="anchor" condition="resultsLink"/>
+                        <label type="p" text="${publicationScope ? 'This response is not available: it does not exist or was not submitted to one of your organization\'s publications.' : 'This response is not available: it does not exist, it answers no invitation of your organization\'s, or you do not follow it up.'}"/>
+                        <link url="${resultsLink}" text="${publicationScope ? 'Back to responses' : 'Back to satisfaction results'}" link-type="anchor" condition="resultsLink"/>
                     </box-body>
                 </container-box>
             </widgets>
         </section>
         <section name="ResponseFound" condition="response">
             <widgets>
-                <context record-entity="moqui.screen.form.FormResponse" record-id="${formResponseId}" title="Feedback ${response.scoreText}: ${response.customerText}"/>
+                <context record-entity="moqui.screen.form.FormResponse" record-id="${formResponseId}"
+                        title="${publicationScope ? 'Response to ' + response.formText : 'Feedback ' + response.scoreText + ': ' + response.customerText}"/>
                 <container style="m-record-header">
                     <container style="m-record-title">
-                        <label text="Feedback" type="span" style="text-caption m-muted"/>
-                        <label text="${response.scoreText ? 'Rated ' + response.scoreText : 'Answered'} · ${response.customerText}" type="h5"/>
-                        <label text="${response.respondedText}" type="div" style="text-caption m-muted"/>
+                        <label text="${publicationScope ? 'Response' : 'Feedback'}" type="span" style="text-caption m-muted"/>
+                        <label text="${publicationScope ? response.formText + ' · ' + response.respondentText : (response.scoreText ? 'Rated ' + response.scoreText : 'Answered') + ' · ' + response.customerText}" type="h5"/>
+                        <label text="${publicationScope ? response.submittedText : response.respondedText}" type="div" style="text-caption m-muted"/>
                     </container>
                     <container style="m-record-actions">
                         <link url="${response.caseUrl}" url-type="plain" text="Open the case" link-type="anchor-button" icon="sym_o_support_agent"
@@ -123,7 +134,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </container>
                 </container>
-                <link url="${resultsLink}" text="Satisfaction results" link-type="anchor" condition="resultsLink"/>
+                <link url="${resultsLink}" text="${publicationScope ? 'Responses' : 'Satisfaction results'}" link-type="anchor" condition="resultsLink"/>
                 <container-row>
                     <!-- ResponseDetails -->
                     <row-col lg="7">
@@ -148,8 +159,10 @@ along with this software (see the LICENSE.md file). If not, see
                             </box-body-nopad>
                         </container-box>
                     </row-col>
-                    <!-- FeedbackFollowUp -->
+                    <!-- FeedbackFollowUp (a case's; a publication's response has none) -->
                     <row-col lg="5">
+                        <section name="FeedbackFollowUpBox" condition="!publicationScope">
+                            <widgets>
                         <container-box>
                             <box-header title="Follow-up"/>
                             <box-body>
@@ -163,6 +176,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </section>
                             </box-body>
                         </container-box>
+                            </widgets>
+                        </section>
                     </row-col>
                 </container-row>
             </widgets>

@@ -3348,6 +3348,159 @@ survey invitation and results); MKT-FORMS, MKT-PUBLIC; stage M5.
   invitation once, an anonymous visitor answers the public form, a later change of an option leaves both responses
   reading as submitted, and the same form's case responses stay out of Marketing.
 
+**Built Nov 14 (P12).** mr-mantle, mr-pass and mr-boss on branch `mkt/p12` (hashes in the worker's reply), from master after P11's merge and
+the Rust 1.100 rebuild; mr-moqui unchanged, no Rust built. Built beside Sales follow-up 3 (a Sales spec fix only).
+- Checked first (the code over the plan): P7's, P11's and P5's Built and Review notes, F20, F21, F53, F70, F80, F90–F253 and §4; People's P16
+  builder as built (FormDefinitions.js, FormPurpose, SurveyApps.js, the four shared screens and their CS and People mounts), Commons'
+  FormPublication.js (`open#Publication`, the invitation guard), CaseFeedback.js (Customer Service's invitation, page and submit pattern),
+  ExternalAccess.js (the FormInvitation kind, scopePermissions and scopePages), MarketingPortal.js (P7's public pattern: one NotFound, the
+  attempt limits, the neutral receipt, `fileGroup`), P8's create#Send and P9's build#CampaignDelivery, P11's triggers, mr-pass's Feedback page
+  (moqui-form-when.js) and P7's Marketing pages. The code over the plan:
+  - the operations are camelCase, as P7's: `getMarketingForm` and `submitMarketingForm` (the plan's `marketing.getForm`, `marketing.submitForm`),
+    after P7's block in both schema copies and route lists, the answer in the three TOKEN_WRITES lists and let through anonymous by name in the
+    transport (an invitation's answer carries its token);
+  - the purposes: the survey is the framework's `DbfpSurvey` (registered for Marketing; no Marketing survey enum), the lead form `DbfpLead` and
+    registration questions `DbfpRegistration` (new), with `FppSurvey` (existing), `FppLead`, `FppRegistration` (new); a survey takes invited,
+    anonymous and account publications, a lead form and registration questions anonymous and account only;
+  - the shared builder's saveField passes no audience, and a new field is internal by default: FormPurpose gains `fieldAudienceEnumId`, the
+    audience every field of the purpose takes (Marketing's three: customer-visible), applied by FormDefinitionServices' save#FormField and a copy;
+  - option scores are `DbFormFieldOption.scoreValue` (a Mantle extend-entity on the framework's option), written as a third part of an option
+    line (`value | label | score`, a whole number 0–1000, a single choice only); a published option's new score ends it and starts an option of the
+    same value from now (a label alone still changes in place, audit-logged), so a summary reads each response's scores of its date;
+  - "create#Invitations (a send of P9 to an audience)": Marketing's create#Invitations makes an ordinary draft CampaignSend of the publication's
+    campaign naming it (`CampaignSend.formPublicationId`), approved and released as every send; build#CampaignDelivery makes each recipient's
+    FormInvitation once (key by send and party, recordEntityName CampaignSend) and a `MarketingSurvey` capability per attempt for their link (the
+    ledger keeps no token, as P7's verification), appended to the body as "Answer the survey" (a template variable may not be a link, P6), and
+    suppresses a recipient who answered or a closed survey. Commons' create#Invitations is the generic one (an editor names recipients);
+  - "hidden and unknown fields refused": Commons' accept#Submission refuses an unknown or internal field (FIELD_UNKNOWN) and a value for a field
+    its rules hide (FIELD_HIDDEN) before anything is kept; the page maps an unknown field and an oversized value to the neutral receipt (a page
+    never offers them) and a hidden one to what to fix (a visitor without JavaScript sees every question);
+  - "the repeat policy and request identity": FormSubmission's requestKey is the digest of the page's request key per publication, unique, with
+    a payload digest: the same answers answer the first, others REQUEST_KEY_REUSED; an invitation answers once (under its lock), an account
+    publication once per party under FprOnce; an anonymous one cannot tell people apart and takes each new key (design §10);
+  - Customer Service's two shared response screens gain a publication branch keyed on the registration's `publicationScope` (the case branch
+    unchanged; Customer Service's specs pass unchanged): Marketing's responses are read only through a FormSubmission of a Marketing publication,
+    so no case feedback is in reach whatever the form; SurveyFormDetail shows a registration's scores (`scores`) and its Distribution link;
+  - the readiness check "published list" is "published list or form" (a site that publishes only forms is ready), and the confirmation
+    template's check holds vacuously for a site offering no list;
+  - the subscription choice is the publication's `subscriptionListId` (a Marketing extend-entity on Commons' FormPublication), offered while that
+    list is offered on the site and filed through P7's `fileGroup` (pending, its verification message, the address limit) after the answer,
+    from an address typed beside it; recorded on the submission's effects;
+  - SurveyDistribution takes a form (its publications, New publication) or a publication; its design path stays.
+- Mantle:
+  - Commons (owner contract): `entity/FormPublicationEntities.xml` FormPublication `titleText`, `introText`, `completionMessage`,
+    `publishedDate`/`ByUserId`, `closedByUserId`, FormPurpose `fieldAudienceEnumId`, DbFormFieldOption `scoreValue`, the new FormSubmission (its
+    status FsbAccepted, FsbApplied, FsbEffectFailed), FppLead and FppRegistration; `FormPublication.js` and `FormPublicationServices.xml`
+    store#, preview#, close#Publication, create#Invitations, accept#Submission, and guardResponse also keeping a public submission's response;
+    `FormDefinitions.js` the scores (checkOptions, storeOptions, editRows, formAt's options, scoreOf) and the purpose's audience;
+    `ExternalAccess.js` the FormInvitation kind's `MarketingSurvey` scope (issuer MARKETING_DISPATCH or MARKETING_CONTENT_EDIT, its page the
+    organization's Marketing mount's SubmitForm).
+  - Marketing: `MarketingForms.js` (new) under `MarketingFormServices.xml` (new): get#FormScope, store#, publish#, find#Publications,
+    get#Publication, create#Invitations, find#Responses, get#Response, get#ResponseStats, and `invitationLink` for the build;
+    `MarketingPortal.js` getForm, submitForm and their effects, `MarketingPortalServices.xml` get#Form and submit#Form; `MarketingDispatch.js`
+    build#CampaignDelivery's invitation link; `MarketingAutomations.js` the form-submission trigger (AtrFormSubmitted, `formPublicationId`; a
+    submission by a known party after the cursor), AutomationServices' parameter; `entity/MarketingEntities.xml` a P12 block (FormPublication
+    `subscriptionListId`, CampaignSend and MarketingAutomation `formPublicationId`, AtrFormSubmitted); `data/MarketingSeedData.xml` a P12 block
+    (DbfpLead, DbfpRegistration and the three FormPurpose rows). PASS owner contracts: `ForumSchema.js`, `PassRoutes.js`, `PassApi.js`,
+    `PassAuthority.js`.
+- PASS: `screen/Marketing/SubmitForm.xml` and `.html.fancy` (PublicForm with `f_` inputs, moqui-form-when.js, the FormSubscription box;
+  FormReceipt), `service/pass/Schema.js` and `Routes.js` (copies of Mantle's), `Transport.js` (TOKEN_WRITES, the anonymous write),
+  `screen/Marketing.xml`'s comment, `docs/Deployment.md` (Marketing app: Forms), README.
+- BOSS: `screen/Marketing/Surveys.xml` (new area, menu 7, BOSS_MKT_SURVEYS, `g v`) mounting Shared/SurveyForms, SurveyFormDetail,
+  SurveyResponses, SurveyResponseDetail and the new `Surveys/SurveyDistribution.xml`; `SurveyApps.js` Marketing's registration (the third);
+  the shared screens' changes above; `Marketing.js` the capability `surveyRead`, area `surveys`, the P12 link paths; `BossSetupMarketingData.xml`
+  (a P12 block: BOSS_MKT_SURVEYS for the authors, audience managers and analysts); demo (`BossZZMarketingDemoData.xml`, a P12 block): Retail's
+  garden centre visit survey with its "good" option relabelled on 5 November, published to anyone on ZIZI_SHOP (with the garden newsletter as
+  its subscription choice) and by invitation through a sent invitation send, an anonymous response before the change and Maya's invited one after.
+- Specs:
+  - Mantle `test/party/FormPublications` (new, 5 features, about 0.8 s: a publication opens only a published form by an admitted access kind, a
+    draft or closed one takes no answer, the page carries no score, an outsider refused; an unknown field and a hidden field's answer refused, a
+    missing required one too, nothing kept, a public response locked; one request key one submission, other answers REQUEST_KEY_REUSED; an
+    invitation answers once; a response reads its option text and score as of submission after both change);
+    `test/marketing/MarketingForms` (new, 3 features, about 1.5 s: an author publishes on the organization's site, a reader, another organization's
+    author and site refused, the campaign linked; an invitation send's dispatch invites only the consenting member, whose link answers once and
+    a second answer keeps nothing, the non-consenting member gets nothing; an audience reader reads the two responses and the summary with each
+    response's scores, a report reader unnamed, a case's feedback on the same form unavailable, MARKETING_VIEW alone refused).
+  - mr-pass `test/Marketing/SubmitForm` (new, 3 features, about 0.5 s; fixtures `MarketingFixtures.js` forms()): SubmitForm's one html render; a
+    draft, closed, another site's publication and a forged link NotFound alike; an answer kept once; over the client's limit, oversized or with an
+    unknown field the same receipt and nothing kept; the two operations in both copies and route lists, the answer in the three lists.
+  - mr-boss `MarketingSurveys` (new, 2 features, about 0.6 s: SurveyDistribution's one qvt render for the author; the registration, the author
+    editing, the analyst reading the demo's two responses unnamed, on the services); `MarketingAccess` (the capabilities `surveyRead` and
+    `surveys` per group, the analyst's menu, the menus and `g v`); `MarketingSpecLib` (menus, keys, the demo survey's ids).
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingSurveyWalk` (3 features: scenario 11's form half and 12 through
+    the screens' transitions); mr-pass `test/acceptance/client/MarketingFormHttp` (2 features, plain requests: an anonymous answer with the
+    subscription choice filed pending; an invitation link a scanner reads, answered once; draft, closed and forged not available) with
+    `test/acceptance/MarketingFormFixtures` on PASS_HTTP (P7's organization, its Marketing target), in `client/suite.js`.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle FormPublications 5 of 5, MarketingForms 3 of 3; FormDefinitions,
+  CaseFeedback, Reviews, Training, PeopleChecklists, SupportTemplates (27 of 27); Dispatch, Sends, Automations, MarketingSubscriptions,
+  Campaigns, PassAuthority, Experiments, MarketingScope, SalesPortal (56 of 56); mr-pass SubmitForm 3 of 3; MarketingAccess, Transport, ShopCart,
+  ShopCheckout, Forum, SupportAccess, SalesPortalAccess, Portals (36 of 36); mr-boss MarketingSurveys 2 of 2, MarketingAccess, MarketingAutomations,
+  MarketingCampaigns, CustomerServiceReports, CustomerServiceAccess, CustomerServiceFeedback, PeopleRecruiting, PeopleAccessLater (64 of 64; two
+  of them over 15 s in that run, below). A throwaway walk of SurveyDistribution's four transitions (store, publish, New invitation send, close)
+  and renders of Surveys, SurveyDetail, SurveyDistribution (a form, an invited publication, tui, html), Responses and ResponseDetail (qvt, tui)
+  passed and was not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen; parse failures 0.
+  Prettier clean on the new and changed JavaScript (ExternalAccess.js was not clean before and is left as it was). Not run: test-apps, the
+  acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P12" table; ss-inventory's Survey rows gain Marketing's Implemented in.
+- Design edits: design-marketing §10 SurveyDistribution and §13 SubmitForm (as built); design-drawers-commons' form publication row (owner
+  contract: the services, FormSubmission, the scores, the audience, the scope).
+- Findings (provisional, numbered by the lead):
+  - the operations are camelCase; the survey purpose is the framework's DbfpSurvey; FormPurpose gains fieldAudienceEnumId (the code over the
+    plan above);
+  - an invitation is an ordinary send of the publication's campaign (its promotional eligibility is the send's preparation and dispatch), its
+    FormInvitation made at the build and its link per attempt; a publication needs a campaign and a site before an invitation send;
+  - a published option's new score is a new option of the same value from now, so a response reads the score of its date; scores are whole
+    numbers 0–1000 on a single choice only (design §10's declared aggregation limits for negative or multi-select scores are not built);
+  - an anonymous publication cannot limit people (each new request key is a submission; FprOnce limits an invitation or an account); two
+    concurrent anonymous posts with one request key: the second fails on the unique key (Unavailable), not the first answer;
+  - the page answers an unknown field or an oversized value with the neutral receipt and a hidden field's answer with what to fix;
+  - the shared response screens' publication branch is an owner contract change of Customer Service's screens (its specs unchanged);
+  - the respondent of a response is named for an audience reader only; a report reader sees "A respondent";
+  - the form-submission trigger files only a submission with a known party (an invitation's recipient or a signed-in account); it is not spec'd
+    (it needs an activated automation and its owner);
+  - the demo's ZIZI_SHOP is a Commerce demo site left unpublished, so the demo publications' site check reads Missing until it is published
+    (as P7's offer);
+  - in one run of the mr-boss group CustomerServiceAccess (17.7 s) and PeopleAccessLater (21.6 s) passed the 15-second bound on a loaded
+    machine (other workers running); neither is changed by this phase beyond the shared screens; to check on master.
+- For the lead:
+  - budget share: mr-mantle about 2.3 s (FormPublications 0.8 s, MarketingForms 1.5 s); mr-pass server about 0.5 s (SubmitForm); mr-boss server
+    about 0.6 s (MarketingSurveys; MarketingAccess +0.1 s); no client spec;
+  - merge hot spots (Sales follow-up 3 beside, and P13/P14 next): mr-mantle `service/mantle/forum/ForumSchema.js` and `script/PassRoutes.js` (a
+    P12 block after P7's), `script/PassApi.js`, `script/PassAuthority.js` (TOKEN_WRITES' end), `entity/MarketingEntities.xml` and
+    `data/MarketingSeedData.xml` (P12 blocks at the ends), `entity/FormPublicationEntities.xml`, `service/mantle/party/FormPublication.js`,
+    `FormPublicationServices.xml`, `FormDefinitions.js`, `ExternalAccess.js` (the FormInvitation kind), `service/mantle/marketing/MarketingPortal.js`
+    (limits, readiness, a P12 section before the readiness), `MarketingPortalServices.xml`, `MarketingDispatch.js` (buildDelivery),
+    `MarketingAutomations.js` (triggers, triggerFor, collect), `AutomationServices.xml`; new MarketingForms.js, MarketingFormServices.xml,
+    FormPublications.spec.js, MarketingForms.spec.js. mr-pass `service/pass/Schema.js`, `Routes.js` (copies), `Transport.js`, `docs/Deployment.md`,
+    README, `test/Marketing/MarketingFixtures.js`, `test/acceptance/client/suite.js`; new SubmitForm page, spec and acceptance tests. mr-boss
+    `screen/Marketing.xml` (the Surveys item and key), `service/ironstone/marketing/Marketing.js` (areas, areaReads, scope, linkPaths),
+    `service/ironstone/shared/SurveyApps.js`, `screen/Shared/SurveyFormDetail.xml`, `SurveyResponses.xml`, `SurveyResponseDetail.xml`,
+    `data/BossSetupMarketingData.xml` and `data/BossZZMarketingDemoData.xml` (P12 blocks at the ends), `test/Marketing/MarketingAccess.spec.js`,
+    `MarketingSpecLib.js`, `plan/ss-inventory.md`, `plan/usl-inventory.md`, `plan/design-marketing.md`, `plan/design-drawers-commons.md`, this file;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Marketing's subscription paragraph; no mr-moqui worktree): "PASS
+    Marketing's forms (`mantle.marketing.MarketingPortalServices` get#Form and submit#Form, `allow-remote="false"`, `authenticate="anonymous-all"`,
+    reached only as the PASS operations `getMarketingForm` and `submitMarketingForm` of the authority's allowlist) find the organization from the
+    site's `marketing` mount and a publication only of a Marketing purpose (survey, lead form, registration questions) of that organization, on
+    that site and open now: a public or signed-in accounts' one by its id, an invited one only by its link's token (an ExternalAccessCapability of
+    the FormInvitation kind, scope `MarketingSurvey`, a 48-character token whose digest alone is kept, made at each attempt of an invitation send's
+    delivery and ending with the publication or after 30 days; each lookup counts against the requester's limit, 100 in ten minutes); a site
+    without the mount, a draft, closed or another site's publication and a forged, expired or revoked token answer the same NotFound. The form is
+    the publication's as of now on the server (the customer-visible fields, never an internal field, a draft or a score); an answer goes through
+    Commons' `mantle.party.FormPublicationServices.accept#Submission`, which refuses an unknown or internal field and a value for a field its rules
+    hide, checks each value's type and length, keeps one FormSubmission per request key (the same answers answer the first, others are refused),
+    answers an invitation once under its lock and an account's publication once per party, and keeps the response as submitted (the framework's
+    update and delete of it are refused). `submitMarketingForm` is an anonymous write (the transport lets it through by name; the authority takes
+    it from a registered deployment as a TOKEN_WRITES operation) bounded by PASS's request key and limits per client (30 in ten minutes) and site
+    (1,000 an hour); over either, an answer over 64 KB, or one naming a field the page never offered gets the publication's same receipt and nothing
+    is kept. An email address typed beside an answer never identifies or subscribes anyone: the subscription choice is a separate public request
+    of the publication's list, filed after the answer through the subscription path (pending, its own verification message and limits). Staff
+    read responses only through `mantle.marketing.MarketingFormServices` (a reader of the purpose and organization, only submissions to a
+    Marketing publication, so no case feedback; the respondent named for an audience reader only). An invitation goes only to a recipient an
+    invitation send's preparation and dispatch admit (the topic's membership, consent within the organization, suppression), approved and
+    released as every send.";
+  - the user's call: none required; to confirm, an invitation as an ordinary approved send, scores as whole numbers on single choices only, the
+    respondent named for audience readers only, and a hidden field's answer told to the visitor rather than answered with the receipt.
+
 ### P13 — Leads and the Sales handoff
 
 Design §10 Leads and LeadRules, §12 LeadSources, §13 SubmitForm (its lead purpose), §15.3 (the capture job);

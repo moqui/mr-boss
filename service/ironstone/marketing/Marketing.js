@@ -42,7 +42,9 @@ const areas = {
     // P6: Sends (Comms' templates; P8 the sends), the authors', approvers' and dispatchers' (BOSS_MKT_SENDS)
     sends: "Sends",
     // P11: Automations, the authors', approvers', dispatchers' and audience managers' (BOSS_MKT_AUTOMATIONS)
-    automations: "Automations"
+    automations: "Automations",
+    // P12: Surveys (the builder, distribution and responses), the authors', audience managers' and analysts' (BOSS_MKT_SURVEYS)
+    surveys: "Surveys"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
@@ -52,7 +54,8 @@ const areaReads = {
     audiences: "audienceRead",
     audiencePreview: "previewRead",
     sends: "sendsRead",
-    automations: "automationRead"
+    automations: "automationRead",
+    surveys: "surveyRead"
 }
 
 // ===== scope =====
@@ -127,6 +130,10 @@ function scope() {
     capabilities.automationRead =
         !!capabilities.anyRead &&
         !!(capabilities.sendEdit || capabilities.approve || capabilities.dispatch || capabilities.audienceRead)
+    // P12: the surveys are read by a Marketing reader who edits content or reads audiences or reports (design §2: Surveys and
+    // SurveyDetail the survey readers and editors, SurveyDistribution A, Responses U and R), as Marketing's form purposes admit
+    capabilities.surveyRead =
+        !!capabilities.anyRead && !!(capabilities.contentEdit || capabilities.audienceRead || capabilities.reportRead)
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -212,7 +219,14 @@ const linkPaths = [
     "Automations",
     "Automations/Automations",
     "Automations/AutomationDetail",
-    "Automations/EnrollmentDetail"
+    "Automations/EnrollmentDetail",
+    // P12: the surveys, one survey, its distribution, the responses and one response (design §10)
+    "Surveys",
+    "Surveys/Surveys",
+    "Surveys/SurveyDetail",
+    "Surveys/SurveyDistribution",
+    "Surveys/Responses",
+    "Surveys/ResponseDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"

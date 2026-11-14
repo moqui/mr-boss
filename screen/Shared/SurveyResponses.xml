@@ -19,7 +19,12 @@ along with this software (see the LICENSE.md file). If not, see
     responses service (People: a People response is read through the record it belongs to) or none sees "not available". One feedback form and one of its effective periods at a time (a period starts
     when its questions or options change), so a changed scale or question is never compared with the earlier one; then the
     queue, team, customer, score and state (ironstone.customerservice.FeedbackServices.find#CaseResponses). The counts are on
-    the form's raw scale. Each answer opens ResponseDetail; its case opens CaseDetail when the user may open it. -->
+    the form's raw scale. Each answer opens ResponseDetail; its case opens CaseDetail when the user may open it.
+    impl-marketing P12: a registration with publication scope (Marketing's, mantle.marketing.MarketingFormServices.find#Responses) is
+    shown its own branch: one form and optionally one of its publications, the counts (invited, delivered, answered, the response rate,
+    the average score of the answered scored questions with the answered count and maximum apart), each choice's answers by option and
+    the responses (publication, date, respondent as the service names them, how they came, score), each opening ResponseDetail; only
+    responses submitted to the app's publications, never a case's. The case branch is unchanged. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Survey responses">
     <parameter name="formId"/>
@@ -29,11 +34,12 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="customerPartyId"/>
     <parameter name="score"/>
     <parameter name="statusEnumId"/>
+    <parameter name="publicationId"/>
     <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <transition name="findResponses">
         <default-response url="."><parameter name="formId"/><parameter name="periodId"/><parameter name="requestCategoryId"/>
             <parameter name="teamPartyId"/><parameter name="customerPartyId"/><parameter name="score"/>
-            <parameter name="statusEnumId"/></default-response>
+            <parameter name="statusEnumId"/><parameter name="publicationId"/></default-response>
     </transition>
     <actions>
         <set field="survey" from="ec.resource.script('component://mr-boss/service/ironstone/shared/SurveyApps.js').context(appRoot)"/>
@@ -41,10 +47,12 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="${survey.services.responses}" out-map="found"
                     transaction="force-new" ignore-error="true"
                     in-map="{appRoot:appRoot, formId:formId, periodId:periodId, requestCategoryId:requestCategoryId,
-                        teamPartyId:teamPartyId, customerPartyId:customerPartyId, score:score, statusEnumId:statusEnumId}"/>
+                        teamPartyId:teamPartyId, customerPartyId:customerPartyId, score:score, statusEnumId:statusEnumId,
+                        publicationId:publicationId}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="responsesFound" from="!!found?.formOptions"/>
+        <set field="publicationScope" from="!!survey?.publicationScope"/>
         <set field="responseRows" from="found?.rows || []"/>
         <set field="stats" from="found?.stats || null"/>
         <set field="distribution" from="stats?.distribution || []"/>
@@ -64,10 +72,101 @@ along with this software (see the LICENSE.md file). If not, see
                 {label: 'In the top two scores', value: stats.satisfiedText || '–'},
                 {label: 'With a comment', value: String(stats.commentCount)},
                 {label: 'Scale', value: stats.scaleText || '–'}] : []"/>
+        <!-- the publication branch (impl-marketing P12) -->
+        <set field="publicationChoices" from="found?.publicationOptions || []"/>
+        <set field="publicationFindValues" from="{formId: found?.formId || '', publicationId: found?.publicationId || ''}"/>
+        <set field="publicationStatLines" from="publicationScope &amp;&amp; stats ? [
+                {label: 'Invited', value: String(stats.invited)},
+                {label: 'Delivered', value: String(stats.delivered)},
+                {label: 'Answered', value: String(stats.answered)},
+                {label: 'Response rate of invitations', value: stats.responseRateText || '–'},
+                {label: 'Average score', value: stats.averageText ? stats.averageText + ' of ' + stats.averageMaximumText : '–'},
+                {label: 'Scored questions answered (average)', value: stats.averageAnsweredText || '–'}] : []"/>
+        <set field="questionRows" from="publicationScope &amp;&amp; stats ? (stats.questions || []).flatMap((question) =&gt; (question.options || [])
+                .map((option) =&gt; ({question: question.title, answer: option.text, count: option.count, shareText: option.shareText}))) : []"/>
     </actions>
     <widgets>
-        <label text="Satisfaction results are not available to you." type="p" condition="!responsesFound"/>
-        <section name="SatisfactionResults" condition="responsesFound">
+        <label text="${publicationScope ? 'The responses are not available to you.' : 'Satisfaction results are not available to you.'}" type="p" condition="!responsesFound"/>
+        <section name="PublicationResponses" condition="responsesFound &amp;&amp; publicationScope">
+            <widgets>
+                <label text="Responses" type="h5"/>
+                <container-box>
+                    <box-body>
+                        <form-single name="ResponseFind" transition="findResponses" map="publicationFindValues">
+                            <field name="formId">
+                                <default-field title="Survey or form">
+                                    <drop-down submit-on-select="true"><list-options list="formChoices" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="publicationId">
+                                <default-field title="Publication">
+                                    <drop-down allow-empty="true" submit-on-select="true"><list-options list="publicationChoices" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field-layout><field-row><field-ref name="formId"/><field-ref name="publicationId"/></field-row></field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <label type="p" style="m-muted" condition="!formChoices.length" text="No survey or form yet."/>
+                <section name="PublicationResults" condition="stats">
+                    <widgets>
+                        <container-row>
+                            <row-col lg="5">
+                                <container-box>
+                                    <box-header title="Counts"/>
+                                    <box-body-nopad>
+                                        <form-list name="ResponseCounts" list="publicationStatLines" skip-form="true" paginate="false" skip-header="true">
+                                            <field name="label"><default-field title=""><display/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="value"/></column></columns>
+                                        </form-list>
+                                        <label type="p" style="q-pa-sm text-caption m-muted q-mb-none" condition="stats.truncated"
+                                                text="Counted over the latest 5000 responses."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col lg="7">
+                                <container-box>
+                                    <box-header title="Choices"/>
+                                    <box-body-nopad>
+                                        <form-list name="ResponseChoices" list="questionRows" skip-form="true" paginate="false">
+                                            <field name="question"><default-field title="Question"><display/></default-field></field>
+                                            <field name="answer"><default-field title="Answer"><display/></default-field></field>
+                                            <field name="count"><default-field title="Responses"><display/></default-field></field>
+                                            <field name="shareText"><default-field title="Share"><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="question"/><field-ref name="answer"/></column><column><field-ref name="count"/><field-ref name="shareText"/></column></columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                        <container-box>
+                            <box-header title="Responses"/>
+                            <box-body-nopad>
+                                <form-list name="PublicationResponseList" list="responseRows" skip-form="true" paginate="false">
+                                    <field name="submittedText">
+                                        <default-field title="Answered">
+                                            <link url="${detailLink}" text="${submittedText}" link-type="anchor"
+                                                    parameter-map="{formResponseId:formResponseId}" condition="detailLink"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="publicationText"><default-field title="Publication"><display/></default-field></field>
+                                    <field name="respondentText"><default-field title="Respondent"><display/></default-field></field>
+                                    <field name="viaText"><default-field title="By"><display/></default-field></field>
+                                    <field name="scoreText"><default-field title="Score"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="submittedText"/><field-ref name="respondentText"/></column>
+                                        <column><field-ref name="scoreText"/><field-ref name="viaText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!responseRows.length" text="No response yet."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="SatisfactionResults" condition="responsesFound &amp;&amp; !publicationScope">
             <widgets>
                 <label text="Satisfaction results" type="h5"/>
                 <!-- CsatFind -->

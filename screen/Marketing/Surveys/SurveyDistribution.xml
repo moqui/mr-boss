@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Surveys › SurveyDistribution (design-marketing §10 SurveyDistribution: FormPublication, FormSharing, PublishForm,
+    Invitations; style-guide §3.3 Detail; impl-marketing P12): a Marketing form's publications (formId: the list and New publication)
+    or one publication (publicationId) of the user's organizations (mantle.marketing.MarketingFormServices get#Publication; else "Not
+    available"). The record header: the form and the publication's access, site and campaign, the state chip; Publish (the opening
+    date, once its readiness holds) or Close by state, and New invitation send for a send author while it takes invitations. The
+    boxes: FormPublication (who answers, how often, the site, the campaign, the subscription choice, the closing date and the page's
+    words; a content author's form at the revision read), FormSharing (the public link with its QR, or "by invitation only", and the
+    respondent's page as the preview shows it), Readiness and Invitations (each invitation send with its topic, state, invited and
+    answered counts, opening SendDetail, where it is approved and released as every send). Every change is Mantle's guarded service. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Distribution" default-menu-include="false">
+    <parameter name="formId"/>
+    <parameter name="publicationId"/>
+    <transition name="storePublication">
+        <actions>
+            <service-call name="mantle.marketing.MarketingFormServices.store#Publication" out-map="stored"
+                    in-map="{publicationId:(publicationId || null), formId:(publicationId ? null : formId), expectedRevision:(expectedRevision || null),
+                        accessEnumId:(accessEnumId || null), repeatEnumId:(repeatEnumId || null), siteId:(siteId ?? ''),
+                        marketingCampaignId:(marketingCampaignId || null), subscriptionListId:(subscriptionListId ?? ''),
+                        thruDate:(thruDate || null), description:(description ?? ''), titleText:(titleText ?? ''), introText:(introText ?? ''),
+                        completionMessage:(completionMessage ?? '')}"/>
+            <message type="success">${stored.created ? 'Made the publication: publish it once it is ready' : 'Saved the publication'}</message>
+        </actions>
+        <default-response url="."><parameter name="publicationId" from="stored.publicationId"/></default-response>
+        <error-response url="."><parameter name="formId"/><parameter name="publicationId"/></error-response>
+    </transition>
+    <transition name="publishPublication">
+        <actions>
+            <service-call name="mantle.marketing.MarketingFormServices.publish#Publication"
+                    in-map="{publicationId:publicationId, expectedRevision:(expectedRevision || null), fromDate:(fromDate || null)}"/>
+            <message type="success">Published: it takes answers from the opening date</message>
+        </actions>
+        <default-response url="."><parameter name="publicationId"/></default-response>
+        <error-response url="."><parameter name="publicationId"/></error-response>
+    </transition>
+    <transition name="closePublication">
+        <actions>
+            <service-call name="mantle.party.FormPublicationServices.close#Publication"
+                    in-map="{publicationId:publicationId, expectedRevision:(expectedRevision || null), thruDate:(thruDate || null)}"/>
+            <message type="success">Closed: it takes no more answers; the answers are kept</message>
+        </actions>
+        <default-response url="."><parameter name="publicationId"/></default-response>
+        <error-response url="."><parameter name="publicationId"/></error-response>
+    </transition>
+    <transition name="createInvitations">
+        <actions>
+            <service-call name="mantle.marketing.MarketingFormServices.create#Invitations" out-map="invited"
+                    in-map="{publicationId:publicationId, contactListId:contactListId, sendName:(sendName || null),
+                        messageTemplateId:(messageTemplateId || null), sendingProfileId:(sendingProfileId || null)}"/>
+            <set field="sendPath" from="sharedLinks?.['Sends/SendDetail'] || '.'"/>
+            <message type="success">Made the invitation send: compose, prepare and ask for its approval as every send</message>
+        </actions>
+        <default-response url="${sendPath}"><parameter name="campaignSendId" from="invited.campaignSendId"/></default-response>
+        <error-response url="."><parameter name="publicationId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="publicationId || formId">
+            <service-call name="mantle.marketing.MarketingFormServices.get#Publication" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{publicationId:(publicationId || null), formId:(publicationId ? null : formId)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.form"/>
+        <if condition="recordFound &amp;&amp; !publicationId">
+            <service-call name="mantle.marketing.MarketingFormServices.find#Publications" out-map="listed" transaction="force-new" ignore-error="true"
+                    in-map="{formId:detail.form.formId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <if condition="recordFound &amp;&amp; detail.publication">
+            <service-call name="mantle.party.FormPublicationServices.preview#Publication" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{publicationId:publicationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="publication" from="detail?.publication || null"/>
+        <set field="formView" from="detail?.form || {}"/>
+        <set field="choices" from="detail?.choices || {accessOptions: [], siteOptions: [], campaignOptions: [], listOptions: []}"/>
+        <set field="publicationRows" from="listed?.publications || []"/>
+        <set field="readinessRows" from="(detail?.readiness || []).map((check) =&gt; ({label: check.label, stateText: check.ready ? 'Ready' : 'Missing'}))"/>
+        <set field="sendRows" from="detail?.invitationSends || []"/>
+        <set field="pageFields" from="preview?.page?.fields || []"/>
+        <set field="can" from="{edit: !!detail?.canEdit, publish: !!detail?.canPublish, close: !!detail?.canClose, invite: !!detail?.canInvite}"/>
+        <set field="publicationValue" from="publication ? {publicationId: publication.publicationId, expectedRevision: String(publication.revision),
+                accessEnumId: publication.accessEnumId, repeatEnumId: publication.repeatEnumId, siteId: publication.siteId || '',
+                marketingCampaignId: publication.marketingCampaignId || '', subscriptionListId: publication.subscriptionListId || '',
+                thruDate: publication.thruDate || '', description: publication.description, titleText: publication.titleText,
+                introText: publication.introText, completionMessage: publication.completionMessage} : {}"/>
+        <set field="newValue" from="{formId: formView.formId, accessEnumId: choices.accessOptions.length ? choices.accessOptions[0].value : '', repeatEnumId: 'FprOnce'}"/>
+        <set field="headerCaption" from="publication ? [publication.purposeText, publication.accessText, publication.siteName,
+                publication.campaignName, publication.fromText ? 'opens ' + publication.fromText : '', publication.thruText ? 'closes ' + publication.thruText : '']
+                .filter(Boolean).join(' · ') : ''"/>
+        <set field="stateColor" from="{draft: 'warning', scheduled: 'info', open: 'positive', closed: 'grey'}[publication?.state] || 'grey'"/>
+        <set field="qrSvg" from="publication?.pageUrl ? ec.resource.barcodeSvg('QR', publication.pageUrl, {moduleWidth: 0.6, height: 24, quietZone: 4, humanReadable: false}) : ''"/>
+        <set field="surveyLink" from="sharedLinks?.['Surveys/SurveyDetail']"/>
+        <set field="distributionLink" from="sharedLinks?.['Surveys/SurveyDistribution']"/>
+        <set field="sendLink" from="sharedLinks?.['Sends/SendDetail']"/>
+    </actions>
+    <widgets>
+        <section name="DistributionUnavailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This survey or publication is not available: it does not exist or is not one of your organization's Marketing forms."/>
+                        <link url="${sharedLinks?.['Surveys/Surveys']}" text="Back to surveys and forms" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- a form's publications -->
+        <section name="FormPublications" condition="recordFound &amp;&amp; !publication">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Distribution" type="span" style="text-caption m-muted"/>
+                        <label text="${formView.formName}" type="h5"/>
+                        <label text="${formView.purposeText}" type="div" style="text-caption m-muted"/>
+                    </container>
+                    <container style="m-record-actions">
+                        <container-dialog id="NewPublication" button-text="New publication" icon="sym_o_add" type="primary" width="560"
+                                title="Publish ${formView.formName}" condition="can.edit">
+                            <form-single name="NewPublicationForm" transition="storePublication" map="newValue">
+                                <field name="formId"><default-field><hidden/></default-field></field>
+                                <field name="accessEnumId">
+                                    <default-field title="Who answers">
+                                        <drop-down><list-options list="choices.accessOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="repeatEnumId">
+                                    <default-field title="How often">
+                                        <radio><option key="FprOnce" text="Once"/><option key="FprMany" text="Several times"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="siteId">
+                                    <default-field title="Site" tooltip="A published site whose Marketing pages serve the organization">
+                                        <drop-down allow-empty="true"><list-options list="choices.siteOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="marketingCampaignId">
+                                    <default-field title="Campaign" tooltip="Needed for invitation sends">
+                                        <drop-down allow-empty="true"><list-options list="choices.campaignOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Make publication"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <link url="${surveyLink}" text="The survey's questions" link-type="anchor" parameter-map="{formId:formView.formId}" condition="surveyLink"/>
+                <container-box>
+                    <box-header title="Publications"/>
+                    <box-body-nopad>
+                        <form-list name="FormPublicationList" list="publicationRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Publication">
+                                    <link url="${distributionLink}" text="${description || publicationId}" link-type="anchor"
+                                            parameter-map="{publicationId:publicationId}"/>
+                                    <label text="${campaignName}" type="div" style="text-caption m-muted" condition="campaignName"/>
+                                </default-field>
+                            </field>
+                            <field name="accessText"><default-field title="Who answers"><display/></default-field></field>
+                            <field name="siteName"><default-field title="Site"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="submissionCount"><default-field title="Answers"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="accessText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="submissionCount"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!publicationRows.length"
+                                text="Not published yet. Make a publication: a public page on a site, signed-in accounts, or invitations to a campaign's list."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- one publication -->
+        <section name="PublicationDetail" condition="recordFound &amp;&amp; publication">
+            <widgets>
+                <context record-entity="mantle.party.FormPublication" record-id="${publication.publicationId}" title="Publication ${publication.description || formView.formName}"/>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Publication of ${formView.formName}" type="span" style="text-caption m-muted"/>
+                        <label text="${publication.description || formView.formName}" type="h5"/>
+                        <label text="${headerCaption}" type="div" style="text-caption m-muted"/>
+                    </container>
+                    <container style="m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                WebUtilities.encodeHtml(publication.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: publication.stateText})}]]></text>
+                            <text type="html">${publication.stateText}</text>
+                        </render-mode>
+                    </container>
+                    <container style="m-record-actions">
+                        <!-- PublishForm -->
+                        <container-dialog id="PublishForm" button-text="Publish" icon="sym_o_publish" type="primary" width="520"
+                                title="Publish ${publication.description || formView.formName}" condition="can.publish">
+                            <form-single name="PublishFormForm" transition="publishPublication"
+                                    map="{publicationId:publication.publicationId, expectedRevision:String(publication.revision)}">
+                                <field name="publicationId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="fromDate">
+                                    <default-field title="Opens" tooltip="Empty: now. It takes answers from then until it closes"><date-time/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Publish"><submit confirmation="Open ${publication.description || formView.formName} for answers?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="NewInvitationSend" button-text="New invitation send" icon="sym_o_forward_to_inbox" width="560"
+                                title="Invite a list to answer" condition="can.invite">
+                            <form-single name="NewInvitationSendForm" transition="createInvitations" map="{publicationId:publication.publicationId}">
+                                <field name="publicationId"><default-field><hidden/></default-field></field>
+                                <field name="contactListId">
+                                    <default-field title="Topic" tooltip="Its accepted, consenting members are invited, as every send's">
+                                        <drop-down><list-options list="choices.listOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sendName"><default-field title="Send name"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Make the send"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="ClosePublication" button-text="Close" icon="sym_o_block" width="480"
+                                    title="Close ${publication.description || formView.formName}" condition="can.close">
+                                <form-single name="ClosePublicationForm" transition="closePublication"
+                                        map="{publicationId:publication.publicationId, expectedRevision:String(publication.revision)}">
+                                    <field name="publicationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="thruDate"><default-field title="Until" tooltip="Empty: now"><date-time/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Close"><submit type="danger" confirmation="Stop taking answers? The answers are kept."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${surveyLink}" text="The survey's questions" link-type="anchor" parameter-map="{formId:formView.formId}" condition="surveyLink"/>
+                            <link url="${distributionLink}" text="All publications of the survey" link-type="anchor" parameter-map="{formId:formView.formId}" condition="distributionLink"/>
+                        </button-menu>
+                    </container>
+                </container>
+                <container-row>
+                    <row-col lg="7">
+                        <!-- FormPublication -->
+                        <container-box>
+                            <box-header title="Publication"/>
+                            <box-body>
+                                <form-single name="FormPublication" transition="storePublication" map="publicationValue">
+                                    <field name="publicationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="accessEnumId">
+                                        <conditional-field title="Who answers" condition="can.edit &amp;&amp; !publication.submissionCount">
+                                            <drop-down><list-options list="choices.accessOptions" key="${value}" text="${label}"/></drop-down>
+                                        </conditional-field>
+                                        <default-field title="Who answers"><display text="${publication.accessText}"/></default-field>
+                                    </field>
+                                    <field name="repeatEnumId">
+                                        <conditional-field title="How often" condition="can.edit">
+                                            <radio><option key="FprOnce" text="Once"/><option key="FprMany" text="Several times"/></radio>
+                                        </conditional-field>
+                                        <default-field title="How often"><display text="${publication.repeatText}"/></default-field>
+                                    </field>
+                                    <field name="siteId">
+                                        <conditional-field title="Site" condition="can.edit">
+                                            <drop-down allow-empty="true"><list-options list="choices.siteOptions" key="${value}" text="${label}"/></drop-down>
+                                        </conditional-field>
+                                        <default-field title="Site"><display text="${publication.siteName}"/></default-field>
+                                    </field>
+                                    <field name="marketingCampaignId">
+                                        <conditional-field title="Campaign" condition="can.edit &amp;&amp; !publication.marketingCampaignId">
+                                            <drop-down allow-empty="true"><list-options list="choices.campaignOptions" key="${value}" text="${label}"/></drop-down>
+                                        </conditional-field>
+                                        <default-field title="Campaign"><display text="${publication.campaignName}"/></default-field>
+                                    </field>
+                                    <field name="subscriptionListId">
+                                        <conditional-field title="Subscription choice" condition="can.edit"
+                                                tooltip="A list a respondent may choose to subscribe to beside the answers, confirmed by its own message; empty: none">
+                                            <drop-down allow-empty="true"><list-options list="choices.listOptions" key="${value}" text="${label}"/></drop-down>
+                                        </conditional-field>
+                                        <default-field title="Subscription choice"><display text="${publication.subscriptionListName}"/></default-field>
+                                    </field>
+                                    <field name="thruDate">
+                                        <conditional-field title="Closes" condition="can.edit" tooltip="Empty: open until closed"><date-time/></conditional-field>
+                                        <default-field title="Closes"><display text="${publication.thruText}"/></default-field>
+                                    </field>
+                                    <field name="description">
+                                        <conditional-field title="Name" condition="can.edit"><text-line size="40"/></conditional-field>
+                                        <default-field title="Name"><display/></default-field>
+                                    </field>
+                                    <field name="titleText">
+                                        <conditional-field title="Page heading" condition="can.edit"><text-line size="40"/></conditional-field>
+                                        <default-field title="Page heading"><display/></default-field>
+                                    </field>
+                                    <field name="introText">
+                                        <conditional-field title="Introduction" condition="can.edit"><text-area rows="3" cols="50"/></conditional-field>
+                                        <default-field title="Introduction"><display/></default-field>
+                                    </field>
+                                    <field name="completionMessage">
+                                        <conditional-field title="After an answer" condition="can.edit"><text-line size="50"/></conditional-field>
+                                        <default-field title="After an answer"><display/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <conditional-field title="Save" condition="can.edit"><submit/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                        <!-- Invitations -->
+                        <container-box>
+                            <box-header title="Invitations"/>
+                            <box-body-nopad>
+                                <form-list name="Invitations" list="sendRows" skip-form="true" paginate="false">
+                                    <field name="sendName">
+                                        <default-field title="Send">
+                                            <link url="${sendLink}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}" condition="sendLink"/>
+                                            <label text="${topicName}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="invited"><default-field title="Invited"><display/></default-field></field>
+                                    <field name="answered"><default-field title="Answered"><display/></default-field></field>
+                                    <field name="expiresText"><default-field title="Links end"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="sendName"/><field-ref name="statusText"/></column>
+                                        <column><field-ref name="invited"/><field-ref name="answered"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!sendRows.length"
+                                        text="${publication.accessEnumId == 'FpaInvited' ? 'No invitation send yet. Each recipient a send admits gets a link of their own that answers once.' : 'This publication is answered on its page, without invitations.'}"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="5">
+                        <!-- FormSharing -->
+                        <container-box>
+                            <box-header title="Sharing"/>
+                            <box-body>
+                                <section name="PublicLink" condition="publication.pageUrl">
+                                    <widgets>
+                                        <label type="p" text="The public page"/>
+                                        <link url="${publication.pageUrl}" url-type="plain" text="${publication.pageUrl}" link-type="anchor" target-window="_blank"/>
+                                        <render-mode>
+                                            <text type="qvt">&lt;div class="bg-white q-pa-xs q-mt-sm" style="max-width:160px"&gt;${qrSvg}&lt;/div&gt;</text>
+                                            <text type="html">${qrSvg}</text>
+                                            <text type="tui">${JSON.stringify({t: 'text', text: publication.pageUrl})}</text>
+                                        </render-mode>
+                                    </widgets>
+                                </section>
+                                <label type="p" condition="!publication.pageUrl"
+                                        text="${publication.accessEnumId == 'FpaInvited' ? 'By invitation only: each recipient opens it from their own link.' : 'No public page yet: choose a site whose Marketing pages serve the organization.'}"/>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Readiness"/>
+                            <box-body-nopad>
+                                <form-list name="PublicationReadiness" list="readinessRows" skip-form="true" paginate="false" skip-header="true">
+                                    <field name="label"><default-field title=""><display/></default-field></field>
+                                    <field name="stateText"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="stateText"/></column></columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="What a respondent sees"/>
+                            <box-body>
+                                <label text="${preview?.page?.title || ''}" type="h6"/>
+                                <label text="${preview?.page?.intro || ''}" type="p" condition="preview?.page?.intro"/>
+                                <form-list name="PreviewFields" list="pageFields" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Question"><display/></default-field></field>
+                                    <field name="kind"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="requiredText"><default-field title=""><display text="${required ? 'Required' : ''}"/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="title"/></column><column><field-ref name="kind"/></column></columns>
+                                </form-list>
+                                <label text="Then: ${preview?.page?.completionMessage || ''}" type="p" style="text-caption m-muted"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
