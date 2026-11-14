@@ -37,11 +37,19 @@ const areas = {
     audiences: "Audiences",
     // P5: AudiencePreview, the audience managers' and, past the area's deny, the authors' and dispatchers'
     // (BOSS_MKT_AUDIENCE_PREVIEW)
-    audiencePreview: "Audiences/AudiencePreview"
+    audiencePreview: "Audiences/AudiencePreview",
+    // P6: Sends (Comms' templates; P8 adds the sends), the authors' (BOSS_MKT_SENDS)
+    sends: "Sends"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
-const areaReads = {settings: "configure", approvals: "approve", audiences: "audienceRead", audiencePreview: "previewRead"}
+const areaReads = {
+    settings: "configure",
+    approvals: "approve",
+    audiences: "audienceRead",
+    audiencePreview: "previewRead",
+    sends: "sendsRead"
+}
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Sales.js): screenAuthz reads the groups' rows once, and screenGrants picks
@@ -96,6 +104,17 @@ function scope() {
     // Mantle's preview#Audience asks
     capabilities.previewRead =
         !!capabilities.anyRead && !!(capabilities.audienceRead || capabilities.sendEdit || capabilities.dispatch)
+    // P6: Comms' templates are read with MESSAGE_TEMPLATE_VIEW or _EDIT, the sending profiles with MESSAGE_SENDING_CONFIGURE or
+    // Marketing's configure, send edit or dispatch (as Mantle's MessageTemplates.js and MessageSendingProfiles.js ask); the Sends
+    // area is the template readers' until P8 adds the sends
+    capabilities.templateRead = !!(capabilities.templateView || capabilities.templateEdit)
+    capabilities.profileRead = !!(
+        capabilities.sendingConfigure ||
+        capabilities.configure ||
+        capabilities.sendEdit ||
+        capabilities.dispatch
+    )
+    capabilities.sendsRead = capabilities.templateRead
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -162,7 +181,12 @@ const linkPaths = [
     // P5: segments and the audience preview (design §4)
     "Audiences/Segments",
     "Audiences/SegmentDetail",
-    "Audiences/AudiencePreview"
+    "Audiences/AudiencePreview",
+    // P6: Comms' templates and sending profiles (design §5, §12)
+    "Sends",
+    "Sends/MessageTemplates",
+    "Sends/MessageTemplateDetail",
+    "Settings/SendingProfiles"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -478,6 +502,25 @@ const choiceSources = {
             },
             id => label(one("mantle.marketing.contact.ContactList", {contactListId: id}))
         )
+    },
+    // P6: Comms' templates of the organization named that are in use and have content in effect (a send's starting point, P8), by
+    // name, for a template reader
+    messageTemplates: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.templateRead) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.MessageTemplate")
+            .condition("organizationPartyId", "in", ids)
+            .condition(factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^templateName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["messageTemplateId", "templateName"], term))
+        if (p.purposeEnumId) query = query.condition("purposeEnumId", p.purposeEnumId)
+        return Array.from(query.list()).map(row => ({
+            value: row.messageTemplateId,
+            label: row.templateName || row.messageTemplateId
+        }))
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
     emailTemplates: (userScope, term, selected) => {
