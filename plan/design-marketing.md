@@ -1004,11 +1004,12 @@ A completed send step is not replayed on restart; a stopped enrollment is not ed
 active. An authorized new enrollment follows configured reentry and current consent.
 **Needs:** MKT-AUTOMATION.
 
-**As built (impl-marketing P11).** The automation's owner identity: it acts as the system for its organization within its approved
-definition. Its admission and step jobs run with no user (`runAsSystem`), classify by P5's rule with no personal contact of any user,
-disabled or merged party available, and read only the party, contact and engagement sources: a trigger, goal or condition segment that
-names a Sales or purchase source, or whose parent does, is refused when it is named (SOURCE_UNAVAILABLE), so a run answers the same
-whoever wrote or activated it (impl-marketing F157's question). A send step's content is a CampaignSend of the automation, status
+**As built (impl-marketing P11).** The automation's owner (the user's call, Nov 14, 2026): it runs as its saved owner, the dispatcher
+who last activated or resumed it. Its admission and step jobs sign the owner in for each run and check again that the owner can sign in,
+holds MARKETING_DISPATCH, works for the organization and can read every segment the automation names; its trigger, goal and condition
+segments may use any of P5's sources, Sales and purchases too, under the owner's own access read at run time, and the classification's
+"not available" is the owner's. An owner who lost access pauses the automation with the reason, and activation refuses a dispatcher who
+could not run it, so a new activation makes its activator the owner; AutomationDetail names the owner (impl-marketing F157's question). A send step's content is a CampaignSend of the automation, status
 `CsAutomation`, copied from a template and prepared when the step is stored, which the send screens neither list, edit nor release; a
 participant who reaches the step becomes one of its recipients and is handed to the ledger through the dispatch's own checks
 (membership, consent within the organization, the suppression split, a withdrawal by anyone at the address, the frequency cap, which now

@@ -3200,6 +3200,95 @@ unchanged, no Rust built. Built beside P10 (`mkt/p10`) and Sales P20 (in review)
   - the user's calls: the owner identity (the system, its segments without Sales or purchase sources); to confirm, the audience readers
     reading automations, the cart automation's topic consent, and earlier enrollments continuing on their approved steps after a re-approval.
 
+**Review Nov 14 (P11).** A fresh review of `mkt/p11` (mr-mantle ae2e3e73, mr-boss 3e3e05ab) against P11, §2, §4 and design §6, §14.1,
+§15.3; master (Marketing P10, Sales P20) merged into both first (mr-mantle 61621cb4, mr-boss 4a694a12), both sides kept: P10's
+`forExperiments` export beside P11's `checkRecipients`/`handOffRecipient` (P10 left checkPage's body unchanged, so the split holds),
+the entities' P10 block before P11's, and the demo data, inventory, link paths and spec ids in order. Fixes mr-mantle fc72b0da, mr-boss
+103204a0.
+- Checked and sound:
+  - The order SECA: `OrderPlacedRecordAttribution` is a tx-commit rule, which the framework writes to the outbox in the placement's
+    transaction and runs on a service worker after the commit in a transaction of its own (`register_tx_rules`); the call is
+    `force-new` and `ignore-error`, and handle#OrderPlaced files at most one event per active order-trigger automation of the seller
+    (each failure logged), so a handler failure never rolls back, holds or slows a placement. Shop's, Sales' and Commerce's placement
+    specs pass (one SalesOrderApproval feature fails on master too: not P11's).
+  - Every step's rechecks: the campaign (closed stops; no longer approved pauses), the goal, the topic classification (withdrawal,
+    unsubscription, leaving the topic and a suppression stop; the channel's purpose, solicitation or evidence skip that send), the
+    sending profile (ended or transactional pauses; not ready and quiet hours postpone), then P9's own checks on the participant
+    (membership, consent within the organization, the suppression split, the shared-address withdrawal, the frequency cap, which
+    postpones); a CsAutomation send is refused by every send service's status gate (requireEditable, release's states, P10's
+    experiment states) and left out of find#Sends and the palette.
+  - Idempotency: events unique by automation and source key, enrollments by automation, person and source key, executions by enrollment
+    and step; process#EnrollmentStep locks the enrollment, so concurrent runs serialize and a restart finds the execution row; each
+    recipient row has its own execution key (the ledger key), so a re-entered person's second pass is a new delivery; failure tolerance
+    per automation, event and enrollment (`apart`).
+  - Approval and activation: P2's decision with targetKind automation, never self-approved (the flag never admits it: spec'd);
+    activation by a dispatcher who is none of the creator, the reviser, the requester or the approver, with no one-person exception (an
+    automation has no recipient count, so the flag's 500 bound cannot apply); any change of the rule, topic, sender or steps raises the
+    revision, ends the approval and returns it to draft; enrollments keep the dated steps in effect at their admission.
+  - Commerce's sender: `automation` offered and stored only while an active cart-trigger automation of the store's organization names
+    the store (AUTOMATION_UNAVAILABLE); built-in recovery sends nothing for such a store and the automation skips a visit built-in recovery
+    already sent for and marks each visit handled, so one sender per cart; Commerce's specs unchanged and passing.
+- Fixed:
+  - R1 (the user's call, Nov 14; §4). The build ran an automation as the system, its segments limited to party, contact and engagement
+    sources. It now runs as its saved owner, the dispatcher who last activated or resumed it (`activatedByUserId`): each admission and
+    step run signs the owner in (as run#EtlMapping and the scheduled supply plan do), checks again that the owner can sign in, holds
+    MARKETING_DISPATCH, works for the organization and can read every segment it names, and puts the user before it back; the trigger,
+    goal and condition segments may use Sales and purchase sources under the owner's access read at run time, and classifyPeople's "not
+    available" is the owner's (P5 review). An owner who lost any of it pauses the automation with the reason (pauseNote, the enrollment's
+    dueNote), never a wider or narrower run; a segment an older enrollment's step names that the owner can no longer read pauses it too.
+    Activation refuses a dispatcher who could not run it (NOT_READY), so a new activation makes its activator the owner; AutomationDetail
+    names the owner. handle#OrderPlaced still files its events as the system (it reads no segment). Spec'd: a Sales lead segment trigger
+    refused activation by a dispatcher without Sales, activated by one with it and admitting a new lead's contact as that owner, then the
+    owner's Sales permissions ended and the next step run pausing the automation with the reason, nothing sent and the run's user put back.
+  - R2 (medium; the step job). run#AutomationSteps read the first 50 active automations with no order, so from the 51st on no enrollment
+    ever ran. It now reads every active automation's due enrollments (up to 1,000 automations), the most overdue first, at most 100 an
+    automation and 200 a run. Not spec'd (it needs 51 automations); read in review.
+  - R3 (medium; the regression suite). The Automations spec used MarketingApprovals' prefix MKA, so in one run (test-apps) the second
+    spec's setup failed on duplicate parties; now MKO, its addresses too. Run together with the Marketing specs.
+  - R4 (low; the choice). `sendMembers` took a topic from `p.topicListId` without the organization check, for automationMembers; a
+    parameter get#Choices does not declare, but a choice source must not trust it. Both now call `topicMembers` with the topic their own
+    check found.
+- Provisional findings (for the lead to number):
+  - the owner (R1): an automation runs as the dispatcher who last activated it, rechecked at each run, pausing when they lose access;
+    activation by a dispatcher who cannot read its segments is refused; staff enrollment admits as the owner (enroll#Party signs the owner
+    in and back within the caller's request, as SitePages' preview does); the Simulation evaluates as its caller (a caller without Sales
+    gets SOURCE_UNAVAILABLE for a Sales segment);
+  - the owner's scope is MarketingAccess.scope(), which narrows to the user's organization filter when one is set: an owner whose filter
+    leaves the automation's organization out pauses it (not exercised);
+  - "never two active for the same automation and person" is a check under the lock of the person's existing enrollments, not a
+    constraint: two events of one person admitted at once (enroll#Party beside the job) could make two;
+  - the cart trigger's send step does not check the cart again: a shopper who checked out after the visit was filed still gets the step's
+    mail unless a goal segment ends it (built-in recovery's build checks the cart);
+  - the subscription trigger's cursor reads acceptances decided at or after it: one committed late with an earlier decidedDate is missed;
+    acceptances while an edited automation was back in draft are admitted at its re-activation (the cursor is kept);
+  - the worker's findings stand otherwise (the store#Steps copy of current template content, the cart trigger's topic consent, audience
+    readers reading automations, a delivery already with the ledger when an enrollment stops, no Home card).
+- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle Automations (7 of 7, about 3.2 s of features; the owner
+  feature fails on the unfixed build, which refused the Sales segment) with Experiments, Dispatch, Sends, CartRecovery,
+  MarketingApprovals, Eligibility, Segments, MarketingSubscriptions, MarketingScope, Campaigns, ContactListSend (74 of 74, 31.8 s);
+  ShopCheckout, StoreOperations, SalesOrderApproval, SalesQuoteResponse, SalesPortal, OrderLifecycle, OrderToCashBasicFlow, DeliveryLedger,
+  StoreCheckout (85 of 86: SalesOrderApproval's batch credit-hold feature, which fails the same on master's checkout); mr-boss
+  MarketingAutomations, MarketingAccess, MarketingSends, MarketingDelivery, MarketingCampaigns, MarketingSegments (16 of 16),
+  CommerceCheckoutSettings, CommerceRecovery, CommerceOrders (5 of 5); the client walk MarketingSendWalk (`--serve`, 8.84 s, near the
+  ~9 s estimate on a loaded machine). `moqui lint --screens`: parse failures 0. Prettier clean. Not run: test-apps, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle Automations about 3.2 s (one feature added, +0.4 s), CartRecovery as built; mr-boss as the Built note;
+  - merge hot spots as the Built note, plus MarketingAutomations.js (the owner: asOwner, ownerProblem, the runs) and Automations.spec.js's
+    prefix; SalesOrderApproval's failing feature is master's, for Sales;
+  - Attack-Surface (the ledger's paragraph; the worker's text corrected for R1): "A Marketing automation reaches people only after
+    `mantle.marketing.CampaignServices.decide#MarketingApproval` (MARKETING_APPROVE, never its author's, the one-person-team flag not
+    applying) and `mantle.marketing.AutomationServices.activate#Automation` (MARKETING_DISPATCH, none of the revision's authors nor its
+    approver, an address for the unsubscribe link). Its admission and step jobs run as its saved owner, the dispatcher who last activated
+    it, signed in for each run and checked again (able to sign in, MARKETING_DISPATCH, the automation's organization, every segment it
+    names readable, Sales and purchase sources under the owner's own access); an owner who lost any of it pauses the automation, and a
+    dispatcher who could not run it cannot activate it. Each send step hands one participant to the delivery ledger through the
+    dispatch's checks (the topic's membership, consent within the organization, suppression and solicitation, a withdrawal by anyone at
+    the address, the frequency cap), once per enrollment and step, with the List-Unsubscribe header and link. The order-placed handler
+    (the SECA OrderPlacedRecordAttribution) only files an admission event, as the system, after the placement commits, in a transaction
+    of its own.";
+  - the user's calls: R1 recorded in §4 (Nov 14); still to confirm as the Built note: audience readers reading automations, the cart
+    automation's topic consent, earlier enrollments continuing on their approved steps after a re-approval.
+
 ### P12 — Surveys and form publication, with PASS SubmitForm
 
 Design §10 Surveys and SurveyDetail, SurveyDistribution, Responses and ResponseDetail, §13 SubmitForm, §18 (the
@@ -3704,6 +3793,7 @@ design-marketing.md or the owner's design.
 | Nov 13, 2026 | `MARKETING_OWNER_CHANGE` (the lifecycle participant `marketing.campaigns`) is granted to `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`, as built in P2, as Sales' `SALES_OWNER_CHANGE`; no Marketing group holds it | The user's call (P2) |
 | Nov 14, 2026 | The consent mutators keep P3's rule, an owner contract of Comms and Commons: `subscribe#ContactListParty`, `store#PartyConsent` and the signed-in `unsubscribe#ContactListParty` change another party's consent only for the party's own user, a contact administrator or Marketing's consent editor of the list's or purpose's organization; the callers' specs pass unchanged | The user's call (P3). The services that decide who may by a link's token or code (the unsubscribe and preferences links, a checkout opt-in's confirmation) record through the internal `record#PartyConsent`, so a visitor signed in as someone else still unsubscribes (P3 review R1) |
 | Nov 14, 2026 | Suppressions block promotional mail only, except a hard bounce: a complaint, a staff block or repeated soft failures refuse a promotional delivery (the ledger's `transactional` N: a list's, campaign's or topic's) and never a transactional notice (an order confirmation, a password reset, a system notice); a hard bounce refuses every delivery to the address | The user's call (P3). Built in the P3 review (R2) in the ledger's attempt (`MessageSuppressions.js` `blocksEveryDelivery`); design-drawers-commons' Mailboxes row records it as the ledger's owner contract |
+| Nov 14, 2026 | An automation runs as a saved owner, the dispatcher who last activated or resumed it, signed in for each admission and step run and checked again (as run#EtlMapping signs in as a mapping's saved owner): its trigger, goal and condition segments may use the owner's Sales and purchase facts (P5's sources, under the owner's own Sales and Commerce access, read at run time), and classify#Recipients' "not available" is the owner's (P5 review); an owner who loses access (the permission, the organization, a disabled account) pauses the automation with a readiness reason rather than running wider or narrower; a new activation by another dispatcher makes that person the owner. This replaces P11's build as the system | The user's call (P11; built in its review, R1) |
 
 ## 5. Open questions
 
