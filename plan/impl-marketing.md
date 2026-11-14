@@ -417,7 +417,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | built and reviewed Nov 14, merged |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | built and reviewed Nov 14, merged |
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | built and reviewed Nov 14, merged |
-| P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | — |
+| P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | built and reviewed Nov 14, merged |
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | — |
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | — |
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | — |
@@ -1838,7 +1838,7 @@ Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §1
   for P6's screens.
 - Design edits: design-marketing §5 MessageTemplateDetail and §12 SendingProfiles (as built); design-drawers-commons' Mailboxes row
   (owner contract: the templates, profiles, receipts and intake).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F160 to F168 in order:
   - F17 is five per-call values, not two (`fromAddress`, `fromName`, `emailServerId` beside `subject` and `bounceAddress`), and the
     call's subject is never expanded (the code over the plan above);
   - the stored message keeps the call's relay, sender and subject but not its bounce address: a send again of the stored message (the
@@ -1932,7 +1932,7 @@ built. Debug rebuilt in the mr-moqui worktree.
   - Tests added in moqui-mail: a hostile and broken report (no separator, a fold first, non-UTF-8, a part cut inside a multi-byte
     character at the limit, a feedback part with no body, 1,000 recipients capped at 100) never panics; a call's fromName and
     emailServerId with a line break are left out (the template's name kept).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F169 to F174 in order:
   - the VERP key is a random value stored on the delivery, not a keyed hash (the script host has no HMAC); deliveries queued
     before this review get a key at their next attempt;
   - an ARF is bound to its delivery by the key alone; a recipient (or anyone who saw the message) holding the key or the Message-ID
@@ -2829,6 +2829,21 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F157 | P5 (Review Nov 14): `classify#Recipients` puts another user's personal contact in "not available" by the calling user, so a P8 or P11 caller running as a job user (no user) sees every personal contact as not available; P8 and P11 should call it as the user who prepares | P5: as its Review note says |
 | F158 | P5 (Review Nov 14): SegmentDetail describes a stored Sales condition (its lead sources or campaigns in words) to an editor without Sales, marked unreadable; a definition, not Sales data | P5: as its Review note says |
 | F159 | P5 (Review Nov 14): "has an open lead is false" matches a person whose leads the caller cannot see: it reads as "none you can see" and discloses nothing | P5: as its Review note says |
+| F160 | P6 (Built Nov 14): F17 is five per-call values, not two (`fromAddress`, `fromName`, `emailServerId` beside `subject` and `bounceAddress`), and the call's subject is never expanded (the code over the plan above) | P6: as its Built note says |
+| F161 | P6 (Built Nov 14): the stored message keeps the call's relay, sender and subject but not its bounce address: a send again of the stored message (the mail queue's retry) would use the template's; the ledger owns its messages' retries (OWNER_RETRIES), so none is resent that way | P6: as its Built note says |
+| F162 | P6 (Built Nov 14): the bounce intake's recovery is its poll job's registration (RecoveryDescriptor has no EmailMessage kind); a report recorded unknown or unreadable is not read again; its EmailMessage stays in the bounce account | P6: as its Built note says |
+| F163 | P6 (Built Nov 14): sender domain verification is a warning, not a block: Admin has no domain verification (design-admin MailDomains is later), so "verified" is a domain this server signs or a relay that passed Admin's test; an untested relay is a warning too | P6: as its Built note says |
+| F164 | P6 (Built Nov 14): a hard bounce suppresses the address for every organization, a complaint for the delivery's organization only (the delivery's own, else its store's); repeated soft bounces suppress nothing yet (MsrSoftFailures has no rule) | P6: as its Built note says |
+| F165 | P6 (Built Nov 14): the email ECA's condition (multipart/report or a `bounces+` address) and the edge ECA are not exercised through the SMTP listener in the regression suite: the specs call process#DeliveryReport on a stored report, and the edge path through the EmailMessage ECA | P6: as its Built note says |
+| F166 | P6 (Built Nov 14): the poll reads the bounce accounts of the profiles' bounce domains; a bounce account that also receives other mail has each message read once (an ordinary message recorded unreadable) | P6: as its Built note says |
+| F167 | P6 (Built Nov 14): MessageTemplateDetail's variables are a text area (name \| label \| fallback \| required) and TextBlocks are not offered; Use (a draft send) waits for P8 | P6: as its Built note says |
+| F168 | P6 (Built Nov 14): Sales' quote templates still expand a `${subject}` body parameter in the EmailTemplate's subject (SalesQuoteIssues.js); they could pass `subject` per call now; not changed here (Sales' file) | P6: as its Built note says |
+| F169 | P6 (Review Nov 14): the VERP key is a random value stored on the delivery, not a keyed hash (the script host has no HMAC); deliveries queued before this review get a key at their next attempt | P6: as its Review note says |
+| F170 | P6 (Review Nov 14): an ARF is bound to its delivery by the key alone; a recipient (or anyone who saw the message) holding the key or the Message-ID can suppress only that recipient's address, which is the recipient's own choice anyway | P6: as its Review note says |
+| F171 | P6 (Review Nov 14): a DSN whose Final-Recipient is a forwarding target (not the delivery's address, no Original-Recipient) is ignored: such a hard bounce suppresses nothing (lettre sends no ORCPT) | P6: as its Review note says |
+| F172 | P6 (Review Nov 14): a profile's purpose (promotional or transactional) is not checked against the delivery's: a promotional delivery may name a transactional-only profile; P8 should choose by purpose or queue#Delivery refuse it | P6: as its Review note says |
+| F173 | P6 (Review Nov 14): the template body check is a pattern list, not a sanitizer: it refuses what it names (scripts, frames, forms, handlers, script links) and leaves styles and remote images; mail clients clean the rest, and BOSS shows the preview through cleanHtml | P6: as its Review note says |
+| F174 | P6 (Review Nov 14): the worker's findings stand (five per-call values; the stored message keeps no bounce address; recovery by the poll job; sender domain a warning; no SMTP-listener path in the regression suite) | P6: as its Review note says |
 
 ## 7. Later
 
