@@ -30,11 +30,13 @@ const mountRoots = {
 // The menu areas whose authorization is a capability (data/BossSetupMarketingData.xml BOSS_MKT_<Area>): Settings the
 // administrator's (P1). Home is every Marketing user's; later phases add theirs.
 const areas = {
-    settings: "Settings"
+    settings: "Settings",
+    // P2: Approvals, the approvers' (BOSS_MKT_APPROVALS)
+    approvals: "Campaigns/Approvals"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
-const areaReads = {settings: "configure"}
+const areaReads = {settings: "configure", approvals: "approve"}
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Sales.js): screenAuthz reads the groups' rows once, and screenGrants picks
@@ -124,7 +126,15 @@ const linkPaths = [
     "Home",
     "Settings",
     "Settings/Index",
-    "Settings/Adoption"
+    "Settings/Adoption",
+    // P2: campaigns, approvals and the campaign settings (design §3, §12)
+    "Campaigns",
+    "Campaigns/Campaigns",
+    "Campaigns/CampaignDetail",
+    "Campaigns/CampaignPlan",
+    "Campaigns/Approvals",
+    "Settings/CampaignDefaults",
+    "Settings/Vocabularies"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -166,7 +176,8 @@ const recordKinds = {
     campaign: {
         name: "Campaign",
         icon: "sym_o_campaign",
-        destination: null,
+        // P2: CampaignDetail
+        destination: {path: "Campaigns/CampaignDetail", parameter: "marketingCampaignId"},
         read: (userScope, marketingCampaignId) => {
             if (!userScope.capabilities.anyRead) return null
             const row = one("mantle.marketing.campaign.MarketingCampaign", {marketingCampaignId})
@@ -243,6 +254,19 @@ function withSelected(options, selected, admits, label) {
         options.push({value: selected, label: label(selected)})
     return options
 }
+const CAMPAIGN = "mantle.marketing.campaign.MarketingCampaign"
+const openCampaignStatuses = ["MKTG_CAMP_PLANNED", "MKTG_CAMP_APPROVED", "MKTG_CAMP_INPROGRESS"]
+// A text condition over fields, ignoring case, in the query.
+function textCondition(fields, term) {
+    const factory = ec.entity.conditionFactory
+    return factory.makeCondition(
+        fields.map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+        "or"
+    )
+}
+// The organization a choice is narrowed to: one of the scope's, else every one of them.
+const choiceOrganizations = (userScope, p) =>
+    p.organizationPartyId && covers(userScope, p.organizationPartyId) ? [p.organizationPartyId] : organizationIds(userScope)
 const choiceSources = {
     // the organizations of the user's marketing scope
     organizations: (userScope, term, selected) =>
@@ -251,7 +275,97 @@ const choiceSources = {
             selected,
             partyId => userScope.capabilities.anyRead && covers(userScope, partyId),
             organizationName
+        ),
+    // P2: the open campaigns of the scope (a parent), by name, of the organization named
+    campaigns: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find(CAMPAIGN)
+            .condition("organizationPartyId", "in", ids)
+            .condition("statusId", "in", openCampaignStatuses)
+            .orderBy("^campaignName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["marketingCampaignId", "campaignName"], term))
+        if (p.excludeId) query = query.condition("marketingCampaignId", "not-equals", p.excludeId)
+        const options = Array.from(query.list()).map(row => ({
+            value: row.marketingCampaignId,
+            label: row.campaignName || row.marketingCampaignId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => !!recordKinds.campaign.read(userScope, id),
+            id => one(CAMPAIGN, {marketingCampaignId: id})?.campaignName || id
         )
+    },
+    // P2: the people who work for the organization named (a manager or contributor), by name
+    people: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const partyIds = Array.from(
+            find("mantle.party.PartyRelationship")
+                .condition("toPartyId", "in", ids)
+                .condition("relationshipTypeEnumId", "in", ["PrtAgent", "PrtEmployee"])
+                .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null))
+                .selectField("fromPartyId")
+                .distinct(true)
+                .list()
+        ).map(row => row.fromPartyId)
+        if (!partyIds.length) return []
+        let query = find("mantle.party.PersonAndUserAccount")
+            .condition("partyId", "in", partyIds)
+            .orderBy("^firstName")
+            .orderBy("^lastName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["firstName", "lastName", "username"], term))
+        const options = []
+        for (const row of Array.from(query.list()))
+            if (!options.some(option => option.value === row.partyId))
+                options.push({value: row.partyId, label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.partyId})
+        return withSelected(
+            options,
+            selected,
+            partyId => partyIds.includes(partyId),
+            partyId => lib.partyNames([partyId])[partyId] || partyId
+        )
+    },
+    // P2: the currencies, a closed list
+    currencies: (userScope, term, selected) => {
+        let query = find("moqui.basic.Uom", {uomTypeEnumId: "UT_CURRENCY_MEASURE"}).orderBy("uomId").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["uomId", "description"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.uomId,
+            label: row.uomId + " · " + (row.description || "")
+        }))
+        return withSelected(
+            options,
+            selected,
+            uomId => !!one("moqui.basic.Uom", {uomId}),
+            uomId => uomId
+        )
+    },
+    // P2: the lists and segments of the organization named, for a campaign's links
+    lists: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find("mantle.marketing.contact.ContactList")
+            .condition("ownerPartyId", "in", ids)
+            .condition("contactListTypeEnumId", "not-equals", "MAILBOX")
+            .orderBy("^contactListName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["contactListId", "contactListName"], term))
+        return Array.from(query.list()).map(row => ({value: row.contactListId, label: row.contactListName || row.contactListId}))
+    },
+    segments: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find("mantle.marketing.segment.MarketSegment")
+            .condition("ownerPartyId", "in", ids)
+            .orderBy("^description")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["marketSegmentId", "description"], term))
+        return Array.from(query.list()).map(row => ({value: row.marketSegmentId, label: row.description || row.marketSegmentId}))
+    }
 }
 function choices(p) {
     const userScope = required()
@@ -264,7 +378,52 @@ function choices(p) {
 // The palette's Marketing records, each opening its Marketing screen, with recordEntity and recordId for Assist's search. None
 // yet, and the root registers no palette source: campaigns join with their screens (P2), lists (P3), segments (P5), sends (P8),
 // events (P16).
-const searchFinds = []
+const searchFinds = [
+    // P2: the campaigns of the scope by id or name
+    {
+        kind: "campaign",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.anyRead) return []
+            const ids = organizationIds(userScope)
+            if (!ids.length) return []
+            const path = sharedPath("Marketing", "Campaigns/CampaignDetail")
+            return Array.from(
+                find(CAMPAIGN)
+                    .condition("organizationPartyId", "in", ids)
+                    .condition(textCondition(["marketingCampaignId", "campaignName"], text))
+                    .orderBy("-fromDate")
+                    .limit(limit)
+                    .list()
+            ).map(row => ({
+                title: row.campaignName || row.marketingCampaignId,
+                subtitle: "Campaign · " + organizationName(row.organizationPartyId),
+                icon: recordKinds.campaign.icon,
+                url: path + "?marketingCampaignId=" + encodeURIComponent(row.marketingCampaignId),
+                recordEntity: CAMPAIGN,
+                recordId: row.marketingCampaignId
+            }))
+        }
+    }
+]
+// The web path of a Marketing screen under a root.
+const sharedPath = (appRoot, path) => "/qapps/" + appRoot + "/" + path
+// A record's link (the palette's get#RecordLink): its kind's screen under Marketing, with its icon, for a Marketing user who may see
+// it; else none.
+function recordLink(kind, recordId) {
+    const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
+    if (!definition?.destination || !recordId) return null
+    const userScope = scope()
+    if (!userScope.read || !definition.read(userScope, recordId)) return null
+    return {
+        url:
+            sharedPath("Marketing", definition.destination.path) +
+            "?" +
+            definition.destination.parameter +
+            "=" +
+            encodeURIComponent(recordId),
+        icon: definition.icon
+    }
+}
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}
@@ -288,4 +447,4 @@ function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Marketing operation " + op)
     return operations[op](p || {})
 }
-;({execute: run})
+;({execute: run, recordLink})

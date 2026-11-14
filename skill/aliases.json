@@ -99,6 +99,11 @@
         "inquiry",
         "enquiry"
     ],
+    "campaign": [
+        "marketing campaign",
+        "promotion plan",
+        "campaign plan"
+    ],
     "opportunity": [
         "deal",
         "pipeline deal",

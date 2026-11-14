@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Campaigns › Approvals (design-marketing §3 Approvals; crosscut §3.15; impl-marketing P2, F42): Commons' Notifications
+    mounted with Marketing's approval topics and the current recipient, as Customer Service and Purchasing mount it, for the approvers
+    (BOSS_MKT_APPROVALS denies the root user group and allows BOSS_MARKETING_APPROVER). Its rows are the requests waiting for the user:
+    a campaign's (MarketingCampaignApproval), titled with the campaign's name and revision, never an audience; a send's
+    (MarketingSendApproval, P8) and an automation's (MarketingAutomationApproval, P11) join with their phases. Approve and refuse call
+    the topics' handlers through the framework (mantle.marketing.CampaignServices approve#MarketingTarget and refuse#MarketingTarget,
+    deciding at the revision the notice names: a stale one is refused naming the current one, and the author's own under the
+    separation policy); opening a row opens CampaignDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Approvals" default-menu-index="2" menu-image="sym_o_approval" menu-image-type="icon"
+        default-menu-include="ec.user.hasPermission('MARKETING_APPROVE')">
+    <always-actions>
+        <script>if(!marketing.capabilities.approvals)throw new Error('PERMISSION_DENIED: Marketing approvals are the approvers\'')</script>
+        <set field="notificationTopics" from="['MarketingCampaignApproval', 'MarketingSendApproval', 'MarketingAutomationApproval']"/>
+        <set field="notificationsTitle" value="Approvals"/>
+    </always-actions>
+    <subscreens default-item="Notifications" always-use-full-path="true">
+        <subscreens-item name="Notifications" location="component://mr-boss/screen/Commons/Notifications.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

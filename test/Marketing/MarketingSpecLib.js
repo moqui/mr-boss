@@ -6,10 +6,18 @@ const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's
-    staffMenu: ["Home"],
-    adminMenu: ["Home", "Settings"],
-    settingsMenu: ["Index", "Adoption"],
-    keys: ["g m"]
+    staffMenu: ["Home", "Campaigns"],
+    adminMenu: ["Home", "Campaigns", "Settings"],
+    settingsMenu: ["Index", "Adoption", "CampaignDefaults", "Vocabularies"],
+    // Campaigns' tabs: Approvals the approvers'
+    campaignsMenu: ["Campaigns"],
+    approverCampaignsMenu: ["Campaigns", "Approvals"],
+    keys: ["g m", "g c"],
+    // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
+    // Retail's planned one, and Services' own
+    runningCampaignId: "BOSS_MKT_CMP_SPRING",
+    plannedCampaignId: "BOSS_MKT_CMP_HOLIDAY",
+    servicesCampaignId: "BOSS_MKT_CMP_SERVICES"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

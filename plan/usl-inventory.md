@@ -831,7 +831,7 @@ the screens that call it.
 | PaymentAutoPostServices | revert#PaymentApplicationPost |  |  |
 | PaymentAutoPostServices | repost#PaymentAndApplications |  |  |
 
-## Marketing (11 services, all added)
+## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices below)
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 
@@ -848,6 +848,19 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactListServices | remove#ContactListParty | PASS: Forum/Settings/Members | Comms/Inbox/Mail |
 | ContactListServices | decline#ContactListParty | PASS: Forum/Settings/Members | Comms/Inbox/Mail |
 | ContactListServices | set#ContactListPartyDelivery | PASS: Forum/Categories/CategoryDetail | Comms/Inbox/Mail |
+
+Added in Marketing P2 (Nov 13, 2026; `mantle.marketing.CampaignServices`, impl-marketing P2), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/CampaignServices | find#Campaigns, create#Campaign | Marketing/Campaigns (CampaignFind, CampaignList, NewCampaign); Marketing/QuickCreate (QuickCampaign) | Marketing/Campaigns/Campaigns; Marketing/QuickCreate/NewCampaign; Marketing/Home (New campaign) (Marketing P2) |
+| marketing/CampaignServices | get#Campaign, store#Campaign, store#CampaignBudget, store#CampaignParty, store#CampaignAssociation, start#, complete#, cancel#, duplicate#Campaign | Marketing/Campaigns/CampaignDetail (CampaignHeader, CampaignParties, Budget, RelatedWork) | Marketing/Campaigns/CampaignDetail; Marketing/Campaigns/CampaignPlan (get#Campaign as of a date) (Marketing P2) |
+| marketing/CampaignServices | store#CampaignCost, find#CampaignCosts | Marketing/Campaigns/CampaignDetail (CostEntries) | Marketing/Campaigns/CampaignDetail (Budget and costs) (Marketing P2) |
+| marketing/CampaignServices | request#, decide#MarketingApproval, approve#, refuse#MarketingTarget, get#Decisions | Marketing/Campaigns/Approvals; Marketing/Campaigns/CampaignDetail (Decisions) | Marketing/Campaigns/CampaignDetail; Marketing/Campaigns/Approvals (Commons' Notifications, the topics' handlers) (Marketing P2) |
+| marketing/CampaignServices | get#, preview#, store#MarketingPolicy | Marketing/Settings/CampaignDefaults (MarketingPolicy, PolicyPreview) | Marketing/Settings/CampaignDefaults (Marketing P2) |
+| marketing/CampaignServices | find#, store#Vocabulary | Marketing/Settings/Vocabularies | Marketing/Settings/Vocabularies (Marketing P2) |
+| marketing/CampaignServices | check#CampaignAccess, create#CampaignAsset | Marketing/Chatter; Marketing/RecordFiles (the campaign host, design §14.3) | Marketing/Campaigns/CampaignDetail (Activity and Files: get#RecordLinkInfo's campaign rule, RecordFiles' get#ContentType) (Marketing P2) |
+| marketing/CampaignServices | find#OwnedCampaignRoles, transfer#CampaignRole | Admin lifecycle (design-admin §14) | Admin's lifecycle registry (marketing.campaigns) (Marketing P2) |
 
 ## Order (89 services)
 

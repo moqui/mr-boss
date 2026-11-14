@@ -406,6 +406,9 @@ const settingsRoutes = {
     // Marketing P1: its settings landing (marketing.settings) and its setup readiness's places (marketing.setup)
     marketingSettings: {url: "/qapps/Marketing/Settings", plain: true},
     marketingAdoption: {url: "/qapps/Marketing/Settings/Adoption", plain: true},
+    // Marketing P2: the campaign defaults and vocabularies (the readiness's "no policy" place)
+    marketingCampaignDefaults: {url: "/qapps/Marketing/Settings/CampaignDefaults", plain: true},
+    marketingVocabularies: {url: "/qapps/Marketing/Settings/Vocabularies", plain: true},
     voice: {url: "/qapps/system/Voice", plain: true},
     toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
 }

@@ -3,7 +3,8 @@
 // launcher per group, each group's capabilities from its permissions (an edit permission alone reading nothing), a campaign, list
 // and segment of another organization and an unowned one refused through the context service with the same parameters, the
 // ironstone.marketing services refused without the root grant, a write verb of the package denied a client and the raw Mantle
-// marketing mutators refused a Marketing user, the record panels served for Marketing's own record hosts only (none yet), Home's
+// marketing mutators refused a Marketing user, the record panels served for Marketing's own record hosts only (P2: the campaign of
+// the user's organization), Approvals for the approvers alone (P2), Home's
 // one qvt render and the settings landing's one html render (the administrator's; an author is refused Settings), and Marketing's
 // rows in Admin's registries (each bundle carrying exactly its group's grants, the readiness provider and the settings entry).
 // One feature per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (the
@@ -172,6 +173,13 @@ feature("the Marketing menu and keys follow the groups; the launcher shows Marke
         const settings = shell(users.admin, true, "Settings/Index", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
             problems.push(`the administrator's Settings tabs: ${settings.status} ${settings.names}`)
+        // P2: Campaigns' Approvals tab for the approver alone
+        const approverTabs = shell(users.approver, true, "Campaigns/Campaigns", "Campaigns")
+        if (JSON.stringify(approverTabs.names) !== JSON.stringify(ids.approverCampaignsMenu))
+            problems.push(`the approver's Campaigns tabs: ${approverTabs.status} ${approverTabs.names}`)
+        const authorTabs = shell(users.author, true, "Campaigns/Campaigns", "Campaigns")
+        if (JSON.stringify(authorTabs.names) !== JSON.stringify(ids.campaignsMenu))
+            problems.push(`the author's Campaigns tabs: ${authorTabs.status} ${authorTabs.names}`)
         if (shell(users.otherApp).apps.includes("Marketing")) problems.push(`${users.otherApp} has Marketing`)
         return {problems}
     },
@@ -205,14 +213,16 @@ const capabilityNames = [
     "audienceRead",
     "reportRead",
     // the Settings area, the administrator's
-    "settings"
+    "settings",
+    // P2: the Approvals area, the approvers'
+    "approvals"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
 const capabilityUsers = [
     {user: users.author, granted: ["view", "campaignEdit", "sendEdit", "contentEdit", "templateView", "anyRead"]},
     {user: users.audience, granted: ["view", ...audienceGrants, "anyRead", "audienceRead"]},
-    {user: users.approver, granted: ["view", "approve", "anyRead"]},
+    {user: users.approver, granted: ["view", "approve", "anyRead", "approvals"]},
     {user: users.dispatch, granted: ["view", "dispatch", "anyRead"]},
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
     {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead"]},
@@ -221,7 +231,7 @@ const capabilityUsers = [
         // no approval, dispatch, template edit, sending configuration or suppression review (design §1.1)
         user: users.admin,
         granted: capabilityNames.filter(
-            name => !["approve", "dispatch", "templateEdit", "sendingConfigure", "suppressionReview"].includes(name)
+            name => !["approve", "dispatch", "templateEdit", "sendingConfigure", "suppressionReview", "approvals"].includes(name)
         )
     },
     {user: "marketing.spec.editonly", granted: ["campaignEdit"]},
@@ -376,18 +386,34 @@ feature(
                     recordEntity: "mantle.party.Party",
                     recordId: ids.organizationId
                 }),
-                chatter: panelRequest("apps/Marketing/Chatter/chatterData")
+                chatter: panelRequest("apps/Marketing/Chatter/chatterData"),
+                // P2: the campaign is Marketing's host: its own organization's admitted, another's refused, the same request
+                ownCampaign: panelRequest("apps/Marketing/RecordFiles/filesData", {
+                    recordEntity: "mantle.marketing.campaign.MarketingCampaign",
+                    recordId: ids.runningCampaignId
+                }),
+                otherCampaign: panelRequest("apps/Marketing/RecordFiles/filesData", {
+                    recordEntity: "mantle.marketing.campaign.MarketingCampaign",
+                    recordId: ids.servicesCampaignId
+                })
             }))
+            // P2: Approvals for the approver alone (the area's grant or its own check)
+            const approvals = {
+                approver: screenRefusal(users.approver, "Campaigns/Approvals"),
+                author: screenRefusal(users.author, "Campaigns/Approvals"),
+                admin: screenRefusal(users.admin, "Campaigns/Approvals")
+            }
             return {
                 authorHome,
                 otherHome,
                 panels,
+                approvals,
                 adminSettings: asUser(users.admin, () => page("Settings/Index", {}, "html")),
                 adminAdoption: asUser(users.admin, () => page("Settings/Adoption", {}, "html")),
                 authorSettings: screenRefusal(users.author, "Settings/Index")
             }
         },
-        then({authorHome, otherHome, panels, adminSettings, adminAdoption, authorSettings}) {
+        then({authorHome, otherHome, panels, approvals, adminSettings, adminAdoption, authorSettings}) {
             authorHome.errors.length == 0
             authorHome.output.includes("Marketing at a glance")
             authorHome.output.includes("Running campaigns")
@@ -410,6 +436,11 @@ feature(
             unauthorized(authorSettings) || authorSettings.includes("PERMISSION_DENIED")
             panels.files.errors.includes("RECORD_PANEL_UNAVAILABLE")
             !panels.chatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
+            !panels.ownCampaign.errors.includes("RECORD_PANEL_UNAVAILABLE") && panels.ownCampaign.status == 200
+            panels.otherCampaign.errors.includes("RECORD_PANEL_UNAVAILABLE")
+            approvals.approver == ""
+            unauthorized(approvals.author) || approvals.author.includes("PERMISSION_DENIED")
+            approvals.admin.includes("PERMISSION_DENIED")
         }
     }
 )
