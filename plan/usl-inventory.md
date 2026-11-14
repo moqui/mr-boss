@@ -831,7 +831,7 @@ the screens that call it.
 | PaymentAutoPostServices | revert#PaymentApplicationPost |  |  |
 | PaymentAutoPostServices | repost#PaymentAndApplications |  |  |
 
-## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices below)
+## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices and P5's SegmentServices below)
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 
@@ -874,6 +874,15 @@ impl-marketing P3), called by built screens:
 | marketing/AudienceServices | reserve#SingleUseList, release#SingleUseList | the send's release (design §4 ListDetail; P9) | (internal; the send's release is P9's) |
 | party/MessageServices | find#Suppressions, store#Suppression | Marketing/Audiences/Suppressions (Shared/Suppressions: SuppressionFind, SuppressionList, SuppressionChange) | Marketing/Audiences/Suppressions (Shared/Suppressions) (Marketing P3) |
 | party/MessageServices | check#Suppressions | the ledger's attempt; Marketing/Audiences/MemberDetail | attempt#Delivery; get#Member; request#Subscriptions (Marketing P3) |
+
+Added in Marketing P5 (Nov 14, 2026; `mantle.marketing.SegmentServices`, impl-marketing P5), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/SegmentServices | find#Segments, store#Segment | Marketing/Audiences/Segments (SegmentFind, SegmentList, NewSegment) | Marketing/Audiences/Segments (Marketing P5) |
+| marketing/SegmentServices | get#Segment, store#Segment, archive#Segment, duplicate#Segment, store#SegmentRules, store#SegmentFilter, store#SegmentMember, evaluate#Segment | Marketing/Audiences/Segments/SegmentDetail (SegmentHeader, NativeRules, SavedFilter, ExplicitMembers, Evaluation) | Marketing/Audiences/SegmentDetail (Marketing P5) |
+| marketing/SegmentServices | preview#Audience | Marketing/Audiences/AudiencePreview (AudienceSelection, Eligibility, RecipientPreview); Marketing/Sends/SendDetail (SendAudience, P8) | Marketing/Audiences/AudiencePreview (Marketing P5) |
+| marketing/SegmentServices | classify#Recipients | the send's prepare (P8) and the automation's admission (P11) | (internal; the rule preview#Audience applies) |
 
 ## Order (89 services)
 

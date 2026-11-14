@@ -246,4 +246,26 @@ along with this software (see the LICENSE.md file). If not, see
             organizationPartyId="ORG_ZIZI_RETAIL" reasonEnumId="MsrComplaint" sourceEnumId="MssProvider" sourceRef="arf-2026-11-01"
             evidenceText="Marked the October newsletter as spam" fromDate="2026-11-01 18:00:00"/>
     <!-- ===== end of Marketing P3 ===== -->
+
+    <!-- ===== Marketing P5: segments and audience preview (impl-marketing P5; design-marketing §4) ===== -->
+    <!-- Retail's segments: the garden newsletter's readers (a rule segment whose filter finds the list's accepted members, Maya and the
+        legacy Pete, with Noah included by hand while his request is pending) and the spring preview guests (explicit: Maya included,
+        Olive excluded). A segment finds people and subscribes no one: a preview of the garden newsletter shows Maya eligible, Pete
+        needing evidence, Noah pending and Olive suppressed. -->
+    <mantle.marketing.segment.MarketSegment marketSegmentId="BOSS_MKT_SEG_GARDEN" marketSegmentTypeEnumId="MARKET_SEGMENT"
+            segmentName="Garden newsletter readers" description="Readers of the garden newsletter, for the spring launch" segmentKindEnumId="MskRule"
+            ownerPartyId="ORG_ZIZI_RETAIL" createdByUserId="BOSS_MKT_AUDIENCE" definitionRevision="2"/>
+    <mantle.marketing.segment.MarketSegmentFilter marketSegmentId="BOSS_MKT_SEG_GARDEN" fromDate="2026-11-01 09:00:00"
+            filterJson="{&quot;match&quot;:&quot;all&quot;,&quot;conditions&quot;:[{&quot;source&quot;:&quot;engagement&quot;,&quot;field&quot;:&quot;subscribedList&quot;,&quot;operator&quot;:&quot;includes&quot;,&quot;value&quot;:[&quot;BOSS_MKT_LIST_GARDEN&quot;]}]}"
+            changedByUserId="BOSS_MKT_AUDIENCE"/>
+    <mantle.marketing.segment.MarketSegmentParty marketSegmentId="BOSS_MKT_SEG_GARDEN" partyId="BOSS_MKT_CON_NOAH" roleTypeId="_NA_"
+            fromDate="2026-11-10 09:30:00" memberKindEnumId="MspInclude" comments="Asked at the till; his request is pending"/>
+    <mantle.marketing.segment.MarketSegment marketSegmentId="BOSS_MKT_SEG_VIP" marketSegmentTypeEnumId="MARKET_SEGMENT"
+            segmentName="Spring preview guests" description="Chosen by hand for the spring preview evening" segmentKindEnumId="MskExplicit"
+            ownerPartyId="ORG_ZIZI_RETAIL" createdByUserId="BOSS_MKT_AUDIENCE" definitionRevision="1"/>
+    <mantle.marketing.segment.MarketSegmentParty marketSegmentId="BOSS_MKT_SEG_VIP" partyId="BOSS_MKT_CON_MAYA" roleTypeId="_NA_"
+            fromDate="2026-11-05 10:00:00" memberKindEnumId="MspInclude"/>
+    <mantle.marketing.segment.MarketSegmentParty marketSegmentId="BOSS_MKT_SEG_VIP" partyId="BOSS_MKT_CON_OLIVE" roleTypeId="_NA_"
+            fromDate="2026-11-05 10:00:00" memberKindEnumId="MspExclude" comments="Complained about the October newsletter"/>
+    <!-- ===== end of Marketing P5 ===== -->
 </entity-facade-xml>

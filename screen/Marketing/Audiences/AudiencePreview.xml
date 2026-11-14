@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › AudiencePreview (design-marketing §4 AudiencePreview: AudienceSelection, Eligibility, RecipientPreview;
+    style-guide task archetype; impl-marketing P5): explains who a send to a topic would reach, as of a time
+    (mantle.marketing.SegmentServices.preview#Audience): the topic list (its channel and purpose), the lists and segments that find
+    the people, the ones that leave people out; the buckets by precedence (not available, no valid address, suppressed, withdrawn or
+    not subscribed, needs evidence, duplicate address, eligible), which sum to the matched people, with the untracked eligible; and
+    the people, a bucket at a time. An audience reader sees names and whole addresses; an author or a dispatcher (who reach this screen
+    past the area's deny, BOSS_MKT_AUDIENCE_PREVIEW) counts and masked addresses only. A preview subscribes no one and is no send
+    authority; its identity is what a send is prepared from (P8). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Audience preview" default-menu-index="6">
+    <parameter name="topicListId"/>
+    <parameter name="listIds"/>
+    <parameter name="segmentIds"/>
+    <parameter name="excludeListIds"/>
+    <parameter name="excludeSegmentIds"/>
+    <parameter name="asOf"/>
+    <parameter name="bucket"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <script><![CDATA[
+            const idList = value => value == null || value === '' ? [] :
+                (value instanceof Array ? Array.from(value) : String(value).split(',')).map(item => String(item).trim()).filter(Boolean)
+            listIdList = idList(listIds)
+            segmentIdList = idList(segmentIds)
+            excludeListIdList = idList(excludeListIds)
+            excludeSegmentIdList = idList(excludeSegmentIds)
+            preview = null
+            previewRefusal = null
+            if (can.audiencePreview && topicListId) {
+                ec.message.pushErrors()
+                try {
+                    preview = ec.service.sync().name('mantle.marketing.SegmentServices.preview#Audience').parameters({
+                        topicListId, listIds: listIdList, segmentIds: segmentIdList, excludeListIds: excludeListIdList,
+                        excludeSegmentIds: excludeSegmentIdList, asOf: asOf || null, bucket: bucket || null, pageIndex
+                    }).requireNewTransaction(true).call()
+                    if (ec.message.hasError()) { previewRefusal = ec.message.getErrorsString(); preview = null }
+                } catch (error) {
+                    previewRefusal = String(error.message)
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+            }
+            const refusals = {
+                SOURCE_UNAVAILABLE: 'A segment reads a source you cannot read in this organization, so no count is shown.',
+                RECORD_UNAVAILABLE: 'A list or segment is not available: each must be one of the topic\'s organization.',
+                LIST_ARCHIVED: 'The topic list is archived: it takes no send.',
+                SEGMENT_ARCHIVED: 'An archived segment cannot be used.',
+                AUDIENCE_TOO_LARGE: 'The audience is too large to preview here; narrow it with fewer lists or segments.',
+                TOO_MANY_SOURCES: 'Choose at most twenty lists and segments.'
+            }
+            if (previewRefusal) {
+                const code = Object.keys(refusals).find(key => previewRefusal.includes(key))
+                previewRefusal = code ? refusals[code] : previewRefusal.replace(/^Error: /, '')
+            }
+        ]]></script>
+        <set field="recipientList" from="preview?.recipientList || []"/>
+        <set field="recipientListCount" from="preview?.recipientListCount"/>
+        <set field="recipientListPageIndex" from="preview?.recipientListPageIndex"/>
+        <set field="recipientListPageSize" from="preview?.recipientListPageSize"/>
+        <set field="recipientListPageMaxIndex" from="preview?.recipientListPageMaxIndex"/>
+        <set field="recipientListPageRangeLow" from="preview?.recipientListPageRangeLow"/>
+        <set field="recipientListPageRangeHigh" from="preview?.recipientListPageRangeHigh"/>
+        <set field="bucketList" from="preview?.bucketList || []"/>
+        <set field="reasonList" from="preview?.reasonList || []"/>
+        <set field="showNames" from="!!preview?.addressesShown"/>
+        <set field="selection" from="{topicListId: topicListId, listIds: listIdList.length ? listIdList : null,
+                segmentIds: segmentIdList.length ? segmentIdList : null, excludeListIds: excludeListIdList.length ? excludeListIdList : null,
+                excludeSegmentIds: excludeSegmentIdList.length ? excludeSegmentIdList : null, asOf: asOf}"/>
+        <!-- each bucket's card: its count and the link that shows its people -->
+        <script><![CDATA[
+            const query = Object.entries({topicListId, listIds: listIdList.join(','), segmentIds: segmentIdList.join(','),
+                excludeListIds: excludeListIdList.join(','), excludeSegmentIds: excludeSegmentIdList.join(','), asOf: asOf || ''})
+                .filter(([, value]) => value).map(([key, value]) => key + '=' + encodeURIComponent(String(value))).join('&')
+            bucketCards = {}
+            for (const entry of bucketList) bucketCards[entry.bucket] = {value: String(entry.count), link: '../AudiencePreview?' + query + '&bucket=' + entry.bucket}
+        ]]></script>
+        <set field="bucketLabel" from="bucket ? (bucketList.find(entry =&gt; entry.bucket == bucket)?.label || bucket) : 'Everyone'"/>
+        <set field="summaryText" from="preview ? preview.matchedCount + ' people matched (' + preview.membershipCount + ' memberships' +
+                (preview.excludedCount ? ', ' + preview.excludedCount + ' left out by your exclusions' : '') + '): ' + preview.eligibleCount +
+                ' eligible, ' + preview.untrackedEligibleCount + ' of them untracked · ' + preview.topic.contactListName + ' · ' +
+                preview.channelText + ' · ' + preview.purposeText + ' · as of ' + preview.asOfText : ''"/>
+    </actions>
+    <widgets>
+        <label text="You do not preview audiences in Marketing." type="p" style="m-muted" condition="!can.audiencePreview"/>
+        <section name="AudiencePreviewTask" condition="can.audiencePreview">
+            <widgets>
+                <label text="Audience preview" type="h5"/>
+                <container-box>
+                    <box-header title="Audience"/>
+                    <box-body>
+                        <form-single name="AudienceSelection" transition="." map="selection">
+                            <field name="topicListId">
+                                <default-field title="Topic list" tooltip="The subscription a send is for: everyone must be an accepted member of it">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lists', selected:topicListId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="listIds">
+                                <default-field title="Find people on lists" tooltip="The topic list itself when no list or segment is chosen">
+                                    <drop-down allow-multiple="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lists'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="segmentIds">
+                                <default-field title="And in segments">
+                                    <drop-down allow-multiple="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'segments'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="excludeListIds">
+                                <default-field title="Leave out lists">
+                                    <drop-down allow-multiple="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lists'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="excludeSegmentIds">
+                                <default-field title="Leave out segments">
+                                    <drop-down allow-multiple="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'segments'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="asOf"><default-field title="As of" tooltip="Now when empty"><date-time type="date-time"/></default-field></field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="topicListId"/><field-ref name="asOf"/></field-row>
+                                <field-row><field-ref name="listIds"/><field-ref name="segmentIds"/></field-row>
+                                <field-row><field-ref name="excludeListIds"/><field-ref name="excludeSegmentIds"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <label text="A preview subscribes no one. Each person still needs the topic's accepted membership, an evidenced consent and an address that is not suppressed."
+                                type="p" style="text-caption m-muted"/>
+                    </box-body>
+                </container-box>
+                <label text="${previewRefusal}" type="p" style="text-warning" condition="previewRefusal"/>
+                <section name="NoTopic" condition="!topicListId">
+                    <widgets><label text="Choose the topic list a send would be for, then Preview." type="p" style="m-muted"/></widgets>
+                </section>
+
+                <section name="Eligibility" condition="preview">
+                    <widgets>
+                        <label text="${summaryText}" type="p" style="q-mb-sm"/>
+                        <dashboard min-width="150">
+                            <number-card title="Eligible" value="${bucketCards.eligible?.value}" icon="sym_o_task_alt" size="sm" link="${bucketCards.eligible?.link}"/>
+                            <number-card title="Not available" value="${bucketCards.unavailable?.value}" icon="sym_o_person_off" size="sm" link="${bucketCards.unavailable?.link}"/>
+                            <number-card title="No valid address" value="${bucketCards.destination?.value}" icon="sym_o_unsubscribe" size="sm" link="${bucketCards.destination?.link}"/>
+                            <number-card title="Suppressed" value="${bucketCards.suppressed?.value}" icon="sym_o_block" size="sm" link="${bucketCards.suppressed?.link}"/>
+                            <number-card title="Withdrawn or not subscribed" value="${bucketCards.withdrawn?.value}" icon="sym_o_remove_circle" size="sm" link="${bucketCards.withdrawn?.link}"/>
+                            <number-card title="Needs evidence" value="${bucketCards.evidence?.value}" icon="sym_o_help" size="sm" link="${bucketCards.evidence?.link}"/>
+                            <number-card title="Duplicate address" value="${bucketCards.duplicate?.value}" icon="sym_o_content_copy" size="sm" link="${bucketCards.duplicate?.link}"/>
+                        </dashboard>
+                        <link url="." text="Show everyone" link-type="anchor" condition="bucket"
+                                parameter-map="{topicListId:topicListId, listIds:listIdList.join(','), segmentIds:segmentIdList.join(','),
+                                    excludeListIds:excludeListIdList.join(','), excludeSegmentIds:excludeSegmentIdList.join(','), asOf:asOf, bucket:''}"/>
+                        <container-box>
+                            <box-header title="Why people are left out"/>
+                            <box-body-nopad>
+                                <form-list name="Reasons" list="reasonList" skip-form="true" paginate="false">
+                                    <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="count" align="right"><default-field title="People"><display format="#,##0"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="reasonText"/></column>
+                                        <column><field-ref name="count"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="People · ${bucketLabel} · ${recipientListCount || 0}"/>
+                            <box-body-nopad>
+                                <form-list name="RecipientPreview" list="recipientList" skip-form="true" paginate="true">
+                                    <field name="partyName">
+                                        <conditional-field title="Contact" condition="showNames"><display/></conditional-field>
+                                        <default-field title="Contact"><ignored/></default-field>
+                                    </field>
+                                    <field name="addressText"><default-field title="Address"><display/></default-field></field>
+                                    <field name="bucketText">
+                                        <default-field title="Bucket">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${bucketColor}">${WebUtilities.encodeHtml(bucketText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(bucketText ?? "")})}]]></text>
+                                                <text type="html">${bucketText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonText"><default-field title="Why"><display/></default-field></field>
+                                    <field name="trackingText"><default-field title="Tracking"><display/></default-field></field>
+                                    <field name="sourcesText"><default-field title="Found on"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="partyName"/><field-ref name="addressText"/></column>
+                                        <column><field-ref name="bucketText"/><field-ref name="reasonText"/></column>
+                                    </columns>
+                                </form-list>
+                                <section name="NoRecipients" condition="!recipientList.length">
+                                    <widgets><label text="No one here." type="p" style="m-muted q-pa-sm"/></widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

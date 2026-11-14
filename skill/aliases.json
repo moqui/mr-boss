@@ -104,6 +104,11 @@
         "promotion plan",
         "campaign plan"
     ],
+    "segment": [
+        "audience segment",
+        "target group",
+        "dynamic list"
+    ],
     "opportunity": [
         "deal",
         "pipeline deal",

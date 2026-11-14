@@ -17,8 +17,11 @@ along with this software (see the LICENSE.md file). If not, see
     services answer a Marketing consent editor for the lists and scoped consents of their organizations, F50) and Suppressions
     (Comms' shared screen, Marketing's mount, F16), in the menu; ListDetail and MemberDetail hidden. For the audience managers and the
     administrator (BOSS_MKT_AUDIENCES denies the root user group; the root's menu shows it to a holder of MARKETING_AUDIENCE_VIEW);
-    every read and write is Mantle's guarded audience, consent or suppression service. Segments, AudienceImport and AudienceMerge
-    join with P4 and P5. Comms' Consent keeps its own subscreen names (Consent and Consent/Contact), so its relative links hold. -->
+    every read and write is Mantle's guarded audience, consent or suppression service. AudienceImport and AudienceMerge join with
+    P4. Comms' Consent keeps its own subscreen names (Consent and Consent/Contact), so its relative links hold.
+    P5: Segments (index 2) and SegmentDetail (hidden), the audience managers'; AudiencePreview (index 6), which the authors and
+    dispatchers also open past the area's deny (BOSS_MKT_AUDIENCE_PREVIEW: an ALWAYS on this screen that does not pass to its other
+    subscreens, and an inheritable one on AudiencePreview), its rows masked for them by Mantle's preview#Audience. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Audiences" default-menu-index="3" menu-image="sym_o_groups" menu-image-type="icon">
     <subscreens default-item="Lists" always-use-full-path="true">

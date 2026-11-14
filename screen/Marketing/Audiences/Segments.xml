@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › Segments (design-marketing §4 Segments: SegmentFind, SegmentList, NewSegment; style-guide §3.2 List;
+    impl-marketing P5): the segments of the user's organizations (mantle.marketing.SegmentServices.find#Segments, scoped and paged in
+    the query), active ones by default, each with how it is defined, its parent, its rules in words and its explicit members. New
+    segment is the primary action (MARKETING_AUDIENCE_EDIT). No match count is listed: an evaluation is the reader's own, under the
+    sources they read, on SegmentDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Segments" default-menu-index="2">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="segmentKindEnumId"/>
+    <parameter name="parentMarketSegmentId"/>
+    <parameter name="archived"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createSegment" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <if condition="can.audienceRead">
+            <service-call name="mantle.marketing.SegmentServices.find#Segments" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, segmentKindEnumId:segmentKindEnumId,
+                        parentMarketSegmentId:parentMarketSegmentId, archived:(archived || 'N'), pageIndex:pageIndex, pageSize:pageSize,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="segmentList" from="found?.segmentList || []"/>
+        <set field="segmentListCount" from="found?.segmentListCount"/>
+        <set field="segmentListPageIndex" from="found?.segmentListPageIndex"/>
+        <set field="segmentListPageSize" from="found?.segmentListPageSize"/>
+        <set field="segmentListPageMaxIndex" from="found?.segmentListPageMaxIndex"/>
+        <set field="segmentListPageRangeLow" from="found?.segmentListPageRangeLow"/>
+        <set field="segmentListPageRangeHigh" from="found?.segmentListPageRangeHigh"/>
+        <set field="detailPath" from="sharedLinks['Audiences/SegmentDetail'] || null"/>
+        <set field="previewPath" from="sharedLinks['Audiences/AudiencePreview'] || null"/>
+        <set field="canEdit" from="!!can.audienceEdit"/>
+        <set field="filtered" from="!!(text || organizationPartyId || segmentKindEnumId || parentMarketSegmentId || (archived &amp;&amp; archived != 'N'))"/>
+        <set field="emptyText" from="filtered ? 'No segment matches these filters.' : 'No segments yet' + (canEdit ? ' · Start one with New segment.' : '.')"/>
+        <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null), segmentKindEnumId: 'MskRule'}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read audiences in Marketing." type="p" style="m-muted" condition="!can.audienceRead"/>
+        <section name="SegmentsRegister" condition="can.audienceRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Segments" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewSegmentDialog" button-text="New segment" title="New segment" icon="sym_o_add"
+                                width="760" type="primary" condition="canEdit">
+                            <section-include name="NewSegmentForm" location="component://mr-boss/template/MarketingSegments.xml"/>
+                        </container-dialog>
+                        <link url="${previewPath}" text="Preview an audience" link-type="anchor-button" icon="sym_o_groups"
+                                condition="previewPath &amp;&amp; can.audiencePreview"/>
+                        <link url="." text="Archived" link-type="anchor-button" icon="sym_o_inventory_2" parameter-map="{archived:'Y'}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="SegmentList" list="segmentList" skip-form="true" paginate="true" header-dialog="true"
+                                select-columns="true" show-csv-button="true">
+                            <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                            <field name="text"><header-field title="Name or id"><text-line size="20"/></header-field></field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="segmentKindEnumId">
+                                <header-field title="Defined by">
+                                    <drop-down allow-empty="true">
+                                        <option key="MskRule" text="Rules"/>
+                                        <option key="MskExplicit" text="Explicit members"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="parentMarketSegmentId">
+                                <header-field title="Inside">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'segments', selected:parentMarketSegmentId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="archived">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="N" text="Active"/>
+                                        <option key="Y" text="Archived"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="segmentName">
+                                <conditional-field title="Segment" condition="detailPath">
+                                    <link url="${detailPath}" text="${segmentName}" link-type="anchor" parameter-map="{marketSegmentId:marketSegmentId}"/>
+                                </conditional-field>
+                                <default-field title="Segment"><display/></default-field>
+                            </field>
+                            <field name="kindText"><default-field title="Defined by"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="parentName"><default-field title="Inside"><display/></default-field></field>
+                            <field name="rulesText"><default-field title="Rules"><display/></default-field></field>
+                            <field name="includedCount" align="right"><default-field title="Included"><display format="#,##0"/></default-field></field>
+                            <field name="excludedCount" align="right"><default-field title="Excluded"><display format="#,##0"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns>
+                                <column><field-ref name="segmentName"/><field-ref name="kindText"/></column>
+                                <column><field-ref name="organizationName"/><field-ref name="parentName"/></column>
+                                <column><field-ref name="rulesText"/></column>
+                                <column><field-ref name="includedCount"/></column>
+                                <column><field-ref name="excludedCount"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="segmentName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="kindText"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoSegments" condition="!segmentList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

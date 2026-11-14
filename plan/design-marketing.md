@@ -581,6 +581,22 @@ recipient execution set; dispatch may remove recipients but never adds newly mat
 
 **Source:** research §§3–4; Twenty CampaignAudiencePreview exclusion buckets.
 
+As built (impl-marketing P5): `mantle.marketing.SegmentServices` over `MarketingSegments.js` (segments) and
+`MarketingEligibility.js` (eligibility). MarketSegment gains its name, kind (MskRule, MskExplicit), creator, archive date and a
+definition revision; MarketSegmentParty its dates and kind (MspInclude, MspExclude), ended never deleted; the saved filter is the
+dated MarketSegmentFilter, a JSON tree of registered sources only. A segment is evaluated over its organization's audience (its
+lists' current members, the parties it owns, its explicit members and what a filter's source discovers), bounded at 5,000: the
+native families and the filter all hold, the explicit inclusions join, the parent intersects (a cycle refused), the exclusions win.
+The sources are party, contact, purchases (`COMMERCE_ORDER_VIEW`), engagement (list membership, the ledger's deliveries) and Sales'
+leads, opportunities and accounts, read under the caller's own Sales scope (SalesAccess `opportunityOf`, `accountOf`) in the
+segment's organization; registration waits for P16, its records. A filter or evaluation on a source the caller cannot read is
+refused (SOURCE_UNAVAILABLE) before any count, and the segment list shows no match count (an evaluation is the caller's own).
+`preview#Audience` takes a topic list and its lists and segments with exclusions, as of a time, and puts each person in one of the
+seven buckets in the order above; the reusable rule is `classify#Recipients` (internal), which P8 prepares and P11 admits with;
+previewKey and resultDigest identify a preview. AudiencePreview opens for authors and dispatchers past the Audiences area's deny
+(`BOSS_MKT_AUDIENCE_PREVIEW`), their rows masked with no name; an audience reader sees names and addresses, and a person the
+caller may not see is a count only.
+
 ### Consent and ConsentDetail — Context passed
 
 Mount Comms Consent list/contact definitions with permitted organizations, non-MAILBOX lists,

@@ -1,0 +1,561 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Audiences › SegmentDetail (design-marketing §4 SegmentDetail: SegmentHeader, NativeRules, SavedFilter,
+    ExplicitMembers, Evaluation; style-guide §3.3 Detail; impl-marketing P5): one segment of the user's organizations (check#Record
+    segment; else "Not available", linking back). The record header: its id and name, how it is defined, organization, parent and
+    store, the state chip; the primary action Preview audience (AudiencePreview with this segment as a source) and More (Edit,
+    Duplicate, Archive). The boxes: Rules (classifications and geographies, each family's rows alternatives; dimension bounds, all of
+    them) and Filter (conditions over the sources the user may read, all or any of them) for a rule segment; Explicit members
+    (include or exclude, dated, ended never deleted); Evaluation (as of a time: who matches and by what, who is left out and why;
+    refused with no count when the filter needs a source the user cannot read). Every change is Mantle's guarded segment service at
+    the revision read; an evaluation subscribes no one. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Segment" default-menu-include="false">
+    <parameter name="marketSegmentId" required="true"/>
+    <parameter name="asOf"/>
+    <parameter name="show"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="contactSearch" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="storeSegment" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <transition-include name="archiveSegment" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <transition-include name="duplicateSegment" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <transition-include name="storeSegmentRule" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <transition-include name="storeSegmentFilter" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <transition-include name="storeSegmentMember" location="component://mr-boss/template/MarketingSegments.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="segmentCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'segment', recordId:marketSegmentId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="segmentCheck?.recordId">
+            <service-call name="mantle.marketing.SegmentServices.get#Segment" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{marketSegmentId:marketSegmentId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.segment"/>
+        <if condition="recordFound">
+            <!-- the evaluation's refusal (a filter on a source the user cannot read) is shown in its box, with no count -->
+            <script><![CDATA[
+                evaluation = null
+                evaluationRefusal = null
+                ec.message.pushErrors()
+                try {
+                    evaluation = ec.service.sync().name('mantle.marketing.SegmentServices.evaluate#Segment')
+                        .parameters({marketSegmentId, asOf: asOf || null, show: show || 'matched', pageIndex})
+                        .requireNewTransaction(true).call()
+                    if (ec.message.hasError()) { evaluationRefusal = ec.message.getErrorsString(); evaluation = null }
+                } catch (error) {
+                    evaluationRefusal = String(error.message)
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+                if (evaluationRefusal) evaluationRefusal = evaluationRefusal.includes('SOURCE_UNAVAILABLE')
+                    ? 'Not evaluated: its filter reads a source you cannot read in this organization, so no count is shown.'
+                    : evaluationRefusal.includes('AUDIENCE_TOO_LARGE') ? 'Not evaluated: the organization\'s audience is too large to evaluate here.'
+                    : 'Not evaluated: ' + evaluationRefusal.replace(/^Error: /, '')
+            ]]></script>
+        </if>
+        <set field="segment" from="detail?.segment || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="isRule" from="segment.segmentKindEnumId != 'MskExplicit'"/>
+        <set field="classificationList" from="detail?.classifications || []"/>
+        <set field="geoList" from="detail?.geos || []"/>
+        <set field="dimensionList" from="detail?.dimensions || []"/>
+        <set field="filter" from="detail?.filter || null"/>
+        <set field="conditionList" from="filter?.conditions || []"/>
+        <set field="filterHistory" from="detail?.filterHistory || []"/>
+        <set field="memberList" from="(detail?.members || []).filter(row =&gt; row.current)"/>
+        <set field="endedMemberList" from="(detail?.members || []).filter(row =&gt; !row.current)"/>
+        <set field="fieldOptions" from="(detail?.sources || []).flatMap(source =&gt; source.fields.map(field =&gt; ({value: field.key, label: field.label})))"/>
+        <set field="evaluationList" from="evaluation?.evaluationList || []"/>
+        <set field="evaluationListCount" from="evaluation?.evaluationListCount"/>
+        <set field="evaluationListPageIndex" from="evaluation?.evaluationListPageIndex"/>
+        <set field="evaluationListPageSize" from="evaluation?.evaluationListPageSize"/>
+        <set field="evaluationListPageMaxIndex" from="evaluation?.evaluationListPageMaxIndex"/>
+        <set field="evaluationListPageRangeLow" from="evaluation?.evaluationListPageRangeLow"/>
+        <set field="evaluationListPageRangeHigh" from="evaluation?.evaluationListPageRangeHigh"/>
+        <set field="segmentsPath" from="sharedLinks['Audiences/Segments']"/>
+        <set field="previewPath" from="sharedLinks['Audiences/AudiencePreview'] || null"/>
+        <set field="canPreview" from="!!(previewPath &amp;&amp; marketing.capabilities.audiencePreview &amp;&amp; !segment.archived)"/>
+        <set field="captionText" from="[segment.kindText, segment.organizationName, segment.parentName ? 'inside ' + segment.parentName : null,
+                segment.storeName ? 'store ' + segment.storeName : null].filter(Boolean).join(' · ')"/>
+        <set field="factsText" from="memberList.filter(row =&gt; row.memberKindEnumId == 'MspInclude').length + ' included · ' +
+                memberList.filter(row =&gt; row.memberKindEnumId == 'MspExclude').length + ' excluded · definition revision ' + segment.definitionRevision"/>
+        <set field="segmentValues" from="Object.assign({}, segment, {expectedRevision: segment.revision})"/>
+        <set field="revisionValues" from="{marketSegmentId: marketSegmentId, expectedRevision: segment.revision}"/>
+        <set field="evaluationTitle" from="evaluation ? 'Evaluation · ' + evaluation.matchedCount + ' matched, ' + evaluation.excludedCount + ' left out, as of ' + evaluation.evaluatedText : 'Evaluation'"/>
+    </actions>
+    <widgets>
+        <section name="SegmentNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Segment ${marketSegmentId} is not available: it does not exist, or it is not one of your organizations'."
+                                type="p"/>
+                        <link url="${segmentsPath}" text="Back to segments" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SegmentFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.marketing.segment.MarketSegment" record-id="${marketSegmentId}" title="${segment.segmentName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${marketSegmentId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${segment.segmentName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${factsText}" type="div" style="text-caption m-muted"/>
+                            <label text="${segment.description}" type="div" style="text-caption" condition="segment.description"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${segment.stateColor}">${WebUtilities.encodeHtml(segment.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(segment.stateText ?? "")})}]]></text>
+                                <text type="html">${segment.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <link url="${previewPath}" text="Preview audience" link-type="anchor-button" btn-type="primary" icon="sym_o_groups"
+                                    parameter-map="{segmentIds:marketSegmentId}" condition="canPreview"/>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="EditSegmentDialog" button-text="Edit segment" icon="sym_o_edit" title="Edit ${segment.segmentName}"
+                                        width="760" condition="can.canEdit">
+                                    <form-single name="EditSegment" transition="storeSegment" map="segmentValues">
+                                        <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="segmentName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="segmentKindEnumId">
+                                            <default-field title="Defined by">
+                                                <radio><option key="MskRule" text="Rules and a filter"/><option key="MskExplicit" text="The people I choose"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="parentMarketSegmentId">
+                                            <default-field title="Inside" tooltip="Only people of this segment can match">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'segments', organizationPartyId:segment.ownerPartyId, excludeId:marketSegmentId,
+                                                                selected:segment.parentMarketSegmentId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="description"><default-field title="Description"><text-area rows="2" cols="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="DuplicateSegmentDialog" button-text="Duplicate" icon="sym_o_content_copy"
+                                        title="Duplicate ${segment.segmentName}" width="520" condition="can.canDuplicate">
+                                    <form-single name="DuplicateSegment" transition="duplicateSegment" map="{marketSegmentId:marketSegmentId}">
+                                        <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                        <field name="segmentName"><default-field title="Name of the copy" tooltip="Copy of its name when empty"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Duplicate" confirmation="Copy ${segment.segmentName} with its rules, filter and members?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ArchiveSegmentDialog" button-text="Archive" icon="sym_o_inventory_2"
+                                        title="Archive ${segment.segmentName}" width="520" condition="can.canArchive">
+                                    <form-single name="ArchiveSegment" transition="archiveSegment" map="segmentValues">
+                                        <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Archive segment" type="danger"
+                                                    confirmation="Archive ${segment.segmentName}? It can no longer be used; its definition stays."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <section name="RulesBox" condition="isRule">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Rules"/>
+                            <box-toolbar>
+                                <button-menu text="Add a rule" icon="sym_o_add" condition="can.canEdit">
+                                    <container-dialog id="AddClassificationDialog" button-text="Classification" icon="sym_o_label"
+                                            title="Add a classification" width="520">
+                                        <form-single name="AddClassification" transition="storeSegmentRule" map="revisionValues">
+                                            <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="ruleAction"><default-field><hidden default-value="addClassification"/></default-field></field>
+                                            <field name="partyClassificationId">
+                                                <default-field title="Classification">
+                                                    <drop-down><dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'classifications'}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title=""><submit text="Add"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="AddGeoDialog" button-text="Geography" icon="sym_o_public" title="Add a geography" width="520">
+                                        <form-single name="AddGeo" transition="storeSegmentRule" map="revisionValues">
+                                            <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="ruleAction"><default-field><hidden default-value="addGeo"/></default-field></field>
+                                            <field name="geoId">
+                                                <default-field title="Country, state or region">
+                                                    <drop-down><dynamic-options transition="choices" server-search="true" min-length="1" parameter-map="{choice:'geos'}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title=""><submit text="Add"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="AddDimensionDialog" button-text="Dimension bounds" icon="sym_o_straighten" title="Set dimension bounds" width="560">
+                                        <form-single name="AddDimension" transition="storeSegmentRule" map="revisionValues">
+                                            <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="ruleAction"><default-field><hidden default-value="storeDimension"/></default-field></field>
+                                            <field name="uomDimensionTypeId">
+                                                <default-field title="Dimension">
+                                                    <drop-down><dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'dimensionTypes'}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="uomId">
+                                                <default-field title="Unit" tooltip="The dimension's own unit when empty">
+                                                    <drop-down allow-empty="true"><dynamic-options transition="choices" server-search="true" min-length="1" parameter-map="{choice:'units'}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="minValue"><default-field title="At least"><text-line size="10"/></default-field></field>
+                                            <field name="maxValue"><default-field title="At most"><text-line size="10"/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="Save bounds"/></default-field></field>
+                                            <field-layout>
+                                                <field-row><field-ref name="uomDimensionTypeId"/><field-ref name="uomId"/></field-row>
+                                                <field-row><field-ref name="minValue"/><field-ref name="maxValue"/></field-row>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                </button-menu>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="Classifications" list="classificationList" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Classification (any of them)"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="RemoveClassification_${partyClassificationId}" button-text="Remove" icon="sym_o_close"
+                                                    title="Remove ${label}" width="480" condition="can.canEdit">
+                                                <form-single name="RemoveClassification" transition="storeSegmentRule"
+                                                        map="{marketSegmentId:marketSegmentId, expectedRevision:segment.revision, ruleAction:'removeClassification', partyClassificationId:partyClassificationId}">
+                                                    <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="ruleAction"><default-field><hidden/></default-field></field>
+                                                    <field name="partyClassificationId"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title=""><submit text="Remove" type="danger" confirmation="Remove the classification ${label} from ${segment.segmentName}?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="Geos" list="geoList" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Geography (any of them)"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="RemoveGeo_${geoId}" button-text="Remove" icon="sym_o_close"
+                                                    title="Remove ${label}" width="480" condition="can.canEdit">
+                                                <form-single name="RemoveGeo" transition="storeSegmentRule"
+                                                        map="{marketSegmentId:marketSegmentId, expectedRevision:segment.revision, ruleAction:'removeGeo', geoId:geoId}">
+                                                    <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="ruleAction"><default-field><hidden/></default-field></field>
+                                                    <field name="geoId"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title=""><submit text="Remove" type="danger" confirmation="Remove the geography ${label} from ${segment.segmentName}?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="Dimensions" list="dimensionList" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Dimension (all of them)"><display/></default-field></field>
+                                    <field name="boundsText"><default-field title="Bounds, inclusive"><display/></default-field></field>
+                                    <field name="uomText"><default-field title="Unit"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="RemoveDimension_${uomDimensionTypeId}" button-text="Remove" icon="sym_o_close"
+                                                    title="Remove ${label}" width="480" condition="can.canEdit">
+                                                <form-single name="RemoveDimension" transition="storeSegmentRule"
+                                                        map="{marketSegmentId:marketSegmentId, expectedRevision:segment.revision, ruleAction:'removeDimension', uomDimensionTypeId:uomDimensionTypeId}">
+                                                    <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="ruleAction"><default-field><hidden/></default-field></field>
+                                                    <field name="uomDimensionTypeId"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title=""><submit text="Remove" type="danger" confirmation="Remove the bounds of ${label} from ${segment.segmentName}?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="boundsText"/></column>
+                                        <column><field-ref name="uomText"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <section name="NoRules" condition="!classificationList.length &amp;&amp; !dimensionList.length &amp;&amp; !geoList.length">
+                                    <widgets><label text="No rules: the segment matches its filter and its included members." type="p" style="m-muted q-pa-sm"/></widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+
+                        <container-box>
+                            <box-header title="Filter"/>
+                            <box-toolbar>
+                                <container-dialog id="AddConditionDialog" button-text="Add a condition" icon="sym_o_filter_alt"
+                                        title="Add a condition to ${segment.segmentName}" width="640" condition="can.canEdit">
+                                    <form-single name="AddCondition" transition="storeSegmentFilter" map="revisionValues">
+                                        <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="filterAction"><default-field><hidden default-value="addCondition"/></default-field></field>
+                                        <field name="fieldKey">
+                                            <default-field title="What">
+                                                <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="operator">
+                                            <default-field title="Is">
+                                                <drop-down no-current-selected-key="equals">
+                                                    <option key="is" text="is (yes or no)"/>
+                                                    <option key="equals" text="is"/>
+                                                    <option key="not-equals" text="is not"/>
+                                                    <option key="in" text="is one of"/>
+                                                    <option key="not-in" text="is none of"/>
+                                                    <option key="includes" text="includes"/>
+                                                    <option key="excludes" text="excludes"/>
+                                                    <option key="greater" text="is more than"/>
+                                                    <option key="greater-equals" text="is at least"/>
+                                                    <option key="less" text="is less than"/>
+                                                    <option key="less-equals" text="is at most"/>
+                                                    <option key="before" text="is before"/>
+                                                    <option key="after" text="is after"/>
+                                                    <option key="within-days" text="is within the last days"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="value"><default-field title="Value" tooltip="yes or no; a number; a date; days; or ids, comma separated"><text-line size="30"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Add condition"/></default-field></field>
+                                    </form-single>
+                                    <label text="Only the sources you may read are offered. A person whose value is unknown never matches, whatever the condition."
+                                            type="p" style="text-caption m-muted"/>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <section name="FilterMatch" condition="filter">
+                                    <widgets>
+                                        <container style="q-pa-sm row items-center q-gutter-sm">
+                                            <label text="People match ${filter?.matchText} of these conditions." type="span"/>
+                                            <section name="FilterMatchToggle" condition="can.canEdit &amp;&amp; conditionList.length &gt; 1">
+                                                <widgets>
+                                                    <form-single name="FilterMatchForm" transition="storeSegmentFilter"
+                                                            map="{marketSegmentId:marketSegmentId, expectedRevision:segment.revision, filterAction:'setMatch', match:(filter?.match == 'any' ? 'all' : 'any')}">
+                                                        <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                        <field name="filterAction"><default-field><hidden/></default-field></field>
+                                                        <field name="match"><default-field><hidden/></default-field></field>
+                                                        <field name="submitButton"><default-field title=""><submit text="Match ${filter?.match == 'any' ? 'all' : 'any'} instead"/></default-field></field>
+                                                    </form-single>
+                                                </widgets>
+                                            </section>
+                                        </container>
+                                        <label text="Some conditions read a source you cannot read: the segment is not evaluated for you." type="p"
+                                                style="text-warning q-px-sm" condition="!filter?.readable"/>
+                                    </widgets>
+                                </section>
+                                <form-list name="Conditions" list="conditionList" skip-form="true" paginate="false">
+                                    <field name="text"><default-field title="Condition"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="RemoveCondition_${index}" button-text="Remove" icon="sym_o_close"
+                                                    title="Remove a condition" width="480" condition="can.canEdit">
+                                                <form-single name="RemoveCondition" transition="storeSegmentFilter"
+                                                        map="{marketSegmentId:marketSegmentId, expectedRevision:segment.revision, filterAction:'removeCondition', index:index}">
+                                                    <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="filterAction"><default-field><hidden/></default-field></field>
+                                                    <field name="index"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title=""><submit text="Remove" type="danger" confirmation="Remove the condition ${text}?"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="text"/></column>
+                                        <column><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <section name="NoFilter" condition="!filter">
+                                    <widgets><label text="No filter: the rules and the included members decide." type="p" style="m-muted q-pa-sm"/></widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Explicit members · ${memberList.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AddSegmentMemberDialog" button-text="Add a member" icon="sym_o_person_add"
+                                title="Add a member to ${segment.segmentName}" width="640" condition="can.canEdit">
+                            <form-single name="AddSegmentMember" transition="storeSegmentMember" map="{marketSegmentId:marketSegmentId, memberKindEnumId:'MspInclude'}">
+                                <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                <field name="partyId">
+                                    <default-field title="Contact">
+                                        <drop-down><dynamic-options transition="contactSearch" server-search="true" min-length="2" parameter-map="{directoryOnly:'Y'}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="memberKindEnumId">
+                                    <default-field title="Member">
+                                        <radio><option key="MspInclude" text="Include"/><option key="MspExclude" text="Exclude, whatever the rules say"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time type="date-time"/></default-field></field>
+                                <field name="thruDate"><default-field title="Until" tooltip="No end when empty"><date-time type="date-time"/></default-field></field>
+                                <field name="comments"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Add member"/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="partyId"/><field-ref name="memberKindEnumId"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="comments"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                            <label text="A member is found by the segment; it is not subscribed to any list." type="p" style="text-caption m-muted"/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SegmentMembers" list="memberList" skip-form="true" paginate="false">
+                            <field name="partyName"><default-field title="Contact"><display/></default-field></field>
+                            <field name="kindText">
+                                <default-field title="Member">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${kindColor}">${WebUtilities.encodeHtml(kindText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(kindText ?? "")})}]]></text>
+                                        <text type="html">${kindText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="comments"><default-field title="Why"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="EndSegmentMember_${partyId}_${roleTypeId}" button-text="End" icon="sym_o_link_off"
+                                            title="End ${partyName}" width="480" condition="can.canEdit">
+                                        <form-single name="EndSegmentMember" transition="storeSegmentMember"
+                                                map="{marketSegmentId:marketSegmentId, partyId:partyId, roleTypeId:roleTypeId, memberAction:'end', expectedRevision:revision}">
+                                            <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                                            <field name="partyId"><default-field><hidden/></default-field></field>
+                                            <field name="roleTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="memberAction"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="End" type="danger" confirmation="End ${partyName}'s membership of ${segment.segmentName}? The row stays in its history."/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyName"/><field-ref name="fromText"/></column>
+                                <column><field-ref name="kindText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoSegmentMembers" condition="!memberList.length">
+                            <widgets>
+                                <label text="No explicit members${segment.segmentKindEnumId == 'MskExplicit' ? ': this segment matches no one until you add some.' : '.'}" type="p" style="m-muted q-pa-sm"/>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="${evaluationTitle}"/>
+                    <box-body-nopad>
+                        <form-single name="EvaluationOptions" transition=".">
+                            <field name="marketSegmentId"><default-field><hidden/></default-field></field>
+                            <field name="show">
+                                <default-field title="Show">
+                                    <drop-down no-current-selected-key="matched" submit-on-change="true">
+                                        <option key="matched" text="Matched"/>
+                                        <option key="excluded" text="Left out"/>
+                                        <option key="all" text="Both"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="asOf"><default-field title="As of" tooltip="Now when empty"><date-time type="date-time"/></default-field></field>
+                            <field name="submitButton"><default-field title=""><submit text="Evaluate"/></default-field></field>
+                            <field-layout><field-row-big><field-ref name="show"/><field-ref name="asOf"/><field-ref name="submitButton"/></field-row-big></field-layout>
+                        </form-single>
+                        <label text="${evaluationRefusal}" type="p" style="text-warning q-pa-sm" condition="evaluationRefusal"/>
+                        <section name="EvaluationRows" condition="evaluation">
+                            <widgets>
+                                <form-list name="Evaluation" list="evaluationList" skip-form="true" paginate="true">
+                                    <field name="partyName"><default-field title="Contact"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="Result">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="partyName"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="NoEvaluation" condition="evaluation &amp;&amp; !evaluationList.length">
+                            <widgets><label text="No one here. A segment finds people; it never subscribes them." type="p" style="m-muted q-pa-sm"/></widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="FilterHistoryBox" condition="filterHistory.length &gt; 1">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Filter history"/>
+                            <box-body-nopad>
+                                <form-list name="FilterHistory" list="filterHistory" skip-form="true" paginate="false">
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="text"><default-field title="Filter"><display/></default-field></field>
+                                    <field name="changedBy"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromText"/><field-ref name="text"/></column>
+                                        <column><field-ref name="changedBy"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

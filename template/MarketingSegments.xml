@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The segment transitions and forms of the IronStone Marketing screens (impl-marketing P5; design-marketing §4 Segments,
+    SegmentDetail): each transition calls Mantle's guarded service (mantle.marketing.SegmentServices, which checks
+    MARKETING_AUDIENCE_VIEW or _EDIT, the segment's organization, the revision read and, for a filter, each source's own read), so a
+    screen that includes one adds no authority. A screen includes each transition it uses by name (transition-include); links go
+    through the root's sharedLinks.
+    - NewSegmentForm: the Segments screen's form (design §4 NewSegment). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new segment: its SegmentDetail, else the list again -->
+    <transition name="createSegment">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.store#Segment" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, segmentName:segmentName, description:(description || null),
+                        segmentKindEnumId:(segmentKindEnumId || null), parentMarketSegmentId:(parentMarketSegmentId || null)}"/>
+            <set field="detailPath" from="sharedLinks['Audiences/SegmentDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Segment ${created.marketSegmentId} created; it subscribes no one</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; created?.marketSegmentId</expression></condition>
+            <parameter name="marketSegmentId" from="created.marketSegmentId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- SegmentHeader: its name, description, kind and parent at the revision read -->
+    <transition name="storeSegment">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.store#Segment"
+                    in-map="{marketSegmentId:marketSegmentId, expectedRevision:expectedRevision, segmentName:segmentName,
+                        description:(description || null), segmentKindEnumId:(segmentKindEnumId || null),
+                        parentMarketSegmentId:(parentMarketSegmentId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Segment saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="archiveSegment">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.archive#Segment"
+                    in-map="{marketSegmentId:marketSegmentId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Segment archived</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a copy: its SegmentDetail -->
+    <transition name="duplicateSegment">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.duplicate#Segment" out-map="copied"
+                    in-map="{marketSegmentId:marketSegmentId, segmentName:(segmentName || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Segment ${copied.marketSegmentId} made as a copy</message></if>
+        </actions>
+        <conditional-response url="."><condition><expression>copied?.marketSegmentId</expression></condition>
+            <parameter name="marketSegmentId" from="copied.marketSegmentId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- NativeRules: one change of a classification, a geography or a dimension's bounds -->
+    <transition name="storeSegmentRule">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.store#SegmentRules"
+                    in-map="{marketSegmentId:marketSegmentId, expectedRevision:expectedRevision, action:ruleAction,
+                        partyClassificationId:(partyClassificationId || null), geoId:(geoId || null),
+                        uomDimensionTypeId:(uomDimensionTypeId || null), uomId:(uomId || null), minValue:(minValue || null),
+                        maxValue:(maxValue || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Rules saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- SavedFilter: add or remove a condition, or choose whether all or any must hold -->
+    <transition name="storeSegmentFilter">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.store#SegmentFilter"
+                    in-map="{marketSegmentId:marketSegmentId, expectedRevision:expectedRevision, action:filterAction,
+                        fieldKey:(fieldKey || null), operator:(operator || null), value:(value ?? null), index:(index ?? null),
+                        match:(match || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Filter saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ExplicitMembers: include or exclude a contact, or end a member -->
+    <transition name="storeSegmentMember">
+        <actions>
+            <service-call name="mantle.marketing.SegmentServices.store#SegmentMember"
+                    in-map="{marketSegmentId:marketSegmentId, partyId:partyId, roleTypeId:(roleTypeId || null), action:(memberAction || 'add'),
+                        memberKindEnumId:(memberKindEnumId || null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        comments:(comments || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${memberAction == 'end' ? 'Member ended' : 'Member saved'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <!-- NewSegment (design §4 NewSegment): a rule or an explicit-member segment of an organization; it subscribes no one -->
+        <section name="NewSegmentForm">
+            <widgets>
+                <form-single name="NewSegment" transition="createSegment" map="newDefaults">
+                    <field name="segmentName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="segmentKindEnumId">
+                        <default-field title="Defined by">
+                            <radio no-current-selected-key="MskRule">
+                                <option key="MskRule" text="Rules and a filter"/>
+                                <option key="MskExplicit" text="The people I choose"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="parentMarketSegmentId">
+                        <default-field title="Inside" tooltip="Only people of this segment can match">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'segments', organizationPartyId:organizationPartyId}">
+                                    <depends-on field="organizationPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="description"><default-field title="Description"><text-area rows="2" cols="60"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Create segment"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="segmentName"/><field-ref name="organizationPartyId"/></field-row>
+                        <field-row><field-ref name="segmentKindEnumId"/><field-ref name="parentMarketSegmentId"/></field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <label text="A segment finds people; it never subscribes anyone. A send still needs each person's accepted membership of its topic."
+                        type="p" style="text-caption m-muted"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

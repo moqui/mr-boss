@@ -34,11 +34,14 @@ const areas = {
     // P2: Approvals, the approvers' (BOSS_MKT_APPROVALS)
     approvals: "Campaigns/Approvals",
     // P3: Audiences (lists, consent, suppressions), the audience managers' (BOSS_MKT_AUDIENCES)
-    audiences: "Audiences"
+    audiences: "Audiences",
+    // P5: AudiencePreview, the audience managers' and, past the area's deny, the authors' and dispatchers'
+    // (BOSS_MKT_AUDIENCE_PREVIEW)
+    audiencePreview: "Audiences/AudiencePreview"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
-const areaReads = {settings: "configure", approvals: "approve", audiences: "audienceRead"}
+const areaReads = {settings: "configure", approvals: "approve", audiences: "audienceRead", audiencePreview: "previewRead"}
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Sales.js): screenAuthz reads the groups' rows once, and screenGrants picks
@@ -89,6 +92,10 @@ function scope() {
     const grants = rootGrants()
     const mantle = grants.read ? marketingAccess.scope() : null
     const capabilities = Object.assign({read: grants.read}, mantle?.capabilities || {})
+    // P5: an audience preview is read by an audience reader, a send author or a dispatcher (design §2 AudiencePreview: A, U, D), as
+    // Mantle's preview#Audience asks
+    capabilities.previewRead =
+        !!capabilities.anyRead && !!(capabilities.audienceRead || capabilities.sendEdit || capabilities.dispatch)
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -148,7 +155,11 @@ const linkPaths = [
     "Audiences/Suppressions",
     "Leads",
     "Leads/Accounts",
-    "QuickCreate/NewList"
+    "QuickCreate/NewList",
+    // P5: segments and the audience preview (design §4)
+    "Audiences/Segments",
+    "Audiences/SegmentDetail",
+    "Audiences/AudiencePreview"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -176,6 +187,7 @@ function sharedContext(p) {
 // that does not exist, one outside the scope and an unowned one alike (RECORD_UNAVAILABLE). P1: an organization, a campaign, a
 // list (not a mailbox) and a segment, each by its organization; later phases add theirs (a send P8, an event P16) and the screens
 // (CampaignDetail P2, ListDetail P3, SegmentDetail P5).
+const segmentLabel = row => row.segmentName || row.description || row.marketSegmentId
 const statusName = statusId => (statusId ? one("moqui.basic.StatusItem", {statusId})?.description || statusId : "")
 const recordKinds = {
     organization: {
@@ -219,12 +231,13 @@ const recordKinds = {
     segment: {
         name: "Segment",
         icon: "sym_o_group_work",
-        destination: null,
+        // P5: SegmentDetail
+        destination: {path: "Audiences/SegmentDetail", parameter: "marketSegmentId"},
         read: (userScope, marketSegmentId) => {
             if (!userScope.capabilities.anyRead) return null
             const row = one("mantle.marketing.segment.MarketSegment", {marketSegmentId})
             if (!row || !covers(userScope, row.ownerPartyId)) return null
-            return {organizationPartyId: row.ownerPartyId, label: row.description || marketSegmentId, detail: "Segment"}
+            return {organizationPartyId: row.ownerPartyId, label: segmentLabel(row), detail: "Segment"}
         }
     }
 }
@@ -371,15 +384,70 @@ const choiceSources = {
         if (term) query = query.condition(textCondition(["contactListId", "contactListName"], term))
         return Array.from(query.list()).map(row => ({value: row.contactListId, label: row.contactListName || row.contactListId}))
     },
+    // P5: the segments are not archived (a parent, a preview's source), excludeId left out, by name; the selected one's label
     segments: (userScope, term, selected, p) => {
         const ids = choiceOrganizations(userScope, p)
         if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
         let query = find("mantle.marketing.segment.MarketSegment")
             .condition("ownerPartyId", "in", ids)
+            .condition(factory.makeCondition("archivedDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^segmentName")
             .orderBy("^description")
             .limit(choiceLimit)
-        if (term) query = query.condition(textCondition(["marketSegmentId", "description"], term))
-        return Array.from(query.list()).map(row => ({value: row.marketSegmentId, label: row.description || row.marketSegmentId}))
+        if (term) query = query.condition(textCondition(["marketSegmentId", "segmentName", "description"], term))
+        if (p.excludeId) query = query.condition("marketSegmentId", "not-equals", p.excludeId)
+        const options = Array.from(query.list()).map(row => ({value: row.marketSegmentId, label: segmentLabel(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => !!recordKinds.segment.read(userScope, id),
+            id => segmentLabel(one("mantle.marketing.segment.MarketSegment", {marketSegmentId: id}))
+        )
+    },
+    // P5: a segment's native rule values, closed or searched lists: party classifications, geographies (countries, states and
+    // groups), dimension kinds and units
+    classifications: (userScope, term, selected) => {
+        let query = find("mantle.party.PartyClassification").orderBy("^description").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["partyClassificationId", "description"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.partyClassificationId,
+            label: row.description || row.partyClassificationId
+        }))
+    },
+    geos: (userScope, term, selected) => {
+        let query = find("moqui.basic.Geo")
+            .condition("geoTypeEnumId", "in", [
+                "GEOT_COUNTRY",
+                "GEOT_STATE",
+                "GEOT_PROVINCE",
+                "GEOT_TERRITORY",
+                "GEOT_REGION",
+                "GEOT_GROUP"
+            ])
+            .orderBy("^geoName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["geoId", "geoName"], term))
+        return Array.from(query.list()).map(row => ({value: row.geoId, label: row.geoName || row.geoId}))
+    },
+    dimensionTypes: (userScope, term, selected) => {
+        let query = find("moqui.basic.UomDimensionType").orderBy("^description").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["uomDimensionTypeId", "description"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.uomDimensionTypeId,
+            label: row.description || row.uomDimensionTypeId
+        }))
+    },
+    units: (userScope, term, selected) => {
+        let query = find("moqui.basic.Uom")
+            .condition("uomTypeEnumId", "not-equals", "UT_CURRENCY_MEASURE")
+            .orderBy("^description")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["uomId", "description", "abbreviation"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.uomId,
+            label: (row.description || row.uomId) + (row.abbreviation ? " (" + row.abbreviation + ")" : "")
+        }))
     },
     // P3: the lists a request may file to (the Sales bulk action, AddMembers): an audience editor's lists of the scope, not archived,
     // never a mailbox, with each one's organization; the selected one's label when it is one of them
@@ -458,6 +526,31 @@ const searchFinds = [
                 url: path + "?marketingCampaignId=" + encodeURIComponent(row.marketingCampaignId),
                 recordEntity: CAMPAIGN,
                 recordId: row.marketingCampaignId
+            }))
+        }
+    },
+    // P5: the segments of the scope by id or name, for an audience reader
+    {
+        kind: "segment",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.audienceRead) return []
+            const ids = organizationIds(userScope)
+            if (!ids.length) return []
+            const path = sharedPath("Marketing", "Audiences/SegmentDetail")
+            return Array.from(
+                find("mantle.marketing.segment.MarketSegment")
+                    .condition("ownerPartyId", "in", ids)
+                    .condition(textCondition(["marketSegmentId", "segmentName", "description"], text))
+                    .orderBy("^segmentName")
+                    .limit(limit)
+                    .list()
+            ).map(row => ({
+                title: segmentLabel(row),
+                subtitle: "Segment · " + organizationName(row.ownerPartyId),
+                icon: recordKinds.segment.icon,
+                url: path + "?marketSegmentId=" + encodeURIComponent(row.marketSegmentId),
+                recordEntity: "mantle.marketing.segment.MarketSegment",
+                recordId: row.marketSegmentId
             }))
         }
     },
