@@ -16,8 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.order.SalesQuoteServices, which checks SALES_QUOTE_EDIT, the selling organization, the assignment and the revision
     itself): createQuote (NewQuote, from Quotes, quick create, OpportunityDetail and Customer360; it opens the new quote's
     OrderDetail), and OrderDetail's quote context: salesStoreLine (a product line or a shipping charge, new or changed),
-    salesDeleteLine and salesUpdateQuote (name, validity, customer reference, address). A screen includes each transition it uses
-    by name. -->
+    salesDeleteLine and salesUpdateQuote (name, validity, customer reference, address); P9: salesRequestApproval and salesDecideQuote
+    (mantle.order.SalesApprovalServices request#QuoteApproval and decide#Quote, each at the revision shown). A screen includes each
+    transition it uses by name. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="createQuote">
         <actions>
@@ -66,5 +67,26 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."><parameter name="orderId"/></error-response>
     </transition>
+    <!-- ===== Sales P9: a quote's approval ===== -->
+    <transition name="salesRequestApproval">
+        <actions>
+            <service-call name="mantle.order.SalesApprovalServices.request#QuoteApproval" out-map="asked"
+                    in-map="{orderId:orderId, orderRevision:orderRevision}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Approval asked of ${asked.notifiedCount || 0} approver(s)</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesDecideQuote">
+        <actions>
+            <service-call name="mantle.order.SalesApprovalServices.decide#Quote"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, salesApprovalPolicyId:(salesApprovalPolicyId || null),
+                        decision:(decision || 'approve'), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'refuse' ? 'Refused' : 'Approved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <!-- ===== end of Sales P9 ===== -->
     <widgets/>
 </screen>

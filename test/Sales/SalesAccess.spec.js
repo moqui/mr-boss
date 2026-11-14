@@ -203,7 +203,8 @@ const capabilityUsers = [
             "settings"
         ])
     },
-    {user: users.approver, granted: ["view", "orderApprove", "anyRead"]},
+    // P9: the approver holds SALES_APPROVE (F43)
+    {user: users.approver, granted: ["view", "orderApprove", "approve", "anyRead"]},
     {user: users.change, granted: ["view", "anyRead"]},
     {user: users.agreement, granted: ["view", "agreementEdit", "recurrenceManage", "anyRead"]},
     {user: users.reader, granted: ["view", "teamView", "reportView", "anyRead", "teamRead", "reportRead", "reports"]},
@@ -543,3 +544,41 @@ feature(
         }
     }
 )
+
+// P9 (impl-sales P9, F43): Approvals is the sales approver's, and deciding a quote needs SALES_APPROVE and a quote of the approver's
+// organization; the approver's own decision of a quote is SalesApprovals'
+feature("Approvals and a quote's decision are a sales approver's, of their organization", {
+    when() {
+        const problems = []
+        const tabs = user => shell(user, true, "Quotes/Quotes", "Quotes").names
+        if (JSON.stringify(tabs(users.approver)) !== JSON.stringify(ids.approverQuotesMenu))
+            problems.push(`the approver's Quotes tabs: ${tabs(users.approver)}`)
+        if (JSON.stringify(tabs(users.rep)) !== JSON.stringify(ids.quotesMenu))
+            problems.push(`the rep's Quotes tabs: ${tabs(users.rep)}`)
+        const approverList = screenRefusal(users.approver, "Quotes/Approvals")
+        if (approverList) problems.push(`the approver's Approvals: ${approverList}`)
+        const repList = screenRefusal(users.rep, "Quotes/Approvals")
+        if (!/^40[13] |is not authorized|PERMISSION_DENIED/.test(repList))
+            problems.push(`the rep opens Approvals: ${repList || "opened"}`)
+        // the same parameters: a stale revision, so neither call could write; the rep is refused for the permission first. The
+        // service as the user through no screen, authorization off as the root's grant lets its screens call it
+        const decide = (user, orderId) =>
+            asUser(user, () =>
+                system(() =>
+                    refusal("mantle.order.SalesApprovalServices.decide#Quote", {orderId, orderRevision: "0", reason: "Spec"})
+                )
+            )
+        const repDecide = decide(users.rep, ids.quotes.wingtip)
+        if (!repDecide.includes("PERMISSION_DENIED")) problems.push(`the rep decides: ${repDecide || "decided"}`)
+        const approverDecide = decide(users.approver, ids.quotes.wingtip)
+        if (!/REVISION_CHANGED|RECORD_UNAVAILABLE/.test(approverDecide))
+            problems.push(`the approver's stale decision: ${approverDecide || "decided"}`)
+        const otherDecide = decide(users.approver, ids.quotes.fabrikam)
+        if (!otherDecide.includes("RECORD_UNAVAILABLE"))
+            problems.push(`the approver decides Ziziwork Sales' quote: ${otherDecide || "decided"}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

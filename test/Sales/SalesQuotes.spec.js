@@ -33,6 +33,8 @@ feature(
             own.output.includes("No tax: the seller has no tax gateway")
             own.output.includes("SalesQuoteChatter")
             own.output.includes("SalesQuoteFiles")
+            // P9: the Approval box, Retail's discount rule met by the entered refit price
+            own.output.includes("Discount at or beyond")
             !own.output.includes("Standard estimate")
             !own.output.includes("Margin")
             storeless.errors.length == 0

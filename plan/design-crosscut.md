@@ -1606,13 +1606,16 @@ Commons §4 seeds seventeen further topics, each approved and refused by its dom
 | `PeopleTrainingApproval` | People | training enrollment | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
 | `PeopleReviewStep` | People | performance review step | proposed `mantle.humanres.ReviewServices.change#ReviewState` |
 | `PayrollRunApproval` | People | payroll run | proposed `mantle.humanres.PayrollRunServices.approve#Run`; refuse through proposed `return#Run` |
-| `SalesQuoteApproval` | Sales | quote at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote`; the topic is Mantle's, seeded beside `OrderChangeApproval` (impl-sales P9, F26) |
+| `SalesQuoteApproval` | Sales | quote at its commercial revision | `mantle.order.SalesApprovalServices.decide#Quote`, through the topic's `approve#QuoteMessage` and `refuse#QuoteMessage` at the message's revision; the topic is Mantle's, seeded beside `OrderChangeApproval`, its title naming the quote, the customer and the kinds of its rules, never an amount (as built, impl-sales P9, F26) |
 | `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval`; the topics are seeded with Marketing's setup data, each with a registration naming `MARKETING_APPROVE` (impl-marketing P2, F42) |
 | `ResourceBooking` | Maintenance | booking request for a managed meeting room or equipment | proposed `mantle.work.ResourceBookingServices.decide#ResourceBooking` |
 | `WorkProcessApproval` | Maintenance | work process (procedure) definition | proposed `mantle.work.ProcessServices.approve#WorkProcess` |
 
 People's eleven follow People's ApprovalPolicies (PE-15 owns the routing). Sales mounts
-`OrderChangeApproval` beside its own topic. Each topic sets a push policy with a lock-screen-safe
+`OrderChangeApproval` beside its own topic. A notification has one link for all its recipients, so `OrderChangeApproval`'s link is
+Commons' `openRecord` link of the change request, resolved per recipient by `PaletteServices.get#RecordLink`: Customer Service's
+OrderChangeDetail for one who works orders there, Sales' Approvals for a sales approver of a commercial kind (Sales' own
+OrderChangeDetail from impl-sales P14) (as built, impl-sales P9, F58). Each topic sets a push policy with a lock-screen-safe
 title; People topics push a generic title with no person or amount. The topic seed rows are listed
 in Commons §4.
 
@@ -1626,7 +1629,7 @@ in Commons §4.
 | Customer Service | Order-change and return exceptions | service topics of the organization | decide per policy | customer promise |
 | People (`People/Approvals`) | Leave, attendance corrections, expenses and advances, positions, offers, employment changes, pay adjustments, training, review steps and payroll runs | actor’s assigned People topics and scoped employer; current source revision | domain decide/approve service per record; no self-approval or missing-approver auto-approval | entitlement, confidentiality and exact pay/claim facts |
 | Maintenance | Booking decisions in BookingRequests and process publication in ProcedureDetail, also Commons inbox cards | ResourceBooking and WorkProcessApproval; current assigned resource/process authority and source state | proposed decide#ResourceBooking or approve#WorkProcess; changed booking span/policy rechecks approval | domain queues and common inbox use the same guarded decision; no duplicate approval lifecycle |
-| Sales (`Sales/Quotes/Approvals`) | Quote/discount exceptions and commercial order changes | SalesQuoteApproval and OrderChangeApproval of the selling organization; current source revision | approve or refuse through `SalesQuoteServices.decide#Quote` or `OrderChangeServices.decide#OrderChange`; no self-approval unless policy allows | price and margin exceptions |
+| Sales (`Sales/Quotes/Approvals`) | Quote/discount exceptions and commercial order changes | SalesQuoteApproval and OrderChangeApproval of the selling organization; current source revision | approve or refuse through `SalesApprovalServices.decide#Quote` or `OrderChangeServices.decide#OrderChange`; no self-approval unless policy allows | price and margin exceptions |
 | Marketing (`Marketing/Campaigns/Approvals`) | Campaign, send and sequence approvals | MarketingCampaignApproval, MarketingSendApproval and MarketingAutomationApproval of the authorized organizations; current target stamp | approve or refuse through `mantle.marketing.CampaignServices.decide#MarketingApproval`; self-approval only under MarketingPolicy's one-person-team flag, off by default, and for a send to fewer than 500 recipients, recorded as a self-approval (impl-marketing §4) | what will be sent, to how many, and when |
 
 ### 3.16 InvoiceDetail

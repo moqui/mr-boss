@@ -2242,6 +2242,23 @@ remain historical; these rows add no implementation claim.
 | product/PriceServices | get#SellerProductPrice | — (Sales' quote lines) | SalesQuotes.js (store#QuoteLine, explain#QuoteLinePrice; no screen) |
 | other/TaxServices | check#OrderTaxGateway | — (the order rules, X1) | OrderServices handle#OrderItemChange, handle#OrderPartChange, handle#OrderMajorChange (no screen) |
 
+### Added in the Sales build: defaults, approval policies and approvals (P9, Nov 13, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesApprovalServices | store#SalesPolicy | Sales/Settings/SalesDefaults | Sales/Settings/SalesDefaults (Publish new defaults, its preview) |
+| order/SalesApprovalServices | get#SalesPolicy | Sales/Settings/SalesDefaults | Sales/Settings/SalesDefaults (In effect, Scheduled and earlier, Commercial revision) |
+| order/SalesApprovalServices | store#SalesCommercialRevision | — (SalesDefaults sets X2's flag, impl-sales §4) | Sales/Settings/SalesDefaults (Commercial revision) |
+| order/SalesApprovalServices | store#SalesApprovalPolicy | Sales/Settings/ApprovalPolicies (ApprovalRules) | Sales/Settings/ApprovalPolicies (New rule, Edit, End) |
+| order/SalesApprovalServices | find#SalesApprovalPolicies | Sales/Settings/ApprovalPolicies (ApprovalRules) | Sales/Settings/ApprovalPolicies (Rules) |
+| order/SalesApprovalServices | preview#Quote | Sales/Settings/ApprovalPolicies (ApprovalPreview); Sales/Orders/OrderDetail | Sales/Settings/ApprovalPolicies (the approval of a quote named); Shared/OrderDetail (Sales: the Approval box, through get#Quote's approval) |
+| order/SalesApprovalServices | request#QuoteApproval | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Ask for approval) |
+| order/SalesApprovalServices | decide#Quote | Sales/Quotes/Approvals; Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Approve, Refuse); the SalesQuoteApproval topic's handlers below |
+| order/SalesApprovalServices | approve#QuoteMessage, refuse#QuoteMessage | Sales/Quotes/Approvals | Sales/Quotes/Approvals and Commons/Notifications (the SalesQuoteApproval topic's approve and refuse) |
+| order/SalesApprovalServices | handle#SalesApprovalRevision | — (the OrderRevisionSalesApproval SECA on increment#OrderRevision) | no screen |
+| order/SalesApprovalServices | check#SalesPreApprove | — (the OrderPreApproveSales SECA on check#OrderPreApprove) | no screen (autoApprove#Order) |
+| order/SalesQuoteServices | propose#Quote | Sales/Orders/OrderDetail | — (its approval guard, P9; OrderDetail's Propose is P10's) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section

@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     BOSS_SAL_REPORTS), P2 Settings (BOSS_SAL_SETTINGS), P3 Accounts, P4 Pipeline (Opportunities and Leads, a Sales reader's); each later
     phase adds its area, and the design's later entries stay absent. P6: Home's work, QuickCreate, LogNote and SendMessage (hidden
     from the menu), and the shell's quick create, Today and Assist providers. P7: Quotes (a Sales reader's), the Orders area with its one
-    OrderDetail route and Products' screens in Sales' context (both hidden from the menu until P11 shows Orders), quick create's Quote. -->
+    OrderDetail route and Products' screens in Sales' context (both hidden from the menu until P11 shows Orders), quick create's Quote.
+    P9: Quotes' Approvals tab (a sales approver's), Settings' Defaults and Approval rules, the approval topics. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
 
@@ -126,6 +127,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P7: a quote over NewQuote (Sales/QuickCreate/NewQuote) -->
         <quick-create kind="salesQuote" label="Quote" icon="sym_o_request_quote" screen="Sales/QuickCreate/NewQuote" sequence="92"/>
         <today-source service="ironstone.sales.ContextServices.get#TodayItems" label="Sales"/>
+        <!-- P9: the approval topics a sales approver decides (Sales/Quotes/Approvals): a quote's exception and a commercial order change -->
+        <notification-topic topic="SalesQuoteApproval"/>
+        <notification-topic topic="OrderChangeApproval"/>
         <!-- P6 (design §1.4 CX-ASSIST): Assist's chips on OpportunityDetail and Customer360 (each also needs its screen's grant) and its
             answer actions, filed through Sales' own record check: Log as note on the page's deal or account, Send as message (Comms'
             internal message, filed on the page's record when Sales admits the user to it) -->
