@@ -412,7 +412,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | built and reviewed Nov 13, merged |
 | P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | built and reviewed Nov 13, merged |
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | built and reviewed Nov 14, merged |
-| P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | — |
+| P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | built and reviewed Nov 14, merged |
 | P5 Segments and audience preview | Mantle, BOSS | Segments, SegmentDetail, AudiencePreview | — |
 | P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | — |
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | — |
@@ -1361,7 +1361,7 @@ mr-moqui unchanged, no Rust built.
 - Inventories: usl-inventory's ContactImportServices rows and a Marketing P4 block; ss-inventory has no row for P4's screens.
 - Design edits: design-marketing §4 (as built); design-admin §11.1's Marketing row (owner contract: the runs finder, permissions and
   the export target).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F132 to F139 in order:
   - the merge is of lists only; party-merge guards (F82) stay P19's, and P4 needed nothing of them;
   - the import matches by the list channel's address alone and never uses a personal contact, the importer's own included (P3's
     request#Subscriptions admits the caller's own personal contact); a row matching only someone's personal contact makes a new
@@ -1436,7 +1436,7 @@ master had nothing newer to merge in either repository.
   - R4 (Low) `export#MemberTransfer` gave the address to any caller asking the field (run#Export gates it, but the service is every
     user's); it now also asks the audience view. `merge#Lists` got a transaction timeout of 1,800 s (up to 2,000 members, each in
     its own transaction under the service's).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F140 to F143 in order:
   - Built finding 5, the user's call: a merge carries an acceptance as a grant of the target list when a same-purpose source list
     has a grant. Design §4 says target-list consent is required independently and evidence of another topic is not a grant, and
     design §4 (Segments: "a subscription topic represented by a non-MAILBOX ContactList") calls a list a topic, so a literal reading files every carried member pending; the build's reading (topic as purpose)
@@ -2373,6 +2373,18 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F129 | P3 (Review Nov 14): a Sales record of one organization may be filed to a list of another when the caller holds both (Sales there, Marketing here); nothing requires the lead's or account's organization to be the list's; left as built (the caller sees both) | P3: as its Review note says |
 | F130 | P3 (Review Nov 14): Comms' Consent/Contact for a Marketing consent editor of several organizations shows the global purpose states only (the scoped state is asked for one organization); history and lists are theirs; a display gap, no disclosure | P3: as its Review note says |
 | F131 | P3 (Review Nov 14): a contact with only a scoped consent appears in a contact administrator's registry with no purpose state (its scoped rows hidden) | P3: as its Review note says |
+| F132 | P4 (Built Nov 14): the merge is of lists only; party-merge guards (F82) stay P19's, and P4 needed nothing of them | P4: as its Built note says |
+| F133 | P4 (Built Nov 14): the import matches by the list channel's address alone and never uses a personal contact, the importer's own included (P3's request#Subscriptions admits the caller's own personal contact); a row matching only someone's personal contact makes a new directory contact with the same address | P4: as its Built note says |
+| F134 | P4 (Built Nov 14): the import calls neither `preview#Contacts` nor `import#Contacts` (name matching; contact books), using their parser and `match#Contact`/`import#ContactRow` (the code over the plan above) | P4: as its Built note says |
+| F135 | P4 (Built Nov 14): a row's request is filed in the row's transaction through `file#SubscriptionRequest` rather than through request#Subscriptions' per-item new transaction (the code over the plan above); the exactly-once rule is the locked item | P4: as its Built note says |
+| F136 | P4 (Built Nov 14): a merge carries an acceptance only for a source of the target's purpose with a list grant (a legacy member with no evidence and a member of another purpose are filed pending), and only for a consent editor; a member withdrawn from any source is not carried even when accepted on another (the withdrawal wins over the preview's other sources) | P4: as its Built note says |
+| F137 | P4 (Built Nov 14): error rows are downloadable only while the staged file is kept (30 days); the demo import has no staged file and offers none | P4: as its Built note says |
+| F138 | P4 (Built Nov 14): the membership export's view permission (who reads others' export records) is MARKETING_AUDIENCE_EXPORT; Marketing has no screen of export records, so they are read in Admin's Exports by its own permissions | P4: as its Built note says |
+| F139 | P4 (Built Nov 14): `./moq run lint --screens --release --nobuild` passed `--nobuild` to moqui and rebuilt the shared release binary (from master's sources; 3 m 43 s) before failing; lint was then run with the binary directly. The brief's lint command should be `target/release/moqui lint --screens` with the runtime | P4: as its Built note says |
+| F140 | P4 (Review Nov 14): Built finding 5, the user's call: a merge carries an acceptance as a grant of the target list when a same-purpose source list has a grant. Design §4 says target-list consent is required independently and evidence of another topic is not a grant, and design §4 (Segments: "a subscription topic represented by a non-MAILBOX ContactList") calls a list a topic, so a literal reading files every carried member pending; the build's reading (topic as purpose) keeps a consolidation of like lists usable. Left as built, the evidence text naming the source list | P4: as its Review note says |
+| F141 | P4 (Review Nov 14): request#Subscriptions (P3) admits the caller's own personal contact onto an organization's list, which the import refuses for the reason above; aligning P3 (refuse personal contacts there too) is suggested | P4: as its Review note says |
+| F142 | P4 (Review Nov 14): an import stuck in Applying past its expiry has its file purged and its remaining rows stay not applied, shown so, with no retry; import the file again | P4: as its Review note says |
+| F143 | P4 (Review Nov 14): `get#AudienceImport` names a matched party to an importer by the file's address (a directory lookup by address), as P3's request screens name parties; noted, not changed | P4: as its Review note says |
 
 ## 7. Later
 
