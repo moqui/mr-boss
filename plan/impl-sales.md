@@ -336,7 +336,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | built and reviewed Nov 13, merged |
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | built and reviewed Nov 14, merged |
-| P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | — |
+| P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | built and reviewed Nov 14, merged |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | — |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | — |
@@ -3067,7 +3067,7 @@ Rust built.
   CloseOrdersForm and OrderList and OrderDetail CloseOrderPartItems, AuditLogList, HeaderForm and SendPlacedEmailForm rows (Sales P11).
 - Design edits: design-sales §6 "As built (impl-sales P11)". design-commerce §13 and design-crosscut (`OrderPlacedAutoApprove`,
   CX-ORDER-AUTHORITY) already say what P11 built; design-shop (mr-pass) is not edited (no mr-pass worktree; see For the lead).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F197 to F205 in order:
   - `approve#SalesOrder` records the order rules' decisions with the seller's setting off too (an ORDER_APPROVE approver, separation
     applied), while a direct `approve#Order` with the setting off ignores the order rules as before (P9); Sales' Approve is stricter
     than the native one there;
@@ -3160,7 +3160,7 @@ each first without conflict (mr-mantle 4a9d9ad3, mr-boss b69ab77b), against P11,
   - R2 (low, spec coverage): SalesOrderApproval checked neither no self-approval nor the system claim being cleared; it now checks that
     an approver who owns, entered and placed an order is refused SELF_APPROVAL by its order rule (the order stays placed), and that no
     claim is left in the shared map after the net-terms approval. The batch check names a refused row's reason.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F206 to F211 in order:
   - with the seller's setting on and no order rule the order meets, `approve#SalesOrder` and `approve#Order` admit the order's own
     owner who holds SALES_ORDER_APPROVE: separation is per rule (design §5), so the setting alone forces a manual approval but not a
     second person;
@@ -3832,6 +3832,21 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F194 | P10 (Review Nov 14): `applyQuoteBatch` makes its operation key on the server, so a double submit of the batch is two batches (the ledger and the states keep it from sending twice: a sent recipient is skipped, a withdrawn quote refused) | P10: as its Review note says |
 | F195 | P10 (Review Nov 14): Marketing P3's suppression at the attempt reads the organization from the delivery's store; a quote or reminder delivery has none, so only blocks of every organization apply to it, not the selling organization's own | P10: as its Review note says |
 | F196 | P10 (Review Nov 14): the Built note's findings stand | P10: as its Review note says |
+| F197 | P11 (Built Nov 14): `approve#SalesOrder` records the order rules' decisions with the seller's setting off too (an ORDER_APPROVE approver, separation applied), while a direct `approve#Order` with the setting off ignores the order rules as before (P9); Sales' Approve is stricter than the native one there | P11: as its Built note says |
+| F198 | P11 (Built Nov 14): an order approver who is not assigned sees an order only while it is Placed or held, so cannot place a Manual hold on an approved order of another rep unless they also hold SALES_TEAM_VIEW (the demo's BOSS_SALES_APPROVE does not) | P11: as its Built note says |
+| F199 | P11 (Built Nov 14): the hold organization check reads the user's own organizations (rollup children included), not the active one; a Customer Service operator who works for a parent organization holds a child's order as before | P11: as its Built note says |
+| F200 | P11 (Built Nov 14): the storeless confirmation goes only for Sales' own storeless orders (a direct order, an accepted quote); Projects' storeless orders and Customer Service's replacements send none; the demo seller Retail has no primary email, so its confirmations fail and wait until it has one (P10's R1 rule), as its quote mail does | P11: as its Built note says |
+| F201 | P11 (Built Nov 14): find#SalesOrders' To fulfill, Part fulfilled and To invoice read the distinct order ids of every shipment source and billing row before the scoped query; fine for the demo, a subquery when volumes grow; the Awaiting approval list runs check#OrderPreApprove for each row of its page | P11: as its Built note says |
+| F202 | P11 (Built Nov 14): Fulfillment and Invoices and payments list rows without links until P14 mounts ShipmentDetail and InvoiceDetail; Print of an order and the Agreements and Changes tabs are not built (P14, P15) | P11: as its Built note says |
+| F203 | P11 (Built Nov 14): a placed quote opens in the order context, so its Issues and responses are no longer shown there (the accepted evidence is a line of the header and Overview) | P11: as its Built note says |
+| F204 | P11 (Built Nov 14): `get#Opportunity`'s `orders` output is no longer read by OpportunityDetail (Orders from find#SalesOrders); left for other readers | P11: as its Built note says |
+| F205 | P11 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the order verbs; P11 had no mr-moqui worktree | P11: as its Built note says |
+| F206 | P11 (Review Nov 14): with the seller's setting on and no order rule the order meets, `approve#SalesOrder` and `approve#Order` admit the order's own owner who holds SALES_ORDER_APPROVE: separation is per rule (design §5), so the setting alone forces a manual approval but not a second person | P11: as its Review note says |
+| F207 | P11 (Review Nov 14): hold#Order's direction check (a Purchase reason only on a purchase part, HOLD_TYPE_DIRECTION) applies to a call with no user too; nothing places one so today | P11: as its Review note says |
+| F208 | P11 (Review Nov 14): the hold organization check reuses FacilityScope, so a holder of FACILITY_ALL_ORGANIZATIONS (Warehouse's) holds and releases a Manual or Change hold of any organization's order | P11: as its Review note says |
+| F209 | P11 (Review Nov 14): with the setting on, the native `approve#Order` answers an order outside the approver's sales scope ORGANIZATION_DENIED, not as missing (only to a holder of SALES_ORDER_APPROVE) | P11: as its Review note says |
+| F210 | P11 (Review Nov 14): SalesOrderApproval's batch feature failed once (successCount 1) on the first run after the master merge with StorelessOrderConfirmation beside it, and passed in the five runs after; no cause found | P11: as its Review note says |
+| F211 | P11 (Review Nov 14): the Built note's findings stand. On its first two: Sales' Approve deciding the order rules with the setting off is right to keep (the rule is the seller's ask for separation and leaves an audit of who decided; the native path stays as built, the owner contract); for the unassigned approver, recommend read-only sight of an order they decided (an OrderDecision of theirs), not the organization's approved orders, so they can follow it without SALES_TEAM_VIEW | P11: as its Review note says |
 
 ## 7. Later
 
