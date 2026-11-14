@@ -699,6 +699,8 @@ feature("a customer agreement is the keeper's to change and its organization's t
         keeper.includes("REVISION_CHANGED")
         repSees == true
         otherSees == false
+    }
+})
 
 // P13 (impl-sales P13): inviting a customer's contact to PASS Sales is a holder of SALES_CUSTOMER_INVITE's, for an account of their
 // organization: with the same parameters (an address that is not the contact's, so nothing is written), the manager reaches the
