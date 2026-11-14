@@ -1,0 +1,70 @@
+{
+  "id": "boss-sales-quotes-expiring",
+  "type": "alert",
+  "title": "Quotes expiring",
+  "body": {
+    "description": "Fires when open quotes (drafts, requested and proposed, not placed) are valid through a date within the next 7 days, by owner, among the quotes its owner's sales scope reads (their own and their teams', or their organizations' for a holder of SALES_TEAM_VIEW). A template: copy it in Insights › Business alerts, set the days (the query's thru, now+7d), the threshold and the audience, then activate it; it tells its subscribers when it starts firing, not at every check.",
+    "query": {
+      "datasetId": "mantle-sales-quotes",
+      "from": "now",
+      "thru": "now+7d",
+      "aggregations": [
+        {
+          "id": "owner",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "ownerPartyId",
+            "size": 50
+          }
+        },
+        {
+          "id": "quotes",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "orderId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "field": {
+              "name": "statusId",
+              "op": "in",
+              "values": [
+                "OrderOpen",
+                "OrderBeingChanged",
+                "OrderRequested",
+                "OrderProposed"
+              ]
+            }
+          },
+          "label": "Open"
+        }
+      ]
+    },
+    "field": "quotes",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "sales",
+      "severity": "warning"
+    }
+  }
+}
