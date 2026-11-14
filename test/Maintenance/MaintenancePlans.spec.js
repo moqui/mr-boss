@@ -126,8 +126,14 @@ feature(
             const work = asUser(users.planner, () =>
                 page("Preventive/Plans/PlanDetail/GeneratedWork", Object.assign({lastStandalone: "true"}, plan))
             )
+            // the period ends before November's due date (2026-11-14 09:00): to now, it is outstanding once that has passed and the
+            // demo's fixed dates read one of four
             const report = asUser(users.planner, () =>
-                page("Reports/PreventiveComplianceReport", {lastStandalone: "true", fromDate: "2026-08-01"})
+                page("Reports/PreventiveComplianceReport", {
+                    lastStandalone: "true",
+                    fromDate: "2026-08-01",
+                    thruDate: "2026-11-13"
+                })
             )
             const policy = asUser(users.admin, () =>
                 page("Settings/WorkPolicy", {lastStandalone: "true", organizationPartyId: ids.organizationId})

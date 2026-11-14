@@ -2,7 +2,7 @@
 // authorization on: maint.resources registers a compressor under a room, records its hour meter, moves a room under another floor
 // after the effect preview, changes a custodian from a date and prints two asset tags; a scanned tag opens EquipmentDetail for
 // maint.reader; Retail's planner (maint.retail) sees none of it; Warehouse's and Manufacturing's EquipmentDetail are unchanged
-// (their contexts, no Maintenance tab). The rules are MaintenanceAccess's, MaintenanceEquipment's and Mantle's
+// (their contexts, no Maintenance tab). The rules are MaintenanceRecordAccess's, MaintenanceEquipment's and Mantle's
 // MaintenanceResources.
 // Run: ./moq accept mr-boss --spec MaintenanceEquipmentWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")

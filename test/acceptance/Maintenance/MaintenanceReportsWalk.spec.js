@@ -7,7 +7,7 @@
 // obligation of the air handler's filter plan is past due, and not again at the next check. The occurrence's due date (and, when
 // the plan has none open, October's skipped one's status) is moved here and put back at the end, and the copied rule is deleted,
 // so the demo data is left as it was. The rules are Mantle's MaintenanceReports and BOSS's MaintenanceReports and
-// MaintenanceAccess. Written with P17, not run as part of it.
+// MaintenanceRecordAccess. Written with P17, not run as part of it.
 // Run: ./moq accept mr-boss --spec MaintenanceReportsWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

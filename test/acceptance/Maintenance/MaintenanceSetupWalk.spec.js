@@ -4,7 +4,7 @@
 // until then, the new one is listed as planned) and sees the missing labor costing rate in Readiness, with its place in Accounting;
 // maint.resources imports twelve pieces of equipment with their starting run hours through Equipment import, one row refused
 // (another organization's location) and downloadable in the error file, the eleven with one starting reading each; and Admin's Imports lists the run for a data operator of Services who also holds MAINTENANCE_RESOURCE_VIEW. The rules are Mantle's
-// MaintenanceImport and BOSS's MaintenanceSettings and MaintenanceAccess.
+// MaintenanceImport and BOSS's MaintenanceSettings and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenanceSetupWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

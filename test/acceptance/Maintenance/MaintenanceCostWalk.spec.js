@@ -5,7 +5,8 @@
 // maint.cost reads its parts, labor and outside service with their sources on WorkOrderDetail's Costs tab and in
 // MaintenanceCostReport (with its CSV), labor at Services' costing rate of the technician's class and never the person's own rate;
 // the planner's WorkOrderDetail has no Costs tab and the tab and the report are refused to them; and the support project's money
-// shows the repair as a project cost. The rules are Mantle's MaintenanceCosts and BOSS's MaintenanceCosts and MaintenanceAccess.
+// shows the repair as a project cost. The rules are Mantle's MaintenanceCosts and BOSS's MaintenanceCosts and
+// MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenanceCostWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page, screenRefusal, shell} = lib

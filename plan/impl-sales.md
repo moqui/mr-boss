@@ -5803,6 +5803,46 @@ Rust built. A test-stability fix, no product code changed.
     rule in MaintenanceRecordAccess instead) and the eight Maintenance specs' header lines.
   - Nothing needs the user's call.
 
+**Review Nov 14 (follow-up 3).** Master was not newer than `sal/fix3` in either repository; nothing merged.
+- Checked and sound:
+  - The diagnosis holds. `OrderPlacedSalesConfirmation` (tx-commit, on a worker) calls `send#OrderConfirmation`, whose build
+    stores the confirmation once (`storeOf`: one `create#OrderContent` under the order's lock). `OrderContentRevision` raises the
+    revision in that same transaction where the seller counts every change. So once the row can be seen, the bump has been
+    committed with it, and the wait covers it. Nothing else the confirmation does touches the order. A second confirmation, from
+    the approval's own rule, finds the stored row and adds none. Reading the revision just before approving is already what the
+    feature does (the keys are read right before `apply#SalesOrderBatch`). The race is the worker landing between that read and the
+    batch's check, so reading later would not close it. A retry on REVISION_CHANGED would hide a real revision bug. Waiting on the
+    order's own stored row is the right fix: it is bounded (10 s, then it fails naming the order) and does not wait for the shared
+    pool. When the pool is empty, `waitWorkerPoolEmpty(1)` returns at once, so a confirmation that is never stored polls the count
+    for the 10 s before failing. That only happens on the failure path, and it is acceptable.
+  - No product change, and no product bug hidden: with `salesCommercialRevisionOnly` N, counting a stored file is the documented
+    rule. A seller who acts on a revision read before the confirmation landed is asked to reload.
+  - MaintenanceAccess split: the 28 feature names are the same as master's, and each body is unchanged apart from prettier line
+    wrapping (compared block by block). No feature reads another's state: no module-level `let`, and the only cache is `shellData`
+    per demo user, read only. Each spec declares only the helpers it uses (`deviceRequest` is in both, as spec-local). The headers
+    say where a later case goes. No screen render was added. Both specs are well under 15 s.
+- Fixed:
+  - R1 (low, test): MaintenancePlans' P14 feature failed on master from 09:00 America/Chicago on Nov 14, 2026. The demo's November
+    filter-change obligation is due 2026-11-14 09:00 (fixed demo date). PM compliance's period defaults to now, so once that time
+    has passed the obligation is outstanding rather than upcoming, and the report reads 25% (one of four) instead of 33.3%. It is
+    date-dependent, not a product fault. The feature now asks for the period `thruDate` 2026-11-13, which keeps November out on any
+    date. It failed before the change and passed after.
+  - R2 (low, docs): the acceptance walks that named MaintenanceAccess for a record rule (Cost, CustomerRepair, Equipment, Intake,
+    Parts, Plans, Preventive, Procedures, Purchase, Reports, Setup, Stack) now name MaintenanceRecordAccess, as the regression
+    headers do. Only comments changed. Dispatch (P8 team defaults), Foundation and AccessWalk keep MaintenanceAccess.
+  - R3 (low, comment): SalesOrderApproval's `confirmed` comment said B and C count every change. Only B does: the fixtures set C,
+    like A, to commercial changes only. The Built note above has the same slip.
+- Provisional findings (for the lead to number):
+  - MaintenancePlans' P14 feature depended on the clock (R1). Other Maintenance specs and walks that assert outcomes around the
+    demo's fixed November dates may turn the same way as the calendar moves. None other was seen failing today.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, machine load around 16): mr-boss MaintenanceAccess and
+  MaintenanceRecordAccess 28 of 28 four times (feature time 4.9 s and 6.1 s in the measured run; 12 to 20 s for both together under
+  load); MaintenancePlans 3 of 3 after R1 (2 of 3 before); mr-mantle SalesOrderApproval 4 of 4 three times (batch feature 0.9 to
+  1.0 s). Prettier clean on the changed specs (three acceptance walks have earlier code-line warnings, untouched). Not run:
+  test-apps, test-framework, acceptance.
+- For the lead: no budget change; merge hot spots are those of the Built note plus `MaintenancePlans.spec.js`'s P14 report call and
+  the twelve acceptance headers. Nothing needs the user's call.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or
