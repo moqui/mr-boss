@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     whose service fails says so alone. P1's one answered source is Attention's records awaiting adoption, the administrator's. A
     Marketing user who reads nothing of Marketing (an edit permission alone) is told what Home holds. P2: New campaign (the author's
     primary action), the running campaigns and pending approvals cards opening their lists, the campaign windows of the next 60 days
-    and the approvals awaiting the approver; the period and mine or team filters wait for more sources. -->
+    and the approvals awaiting the approver; the period and mine or team filters wait for more sources. P9: the sends due (released and
+    due within a day, or sending) and the failed or uncertain deliveries cards opening Sends, the scheduled sends in Upcoming opening each
+    SendDetail, and a dispatcher's attention rows for a send with a failed or uncertain delivery opening its CampaignDelivery. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -52,18 +54,19 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index'],
                 marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: sharedLinks['Campaigns/Approvals'],
                 marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults'],
-                marketingLists: sharedLinks['Audiences/Lists']}"/>
+                marketingLists: sharedLinks['Audiences/Lists'], marketingSends: sharedLinks['Sends/Sends'],
+                marketingSend: sharedLinks['Sends/SendDetail'], marketingDelivery: sharedLinks['Sends/CampaignDelivery']}"/>
         <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
         <set field="stateText" from="{available: 'Available', notAvailable: 'Not available', failed: 'Could not be read'}"/>
         <set field="cardRows" from="Array.from(homeFound?.cards || []).map(card =&gt; Object.assign({}, card, {
                 shown: card.state === 'available' ? String(card.value ?? '') : stateText[card.state] || card.state,
                 cardUrl: card.linkPath ? places[card.linkPath] || null : null}))"/>
         <set field="upcomingRows" from="Array.from(upcomingFound?.rows || []).map(row =&gt; Object.assign({}, row, {
-                rowUrl: row.route &amp;&amp; places[row.route] ? places[row.route] + (row.recordId ? '?marketingCampaignId=' + encodeURIComponent(row.recordId) : '') : null}))"/>
+                rowUrl: row.route &amp;&amp; places[row.route] ? places[row.route] + (row.recordId ? '?' + (row.recordParameter || 'marketingCampaignId') + '=' + encodeURIComponent(row.recordId) : '') : null}))"/>
         <set field="upcomingSources" from="Array.from(upcomingFound?.sources || []).map(source =&gt; Object.assign({}, source, {
                 shown: stateText[source.state] || source.state}))"/>
         <set field="attentionRows" from="Array.from(attentionFound?.rows || []).map(row =&gt; Object.assign({}, row, {
-                actionUrl: row.route ? places[row.route] || null : null}))"/>
+                actionUrl: row.route &amp;&amp; places[row.route] ? places[row.route] + (row.recordParameter &amp;&amp; row.recordId ? '?' + row.recordParameter + '=' + encodeURIComponent(row.recordId) : '') : null}))"/>
         <set field="attentionSources" from="Array.from(attentionFound?.sources || []).filter(source =&gt; source.state !== 'available')
                 .map(source =&gt; Object.assign({}, source, {shown: stateText[source.state] || source.state}))"/>
         <set field="failedText" from="Array.from(new Set([].concat(Array.from(homeFound?.failedSources || []),

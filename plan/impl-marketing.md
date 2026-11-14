@@ -2533,6 +2533,142 @@ jobs), §18 (the delivery report); MKT-SEND, MKT-TRANSPORT; CX-DELIVERY.
   recording with one uncertain delivery, which the dispatcher reconciles and nothing resends; a duplicate bounce
   report changes no count; the email carries the unsubscribe header and link.
 
+**Built Nov 14 (P9).** mr-mantle and mr-boss on branch `mkt/p9` (hashes in the worker's reply), from master after P8's merge; mr-moqui
+unchanged, no Rust built. Built beside Sales P16 (in review) and P19 (the hot spots below).
+- Checked first (the code over the plan): P5's to P8's Built and Review notes, F90–F205 and §4's rows (the one-person-team flag under 500;
+  suppressions promotional but a hard bounce); the ledger (MessageDeliveries.js: one delivery per event, recipient, channel and template
+  key, each attempt and build in a transaction of its own; consentOf's topic rule; resolve#Delivery for MESSAGE_DELIVERY_REVIEW alone),
+  P3's reserve#SingleUseList and release#SingleUseList (built, never called), P5's classifyPeople, P6's profiles and receipts,
+  ConsentServices create#UnsubscribeToken (siteId: that site's Account Email preferences page; else baseUrl's /u/, F75), the list send's
+  CommunicationEvent and ContactListCommStatus (send#ContactListEmail), the framework's registerOnCommit and the job registrations. The
+  code over the plan:
+  - the CampaignSend and CampaignRecipient flows had no transitions for the dispatch (P8 seeded the send's; the recipient had none):
+    CampaignRecipient gains Handed off, Skipped at dispatch and Not sent: cancelled with their transitions, and a send completed with
+    failures goes back to Sending when its failures are retried;
+  - "keyed by the recipient's execution key": the ledger's natural key is event, recipient, channel and template, so a recipient's
+    eventKey is `CampaignSend:<send>:<execution key>`; queue#Delivery answers the delivery it holds for it, so a page claimed again after a
+    lease ends, or a hand-off whose recording failed, hands the recipient off once (the ledger's own job attempts a delivery the dispatch
+    did not);
+  - "consent is checked for a purpose on a topic's list within the organization": the ledger's topic consent was the list row only (a
+    member evidenced by a purpose grant would be refused); a topic delivery queued with `consentOrganizationPartyId` reads Marketing's
+    evidenced rule at each attempt, one queued without it (Commerce's review requests) is unchanged;
+  - "resolve#Delivery's permission granted to the dispatch group": MESSAGE_DELIVERY_REVIEW read every organization's receipts
+    (find#DeliveryReceipts); granted to the dispatcher it would have read every organization's, so the permission's every-organization
+    reach is a system administrator's now (ADMIN holds it, unchanged), and resolve#Delivery and the mail queue's reconciliation reach the
+    reviewer's organizations' deliveries;
+  - "release separated from approval": the releaser is none of the revision's authors (creator, the maker of its change, the requester)
+    nor its approver, but under the one-person-team flag with fewer than 500 recipients counted at the release;
+  - "the Today source of due sends" is Home's Upcoming (P8's scheduled sends source, which waited) and the sends due card; Admin's Today
+    has no Marketing source;
+  - the send's unsubscribe link: a profile naming a site gives that site's Email preferences page; one naming none the server's /u/
+    page, from the root of the request that released it (a job has no request).
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P9 block): CampaignSend's release, dispatch and cancellation fields, `preparedAttachmentsJson` and
+    `communicationEventId`; CampaignRecipient's claim, lease, hand-off and skip fields. `entity/MessageDeliveryEntities.xml` (a P9 block):
+    MessageDelivery `resolvedByUserId`, `resolvedDate`, `resolutionNote`. `data/MarketingSeedData.xml` (a P9 block): the recipient states and
+    transitions, the send's retry transition, the ledger source MdsrcCampaignSend and its EmailTemplate. `data/MarketingDispatchSetupData.xml`
+    (new, seed-initial): the job run_MarketingDueSends with its JobRegistration (MARKETING_DISPATCH) and RecoveryDescriptor.
+  - `MarketingDispatch.js` (new) under `CampaignSendServices.xml` (a P9 block): `release#Send`, `pause#Send`, `cancel#Send`,
+    `run#DueSends` (the job; `operation` marketing.send.dispatch.run), `dispatch#Send` (operation-ref the send), the internal
+    `start#DueSend`, `claim#RecipientPage`, `handOff#Recipient`, `sweep#Send`, `find#Recipients`, `get#Recipient`, `retry#Recipients`,
+    `reconcile#Recipient`, `build#CampaignDelivery`; get#Send answers `delivery` and `control`. Refusals in each description.
+  - `MarketingSends.js` (P8 carry-overs): preparation creates the recipients in one bulk create (F205) and copies the attachments beside the
+    prepared body (F200: ATTACHMENT_UNAVAILABLE, ATTACHMENT_TOO_LARGE at 10 MB); the test's daily limit is counted under the send's lock
+    (F203); the send's reply-to goes with each message (the build answers it, the ledger applies it over the profile's).
+  - `MarketingEligibility.js`: classifyPeople takes `availableOf` (the dispatch's check, with no user, takes disabled and merged parties as
+    not available; F157's personal contacts were settled by the preparer). `MarketingWorkspace.js`: the sends due and failed or uncertain
+    deliveries cards, Upcoming's scheduled sends, a dispatcher's delivery attention rows.
+  - The ledger (owner contract, Comms; `MessageDeliveries.js` and `MessageServices.xml` P9 blocks): queue#Delivery's
+    `consentOrganizationPartyId` and `consentContactMechId` (organizationTopicConsent), a build's `replyToAddresses`, resolve#Delivery's
+    reach and resolution (reviewerReaches); `MessageDeliveryReports.js` receipts' reach.
+- BOSS:
+  - Screens: SendDetail's control (Release the primary for an approved send, Resume, More: Delivery and recipients, Pause, Cancel send) and
+    Delivery box; `Shared/CampaignDelivery` (new; DeliveryRows with state and address filters, Retry failures as its row selection, the CSV
+    and PDF report) mounted at `Sends/CampaignDelivery`; `Sends/RecipientDetail` (new: the header with Reconcile or Retry, Recipient,
+    Attempts, the receipts); both hidden in Sends; Home's places and rows' record parameters; `template/MarketingSends.xml` (a P9 block:
+    releaseSend, pauseSend, cancelSend, retryRecipients, reconcileRecipient); `Marketing.js` link paths.
+  - `BossSetupMarketingData.xml` (a P9 block): MESSAGE_DELIVERY_REVIEW to BOSS_MARKETING_DISPATCH, in its bundle.
+- Specs:
+  - Mantle `test/marketing/Dispatch` (new, 6 features, 3.8 s: a release refused unapproved, to an author, to another organization's
+    dispatcher and with the relay disabled, then released, a second release answering the first; five messages each with the
+    List-Unsubscribe and List-Unsubscribe-Post headers, the link, the VERP sender and the send's reply-to, the list rows given their
+    Message-IDs, the send completed, addresses masked for a dispatcher; a list withdrawal, a suppression and a changed address skipped with
+    their reasons, the others sent, a member who joined after preparation never added; the one-person team's release, refused at 500 and
+    with the flag off; a single-use list held by one send, freed by a cancellation before any hand-off; a page claimed again after its lease
+    ends hands each recipient off once, a stopped worker's delivery answered, pause and cancel stopping new claims with the in-flight count;
+    an uncertain delivery reconciled by a reviewing dispatcher with evidence, refused without the permission, to another organization and
+    without evidence); `test/party/DeliveryLedger` (+1 feature, 0.1 s: a topic delivery within an organization sent on the organization's
+    purpose grant, refused after a global withdrawal, the same delivery without the organization keeping the list's rule);
+    `MarketingScope` (Home's P9 cards and the dispatcher's attention source); `MarketingApprovals` (its decision lookups name the kind: a send
+    of another spec may share a campaign's id).
+  - mr-boss `MarketingDelivery` (new, 1 feature, 0.4 s: CampaignDelivery's one qvt render for the dispatcher of the December newsletter
+    released for its schedule, the address masked and no name); `MarketingAccess` (RecipientDetail opened by a dispatcher, refused a reader;
+    about +0.1 s); the client walk `test/client/Marketing/MarketingSendWalk` (new, Marketing's one regression walk, 9.1 s: the author makes a
+    send from the Garden newsletter template through the Use link's New send dialog, prepares it and asks; the approver approves; the
+    dispatcher releases it and sees one sent) in `test/client/suite.js`.
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingDispatchScenario` (3 features, scenarios 6 and 7: author, approver
+    and dispatcher each their part; forty recipients, a stop after a hand-off leaving one delivery uncertain, the rest sent once, the
+    dispatcher's reconciliation on RecipientDetail, nothing resent, the unsubscribe header and link; a duplicate bounce report changing no
+    count).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Dispatch (6 of 6), Sends, DeliveryLedger, DeliveryReports,
+  MarketingScope, Eligibility, MarketingApprovals, Segments, MarketingSubscriptions, SalesQuoteIssue, ContactListSend, SendingProfiles,
+  Consent, Audiences, CartRecovery, StoreReviews, MessageTemplates, Suppressions (113 features, 112 passed: MarketingApprovals' lookup by a
+  shared id, fixed, then Dispatch and MarketingApprovals 11 of 11), ShopCheckout, SalesQuoteResponse, SalesPortal, StoreCheckout (22 of 22);
+  mr-boss MarketingDelivery, MarketingSends, MarketingAccess, MarketingCampaigns, MarketingTemplates, MarketingLists, MarketingSegments,
+  MarketingImport, AdminRegistries, RecordFiles, SalesQuoteSend, QuickCreate (63 of 63, 17.5 s of features); mr-pass Outbox, ShopAccount
+  (16 of 16); the client walk MarketingSendWalk (1 of 1, 9.1 s, its spec under 15 s). `moqui lint --screens`: 141 flagged sites, as before,
+  none in Marketing; parse failures 0. Prettier clean on the changed JavaScript. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P9" table; ss-inventory has no row for P9's screens.
+- Design edits: design-marketing §5 (the as-built paragraph after RecipientDetail); design-drawers-commons' Mailboxes row (owner contract:
+  the topic consent within an organization, the build's reply-to, the reviewer's reach and resolution, the receipts' reach).
+- Findings (provisional, numbered by the lead):
+  - the ledger's natural key holds the execution key in the eventKey (`CampaignSend:<send>:<key>`), so a send's deliveries are counted by
+    a prefix of it (the code over the plan above);
+  - MESSAGE_DELIVERY_REVIEW's every-organization reach is a system administrator's only now (receipts, resolution, the mail queue's
+    reconciliation): an owner contract change of Comms, needed to grant it to the dispatcher;
+  - the releaser may be neither an author nor the approver (but under the flag): the plan names the author only;
+  - the dispatch's recheck reads the recipient's own membership, consent, suppression, solicitation and address and the frequency cap, not a
+    withdrawal by another person at the same address (P5's DESTINATION_WITHDRAWN, settled at preparation); the ledger rechecks the
+    recipient's consent and the suppressions at each attempt;
+  - a cancelled or paused send's deliveries already with the ledger (queued or retrying) still go out, as design §5 says; the UI states
+    their count; the build suppresses one whose recipient left the topic or whose address changed;
+  - a send with an uncertain delivery stays Sending until it is reconciled; the frequency cap counts the organization's campaign-send
+    deliveries only (P11's automation steps are not yet a source);
+  - a profile with no site gives the /u/ link from the root of the release's request; a send released with no web request (none in P9)
+    would get a relative link;
+  - throughput: 20 pages of 100 a send a run, a run every two minutes by default, the profile's throttle applied by the ledger;
+  - ContactListCommStatus is stored CeReady at the hand-off and given its Message-ID by the next sweep (the ledger does not call back);
+  - the golden walk opens the New send dialog by the Use link's address with the campaign chosen (the template list's Use is an icon
+    button the walk did not match by its text), to stay under 15 s a spec;
+  - MarketingApprovals looked up its decisions by target id alone, which a send of another spec run before it can share.
+- For the lead:
+  - budget share: mr-mantle about 3.9 s (Dispatch 3.8 s, DeliveryLedger +0.1 s); mr-boss server about 0.5 s (MarketingDelivery 0.4 s,
+    MarketingAccess +0.1 s); mr-boss client 9.1 s (MarketingSendWalk; about 14 s of spec time with its three sign-ins), over the plan's
+    estimate of about 8 s for the client budget: the user's agreement is needed for the 1.1 s beyond it;
+  - merge hot spots (Sales P16 and P19 beside): mr-mantle `service/mantle/party/MessageDeliveries.js` (the header paragraph, queue's
+    consentJson, consentOf's first branch and return, a P9 block after consentOf, the attempt's reply-to line, resolveDelivery's reach and
+    fields, recoverMailOutcome's reach, the exports), `service/mantle/party/MessageServices.xml` (queue#Delivery's two parameters before
+    bodyParameters, resolve#Delivery's description, find#DeliveryReceipts' description), `MessageDeliveryReports.js` (receipts'
+    everyOrganization), `entity/MessageDeliveryEntities.xml` (a P9 block at the end), `entity/MarketingEntities.xml` and
+    `data/MarketingSeedData.xml` (P9 blocks after P8's), `service/mantle/marketing/CampaignSendServices.xml` (get#Send's outputs, a P9 block),
+    `MarketingSends.js` (prepare, testSend's lock, getSend, the exports), `MarketingEligibility.js` (classifyPeople's available),
+    `MarketingWorkspace.js`, `test/marketing/MarketingScope.spec.js`, `MarketingApprovals.spec.js`, `test/party/DeliveryLedger.spec.js` (a
+    feature at the end); mr-boss `data/BossSetupMarketingData.xml` (a P9 block), `screen/Marketing/Sends.xml`, `Sends/SendDetail.xml`,
+    `Home.xml`, `template/MarketingSends.xml`, `service/ironstone/marketing/Marketing.js` (linkPaths), `test/Marketing/MarketingAccess.spec.js`,
+    `test/client/suite.js` (after SalesPipelineWalk), `plan/usl-inventory.md`, `plan/design-marketing.md`, `plan/design-drawers-commons.md`,
+    this file. Not touched: Sales files, PASS, mr-moqui;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, the ledger's paragraph; no public endpoint is added): "A Marketing send
+    reaches its recipients only through `mantle.marketing.CampaignSendServices.release#Send` (MARKETING_DISPATCH, the send's organization, a
+    current approval at its revision, a ready promotional sending profile, the policy's audience limit; the releaser none of its authors nor
+    its approver but under the organization's one-person-team flag with fewer than 500 recipients) and the due dispatch, which hands only
+    the prepared recipients to the delivery ledger, each checked again just before (the topic's membership, consent, suppression and
+    solicitation, the address prepared, the frequency cap) and keyed by the send and its random execution key, so a recipient is handed
+    off once. The ledger checks the recipient's consent within the organization and every suppression at each attempt; each message carries
+    a List-Unsubscribe header and link from a token whose digest alone is kept. MESSAGE_DELIVERY_REVIEW (ADMIN's and Marketing's
+    dispatcher's) resolves and reads only the deliveries of the reviewer's organizations, every one for a system administrator.";
+  - the user's calls: the client budget beyond the plan's estimate (above); to confirm, the approver kept from releasing, and
+    MESSAGE_DELIVERY_REVIEW's narrowed reach.
+
 ### P10 — Experiments
 
 Design §5 ExperimentDetail; MKT-EXPERIMENT; gate 3.

@@ -488,6 +488,13 @@ feature(
                 // P8: the sends for an approver (and an author), not a reader; another organization's send is no one else's
                 approver: screenRefusal(users.approver, "Sends/Sends"),
                 readerSends: screenRefusal(users.reader, "Sends/Sends"),
+                // P9: a recipient's delivery for a dispatcher, not a reader
+                dispatchRecipient: screenRefusal(users.dispatch, "Sends/RecipientDetail", {
+                    campaignRecipientId: "BOSS_MKT_RCPT_NOV_MAYA"
+                }),
+                readerRecipient: screenRefusal(users.reader, "Sends/RecipientDetail", {
+                    campaignRecipientId: "BOSS_MKT_RCPT_NOV_MAYA"
+                }),
                 otherSend: asUser(users.otherAuthor, () =>
                     refusal(checkRecord, {recordType: "send", recordId: ids.approvedSendId})
                 ),
@@ -542,6 +549,8 @@ feature(
             unauthorized(sends.authorProfiles) || sends.authorProfiles.includes("PERMISSION_DENIED")
             sends.approver == ""
             unauthorized(sends.readerSends) || sends.readerSends.includes("PERMISSION_DENIED")
+            sends.dispatchRecipient == ""
+            unauthorized(sends.readerRecipient) || sends.readerRecipient.includes("PERMISSION_DENIED")
             sends.otherSend.includes("RECORD_UNAVAILABLE")
             sends.ownSend == ""
             !panels.ownSend.errors.includes("RECORD_PANEL_UNAVAILABLE") && panels.ownSend.status == 200
