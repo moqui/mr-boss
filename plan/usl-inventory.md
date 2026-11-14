@@ -831,7 +831,7 @@ the screens that call it.
 | PaymentAutoPostServices | revert#PaymentApplicationPost |  |  |
 | PaymentAutoPostServices | repost#PaymentAndApplications |  |  |
 
-## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices, P6's Comms templates and sending profiles and P8's CampaignSendServices below)
+## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices, P6's Comms templates and sending profiles, P8's CampaignSendServices and P9's dispatch below)
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 
@@ -936,6 +936,22 @@ and the ledger's promotional profile check, impl-marketing P8), called by built 
 | marketing/CampaignServices | request#, decide#MarketingApproval (targetKind send) | Marketing/Sends/SendDetail (SendDecision) | Marketing/Sends/SendDetail (Request approval, Approve); Commons' Notifications (MarketingSendApproval) (Marketing P8) |
 | marketing/CampaignServices | store#MarketingPolicy (testAddresses) | Marketing/Settings/CampaignDefaults | Marketing/Settings/CampaignDefaults (Test addresses) (Marketing P8) |
 | party/MessageServices | queue#Delivery (a promotional delivery never names a transactional profile) | the ledger's contract (F172) | test#Send (Marketing P8) |
+
+Added in Marketing P9 (Nov 14, 2026; the release, the due dispatch and the delivery's recovery of `mantle.marketing.CampaignSendServices`
+over MarketingDispatch.js, and the ledger's topic consent within an organization and reviewer scope, impl-marketing P9), called by built
+screens, the dispatch job and the ledger:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/CampaignSendServices | release#Send, pause#Send, cancel#Send | Marketing/Sends/SendDetail (SendControl) | Marketing/Sends/SendDetail (Release, Resume; More: Pause, Cancel send) (Marketing P9) |
+| marketing/CampaignSendServices | run#DueSends, dispatch#Send, start#DueSend, claim#RecipientPage, handOff#Recipient, sweep#Send | design §15.2, §15.3 (Due campaign dispatch) | the run_MarketingDueSends job (JobRegistration, RecoveryDescriptor); release's service worker (Marketing P9) |
+| marketing/CampaignSendServices | find#Recipients, retry#Recipients | Shared/CampaignDelivery (DeliveryFind, DeliveryRows, RetryRecipients); the delivery report (CSV, html-print) | Shared/CampaignDelivery at Marketing/Sends/CampaignDelivery (the list's CSV and PDF) (Marketing P9) |
+| marketing/CampaignSendServices | get#Recipient, reconcile#Recipient | Marketing/Sends/RecipientDetail (Recipient, Attempts, ResolveDelivery) | Marketing/Sends/RecipientDetail (Reconcile, Retry) (Marketing P9) |
+| marketing/CampaignSendServices | build#CampaignDelivery | the ledger's source MdsrcCampaignSend | attempt#Delivery (Marketing P9) |
+| marketing/CampaignSendServices | get#Send (delivery, control) | Marketing/Sends/SendDetail (Delivery) | Marketing/Sends/SendDetail (the Delivery box) (Marketing P9) |
+| marketing/MarketingWorkspaceServices | get#Home, get#Upcoming, get#Attention (the sends' sources) | Marketing/Home (MarketingCards, Upcoming, Attention) | Marketing/Home (Sends due, Failed or uncertain deliveries, Scheduled sends, a dispatcher's delivery rows) (Marketing P9) |
+| party/MessageServices | queue#Delivery (consentOrganizationPartyId, consentContactMechId), attempt#Delivery (a source's reply-to) | the ledger's contract (F13: organization and topic consent) | handOff#Recipient (Marketing P9) |
+| party/MessageServices | resolve#Delivery (the reviewer's organization, the resolution kept), find#DeliveryReceipts (MESSAGE_DELIVERY_REVIEW scoped but for a system administrator) | the ledger's contract (F13: the permission granted to the dispatcher) | reconcile#Recipient; Admin's MailQueue (recover#OwnedMailOutcome) (Marketing P9) |
 
 ## Order (89 services)
 

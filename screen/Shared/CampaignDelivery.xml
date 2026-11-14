@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CampaignDelivery (design-marketing §5 CampaignDelivery: DeliveryFind, DeliveryRows, RetryRecipients; §18 the delivery report;
+    crosscut §3.29; impl-marketing P9, F16): Marketing's execution projection of one send, mounted at Marketing/Sends/CampaignDelivery
+    (Comms mounts it later, with a Comms settings area). Its rows join the send's recipients (CampaignRecipient, the selection) to the
+    one delivery ledger, which holds every attempt, receipt and outcome. Everything is decided by
+    mantle.marketing.CampaignSendServices find#Recipients: who reads (a Marketing reader of the send's organization who writes,
+    approves or dispatches sends), whether the name and whole address show (MARKETING_AUDIENCE_VIEW) or the address is masked. The
+    report is the list's CSV and PDF (html-print) of every row, masked alike. A known retryable failure is retried by a dispatcher
+    (retry#Recipients, the selected rows or every one); an uncertain delivery is reconciled on RecipientDetail, never retried. An
+    operator who manages Admin's mail queue is linked there. The mounting root adds nothing: no organization or capability is taken
+    from its context. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Delivery" default-menu-include="false">
+    <parameter name="campaignSendId" required="true"/>
+    <parameter name="state"/>
+    <parameter name="skipReasonCode"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="retryRecipients" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <service-call name="mantle.marketing.CampaignSendServices.find#Recipients" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{campaignSendId:campaignSendId, state:(state || null), skipReasonCode:(skipReasonCode || null), text:(text || null),
+                    pageIndex:pageIndex, pageNoLimit:(pageNoLimit || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="readable" from="found?.recipientList != null"/>
+        <if condition="readable">
+            <service-call name="mantle.marketing.CampaignSendServices.get#Send" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="send" from="detail?.send || {}"/>
+        <set field="control" from="detail?.control || {}"/>
+        <set field="summary" from="found?.summary || {}"/>
+        <set field="recipientList" from="found?.recipientList || []"/>
+        <set field="recipientListCount" from="found?.recipientListCount"/>
+        <set field="recipientListPageIndex" from="found?.recipientListPageIndex"/>
+        <set field="recipientListPageSize" from="found?.recipientListPageSize"/>
+        <set field="recipientListPageMaxIndex" from="found?.recipientListPageMaxIndex"/>
+        <set field="recipientListPageRangeLow" from="found?.recipientListPageRangeLow"/>
+        <set field="recipientListPageRangeHigh" from="found?.recipientListPageRangeHigh"/>
+        <set field="unmasked" from="!!found?.unmasked"/>
+        <set field="detailPath" from="sharedLinks['Sends/SendDetail']"/>
+        <set field="recipientPath" from="sharedLinks['Sends/RecipientDetail']"/>
+        <set field="listPath" from="sharedLinks['Sends/Sends']"/>
+        <set field="filtered" from="!!(state || skipReasonCode || text)"/>
+        <set field="countsText" from="summary.released ? summary.handedOffCount + ' handed off: ' + summary.sentCount + ' sent, ' + summary.inFlightCount + ' in flight, '
+                + summary.failedCount + ' failed, ' + summary.uncertainCount + ' uncertain, ' + summary.suppressedCount + ' suppressed · ' + summary.waitingCount
+                + ' waiting · ' + summary.skippedCount + ' skipped at dispatch' + (summary.cancelledCount ? ' · ' + summary.cancelledCount + ' not sent: cancelled' : '')
+                : 'Not released yet: the recipients below are the prepared selection.'"/>
+    </actions>
+    <widgets>
+        <section name="DeliveryNotFound" condition="!readable">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="The delivery of send ${campaignSendId} is not available: the send does not exist, it is not one of your organizations', or you do not read sends."
+                                type="p"/>
+                        <link url="${listPath}" text="Back to sends" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="DeliveryFound" condition="readable">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Delivery of ${send.sendName || campaignSendId}" type="h5" style="q-my-none"/>
+                        <label text="${send.statusText} · ${countsText}" type="div" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <link url="${detailPath}" text="Open the send" link-type="anchor-button" icon="sym_o_forward_to_inbox"
+                                parameter-map="{campaignSendId:campaignSendId}"/>
+                        <link url="/qapps/Admin/Protocols/MailQueue" text="Mail queue" link-type="anchor-button" icon="sym_o_outbox"
+                                condition="ec.user.hasPermission('ADMIN_OPERATION_MANAGE')"/>
+                    </container>
+                </container>
+                <label text="${summary.dispatchNote}" type="p" style="text-warning" condition="summary.dispatchNote"/>
+                <label text="Addresses are masked: whole addresses and names are for Marketing's audience readers." type="p" style="text-caption m-muted"
+                        condition="!unmasked"/>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="DeliveryRows" list="recipientList" skip-form="true" paginate="true" header-dialog="true"
+                                show-csv-button="true" show-pdf-button="true" select-columns="true">
+                            <row-selection id-field="campaignRecipientId" parameter="campaignRecipientId" condition="control.canRetry">
+                                <action>
+                                    <dialog button-text="Retry failures" title="Retry the selected recipients' failures"/>
+                                    <form-single name="RetrySelected" transition="retryRecipients">
+                                        <field name="campaignSendId" from="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="noteText">
+                                            <default-field title=""><display text="Only a delivery that failed after its retryable tries is tried again, and only for a recipient still eligible; an uncertain one is reconciled on its own page."/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Retry failures" confirmation="Try the selected recipients' failures again?"/></default-field></field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="state">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="waiting" text="Waiting to be handed off"/>
+                                        <option key="handedOff" text="Handed off"/>
+                                        <option key="sent" text="Sent"/>
+                                        <option key="inFlight" text="In flight"/>
+                                        <option key="failed" text="Failed"/>
+                                        <option key="uncertain" text="Uncertain"/>
+                                        <option key="suppressed" text="Suppressed at sending"/>
+                                        <option key="skipped" text="Skipped at dispatch"/>
+                                        <option key="cancelled" text="Not sent: cancelled"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="text"><header-field title="Address"><text-line size="20"/></header-field></field>
+                            <field name="campaignRecipientId">
+                                <default-field title="Recipient">
+                                    <link url="${recipientPath}" text="${campaignRecipientId}" link-type="anchor" parameter-map="{campaignRecipientId:campaignRecipientId}"/>
+                                </default-field>
+                            </field>
+                            <field name="addressText"><default-field title="Address"><display/></default-field></field>
+                            <field name="recipientName"><default-field title="Name"><display/></default-field></field>
+                            <field name="statusText"><default-field title="Recipient"><display/></default-field></field>
+                            <field name="deliveryStateText">
+                                <default-field title="Delivery">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${deliveryStateEnumId == 'MdsSent' ? 'positive' : deliveryStateEnumId == 'MdsFailed' ? 'negative' : deliveryStateEnumId == 'MdsUncertain' ? 'warning' : 'grey-7'}">${WebUtilities.encodeHtml(deliveryStateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(deliveryStateText ?? "")})}]]></text>
+                                        <text type="html">${deliveryStateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="attempts" align="right"><default-field title="Attempts"><display/></default-field></field>
+                            <field name="receiptText"><default-field title="Latest report"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="handedOffDateText"><default-field title="Handed off"><display/></default-field></field>
+                            <field name="sentDateText"><default-field title="Sent"><display/></default-field></field>
+                            <columns>
+                                <column><field-ref name="campaignRecipientId"/><field-ref name="addressText"/></column>
+                                <column><field-ref name="recipientName"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="deliveryStateText"/></column>
+                                <column><field-ref name="attempts"/><field-ref name="receiptText"/></column>
+                                <column><field-ref name="reasonText"/></column>
+                                <column><field-ref name="handedOffDateText"/><field-ref name="sentDateText"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="campaignRecipientId"/><field-ref name="addressText"/></column>
+                                <column><field-ref name="deliveryStateText"/><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoRecipients" condition="!recipientList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${filtered ? 'No recipient matches these filters.' : 'The send has no prepared recipient.'}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

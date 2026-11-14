@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Sends area of IronStone Marketing (design-marketing §5, §1.2; impl-marketing P6, P8): Sends (the list, the default), SendDetail
     and Compose (hidden, opened from it), MessageTemplates (Comms' shared template library, Marketing's mount, F16) and
-    MessageTemplateDetail (hidden; a sibling of the list, as ListDetail is of Lists). CampaignDelivery joins in P9. For the authors,
+    MessageTemplateDetail (hidden; a sibling of the list, as ListDetail is of Lists); P9: CampaignDelivery (the shared delivery
+    projection, Marketing's mount) and RecipientDetail, hidden, opened from a send. For the authors,
     approvers, dispatchers and the administrator (BOSS_MKT_SENDS denies the root user group and gives those groups an ALWAYS; the
     root's menu shows it to a template reader or a Marketing reader who writes, approves or dispatches sends); the area's check asks
     the capability too (sends), so a custom group given Marketing is shown no area its services refuse. Every read and write is
@@ -32,6 +33,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="MessageTemplates" location="component://mr-boss/screen/Shared/MessageTemplates.xml" menu-index="2"
                 menu-include="ec.user.hasPermission('MESSAGE_TEMPLATE_VIEW') || ec.user.hasPermission('MESSAGE_TEMPLATE_EDIT')"/>
         <subscreens-item name="MessageTemplateDetail" location="component://mr-boss/screen/Shared/MessageTemplateDetail.xml" menu-include="false"/>
+        <subscreens-item name="CampaignDelivery" location="component://mr-boss/screen/Shared/CampaignDelivery.xml" menu-include="false"/>
+        <subscreens-item name="RecipientDetail" location="component://mr-boss/screen/Marketing/Sends/RecipientDetail.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MarketingSendsPanel" type="tab"/>

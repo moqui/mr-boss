@@ -21,7 +21,10 @@ along with this software (see the LICENSE.md file). If not, see
     prepared content, else the draft, rendered with sample values), Audience (its sources, the buckets counted at the preparation of
     the current revision and the AudiencePreview link), Schedule, Decisions and Activity (the conversation and the files: a send is a
     Chatter and files host). Every change is Mantle's guarded service at the revision read; a change of the content, sender, audience
-    or schedule ends the approval. The Delivery and Experiment boxes join in P9 and P10. -->
+    or schedule ends the approval. P9: SendControl (design §5): Release the primary action of an approved send for a dispatcher (who is
+    none of its authors nor its approver, but under the one-person-team flag), Resume of a paused one, and Pause and Cancel in More,
+    each Mantle's guarded service; the Delivery box (the release, the counts from the delivery ledger, what is in flight) links
+    CampaignDelivery. The Experiment box joins in P10. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Send" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
@@ -32,6 +35,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="requestSendApproval" location="component://mr-boss/template/MarketingSends.xml"/>
     <transition-include name="decideSendApproval" location="component://mr-boss/template/MarketingSends.xml"/>
     <transition-include name="duplicateSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="releaseSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="pauseSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="cancelSend" location="component://mr-boss/template/MarketingSends.xml"/>
     <actions>
         <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="sendCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'send', recordId:campaignSendId}"/>
@@ -49,6 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="send" from="detail?.send || {}"/>
         <set field="can" from="detail?.capabilities || {}"/>
+        <set field="control" from="detail?.control || {}"/>
+        <set field="delivery" from="detail?.delivery || {}"/>
+        <set field="deliveryPath" from="sharedLinks['Sends/CampaignDelivery']"/>
         <set field="audience" from="detail?.audience || {}"/>
         <set field="bucketList" from="audience.bucketList || []"/>
         <set field="decisionList" from="detail?.decisions || []"/>
@@ -156,6 +165,31 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                 </form-single>
                             </container-dialog>
+                            <!-- P9: Release an approved send, Resume a paused one (a dispatcher's) -->
+                            <container-dialog id="ReleaseSendDialog" button-text="Release" icon="sym_o_send" type="primary"
+                                    title="Release ${send.sendName}" width="560" condition="control.canRelease">
+                                <label text="${send.eligibleCount} prepared recipients at revision ${send.sendRevision}, ${send.scheduledDate ? 'from ' + send.scheduledText : 'now'}. Each is checked again just before it is handed to the delivery service: a withdrawal, a suppression or a changed address since leaves that one out."
+                                        type="p"/>
+                                <label text="You wrote, asked for or approved this send: the one-person team's policy lets you release it, and it is recorded so." type="p" style="text-warning"
+                                        condition="control.releaseSelf"/>
+                                <form-single name="ReleaseSend" transition="releaseSend" map="sendRef">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Note"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Release" confirmation="Release ${send.sendName} to ${send.eligibleCount} recipients?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ResumeSendDialog" button-text="Resume" icon="sym_o_play_arrow" type="primary"
+                                    title="Resume ${send.sendName}" width="480" condition="control.canResume">
+                                <label text="${delivery.waitingCount} recipients wait to be handed off." type="p"/>
+                                <form-single name="ResumeSend" transition="releaseSend" map="sendRef">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Resume" confirmation="Resume ${send.sendName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
                             <button-menu text="More" icon="more_horiz">
                                 <link url="${composePath}" text="${can.canEdit ? 'Edit content' : 'Content'}" link-type="anchor" icon="sym_o_edit_note"
                                         parameter-map="{campaignSendId:campaignSendId}"/>
@@ -205,10 +239,53 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                                 <link url="${campaignPath}" text="Open the campaign" link-type="anchor" icon="sym_o_campaign"
                                         parameter-map="{marketingCampaignId:send.marketingCampaignId}"/>
+                                <!-- P9: the delivery, Pause and Cancel -->
+                                <link url="${deliveryPath}" text="Delivery and recipients" link-type="anchor" icon="sym_o_outgoing_mail"
+                                        parameter-map="{campaignSendId:campaignSendId}" condition="delivery.released"/>
+                                <container-dialog id="PauseSendDialog" button-text="Pause" icon="sym_o_pause" title="Pause ${send.sendName}"
+                                        width="480" condition="control.canPause">
+                                    <label text="No more recipients are handed off until it is resumed; messages already with the delivery service may still go out."
+                                            type="p" style="m-muted"/>
+                                    <form-single name="PauseSend" transition="pauseSend" map="{campaignSendId:campaignSendId}">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Pause" confirmation="Pause ${send.sendName}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CancelSendDialog" button-text="Cancel send" icon="sym_o_cancel" title="Cancel ${send.sendName}"
+                                        width="480" condition="control.canCancel">
+                                    <label text="The recipients not yet handed off are not sent. ${delivery.released ? delivery.inFlightCount + ' messages already with the delivery service may still go out.' : ''}"
+                                            type="p" style="m-muted"/>
+                                    <form-single name="CancelSend" transition="cancelSend" map="{campaignSendId:campaignSendId}">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Cancel send" type="danger" confirmation="Cancel ${send.sendName}? This cannot be undone."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
                             </button-menu>
                         </container>
                     </container>
                 </container>
+
+                <!-- P9: the delivery (design §5 SendDetail's Delivery): the release and the counts from the delivery ledger -->
+                <container-box condition="delivery.released">
+                    <box-header title="Delivery"/>
+                    <box-toolbar>
+                        <link url="${deliveryPath}" text="Delivery and recipients" link-type="anchor-button" icon="sym_o_outgoing_mail"
+                                parameter-map="{campaignSendId:campaignSendId}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Released ${delivery.releasedDateText} by ${delivery.releasedByName}${delivery.selfDispatch ? ' (one-person team)' : ''} to ${delivery.releasedCount} recipients."
+                                type="p"/>
+                        <label text="${delivery.handedOffCount} handed off: ${delivery.sentCount} sent, ${delivery.inFlightCount} in flight, ${delivery.failedCount} failed, ${delivery.uncertainCount} uncertain, ${delivery.suppressedCount} suppressed · ${delivery.waitingCount} waiting · ${delivery.skippedCount} skipped at dispatch${delivery.cancelledCount ? ' · ' + delivery.cancelledCount + ' not sent: cancelled' : ''}"
+                                type="p"/>
+                        <label text="${delivery.dispatchNote}" type="p" style="text-warning" condition="delivery.dispatchNote"/>
+                        <label text="Cancelled ${delivery.cancelledDateText}: ${delivery.cancelReason}" type="p" style="m-muted" condition="delivery.cancelledDateText"/>
+                        <label text="Completed ${delivery.completedDateText}" type="p" style="m-muted" condition="delivery.completedDateText"/>
+                    </box-body>
+                </container-box>
 
                 <container-box>
                     <box-header title="Summary"/>
