@@ -29,7 +29,11 @@ const organizationOptionLimit = 100
 // (SALES_CONTEXT); a mount adds no right: the user's own Sales grant and scope decide.
 const mountRoots = {
     Sales: {linkBase: "//Sales", paths: null},
-    Marketing: {linkBase: "//Marketing", paths: {"Pipeline/Leads": "Leads", "Settings/LeadSources": "Settings/LeadSources"}}
+    // impl-marketing P3 (F64): Accounts at Marketing/Leads/Accounts, for Marketing's bulk "Add to list (evidenced)"
+    Marketing: {
+        linkBase: "//Marketing",
+        paths: {"Pipeline/Leads": "Leads", "Accounts/Accounts": "Leads/Accounts", "Settings/LeadSources": "Settings/LeadSources"}
+    }
 }
 // The menu areas whose authorization is a capability (data/BossSetupSalesData.xml BOSS_SAL_<Area>): Reports the report readers'
 // (P1). Home is every Sales user's; later phases add theirs (Settings P2, Approvals P9, Changes P14, Agreements P15).

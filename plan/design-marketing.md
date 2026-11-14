@@ -619,6 +619,31 @@ evidence. **Needs:** MKT-CONSENT, MKT-TRANSPORT.
 
 **Source:** research §§3–4, 10; Odoo blacklist and Twenty suppression reasons.
 
+**As built (impl-marketing P3).** The Audiences area (`Marketing/Audiences`, BOSS_MKT_AUDIENCES: the audience managers' ALWAYS,
+the root user group denied) holds Lists, ListDetail and MemberDetail as siblings (`Audiences/Lists`, `Audiences/ListDetail`,
+`Audiences/MemberDetail`, as Campaigns' CampaignDetail), Comms' Consent screens mounted by location under their own names
+(`Audiences/Consent`, `Audiences/Consent/Contact`, so their relative links hold) and `Shared/Suppressions` at
+`Audiences/Suppressions`. The services are `mantle.marketing.AudienceServices` (L): `find#Lists`, `create#List` (over
+`create#ContactList`, which subscribes no one for a list that is not a mailbox and refuses named members), `store#List`,
+`archive#List`, `get#List`, the dated `store#SubscriptionPolicy` (ContactListPolicy: public offer, confirmation required, purpose,
+the offer's wording, confirmation and notice templates) and `store#ContactListEmail`, `find#Members` (addresses masked),
+`get#Member`, `request#Subscriptions` (SubscriptionRequest; each item on its own: pending, accepted with evidence by a consent
+editor, existing, or refused WITHDRAWN when the evidence is no later than the latest withdrawal of the list or its purpose,
+CONSENT_WITHDRAWN for an acceptance of a purpose the person withdrew, MISSING_DESTINATION; a suppressed address filed and kept
+suppressed), `withdraw#Subscription` and the internal single-use `reserve#`/`release#SingleUseList`. Marketing's own list and member
+finds replace the extension of `find#ContactLists` and `find#ContactListParties` (those answer by the mailbox model and organization
+membership, list by list, and stay unchanged for their callers). PartyConsent gains a nullable `organizationPartyId`: a scoped row
+never changes allowSolicitation, the organization's state is its own latest row unless the latest global row withdraws the
+purpose, and `get#PartyConsentState`, `get#PartyConsentHistory` and `find#Consents` answer by organization. Another party's consent
+or subscription is changed in Mantle only by a contact administrator or a holder of MARKETING_CONSENT_EDIT for the list's or
+purpose's organization (`MarketingAccess.requireConsentChange`); Comms' consent services answer a Marketing consent editor for the
+organizations of their scope (their lists, contacts with a row on one or a scoped consent, scoped records, subscriptions through
+`request#Subscriptions`), and the export of a data request stays the contact administrator's. MessageSuppression (Comms', in
+`mantle.party.MessageServices`: `find#`, `store#`, `check#Suppressions`) is destination-scoped and normalized, for every
+organization or one; the ledger's attempt refuses an active block of every organization or of the delivery's store's organization (a hard bounce for every delivery; a complaint, staff block or soft failures for a promotional one only, never a transactional notice: the user's call, Nov 14);
+an audience editor adds a block for an organization of their scope, a reviewer (MESSAGE_SUPPRESSION_REVIEW, the Marketing
+administrator's since P3) ends one with new evidence.
+
 ## 5. Sends, templates and experiments
 
 ### Sends

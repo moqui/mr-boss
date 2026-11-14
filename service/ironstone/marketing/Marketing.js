@@ -32,11 +32,13 @@ const mountRoots = {
 const areas = {
     settings: "Settings",
     // P2: Approvals, the approvers' (BOSS_MKT_APPROVALS)
-    approvals: "Campaigns/Approvals"
+    approvals: "Campaigns/Approvals",
+    // P3: Audiences (lists, consent, suppressions), the audience managers' (BOSS_MKT_AUDIENCES)
+    audiences: "Audiences"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
-const areaReads = {settings: "configure", approvals: "approve"}
+const areaReads = {settings: "configure", approvals: "approve", audiences: "audienceRead"}
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Sales.js): screenAuthz reads the groups' rows once, and screenGrants picks
@@ -134,7 +136,19 @@ const linkPaths = [
     "Campaigns/CampaignPlan",
     "Campaigns/Approvals",
     "Settings/CampaignDefaults",
-    "Settings/Vocabularies"
+    "Settings/Vocabularies",
+    // P3: audiences (design §4: lists, members, Comms' Consent and the shared Suppressions), Sales' Leads and Accounts mounted for the
+    // bulk action (design §10, F64), and quick create's list
+    "Audiences",
+    "Audiences/Lists",
+    "Audiences/ListDetail",
+    "Audiences/MemberDetail",
+    "Audiences/Consent",
+    "Audiences/Consent/Contact",
+    "Audiences/Suppressions",
+    "Leads",
+    "Leads/Accounts",
+    "QuickCreate/NewList"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -192,7 +206,8 @@ const recordKinds = {
     list: {
         name: "List",
         icon: "sym_o_contact_mail",
-        destination: null,
+        // P3: ListDetail
+        destination: {path: "Audiences/ListDetail", parameter: "contactListId"},
         read: (userScope, contactListId) => {
             if (!userScope.capabilities.anyRead) return null
             const row = one("mantle.marketing.contact.ContactList", {contactListId})
@@ -365,6 +380,48 @@ const choiceSources = {
             .limit(choiceLimit)
         if (term) query = query.condition(textCondition(["marketSegmentId", "description"], term))
         return Array.from(query.list()).map(row => ({value: row.marketSegmentId, label: row.description || row.marketSegmentId}))
+    },
+    // P3: the lists a request may file to (the Sales bulk action, AddMembers): an audience editor's lists of the scope, not archived,
+    // never a mailbox, with each one's organization; the selected one's label when it is one of them
+    audienceLists: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.audienceEdit) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.marketing.contact.ContactList")
+            .condition("ownerPartyId", "in", ids)
+            .condition("contactListTypeEnumId", "in", ["MARKETING", "NEWSLETTER", "ANNOUNCEMENT"])
+            .condition(factory.makeCondition("archivedDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^contactListName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["contactListId", "contactListName"], term))
+        const many = ids.length > 1
+        const label = row => (row.contactListName || row.contactListId) + (many ? " · " + organizationName(row.ownerPartyId) : "")
+        const options = Array.from(query.list()).map(row => ({value: row.contactListId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => {
+                const row = one("mantle.marketing.contact.ContactList", {contactListId: id})
+                return !!row && row.contactListTypeEnumId !== "MAILBOX" && covers(userScope, row.ownerPartyId)
+            },
+            id => label(one("mantle.marketing.contact.ContactList", {contactListId: id}))
+        )
+    },
+    // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
+    emailTemplates: (userScope, term, selected) => {
+        let query = find("moqui.basic.email.EmailTemplate").orderBy("^description").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["emailTemplateId", "description"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.emailTemplateId,
+            label: row.description || row.emailTemplateId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => !!one("moqui.basic.email.EmailTemplate", {emailTemplateId: id}),
+            id => one("moqui.basic.email.EmailTemplate", {emailTemplateId: id})?.description || id
+        )
     }
 }
 function choices(p) {
@@ -401,6 +458,32 @@ const searchFinds = [
                 url: path + "?marketingCampaignId=" + encodeURIComponent(row.marketingCampaignId),
                 recordEntity: CAMPAIGN,
                 recordId: row.marketingCampaignId
+            }))
+        }
+    },
+    // P3: the lists of the scope by id or name, for an audience reader
+    {
+        kind: "list",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.audienceRead) return []
+            const ids = organizationIds(userScope)
+            if (!ids.length) return []
+            const path = sharedPath("Marketing", "Audiences/ListDetail")
+            return Array.from(
+                find("mantle.marketing.contact.ContactList")
+                    .condition("ownerPartyId", "in", ids)
+                    .condition("contactListTypeEnumId", "in", ["MARKETING", "NEWSLETTER", "ANNOUNCEMENT"])
+                    .condition(textCondition(["contactListId", "contactListName"], text))
+                    .orderBy("^contactListName")
+                    .limit(limit)
+                    .list()
+            ).map(row => ({
+                title: row.contactListName || row.contactListId,
+                subtitle: "List · " + organizationName(row.ownerPartyId),
+                icon: recordKinds.list.icon,
+                url: path + "?contactListId=" + encodeURIComponent(row.contactListId),
+                recordEntity: "mantle.marketing.contact.ContactList",
+                recordId: row.contactListId
             }))
         }
     }

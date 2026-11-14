@@ -20,16 +20,62 @@ along with this software (see the LICENSE.md file). If not, see
     Who may: the registry, the history, the exports and every change are for contact admins (the CONTACT_ADMIN permission,
     which BossSetupData gives the BOSS_CONTACT_ADMIN group and Mantle the ADMIN group); each service checks it before it reads
     anything, as Comms is open to every user. Anyone who may see a contact (ironstone.commons.ContactServices.check#ContactAccess) reads
-    its current state on the contact record, without the history. Another user's personal contact is "not found". -->
+    its current state on the contact record, without the history. Another user's personal contact is "not found".
+
+    Marketing's mount (impl-marketing P3, F50; design-marketing §4 Consent and ConsentDetail): a holder of MARKETING_CONSENT_EDIT
+    with MARKETING_AUDIENCE_VIEW manages consent too, for the organizations of their Marketing scope only (check#ConsentAdmin
+    organizationPartyIds): the lists those organizations own, the contacts with a row on one of them or a consent scoped to one of
+    them, consent recorded scoped to one of them (never a global grant or withdrawal, a contact administrator's), a subscription
+    through Marketing's evidenced request (mantle.marketing.AudienceServices request#Subscriptions, accepted with the evidence) and the
+    history of those organizations' rows. Decided by permission, whichever app shows the screen; Mantle's consent services check the
+    same rule again (MarketingAccess.js requireConsentChange). The export of a data request stays the contact administrator's. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
     <service verb="check" noun="ConsentAdmin" allow-remote="false">
-        <description>Whether the current user is a contact admin, who manages consent; with need, an error when not.</description>
+        <description>Whether the current user manages consent: a contact admin (every list and contact, isContactAdmin), or a
+            Marketing consent editor (MARKETING_CONSENT_EDIT with MARKETING_AUDIENCE_VIEW) for the organizations of their Marketing scope
+            (organizationPartyIds; null for a contact admin); with need, an error when neither.</description>
         <in-parameters><parameter name="need" type="Boolean" default="false"/></in-parameters>
-        <out-parameters><parameter name="isConsentAdmin" type="Boolean"/></out-parameters>
+        <out-parameters>
+            <parameter name="isConsentAdmin" type="Boolean"/>
+            <parameter name="isContactAdmin" type="Boolean"/>
+            <parameter name="organizationPartyIds" type="List"/>
+        </out-parameters>
         <actions><script><![CDATA[
-            isConsentAdmin = !!ec.user.userId && (ec.user.hasPermission('CONTACT_ADMIN') || ec.user.isInGroup('BOSS_CONTACT_ADMIN') || ec.user.isInGroup('ADMIN'))
+            isContactAdmin = !!ec.user.userId && (ec.user.hasPermission('CONTACT_ADMIN') || ec.user.isInGroup('BOSS_CONTACT_ADMIN') || ec.user.isInGroup('ADMIN'))
+            organizationPartyIds = null
+            isConsentAdmin = isContactAdmin
+            if (!isContactAdmin && ec.user.userId && ec.user.hasPermission('MARKETING_CONSENT_EDIT') && ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')) {
+                const marketingAccess = ec.resource.script('component://mr-mantle/service/mantle/marketing/MarketingAccess.js')
+                organizationPartyIds = marketingAccess.organizationIds(marketingAccess.scope())
+                isConsentAdmin = organizationPartyIds.length > 0
+            }
             if (need && !isConsentAdmin) ec.message.addError(ec.l10n.localize('Only contact admins manage consent'))
+        ]]></script></actions>
+    </service>
+
+    <service verb="check" noun="ScopedContact" allow-remote="false" read-only="true">
+        <description>A contact a Marketing consent editor may see (impl-marketing P3): a party that is not merged or another user's
+            personal contact, with a membership row on a list of the organizations or a consent scoped to one of them or of one of their
+            lists; party is null otherwise, the same answer whether it exists or not.</description>
+        <in-parameters>
+            <parameter name="partyId" required="true"/>
+            <parameter name="organizationPartyIds" type="List" required="true"/>
+        </in-parameters>
+        <out-parameters><parameter name="party" type="Map"/></out-parameters>
+        <actions><script><![CDATA[
+            party = null
+            const orgIds = Array.from(organizationPartyIds || [])
+            if (!orgIds.length) return
+            const row = ec.entity.find('mantle.party.PartyDetail').disableAuthz().condition('partyId', partyId).one()
+            if (row == null || row.mergedToPartyId || (row.privateOwnerUserId && row.privateOwnerUserId !== ec.user.userId)) return
+            const listIds = Array.from(ec.entity.find('mantle.marketing.contact.ContactList').disableAuthz().condition('ownerPartyId', 'in', orgIds)
+                    .condition('contactListTypeEnumId', 'not-equals', 'MAILBOX').selectField('contactListId').list()).map((list) => list.contactListId)
+            const onList = listIds.length > 0 && ec.entity.find('mantle.marketing.contact.ContactListParty').disableAuthz().condition('partyId', partyId)
+                    .condition('contactListId', 'in', listIds).count() > 0
+            const scoped = ec.entity.find('mantle.party.PartyConsent').disableAuthz().condition('partyId', partyId)
+                    .condition('organizationPartyId', 'in', orgIds).count() > 0
+            if (onList || scoped) party = row.getMap()
         ]]></script></actions>
     </service>
 
@@ -47,9 +93,12 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const nowMillis = Number(String(ec.user.nowTimestamp))
-            const consentAdmin = !!ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').call()?.isConsentAdmin
-            const lists = !consentAdmin ? [] : Array.from(ec.entity.find('mantle.marketing.contact.ContactList').disableAuthz()
-                    .condition('contactListTypeEnumId', 'not-equals', 'MAILBOX').orderBy('contactListName').list())
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').call() || {}
+            const consentAdmin = !!admin.isConsentAdmin
+            // a Marketing consent editor: the lists of their organizations (impl-marketing P3)
+            let listFind = ec.entity.find('mantle.marketing.contact.ContactList').disableAuthz().condition('contactListTypeEnumId', 'not-equals', 'MAILBOX')
+            if (admin.organizationPartyIds != null) listFind = listFind.condition('ownerPartyId', 'in', Array.from(admin.organizationPartyIds))
+            const lists = !consentAdmin ? [] : Array.from(listFind.orderBy('contactListName').list())
             const archived = (list) => list.archivedDate != null && Number(String(list.archivedDate)) <= nowMillis
             listOptions = lists.sort((a, b) => (archived(a) ? 1 : 0) - (archived(b) ? 1 : 0)).map((list) => ({key: list.contactListId,
                 text: (list.contactListName || list.contactListId) + (archived(list) ? ' · ' + L('archived') : ''), archived: archived(list)}))
@@ -96,10 +145,10 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             consentList = []
             consentListCount = 0
-            ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
             if (ec.message.hasError()) return
             const L = (text) => ec.l10n.localize(text)
-            const out = ec.service.sync().name('mantle.party.ConsentServices.find#Consents').parameters({text: text || null,
+            const out = ec.service.sync().name('mantle.party.ConsentServices.find#Consents').parameters({organizationPartyIds: admin.organizationPartyIds ?? null, text: text || null,
                 contactListId: contactListId || null, statusId: statusId || null, purposeEnumId: purposeEnumId || null,
                 changedFromDate: changedFromDate || null, changedThruDate: changedThruDate || null, allowSolicitation: allowSolicitation || null,
                 orderByField: orderByField || '-lastChangeDate', pageIndex: pageIndex || 0, pageSize: pageSize || 20, exportCsv: !!exportCsv}).call()
@@ -160,12 +209,24 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             found = false; canEdit = false; addressList = []; listList = []; partyConsentList = []; historyList = []; historyListCount = 0
             addListOptions = []; addressOptions = []; purposeOptions = []; sourceOptions = []
-            const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
-            if (ec.message.hasError()) return
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').call() || {}
+            const orgIds = admin.organizationPartyIds == null ? null : Array.from(admin.organizationPartyIds)
+            let partyRow = null
+            if (orgIds != null) {
+                // a Marketing consent editor: a contact of their organizations' lists or scoped consents, checked before anything is read
+                partyRow = ec.service.sync().name('ironstone.comms.ConsentServices.check#ScopedContact').parameters({partyId: partyId,
+                    organizationPartyIds: orgIds}).call()?.party || null
+                if (!partyRow) { ec.message.addError(`Contact ${partyId} not found`); return }
+            } else {
+                const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
+                if (ec.message.hasError()) return
+                partyRow = access.party
+            }
             found = true
-            partyName = ec.resource.expand('PartyFullNameTemplate', '', access.party).trim() || partyId
-            canEdit = !!ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').call()?.isConsentAdmin
-            const state = ec.service.sync().name('mantle.party.ConsentServices.get#PartyConsentState').parameters({partyId: partyId}).call()
+            partyName = ec.resource.expand('PartyFullNameTemplate', '', partyRow).trim() || partyId
+            canEdit = !!admin.isConsentAdmin
+            const state = ec.service.sync().name('mantle.party.ConsentServices.get#PartyConsentState').parameters({partyId: partyId,
+                organizationPartyId: orgIds != null && orgIds.length === 1 ? orgIds[0] : null}).call()
             if (ec.message.hasError()) return
             const L = (text) => ec.l10n.localize(text)
             const enumText = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description ?? id) : ''
@@ -197,7 +258,8 @@ along with this software (see the LICENSE.md file). If not, see
                 statusColor: consent.granted ? 'text-positive' : 'text-negative', whenText: when(consent.consentDate),
                 sourceText: enumText(consent.sourceEnumId), evidenceText: consent.evidenceText || ''}))
             grantedText = Array.from(state.grantedPurposeEnumIds || []).map(enumText).join(', ')
-            listList = Array.from(state.listList || []).map((list) => ({contactListId: list.contactListId, contactListName: list.contactListName || list.contactListId,
+            const ownLists = orgIds == null ? null : new Set(orgIds)
+            listList = Array.from(state.listList || []).filter((list) => ownLists == null || ownLists.has(list.ownerPartyId)).map((list) => ({contactListId: list.contactListId, contactListName: list.contactListName || list.contactListId,
                 typeText: enumText(list.contactListTypeEnumId), statusId: list.statusId, subscribed: !!list.subscribed, isCurrent: !!list.isCurrent,
                 isArchived: !!list.isArchived, statusText: list.subscribed ? L('Subscribed') : (statusText(list.statusId) || L('Not subscribed')),
                 statusColor: list.subscribed ? 'text-positive' : list.statusId === 'CLPT_UNSUBS_PENDING' || list.statusId === 'CLPT_PENDING' ? 'text-warning' : 'text-grey-7',
@@ -213,7 +275,7 @@ along with this software (see the LICENSE.md file). If not, see
             sourceOptions = Array.from(options.sourceOptions || [])
             if (!includeHistory) return
             const history = ec.service.sync().name('mantle.party.ConsentServices.get#PartyConsentHistory').parameters({partyId: partyId,
-                pageIndex: historyPageIndex || 0, pageSize: historyPageSize || 20}).call()
+                organizationPartyIds: orgIds, pageIndex: historyPageIndex || 0, pageSize: historyPageSize || 20}).call()
             if (ec.message.hasError()) return
             historyList = Array.from(history.historyList || []).map((row) => Object.assign({}, row, {whenText: when(row.consentDate),
                 whatText: [row.purposeDescription, row.contactListName ? L('list') + ' ' + row.contactListName : null].filter((part) => part).join(' · '),
@@ -240,13 +302,23 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="consentDate" type="Timestamp"/>
             <parameter name="evidenceText"/>
             <parameter name="comments"/>
+            <parameter name="organizationPartyId"><description>The organization the consent is for (a Marketing consent editor's:
+                required, one of theirs; the single one by default)</description></parameter>
         </in-parameters>
         <out-parameters><parameter name="partyConsentId"/><parameter name="allowSolicitation"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
             if (ec.message.hasError()) return
-            ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
-            if (ec.message.hasError()) return
+            if (admin.organizationPartyIds != null) {
+                const orgIds = Array.from(admin.organizationPartyIds)
+                if (!organizationPartyId && orgIds.length === 1) organizationPartyId = orgIds[0]
+                if (!organizationPartyId || !orgIds.includes(organizationPartyId)) { ec.message.addError(ec.l10n.localize('Choose the organization the consent is for')); return }
+                if (!ec.service.sync().name('ironstone.comms.ConsentServices.check#ScopedContact').parameters({partyId: partyId, organizationPartyIds: orgIds}).call()?.party) {
+                    ec.message.addError(`Contact ${partyId} not found`); return }
+            } else {
+                ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
+                if (ec.message.hasError()) return
+            }
             let mechId = contactMechId || null
             const kinds = {PcpMarketingEmail: 'CmtEmailAddress', PcpSms: 'CmtTelecomNumber', PcpPhone: 'CmtTelecomNumber'}
             if (!mechId && kinds[purposeEnumId]) {
@@ -258,7 +330,7 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const out = ec.service.sync().name('mantle.party.ConsentServices.store#PartyConsent').parameters({partyId: partyId, purposeEnumId: purposeEnumId,
                 statusId: statusId, contactMechId: mechId, sourceEnumId: sourceEnumId || 'PcsStaff', consentDate: consentDate || null,
-                evidenceText: evidenceText || null, comments: comments || null}).call()
+                evidenceText: evidenceText || null, comments: comments || null, organizationPartyId: organizationPartyId || null}).call()
             if (ec.message.hasError()) return
             partyConsentId = out.partyConsentId
             allowSolicitation = out.allowSolicitation ?? null
@@ -279,10 +351,27 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="statusId"/><parameter name="changed" type="Boolean"/></out-parameters>
         <actions><script><![CDATA[
             changed = false
-            ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
             if (ec.message.hasError()) return
-            ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
-            if (ec.message.hasError()) return
+            if (admin.organizationPartyIds != null) {
+                // a Marketing consent editor: a list of their organizations, a subscription only by Marketing's evidenced request
+                const orgIds = Array.from(admin.organizationPartyIds)
+                if (!ec.service.sync().name('ironstone.comms.ConsentServices.check#ScopedContact').parameters({partyId: partyId, organizationPartyIds: orgIds}).call()?.party) {
+                    ec.message.addError(`Contact ${partyId} not found`); return }
+                if (subscribe) {
+                    const filed = ec.service.sync().name('mantle.marketing.AudienceServices.request#Subscriptions').parameters({contactListId: contactListId,
+                        partyIdList: [partyId], contactMechId: contactMechId || null, sourceEnumId: 'PcsStaff', evidenceText: evidenceText || null, accept: true}).call()
+                    if (ec.message.hasError()) return
+                    const result = Array.from(filed.results || [])[0] || {}
+                    if (result.outcome === 'refused') { ec.message.addError(`Not subscribed: ${result.reasonCode}`); return }
+                    statusId = result.outcome === 'accepted' || result.outcome === 'existing' ? 'CLPT_ACCEPTED' : null
+                    changed = result.outcome === 'accepted'
+                    return
+                }
+            } else {
+                ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
+                if (ec.message.hasError()) return
+            }
             if (subscribe) {
                 const out = ec.service.sync().name('mantle.party.ConsentServices.subscribe#ContactListParty').parameters({contactListId: contactListId,
                     partyId: partyId, contactMechId: contactMechId || null, sourceEnumId: 'PcsStaff', evidenceText: evidenceText || null}).call()
@@ -313,12 +402,15 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions><script><![CDATA[
             unsubscribedCount = 0; unchangedCount = 0; failedPartyIdList = []
-            ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
             if (ec.message.hasError()) return
+            const orgIds = admin.organizationPartyIds == null ? null : Array.from(admin.organizationPartyIds)
             const ids = []
             for (const id of Array.from(new Set(Array.from(partyIdList || []).map((value) => String(value).trim()).filter((value) => value)))) {
-                const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: id}).call()
-                if (access?.visible) ids.push(id); else failedPartyIdList.push(id)
+                const visible = orgIds != null
+                    ? !!ec.service.sync().name('ironstone.comms.ConsentServices.check#ScopedContact').parameters({partyId: id, organizationPartyIds: orgIds}).call()?.party
+                    : !!ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: id}).call()?.visible
+                if (visible) ids.push(id); else failedPartyIdList.push(id)
             }
             if (!ids.length) return
             const out = ec.service.sync().name('mantle.party.ConsentServices.unsubscribe#ContactListParties').parameters({contactListId: contactListId,
@@ -337,8 +429,10 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters><parameter name="partyId" required="true"/></in-parameters>
         <out-parameters><parameter name="csvText"/><parameter name="fileName"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
+            const admin = ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').parameter('need', true).call()
             if (ec.message.hasError()) return
+            // a data request's export is the contact administrator's (impl-marketing P3)
+            if (!admin.isContactAdmin) { ec.message.addError(ec.l10n.localize('Only contact admins export a contact\'s consent history')); return }
             const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess').parameters({partyId: partyId, need: 'view'}).call()
             if (ec.message.hasError()) return
             const history = ec.service.sync().name('mantle.party.ConsentServices.get#PartyConsentHistory').parameters({partyId: partyId, pageNoLimit: true}).call()
