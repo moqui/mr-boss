@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     ListTemplates; style-guide §3.3 Detail; impl-marketing P3): one list of the user's organizations (check#Record list; else "Not
     available", linking back). The record header: its id and name, kind, channel, organization, campaign, single use and the counts,
     the state chip; the primary action Add members (evidenced requests, pending until confirmed, or accepted with evidence by a
-    consent editor) and More (Edit list, Archive). The boxes: Subscription policy (the dated policy in effect, Edit; its history),
+    consent editor) and More (Edit list, Archive). The boxes: Subscription policy (the dated policy in effect, Edit; its history;
+    P7: a public offer's PASS site and opening interval),
     Members (every membership state, filtered, each opening MemberDetail, addresses masked) and Templates (the dated bindings, Bind,
     End). Every change is Mantle's guarded audience service at the revision read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -50,6 +51,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="counts" from="detail?.counts || {}"/>
         <set field="can" from="detail?.capabilities || {}"/>
         <set field="policyHistory" from="detail?.policyHistory || []"/>
+        <!-- P7: the PASS sites whose Marketing mount offers the organization's lists -->
+        <set field="siteOptions" from="detail?.siteOptions || []"/>
         <set field="templateList" from="(detail?.templates || []).filter(row =&gt; row.current)"/>
         <set field="memberList" from="members?.memberList || []"/>
         <set field="memberListCount" from="members?.memberListCount"/>
@@ -63,7 +66,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="captionText" from="[list.typeText, list.channelText, list.organizationName, list.campaignName ? 'campaign ' + list.campaignName : null,
                 list.singleUse == 'Y' ? 'single use' : null, list.reservationText || null].filter(Boolean).join(' · ')"/>
         <set field="factsText" from="(counts.subscribed || 0) + ' subscribed · ' + (counts.pending || 0) + ' pending · ' + (counts.unsubscribed || 0) + ' unsubscribed'"/>
-        <set field="policyText" from="policy ? [policy.publicOffer == 'Y' ? 'Offered on a published page' : 'Not offered publicly',
+        <set field="policyText" from="policy ? [policy.publicOffer == 'Y' ? (policy.offerText + (policy.publicSiteId ? ' on ' + policy.publicSiteId : '')) : 'Not offered publicly',
                 policy.confirmationRequired == 'N' ? 'accepted with evidence' : 'confirmation required', list.purposeText].join(' · ')
                 : 'No policy yet: requests wait for confirmation, for ' + list.purposeText"/>
         <set field="listValues" from="Object.assign({}, list, {expectedRevision: list.revision})"/>
@@ -216,7 +219,15 @@ along with this software (see the LICENSE.md file). If not, see
                             <form-single name="EditPolicy" transition="storePolicy" map="policyValues">
                                 <field name="contactListId"><default-field><hidden/></default-field></field>
                                 <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                <field name="publicOffer"><default-field title="Public offer" tooltip="Offered for subscription on a published page"><check><option key="Y" text="Offer it on a published page"/></check></default-field></field>
+                                <field name="publicOffer"><default-field title="Public offer" tooltip="Offered for subscription on the site's PASS Subscribe page, only while the offer is open; the list's public flag alone offers nothing"><check><option key="Y" text="Offer it on a published page"/></check></default-field></field>
+                                <!-- P7: the offer's site and opening interval -->
+                                <field name="publicSiteId">
+                                    <default-field title="Site" tooltip="A PASS site whose Marketing mount serves this list's organization">
+                                        <drop-down allow-empty="true"><list-options list="siteOptions" key="${siteId}" text="${name}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="offerFromDate"><default-field title="Offer opens" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                                <field name="offerThruDate"><default-field title="Offer closes" tooltip="Empty: open while this policy is in effect"><date-time type="timestamp"/></default-field></field>
                                 <field name="confirmationRequired">
                                     <default-field title="Confirmation">
                                         <radio><option key="Y" text="The person confirms each request"/><option key="N" text="Staff may accept with evidence"/></radio>
