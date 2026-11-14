@@ -346,4 +346,28 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
     <!-- ===== end of Sales P7 ===== -->
+
+    <!-- ===== Sales P9 (impl-sales P9, F26, F43, F58): approvals, defaults and approval rules ===== -->
+    <!-- SALES_APPROVE for the approver (F43, §4: granted with its screens): it decides quote exceptions (decide#Quote) and, filed by
+        Customer Service, commercial order changes (OrderChangeServices decides them under SALES_APPROVE), from Approvals; in its
+        bundle. No other Sales group holds it, the administrator neither (§4 Nov 13). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_APPROVE" userPermissionId="SALES_APPROVE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_APPROVE" userPermissionId="SALES_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <!-- Approvals (design §5; Sales/Quotes/Approvals.xml): denied to the root user group, ALWAYS for the approver with the root's filter
+        sets; the administrator and ADMIN open it through their ALWAYS on the root. The screen and its menu also ask SALES_APPROVE,
+        so a custom group given Sales in Admin, which this deny does not reach, is shown no list its services refuse
+        (impl-maintenance F346's lesson). SalesDefaults and ApprovalPolicies are Settings tabs, under BOSS_SAL_SETTINGS (P2). -->
+    <artifactGroups artifactGroupId="BOSS_SAL_APPROVALS" description="Sales approvals">
+        <artifacts artifactName="component://mr-boss/screen/Sales/Quotes/Approvals.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SAL_APPROVALS_DENY" userGroupId="BOSS_SALES" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_SAL_APPROVALS_APPROVER" userGroupId="BOSS_SALES_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- a quote's exception to decide (Mantle's SalesQuoteApproval, F26) opens the quote's OrderDetail under Sales, whose Approval box
+        decides it; the decision is decide#Quote at the message's revision, from Approvals, the Commons inbox or the detail -->
+    <moqui.security.user.NotificationTopic topic="SalesQuoteApproval" linkTemplate="/qapps/Sales/Orders/OrderDetail?orderId=${orderId}"/>
+    <!-- ===== end of Sales P9 ===== -->
 </entity-facade-xml>

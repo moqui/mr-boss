@@ -126,6 +126,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="salesStoreLine" location="component://mr-boss/template/SalesQuotes.xml"/>
     <transition-include name="salesDeleteLine" location="component://mr-boss/template/SalesQuotes.xml"/>
     <transition-include name="salesUpdateQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <!-- Sales P9: a quote's approval asked and decided -->
+    <transition-include name="salesRequestApproval" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesDecideQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
     <!-- Insights (appRoot Insights, mounted at Insights/Records/OrderDetail; design-insights §10, crosscut's Insights row, impl-insights
         P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
         below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads

@@ -2187,6 +2187,154 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
   `sales.admin` publishes a discount rule; a rep's override waits for `sales.approver`, who approves it from
   Approvals; the rep cannot approve their own; a direct service call cannot propose the unapproved quote.
 
+**Built Nov 13 (P9).** mr-mantle and mr-boss on branch `sal/p9` (hashes in the worker's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P6's and P7's Built and Review notes, §4 (the Nov 11 rows on OrderDecision, the approval
+  setting and the pre-approval warnings, the acceptance threshold; the Nov 13 rows, the free line among them), F11, F14, F26, F43, F52,
+  F58, F60, F61 and F144–F155; OrderDecision (OrderEntities.xml:319), `autoApprove#Order`, `approve#Order` and `check#OrderPreApprove`
+  with the credit and purchase SECAs; Purchasing's approval rules (PurchaseApprovals.js: steps, `refusalFor`, `notify`,
+  `clearNotices`, the `revisionChanged` SECA, the topic handlers); OrderChanges.js' deciders, notices and `decide`; the
+  OrderChangeApproval topic and its BOSS link; Commons' `open#Notification` and `get#RecordLink`; Purchasing/Approvals.xml;
+  SalesQuotes.js' free-line check; SalesSettings' readiness; SalesIntake's purge. The code over the plan:
+  - `approve#Order` does not call `check#OrderPreApprove` (F11), so a Sales warning on that check stops `autoApprove#Order` and never
+    a person's approval, with nothing more to build for "does not refuse that approval";
+  - the approval verbs are a service file of their own, `mantle.order.SalesApprovalServices` (store#SalesPolicy, get#SalesPolicy,
+    store#SalesCommercialRevision, store#SalesApprovalPolicy, find#SalesApprovalPolicies, preview#Quote, request#QuoteApproval,
+    decide#Quote, the topic's approve#QuoteMessage and refuse#QuoteMessage, the two SECA services), so P8's quote-request verbs and
+    these do not meet in SalesQuoteServices.xml; `propose#Quote` is SalesQuoteServices' (a P9 block), its approval guard built here,
+    its issue checks P10's; the design's "Q." names hold as a package;
+  - the plan names no request step: a notice is sent when the rep asks (`request#QuoteApproval`), not on every line change, and a
+    holder of SALES_APPROVE sees a quote of their organization once its approval was asked (SalesAccess.js quoteOf, design §1.1 "an
+    assigned approval grants its authorized approver the source projection");
+  - the default pipeline is P2's (SalesPipeline.defaultFlag) and stays so; SalesPolicy holds the default team, not a pipeline;
+  - the "approver role" is a user group holding SALES_APPROVE, as Purchasing's steps name one;
+  - the commercial revision is the seller's own PartyAcctgPreference flag, which `find#PartyAcctgPreference` inherits from a parent
+    organization: SalesDefaults sets it only on the seller's own row (PREFERENCE_INHERITED otherwise; the demo's Retail inherits ON from
+    ORG_ZIZI_CORP);
+  - SalesDefaults shows the defaults Sales reads today (validity, team, intake retention); the templates, response requirements,
+    acceptance thresholds, the approval setting and the net-terms option are stored by store#SalesPolicy and join the form with P10,
+    P11 and P13, which read them, so no field the user sets does nothing.
+- Mantle:
+  - `entity/SalesApprovalEntities.xml` (new): SalesPolicy and SalesPolicyThreshold (an organization's dated defaults, the acceptance
+    thresholds per currency), SalesApprovalPolicy (dated rules: purpose SapQuote or SapOrder, type SarAmount, SarDiscount, SarPriceFloor
+    or SarFreeLine, with SarOverride for the unconfigured manual-price rule; threshold and currency, discount percent, floor margin,
+    approver group, self-approval), their key fields audit-logged with the change reason; OrderDecision extended with the order revision,
+    organization, purpose, rule, rule type, evaluation time, result (SdrRequested, SdrApproved, SdrRefused), decider, reason text and
+    operation key.
+  - `service/mantle/order/SalesApprovals.js` and `SalesApprovalServices.xml` (new): policies published as dated successors (a preview
+    writes nothing; REVISION_CHANGED, NO_CHANGE, DATE_INVALID, TEAM_INVALID, TEMPLATE_INVALID); rules (THRESHOLD_REQUIRED,
+    PERCENT_INVALID, APPROVER_INVALID, RULE_ENDED; another organization's rule as missing); the evaluation (each rule a quote meets at
+    its revision, its inputs as text, the lines and their authors; a floor's cost from the approved standard cost, else the seller's
+    average cost, never answered; a currency other than an amount rule's does not meet it); the states (required, requested, approved,
+    refused) from the decisions at the revision; separation (owner, requester, a priced line's actor) unless the rule allows; the
+    approvers (SALES_APPROVE holders who work for the seller, in the rule's group); `decide#Quote` (SALES_APPROVE, the quote's
+    organization, a draft, unexpired, the revision named, APPROVAL_NOT_NEEDED, SELF_APPROVAL, APPROVER_INVALID, the operation key);
+    the notice (title of the quote, customer and the kinds of its rules, no amount) and its handlers at the message's revision;
+    `freeLineCovered`; propose's guard (APPROVAL_REQUIRED, LINES_REQUIRED).
+  - `service/SalesApproval.secas.xml` (new): `OrderPreApproveSales` on `check#OrderPreApprove` (Sales' warnings for a seller with a
+    rule in effect: an accepted quote's open quote rules, the order rules met) and `OrderRevisionSalesApproval` on
+    `increment#OrderRevision` (a quote's commercial change invalidates its earlier decisions and reads their notices; any other order
+    returns at once).
+  - `data/MantleSetupData.xml`: the SalesQuoteApproval topic beside OrderChangeApproval (F26).
+  - `SalesQuotes.js`: the free line (P7's SALES_APPROVE check now only where no rule covers the line, the user's call), get#Quote's
+    `approval` and `canFreeLine`, create#Quote's validity from the policy's days and its team falling back to the policy's default team;
+    `SalesQuoteServices.xml` (get#Quote's approval, store#QuoteLine's description, `propose#Quote`); `SalesAccess.js` (a P9 block:
+    `approvalAsked` in quoteOf); `SalesIntake.js` (the purge holds each intake to its organization's retention, 30 when none);
+    `SalesSettings.js` (readiness `sales.defaults` and `sales.commercialRevision`, fixed at `salesDefaults`).
+- BOSS:
+  - Screens: `Sales/Quotes/Approvals.xml` (the Commons list with SalesQuoteApproval and OrderChangeApproval, for SALES_APPROVE);
+    `Sales/Settings/SalesDefaults.xml` (in effect, publish with preview, scheduled and earlier, the commercial revision) and
+    `Sales/Settings/ApprovalPolicies.xml` (rules with New, Edit as the next version and End; a named quote's preview);
+    `template/SalesOrderDetail.xml`'s Approval box and `template/SalesQuotes.xml`'s salesRequestApproval and salesDecideQuote, included
+    by `Shared/OrderDetail.xml` (owner contract, beside the P7 includes); `Sales.xml` (the two topics in shell-providers);
+    `Sales/Settings/Readiness.xml` (the two places).
+  - `Sales.js` (P9 blocks): linkPaths Quotes/Approvals, Settings/SalesDefaults and Settings/ApprovalPolicies, the choice
+    `approverGroups`, the record kind `orderChange` (a commercial change of the scope for a sales approver, opening Approvals until
+    P14); `Admin.js` mountRoutes `salesDefaults` and `salesApprovalPolicies`.
+  - F58 (owner contracts with Customer Service and Commons): OrderChangeApproval's link (BossSetupData.xml) is Commons' `openRecord`
+    link of the change request; `PaletteServices.get#RecordLink` has an order-change branch: Customer Service's OrderChangeDetail for one
+    who works orders there, else Sales' Approvals for a sales approver of a commercial kind, else nothing. One topic.
+  - `data/BossSetupSalesData.xml` (a P9 block): SALES_APPROVE for BOSS_SALES_APPROVE (F43) in its bundle; BOSS_SAL_APPROVALS (Approvals
+    denied to the root group, ALWAYS for the approver); the SalesQuoteApproval link to Sales' OrderDetail.
+  - Demo (`data/BossZSalesDemoData.xml`, a P9 block): Retail's defaults (30 days' validity, 60 days' intake retention) and its two quote
+    rules, a discount of 5 % or more (the Wingtip draft's entered refit price meets it) and a free line, each for BOSS_SALES_APPROVE;
+    Ziziwork Sales sets none, so its manual prices meet the unconfigured rule.
+- Specs:
+  - Mantle `test/order/SalesQuoteApprovals` (new, 5 features, 2.2 s): defaults published as a successor with a preview, stale and
+    rep refused, a new quote's validity from them, a rule's input refused, a rep refused a rule; an entered price over the rule needs
+    approval, propose refused, the approver sees the quote once asked and is notified (the rep not; the title with no amount), the rep,
+    another organization's approver, a stale revision and a lead who priced the quote refused, the approval with an operation key
+    answered again, the notices read; a file leaves the approval current (commercial revision on), a line change supersedes it, the
+    quote proposes once approved again; a free line refused where only an amount rule is set and admitted under a free-line rule or a
+    discount rule; with the approval setting off a Sales order rule stops `autoApprove#Order` (a store order with a covering
+    authorization) and not a person's `approve#Order`, and an organization with no rule auto-approves as before.
+    `SalesQuoteDrafts`' free-line feature now has the rep's free line admitted under the unconfigured rule, the quote needing approval.
+  - mr-boss `test/Sales/SalesApprovals` (new, 2 features, 0.6 s): the rep asks for the Wingtip draft's approval, the notice's title
+    names the quote and Wingtip and no amount, Approvals' one html render as the approver has its row and no amount, the approver
+    decides it; OrderChangeApproval's link (openRecord) opens Customer Service's OrderChangeDetail for its order desk, Sales' Approvals
+    for the approver and nothing for a rep. `SalesAccess` (a P9 feature, 0.4 s; the approver's capabilities with `approve`): Quotes'
+    tabs with Approvals for the approver only, Approvals refused a rep, decide#Quote refused a rep for the permission and the approver
+    for another organization's quote, with the same parameters. `SalesQuotes`' one OrderDetail render shows the Approval box.
+    `SalesSpecLib.js`: the Settings tabs with Defaults and Approval rules, Quotes' tabs for an approver, Retail's rule ids.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesApprovalUsable` (3 features: sales.admin publishes a discount rule
+    through ApprovalPolicies; a rep's quote over it waits, the rep cannot decide and a direct propose is refused; the approver approves
+    from Approvals' approve transition and the quote proposes).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteApprovals, SalesQuoteDrafts, StorelessOrderTax,
+  SalesWorkspace, SalesLeadIntake, SalesPipelineSetup, SalesOpportunities, SalesAccounts, SalesOrganizationScope, SalesLeadQualify,
+  RecordVisibility, OrderLifecycle, OrderChanges, PurchaseApprovals, PurchaseOrders, OrderToCashBasicFlow, ShopCheckout, StoreCheckout,
+  StoreFulfillment, ShopCustomer, ShopSubscriptions, Subscriptions, AccountingReturns, ReturnPolicies, OrderConfirmations,
+  StoreOperations, CartRecovery, WorkProjectMilestones and AccountingCredit 220 of 220 (31 specs with their dependencies); after the
+  last changes SalesQuoteApprovals, SalesQuoteDrafts, SalesLeadIntake, SalesPipelineSetup, SalesWorkspace and StorelessOrderTax 26 of
+  26. mr-boss SalesAccess, SalesAccounts, SalesApprovals, SalesHome, SalesIntake, SalesOpportunities, SalesQuotes, SalesReports,
+  SalesSettings, CustomerServiceAccess, CustomerServiceOrderChanges, CustomerServiceOrders, CommerceOrders, CommerceAccess,
+  PurchasingOrders, PurchasingAccess, AccountingCollections, ProjectsAccess, Chat, RecordFiles, Notifications, QuickCreate,
+  AdminRegistries, AdminCapabilities, AdminSettings, InsightsRecords, ProductsSharedContext, MaintenanceAccess, PeopleAccess,
+  WarehouseAccess and ManufacturingAccess 283 of 283 (32 specs). The demo loads with no data file failing. `moqui lint --screens`
+  (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on the new and changed JavaScript. Not run:
+  the client walk (no screen it walks changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in the Sales build: defaults, approval policies and approvals" table; ss-inventory has no
+  baseline form naming Sales' approvals, defaults or rules (the order approval forms are P11's), so no row changed.
+- Design edits: design-sales §5 "As built (impl-sales P9)" after Approvals and a note under §9 ApprovalPolicies; design-crosscut §3.15
+  (the SalesQuoteApproval row as built, OrderChangeApproval's link per recipient, the Sales row's service), design-drawers-commons §4
+  (the SalesQuoteApproval row, the link) and design-customer-service §4 (Approvals' context: the link resolved per recipient), owner
+  contracts.
+- Findings (provisional, numbered by the lead):
+  - the approval setting, the templates, response requirements, acceptance thresholds and net-terms option are stored by
+    store#SalesPolicy but shown on SalesDefaults only when P10, P11 and P13 read them; until then a configurer sets them through the
+    service alone;
+  - the commercial revision is set only on a seller's own accounting preference: Retail and the other Ziziwork organizations inherit
+    ORG_ZIZI_CORP's, so SalesDefaults shows where it is set and does not change it there (Accounting's settings own that row);
+  - a notice is sent when the rep asks for approval; a later line change supersedes the decisions and reads the notices, and the rep
+    asks again (there is no automatic resubmission, unlike Purchasing's placed orders);
+  - an approval by the topic's handler without a rule named decides every open rule the approver may decide; one the approver may not
+    (another group's) stays open, and a refusal from the list refuses each;
+  - a SapOrder rule warns on every sales order of its seller that meets it, store orders included, so with the setting off such an order
+    waits for a person as §4 says; nothing yet records an order-purpose decision (P11's `approve#Order` direction);
+  - an amount rule in one currency does not meet a quote in another (no conversion), as Purchasing's bands; design §9's "missing FX
+    blocks" is not built;
+  - `get#RecordLink`'s order-change branch sends a Sales approver to Approvals, not to the change, until P14's OrderChangeDetail;
+  - the Approvals screen's own permission check runs in its always-actions before the artifact deny is reported, so a refused
+    render names PERMISSION_DENIED rather than the authorization (the deny row holds: checked by `isPermitted`);
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the Sales approval verbs; all are `allow-remote="false"` and check
+    SALES_APPROVE or SALES_CONFIGURE and the organization themselves; P9 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 2.2 s (SalesQuoteApprovals; SalesQuoteDrafts unchanged in time); mr-boss server about 1.0 s
+    (SalesApprovals 0.6 s, SalesAccess' P9 feature 0.4 s); client none;
+  - merge hot spots (P8 is built beside P9 on sal/p8): mr-boss `data/BossSetupSalesData.xml` and `data/BossZSalesDemoData.xml` (P9
+    blocks after P7's), `service/ironstone/sales/Sales.js` (linkPaths' P9 entries after P7's, the choice and record kind in their own P9
+    blocks), `screen/Sales.xml` (the comment and two notification topics in shell-providers), `test/Sales/SalesAccess.spec.js` (the
+    approver's capabilities and a P9 feature at the end), `test/Sales/SalesSpecLib.js` (settingsMenu, approverQuotesMenu,
+    approvalRules); also `screen/Shared/OrderDetail.xml` (two includes), `template/SalesOrderDetail.xml` and `template/SalesQuotes.xml`
+    (P9 blocks), `service/ironstone/commons/PaletteServices.xml`, `service/ironstone/admin/Admin.js`, `data/BossSetupData.xml` (the
+    OrderChangeApproval link), `plan/usl-inventory.md`, `plan/design-sales.md`, `plan/design-crosscut.md`,
+    `plan/design-drawers-commons.md`, `plan/design-customer-service.md`; mr-mantle `service/mantle/order/SalesQuoteServices.xml` (a P9
+    block at the end, get#Quote's output), `SalesQuotes.js`, `service/mantle/sales/SalesAccess.js` (a P9 block before requireQuote),
+    `SalesIntake.js`, `SalesSettings.js`, `data/MantleSetupData.xml` (the topic after OrderChangeApproval);
+  - Attack-Surface, a line for the lead: "- Sales' approvals (`mantle.order.SalesApprovalServices`, all `allow-remote="false"`):
+    `decide#Quote` and the SalesQuoteApproval handlers need SALES_APPROVE in the quote's selling organization, the revision the
+    approver read and an approver other than the quote's owner, requester or a priced line's actor unless the rule allows it; the
+    defaults and rules need SALES_CONFIGURE for the organization; a price floor's cost is read on the server and never answered.";
+  - nothing needs the user's call; the free line's rule is the user's call of Nov 13 as recorded.
+
 ### P10 — Issue, send and the customer's response
 
 Design §5 OrderDetail's quote context (propose, send, revision binding, revise, clone, record acceptance, decline and

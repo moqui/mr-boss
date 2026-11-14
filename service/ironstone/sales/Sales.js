@@ -185,7 +185,11 @@ const linkPaths = [
     "Orders/OrderDetail",
     "Products/Product360",
     "Products/InventoryAvailability",
-    "Products/PriceExplain"
+    "Products/PriceExplain",
+    // P9: the approvals list and the defaults and approval rules
+    "Quotes/Approvals",
+    "Settings/SalesDefaults",
+    "Settings/ApprovalPolicies"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -296,6 +300,32 @@ const recordKinds = {
         }
     }
 }
+// ===== P9: a commercial order change (impl-sales P9, F58) =====
+// A commercial-kind change of a sales order of the scope (RqtOrderChange; not a cancel or substitute, Customer Service's), for a
+// sales approver (SALES_APPROVE), who decides it from Approvals until P14 gives it its OrderChangeDetail under Sales; Mantle's
+// decide#OrderChange checks the permission and the organization again.
+recordKinds.orderChange = {
+    name: "Order change",
+    icon: "sym_o_edit_note",
+    destination: "Quotes/Approvals",
+    parameter: "requestId",
+    read: (userScope, requestId) => {
+        if (!userScope.capabilities.approve) return null
+        const request = one("mantle.request.Request", {requestId})
+        if (!request || request.requestTypeEnumId !== "RqtOrderChange" || !request.orderId) return null
+        if (["OckCancel", "OckSubstitute"].includes(request.orderChangeKindEnumId)) return null
+        const part = Array.from(
+            find("mantle.order.OrderPart").condition("orderId", request.orderId).orderBy("orderPartSeqId").list()
+        )[0]
+        if (!part || !covers(userScope, part.vendorPartyId)) return null
+        return {
+            organizationPartyId: part.vendorPartyId,
+            label: request.requestName || "Order change " + requestId,
+            detail: "Order change"
+        }
+    }
+}
+// ===== end of P9 =====
 // A party's name for a label: the organization's name or the person's.
 function partyLabel(party) {
     if (!party) return ""
@@ -688,6 +718,25 @@ Object.assign(choiceSources, {
         )
     }
 })
+// ===== P9: the approvers' groups (impl-sales P9) =====
+// an approval rule's approver role: the user groups that hold SALES_APPROVE now (store#SalesApprovalPolicy checks the group again)
+choiceSources.approverGroups = (userScope, term) => {
+    const groupIds = Array.from(
+        new Set(
+            Array.from(find("moqui.security.UserGroupPermission").condition("userPermissionId", "SALES_APPROVE").list())
+                .filter(row => lib.active(row))
+                .map(row => row.userGroupId)
+        )
+    )
+    if (!groupIds.length || !userScope.capabilities.configure) return []
+    return byTerm(
+        Array.from(find("moqui.security.UserGroup").condition("userGroupId", "in", groupIds).orderBy("description").list()).map(
+            row => ({value: row.userGroupId, label: row.description || row.userGroupId})
+        ),
+        term
+    )
+}
+// ===== end of P9 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(

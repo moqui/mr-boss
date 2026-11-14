@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Settings › SalesDefaults (design-sales §9 SalesDefaults; style-guide §3.9 Settings; impl-sales P9): an organization's
+    Sales defaults in effect (mantle.order.SalesApprovalServices.get#SalesPolicy), published as a dated successor with its reason
+    (store#SalesPolicy; Preview answers the changes and saves nothing), the scheduled and earlier versions, and the commercial
+    revision a quote's issue binds (store#SalesCommercialRevision, X2, F9). The defaults shown are those Sales reads today: a new
+    quote's validity and default team, and the unverified intake retention; the templates, response requirements, acceptance
+    thresholds, the approval setting and the net-terms option join this form with the phases that read them (P10, P11, P13).
+    SALES_CONFIGURE, which Mantle checks with the organization. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Defaults" default-menu-index="6"
+        default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition name="publishDefaults">
+        <actions>
+            <service-call name="mantle.order.SalesApprovalServices.store#SalesPolicy" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, revision:(revision || null), fromDate:(fromDate || null),
+                        defaultTeamPartyId:(defaultTeamPartyId ?? ''), quoteValidityDays:(quoteValidityDays ?? ''),
+                        intakeRetentionDays:(intakeRetentionDays ?? ''), changeReason:(changeReason || null),
+                        previewOnly:(previewOnly == 'Y' ? 'Y' : null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="changeText" from="(stored.changes || []).map(change =&gt; ec.l10n.localize(change.field) + ': '
+                        + (change.beforeText || '—') + ' → ' + (change.afterText || '—')).join('; ')"/>
+                <if condition="stored.published"><then>
+                    <message type="success">Defaults published${changeText ? ': ' + changeText : ''}</message>
+                </then><else>
+                    <message type="info">${changeText ? 'Publishing would change ' + changeText : 'Publishing would change nothing'}</message>
+                </else></if>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <transition name="setCommercialRevision">
+        <actions>
+            <service-call name="mantle.order.SalesApprovalServices.store#SalesCommercialRevision"
+                    in-map="{organizationPartyId:organizationPartyId, commercialRevisionOnly:commercialRevisionOnly,
+                        changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Commercial revision saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <always-actions>
+        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales settings are the Sales administrator\'s')</script>
+    </always-actions>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.order.SalesApprovalServices.get#SalesPolicy" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="policyFound" from="!!found?.organizationPartyId"/>
+        <set field="policy" from="found?.policy || null"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId}"/>
+        <set field="publishValues" from="{organizationPartyId: organizationPartyId, revision: policy?.revision || null,
+                defaultTeamPartyId: policy?.defaultTeamPartyId || null, quoteValidityDays: policy?.quoteValidityDays ?? null,
+                intakeRetentionDays: policy?.intakeRetentionDays ?? null}"/>
+        <set field="revisionValues" from="{organizationPartyId: organizationPartyId, commercialRevisionOnly: found?.commercialRevisionOnly ? 'N' : 'Y'}"/>
+        <set field="policyRows" from="policy ? [['Default team', policy.teamName || 'None: the author\'s only team, else none'],
+                ['Quote validity', policy.quoteValidityDays ? policy.quoteValidityDays + ' days' : 'No end set'],
+                ['Unverified intakes kept', (policy.intakeRetentionDays || 30) + ' days'],
+                ['In effect', policy.fromText + (policy.thruText ? ' until ' + policy.thruText : '')],
+                ['Published by', [policy.changedByName, policy.changeReason].filter(Boolean).join(' · ')]]
+                .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]})) : []"/>
+        <set field="versionRows" from="(found?.scheduled || []).map(row =&gt; Object.assign({}, row, {stateText: ec.l10n.localize('Scheduled')}))
+                .concat((found?.earlier || []).map(row =&gt; Object.assign({}, row, {stateText: ec.l10n.localize('Ended')})))"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                <container style="col-12 col-md m-record-title">
+                    <label text="Sales defaults" type="h5"/>
+                    <label text="${found?.organizationName || ''}" type="span" style="text-caption m-muted" condition="policyFound"/>
+                </container>
+            </container>
+            <container style="row items-center q-gutter-xs m-record-actions">
+                <container-dialog id="PublishDefaultsDialog" button-text="Publish new defaults" icon="sym_o_publish" type="primary" width="640"
+                        title="Publish new Sales defaults" condition="policyFound">
+                    <form-single name="PublishDefaults" transition="publishDefaults" map="publishValues">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="revision"><default-field><hidden/></default-field></field>
+                        <field name="defaultTeamPartyId">
+                            <default-field title="Default team" tooltip="A new quote's team when its opportunity has none and its author is in no single team">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'teams', organizationPartyId:organizationPartyId, selected:defaultTeamPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="quoteValidityDays">
+                            <default-field title="Quote validity in days" tooltip="Empty: a new quote's end is left open"><text-line size="6" input-type="number"/></default-field>
+                        </field>
+                        <field name="intakeRetentionDays">
+                            <default-field title="Keep unverified inquiries for days" tooltip="Empty: 30 days"><text-line size="6" input-type="number"/></default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                        <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                        <field name="previewOnly">
+                            <default-field title=" "><check><option key="Y" text="Preview the changes; publish nothing"/></check></default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Publish"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="defaultTeamPartyId"/><field-ref name="quoteValidityDays"/></field-row>
+                            <field-row><field-ref name="intakeRetentionDays"/><field-ref name="fromDate"/></field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="previewOnly"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="DefaultsFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="!policyFound" text="Sales' defaults cannot be read for this organization just now."/>
+        <container-row condition="policyFound">
+            <row-col md="6">
+                <container-box>
+                    <box-header title="In effect"/>
+                    <box-body-nopad>
+                        <form-list name="DefaultsInEffect" list="policyRows" skip-form="true" skip-header="true" paginate="false">
+                            <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
+                            <field name="value"><default-field><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!policy"
+                                text="No defaults yet: a new quote's end is left open and unverified inquiries are kept 30 days. Publish the first with Publish new defaults."/>
+                    </box-body-nopad>
+                </container-box>
+            </row-col>
+            <row-col md="6">
+                <container-box>
+                    <box-header title="Commercial revision"/>
+                    <box-toolbar>
+                        <container-dialog id="CommercialRevisionDialog" button-text="${found?.commercialRevisionOnly ? 'Turn off' : 'Turn on'}"
+                                icon="sym_o_toggle_on" type="default" width="520" title="Change the commercial revision" condition="found?.commercialRevisionOwn">
+                            <form-single name="CommercialRevision" transition="setCommercialRevision" map="revisionValues">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="commercialRevisionOnly"><default-field><hidden/></default-field></field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="${found?.commercialRevisionOnly ? 'Turn off' : 'Turn on'}"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" condition="found?.commercialRevisionOnly"
+                                text="On: a quote's revision moves with its commercial changes only, so storing its PDF, a file or a note leaves an issue and an approval in force."/>
+                        <label type="p" style="text-warning" condition="!found?.commercialRevisionOnly"
+                                text="Off: every change of a quote, a file or a note among them, moves its revision, so a quote cannot be issued."/>
+                        <label type="p" style="text-caption m-muted" condition="!found?.commercialRevisionOwn"
+                                text="Set in ${found?.commercialRevisionOwnerName || 'another organization'}'s accounting preference."/>
+                    </box-body>
+                </container-box>
+            </row-col>
+        </container-row>
+        <container-box condition="policyFound &amp;&amp; versionRows.length">
+            <box-header title="Scheduled and earlier · ${versionRows.length}"/>
+            <box-body-nopad>
+                <form-list name="DefaultsVersions" list="versionRows" skip-form="true" paginate="false">
+                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <field name="quoteValidityDays" align="right"><default-field title="Validity days"><display/></default-field></field>
+                    <field name="teamName"><default-field title="Default team"><display/></default-field></field>
+                    <field name="changeReason">
+                        <default-field title="Why">
+                            <label text="${changeReason}" type="span"/>
+                            <label text="${changedByName}" type="div" style="text-caption m-muted" condition="changedByName"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="fromText"/><field-ref name="stateText"/></column>
+                        <column><field-ref name="changeReason"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
