@@ -1066,6 +1066,126 @@ ContactDetail's Add to list; MKT-AUDIENCE, MKT-CONSENT (the suppression and scop
   audience permission sees no bulk action and one with it files requests that arrive pending; a complaint
   suppression stays after the contact resubscribes; the Forum's and Comms' mailboxes behave as before.
 
+**Built Nov 14 (P3).** mr-mantle and mr-boss on branch `mkt/p3` (hashes in the worker's reply), master (Sales P8, P9) merged into
+both; mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P1's and P2's Built and Review notes, F6, F9, F13, F16, F43, F50, F64, F65, F67, F77 and
+  §4's rows (Accounts at Marketing/Leads/Accounts; Comms' permissions by Marketing role); impl-sales P3 and P4 (Accounts and LeadList
+  built for a second mount, LeadList's selection key `id@revision`, a lead's contacts its current Contact rows); Mantle's
+  ContactListServices, ConsentServices and the ledger (MessageDeliveries.js); Comms' `ironstone.comms.ConsentServices` and its
+  screens. The code over the plan:
+  - `find#ContactLists` and `find#ContactListParties` answer by the mailbox model and organization membership, one access call a list,
+    and cannot page in the query: Marketing reads through its own `find#Lists` and `find#Members` (AudienceServices); the two stay as
+    they are for the Inbox, the Forum and Comms;
+  - `subscribe#ContactListParty`, `store#PartyConsent` and the signed-in `unsubscribe#ContactListParty` let any signed-in user change
+    any party's consent: they now need the party's own user, a contact administrator or Marketing's consent editor of the list's or
+    purpose's organization (design §4: "the same extensions protect direct service calls");
+  - Comms' Consent screens are mounted by location under their own names (`Audiences/Consent`, `Audiences/Consent/Contact`, not the
+    design's ConsentDetail), so their relative links hold; ListDetail and MemberDetail are siblings of Lists (`Audiences/ListDetail`),
+    as CampaignDetail is of Campaigns;
+  - Marketing/Leads did not exist: the Leads area mounts Sales' Leads (its default) and Accounts by location in Sales' context for
+    the Marketing root; P13 adds LeadRules and LeadSources;
+  - a deny of a group the user is in wins over an allow, so the Audiences area gives the audience group an ALWAYS (as Approvals' approver).
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P3 block): ContactListPolicy (dated), SubscriptionRequest with its kinds and statuses;
+    ContactList gains `reservedBySendId` (audited), `reservedDate`, `consumedDate`. `entity/PartyEntities.xml`: PartyConsent
+    `organizationPartyId`. `entity/MessageDeliveryEntities.xml`: MessageSuppression with its reasons and sources.
+  - `AudienceServices.xml` over `MarketingAudiences.js`: `find#Lists`, `create#List`, `store#List`, `archive#List`, `get#List`,
+    `store#SubscriptionPolicy`, `store#ContactListEmail`, `find#Members`, `get#Member`, `request#Subscriptions` (parties, Sales leads'
+    current contacts and Sales accounts' contacts under the caller's Sales read; each item in its own transaction through the internal
+    `file#SubscriptionRequest`, recorded refused or not), `withdraw#Subscription`, `reserve#SingleUseList`, `release#SingleUseList`;
+    refusals and rules in each service's description and design §4's as-built note.
+  - `ContactListServices.create#ContactList`: a list that is not a mailbox subscribes no one (MEMBERS_NEED_EVIDENCE for named members).
+    `ConsentServices`: `store#PartyConsent` (organizationPartyId; a scoped row leaves allowSolicitation; the consent change rule),
+    `get#PartyConsentState` (organizationPartyId), `get#PartyConsentHistory` (organizationPartyIds), `find#Consents`
+    (organizationPartyIds), `subscribe#` and the signed-in `unsubscribe#ContactListParty` (the rule). `MarketingAccess.js`
+    `consentChangeAllowed`, `requireConsentChange`.
+  - `MessageServices.xml` over `MessageSuppressions.js` (Comms', owner contract): `find#Suppressions`, `store#Suppression`,
+    `check#Suppressions`; `MessageDeliveries.js` attempt refuses an active block of every organization or of the delivery's store's
+    organization, after the consent and before the hand-off. `MarketingWorkspace.js`: Home's audience changes card (requests of the
+    last seven days).
+- BOSS:
+  - Screens: the root (Audiences and Leads in the menu, QuickList, `g l`); `Marketing/Audiences` (Lists, ListDetail, MemberDetail,
+    Comms' Consent by location, `Shared/Suppressions`); `Marketing/Leads` (Sales' Leads and Accounts in Sales' context for this root);
+    `QuickCreate/NewList`; `Shared/Suppressions` (Comms', Marketing's mount only; everything decided by find#/store#Suppression);
+    `template/MarketingAudiences.xml` (the transitions, NewListForm, and the Sales bulk action's `addToList` and
+    `audienceListChoices`); Home's audience card link.
+  - Owner contracts: Sales' `Pipeline/Leads.xml` (the selection for an audience editor too, Assign and Disqualify `canEdit`, the action
+    "Add to list (evidenced)") and `Accounts/Accounts.xml` (AccountList's row selection with the action), each in a P3 block; Sales.js
+    `mountRoots` (Accounts at `Leads/Accounts`); Comms' `ConsentServices.xml` (check#ConsentAdmin's Marketing scope, check#ScopedContact,
+    the options, the registry, a contact's consent, record, subscription and bulk unsubscribe for a Marketing consent editor; the export
+    the contact administrator's), `Consent/List.xml` and `Consent/Contact.xml` (the organization of a recorded consent; the link to
+    Commons a contact administrator's), `template/ConsentRecord.xml` (the organization field) and `template/ContactRecord.xml` (the
+    Consent tab links a Marketing consent editor to Marketing's mount, F67).
+  - `Marketing.js`: the area `audiences`, the list's destination (ListDetail), choices `audienceLists` and `emailTemplates`, the
+    palette's lists, the P3 link paths. `data/BossSetupMarketingData.xml` (a P3 block): BOSS_MKT_AUDIENCES, MESSAGE_SUPPRESSION_REVIEW
+    for BOSS_MARKETING_ADMIN with its bundle row. Demo (`BossZZMarketingDemoData.xml`, a P3 block): `marketing.sales` (a Retail
+    representative who manages audiences), Retail's garden newsletter (policy; Maya accepted with evidence, Noah pending, Olive
+    unsubscribed, Pete a legacy member), its announcements, the single-use Spring VIP list, a hard bounce for every organization and
+    Olive's complaint.
+- Specs:
+  - Mantle `test/marketing/Audiences` (6 features, 1.6 s: a list subscribes no one, named members refused, a mailbox as before; pending
+    without confirmation, no address refused; acceptance needs the consent permission and evidence; a withdrawal not regranted by older
+    evidence, a withdrawn purpose not by staff; another organization's list missing, another person's consent only for the editor's
+    organization, a scoped grant not global; the dated policy and bindings, the single-use reservation); `test/party/Suppressions`
+    (3 features, 0.6 s: refused at the ledger's attempt however typed, another sent; a new subscription does not end a block, ending
+    needs the review permission and new evidence; an editor blocks for their organization only and reads no other's); `Consent` (+1
+    feature, under 0.1 s: a scoped grant against a global withdrawal, an organization's answer); `MarketingScope`'s Home feature expects
+    the audience card answered.
+  - mr-boss `MarketingLists` (2 features, 0.4 s: ListDetail's one qvt render; the bulk action on the context service and Mantle's
+    request, the list choice refused a salesperson without Marketing, a request filed pending for marketing.sales, refused as missing
+    for an audience manager without Sales and refused for sales.rep); `MarketingAccess` (the Audiences and Leads menus, Audiences' tabs,
+    the `audiences` capability, the administrator's suppression review, MESSAGE_SUPPRESSION_REVIEW's holders; +0.1 s); `SalesAccess`'
+    Marketing links case gains `Accounts/Accounts`.
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingAudienceWalk` (3 features: the list made and five requests filed,
+    three pending; the bulk action hidden from sales.rep and filed pending by marketing.sales under Sales and Marketing's mount, refused
+    for sales.rep; a complaint suppression kept after an accepted resubscription; a mailbox as before).
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the master merge): mr-mantle Audiences, Suppressions, Consent,
+  MarketingApprovals (32 of 32); ContactListSend, DeliveryLedger, MarketingScope, Mailboxes, InboxThreads, InternalMessages, ShopCheckout,
+  ShopCustomer, Campaigns, SalesOpportunities, RecordVisibility, SitePages (119 of 119); mr-boss MarketingLists, MarketingAccess,
+  MarketingCampaigns, SalesAccess, Consent, Contacts, Unsubscribe, SalesAccounts, SalesOpportunities, Inbox, InboxMailboxes,
+  AppOrganizationFilters, ProjectsAccess, AdminCapabilities, QuickCreate, CommonsSettings (162 of 162). A throwaway render of Lists,
+  MemberDetail, Suppressions (audience manager and administrator), Consent and Consent/Contact under Marketing, QuickList, Leads and
+  Accounts under Marketing and Sales (qvt, tui, html) passed and was not kept (no screen walk in the regression suite). `moqui lint
+  --screens`: 141 flagged sites, as before, none in the P3 screens. Prettier clean on the changed JavaScript. Not run: test-apps, the
+  acceptance suite.
+- Inventories: usl-inventory's ContactListServices and ConsentServices rows and a Marketing P3 block (AudienceServices, the
+  suppression services); ss-inventory has no row for P3's screens.
+- Design edits: design-marketing §4 (as built); design-drawers-commons' Mailboxes row (owner contract: lists, consent's organization and
+  change rule, suppressions and the ledger's refusal).
+- Findings (provisional, numbered by the lead):
+  - the consent mutators (`subscribe#ContactListParty`, `store#PartyConsent`, the signed-in `unsubscribe#ContactListParty`) admitted any
+    signed-in user for any party that was not someone's personal contact; now the party's own user, a contact administrator or
+    Marketing's consent editor of the organization; every caller found passes (Comms as a contact administrator, Shop and the account
+    hub for the party's own user, the token pages with no user);
+  - Marketing reads lists and members through its own finds rather than extending `find#ContactLists`/`find#ContactListParties` (the
+    code over the plan above);
+  - a request whose evidence predates the party's latest withdrawal is refused WITHDRAWN, and a staff acceptance of a purpose the person
+    withdrew (for every organization or the list's) is refused CONSENT_WITHDRAWN while a pending request with newer evidence is filed
+    (the person's own confirmation, P7, renews it): the plan's "never clears a withdrawal" made precise;
+  - with organizations asked, `find#Consents` merges the scoped rows of all of them into one state per purpose; a contact
+    administrator's registry (no organization) shows the global states only, so an organization's scoped grant shows only under
+    Marketing's mount;
+  - suppressions apply to every delivery of the ledger, transactional notices too, for their organization or every one; a delivery's
+    organization is its store's until P9 gives a campaign delivery its own;
+  - the bulk action's capability shows from `ec.user.hasPermission('MARKETING_AUDIENCE_EDIT')` in Sales' screens (no Marketing context
+    there); Mantle checks it, the list's organization and each record under the caller's Sales read;
+  - Comms' Consent screens answer a Marketing consent editor under Comms' own root too (the rule is by permission, not by mount);
+  - the Leads area mounts Sales' Leads in P3 (the plan places Marketing's Leads in P13), as Accounts needed an area;
+  - the design's ConsentDetail and Lists/ListDetail paths are Consent/Contact and Audiences/ListDetail (the code over the plan above).
+- For the lead:
+  - budget share: mr-mantle about 2.3 s (Audiences 1.6 s, Suppressions 0.6 s, Consent +0.1 s); mr-boss server about 0.5 s
+    (MarketingLists 0.4 s, MarketingAccess +0.1 s); no client spec;
+  - merge hot spots (Sales P8–P9 merged; Sales' later phases may touch the first four): mr-boss `service/ironstone/sales/Sales.js`
+    (mountRoots' Marketing row), `screen/Sales/Pipeline/Leads.xml` (two transition-includes, `canRequestSubscriptions`, the
+    row-selection condition, the actions' conditions and the new action), `screen/Sales/Accounts/Accounts.xml` (the same, and the new
+    row selection), `test/Sales/SalesAccess.spec.js` (the Marketing links case), `service/ironstone/comms/ConsentServices.xml`,
+    `screen/Comms/Consent/List.xml`, `Contact.xml`, `template/ConsentRecord.xml`, `template/ContactRecord.xml` (the Consent tab),
+    `data/BossSetupMarketingData.xml`, `data/BossZZMarketingDemoData.xml`, `plan/usl-inventory.md`, `plan/design-drawers-commons.md`;
+    mr-mantle `service/mantle/party/ConsentServices.xml`, `MessageServices.xml`, `MessageDeliveries.js`, `entity/PartyEntities.xml`,
+    `entity/MessageDeliveryEntities.xml`, `entity/MarketingEntities.xml`, `service/mantle/marketing/ContactListServices.xml`,
+    `MarketingAccess.js`, `MarketingWorkspace.js`, `test/party/Consent.spec.js`;
+  - the user's calls: whether the consent mutators' new rule (first finding) and suppressions on transactional notices (fifth) stand.
+
 ### P4 — Audience import and merge
 
 Design §4 AudienceImport and AudienceMerge, §18 (the import preview, error rows and membership export);
