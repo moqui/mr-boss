@@ -2928,7 +2928,7 @@ unchanged, no Rust built. Built beside Marketing P11 (on `mkt/p11`) and Sales P2
     machine.
 
 **Review Nov 14 (P10).** A fresh review of `mkt/p10` (mr-mantle a8edf7a7, mr-boss 69604a2b) against P10, §2, §4 and design §5
-ExperimentDetail, §14.1; master (Sales P20) merged into both first without conflict (mr-mantle 27317ca5, mr-boss c0893d05 sides kept).
+ExperimentDetail, §14.1; master (Sales P20) merged into both first without conflict (mr-mantle 27317ca5, mr-boss c324165e; both sides kept).
 - Checked and sound:
   - P9's guards across variants: each variant's content is checked as the send's (checkContent, PRIVATE_LINK) at store#ExperimentVariant
     and again at preparation (subject, body, VARIANTS_SAME); setup, sample, variant change and removal call the send's `revise` (revision
