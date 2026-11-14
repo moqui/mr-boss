@@ -27,9 +27,12 @@ along with this software (see the LICENSE.md file). If not, see
                         contactPartyId:(contactPartyId || null), salesOpportunityId:(salesOpportunityId || null),
                         currencyUomId:(currencyUomId || null), productStoreId:(productStoreId || null), orderName:(orderName || null),
                         otherPartyOrderId:(otherPartyOrderId || null), validFromDate:(validFromDate || null),
-                        validThruDate:(validThruDate || null)}"/>
+                        validThruDate:(validThruDate || null), templateOrderId:(templateOrderId || null)}"/>
             <set field="detailPath" from="sales.sharedLinks['Orders/OrderDetail'] || null"/>
             <if condition="!ec.message.hasError()"><message type="success">Quote ${created.orderId} created</message></if>
+            <!-- P12: a template's line with no price for this customer, or not usable for them, waits for the rep -->
+            <if condition="!ec.message.hasError() &amp;&amp; created.warnings?.length">
+                <message type="warning">${created.warnings.length} line(s) of the template need your attention: ${created.warnings.map(row =&gt; row.productId + (row.reasonCode == 'PRICE_UNAVAILABLE' ? ' has no price for this customer' : ' is not sold to this customer')).join('; ')}</message></if>
         </actions>
         <conditional-response url="${detailPath}"><condition><expression>detailPath</expression></condition>
             <parameter name="orderId" from="created.orderId"/></conditional-response>

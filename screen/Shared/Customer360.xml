@@ -71,6 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <!-- Sales P13 (owner contract): Invite to Sales in Sales' context (template/SalesInvite.xml) -->
+    <transition-include name="inviteSalesContact" location="component://mr-boss/template/SalesInvite.xml"/>
     <subscreens default-item="Contact" always-use-full-path="true">
         <conditional-default condition="appRoot == 'CustomerService'" item="ServiceOverview"/>
         <conditional-default condition="appRoot == 'Sales'" item="SalesOverview"/>

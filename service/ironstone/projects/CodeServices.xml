@@ -181,7 +181,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const restricted = new Set(Array.from(vis.restrictedItemIds || []))
                 const shared = vis.itemVisibilityIds == null ? null : Array.from(vis.itemVisibilityIds)
                 const all = !!vis.allProjects && !vis.isClient
-                const rows = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', ids)
+                // never a confidential issue's task the user is no Owner of, a project's manager included (HiddenItems.js): a
+                // commit or a merge request that names one shows no link to it
+                const rows = Array.from(ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', ids), vis)
                         .selectField('workEffortId,workEffortName,statusId,workEffortTypeEnumId,rootWorkEffortId,visibilityEnumId').disableAuthz().list())
                 for (const row of rows) {
                     const isProject = row.workEffortTypeEnumId === 'WetProject'
@@ -560,7 +562,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const access = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId}).call() || {}
             if (!access.canCreate && !access.canUpdate) { ec.message.addError(ec.resource.expand('You may not push to ${repositoryId}', '', {repositoryId})); return }
-            const effort = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', String(workEffortId).trim()).one()
+            const found = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', String(workEffortId).trim()).one()
+            // a confidential issue's task the user is no Owner of is as one that does not exist (HiddenItems.js)
+            const effort = found && ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').shown(found.workEffortId) ? found : null
             const projectId = effort ? (effort.workEffortTypeEnumId === 'WetProject' ? effort.workEffortId : effort.rootWorkEffortId) : null
             if (!projectId) { ec.message.addError(ec.resource.expand('${workEffortId} is not a project or one of its plan items or work items', '', {workEffortId})); return }
             ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: projectId, need: 'update'}).call()
@@ -581,6 +585,8 @@ along with this software (see the LICENSE.md file). If not, see
             const access = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId}).call() || {}
             if (!access.canCreate && !access.canUpdate) { ec.message.addError(ec.resource.expand('You may not push to ${repositoryId}', '', {repositoryId})); return }
             const effort = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
+            // a link is taken off an item the user may see (HiddenItems.js mayName)
+            if (effort && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(effort.workEffortId)) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
             const projectId = effort ? (effort.workEffortTypeEnumId === 'WetProject' ? effort.workEffortId : effort.rootWorkEffortId) : null
             if (projectId) ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: projectId, need: 'update'}).call()
             if (ec.message.hasError()) return
@@ -727,8 +733,8 @@ along with this software (see the LICENSE.md file). If not, see
             const segment = branch.split('/').pop()
             const candidates = []
             for (let end = segment.length; end > 0; end = segment.lastIndexOf('-', end - 1)) candidates.push(segment.substring(0, end))
-            const tasks = candidates.length && projectIds.length ? Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', candidates)
-                    .condition('workEffortTypeEnumId', 'WetTask').condition('rootWorkEffortId', 'in', projectIds).list()) : []
+            const tasks = candidates.length && projectIds.length ? Array.from(ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', candidates)
+                    .condition('workEffortTypeEnumId', 'WetTask').condition('rootWorkEffortId', 'in', projectIds)).list()) : []
             const task = candidates.map((id) => tasks.find((row) => row.workEffortId === id)).find((row) => row) || null
             const named = new Set(task ? [task.workEffortId] : [])
             for (const commit of commitList) for (const item of commit.itemList) if (item.workEffortId) named.add(item.workEffortId)
@@ -870,7 +876,7 @@ along with this software (see the LICENSE.md file). If not, see
             const access = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId}).call() || {}
             if (!access.canView) { ec.message.addError(ec.resource.expand('Repository ${repositoryId} is not available', '', {repositoryId})); return }
             const task = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', String(workEffortId).trim()).one()
-            if (task == null || task.workEffortTypeEnumId !== 'WetTask' || !task.rootWorkEffortId) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
+            if (task == null || task.workEffortTypeEnumId !== 'WetTask' || !task.rootWorkEffortId || !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').shown(task.workEffortId)) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
             ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: task.rootWorkEffortId, need: 'update'}).call()
             if (ec.message.hasError()) return
             ec.service.sync().name('mantle.work.GitServices.add#TaskCommit').parameters({workEffortId: task.workEffortId, repositoryId, commitId}).disableAuthz().call()
@@ -889,6 +895,8 @@ along with this software (see the LICENSE.md file). If not, see
             const access = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId}).call() || {}
             if (!access.canView) { ec.message.addError(ec.resource.expand('Repository ${repositoryId} is not available', '', {repositoryId})); return }
             const task = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
+            // a link is taken off an item the user may see (HiddenItems.js mayName)
+            if (task && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(task.workEffortId)) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
             if (task?.rootWorkEffortId) ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: task.rootWorkEffortId, need: 'update'}).call()
             if (ec.message.hasError()) return
             ec.service.sync().name('mantle.work.GitServices.remove#TaskCommit').parameters({workEffortId, repositoryId, commitId}).disableAuthz().call()
@@ -1571,10 +1579,22 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!(partyId in userOf)) userOf[partyId] = ec.entity.find('moqui.security.UserAccount').condition('partyId', partyId).disableAuthz().list()[0]?.userId || null
                 return userOf[partyId]
             }
+            // a public account's post may name a remote image, which a staff browser would fetch (the app's pages have no
+            // img-src policy that stops it): an image becomes a link to it, opened only when clicked, or goes
+            const withoutImages = (html) => html.replace(/<img\b[^>]*>/gi, (tag) => {
+                const src = /\ssrc="(https?:\/\/[^"]*)"/i.exec(tag)?.[1]
+                const alt = /\salt="([^"]*)"/i.exec(tag)?.[1] || ''
+                return src ? '<a href="' + src + '" rel="noopener noreferrer nofollow" target="_blank">[' + (alt || L('image')) + ']</a>' : ''
+            }).replace(/<\/{0,1}(picture|source|video|audio)\b[^>]*>/gi, '')
             const threadList = threads.map((thread) => ({communicationEventId: thread.communicationEventId, path: thread.path, oldLine: thread.oldLine ?? null,
                 newLine: thread.newLine ?? null, lineText: thread.lineText || '', commitId: thread.commitId || null, outdated: !!thread.outdated, resolved: !!thread.resolved,
+                // a thread of a public conversation (a repository Smithy keeps) is a post: its body is html, cleaned by Mantle and
+                // once more here; Projects' own comment is markdown as typed
+                isPost: !!thread.isPost,
                 commentList: Array.from(thread.commentList || []).map((comment) => ({communicationEventId: comment.communicationEventId, authorName: comment.authorName || L('Someone'),
-                    userId: userIdOf(comment.fromPartyId), isMine: !!myPartyId && comment.fromPartyId === myPartyId, whenText: when(comment.entryDate), body: comment.body || ''}))}))
+                    userId: userIdOf(comment.fromPartyId), isMine: !!myPartyId && comment.fromPartyId === myPartyId, whenText: when(comment.entryDate),
+                    bodyFormat: comment.bodyFormat === 'html' ? 'html' : 'markdown',
+                    body: comment.bodyFormat === 'html' ? withoutImages(String(StringUtilities.cleanHtml(String(comment.body || '')))) : (comment.body || '')}))}))
             const me = ec.user.userId
             const myReview = me && !isClient ? ec.entity.find('moqui.resource.GitMergeRequestReviewer').condition({mergeRequestId, userId: me}).disableAuthz().one() : null
             changes = {mergeRequestId, repositoryId: mr.repositoryId, mergeRequestNum: mr.mergeRequestNum, title: mr.title, statusId: mr.statusId, isOpen,
@@ -1701,7 +1721,7 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
             const task = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', String(workEffortId).trim()).one()
-            if (task == null || task.workEffortTypeEnumId !== 'WetTask' || !task.rootWorkEffortId) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
+            if (task == null || task.workEffortTypeEnumId !== 'WetTask' || !task.rootWorkEffortId || !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').shown(task.workEffortId)) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
             ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: task.rootWorkEffortId, need: 'update'}).call()
             if (ec.message.hasError()) return
             ec.service.sync().name('mantle.work.GitServices.add#MergeRequestItem').parameters({mergeRequestId, workEffortId: task.workEffortId,
@@ -1718,6 +1738,8 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
             const task = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
+            // a link is taken off an item the user may see (HiddenItems.js mayName)
+            if (task && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(task.workEffortId)) { ec.message.addError(ec.resource.expand('Work item ${workEffortId} not found', '', {workEffortId})); return }
             if (task?.rootWorkEffortId) ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: task.rootWorkEffortId, need: 'update'}).call()
             if (ec.message.hasError()) return
             ec.service.sync().name('mantle.work.GitServices.remove#MergeRequestItem').parameters({mergeRequestId, workEffortId}).call()
@@ -1728,7 +1750,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="comment" noun="MergeRequest">
         <description>MergeRequestChanges' line comment and reply: mantle.work.GitServices.create#ReviewComment (a comment on a line
             of the diff, at the head, when path and a line are given; a reply with parentCommEventId), for a user who may view the
-            repository, while the merge request is open or a draft.</description>
+            repository, while the merge request is open or a draft. On a merge request of a repository Smithy keeps the comment is a
+            post of its public conversation, through the post gate: held is true when it waits for a moderator, and it is then in
+            no thread until it is approved.</description>
         <in-parameters>
             <parameter name="mergeRequestId" required="true"/>
             <parameter name="body" required="true" allow-html="safe"/>
@@ -1738,15 +1762,19 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="lineText"/>
             <parameter name="parentCommEventId"/>
         </in-parameters>
-        <out-parameters><parameter name="communicationEventId"/></out-parameters>
+        <out-parameters><parameter name="communicationEventId"/><parameter name="held" type="Boolean"/></out-parameters>
         <actions><script><![CDATA[
+            held = false
             // a client contact comments on no merge request: line comments are the team's review notes (impl-projects.md P10b)
             if (ec.user.hasPermission('PROJECT_CLIENT')) { ec.message.addError(ec.resource.expand('Merge request ${mergeRequestId} is not available', '', {mergeRequestId})); return }
             const mr = ec.entity.find('moqui.resource.GitMergeRequest').condition('mergeRequestId', mergeRequestId).disableAuthz().one()
             if (mr && !['GmrDraft', 'GmrOpen'].includes(mr.statusId)) { ec.message.addError(ec.l10n.localize('A merged or closed merge request takes no comments')); return }
-            communicationEventId = ec.service.sync().name('mantle.work.GitServices.create#ReviewComment').parameters({mergeRequestId, body,
+            const made = ec.service.sync().name('mantle.work.GitServices.create#ReviewComment').parameters({mergeRequestId, body,
                 path: parentCommEventId ? null : (path || null), oldLine: parentCommEventId ? null : (oldLine ?? null), newLine: parentCommEventId ? null : (newLine ?? null),
-                lineText: parentCommEventId ? null : (lineText || null), parentCommEventId: parentCommEventId || null}).call()?.communicationEventId || null
+                lineText: parentCommEventId ? null : (lineText || null), parentCommEventId: parentCommEventId || null}).call()
+            communicationEventId = made?.communicationEventId || null
+            // a post of a public conversation that the gate holds: Mantle's answer (held)
+            held = !!made?.held
         ]]></script></actions>
     </service>
 

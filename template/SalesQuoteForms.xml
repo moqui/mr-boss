@@ -12,8 +12,8 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- NewQuote (design-sales §5 Quotes: customer and contact, selling organization, opportunity, currency, optional store, validity;
-    impl-sales P7), shared by Quotes, quick create, OpportunityDetail and Customer360: the form posts to the screen's createQuote
+<!-- NewQuote (design-sales §5 Quotes: customer and contact, selling organization, opportunity, currency, optional template and store,
+    validity; impl-sales P7, the template P12), shared by Quotes, quick create, OpportunityDetail and Customer360: the form posts to the screen's createQuote
     (template/SalesQuotes.xml) and reads its values from newQuoteDefaults (the organization, and the customer and opportunity when
     opened from one). Without a store the quote is taxed through the seller's gateway (X1). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -54,9 +54,19 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
+                    <!-- P12: a current template of the selling organization; the quote is its copy, priced as of today -->
+                    <field name="templateOrderId">
+                        <default-field title="Template" tooltip="Start from a published template: its lines, priced for this customer today">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'quoteTemplates', selected:templateOrderId, organizationPartyId:organizationPartyId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
                     <field name="orderName"><default-field title="Name"><text-line/></default-field></field>
                     <field name="currencyUomId">
-                        <default-field title="Currency" tooltip="The opportunity's or the seller's currency when empty">
+                        <default-field title="Currency" tooltip="The template's, the opportunity's or the seller's currency when empty">
                             <drop-down allow-empty="true">
                                 <dynamic-options transition="choices" server-search="true" min-length="0"
                                         parameter-map="{choice:'currencies', selected:currencyUomId}"/>
@@ -78,7 +88,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <field-layout>
                         <field-row><field-ref name="organizationPartyId"/><field-ref name="customerPartyId"/></field-row>
                         <field-row><field-ref name="contactPartyId"/><field-ref name="salesOpportunityId"/></field-row>
-                        <field-row><field-ref name="orderName"/><field-ref name="currencyUomId"/></field-row>
+                        <field-row><field-ref name="templateOrderId"/><field-ref name="orderName"/></field-row>
+                        <field-ref name="currencyUomId"/>
                         <field-row><field-ref name="productStoreId"/><field-ref name="validThruDate"/></field-row>
                         <field-ref name="otherPartyOrderId"/>
                         <field-ref name="submitButton"/>

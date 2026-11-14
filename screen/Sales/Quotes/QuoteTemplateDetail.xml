@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Quotes › Quote template (design-sales §5 QuoteTemplateDetail: TemplateHeader, TemplateItems, TemplatePreview; style-guide §3.3
+    Detail; impl-sales P12), over mantle.order.SalesQuoteServices.get#QuoteTemplate (a template of the user's sales scope: a current one
+    for a Sales reader, every one for a template manager; another's and a missing one are "not available" alike). The header (the
+    template, its organization, currency and published interval, its state) with the state's one primary (Add line for an empty draft,
+    Publish a draft with lines, New quote from a current one, Start successor for a manager) and More (Add shipping charge, Edit
+    template, End or Set aside, the template it replaces and its successor); Overview; Items, the quote draft's line editor
+    (salesStoreLine and salesDeleteLine: a product priced on the quote's date, or a fixed price with its reason, or a charge); Preview
+    (preview#QuoteTemplate: the lines priced for a customer on a date, with warnings); History. A published template is not changed:
+    its successor, a draft copy, replaces it when published, and the quotes made from it keep their terms. No cost or margin. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quote template" default-menu-include="false">
+    <parameter name="orderId" required="true"/>
+    <parameter name="previewCustomerPartyId"/>
+    <parameter name="previewDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="salesStoreLine" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesDeleteLine" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="createQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesStoreTemplate" location="component://mr-boss/template/SalesQuoteTemplates.xml"/>
+    <transition-include name="salesSucceedTemplate" location="component://mr-boss/template/SalesQuoteTemplates.xml"/>
+    <transition-include name="salesPublishTemplate" location="component://mr-boss/template/SalesQuoteTemplates.xml"/>
+    <transition-include name="salesEndTemplate" location="component://mr-boss/template/SalesQuoteTemplates.xml"/>
+    <actions>
+        <service-call name="mantle.order.SalesQuoteServices.get#QuoteTemplate" out-map="detail" transaction="force-new"
+                ignore-error="true" in-map="{orderId:orderId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!detail?.templateFound"/>
+        <set field="tp" from="detail?.template || {}"/>
+        <set field="templateLines" from="detail?.lines || []"/>
+        <set field="templateHistory" from="detail?.history || []"/>
+        <if condition="recordFound">
+            <service-call name="mantle.order.SalesQuoteServices.preview#QuoteTemplate" out-map="previewOut" transaction="force-new"
+                    ignore-error="true" in-map="{orderId:orderId, customerPartyId:(previewCustomerPartyId || null), validDate:(previewDate || null)}"/>
+            <set field="previewRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="preview" from="previewOut?.preview || null"/>
+        <set field="previewLines" from="previewOut?.lines || []"/>
+        <set field="primaryAction" from="tp.canPublish ? 'publish' : tp.canEdit ? 'addLine' : tp.canQuote ? 'quote' : tp.canSucceed ? 'succeed' : ''"/>
+        <set field="stateActions" from="{orderId:orderId, orderRevision:tp.orderRevision}"/>
+        <set field="lineDefaults" from="{orderId:orderId, orderRevision:tp.orderRevision, quantity:'1'}"/>
+        <set field="shippingDefaults" from="{orderId:orderId, orderRevision:tp.orderRevision, itemTypeEnumId:'ItemShipping',
+                itemDescription:ec.l10n.localize('Shipping')}"/>
+        <set field="templateValues" from="{orderId:orderId, orderRevision:tp.orderRevision, orderName:tp.orderName,
+                templateDescription:tp.templateDescription, templateValidityDays:(tp.templateValidityDays == null ? '' : String(tp.templateValidityDays))}"/>
+        <set field="newQuoteDefaults" from="{organizationPartyId:tp.organizationPartyId, templateOrderId:orderId}"/>
+        <set field="previewValues" from="{orderId:orderId, previewCustomerPartyId:previewCustomerPartyId, previewDate:previewDate,
+                organizationPartyId:tp.organizationPartyId}"/>
+        <set field="productUrl" from="sharedLinks['Products/Product360']"/>
+        <set field="captionText" from="[tp.organizationName, tp.currencyUomId, tp.intervalText].filter(Boolean).join(' · ')"/>
+        <set field="overviewRows" from="[['Description', tp.templateDescription], ['Organization', tp.organizationName], ['Currency', tp.currencyUomId],
+                ['Quotes valid for', tp.validityText], ['Published', tp.intervalText], ['Replaces', tp.predecessorName], ['Replaced by', tp.successorName],
+                ['Entered', [tp.enteredByName, tp.entryText].filter(Boolean).join(' · ')], ['Revision', String(tp.orderRevision ?? '')]]
+                .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]}))"/>
+    </actions>
+    <widgets>
+        <section name="TemplateNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Quote template ${orderId} is not available: it does not exist, it is not one of your organizations', or it is not published."
+                                type="p"/>
+                        <link url="${sharedLinks['Quotes/QuoteTemplates']}" text="Back to quote templates" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="TemplateFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${orderId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${tp.orderName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${tp.state == 'current' ? 'positive' : tp.state == 'draft' ? 'secondary' : tp.state == 'scheduled' ? 'primary' : 'grey'}">${WebUtilities.encodeHtml(tp.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(tp.stateText ?? "")})}]]></text>
+                                <text type="html">${tp.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="TemplateAddLine" button-text="Add line" icon="sym_o_add" width="640"
+                                type="${primaryAction == 'addLine' ? 'primary' : 'default'}" title="Add a line to template ${orderId}" condition="tp.canEdit">
+                            <form-single name="TemplateAddLineForm" transition="salesStoreLine" map="lineDefaults">
+                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="false" required-manual-select="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'products', organizationPartyId:tp.organizationPartyId, selected:productId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                <field name="unitAmount">
+                                    <default-field title="Fixed price" tooltip="Leave empty to price it for each customer on the quote's date; a fixed price needs its reason">
+                                        <text-line size="10"/></default-field>
+                                </field>
+                                <field name="overrideReason"><default-field title="Reason for the fixed price"><text-line/></default-field></field>
+                                <field name="freeLine">
+                                    <conditional-field title="Free line" condition="tp.canFreeLine">
+                                        <check><option key="Y" text="Free of charge (needs its reason)"/></check></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="itemDescription"><default-field title="Description" tooltip="The product's name when empty"><text-line/></default-field></field>
+                                <field name="submitButton"><default-field title="Add line"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="TemplatePublish" button-text="Publish" icon="sym_o_publish" width="520" type="primary"
+                                title="Publish template ${orderId}" condition="primaryAction == 'publish'">
+                            <form-single name="TemplatePublishForm" transition="salesPublishTemplate" map="stateActions">
+                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                <field name="fromDate"><default-field title="Published from" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Published through" tooltip="No end when empty"><date-time type="date"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Publish">
+                                        <submit confirmation="Publish template ${orderId}? It is then fixed${tp.predecessorOrderId ? ' and replaces ' + tp.predecessorName + ' from its start' : ''}; change it later through its successor."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted"
+                                    text="Quotes already made from a template keep their lines and terms when it is replaced."/>
+                        </container-dialog>
+                        <container-dialog id="TemplateNewQuote" button-text="New quote" icon="sym_o_request_quote" width="760"
+                                type="${primaryAction == 'quote' ? 'primary' : 'default'}" title="New quote from ${tp.orderName}" condition="tp.canQuote">
+                            <section-include name="NewQuoteForm" location="component://mr-boss/template/SalesQuoteForms.xml"/>
+                        </container-dialog>
+                        <link url="salesSucceedTemplate" link-type="hidden-form" text="Start successor" icon="sym_o_difference"
+                                btn-type="${primaryAction == 'succeed' ? 'primary' : 'default'}" condition="tp.canSucceed" parameter-map="{orderId:orderId}"
+                                confirmation="Start a draft successor of ${tp.orderName}? It replaces this template once you publish it."/>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="TemplateAddShipping" button-text="Add shipping charge" icon="sym_o_local_shipping"
+                                    width="520" title="Add a shipping charge to template ${orderId}" condition="tp.canEdit">
+                                <form-single name="TemplateAddShippingForm" transition="salesStoreLine" map="shippingDefaults">
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                    <field name="itemTypeEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="unitAmount"><default-field title="Amount"><text-line size="10"/></default-field></field>
+                                    <field name="itemDescription"><default-field title="Description"><text-line/></default-field></field>
+                                    <field name="submitButton"><default-field title="Add shipping charge"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="TemplateEdit" button-text="Edit template" icon="sym_o_edit" width="640"
+                                    title="Edit template ${orderId}" condition="tp.canEdit">
+                                <form-single name="TemplateEditForm" transition="salesStoreTemplate" map="templateValues">
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                    <field name="orderName"><default-field title="Name"><text-line/></default-field></field>
+                                    <field name="templateDescription"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                                    <field name="templateValidityDays">
+                                        <default-field title="Quotes valid for (days)" tooltip="The organization's quote validity when empty"><text-line size="6"/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="TemplateEnd" button-text="${tp.state == 'draft' ? 'Set aside' : 'End'}" icon="sym_o_event_busy"
+                                    width="520" title="${tp.state == 'draft' ? 'Set aside' : 'End'} template ${orderId}" condition="tp.canEnd">
+                                <form-single name="TemplateEndForm" transition="salesEndTemplate" map="stateActions">
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                    <field name="thruDate">
+                                        <conditional-field title="Ends on" tooltip="Now when empty" condition="tp.state != 'draft'"><date-time type="date"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="${tp.state == 'draft' ? 'Set aside' : 'End'}">
+                                            <submit type="danger" confirmation="${tp.state == 'draft' ? 'Set aside the draft template ' + orderId + '? It is never published.' : 'End template ' + orderId + '? No quote starts from it after that; quotes made from it keep their terms.'}"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="." text="Replaces ${tp.predecessorName}" parameter-map="{orderId:tp.predecessorOrderId}" condition="tp.predecessorOrderId"/>
+                            <link url="." text="Successor ${tp.successorName}" parameter-map="{orderId:tp.successorOrderId}" condition="tp.successorOrderId"/>
+                            <link url="${sharedLinks['Quotes/QuoteTemplates']}" url-type="plain" text="All templates"/>
+                        </button-menu>
+                    </container>
+                </container>
+                <label type="p" style="text-caption m-muted" condition="tp.state != 'draft' &amp;&amp; tp.canManage"
+                        text="A published template is not changed: start its successor, change that and publish it to replace this one."/>
+                <container-row>
+                    <row-col md="5">
+                        <container-box>
+                            <box-header title="Overview"/>
+                            <box-body-nopad>
+                                <form-list name="TemplateOverview" list="overviewRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="7">
+                        <container-box>
+                            <box-header title="Items · ${templateLines.length}"/>
+                            <box-body-nopad>
+                                <form-list name="TemplateLines" list="templateLines" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="description">
+                                        <default-field title="Item">
+                                            <link url="${productUrl}" text="${description}" link-type="anchor" parameter-map="{productId:productId}"
+                                                    condition="productId &amp;&amp; productUrl"/>
+                                            <label text="${description}" type="div" condition="!productId || !productUrl"/>
+                                            <label text="${pricingText}" type="div" style="text-caption ${fixed ? 'text-warning' : 'm-muted'}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                    <field name="unitText" align="right">
+                                        <default-field title="Price">
+                                            <label text="${unitText}" type="span" style="text-no-wrap"/>
+                                            <label text="${fixed ? ec.l10n.localize('Calculated') + ' ' + calculatedText : ec.l10n.localize('as of the last change')}" type="div"
+                                                    style="text-caption m-muted" condition="productId &amp;&amp; (!fixed || calculatedText)"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="TemplateEditLine_${orderItemSeqId}" button-text="Edit" icon="sym_o_edit"
+                                                    width="560" title="Edit line ${orderItemSeqId}" condition="tp.canEdit">
+                                                <form-single name="TemplateEditLine" transition="salesStoreLine">
+                                                    <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                    <field name="orderRevision" from="tp.orderRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="quantity" from="quantityText">
+                                                        <conditional-field title="Quantity" condition="!shipping"><text-line size="8"/></conditional-field>
+                                                        <default-field><ignored/></default-field>
+                                                    </field>
+                                                    <field name="unitAmount" from="fixed || shipping ? String(unitAmount ?? '') : ''">
+                                                        <default-field title="${shipping ? 'Amount' : 'Fixed price'}" tooltip="Leave empty to keep the pricing; a fixed price needs its reason"><text-line size="10"/></default-field>
+                                                    </field>
+                                                    <field name="overrideReason">
+                                                        <conditional-field title="Reason for the fixed price" condition="!shipping"><text-line/></conditional-field>
+                                                        <default-field><ignored/></default-field>
+                                                    </field>
+                                                    <field name="useCalculatedPrice">
+                                                        <conditional-field title="Price" condition="fixed">
+                                                            <check><option key="Y" text="Price it on the quote's date instead"/></check></conditional-field>
+                                                        <default-field><ignored/></default-field>
+                                                    </field>
+                                                    <field name="itemDescription" from="description"><default-field title="Description"><text-line/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="salesDeleteLine" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                                    condition="tp.canEdit" parameter-map="{orderId:orderId, orderRevision:tp.orderRevision, orderItemSeqId:orderItemSeqId}"
+                                                    confirmation="Remove line ${orderItemSeqId} of template ${orderId}?"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="unitText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!templateLines.length"
+                                        text="${tp.canEdit ? 'No lines yet · Add the first with Add line' : 'No lines'}"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <!-- TemplatePreview: an example quote, the lines priced for a customer on a date -->
+                <container-box>
+                    <box-header title="Preview${preview ? ' · ' + preview.customerName + ' · ' + preview.validText : ''}"/>
+                    <box-body>
+                        <form-single name="TemplatePreviewFind" transition="." map="previewValues">
+                            <field name="orderId"><default-field><hidden/></default-field></field>
+                            <field name="previewCustomerPartyId">
+                                <default-field title="Customer" tooltip="Empty for the seller's own price">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'accounts', selected:previewCustomerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="previewDate"><default-field title="Priced on" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="previewCustomerPartyId"/><field-ref name="previewDate"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <label text="${previewRefusal}" type="p" style="text-negative" condition="previewRefusal"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="TemplatePreviewLines" list="previewLines" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Item">
+                                    <label text="${description}" type="span"/>
+                                    <label text="${warningText}" type="div" style="text-caption text-warning" condition="warningText"/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText"><default-field title="Price from"><display/></default-field></field>
+                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="unitText" align="right"><default-field title="Price"><display/></default-field></field>
+                            <field name="amountText" align="right">
+                                <default-field title="Amount"><label text="${amountText}" type="span" style="text-no-wrap text-weight-medium"/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="amountText"/></column>
+                            </columns>
+                        </form-list>
+                        <container style="row justify-end q-pa-sm" condition="preview">
+                            <label text="${ec.l10n.localize('Example total')} ${preview?.totalText} · ${ec.l10n.localize('before tax, which the quote’s address decides')}"
+                                    type="span" style="text-subtitle1 text-weight-medium"/>
+                        </container>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="History · ${templateHistory.length}"/>
+                    <box-body-nopad>
+                        <form-list name="TemplateHistory" list="templateHistory" skip-form="true" paginate="false">
+                            <field name="changedText"><default-field title="When"><display/></default-field></field>
+                            <field name="fieldText">
+                                <default-field title="Change">
+                                    <label text="${fieldText}${lineText ? ' · ' + ec.l10n.localize('line') + ' ' + lineText : ''}" type="span"/>
+                                </default-field>
+                            </field>
+                            <field name="newText">
+                                <default-field title="From and to">
+                                    <label text="${oldText || '—'} → ${newText || '—'}" type="span"/>
+                                    <label text="${reason}" type="div" style="text-caption m-muted" condition="reason"/>
+                                </default-field>
+                            </field>
+                            <field name="userName"><default-field title="By"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="fieldText"/><field-ref name="changedText"/></column>
+                                <column><field-ref name="newText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!templateHistory.length" text="No changes recorded yet"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -104,6 +104,105 @@ feature("the Development tab on the code demo: IRON-3's branches and its merge r
     },
 })
 
+// A Smithy tracker for the issue features, made once: a site with a canonical host, a public repository with issues on (which
+// makes its project), through Mantle's services as john.doe (the site's rows by its spec helpers, mr-mantle
+// test/smithy/SmithySpecLib.js). An issue's task is a work item of that project.
+function issueTracker() {
+    if (made.tracker) return made.tracker
+    const smithy = ec.resource.script("component://mr-mantle/test/smithy/SmithySpecLib.js")
+    const key = Date.now().toString(36)
+    const siteId = smithy.site("BWI" + key)
+    smithy.make("mantle.public.PublicSiteHost", { hostname: "issues-" + key + ".boss.test", siteId, canonical: "Y" })
+    smithy.make("mantle.public.PublicSiteParty", { siteId, partyId: ec.user.userAccount.partyId, state: "active", role: "owner", revision: 1 })
+    const groupId = smithy.run("mantle.smithy.SmithyServices.create#Group", { siteId, pathSegment: "boss-issues", visibility: "public" }).groupId
+    const repositoryId = smithy.run("mantle.smithy.SmithyServices.create#Repository", { siteId, groupId, slug: "code", visibility: "public", repositoryKind: "db" }).repositoryId
+    smithy.run("mantle.smithy.SmithyServices.update#Repository", { input: { siteId, repositoryId, issuesEnabled: true,
+        expectedRevision: Number(one("mantle.smithy.SmithyRepository", { repositoryId }).revision) } })
+    const file = (title, more) => {
+        const filed = smithy.run("mantle.smithy.SmithyIssueServices.create#Issue", { input: Object.assign({ siteId, repositoryId, title,
+            body: "The text of " + title, operationId: "boss-wid-" + ec.user.randomString(12) }, more || {}) }).result
+        return { issueNumber: filed.issueNumber, workEffortId: one("mantle.smithy.SmithyIssue", { repositoryId, issueNumber: filed.issueNumber }).workEffortId }
+    }
+    made.tracker = { smithy, siteId, repositoryId, file, projectId: one("mantle.smithy.SmithyRepository", { repositoryId }).workEffortId,
+        url: "https://issues-" + key + ".boss.test/code/boss-issues/code/-/issues/" }
+    return made.tracker
+}
+
+feature("a task that is an issue of a repository: its number with the public page's link, and the public conversation apart from Chatter", {
+    requires: ["git"],
+    when() {
+        const tracker = issueTracker()
+        const filed = tracker.file("Printer on fire")
+        return { filed, page: detail({ workEffortId: filed.workEffortId }), url: tracker.url + filed.issueNumber }
+    },
+    then({ filed, page, url }) {
+        page.status == 200
+        page.errors == ""
+        !page.broken
+        // beside the key: the number in the repository, linked to the public page
+        page.output.includes("m-workitem-key")
+        page.output.includes("#" + filed.issueNumber)
+        page.output.includes(url)
+        // the outward conversation is its own box; Chatter stays for the internal notes
+        page.output.includes("Public conversation")
+        page.output.includes("The text of Printer on fire")
+        page.output.includes('<m-chatter id="TaskChatter"')
+        // its text is the issue's first post, so the Edit dialog does not offer the description
+        page.output.includes("edit it on the issue")
+    },
+})
+
+feature("a confidential issue's task is nowhere for the tracker's project manager (the list, its detail, Today, a time entry by its id, a commit's links) and there for a Smithy Owner and an administrator", {
+    requires: ["git"],
+    when() {
+        const tracker = issueTracker()
+        const secret = tracker.file("A hole in the wall", { confidential: true }).workEffortId
+        // Joe Developer manages the tracker's project: in Smithy a project role is a Maintainer's at most, never an Owner's, and
+        // the confidential issue's task is in the companion project, whose members are the Owners alone
+        const joe = one("moqui.security.UserAccount", { username: "joe.developer" }).partyId
+        tracker.smithy.make("mantle.work.effort.WorkEffortParty", { workEffortId: tracker.projectId, partyId: joe, roleTypeId: "Manager", fromDate: Date.now() - 1000 })
+        // the services as the screens call them: the rule under test is the services' own, by the user
+        const call = (name, parameters) => {
+            const out = ec.service.sync().name(name).parameters(parameters).disableAuthz().call() || {}
+            ec.message.clearErrors()
+            return out
+        }
+        const look = () => ({
+            manages: Array.from(call("mantle.work.ProjectServices.get#VisibleProjectInfo", {}).managedProjectIds || []).includes(tracker.projectId),
+            list: Array.from(call("ironstone.projects.WorkItemServices.find#WorkItems", { list: "all", text: "hole in the wall", withCounts: false }).rowList || [])
+                .some((row) => row.workEffortId === secret),
+            detail: !!call("ironstone.commons.TaskServices.get#TaskAccess", { workEffortId: secret, need: "check", app: "projects" }).visible,
+            today: JSON.stringify(call("ironstone.commons.CommonsServices.get#TodayView", {})).includes(secret),
+            // a time entry asked for the task by its id: the item is offered, with its name, only to one who sees it
+            time: Array.from(call("ironstone.projects.TimeServices.get#TimeEntryEdit", { workEffortId: secret }).edit?.itemOptions || [])
+                .some((option) => option.value === secret || String(option.label).includes("hole in the wall")),
+            link: !!(call("ironstone.projects.CodeServices.get#VisibleWorkEfforts", { workEffortIdList: [secret] }).effortMap || {})[secret],
+        })
+        const manager = as("joe.developer", look)
+        // the same user made an Owner of the repository, as its Members tab makes one: Mantle puts him on the companion project
+        tracker.smithy.make("mantle.public.PublicSiteParty", { siteId: tracker.siteId, partyId: joe, state: "active", role: "member", revision: 1 })
+        tracker.smithy.make("mantle.public.PublicSiteProfile", { siteId: tracker.siteId, partyId: joe, handle: "joedev", displayName: "Joe", discoverability: "public", revision: 1 })
+        tracker.smithy.run("mantle.smithy.SmithyServices.set#RepositoryMember", { input: { siteId: tracker.siteId, repositoryId: tracker.repositoryId, handle: "joedev", role: "owner" } })
+        return { manager, owner: as("joe.developer", look), admin: look() }
+    },
+    then({ manager, owner, admin }) {
+        // a manager of the tracker's project, and nothing of this task anywhere
+        manager.manages == true
+        manager.list == false
+        manager.detail == false
+        manager.today == false
+        manager.time == false
+        manager.link == false
+        owner.list == true
+        owner.detail == true
+        owner.time == true
+        owner.link == true
+        admin.list == true
+        admin.detail == true
+        admin.link == true
+    },
+})
+
 feature("in the terminal (tui) the work item and the work items list render as model documents with no error node", {
     when() {
         const tui = (path, parameters) => {

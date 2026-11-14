@@ -642,3 +642,60 @@ feature("approving a sales order is an order approver's, of their organization",
         other.includes("RECORD_UNAVAILABLE")
     }
 })
+
+// P12 (impl-sales P12): a quote template is maintained by a Sales manager or administrator and read, once published, by the
+// organization's Sales users: with the same parameters (a stale revision, so nothing is written) the rep is refused the draft's change
+// for the permission and the manager reaches the revision check; the rep sees Retail's published template and Ziziwork Sales' rep does
+// not (another organization's answers as missing)
+feature("a quote template is a manager's to keep and its organization's to read", {
+    when() {
+        const Q = "mantle.order.SalesQuoteServices."
+        const store = user =>
+            asUser(user, () =>
+                system(() =>
+                    refusal(Q + "store#QuoteTemplate", {
+                        orderId: ids.templates.service,
+                        orderRevision: "0",
+                        orderName: "Yearly service visit"
+                    })
+                )
+            )
+        const seen = user =>
+            asUser(user, () => system(() => !!invoke(Q + "get#QuoteTemplate", {orderId: ids.templates.refit}).templateFound))
+        return {rep: store(users.rep), manager: store(users.manager), repSees: seen(users.rep), otherSees: seen(users.otherRep)}
+    },
+    then({rep, manager, repSees, otherSees}) {
+        rep.includes("PERMISSION_DENIED")
+        manager.includes("REVISION_CHANGED")
+        repSees == true
+        otherSees == false
+    }
+})
+
+// P13 (impl-sales P13): inviting a customer's contact to PASS Sales is a holder of SALES_CUSTOMER_INVITE's, for an account of their
+// organization: with the same parameters (an address that is not the contact's, so nothing is written), the manager reaches the
+// address check, the rep is refused for the permission, and the manager is refused Ziziwork Sales' account as missing
+feature("inviting a customer's contact to PASS Sales is an inviter's, for an account of their organization", {
+    when() {
+        const invite = (user, accountPartyId, contactPartyId) =>
+            asUser(user, () =>
+                system(() =>
+                    refusal("mantle.sales.AccountServices.invite#SalesContact", {
+                        accountPartyId,
+                        contactPartyId,
+                        emailAddress: "nobody@invite.example.test"
+                    })
+                )
+            )
+        return {
+            manager: invite(users.manager, ids.accounts.wingtip, ids.contacts.dana),
+            rep: invite(users.rep, ids.accounts.wingtip, ids.contacts.dana),
+            other: invite(users.manager, ids.accounts.fabrikam, ids.contacts.lee)
+        }
+    },
+    then({manager, rep, other}) {
+        manager.includes("EMAIL_INVALID")
+        rep.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})

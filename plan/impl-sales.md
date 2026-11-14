@@ -1,3 +1,6 @@
+Nov 14, 2026 — gate 2 built: P7–P13 (stage S2), quote to order with public acceptance on PASS, each phase reviewed by a fresh agent
+and merged on its focused specs, beside Marketing P1–P6. The user's calls of the build are in §4. Next: stage S3 (P14 beside P15, P16,
+P17, P18, P19, P20).
 Nov 13, 2026 — gate 1 built: P1–P6 (stage S1), a working CRM, each phase reviewed by a fresh agent and merged on its focused
 specs, with follow-up 1 (a new record's organization defaults to the user's own across the apps, F111) and the basic-comms
 Mail actions slot (P5). The user's calls of the build are in §4 (Nov 13). Next: Marketing's track starts beside Sales (P7 on).
@@ -337,8 +340,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | built and reviewed Nov 14, merged |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | built and reviewed Nov 14, merged |
-| P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
-| P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | — |
+| P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | built and reviewed Nov 14, merged |
+| P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | built and reviewed Nov 14, merged |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | — |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | — |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
@@ -3225,6 +3228,219 @@ Design §5 QuoteTemplates and QuoteTemplateDetail, §19 item 2; SAL-TEMPLATE.
   publishes a template, a rep starts a quote from it, the manager publishes a successor, and the first quote and its
   PDF are unchanged.
 
+**Built Nov 14 (P12).** mr-mantle and mr-boss on branch `sal/p12` (hashes in the worker's reply); mr-moqui and mr-pass unchanged, no
+Rust built.
+- Checked first (the code over the plan): P7's, P10's and P11's Built and Review notes, §4 (the Nov 11 template row, the Nov 14 rows),
+  F7 and the readers of `OrpRecurringTemplate`; `clone#Order`, `create#Order`, `update#OrderStatus`; SalesQuotes.js (createQuote, the
+  line verbs, priceFields), SalesAccess.js (`orderExcludedPurposes` already named `OrpSalesQuoteTemplate`, P11), SalesAccounts.js
+  (`ordersOf` already left it out), SalesOrders.js findOrders; Shared/OrderDetail's quote line editor. The code over the plan:
+  - who maintains templates: design §2 gives QuoteTemplates to R, M and S and QuoteTemplateDetail to M and S, and no permission names
+    templates; a template manager is SALES_QUOTE_EDIT with SALES_TEAM_MANAGE or SALES_CONFIGURE (the manager and the administrator, as
+    `mergesFor`), a Sales reader sees the current templates; no new permission and no setup row;
+  - "never placed and never leaves Open" is a guard in `update#OrderStatus` (QUOTE_TEMPLATE for any other status), the one status
+    write behind propose, place, approve and cancel, on the header it already reads; `create#InvoiceFromSource` and Payables' order
+    source refuse a template too (QUOTE_TEMPLATE);
+  - the design's header fields: OrderHeader gains `templateDescription` and `templateValidityDays` (no table); the "currency policy" is
+    the template's one currency (create#Order always sets one), a quote from it in that currency (TEMPLATE_CURRENCY); the "terms/print
+    template" is not built (a template's own text location would be rendered into a customer's PDF from a location a manager types;
+    the quote takes its organization's SalesPolicy text, as before);
+  - the line editor: `store#QuoteLine` and `delete#QuoteLine` admit a template draft (SalesQuotes.js `lineTarget`), so the template's
+    lines are priced, checked and free-line-ruled as a quote's; a template line has no customer, so a product with no seller's price of
+    its own is admitted unpriced (create#OrderItem stores 0, no source) and priced on each quote for its customer; an entered price is
+    the template's fixed price with its reason (the "authorized contractual fixed price"), kept on the quote with today's calculated
+    basis beside it and its author, so the quote's manual-price, discount and free-line rules read it as entered;
+  - "copied with clone#Order": `create#Quote` with `templateOrderId` clones the template (no parties, payments, notes, files or work
+    efforts; the template's two header fields cleared), its parentOrderId naming the template, then reprices each product line as of
+    now, deletes any tax line and runs `handle#OrderMajorChange` (X1); a line left without a price or not usable for the customer is
+    named in a new `warnings` output, and propose#Quote refuses it until the rep prices it;
+  - a dated successor is a draft clone of the published template (parentOrderId names it, one at a time: SUCCESSOR_EXISTS); its publish
+    ends the predecessor at its start; `end#QuoteTemplate` (not in the plan's list) ends a published template or sets a draft aside;
+  - the user's call of Nov 14 (P11's review): `orderOf` admits an order approver read only to an order they recorded a decision on (an
+    OrderDecision of theirs, approved or refused) once it is approved, and find#SalesOrders' approver reach adds those orders; with no
+    order rule met, `approve#SalesOrder` records no decision, so such an approver still loses sight of the order once approved (below).
+- Mantle:
+  - `entity/SalesQuoteTemplateEntities.xml` (new): the purpose `OrpSalesQuoteTemplate`; OrderHeader's `templateDescription` and
+    `templateValidityDays`.
+  - `service/mantle/order/SalesQuoteTemplates.js` (new) and a P12 block of `SalesQuoteServices.xml`: `find#QuoteTemplates` (a reader's
+    current ones; a manager's open, current, draft, scheduled, ended or all; organization, text, product; paged), `get#QuoteTemplate`,
+    `store#QuoteTemplate` (NAME_REQUIRED, CURRENCY_FIXED, TEMPLATE_DRAFT, SUCCESSOR_EXISTS, VALIDITY_INVALID, the revision),
+    `publish#QuoteTemplate` (LINES_REQUIRED, DATE_INVALID, VALIDITY_INVALID, SUCCESSOR_EXISTS), `end#QuoteTemplate` (TEMPLATE_ENDED),
+    `preview#QuoteTemplate` (a customer of the organization or none, a date; warnings; no tax), and `usableTemplate`, `cloneForQuote`,
+    `priceCopy` for create#Quote. create#Quote's `templateOrderId` and `warnings` (RECORD_UNAVAILABLE, TEMPLATE_UNAVAILABLE,
+    TEMPLATE_INVALID, TEMPLATE_CURRENCY).
+  - `SalesAccess.js` (a P12 block before the module value): `templatePurpose`, `templateManager`, `templateState`, `templateOf`,
+    `requireTemplate` (RECORD_UNAVAILABLE, PERMISSION_DENIED, TEMPLATE_PUBLISHED), `decidedOrderIds`; `orderOf`'s approver test.
+    `SalesQuotes.js` (createQuote's template branch, `lineTarget`, priceFields' unpriced template line); `SalesOrders.js` (findOrders'
+    approver reach).
+  - F7's readers (owner contracts, each beside its `OrpRecurringTemplate` test): `OrderServices.xml` update#OrderStatus;
+    `StoreOperations.js` withoutRecurringBases; `OrderInfoServices.xml` send#OrderStoreEmail; `SalesReportServices.xml` (the two
+    summaries); `AssetServices.xml` (both reservation checks); `InvoiceServices.xml` create#InvoiceFromSource; `Payables.js`
+    invoiceSource; `Credit.js` the open orders; `SubscriptionServices.xml` fulfill#OrderSubscriptions.
+- BOSS:
+  - Screens: `Sales/Quotes/QuoteTemplates.xml` (new, tab 3 "Quote templates": TemplateFind in the list's header, TemplateList, the
+    manager's saved lists Open, Published, Drafts, Scheduled and Ended, NewTemplate); `Sales/Quotes/QuoteTemplateDetail.xml` (new, hidden
+    from the menu: TemplateHeader with the state's one primary, Add line, Publish, New quote or Start successor, and More with Add
+    shipping charge, Edit template, End or Set aside and the predecessor and successor; Overview; TemplateItems over the quote draft's
+    salesStoreLine and salesDeleteLine; TemplatePreview; History); `template/SalesQuoteTemplates.xml` (new: createQuoteTemplate,
+    salesStoreTemplate, salesSucceedTemplate, salesPublishTemplate, salesEndTemplate); `template/SalesQuoteForms.xml` (NewQuote's
+    template choice) and `template/SalesQuotes.xml` (createQuote passes it and warns of the lines left for the rep); `Sales/Quotes.xml`
+    (comment).
+  - `Sales.js` (a P12 block after P9's choices): linkPaths Quotes/QuoteTemplates and Quotes/QuoteTemplateDetail, the choice
+    `quoteTemplates` (find#QuoteTemplates' current ones of the selling organization).
+  - Demo (`data/BossZSalesDemoData.xml`, a P12 block at the end): Retail's published "Store refit starter" (sales.manager's: Demo
+    Product One-One priced on the quote's date, One-Two at a fixed bundle rate, an installation charge, quotes valid 45 days) and a
+    draft "Yearly service visit".
+- Specs:
+  - Mantle `test/order/SalesQuoteTemplates` (new, 4 features, 1.6 s): a manager keeps a draft (a line priced on the quote's date, a fixed
+    line with its reason, a charge, a customer-priced product admitted unpriced), refused to a rep for the permission and to B's manager
+    as missing, hidden from the rep until published, previewed for the account (340), published, then refused an edit
+    (TEMPLATE_PUBLISHED), listed to the rep; a quote from it after the price rose from 100 to 120 is priced 120, the fixed line 45 beside
+    a 50 basis with its reason, the customer-priced line 70, 14 days valid, parentOrderId the template, the template unchanged, another
+    currency and another organization refused; a successor (a second refused) with a changed quantity, published, ends the first
+    (refused to the rep as missing, to the manager TEMPLATE_UNAVAILABLE), the earlier quote's lines and revision unchanged, the next
+    quote of 3; neither template among find#Quotes' "all" or find#SalesOrders, not a quote (get#Quote, propose#Quote), place#Order
+    refused QUOTE_TEMPLATE, no reservation. `SalesOrderApproval` (the carry-over, about 0.1 s): the approver who decided the store order
+    still sees it read only once approved, and not the order of the first feature approved with no decision of theirs, in get#SalesOrder
+    and find#SalesOrders.
+  - mr-boss `test/Sales/SalesQuoteTemplates` (new, 1 feature, 0.25 s warm, 0.9 s cold): QuoteTemplateDetail's one qvt render as the
+    manager (published, Start successor, New quote, the fixed rate's reason, the preview for Wingtip with its total, no line editing)
+    and Quote templates' one html render as the rep (the published template, not the draft, no New template). `SalesAccess` (a P12
+    feature, 0.19 s): the draft's change refused the rep for the permission and reaching the manager's revision check with the same
+    parameters, the published template read by the rep and missing to Ziziwork Sales' rep. `SalesSpecLib.js`: the Quotes tabs with
+    QuoteTemplates, the demo templates.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesTemplateUsable` (3 features through the screens' transitions: the
+    manager's template with a priced and a fixed line published; the rep's quote from it for Wingtip at Wingtip's price with the fixed
+    line; the successor published, the first template ended, the first quote's lines and print unchanged, the next quote copying the
+    successor).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteTemplates, SalesQuoteDrafts, SalesQuoteIssue,
+  SalesQuoteResponse, SalesQuoteApprovals, SalesQuoteRequests, SalesWorkspace, SalesOrderApproval, StorelessOrderConfirmation,
+  StorelessOrderTax, StoreOperations, StoreReports, OrderLifecycle, ShopCheckout, ShopSubscriptions, Subscriptions, AccountingCredit,
+  PurchaseBills, OrderToCashBasicFlow, OrderConfirmations, OrderChanges, SalesAccounts, SalesOpportunities, AccountingReturns and
+  RecordVisibility 184 of 184 (27 specs with dependencies, 95 s), then SalesQuoteTemplates and SalesQuoteDrafts again after the last
+  changes. mr-boss SalesQuoteTemplates, SalesAccess, SalesQuotes, SalesOrders, SalesQuoteSend, SalesHome, QuickCreate,
+  SalesOpportunities, SalesAccounts, SalesApprovals, SalesQuoteRequests, CommerceOrders, CustomerServiceOrders and InsightsHome 71 of 71
+  (14 specs, 47 s); a draft's qvt and tui renders, the manager's list and NewQuote's template choice were checked once by hand and not
+  kept. mr-pass whole suite 190 of 190 (19.6 s of its 20 s under the parallel workers' load; 13.4 s at P11's review). `moqui lint
+  --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on the new and changed
+  JavaScript. Not run: the client walk (no screen it walks changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's clone#Order and get#ProductPrice rows and an "Added in the Sales build: quote templates" table;
+  ss-inventory unchanged (no baseline form maps to QuoteTemplates or QuoteTemplateDetail).
+- Design edits: design-sales §5 "As built (impl-sales P12)" and §6's order scope (the approver's decided orders).
+- Findings, numbered by the lead F212 to F218 in order:
+  - a template's own terms and print text (design §5 TemplateHeader) is not built: a quote from a template takes its organization's
+    stored text; a per-template text needs a registered text choice an administrator sets, not a location a manager types;
+  - with no order rule met, `approve#SalesOrder` records no OrderDecision, so the approver who approved such an order loses sight of
+    it once approved (the carry-over covers the orders they decided a rule on); recording a no-rule decision would change P9's rule
+    reading (a decision with no policy is the unconfigured manual-price rule's);
+  - a template's fixed line keeps the template author as `priceOverrideUserId` on the quote, so that author may not approve the
+    quote's manual-price rule for it (separation by price author, P9); the rep who copied it may;
+  - a template line with no seller's price is stored at 0 with no source (create#OrderItem's default), shown unpriced on the detail
+    and counted 0 in its example total; the preview prices it for the customer chosen;
+  - TemplateFind's category filter (design §5) is not built; a product filter is;
+  - Quote templates is shown to every Sales reader (R), who sees only the published ones; drafts, scheduled and ended templates are
+    the manager's and the administrator's;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the template verbs; P12 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 1.7 s (SalesQuoteTemplates 1.6 s, SalesOrderApproval's checks about 0.1 s); mr-boss server about
+    0.45 s (SalesQuoteTemplates 0.25 s warm, SalesAccess' P12 feature 0.19 s); client none;
+  - merge hot spots (P13 beside it): mr-mantle `service/mantle/sales/SalesAccess.js` (orderOf's approver test in P11's block; a P12
+    block before the module value; exports at the end), `service/mantle/order/SalesQuoteServices.xml` (create#Quote's parameters and
+    description, store#QuoteLine's and delete#QuoteLine's descriptions, a P12 block at the end before `</services>`, the file comment),
+    `SalesQuotes.js` (createQuote, storeLine and deleteLine, priceFields), `SalesOrders.js` findOrders, `OrderServices.xml`
+    update#OrderStatus, `test/order/SalesOrderApproval.spec.js` (feature 2); the F7 readers above (Shop's, Accounting's, the sales
+    summaries); mr-boss `service/ironstone/sales/Sales.js` (a P12 block after P9's choices, before accountContactIds),
+    `data/BossZSalesDemoData.xml` (a P12 block at the end), `template/SalesQuotes.xml` (createQuote), `template/SalesQuoteForms.xml`
+    (NewQuote), `screen/Sales/Quotes.xml` (comment), `test/Sales/SalesAccess.spec.js` (a feature at the end),
+    `test/Sales/SalesSpecLib.js` (quotesMenu, approverQuotesMenu, templates), `plan/usl-inventory.md`, `plan/design-sales.md` (§5 as
+    built, §6's order scope). BossSetupSalesData.xml, Sales.xml and SalesQuoteIssues.js are not touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' orders: "Sales' quote templates (in
+    `mantle.order.SalesQuoteServices`, all `allow-remote="false"`): orders of purpose `OrpSalesQuoteTemplate`, which
+    `mantle.order.OrderServices.update#OrderStatus` keeps Open and invoicing refuses; a Sales reader of the organization reads the
+    current ones, and only a template manager (`SALES_QUOTE_EDIT` with `SALES_TEAM_MANAGE` or `SALES_CONFIGURE`) reads the others and
+    changes a draft, at its revision; another organization's answers as missing; a template's lines go through the quote line verbs,
+    priced by the seller's authority for no customer; `create#Quote` copies only a current template of the quote's organization, in its
+    currency, and reprices it for the quote's customer as of the quote's date. An order approver reads an approved order only when they
+    recorded a decision on it.";
+  - the user's call, if the lead agrees: whether `approve#SalesOrder` should record a decision when no order rule is met, so the
+    approver keeps sight of every order they approved (the second finding).
+
+**Review 2026-11-14 (P12).** A fresh review of `sal/p12` (mr-mantle 81856f2e, mr-boss 487c9312; master had nothing newer, so no merge)
+against P12, §2, §4 (the Nov 11 template row, the Nov 14 rows), F7 and design-sales §5 and §6.
+- Checked and sound: the template scope (`templateOf`: a Sales reader of the organization sees current ones only, a template manager
+  every one and changes a draft only; another organization, or a state the caller does not see, answers as missing; a rep's and B's
+  manager's edits refused as the spec shows); every verb takes the template's organization from its own part, never a parameter;
+  revisions on store, publish, end and the line verbs; publish's date window, the predecessor ended at the successor's start, one
+  successor at a time; `create#Quote` copies only a current template of the quote's organization in its currency, through
+  `clone#Order` with no payments, notes, files or parties, the template's two fields cleared, then prices each product line through
+  `get#SellerProductPrice` for the quote's customer as of now (P7's date for every quote line; no cost, no other party's price),
+  deletes copied tax and retaxes (X1); `preview#QuoteTemplate` writes nothing and prices only for an account the caller sees.
+  `update#OrderStatus`'s guard: every status path (propose, place, approve, cancel, reject, the part-status checks behind
+  cancel#OrderPart, bulk status changes) goes through it, and it reads only the order's own purpose, so no other order is touched.
+  F7's readers in Mantle (credit, both reservation checks, invoicing and Payables' source, store mail, store worklists, the sales
+  summaries, subscription fulfillment), Sales' own (find#Quotes, find#SalesOrders, ordersOf, Home) and the customer-keyed readers
+  (Shop, PASS, Accounting's and Customer Service's customer lists, promotions, new-customer counts, Commerce's store-keyed lists and
+  palette) leave a template out; the five report definitions whose filter names only `OrpRecurringTemplate` (mantle-sales,
+  boss-commerce-store-operations, insights-suite-orders and -order-value) read the `mantle-sales-orders` dataset, whose time field
+  is `placedDate`, which a template never has. Screens: one qvt render of QuoteTemplateDetail and one html render of Quote
+  templates in the regression suite; the transitions call only the guarded services.
+- R1 (confidentiality and F7, medium): a template was an order to every other app. Customer Service's order record kind (a part
+  sold by an internal organization, every customer served: a template has none) admitted it, so an agent of Retail found the demo
+  template by id or name in the order lookup and the palette and opened it in OrderDetail; and the record rule
+  (`get#RecordLinkInfo`, behind Chatter, RecordFiles, Product360's connections and palette hits) fell through to the generic order
+  rule, so any user of the organization with the order filter saw a draft or ended template. Fixed: `check#QuoteAccess` answers a
+  template by `templateOf`, and the record rule sends a template there as it does an unplaced quote (CommunicationServices.xml);
+  CustomerService.js `readOrder` and `isSalesOrder` leave the purpose out. Spec checks: Mantle SalesQuoteTemplates feature 4 (a
+  clerk of A with the record rule sees no template; the rep the current one and not the ended one; the manager the ended one) and
+  mr-boss SalesQuoteTemplates feature 2 (Customer Service's lookup finds neither the template's id nor its name); each failed on the
+  unfixed code.
+- R2 (the user's call of Nov 14, §4): `approve#SalesOrder` records a decision on every approval: with no order rule left to decide,
+  one OrderDecision of purpose SapOrder with no rule (SalesApprovals.js `decideOrderRules`; decidedCount still counts rule
+  decisions). No requirement reads an order decision with no policy (the policy-less "default" key is only a quote's unconfigured
+  manual-price rule). Spec check: SalesOrderApproval feature 1 approves an order of A through Sales before any order rule exists
+  (one decision, no policy, the approver's) and feature 2 finds it read only in get#SalesOrder and find#SalesOrders; failed on the
+  unfixed code.
+- R3 (separation, low; the Built note's third finding): a template's fixed line kept the template author as the quote line's price
+  author, so the manager who wrote the template could never approve a quote's manual-price rule for it, while the price on this quote
+  was put there by the rep who chose the template. Fixed: `priceCopy` makes the quote's maker the author (priceOverrideUserId and
+  date), keeping the price and reason; the rep is refused the rule as owner and author, the template's author may decide it. Spec
+  check: SalesQuoteTemplates feature 2 (the fixed line's author is the rep); failed on the unfixed code.
+- Findings, numbered by the lead F219 to F222 in order:
+  - the five report definitions above name only `OrpRecurringTemplate` in their "Not a recurring base order" filter; a template is
+    left out by the dataset's `placedDate` time field, not by the filter, so a panel without a time range would count its lines;
+  - the palette has no Sales link for a template (it falls through to no app); QuoteTemplateDetail is reached from Quote templates;
+  - `decidedBy` counts any decision of the caller, a SapQuote decision on the quote before it became the order included, as the
+    Nov 14 row reads ("a decision on it"); a quote approver who also approves orders keeps read-only sight of that order;
+  - the Built note's other findings stand as written (no per-template terms text, no category filter, the unpriced line at 0 on
+    the detail, Quote templates shown to every reader).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteTemplates, SalesOrderApproval,
+  SalesQuoteApprovals, SalesQuoteDrafts, SalesQuoteIssue, RecordVisibility, SalesWorkspace and StorelessOrderConfirmation 41 of 41
+  (8 specs, 48 s; SalesQuoteTemplates 1.7 s, SalesOrderApproval 3.5 s); mr-boss SalesQuoteTemplates, CustomerServiceOrders,
+  SalesOrders, SalesApprovals, SalesAccess and SalesQuotes 27 of 27 (35 s; SalesQuoteTemplates 0.3 s), CustomerServiceAccess and
+  CommerceOrders 24 of 24 (37 s). Each new check run once against the unfixed code and failed. Prettier clean on the changed
+  JavaScript. No screen changed, so no lint. Not run: test-apps, the acceptance suite (SalesTemplateUsable unchanged).
+- For the lead:
+  - budget share: mr-mantle about +0.1 s (feature 4's record-rule checks, feature 1's no-rule approval); mr-boss about +0.1 s
+    (SalesQuoteTemplates feature 2, no render);
+  - merge hot spots beyond the Built note's: mr-mantle `service/mantle/party/CommunicationServices.xml` (the quote branch of the
+    record rule and its description), `SalesQuotes.js` quoteAccess, `SalesQuoteServices.xml` check#QuoteAccess's description,
+    `SalesApprovals.js` decideOrderRules, `SalesOrderServices.xml` approve#SalesOrder's description; mr-boss
+    `service/ironstone/customerservice/CustomerService.js` (readOrder, isSalesOrder), `plan/design-sales.md` (§5 as built, §6);
+  - §4 row added (Nov 14, the user's call on the decision on every approval);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' orders: "Sales' quote templates (in
+    `mantle.order.SalesQuoteServices`, all `allow-remote="false"`): orders of purpose `OrpSalesQuoteTemplate`, which
+    `mantle.order.OrderServices.update#OrderStatus` keeps Open (so they are never proposed, placed, approved or cancelled), which
+    invoicing refuses and which reservation, credit, store mail, store worklists and the sales summaries leave out; a Sales reader
+    of the organization reads the current ones, and only a template manager (`SALES_QUOTE_EDIT` with `SALES_TEAM_MANAGE` or
+    `SALES_CONFIGURE`) reads the others and changes a draft, at its revision, a published one only through a dated successor;
+    another organization's, or one the caller may not read, answers as missing, and the record rule behind Chatter, files, product
+    connections and the palette (`check#QuoteAccess`) gives the same answer in every app, while Customer Service's orders leave
+    templates out; a template's lines go through the quote line verbs, priced by the seller's authority for no customer;
+    `create#Quote` copies only a current template of the quote's organization, in its currency, and reprices it for the quote's
+    customer as of the quote's date, a fixed line keeping its price and reason with the quote's maker as its price author;
+    `preview#QuoteTemplate` writes nothing and prices only for an account the caller reads. `approve#SalesOrder` records the
+    approver's decision on every approval, and an order approver reads an approved order only when they recorded a decision on
+    it." (It replaces the Built note's draft of the paragraph.)
+
 ### P13 — PASS Sales: quotes
 
 Design §10.1, CustomerQuotes, CustomerQuote and QuoteResponse, §4's Invite to Sales, §12.1 (public operation
@@ -3266,6 +3482,267 @@ identity); SAL-PORTAL (its quote part), X6. Ends stage 2.
   link at 390 px, reads the offer and its PDF, accepts with a PO and sees the receipt; a second click shows the same
   receipt; an invited contact signs in and finds the quote under My account; no ID change or other capability shows
   another customer's quote.
+
+**Built Nov 14 (P13).** mr-mantle, mr-pass and mr-boss on branch `sal/p13` (hashes in the worker's reply), from master (P11 merged);
+mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P10's and P11's Built and Review notes, §4 (the PASS Sales, threshold and `SalesOrder`
+  scope rows), F17, F18, F36, F42, F48, F73 and F186; ExternalAccess.js (the kinds, `check`, the self relationship, `invite`),
+  ExternalAccessServices, PublicApps.js, AccountHub.js; SalesQuoteIssues.js (send, the ledger's build, respond, revise,
+  withdraw), SalesPolicyThreshold; mr-pass README, Deployment.md ("Adding an app", Support), the Support app's pages,
+  Shared/Portal.js, Facade.js, Transport.js, Schema.js and Routes.js with Mantle's copies, PassApi.js and PassAuthority.js
+  (`TOKEN_WRITES`, `REASONS`, `DOWNLOADS`), SupportPortal.js (the pattern of a portal module), Headers.js; Customer Service's
+  Invite to support (the BOSS pattern). The code over the plan:
+  - every PASS operation is a camelCase name, so the plan's `sales.findQuotes` … `sales.getQuoteResponse` are `findSalesQuotes`,
+    `getSalesQuote`, `getSalesQuoteDocument`, `respondSalesQuote` and `getSalesQuoteResponse`; the reads are GET routes with the
+    token in the authority's query, as the Support app's (`getCustomerCase`, `getCaseFile`), and only `respondSalesQuote` is in
+    the three `TOKEN_WRITES` lists, as the plan says; the PDF is in PassAuthority's `DOWNLOADS`;
+  - the ledger keeps no token (MessageDeliveries.js: "a link's token is made for the send"), so `send#Quote` makes each
+    recipient's link in the ledger's build at each attempt and in the rep's own send, not one capability at the issue; the stored
+    PDF is one per issue, so it carries the quote's page with no token (`/sales/CustomerQuote?orderId=`, a signed-in contact's)
+    and its QR (`ec.resource.barcodeSvg('QR', …)`), never a bearer link;
+  - `create#AccessCapability` would have let a `SUPPORT_CASE_EDIT` holder mint any `SalesOrder` scope: the kind now has scope
+    permissions (`SALES_QUOTE_SEND` for the quote scopes), a scope's own page and app (Sales' mount on a site targeting the
+    organization; OrderView keeps Shop's page on the store's site), and bound scopes that need a `recordRevision` and are never
+    mixed with an order's, so only `send#Quote` makes a quote link; the kind resolves a quote (purpose `OrpSalesQuote`, out of
+    draft) for the quote scopes and an order as before for the others;
+  - `respond#CustomerQuote` is "the same `respond#Quote` as the staff path" as one lifecycle, `respondTo` in SalesQuoteIssues.js,
+    which `respond#Quote` now calls with its staff checks unchanged (same request hash, same refusals) and the portal calls with
+    the customer's identity; the response keeps the capability, the acceptor's name and title (SalesQuoteResponse `capabilityId`,
+    `acceptorName`, `acceptorTitle`, a P13 extend-entity) and source SqsPortal;
+  - Mantle's readiness is where readiness lives, so "readiness for an organization with no published Sales mount" is Sales'
+    `sales.publicApp` check (a warning) in SalesSettings.js, beside PASS's own `check#SalesAppReadiness` for a site;
+  - Smithy reserves every PASS app's default base as a group path (SmithyCore.js `reservedNames`, its spec counting Apps.js), so
+    `sales` joins it (owner contract with Smithy);
+  - SalesDefaults' publish dialog lists its fields in a `field-layout`, and P10's `responsePoRequired` and `reminderDays` were in
+    no row, so the dialog never showed them (an unreferenced visible field is not rendered, form.rs); they are in a row now, with
+    the threshold.
+- Mantle:
+  - `service/mantle/order/SalesPortal.js` and `SalesPortalServices.xml` (new, P of design §12.1): `find#CustomerQuotes` (a
+    signed-in account's issued quotes of the customers it acts for, each quote's latest issue, state open or all, paged),
+    `get#CustomerQuote` (the offer's lines and totals as text, terms as plain text, the PDF's name, the response, what the page may
+    do), `get#QuoteDocument` (the issue's PDF for the facade, its location never in a page), `respond#CustomerQuote` (the revision
+    seen, the terms acknowledged, the PO, the acceptor; or a decline's reason; an operation key `sqp-<operationId>` bound to the
+    capability or the signed-in party, the organization, the issue and the payload, F36; limited per requester),
+    `get#QuoteResponse` (the receipt), `check#SalesAppReadiness`, `get#AccountCard` (Quotes and orders: open quotes). The asker:
+    the sales mount's target on a published site; a token's capability (QuoteView or QuoteRespond) reaching the issue at its bound
+    revision while it stands or once answered, an order ID beside it the token's own; or a signed-in contact grant of the `sales`
+    app or the customer's own verified account (`actingParties`), reaching the latest issue. Every miss is the same NotFound.
+  - The threshold: above the seller's SalesPolicyThreshold for the quote's currency a link alone gets ACCEPTANCE_SIGN_IN_REQUIRED
+    (still Decline); a request signed in for the customer accepts.
+  - `ExternalAccess.js` (owner contract, F17): the `SalesOrder` kind's QuoteView and QuoteRespond (above), `appOf` and `pageOf`,
+    `requirePermissions` and `requireIssuer` by scope, `quoteScopes` exported; `appKinds.sales` (`SALES_CUSTOMER_INVITE`, a person
+    admitted, the party a Customer). `ExternalAccessServices.xml`: `create#AccessCapability` passes its scopes to the issuer check.
+  - `SalesQuoteIssues.js`: a P13 block (`quotePageUrl`, `quoteLink`, `revokeLinks`, `qrOf`), `textMap`'s link, `offerOf` taken out
+    of `printOf` (the print and the PASS page read one projection), the link in the ledger's build and the own send, the links
+    revoked by `revise#Quote` and `withdraw#Quote`, `respondTo`, and exports for SalesPortal.js.
+  - `entity/SalesQuoteIssueEntities.xml` (a P13 extend-entity of SalesQuoteResponse); `PublicApps.js` (`sales`: organization
+    target, readiness, account card); `ForumSchema.js`, `script/PassRoutes.js`, `PassApi.js`, `PassAuthority.js` (the five
+    operations, `respondSalesQuote` in `TOKEN_WRITES`, `getSalesQuoteDocument` in `DOWNLOADS`, the reasons
+    `acceptanceSignInRequired` and `responseRecorded`); `SalesSettings.js` (`sales.publicApp`); `SalesAccounts.js` and
+    `AccountServices.xml` (a P13 block: `get#SalesInvite`, `invite#SalesContact`: `SALES_CUSTOMER_INVITE`, a customer account of
+    the scope, a current contact of it or the person account itself, one of the contact's own addresses, an organization of the
+    scope serving the account with a published PASS Sales site, then `invite#Contact` for the `sales` app); `SmithyCore.js`.
+- PASS (F18, Deployment.md "Adding an app"):
+  - `screen/Sales.xml` and `screen/Sales/`: CustomerQuotes, CustomerQuote (`respond` and `document` transitions) and QuoteResponse,
+    plain HTML forms in `.html.fancy` pages over `Sales/Sales.js` and `Shared/Portal.js`, as the Support pages are; Accept (the
+    revision and total stated, PO, name, title, the terms' checkbox, a request key) and Decline (a reason); the sign-in link above
+    the threshold; a wrong, expired, revoked or ended link reads "This quote is not available" with the sales contact as the route.
+  - Registrations: `service/pass/Apps.js`, `Pass.xml`, the header's branch (My quotes), Account › Settings' Quotes link,
+    `Schema.js` and `Routes.js` (identical to Mantle's copies), `Transport.js` `TOKEN_WRITES`, `Portal.js` `reasons`,
+    `Contracts.d.ts`, the test runtime's `/sales` mount, Portals' targeted apps (`billing,sales,shop,supplier,support`); the Account
+    hub's card comes from PublicApps' registration (orders join with P17). `docs/Deployment.md` "Sales app"; README.
+- BOSS: `template/SalesInvite.xml` (new: Invite to Sales over Mantle's two services, the link shown once), included in
+  `Shared/Customer360.xml` (owner contract: the transition) through `template/SalesCustomer360.xml`'s header and in
+  `Sales/Accounts/ContactDetail.xml` for a contact; `Sales/Settings/SalesDefaults.xml` (the acceptance threshold of one currency,
+  the others kept; shown in In effect; P10's two fields in the dialog's layout).
+- Specs:
+  - Mantle `test/order/SalesPortal` (new, 4 features, 3.1 s): the quote's mail carries its recipient's link to the Sales mount and
+    the print the quote's page and QR with no token; the link reads its one issue and PDF (no location in the view) and no list;
+    another customer's quote, a changed order ID, a forged token, an order ID with no sign-in and a revised issue give nothing; a
+    double submit gives one response (SqsPortal, the capability, no user) and one placed order, a retry answering it, another
+    link's use of the key a conflict, another link's new key the same receipt, a decline after it RESPONSE_RECORDED; a contact of
+    the account lists only its account's issued quotes (no draft, no other customer's), an uninvited account none; above the
+    threshold a link is refused (ACCEPTANCE_SIGN_IN_REQUIRED, Decline still offered) and the signed-in contact accepts.
+  - mr-pass `test/Sales/SalesPortalAccess` (new, 2 features, 0.1 s; its issue made without a PDF): CustomerQuote's one render by a
+    link with Accept and Decline; a forged link, a changed ID and an early receipt read "not available" with nothing of the
+    quote; My quotes asks a visitor to sign in; the five operations in both copies of the schema and routes, the response a POST
+    and a bearer write in the three lists. Fixtures for the acceptance tests in `test/Sales/SalesQuoteFixtures.js`. Portals' and
+    Smithy's specs follow the new app.
+  - mr-boss `SalesAccess` (a P13 feature, 0.1 s): with the same parameters the manager reaches the address check, the rep is
+    refused for SALES_CUSTOMER_INVITE and the manager is refused Ziziwork Sales' account as missing.
+  - Acceptance, written and not run: mr-pass `test/acceptance/SalesQuoteScenarios` (3 features: the mailed link's offer, PDF,
+    acceptance with a PO and the receipt twice, staff seeing the customer's response; Invite to Sales redeemed, the contact's My
+    quotes and Account hub card; isolation, a revised link, the threshold) and `test/acceptance/client/SalesQuoteHttp` (2
+    features: the walk at 390 px through Accept to the receipt and back; plain requests, the same through a remote frontend: the
+    invited contact's My quotes, forged and crossed links and another customer's quote), with `SalesQuoteFixtures` on PASS_HTTP,
+    registered in `client/suite.js`.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPortal 4 of 4 (twice), then SalesQuoteIssue,
+  SalesQuoteResponse, SalesPipelineSetup, SupportPortal, CaseFeedback, SupplierPortal, ShopCheckout, ReturnPolicies,
+  AccountingPortals, SupportChannels, StoreFulfillment, SalesOrderApproval, StorelessOrderConfirmation and SalesQuoteRequests 90
+  of 92 run (one skipped; SalesOrderApproval's batch feature failed once beside StorelessOrderConfirmation, F210's flake, and passed
+  alone, 4 of 4), and after the last changes SalesPortal, SalesQuoteIssue, SalesQuoteResponse and SalesPipelineSetup 18 of 18.
+  mr-pass whole suite 191 of 192, Smithy's app count then fixed (14 of 14), 16.6 s of its 20 s under the parallel workers' load
+  (P11's run read 13.4 s). mr-boss SalesAccess, SalesSettings, SalesAccounts, SalesQuotes, SalesQuoteSend, SalesOrders,
+  AccountingReceivables, AdminRegistries 44 of 44, and AccountingCollections, CustomerServiceAccess, CustomerServiceOrders,
+  ProjectsAccess, InsightsRecords, CommerceAccess 70 of 70. `moqui lint --screens` (release): 141 flagged sites, as before, none in
+  a new or changed screen; parse failures 0. Prettier (mr-moqui's config) on the changed and new JavaScript. Not run: the client
+  walk (no screen it walks changed), ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's ExternalAccessServices rows (check, create, invite, revoke) and an "Added in the Sales build: PASS
+  Sales quotes" table; ss-inventory has no row naming a PASS Sales path.
+- Design edits: design-sales §10 "As built (impl-sales P13)"; design-crosscut's PASS Sales row (built) and CX-CUSTOMER-ACCOUNT
+  (a quote link only from `send#Quote`).
+- Findings, numbered by the lead F223 to F234 in order:
+  - the PASS operations are camelCase (`findSalesQuotes` …), and the reads GET routes with the token in the authority's query, as
+    Support's; design §10.1 names them `sales.*`;
+  - the issued PDF carries the quote's page for a signed-in contact and its QR, not a bearer link; a forwarded PDF opens nothing,
+    and a customer with no invitation reaches the quote only by the mailed link; quotes issued before P13 carry neither;
+  - a link is made for each mail attempt; a retried delivery's earlier link stays valid until the validity ends or the quote is
+    revised or withdrawn (it was never delivered);
+  - a link ends with the quote's validity, so after an acceptance its receipt is readable by the link only until then; a contact
+    signs in afterwards;
+  - above the threshold the customer's own verified account (a person customer, the self relationship) accepts signed in, as an
+    invited contact does; design §10 names only the invited contact;
+  - a contact invited to Sales sees every issued quote of its customer at that organization (no per-contact narrowing, as Support's
+    customer administrator has); `invite#Contact` takes no administrator flag for `sales`;
+  - nothing tells the quote's owner of a customer's online acceptance or decline (the order is placed and listed; the response
+    shows on OrderDetail);
+  - the Account hub's card shows only for an account acting for a customer of the organization (Support's always shows);
+  - Invite to Sales on Customer360's header says why it is not offered to an inviter (no published PASS Sales site, not a customer
+    account, no address); the demo has no Sales site, so every inviter sees the reason;
+  - SalesDefaults' dialog did not show P10's PO requirement and reminder days (their fields were in no row of its layout); fixed;
+  - a customer's response runs below the portal's checks with artifact authorization disabled, as Support's; place#Order and P11's
+    net-terms approval run with no user (the response's `recordedByUserId` empty), and the storeless confirmation still follows;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name PASS Sales; P13 had no mr-moqui worktree (the text below).
+- For the lead:
+  - budget share: mr-mantle about 3.1 s (SalesPortal); mr-boss server about 0.1 s (SalesAccess' P13 feature); mr-pass server about
+    0.1 s (SalesPortalAccess; its fixture's quote in the spec's setup); client none;
+  - merge hot spots: mr-mantle `service/mantle/party/ExternalAccess.js` (the SalesOrder kind, `requirePermissions`,
+    `requireIssuer`, `create`, `check`, `appKinds`, exports), `ExternalAccessServices.xml`, `service/mantle/order/SalesQuoteIssues.js`
+    (textMap's parameter, the P13 links block after it, `offerOf` taken out of `printOf`, the own send and the build, `respondQuote`
+    split into `respondTo`, withdraw and revise, the exports; Sales P12's template work may touch `printOf` and clone),
+    `entity/SalesQuoteIssueEntities.xml` (extend-entity at the end), `service/mantle/sales/SalesAccounts.js` (a P13 block before the
+    operations map) and `AccountServices.xml` (two services at the end), `SalesSettings.js` (the readiness list's end),
+    `service/mantle/public/PublicApps.js`, `service/mantle/forum/ForumSchema.js` and `script/PassRoutes.js` (after getShopFeed),
+    `script/PassApi.js` and `PassAuthority.js` (the lists' ends), `service/mantle/smithy/SmithyCore.js`; mr-pass
+    `service/pass/Schema.js`, `Routes.js`, `Transport.js`, `Apps.js`, `screen/Pass.xml`, `screen/Shared/Header.html.fancy`,
+    `screen/Shared/Portal.js`, `screen/Account/Settings.xml`, `test/MoquiConf.xml`, `test/Billing/Portals.spec.js`,
+    `test/Smithy/Smithy.spec.js`, `test/acceptance/client/suite.js`, `README.md`, `docs/Deployment.md`; mr-boss
+    `screen/Shared/Customer360.xml`, `template/SalesCustomer360.xml`, `screen/Sales/Accounts/ContactDetail.xml`,
+    `screen/Sales/Settings/SalesDefaults.xml`, `test/Sales/SalesAccess.spec.js` (a feature at the end), `plan/usl-inventory.md`
+    (a table after P11's, where P12 appends too), `plan/design-sales.md` (§10), `plan/design-crosscut.md`. Marketing P6's files are
+    not touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' orders: "PASS Sales' customer quotes
+    (`mantle.order.SalesPortalServices`, all `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS
+    operations `findSalesQuotes`, `getSalesQuote`, `getSalesQuoteDocument`, `respondSalesQuote` and `getSalesQuoteResponse` of the
+    authority's allowlist): each finds the organization from the site's `sales` mount and the customer from the bearer link's
+    capability (the `SalesOrder` kind's QuoteView or QuoteRespond scope, bound to one issue's commercial revision, ending with the
+    quote's validity, made only by `send#Quote` for each recipient's mail under `SALES_QUOTE_SEND`, revoked by `revise#Quote` and
+    `withdraw#Quote`; `create#AccessCapability` refuses those scopes) or from a signed-in account's contact grant of the `sales` app
+    or its own verified customer party, never from the request; a link reaches its one issue while it stands and its receipt after
+    a response, never a list; a wrong, expired, revoked, crossed (an order ID beside another quote's token) or ended link answers the
+    same NotFound; every token lookup and every response counts against the requester's limit; `respondSalesQuote` is the only
+    bearer write (`TOKEN_WRITES`), runs respond#Quote's lifecycle under the order's lock (one response an issue, `place#Order` once)
+    with the revision seen and the terms acknowledged, and its operation key binds the capability or the customer, the
+    organization, the issue and the payload; above the seller's acceptance threshold a link alone cannot accept; answers are
+    allow-listed projections and the issued PDF is streamed by the facade, its location never answered. Invite to Sales
+    (`mantle.sales.AccountServices.invite#SalesContact`) needs `SALES_CUSTOMER_INVITE`, a customer account of the caller's sales
+    scope, one of the contact's own addresses and an organization of the scope with a published Sales site.";
+  - the user's call: whether above the threshold the customer's own verified account (a person customer) accepts as an invited
+    contact does (built so), and whether a Sales contact should see only quotes addressed to them unless made a customer
+    administrator (built: every issued quote of the customer).
+
+**Review 2026-11-14 (P13).** A fresh review of `sal/p13` (mr-mantle 2c581fcb, mr-pass e582ca9, mr-boss 70f4c25d; master had nothing
+newer in any of the three, so no merge; Sales P12 is not on master yet, so its `printOf` and SalesQuotes.js work meets this at the
+merge) against P13, §2, §4, design §10 and §12.1, X6, F17, F18, F36 and F48, as a public, unauthenticated surface.
+- Checked and sound:
+  - The five services are `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS operations of the
+    authority's allowlist (ForumSchema.js and PassRoutes.js equal mr-pass's Schema.js and Routes.js, SalesPortalAccess checks it); the
+    authority sets `siteId` from the request's site and refuses a different one in the input, and each operation takes the
+    organization from that site's `sales` mount (published, an internal organization). The customer is the capability's or the
+    signed-in account's (a contact grant of the `sales` app, or its own verified party), never the request's; an order ID beside a
+    token must be the token's; a token of another organization, scope or record kind, a forged, expired or revoked one, an ended,
+    superseded or expired issue and another customer's quote all answer the same NotFound (a token's NotFound comes from one check;
+    "sign in" is answered only when no token is given, before any lookup).
+  - Tokens: 48 random characters, only the digest kept; every lookup counts against the requester's limit (100 in ten minutes) and
+    every response post against its own (30). QuoteView and QuoteRespond are made only by `send#Quote` (`quoteLink`, through
+    ExternalAccess `create`, which has no permission check of its own and is called only from the issue's send and the ledger's build):
+    `create#AccessCapability` asks SALES_QUOTE_SEND for them and then refuses them for want of a bound revision (SCOPE_INVALID; a check
+    added below), a bound scope is never mixed with an order's, a token's thruDate is the issue's validity, `revise#Quote` and
+    `withdraw#Quote` revoke every quote link of the order, and a native change leaves the link bound to a superseded issue. A quote
+    link never opens Shop's OrderView page or the reverse (the scope is checked).
+  - The retried delivery's earlier link (the Built note's finding): acceptable. Its token existed only in that attempt's message; an
+    uncertain attempt may have reached the customer, so leaving it valid is right, and it is bound to the same issue and revision, ends
+    with the validity and is revoked by revise and withdraw like the others.
+  - respondSalesQuote is the only bearer write, in the three `TOKEN_WRITES` lists (equal); the authority's exemption from the session
+    check is for a registered deployment only, and the local page posts with the session token (the transition's CSRF check). It goes
+    through `respondTo`, the staff path's lifecycle: the operation key read under the order's lock, one response an issue (a repeat of
+    an acceptance answers the first, any other second response RESPONSE_RECORDED), `place#Order` once, the response's source SqsPortal
+    with the capability or the signed-in party, staff-only evidence and contact fields ignored, the date now. The operation key binds
+    the capability or party, the organization, the issue and the payload (another link's same key is a conflict).
+  - Projections: no cost, margin, price trace, internal note, other contact, approval data or PDF location (the facade streams the PDF;
+    the authority strips `location`); terms as plain text; every page value HTML-escaped (`.html.fancy`).
+  - Pages: no-store (the default route policy), `Referrer-Policy: same-origin` and a CSP whose `img-src` is the site and its brand
+    logo's origin, so the token in a link page's URL never travels to a third party; the sign-in link from a link page returns to the
+    quote by its order ID, never its token; reads are GETs a mail scanner may fetch without effect.
+  - Invite to Sales: SALES_CUSTOMER_INVITE (in SalesAccess and again in `invite#Contact` with the organization), a customer account of
+    the caller's sales scope (another answers as missing), a current contact of it or the person account itself, one of the contact's
+    own addresses, an organization of the scope with a published Sales site. The BOSS template shows the link once.
+  - The SalesDefaults threshold keeps the other currencies' thresholds; P10's two fields now show (the Built note's fix).
+- Fixed (mr-mantle 6e7864fb):
+  - R1 (medium, confidentiality): a signed-in contact reached the latest issue with no check that the order was still at its revision,
+    so after `revise#Quote` and a new `propose#Quote` not yet sent, `getSalesQuote` showed the new revision's lines and totals (the
+    seller's unissued, possibly unapproved work) and My quotes listed a revised quote with its draft total. An unanswered quote whose
+    revision moved past its latest issue, or that is back in a revision's draft, is now neither shown nor listed. SalesPortal checks it
+    (both checks fail on the unfixed code).
+  - R2 (low): respond#CustomerQuote checked the revision, the terms and the threshold against the order read before its lock; it now
+    locks first and checks the locked order and the response read under the lock (design §10: eligibility revalidated under lock). A
+    request without a token, which ExternalAccess admitted as the customer's contact or own party, is now signed in for it even where
+    the self party lacks the Customer role (it was taken as a bearer, its identity `party:null`).
+  - R3 (low): an acceptance needed no acceptor: the page asks the name, the service did not (a remote frontend's or a scripted post
+    accepted nameless). The name is required now (ACCEPTOR_REQUIRED); SalesPortal checks it (the unfixed code placed the order).
+  - R4 (low, spec coverage): nothing checked that `create#AccessCapability` refuses the quote scopes; SalesPortal checks it for a quote
+    sender (SCOPE_INVALID).
+- Findings, numbered by the lead F235 to F239 in order:
+  - a quote link's token is in the sent mail's stored body (the rep's own send saves a draft; the ledger's `send#EmailTemplate` keeps
+    the message), so a reader of the organization's sent mail can open the link and, below the threshold, accept or decline as the
+    customer (the response records the capability); Billing's and Support's links are kept the same way;
+  - once answered, a link and a contact read the quote's lines and totals from the order as it is now (`offerOf(order)`), so a later
+    commercial change of the placed order (P14) would show as the quote; the PDF stays the issued offer. For P14 or P17 to read the
+    issue's own lines or show the order instead;
+  - a refusal from below the checks that is not a listed code (`place#Order`, P11's net-terms approval) reaches the page with its
+    text when the authority's internal-text filter passes it;
+  - `invite#Contact` for `sales` (not remote) takes any address and any Customer of the organization; only invite#SalesContact narrows
+    it to an account of the scope and the contact's own address. Only BOSS's template calls it for `sales` today;
+  - the Built note's findings stand; the two user's calls are recorded in §4 (Nov 14) and design §10.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPortal 4 of 4 (feature time 3.7 s; 28 s with
+  setup), and with each fix taken out its check fails (R1's two, R3's); mr-pass SalesPortalAccess 2 of 2 (0.1 s). Prettier (mr-moqui's
+  config) on the two changed files. Not run: test-apps, test-framework, the acceptance suite; no screen changed.
+- For the lead:
+  - budget share: mr-mantle about 3.7 s (SalesPortal, about 0.6 s more for the review's checks); mr-pass and mr-boss as the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/order/SalesPortal.js` and `test/order/SalesPortal.spec.js`
+    (only this branch); with Sales P12, SalesQuoteIssues.js `printOf` (P13 split `offerOf` out of it and adds the page link and QR)
+    and the exports at its end;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`): the worker's paragraph is right but for three points (a contact's
+    reach, the checks under the lock and the acceptor, and the stored mail); corrected: "PASS Sales' customer quotes
+    (`mantle.order.SalesPortalServices`, all `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS
+    operations `findSalesQuotes`, `getSalesQuote`, `getSalesQuoteDocument`, `respondSalesQuote` and `getSalesQuoteResponse` of the
+    authority's allowlist): each finds the organization from the site's `sales` mount and the customer from the bearer link's
+    capability (the `SalesOrder` kind's QuoteView and QuoteRespond scopes, bound to one issue's commercial revision, ending with the
+    quote's validity, made only by `send#Quote` for each recipient's mail, revoked by `revise#Quote` and `withdraw#Quote`;
+    `create#AccessCapability` refuses those scopes) or from a signed-in account's contact grant of the `sales` app or its own verified
+    customer party, never from the request; a link reaches its one issue while it stands and its receipt after a response, never a
+    list; a signed-in account sees a quote of a customer it acts for only at its issued revision or once answered; a wrong, expired,
+    revoked, crossed or ended link answers the same NotFound; every token lookup and every response counts against the requester's
+    limit; `respondSalesQuote` is the only bearer write (`TOKEN_WRITES`), runs respond#Quote's lifecycle under the order's lock (the
+    revision seen, the terms acknowledged, the acceptor named and the threshold checked there; one response an issue, `place#Order`
+    once), and its operation key binds the capability or the customer, the organization, the issue and the payload; above the
+    seller's acceptance threshold a link alone cannot accept; answers are allow-listed projections and the issued PDF is streamed by
+    the facade, its location never answered; link pages are no-store with a same-origin referrer policy. A link's token is in the
+    sent mail the organization keeps. Invite to Sales (`mantle.sales.AccountServices.invite#SalesContact`) needs
+    `SALES_CUSTOMER_INVITE`, a customer account of the caller's sales scope, one of the contact's own addresses and an organization
+    of the scope with a published Sales site.";
+  - the user's calls of Nov 14 are recorded (§4, design §10); none open from this review, unless the lead wants the stored-mail
+    finding decided (keep, or keep links out of the stored body).
 
 ### P14 — Commercial changes and the fulfillment and billing handoffs
 
@@ -3604,6 +4081,8 @@ the owner's design.
 | Nov 13, 2026 | A lifecycle transfer of a leaving rep's deals keeps each deal's team, as a manager's owner change does; a manager sets the team afterwards | The lead's call, as P6's review recommended: changing the team would widen or narrow who sees the deal without a Sales decision |
 | Nov 14, 2026 | With the seller's approval setting on and no order rule matching, the order's owner, enterer or placer who holds `SALES_ORDER_APPROVE` may approve it: the setting forces a manual approval, and separation applies per order rule | The user's call (P11's review) |
 | Nov 14, 2026 | An order approver keeps read-only sight of an order on which they recorded a decision, after it is approved; not of the organization's other approved orders. Built in P12 | The user's call (P11's review) |
+| Nov 14, 2026 | A quote link's token stays in the stored body of the sent mail, as Billing's and Support's links do; a cross-app redaction of stored links is later (§7) | The user's call (P13's review) |
+| Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
 | Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
@@ -3611,6 +4090,8 @@ the owner's design.
 | Nov 13, 2026 | An entered zero price or a free quote line keeps requiring `SALES_APPROVE` of the one who enters it until P9 (P7); in P9 a free or zero line becomes a rule in Sales' approval policies, so a rep can draft it and the approver decides at issue (P7, P9) | The user's call (the P7 Built note's free-line finding) |
 | Nov 13, 2026 | A mail rule's `createQuoteRequest` action (Create RFQ from mail) needs its owner to hold `SALES_QUOTE_EDIT`, when the rule is saved (`check#LeadRuleOwner`) and each time it runs (`create#QuoteRequestFromEmail`), as built (P8) | The user's call (the P8 Built note's first finding), by analogy with createLead's owner |
 | Nov 13, 2026 | A chargeable repair's warranty claim stays visible to Sales as built (holders of `SALES_QUOTE_EDIT` or `SALES_TEAM_VIEW` in the claim's organization, its customer and products only, under RFQs' "Repairs to quote"), with notices both ways: Customer Service's chargeable decision tells the organization's default Sales team (P9's SalesPolicy; topic SalesRepairToQuote), and a repair quote made tells the claim's assignee or queue (SalesRepairQuoted); neither title carries fault text or an amount (P8 review) | The user's call (the P8 Built note's second finding); written into design-sales §5 and design-customer-service §13 |
+| Nov 14, 2026 | Above the seller's acceptance threshold, a person customer's own verified account (the self relationship) may accept signed in, beside an invited contact of a company customer. Built in P13 | The user's call (P13's Built note) |
+| Nov 14, 2026 | A contact invited to PASS Sales sees every issued quote of its customer at that organization, not only the quotes addressed to it; `invite#Contact` takes no administrator flag for `sales`. Built in P13 | The user's call (P13's Built note) |
 
 ## 5. Open questions
 
@@ -3849,6 +4330,34 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F209 | P11 (Review Nov 14): with the setting on, the native `approve#Order` answers an order outside the approver's sales scope ORGANIZATION_DENIED, not as missing (only to a holder of SALES_ORDER_APPROVE) | P11: as its Review note says |
 | F210 | P11 (Review Nov 14): SalesOrderApproval's batch feature failed once (successCount 1) on the first run after the master merge with StorelessOrderConfirmation beside it, and passed in the five runs after; no cause found | P11: as its Review note says |
 | F211 | P11 (Review Nov 14): the Built note's findings stand. On its first two: Sales' Approve deciding the order rules with the setting off is right to keep (the rule is the seller's ask for separation and leaves an audit of who decided; the native path stays as built, the owner contract); for the unassigned approver, recommend read-only sight of an order they decided (an OrderDecision of theirs), not the organization's approved orders, so they can follow it without SALES_TEAM_VIEW | P11: as its Review note says |
+| F212 | P12 (Built Nov 14): a template's own terms and print text (design §5 TemplateHeader) is not built: a quote from a template takes its organization's stored text; a per-template text needs a registered text choice an administrator sets, not a location a manager types | P12: as its Built note says |
+| F213 | P12 (Built Nov 14): with no order rule met, `approve#SalesOrder` records no OrderDecision, so the approver who approved such an order loses sight of it once approved (the carry-over covers the orders they decided a rule on); recording a no-rule decision would change P9's rule reading (a decision with no policy is the unconfigured manual-price rule's) | P12: as its Built note says |
+| F214 | P12 (Built Nov 14): a template's fixed line keeps the template author as `priceOverrideUserId` on the quote, so that author may not approve the quote's manual-price rule for it (separation by price author, P9); the rep who copied it may | P12: as its Built note says |
+| F215 | P12 (Built Nov 14): a template line with no seller's price is stored at 0 with no source (create#OrderItem's default), shown unpriced on the detail and counted 0 in its example total; the preview prices it for the customer chosen | P12: as its Built note says |
+| F216 | P12 (Built Nov 14): TemplateFind's category filter (design §5) is not built; a product filter is | P12: as its Built note says |
+| F217 | P12 (Built Nov 14): Quote templates is shown to every Sales reader (R), who sees only the published ones; drafts, scheduled and ended templates are the manager's and the administrator's | P12: as its Built note says |
+| F218 | P12 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the template verbs; P12 had no mr-moqui worktree | P12: as its Built note says |
+| F219 | P12 (Review Nov 14): the five report definitions above name only `OrpRecurringTemplate` in their "Not a recurring base order" filter; a template is left out by the dataset's `placedDate` time field, not by the filter, so a panel without a time range would count its lines | P12: as its Review note says |
+| F220 | P12 (Review Nov 14): the palette has no Sales link for a template (it falls through to no app); QuoteTemplateDetail is reached from Quote templates | P12: as its Review note says |
+| F221 | P12 (Review Nov 14): `decidedBy` counts any decision of the caller, a SapQuote decision on the quote before it became the order included, as the Nov 14 row reads ("a decision on it"); a quote approver who also approves orders keeps read-only sight of that order | P12: as its Review note says |
+| F222 | P12 (Review Nov 14): the Built note's other findings stand as written (no per-template terms text, no category filter, the unpriced line at 0 on the detail, Quote templates shown to every reader) | P12: as its Review note says |
+| F223 | P13 (Built Nov 14): the PASS operations are camelCase (`findSalesQuotes` …), and the reads GET routes with the token in the authority's query, as Support's; design §10.1 names them `sales.*` | P13: as its Built note says |
+| F224 | P13 (Built Nov 14): the issued PDF carries the quote's page for a signed-in contact and its QR, not a bearer link; a forwarded PDF opens nothing, and a customer with no invitation reaches the quote only by the mailed link; quotes issued before P13 carry neither | P13: as its Built note says |
+| F225 | P13 (Built Nov 14): a link is made for each mail attempt; a retried delivery's earlier link stays valid until the validity ends or the quote is revised or withdrawn (it was never delivered) | P13: as its Built note says |
+| F226 | P13 (Built Nov 14): a link ends with the quote's validity, so after an acceptance its receipt is readable by the link only until then; a contact signs in afterwards | P13: as its Built note says |
+| F227 | P13 (Built Nov 14): above the threshold the customer's own verified account (a person customer, the self relationship) accepts signed in, as an invited contact does; design §10 names only the invited contact | P13: as its Built note says |
+| F228 | P13 (Built Nov 14): a contact invited to Sales sees every issued quote of its customer at that organization (no per-contact narrowing, as Support's customer administrator has); `invite#Contact` takes no administrator flag for `sales` | P13: as its Built note says |
+| F229 | P13 (Built Nov 14): nothing tells the quote's owner of a customer's online acceptance or decline (the order is placed and listed; the response shows on OrderDetail) | P13: as its Built note says |
+| F230 | P13 (Built Nov 14): the Account hub's card shows only for an account acting for a customer of the organization (Support's always shows) | P13: as its Built note says |
+| F231 | P13 (Built Nov 14): Invite to Sales on Customer360's header says why it is not offered to an inviter (no published PASS Sales site, not a customer account, no address); the demo has no Sales site, so every inviter sees the reason | P13: as its Built note says |
+| F232 | P13 (Built Nov 14): SalesDefaults' dialog did not show P10's PO requirement and reminder days (their fields were in no row of its layout); fixed | P13: as its Built note says |
+| F233 | P13 (Built Nov 14): a customer's response runs below the portal's checks with artifact authorization disabled, as Support's; place#Order and P11's net-terms approval run with no user (the response's `recordedByUserId` empty), and the storeless confirmation still follows | P13: as its Built note says |
+| F234 | P13 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name PASS Sales; P13 had no mr-moqui worktree (the text below) | P13: as its Built note says |
+| F235 | P13 (Review Nov 14): a quote link's token is in the sent mail's stored body (the rep's own send saves a draft; the ledger's `send#EmailTemplate` keeps the message), so a reader of the organization's sent mail can open the link and, below the threshold, accept or decline as the customer (the response records the capability); Billing's and Support's links are kept the same way | P13: as its Review note says |
+| F236 | P13 (Review Nov 14): once answered, a link and a contact read the quote's lines and totals from the order as it is now (`offerOf(order)`), so a later commercial change of the placed order (P14) would show as the quote; the PDF stays the issued offer. For P14 or P17 to read the issue's own lines or show the order instead | P13: as its Review note says |
+| F237 | P13 (Review Nov 14): a refusal from below the checks that is not a listed code (`place#Order`, P11's net-terms approval) reaches the page with its text when the authority's internal-text filter passes it | P13: as its Review note says |
+| F238 | P13 (Review Nov 14): `invite#Contact` for `sales` (not remote) takes any address and any Customer of the organization; only invite#SalesContact narrows it to an account of the scope and the contact's own address. Only BOSS's template calls it for `sales` today | P13: as its Review note says |
+| F239 | P13 (Review Nov 14): the Built note's findings stand; the two user's calls are recorded in §4 (Nov 14) and design §10 | P13: as its Review note says |
 
 ## 7. Later
 

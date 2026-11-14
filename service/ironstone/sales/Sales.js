@@ -791,6 +791,30 @@ choiceSources.approverGroups = (userScope, term) => {
     )
 }
 // ===== end of P9 =====
+// ===== P12: quote templates (impl-sales P12; design-sales §5 QuoteTemplates, QuoteTemplateDetail) =====
+linkPaths.push("Quotes/QuoteTemplates", "Quotes/QuoteTemplateDetail")
+// NewQuote's template: the current templates of the selling organization (Mantle's find#QuoteTemplates, scoped and searched there)
+choiceSources.quoteTemplates = (userScope, term, selected, p) => {
+    const organizationPartyId = choiceOrganization(userScope, p)
+    if (!organizationPartyId) return []
+    const found =
+        ec.service
+            .sync()
+            .name("mantle.order.SalesQuoteServices.find#QuoteTemplates")
+            .parameters({organizationPartyId, state: "current", text: term || null, pageSize: choiceLimit})
+            .call() || {}
+    const options = Array.from(found.templateList || []).map(row => ({
+        value: row.orderId,
+        label: row.orderName + " · " + row.currencyUomId
+    }))
+    return withSelected(
+        options,
+        selected,
+        orderId => salesAccess.templateOf(userScope.mantle, orderId)?.state === "current",
+        orderId => one("mantle.order.OrderHeader", {orderId})?.orderName || orderId
+    )
+}
+// ===== end of P12 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(
