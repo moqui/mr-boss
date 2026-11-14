@@ -3,7 +3,8 @@
 // createRecord and Comms' create-from provider, makes a request of sales.rep's with the message on it and answers the same request
 // again; a Sales user who cannot read the message is refused as for a missing one, before anything is written, and another app's user
 // is refused; QuoteRequestDetail's one qvt render in Sales' context (the record header with Create quote, the lines, the line with no
-// product, Conversation and Files), its record link under Sales, and its "not available" for another organization's rep; RFQs' one html render (the rep's requests
+// product, Conversation and Files), its record link under Sales, and its "not available" for another organization's rep and in
+// Commons' requests for its own rep; RFQs' one html render (the rep's requests
 // with the mailed one in East's queue, the saved lists, New request). The rules are Mantle's SalesQuoteRequests; the demo requests are
 // data/BossZSalesDemoData.xml's P8 block.
 // Run: ./moq test mr-boss --spec SalesQuoteRequests
@@ -144,10 +145,26 @@ feature("QuoteRequestDetail shows the rep's request in Sales' context; another o
             ),
             otherLink: asUser(users.otherRep, () =>
                 system(() => lib.invoke("ironstone.commons.PaletteServices.get#RecordLink", linkOf(rfqs.wingtip)).url)
+            ),
+            // the request is Sales' alone: its own rep finds it in no Commons list and Commons' request (and Projects') refuses it
+            commons: asUser(users.rep, () =>
+                system(() =>
+                    lib.invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId: rfqs.wingtip, need: "check"})
+                )
+            ),
+            commonsList: asUser(users.rep, () =>
+                system(() =>
+                    Array.from(
+                        lib.invoke("ironstone.commons.RequestServices.find#RequestRows", {list: "all", pageSize: 500}).rowList ||
+                            []
+                    ).map(row => row.requestId)
+                )
             )
         }
     },
-    then({own, other, link, otherLink}) {
+    then({own, other, link, otherLink, commons, commonsList}) {
+        commons.visible == false
+        !commonsList.includes(rfqs.wingtip)
         String(link).includes("/Sales/Quotes/QuoteRequestDetail?requestId=" + rfqs.wingtip)
         !otherLink
         own.errors.length == 0
