@@ -6,7 +6,7 @@
 // makes nothing again. A new room plan whose first two monthly due dates have passed shows two missed due dates; the planner
 // coalesces them into one catch-up with a reason, the supervisor approves, starts and completes the catch-up's work order, and PM
 // compliance shows the two obligations late, none on time: not one compliant order. A reader opens Due maintenance and may not
-// generate. The rules are Mantle's MaintenanceGeneration and BOSS's MaintenancePlans and MaintenanceAccess.
+// generate. The rules are Mantle's MaintenanceGeneration and BOSS's MaintenancePlans and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePreventiveWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib

@@ -6,7 +6,7 @@
 // starts it, issues a gasket from the organization's stock and completes it; the agent is told it finished and the case stays open;
 // the technician stores the intervention report on Maintenance/WorkOrders/InterventionReport, and the agent sends it from the
 // claim's RepairLinks to the customer's address and closes the case herself. The rules are Mantle's WarrantyManagedRepair and BOSS's
-// MaintenanceAccess; Customer Service's own walk is CustomerServiceWarrantyWalk.
+// MaintenanceRecordAccess; Customer Service's own walk is CustomerServiceWarrantyWalk.
 // Run: ./moq accept mr-boss --spec MaintenanceCustomerRepairWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, asUser, system, invoke, page} = lib

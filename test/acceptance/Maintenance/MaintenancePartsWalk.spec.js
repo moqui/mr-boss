@@ -6,7 +6,7 @@
 // maintenance expense (the mapped Repairs and maintenance account, not WIP) with the compressor's room and the cost centre, and the
 // return credited the same way; with Services' maintenance expense mapping ended in Accounting's Posting defaults the next issue
 // stops with the named exception, and a new mapping lets it go again. The rules are Mantle's MaintenanceMaterials and
-// MaintenanceExpenseRouting and BOSS's MaintenanceParts and MaintenanceAccess.
+// MaintenanceExpenseRouting and BOSS's MaintenanceParts and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePartsWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib

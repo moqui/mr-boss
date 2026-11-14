@@ -2,7 +2,7 @@
 // Requests' one qvt render (the planner's untriaged and triaged requests and the adoption queue), RequestDetail's one qvt render
 // under Maintenance (the planner's Maintenance box with the reported fault and the triage dialogs; Retail's planner refused),
 // Commons' RequestDetail of a maintenance request rendered once for its reporter (the owner contract with Commons: the safe
-// summary, no time, no technician, no other report of the fault), and Report a problem: in the requester's + menu (every group's is MaintenanceAccess'), its one
+// summary, no time, no technician, no other report of the fault), and Report a problem: in the requester's + menu (every group's is MaintenanceRecordAccess'), its one
 // qvt render and a report through it. The intake rules (one target, own requests, triage once, mail, the production handoff)
 // are Mantle's MaintenanceIntake; the "usable when" is the acceptance MaintenanceIntakeWalk.
 // Run: ./moq test mr-boss --spec MaintenanceRequests

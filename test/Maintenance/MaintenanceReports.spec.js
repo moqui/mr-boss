@@ -6,7 +6,7 @@
 // team, its rows opening WorkOrderDetail, the CSV and Print offered; the landing's cards and report links); each report's CSV is its
 // rows alone, every outcome named (review R2); the work orders dataset read through Insights is each reader's own organization's,
 // a Retail reader never Services' rows whatever they send (review R3). The counting rules are
-// Mantle's MaintenanceReports; the access rule is MaintenanceAccess'; the "usable when" is the acceptance MaintenanceReportsWalk.
+// Mantle's MaintenanceReports; the access rule is MaintenanceRecordAccess'; the "usable when" is the acceptance MaintenanceReportsWalk.
 // Run: ./moq test mr-boss --spec MaintenanceReports
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib

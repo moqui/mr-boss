@@ -3,7 +3,7 @@
 // from Commons' Report a problem with a photo and follows it in Commons; a second person's report of the same fault is added to the
 // same work order at triage; Manufacturing's operator stops a robot for a fault with a maintenance request, which appears in Retail's
 // Requests and is made one work order; the requester never sees the work order's time. The rules are Mantle's MaintenanceIntake and
-// BOSS's MaintenanceRequests and MaintenanceAccess.
+// BOSS's MaintenanceRequests and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenanceIntakeWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

@@ -7,7 +7,7 @@
 // week's oil service in My work orders, read only, and a PUT is refused with the work order unchanged, and its .ics is offered; a
 // vendor's expert invited to a video call about the work order joins the call from the invitation's link as a guest; Admin's
 // Exports lists the work order and booking lists in their owner's place. The rules are Mantle's and BOSS's MaintenanceStack and
-// MaintenanceAccess; the skills' retrieval is test/skill-retrieval.json.
+// MaintenanceRecordAccess; the skills' retrieval is test/skill-retrieval.json.
 // Run: ./moq accept mr-boss --spec MaintenanceStackWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page, shell} = lib

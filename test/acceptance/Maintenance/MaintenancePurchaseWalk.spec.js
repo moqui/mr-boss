@@ -6,7 +6,7 @@
 // photo of the rewound motor; at completion the supervisor accepts the service with the technician's photo, recorded once, under
 // Purchasing's own check (accept#ServiceItem), which the demo's maint.supervisor passes as a member of Warehouse's receiving group
 // (STOCK_RECEIVE alone, no Warehouse screen: the lead's decision, Nov 12, P10 review R1); no order line is completed by the work's
-// status. The rules are Mantle's MaintenancePurchases and BOSS's MaintenancePurchasing and MaintenanceAccess.
+// status. The rules are Mantle's MaintenancePurchases and BOSS's MaintenancePurchasing and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePurchaseWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

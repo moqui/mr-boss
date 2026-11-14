@@ -6,7 +6,7 @@
 // at 09:00 in the campus' time zone; a change of the room plan's interval needs a reason, starts the next term and keeps the earlier one
 // in the history; a new plan for the van naming the room procedure is refused activation (the procedure does not apply) and, with no
 // procedure, is activated (the user's call, Nov 12: P14 makes its work ad hoc from its name and estimate); a reader may open a plan but
-// not activate it. The rules are Mantle's MaintenanceDue and BOSS's MaintenancePlans and MaintenanceAccess.
+// not activate it. The rules are Mantle's MaintenanceDue and BOSS's MaintenancePlans and MaintenanceRecordAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePlansWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

@@ -4,7 +4,7 @@
 // context rendered once (the work order's lines with Issue for the assigned technician with the stock grant, Return unused and
 // History), Shared/InventoryAvailability under Maintenance rendered once (the part's stock in Services' warehouse only), the model's
 // suggested part and the charge's choices. The rules are Mantle's MaintenanceMaterials and MaintenanceExpenseRouting; the access case
-// is MaintenanceAccess's; the "usable when" is the acceptance MaintenancePartsWalk.
+// is MaintenanceRecordAccess's; the "usable when" is the acceptance MaintenancePartsWalk.
 // Run: ./moq test mr-boss --spec MaintenanceParts
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib
