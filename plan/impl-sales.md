@@ -5455,6 +5455,75 @@ with its products, and tax is computed on each generated order when it is placed
     on and that no Shop contract renews; it reads only the records.";
   - nothing needs the user's call.
 
+**Review Nov 14 (follow-up 2).** Master (Sales P19) merged into both repositories' `sal/fix2` first, cleanly; the specs re-run on
+the merge.
+- Checked and sound:
+  - `invoice#RecurringOrder` is reached only from the `SalesRecurrenceApprovedInvoice` tx-commit rule (`allow-remote="false"`, no
+    screen, REST or Assist mount) and reads only the records. It bills only an order with a parent, no purpose and a
+    `recurOccurrenceDate`, which only `create#RecurringOrder` sets (`clone#Order` clears it and every recurrence field, so a Commerce
+    reorder, a Sales or Purchasing copy, a Customer Service replacement or a Shop renewal never carries it), of a base with
+    `recurAutoInvoice` Y and a cron and no `StoreRecurringContract`; a normal sales order, a Shop renewal (no occurrence date, and its
+    base has a contract), a Commerce order and a replacement return at once. Billing goes through `create#FulfillmentInvoice`
+    (refuses a base or quote template, keeps one invoice per source key); a re-approval (hold and release, `checkStillComplete`)
+    finds the part billed and bills nothing, and an invoice cancelled later keeps its billing rows, so a re-approval does not bill
+    again.
+  - `clone#Order`'s parent mapping applies only with `productItemsOnly: false`; the default path copies `parentItemSeqId` as before
+    (Shop's base and renewals, Commerce's reorder, a legacy base). Sales' quote, order and template copies and Purchasing's copy, which
+    copy every line, get correct parents; their specs pass unchanged.
+  - Retax at placement: `handle#OrderMajorChange` runs on the open order before `place#Order`, so neither path's status guard skips
+    it; a storeless seller with a gateway replaces the copied tax lines (X1), a store order deletes and refigures promotions, shipping
+    and tax, a storeless seller with no gateway keeps the copied lines. A tax error stops `create#RecurringOrder`, whose own
+    transaction rolls back; `runOccurrence` records it on the base and the job goes on to the next base.
+  - Accounting's Recurring invoices' three texts are right for each kind of base; the Shop-contract read is one `in` query.
+- Fixed:
+  - R1 (medium, mr-mantle `SalesRecurrence.js` `invoiceRecurringOrder`): "exactly once" did not hold under concurrency. The rule runs
+    on service workers after the commit, and the part's status and billing were read outside the transaction that billed it, with
+    nothing locked; `create#FulfillmentInvoice` checks its source key unlocked too. Two approvals' rules at once (two approvals
+    racing, or a re-approval while the first rule is still running) could both find nothing billed and make two invoices. Each part
+    is now billed in a `runRequireNew` transaction that locks the `OrderPart` (`forUpdate`), reads its status and billing again, and
+    invoices in that same transaction, as Shop's invoice step locks its fulfillment rows. A part must also be one the worker copied (the
+    base's part of the same id and seller), so an order pointed at a base by other means bills nothing.
+  - R2 (low, mr-mantle `OrderServices.xml` `clone#Order`): the line-id map was `globalThis.copiedSeqIds`, a global of the script
+    realm, shared by every later script in it. It is now a `const` local of the service's action block.
+  - R3 (low, test): the follow-up's spec did not check a retax failure. SalesRecurrence's sixth feature now makes a second
+    auto-invoiced base of C, ends the gateway's rate and runs the job: the occurrence fails with TAX_RATE_MISSING, kept on the base
+    (`recurFailureDate`, the message), and no order is made. This guards the behavior; it would pass on the worker's code too.
+    R1 has no spec of its own (two workers at once cannot be driven from a spec); the single-approval billing and the second
+    `invoice#RecurringOrder` that bills nothing still pass.
+- Provisional findings (for the lead to number):
+  - R1 above (medium): a recurring order could be invoiced twice when two approvals' tx-commit rules ran at once; fixed.
+  - A legacy base (made recurring before Sales, not marked `OrpRecurringTemplate`) with `recurAutoInvoice` Y is billed on approval
+    too. Before, it was billed only when approved at placement, which never happened with no payment copied. That matches §4's call
+    ("a native recurring order"), but its auto-invoice may have been set through Mantle's `update#OrderRecur`, without Sales'
+    `RECEIVABLE_EDIT` check.
+  - `clone#Order` maps a child's parent only when the parent's id sorts before it, which is how Mantle creates lines. A child listed
+    before its parent keeps the source's id, as every child did before.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge and the fixes):
+  - mr-mantle SalesRecurrence: 6 of 6. The sixth feature takes 1.38 s (the worker's was about 0.6 s; R3 adds about 0.8 s).
+  - mr-mantle SalesRecurrence, OrderLifecycle, SalesQuoteTemplates, SalesQuoteIssue, SalesQuoteDrafts, SalesOrderChanges,
+    SalesOrderApproval, StorelessOrderTax, StorelessOrderConfirmation, StoreOperations, OrderToCashBasicFlow, ShopCheckout,
+    ShopOperations, ShopSubscriptions, Subscriptions, PurchaseOrders, OrderChanges, ReturnToResponseBasicFlow, ReturnPolicies and
+    SalesPortal: 160 of 160 (23 specs with their dependencies, 58.2 s of features).
+  - mr-boss SalesRecurrence, AccountingCollections, CommerceSubscriptions, SalesQuotes, SalesQuoteTemplates, SalesOrders,
+    SalesOrderChanges, AccountingAccess, CustomerServiceFeedback, PurchasingOrders and PurchasingReturns: 35 of 35 (22.3 s).
+  - mr-pass ShopSubscriptions and ShopCheckout: 6 of 6 (master's mr-pass).
+  - Prettier is clean on the changed JavaScript. No screen changed. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle about +1.4 s in all (SalesRecurrence's sixth feature, 1.38 s); mr-boss and client none.
+  - Merge hot spots: as the Built note says, plus `invoiceRecurringOrder`'s part loop and the sixth feature's added check.
+  - Attack-Surface correction: the worker's text is right except in three places. Every line is repeated only for a Sales base, not
+    a legacy one. A retax failure also fails the occurrence. The billing is per part, under the part's lock (R1). Replace "copied with
+    no payment and no purpose and placed through `place#Order` (so it is approved as any sales order of the seller, never on a copied
+    payment), and fails an occurrence whose agreement no longer applies." with "copied with no payment and no purpose (a Sales
+    base's every line, each child line under its own parent, retaxed by its own path, its seller's gateway or its store's; a base
+    made recurring before Sales its product lines) and placed through `place#Order` (so it is approved as any sales order of the
+    seller, never on a copied payment), and fails an occurrence whose agreement no longer applies or that cannot be taxed.
+    `invoice#RecurringOrder` (`authenticate="anonymous-all"`, internal, run only by the `SalesRecurrenceApprovedInvoice` tx-commit
+    rule on an order's approval) reads only the records and bills, through `create#FulfillmentInvoice` and once (each part under its
+    lock), only an approved part of the base's seller of an order the worker made for an occurrence of a base whose auto-invoice is
+    on and that no Shop contract renews."
+  - Nothing needs the user's call.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or
