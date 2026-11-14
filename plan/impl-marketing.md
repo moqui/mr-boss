@@ -3501,6 +3501,86 @@ the Rust 1.100 rebuild; mr-moqui unchanged, no Rust built. Built beside Sales fo
   - the user's call: none required; to confirm, an invitation as an ordinary approved send, scores as whole numbers on single choices only, the
     respondent named for audience readers only, and a hidden field's answer told to the visitor rather than answered with the receipt.
 
+**Review Nov 14 (P12).** A fresh review of `mkt/p12` (mr-mantle e8171398, mr-pass 2ad9f8e, mr-boss 0604962c) against P12, §2, §4 and
+design §10, §13, §18, judged as a public, unauthenticated surface by P7's and Sales P13's reviews; master (Sales follow-up 3) merged into
+mr-mantle (a59e2a58: SalesOrderApproval's spec) and mr-boss (7b3b6068: the MaintenanceAccess split, MaintenancePlans), no conflict; mr-pass
+had nothing new. Fixes mr-mantle 6cec5686, mr-pass 3d6929a.
+- Checked and sound:
+  - The two operations: one NotFound for every miss (a site without the mount, a draft, scheduled, closed or another site's or
+    organization's publication, a form not of a Marketing purpose or not the organization's, an invited publication by id, a public one by
+    token) once R2 is in; `served` first, then the publication, then the limits (client 30 in ten minutes, site 1,000 an hour, P7's attempt
+    buckets in their own transactions); a token's lookup counted by ExternalAccess' own throttle (100 in ten minutes per requester) before
+    the digest lookup; the answer's values a map or bounded JSON text (65,536 characters); over a limit, oversized, an unknown or internal
+    field, a value over 4,000 characters, an invitation already answered: the publication's receipt and nothing kept. The page posts with
+    the session token (CSRF), its inputs `f_<name>` from the server's own field list; the PASS route is no-store with Referrer-Policy
+    same-origin and the shell's CSP (`script-src 'self'`, the framework's moqui-form-when.js); `.html.fancy` escapes every value, so an
+    author's title, introduction or option text cannot write markup. Nothing is echoed but the receipt, a field's title in what to fix,
+    and an invited publication's id is never sent to its page. GET only reads, so a mail scanner changes nothing.
+  - accept#Submission: unknown and internal fields refused before anything is kept (the purpose's customer-visible fields as of now), each
+    value of its type through checkValues, a hidden field's answer refused, the request key a per-publication digest with the payload's
+    digest (the same answers answer the first, other answers REQUEST_KEY_REUSED), an invitation answered once under its lock, the response
+    locked by the guard as an invited one is. The worker's "a hidden field's answer told to the visitor": the message names no question
+    ("Leave unanswered the questions that do not apply to your other answers") and the page already carries every customer-visible
+    question with its rules, so it discloses no structure; an internal field is FIELD_UNKNOWN and gets the receipt. Kept as built: the
+    receipt would tell a visitor without JavaScript their answer was kept when nothing was (the user's call, below).
+  - The subscription choice: the publication's list only while it is offered on that site (P7's `offerOf`), only when ticked with a valid
+    address under P7's address limit, filed through P7's `fileGroup` (pending, its own verification message, evidence naming the form and
+    site, a request key derived from the submission so a replay files nothing), after the answer and apart (a failure logged and recorded
+    on the submission, the answer kept); never a membership and never from an answer.
+  - create#Invitations: an ordinary draft CampaignSend of the publication's open campaign (create#Send's own checks), so P8's approval,
+    P9's preparation (topic membership, consent within the organization, suppression) and release apply unchanged; build#CampaignDelivery
+    adds the link only after its membership and address checks, the FormInvitation once per send and recipient, a capability of scope
+    MarketingSurvey per attempt (48 characters, digest only, ending with the publication or after 30 days), and suppresses a recipient
+    who answered or a survey not open; a case feedback link never opens a Marketing form (the scope and recordType are both checked).
+  - Staff reads: Marketing's responses only through a FormSubmission of a Marketing publication of the caller's organizations, so no case
+    feedback of the same form is reached; the respondent named for an audience reader only; scores read with the form of each response's
+    date. The shared response screens' publication branch is keyed on the registration and leaves the case branch as it was; Customer
+    Service's and People's specs (CustomerServiceFeedback, CustomerServiceReports, CustomerServiceAccess, PeopleRecruiting,
+    PeopleAccessLater) pass unchanged, and FormDefinitions and CaseFeedback in Mantle.
+  - The copies: ForumSchema.js and Schema.js, PassRoutes.js and Routes.js byte-identical; the three TOKEN_WRITES lists equal (diffed);
+    the transport lets `submitMarketingForm` through without a token by name, as P7's `requestSubscription`.
+- Fixed:
+  - R1 (medium; one submission per request key). Two concurrent posts of one request key to a public (or an account's) publication: the
+    second failed on FormSubmission's unique key at commit (an error, not the first's answer), and an account's once policy could admit two
+    answers of one party. accept#Submission now takes the publication's row lock (as an invitation's) before its second look for the key
+    and the once check, so the second answers the first. Spec'd in FormPublications: four threads post one key and each gets the one
+    submission (failed before the fix with the duplicate key).
+  - R2 (low; one NotFound). A link the ExternalAccess check refused answered "This link is not available", a good link of a closed or
+    another site's publication "This page is not available", so the operations' answers told a good token from a forged one. The check's
+    NotFound is now the page's own. SubmitForm's spec compared the draft's, closed's and other site's words but left the forged one out; it
+    now compares all five (failed before the fix).
+- Provisional findings (for the lead to number):
+  - accept#Submission is `authenticate="anonymous-all"` and trusts the invitationId and partyId its caller verified; `allow-remote="false"`
+    keeps it off REST, and the Marketing page calls the JavaScript directly, as CaseFeedback's anonymous internal services are built;
+  - a published option's new score ends it and starts an option of the same value at the next sequence number, so the rescored option
+    moves to the end of the question's options (a relabel stays in place);
+  - the invitation link is made, and the FormInvitation marked sent with its attempt counted, before the build's later checks and the
+    attempt itself, so a delivery suppressed after it (no unsubscribe address) or failed still reads as sent (Responses' "Delivered");
+  - the option score parser applies to every purpose's builder: a non-Marketing option line ending "| <number>" now stores a score
+    (unused there) instead of keeping it in its label;
+  - the worker's findings stand (the operations camelCase, the purposes, the invitation as an ordinary send, scores 0–1000 on single
+    choices, an anonymous publication taking each new key, the respondent named for audience readers, the trigger not spec'd, the demo
+    site unpublished); its concurrent anonymous one is R1.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge): mr-mantle FormPublications (6 of 6, 1.3 s),
+  MarketingForms, FormDefinitions, CaseFeedback, MarketingSubscriptions, Dispatch, Automations (34 of 34, 43.7 s); mr-pass SubmitForm,
+  MarketingAccess, Transport, Portals (11 of 11, 29.3 s); mr-boss MarketingSurveys, MarketingAccess, CustomerServiceFeedback,
+  CustomerServiceReports, CustomerServiceAccess, PeopleRecruiting, PeopleAccessLater (61 of 61, 97.4 s). In that seven-spec run
+  PeopleAccessLater (18.7 s) and CustomerServiceAccess (18.1 s) passed the 15-second bound, as the worker saw; each alone is under it.
+  Prettier clean on the changed JavaScript. No screen changed; acceptance tests not run.
+- For the lead:
+  - budget share: mr-mantle FormPublications +0.4 s (the concurrent feature); the rest as the Built note;
+  - merge hot spots: as the Built note, plus `FormPublication.js` acceptSubmission (the lock) and `MarketingPortal.js` publicationOfPage;
+  - PeopleAccessLater and CustomerServiceAccess over 15 s beside other specs on a loaded machine: not P12's (the shared screens' change is a
+    branch they do not take); to check on master;
+  - Attack-Surface (mr-moqui, after PASS Marketing's subscription paragraph): the worker's paragraph is accurate with these corrections:
+    after "answer the same NotFound" add "(the link check's refusal answered in the page's own words)"; in "keeps one FormSubmission per
+    request key (the same answers answer the first, others are refused)" add "under the publication's or the invitation's lock, so a
+    concurrent repeat answers the first"; in "over either, an answer over 64 KB, or one naming a field the page never offered gets the
+    publication's same receipt" add "a value over 4,000 characters, or an invitation already answered"; and after "a value for a field its
+    rules hide" add "(the visitor is told to leave such questions unanswered, naming none)";
+  - the user's call (none blocking): a hidden question's answer told to the visitor (what to fix, naming no question) rather than the
+    receipt, which would drop a no-JavaScript visitor's answer silently; and the rescored option's place (the finding above).
+
 ### P13 — Leads and the Sales handoff
 
 Design §10 Leads and LeadRules, §12 LeadSources, §13 SubmitForm (its lead purpose), §15.3 (the capture job);
