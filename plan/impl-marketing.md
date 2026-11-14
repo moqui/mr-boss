@@ -409,7 +409,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F89) |
-| P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | — |
+| P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | built and reviewed Nov 13, merged |
 | P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | — |
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | — |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | — |
@@ -685,7 +685,7 @@ built.
 - Design edits: design-marketing §1.1 (as built: the permissions, the scope module, the grants, the administrator, the filter rows,
   the list rule and Commons' authorization-off reads), §3 Home, §12 Settings and §15.4 (as built); design-admin §14.2's Marketing
   row; design-drawers-commons' Mailboxes row (owner contract: the list services' organization check, F77).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F90 to F98 in order:
   - the ContactList filter, worded as the plan has it, would have hidden mailboxes and other organizations' lists from every BOSS
     read under an ordinary grant (Commons' contact record Consent tab, the list services, Comms' consent options): the mailbox
     exemption and the authorization-off reads keep Commons' and Comms' behavior as before P1; consent's organization scope is P3's;
@@ -762,7 +762,7 @@ built.
   - R3 (scope, low). Comms' `get#ConsentOptions` now reads every list past the new filter, and checked no permission itself (its
     two callers check the contact admin first). It now lists the lists to a contact admin only, so the authorization-off read
     cannot reach anyone else if a later caller forgets.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F99 to F102 in order:
   - `apply#Adoption`'s check-then-write race and optional revision (R1, R2);
   - Comms' `get#ConsentOptions` gated on the contact admin (R3);
   - `create#ContactList` lets a contact administrator create a non-mailbox list with no owner, which is then unowned (awaiting
@@ -1682,6 +1682,9 @@ design-marketing.md or the owner's design.
 | Nov 13, 2026 | Sales' Accounts is mounted at `Marketing/Leads/Accounts` (P3) for the bulk action, beside Leads; design §2 gains the row | The user's call (Nov 13, as recommended). The plan's choice (F64): Sales' mount row admits Leads and LeadSources only, and impl-sales §4 (Nov 11) has Marketing mount Accounts; the design had no path for it |
 | Nov 13, 2026 | Marketing's BOSS setup and demo go in files of their own (`data/BossSetupMarketingData.xml`, `data/BossZZMarketingDemoData.xml`), as Sales' and Maintenance's do | The plan's choice (F69), so Marketing's track and Sales' do not meet in one file |
 | Nov 13, 2026 | §5 Q6 answered as recommended: P22 adds framework support in mr-moqui, a conf-level `sms-consent` provider a component such as Mantle registers, and a per-number day limit for promotional texts apart from `smsSystemMaxPerDay`; a campaign text is sent by the system, not as the releasing user | The user's call; F72, F74. P22 works in an mr-moqui worktree |
+| Nov 13, 2026 | `MARKETING_ALL_ORGANIZATIONS` is kept, granted to `ADMIN` and `BOSS_MARKETING_ADMIN` alone, as Sales', People's and Maintenance's all-organizations permissions | The user's call (P1) |
+| Nov 13, 2026 | `BOSS_MARKETING_ADMIN` keeps the grants P1 built: every Marketing view and edit, `MESSAGE_TEMPLATE_VIEW` and all-organizations; no approve, dispatch or Comms configuration, so approval and dispatch stay with their own groups | The user's call (P1), as Sales' administrator |
+| Nov 13, 2026 | Comms' explicit permissions are split by Marketing role: `MESSAGE_TEMPLATE_EDIT` to the Marketing content author group, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` to `BOSS_MARKETING_ADMIN`; Comms' own groups gain them when Comms' settings area exists (§7). Granted in P6 with the screens that use them | The user's call (P1) |
 
 ## 5. Open questions
 
@@ -1790,6 +1793,19 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F87 | P0 (Nov 13): nothing writes TrackingCodeVisit, TrackingCodeOrder, TrackingCodeOrderReturn or SalesOpportunityTracking in any component or crate; only their definitions exist (mr-mantle MarketingEntities.xml:354-418, SalesEntities.xml:188) | P15 and P20 as designed; Sales P5 writes SalesOpportunityTracking |
 | F88 | P0 (Nov 13): the demo: ORG_ZIZI_RETAIL owns POPC_DEFAULT (its store's tax gateway LOCAL, mr-mantle data/ZcaProductDemoData.xml:196) and the gateways TEST_APPROVE and BOSS_COM_HOSTED (mr-boss data/BossCommerceDemoData.xml:74-90), and the PASS site ZIZI_SHOP, made by Commerce's demo service, disabled until published, with Account, Billing, Support and Shop mounts (BossZCommerceDemoData.xml:15-19; service/ironstone/commerce/Demo.js:16); ORG_ZIZI_SERVICES owns BOSS_COM_DIGITAL and ZIZI_DIGITAL; no organization has a seller tax preference (impl-sales F62). A run captures mail with `mail_capture_sends=true` (docs/dev/JS-Testkit.md:341-346) | P1's users of ORG_ZIZI_RETAIL and ORG_ZIZI_SERVICES as written; P7 adds the Marketing mount to ZIZI_SHOP; P17 sets ORG_ZIZI_RETAIL's tax preference. P17 changed |
 | F89 | P0 (Nov 13): the earlier plans' §7 rows naming this plan: impl-sales §7 (P3, P5, P11, P13, P15, P17, P20, under the names §1 uses), impl-people §7 (P12, P21, CheckIn's route group), impl-maintenance §7 (none) | Consistent with §1, but for Accounts' mount (F64), which impl-sales F110 already names |
+| F90 | P1 (Built Nov 13): the ContactList filter, worded as the plan has it, would have hidden mailboxes and other organizations' lists from every BOSS read under an ordinary grant (Commons' contact record Consent tab, the list services, Comms' consent options): the mailbox exemption and the authorization-off reads keep Commons' and Comms' behavior as before P1; consent's organization scope is P3's | P1: as its Built note says |
+| F91 | P1 (Built Nov 13): `ForumMailboxReceipt` named ContactList without its owner or type, so any find of it under an app root's grant would have been refused once the list filter existed; aliases added | P1: as its Built note says |
+| F92 | P1 (Built Nov 13): the plan names no all-organizations permission for Marketing; `MARKETING_ALL_ORGANIZATIONS` is built for the administrator alone, as Sales', People's and Maintenance's are by the user's calls | P1: as its Built note says |
+| F93 | P1 (Built Nov 13): design §1.1 gives the administrator "MARKETING_CONFIGURE plus explicit view/edit grants": built as every view and edit of the table, `MESSAGE_TEMPLATE_VIEW` and the all-organizations permission, no approval, dispatch or Comms configuration (Sales' choice; Maintenance's administrator got every app permission by the user's call) | P1: as its Built note says |
+| F94 | P1 (Built Nov 13): `MESSAGE_TEMPLATE_EDIT`, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` are held by `ADMIN` alone: design §1.1 gives them to "designated template editors" and as explicit grants with no group named, which P6 needs (a Comms or Admin group, or a Marketing one) | P1: as its Built note says |
+| F95 | P1 (Built Nov 13): the list services' new rule is the organization alone, with no Marketing permission (any employee of a list's organization reaches it through ContactListServices as before; Marketing's own list services and the list policy are P3's), and a call with no user is unchanged | P1: as its Built note says |
+| F96 | P1 (Built Nov 13): the Settings area's deny is met after the screen's own capability check in a render (always-actions run first), as Sales' and Maintenance's settings are; the spec takes either refusal | P1: as its Built note says |
+| F97 | P1 (Built Nov 13): the readiness check of unowned records is instance-wide (they are no organization's), under a provider scoped by organization, so Admin's Health shows it once per organization asked | P1: as its Built note says |
+| F98 | P1 (Built Nov 13): `test/acceptance/AppStructure`'s placeholder count was stale before this phase (at least 16 with 9 left), now none | P1: as its Built note says |
+| F99 | P1 (Review Nov 13): `apply#Adoption`'s check-then-write race and optional revision (R1, R2) | P1: as its Review note says |
+| F100 | P1 (Review Nov 13): Comms' `get#ConsentOptions` gated on the contact admin (R3) | P1: as its Review note says |
+| F101 | P1 (Review Nov 13): `create#ContactList` lets a contact administrator create a non-mailbox list with no owner, which is then unowned (awaiting adoption, reached only by contact administrators): kept, as the plan gives the contact administrator every list | P1: as its Review note says |
+| F102 | P1 (Review Nov 13): the readiness check and the Adoption preview are instance-wide (unowned records are no organization's): a configurer of one organization sees every unowned record's name; today only `BOSS_MARKETING_ADMIN` (every organization) holds the permission | P1: as its Review note says |
 
 ## 7. Later
 
