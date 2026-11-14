@@ -343,7 +343,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | built and reviewed Nov 14, merged |
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | built and reviewed Nov 14, merged |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | built and reviewed Nov 14, merged |
-| P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | — |
+| P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | built and reviewed Nov 14, merged |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | — |
 | P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | — |
@@ -4114,7 +4114,7 @@ before the last runs; mr-moqui and mr-pass unchanged, no Rust built.
   prices" table.
 - Design edits: design-sales §7 "As built (impl-sales P15)"; design-products §7 (the guard, the seller's agreements, Sales' price
   mounts; owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F253 to F258 in order:
   - the guard admits an agreement with no status by its dates alone (Products' ProductPriceLists and Customer Service's service
     agreements are made so); a raw Agreement row written without a status, by REST or an import, would price without activation;
     making the status required is the user's call (it changes Products' spec and Customer Service's SLA reading);
@@ -4194,7 +4194,7 @@ branches first, without conflict (mr-mantle 992fc867, mr-boss c59fed77); P15's s
     naming the other agreement and product), as does a priced product added to an active agreement; a renewal's predecessor, which its
     activation ends, is not counted, and agreements pricing different products (a product agreement beside general terms) may overlap.
     SalesAgreements checks an overlapping activation refused and a renewal's activation ending its predecessor (that path was untested).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F259 to F262 in order:
   - the Built note's first finding stands for the user (an agreement with no status prices by its dates alone); with R1 a raw AgrSales
     row is no longer writable through Products, so the remaining path is an Agreement written by REST, an import or entity data;
   - Products' price-list editor (`store#ProductPriceList`, PriceLists.js) may still attach a price list to a customer agreement under
@@ -4508,6 +4508,7 @@ the owner's design.
 | Nov 14, 2026 | With the seller's approval setting on and no order rule matching, the order's owner, enterer or placer who holds `SALES_ORDER_APPROVE` may approve it: the setting forces a manual approval, and separation applies per order rule | The user's call (P11's review) |
 | Nov 14, 2026 | An order approver keeps read-only sight of an order on which they recorded a decision, after it is approved; not of the organization's other approved orders. Built in P12 | The user's call (P11's review) |
 | Nov 14, 2026 | A quote link's token stays in the stored body of the sent mail, as Billing's and Support's links do; a cross-app redaction of stored links is later (§7) | The user's call (P13's review) |
+| Nov 14, 2026 | An agreement with no status keeps pricing by its dates alone, as Products' price lists and Customer Service's service agreements rely on; Sales' own agreements always carry a status. A raw Agreement row written by REST or an import is the remaining gap (F-row of P15) | The user's call (P15) |
 | Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
@@ -4797,6 +4798,16 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F250 | P14 (Review Nov 14): a fully packed sales order goes Completed before it ships, so a commercial change of it is refused by hold#Order's ORDER_HOLD_STATE (not a named change conflict, and the preview does not show it), and it leaves the change operator's sight; met while writing R4 | P14: as its Review note says |
 | F251 | P14 (Review Nov 14): a new line's price is the seller's price at apply; the approval binds the proposal's revision, not that price, so a price list change between the decision and apply is applied at the new price under the old approval (STOCK_CHANGED only against the applier's own preview). Storing the previewed price on the RequestItem (in the revision) would bind it | P14: as its Review note says |
 | F252 | P14 (Review Nov 14): save#OrderChange admits a Sales filer editing another person's commercial proposal on an order they may file on (as Customer Service's staff may); Sales offers no Edit, so only a direct call reaches it | P14: as its Review note says |
+| F253 | P15 (Built Nov 14): the guard admits an agreement with no status by its dates alone (Products' ProductPriceLists and Customer Service's service agreements are made so); a raw Agreement row written without a status, by REST or an import, would price without activation; making the status required is the user's call (it changes Products' spec and Customer Service's SLA reading) | P15: as its Built note says |
+| F254 | P15 (Built Nov 14): Products' price editor (Customer prices, `store#ProductPrice` with `PRICE_EDIT`) still writes a sales agreement's row directly, with PricePolicy checking only the agreement's organization; Purchasing refuses its agreements' rows there ("changes on the agreement"); Sales leaves it open (design §7 names the Products editor for AgreementPrices) and activation checks the rows' currency and parties, but a row added to an active agreement in Products is not checked | P15: as its Built note says |
+| F255 | P15 (Built Nov 14): the seller's authority with two current agreements with one customer takes the latest-started one's row first; no rule stops two overlapping active agreements of one customer | P15: as its Built note says |
+| F256 | P15 (Built Nov 14): `get#SalesAgreement`'s linked lines and `find#SalesAgreements`' orderId read the quotes and orders the caller sees, so the agreement keeper (no quote or order of their own) sees none; a keeper who should see them needs `SALES_TEAM_VIEW` | P15: as its Built note says |
+| F257 | P15 (Built Nov 14): a template's terms and print text, an agreement's print and stored approved PDF, ContractSchedules, the agreement as a Commons record link in the palette's other roots, and Customer Service's and Accounting's AgreementDetail contexts are not built | P15: as its Built note says |
+| F258 | P15 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the agreement services or the guard; P15 had no mr-moqui worktree | P15: as its Built note says |
+| F259 | P15 (Review Nov 14): the Built note's first finding stands for the user (an agreement with no status prices by its dates alone); with R1 a raw AgrSales row is no longer writable through Products, so the remaining path is an Agreement written by REST, an import or entity data | P15: as its Review note says |
+| F260 | P15 (Review Nov 14): Products' price-list editor (`store#ProductPriceList`, PriceLists.js) may still attach a price list to a customer agreement under `PRICE_EDIT`; the guard applies it only while the agreement is active, but the list is not on the agreement's revision or activation checks | P15: as its Review note says |
+| F261 | P15 (Review Nov 14): `salesAgreementContent` (BOSS) adds a document, which counts as acceptance evidence, to an agreement of any status and names no revision (it checks `agreementEdit` and the organization) | P15: as its Review note says |
+| F262 | P15 (Review Nov 14): the Built note's fourth and fifth findings stand (the keeper sees linked lines only of quotes and orders they read; the template print, contract schedules and the other apps' AgreementDetail contexts are not built) | P15: as its Review note says |
 
 ## 7. Later
 
