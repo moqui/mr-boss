@@ -1,3 +1,7 @@
+Nov 14, 2026 — gates 3 and 4 built: P8–P11 (stages M3–M4), durable sends and drip sequences (sends and the composer with a
+paged evaluation, dispatch and delivery, A/B experiments, automation run as its saved owner), each phase reviewed by a fresh agent and
+merged on its focused specs, beside Sales P16–P20. The user's calls of the build are in §4. Next: P12 (surveys and form publication),
+then P13 beside P14, P15 (gate 5); paused here for an origin sync and a Rust 1.100 rebuild.
 Nov 14, 2026 — gate 2 built: P6–P7 (stage M2), email readiness and public subscription (templates, sending profiles, bounce intake,
 PASS Marketing), each phase reviewed by a fresh agent and merged on its focused specs; P6 with its framework part (per-call mail values,
 the DSN and ARF reader). Next: P8 (sends, with a paged evaluation past the 5,000 preview cap), P9, then P10 beside P11.
@@ -425,7 +429,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | built and reviewed Nov 14, merged |
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | built and reviewed Nov 14, merged |
 | P10 Experiments | Mantle, BOSS | ExperimentDetail | built and reviewed Nov 14, merged |
-| P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | — |
+| P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | built and reviewed Nov 14, merged |
 | P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | — |
 | P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | — |
 | P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | — |
@@ -3150,7 +3154,7 @@ unchanged, no Rust built. Built beside P10 (`mkt/p10`) and Sales P20 (in review)
 - Inventories: usl-inventory's "Added in Marketing P11" table; ss-inventory has no row for P11's screens.
 - Design edits: design-marketing §6 (the as-built paragraph after EnrollmentDetail); design-commerce §8 (One sender per cart: the as-built
   owner contract); design-crosscut §1.3's register (OrderPlacedRecordAttribution built, its handler's P11 part).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F238 to F247 in order:
   - the owner identity is the system within the approved definition (above): a personal contact of any user is never enrolled, and a
     segment reading Sales or purchases is refused for a trigger, goal or condition; an automation needing Sales facts waits for a design
     of an automation owner who signs in for its runs (as run#EtlMapping's saved owner);
@@ -3248,7 +3252,7 @@ the entities' P10 block before P11's, and the demo data, inventory, link paths a
   - R4 (low; the choice). `sendMembers` took a topic from `p.topicListId` without the organization check, for automationMembers; a
     parameter get#Choices does not declare, but a choice source must not trust it. Both now call `topicMembers` with the topic their own
     check found.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F248 to F253 in order:
   - the owner (R1): an automation runs as the dispatcher who last activated it, rechecked at each run, pausing when they lose access;
     activation by a dispatcher who cannot read its segments is refused; staff enrollment admits as the owner (enroll#Party signs the owner
     in and back within the caller's request, as SitePages' preview does); the Simulation evaluates as its caller (a caller without Sales
@@ -4050,6 +4054,22 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F235 | P10 (Review Nov 14): any change of an experiment's setup ends the send's approval, the measure and the observation period too (R4; the Built note had them as the reading's) | P10: as its Review note says |
 | F236 | P10 (Review Nov 14): no attention row for a send in Sample sent waiting for a winner (troubledSends lists it only with a failed or uncertain delivery) | P10: as its Review note says |
 | F237 | P10 (Review Nov 14): release#ExperimentWinner's `operationKey` names nothing (the experiment is the identity), as release#Send's stamp | P10: as its Review note says |
+| F238 | P11 (Built Nov 14): the owner identity is the system within the approved definition (above): a personal contact of any user is never enrolled, and a segment reading Sales or purchases is refused for a trigger, goal or condition; an automation needing Sales facts waits for a design of an automation owner who signs in for its runs (as run#EtlMapping's saved owner) | P11: as its Built note says |
+| F239 | P11 (Built Nov 14): editing an active automation returns it to draft; its enrollments admitted earlier continue on the steps in effect at their admission (approved at the earlier revision) once the new revision is approved and activated, as design §6 says; store#Steps copies every send step's template content again, so a re-stored set takes the templates' current content | P11: as its Built note says |
+| F240 | P11 (Built Nov 14): a send step's checks skip a channel withdrawal (the topic's purpose, the address's solicitation, no evidence) and stop the enrollment on a topic withdrawal, an unsubscription or a suppression (design §6's two sentences read together); the dispatch's frequency cap leaves out a step send's own earlier deliveries (a re-entered person's earlier delivery of the same step) | P11: as its Built note says |
+| F241 | P11 (Built Nov 14): the cart trigger's sends go to the automation's topic (a Marketing list) and need its marketing consent beside the store's cart reminders; a shopper who turned on cart reminders only is not reached by an automation sender, where built-in recovery reaches them | P11: as its Built note says |
+| F242 | P11 (Built Nov 14): the confirmed subscription trigger counts a staff acceptance with evidence as a confirmation (an accepted SubscriptionRequest), and reads only those decided after the first activation; the segment trigger's first scan is a baseline (no one already matched is enrolled); the segment universe's 5,000 cap leaves a scan with an admissionNote | P11: as its Built note says |
+| F243 | P11 (Built Nov 14): the automations and enrollments are read by an audience reader too (EnrollmentDetail's D and U), not by a reader or analyst (design §2 listed Automations as the app's) | P11: as its Built note says |
+| F244 | P11 (Built Nov 14): a delivery already with the ledger when an enrollment stops still goes out unless its build finds the recipient off the topic or the address changed (P9's build; F218's sharers are not rechecked there) | P11: as its Built note says |
+| F245 | P11 (Built Nov 14): no Home card, attention source or Today row for automations yet (stalled enrollments are Insights' alert, P20) | P11: as its Built note says |
+| F246 | P11 (Built Nov 14): the demo's stopped enrollment is a staff stop (Olive's unsubscription in November falls after her wait would have ended) | P11: as its Built note says |
+| F247 | P11 (Built Nov 14): CartRecovery's spec gains one feature (the plan names it); its earlier features are unchanged | P11: as its Built note says |
+| F248 | P11 (Review Nov 14): the owner (R1): an automation runs as the dispatcher who last activated it, rechecked at each run, pausing when they lose access; activation by a dispatcher who cannot read its segments is refused; staff enrollment admits as the owner (enroll#Party signs the owner in and back within the caller's request, as SitePages' preview does); the Simulation evaluates as its caller (a caller without Sales gets SOURCE_UNAVAILABLE for a Sales segment) | P11: as its Review note says |
+| F249 | P11 (Review Nov 14): the owner's scope is MarketingAccess.scope(), which narrows to the user's organization filter when one is set: an owner whose filter leaves the automation's organization out pauses it (not exercised) | P11: as its Review note says |
+| F250 | P11 (Review Nov 14): "never two active for the same automation and person" is a check under the lock of the person's existing enrollments, not a constraint: two events of one person admitted at once (enroll#Party beside the job) could make two | P11: as its Review note says |
+| F251 | P11 (Review Nov 14): the cart trigger's send step does not check the cart again: a shopper who checked out after the visit was filed still gets the step's mail unless a goal segment ends it (built-in recovery's build checks the cart) | P11: as its Review note says |
+| F252 | P11 (Review Nov 14): the subscription trigger's cursor reads acceptances decided at or after it: one committed late with an earlier decidedDate is missed; acceptances while an edited automation was back in draft are admitted at its re-activation (the cursor is kept) | P11: as its Review note says |
+| F253 | P11 (Review Nov 14): the worker's findings stand otherwise (the store#Steps copy of current template content, the cart trigger's topic consent, audience readers reading automations, a delivery already with the ledger when an enrollment stops, no Home card) | P11: as its Review note says |
 
 ## 7. Later
 
