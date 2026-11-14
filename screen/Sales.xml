@@ -132,6 +132,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P9: the approval topics a sales approver decides (Sales/Quotes/Approvals): a quote's exception and a commercial order change -->
         <notification-topic topic="SalesQuoteApproval"/>
         <notification-topic topic="OrderChangeApproval"/>
+        <!-- P8 review (the user's call of Nov 13, 2026): a warranty claim's chargeable repair for Sales to quote -->
+        <notification-topic topic="SalesRepairToQuote"/>
         <!-- P6 (design §1.4 CX-ASSIST): Assist's chips on OpportunityDetail and Customer360 (each also needs its screen's grant) and its
             answer actions, filed through Sales' own record check: Log as note on the page's deal or account, Send as message (Comms'
             internal message, filed on the page's record when Sales admits the user to it) -->
