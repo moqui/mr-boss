@@ -991,9 +991,9 @@ and the ledger's promotional profile check, impl-marketing P8), called by built 
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
 | OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3); Commerce/Orders/OrderDetail (Order again, through mantle.order.StoreOperationsServices.reorder#StoreOrder: copyPayment false, then repriced; Commerce P8); Sales/Quotes/QuoteTemplateDetail and Sales/Quotes/Quotes (New quote from a template, through SalesQuoteServices.create#Quote: copyPayment false, then priced as of the quote's date; a successor through store#QuoteTemplate) (Sales P12) |
-| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
-| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
-| OrderServices | create#RecurringOrder |  |  |
+| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders | Sales/Agreements/RecurringOrders (New recurring order, Edit, through SalesRecurrenceServices.store#SalesRecurrence on the base, a copy of the approved order; OrderDetail's Make recurring opens it) (Sales P16) |
+| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run); its guards are Sales' (the base's zone, dates, pause, one order for an occurrence, a failure named and the next base run) (Sales P16) |
+| OrderServices | create#RecurringOrder |  | Sales/Agreements/RecurringOrders (Make the due order now, through SalesRecurrenceServices.change#SalesRecurrence retry) (Sales P16) |
 | OrderServices | handle#OrderItemChange |  |  |
 | OrderServices | handle#OrderPartChange |  |  |
 | OrderServices | handle#OrderMajorChange |  | — (no screen; the order rules) X1: a storeless order's tax step through the seller's gateway (Sales P7) |
@@ -2447,6 +2447,16 @@ remain historical; these rows add no implementation claim.
 | sales/ForecastServices | store#Target, find#Targets | Sales/Settings/Targets (SalesTargets) | Sales/Settings/Targets (New target, Change, the list with CSV) |
 | sales/ForecastServices | ensure#SalesPeriods | — (not in the design) | Sales/Settings/Targets (Add sales periods) |
 | sales/ForecastServices | get#TargetAttainment | Sales/Reports/TargetAttainment (TargetOptions, TargetResults) | Sales/Reports/TargetAttainment (with CSV) |
+
+### Added in the Sales build: recurring orders and subscriptions (P16, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesRecurrenceServices | find#RecurringSalesOrders | Sales/Agreements/RecurringOrders (RecurrenceFind, RecurrenceList) | Sales/Agreements/RecurringOrders (the list with Active, Paused, Last run failed, Ended and All) |
+| order/SalesRecurrenceServices | store#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceSettings) | Sales/Agreements/RecurringOrders (New recurring order, Edit); Sales/Orders/OrderDetail (Make recurring opens it) |
+| order/SalesRecurrenceServices | change#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceAction) | Sales/Agreements/RecurringOrders (Make the due order now, Pause, Resume, End) |
+| order/SalesRecurrenceServices | find#SalesSubscriptions | Sales/Agreements/Subscriptions (Commerce's Subscriptions with a Sales context) | Shared/Subscriptions in Sales' context at Sales/Agreements/Subscriptions |
+| order/SalesRecurrenceServices | add#SubscriptionFollowUp | Sales/Agreements/Subscriptions (Follow up, over mantle.work.TaskServices.create#SimpleTask) | Shared/Subscriptions in Sales' context (Follow up) |
 
 ## Marketing design — source-verified service additions
 

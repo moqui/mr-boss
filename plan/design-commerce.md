@@ -956,6 +956,15 @@ resumes the same occurrence through Shop's coordinator, and is refused while a p
 latest term ends its renewal (design-shop §10.2 as built). Customer360 lists the customer's subscriptions.
 Storeless native Subscription rows for Sales' mount are not listed yet (impl-commerce F145).
 
+**As built (Nov 14, impl-sales P16; owner contract, F23).** The list is `Shared/Subscriptions`, mounted by Commerce at
+`Commerce/Customers/Subscriptions` (its route and its own rendering, filters and links unchanged) and by Sales at
+`Sales/Agreements/Subscriptions`. Sales' context does not call `R.find#StoreSubscriptions` (it needs Commerce's
+permissions): Mantle's `mantle.order.SalesRecurrenceServices.find#SalesSubscriptions`, a Sales reader's, lists the store
+contracts of the stores of the user's sales organizations read only (no method, consent or renewal attempts) beside the
+storeless Subscription rows of native orders of those organizations, each with its source order, recurring base and
+agreement and "No billing link" when its order line was not billed. Sales offers only Follow up (a task on the customer);
+cancel and retry stay SubscriptionDetail's under Commerce's grants, which Sales does not mount.
+
 ### Requests
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

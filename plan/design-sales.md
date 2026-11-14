@@ -1403,6 +1403,38 @@ does not end already paid access; a subscription with no billing link is shown a
 
 **Source:** research §§7–8; Commerce Subscriptions. **Needs:** SAL-RECURRENCE, SAL-COLLAB; COM-SUBSCRIPTION.
 
+### As built (impl-sales P16, Nov 14, 2026)
+
+- A recurring base is an approved copy of an approved sales order (`clone#Order` with `copyPayment=false`), marked
+  `OrpRecurringTemplate`, with no placed or approved date and no reservation, shipment or billing source; the order it came from stays
+  an ordinary order and is fulfilled and billed as before (§4 Q7: the base stays Approved). OrderHeader gains the zone the cadence is
+  read in (`recurTimeZone`), its dates (`recurFromDate`, `recurThruDate`), a pause (`recurPausedDate`, `recurResumedDate`), its
+  agreement (`recurAgreementId`), its revision (`recurRevision`), its last failure, and on a generated order the occurrence it was made
+  for (`recurOccurrenceDate`). Mantle `mantle.order.SalesRecurrenceServices` (not in `SalesAgreementServices`: the records are
+  orders, beside the worker): `find#RecurringSalesOrders`, `store#SalesRecurrence` (over `update#OrderRecur`; monthly, weekly or yearly
+  day and hour, or a cron expression), `change#SalesRecurrence` (pause, resume, end, retry), `find#SalesSubscriptions`,
+  `add#SubscriptionFollowUp`. `SALES_RECURRENCE_MANAGE` keeps the organization's bases, `SALES_TEAM_VIEW` reads them, and a keeper may
+  repeat any approved sales order of the organization (the agreement keeper sees no orders by assignment); auto-invoice needs
+  `RECEIVABLE_EDIT` to turn on.
+- The one worker (`create#RecurringOrders`, `create#RecurringOrder`): due at the latest scheduled time in the base's zone after its
+  last order and resumption, inside its dates, not paused (a paused month is skipped); one order for an occurrence under the base's
+  lock, so the job and an operator's retry answer the same order; cloned with `copyPayment=false` and no purpose, placed through
+  `place#Order`. With no payment copied, a generated order is never auto-approved: it waits in Awaiting approval like any sales order
+  (the seller's approval setting changes nothing more), and auto-invoice, which bills only a part approved at its placement, bills
+  nothing until a renewal payment (Accounting's attempt with recorded consent, §7) exists for native bases. An agreement the base or a line's price names that no longer applies (PriceResolver's guard) fails the occurrence
+  (AGREEMENT_INACTIVE); each base runs in its own transaction, a failure is logged and kept on the base, and the next base runs. A
+  Shop contract's base is only dispatched to Shop and is not Sales'.
+- The readers that counted an approved base now leave it out (§4 Q7 confirmed against the code): supply planning's demand, shipment
+  loads, `create#OrderPartShipment` and `add#OrderPartToShipment` (RECURRING_TEMPLATE), `reserve#AssetForOrderItem`, the account's
+  open orders, Customer Service's order record, the PASS Support portal's customer orders and Shop's own orders after a cancelled
+  contract cleared the cadence.
+- Screens: RecurringOrders at `Sales/Agreements/RecurringOrders` (the list with Active, Paused, Last run failed, Ended and All; New
+  recurring order, Edit, Make the due order now, Pause, Resume, End); a base has no detail screen of its own (its last order opens
+  OrderDetail). Subscriptions is `Shared/Subscriptions` (Commerce's list made shared, design-commerce §6 as built) in Sales' context:
+  store contracts read only beside storeless subscriptions, with the source order, the base (opening RecurringOrders) and the
+  agreement; Follow up only. OrderDetail's More offers Make recurring for an approved order; Accounting's Recurring invoices links to
+  RecurringOrders for a keeper of recurrence.
+
 ## 8. Reports and forecasts
 
 ### Forecast

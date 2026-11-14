@@ -883,7 +883,7 @@ choiceSources.changeOrders = (userScope, term, selected) => {
     const found =
         ec.service
             .sync()
-            .name("mantle.order.SalesWorkspaceServices.find#SalesOrders")
+            .name("mantle.sales.SalesWorkspaceServices.find#SalesOrders")
             .parameters({list: "recent", text: term || null, pageSize: choiceLimit})
             .call() || {}
     const changeable = salesAccess.changeStatuses
@@ -1001,6 +1001,48 @@ choiceSources.agreementParties = (userScope, term, selected, p) => {
     return options
 }
 // ===== end of P15 =====
+// ===== P16: recurring orders and subscriptions (impl-sales P16; design-sales §7 RecurringOrders, Subscriptions) =====
+linkPaths.push("Agreements/RecurringOrders", "Agreements/Subscriptions")
+const recurrence = () => ec.resource.script("component://mr-mantle/service/mantle/order/SalesRecurrence.js")
+// RecurrenceSettings' order: the approved sales orders a keeper of recurrence may repeat (SalesRecurrence.js, Mantle's check)
+choiceSources.recurrenceSources = (userScope, term, selected) => recurrence().recurrenceSourceOptions(term, selected)
+// A base's agreement and Subscriptions' agreement filter: the active customer agreements of the scope (Mantle's find#SalesAgreements),
+// of the organization and the customer when given
+choiceSources.agreements = (userScope, term, selected, p) => {
+    const found = lib.probe("mantle.party.SalesAgreementServices.find#SalesAgreements", {
+        organizationPartyId: p.organizationPartyId && covers(userScope, p.organizationPartyId) ? p.organizationPartyId : null,
+        customerPartyId: p.accountPartyId || null,
+        state: "active",
+        text: term || null,
+        pageSize: choiceLimit
+    })
+    return withSelected(
+        Array.from(found.agreementList || []).map(row => ({
+            value: row.agreementId,
+            label: [row.description, row.customerName].filter(Boolean).join(" · ")
+        })),
+        selected,
+        agreementId => !!salesAccess.agreementOf(userScope.mantle, agreementId),
+        agreementId => one("mantle.party.agreement.Agreement", {agreementId})?.description || agreementId
+    )
+}
+// RecurrenceSettings' zone: the known time zones, searched by name
+choiceSources.timeZones = (userScope, term, selected) => {
+    const lower = String(term || "").toLowerCase()
+    const zones = Array.from(ec.l10n.getAvailableTimeZones() || []).map(String)
+    const options = zones
+        .filter(zone => !lower || zone.toLowerCase().includes(lower))
+        .slice(0, choiceLimit)
+        .map(zone => ({value: zone, label: zone}))
+    return withSelected(
+        options,
+        selected,
+        zone => zones.includes(zone),
+        zone => zone
+    )
+}
+// ===== end of P16 =====
+
 // ===== P18: forecasts and targets (impl-sales P18; design-sales §8 Forecast, TargetAttainment, §9 Targets) =====
 linkPaths.push("Pipeline/Forecast", "Settings/Targets", "Reports/TargetAttainment")
 const forecasts = () => ec.resource.script("component://mr-mantle/service/mantle/sales/SalesForecasts.js")
