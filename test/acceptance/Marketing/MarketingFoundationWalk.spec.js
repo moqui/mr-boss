@@ -175,12 +175,20 @@ feature("the administrator adopts a legacy list on Settings › Adoption and it 
     when() {
         const before = listAccess(users.author, legacyList)
         const shown = asUser(users.admin, () => page("Settings/Adoption", {}, "html"))
-        const adopted = asUser(users.admin, () =>
-            post("Settings/Adoption/adopt", {recordKind: "list", recordId: legacyList, organizationPartyId: ids.organizationId})
+        // the revision the page posts back (the row's lastUpdatedStamp as millis)
+        const revision = system(() =>
+            String(
+                Number(
+                    String(
+                        ec.entity.find("mantle.marketing.contact.ContactList").condition("contactListId", legacyList).one()
+                            .lastUpdatedStamp
+                    )
+                )
+            )
         )
-        const again = asUser(users.admin, () =>
-            post("Settings/Adoption/adopt", {recordKind: "list", recordId: legacyList, organizationPartyId: ids.organizationId})
-        )
+        const adoption = {recordKind: "list", recordId: legacyList, organizationPartyId: ids.organizationId, revision}
+        const adopted = asUser(users.admin, () => post("Settings/Adoption/adopt", adoption))
+        const again = asUser(users.admin, () => post("Settings/Adoption/adopt", adoption))
         const after = listAccess(users.author, legacyList)
         const otherAfter = listAccess(users.otherAuthor, legacyList)
         const owner = system(
