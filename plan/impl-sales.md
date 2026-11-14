@@ -4414,6 +4414,86 @@ mr-moqui unchanged, no Rust built.
   - nothing needs the user's call; the storeless-only rule (F42) and hiding an order while it is being changed may be worth the user's
     look once P14's commercial change lands.
 
+**Review 2026-11-14 (P17).** A fresh review of `sal/p17` (mr-mantle 5c2127b6, mr-pass 030b247, mr-boss ea8706dc) against P17, §2, §4,
+design §10, F42, F48 and F236, as a public, unauthenticated surface with P13's review as the standard. Master (Sales P14, P15,
+Marketing P6) merged into mr-mantle (clean) and mr-boss (usl-inventory: P14's and P15's tables kept before P17's); mr-pass had
+nothing newer. ForumSchema.js equals mr-pass Schema.js and PassRoutes.js equals Routes.js after the merge; Dogfood DG6's four
+mailing-list operations and the eight Sales operations (five quote, three order) are in both.
+- Checked and sound:
+  - The three services are `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as `findSalesOrders`,
+    `getSalesOrder` and `getSalesOrderDocument` of the authority's allowlist (GET reads, in no `TOKEN_WRITES` list; the PDF in
+    `DOWNLOADS`, its location stripped). The organization is the site's `sales` mount's; the customer is the OrderView capability's
+    (`check` with the scope, the kind and the organization; an order ID beside the token must be its own) or the signed-in account's
+    `actingFor`, never the request's. "Sign in" is answered only with no token, before any lookup; every other miss (forged,
+    expired, revoked, a crossed ID, another customer's order, a store order's link, a quote link on the order page, an order link on
+    a quote page, a cancelled or rejected order, a base or template) is the one NotFound. Token lookups count in `check`, as P13's.
+  - Projections: lines and totals through `offerOf` as P13's quote (no cost, margin, price trace, internal note); shipments only
+    through this order's ShipmentItemSource rows, their items this order's; a tracking link only `https:` (the spec's script URL
+    dropped); invoices of the order's billing, from the organization to that customer, issued only; Billing's InvoicePay only for a
+    signed-in account where the site's Billing serves the organization; Support's pages only where its mount serves it. Every value
+    is escaped by the `.html.fancy` pages; no form on CustomerOrder. The PDF is the earliest stored OctOrderConfirmation, streamed.
+  - Support for a link's reader: Sales.js keeps the token in the session only after a successful read, never in a URL; Support's
+    `askers` checks it again (OrderView, the organization, the order ID) and serves storeless orders as Shop's guests'.
+  - The owner contract with Shop: `recordPage` changes the page only for a storeless order's OrderView; a store order's link stays
+    `/shop/Orders/Status` (the spec checks it), and ShopCheckout, ShopCustomer (mr-mantle) and ShopAccount (mr-pass) pass unchanged.
+  - Order links at each delivery attempt, 366 days, revoked only by cancelling: acceptable, as P13's per-attempt quote links. The
+    token exists only in that attempt's message; an uncertain attempt may have reached the customer; 366 days is Shop's order link;
+    `resolve` refuses a cancelled or rejected order; only the digest is kept. The link also admits Support requests for that one
+    order (as Shop's), so F235's stored-mail point applies to it too. Not made when the site has no published Sales mount.
+  - Built finding 4 against P14 as merged: not so. A placed order is never Being changed (the status flow has no Placed to Being
+    changed; only Open and Proposed); P14's apply holds it with the Change reason and releases that hold inside the one transaction,
+    so a pending or applied commercial change leaves the order shown; a Credit hold the change leaves shows as "Received, being
+    reviewed" (OrderHold is listed). The `OrderBeingChanged` exclusion is dead for orders; design §10's "Which orders" corrected.
+  - F236 against P14 and the storeless tax path: every P14 kind moves the revision where the seller counts commercial changes only
+    (a line's quantity or price is `item`, a ship date, method or carrier an OrderPart update, an address an OrderPartContactMech),
+    so the quote page shows "changed" after an applied change. The other way, a probe (a scratch spec, not kept) found the revision
+    unmoved through acceptance (`place#Order` with the PO), the confirmation's build and stored PDF, and `approve#Order`, both for
+    seller A (no gateway) and seller C (`taxGatewayConfigId` LOCAL): the storeless retax runs only on an item or address change and
+    not once Approved or billed. So the accepted quote keeps its lines until a real change.
+- Fixed (mr-mantle 7f67473b):
+  - R1 (low, correctness): find#CustomerOrders took up to 1,000 OrderPart rows of the organization and customers in no order, before
+    the store, status and placement filters, so a customer who also buys in the organization's store (or has many drafts) could see
+    its recent direct orders missing from My orders and the hub's count. The candidates now come from OrderHeaderAndPart filtered by
+    no store, a shown status and a placed date, newest first. No spec check (it needs over a thousand parts); the existing list checks
+    pass.
+- Provisional findings (for the lead to number):
+  - Built finding 4 (orders being changed hidden) does not hold against P14 (above); a cancelled order still leaves My orders and its
+    link reads not available, which may be worth the user's look (a customer may want to see that it was cancelled);
+  - an order link admits Support's request pages for that order (a cancellation request is a write by the link's reader), as Shop's
+    order link does; with F235 a reader of the organization's sent mail can file one as the customer;
+  - signed-in reads by order ID are not rate limited (as P13's quote reads); every token lookup is;
+  - the PDF is the confirmation as placed; after a commercial change the page shows the order now and the PDF the order as placed
+    (P14 stores its changed document separately), with no label saying so;
+  - the Built note's other findings stand (operation names, storeless only, no date filter, contact grants per app).
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge and R1): mr-mantle SalesPortal 6 of 6 (27.8 s with
+  setup), StorelessOrderConfirmation 1 of 1, ShopCheckout 8 of 8, ShopCustomer 5 of 5, SalesOrderChanges 3 of 3; mr-pass
+  SalesPortalAccess 3 of 3, Forum 13 of 13 (the schema copies check), ShopAccount 3 of 3. Prettier (mr-moqui's config) on
+  SalesPortal.js. Not run: test-apps, test-framework, the acceptance suite; no screen changed in the review.
+- For the lead:
+  - budget share: as the Built note (mr-mantle about 1.9 s, mr-pass about 0.02 s); R1 adds none;
+  - merge hot spots: as the Built note; with Marketing P7 the schema copies (both equal here, DG6's block before the Sales block in
+    each; keep them equal) and mr-boss `plan/usl-inventory.md` (P14, P15, then P17 tables);
+  - Attack-Surface: the worker's paragraph is right but for two points: "not being changed" (a placed order never is; drop it) and the
+    link's reach into Support. Corrected: "PASS Sales' customer orders (`mantle.order.SalesPortalServices` find#CustomerOrders,
+    get#CustomerOrder and get#OrderDocument, all `allow-remote="false"`, `authenticate="anonymous-all"`, reached only as the PASS
+    operations `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument` of the authority's allowlist, reads with no bearer
+    write): each finds the organization from the site's `sales` mount and the customer from the bearer link's capability (the
+    `SalesOrder` kind's OrderView, made for each recipient of the storeless confirmation at each delivery attempt, lasting a year,
+    only its digest kept, ended by the order's cancellation; or issued by `create#AccessCapability` under the kind's permission as
+    before) or from a signed-in account's contact grant of the `sales` app or its own verified customer party, never from the
+    request; a link reaches its one order and never lists, and an order ID beside it must be its own; only a placed storeless sales
+    order of that organization whose every part is the seller's to that customer, not a recurring base or template and not cancelled
+    or rejected, is shown; a store order's OrderView link opens Shop's page and the Sales page refuses it, and a quote link never
+    opens an order nor an order link a quote; a wrong, expired, revoked or crossed link and another customer's order answer the same
+    NotFound; every token lookup counts against the requester's limit; answers are allow-listed projections (no cost, margin,
+    internal note or other party; a carrier's tracking link only when https); Billing is linked only for a signed-in account and
+    Support only where the site mounts each for the same organization, each checking its own access; a link's reader reaches
+    Support's requests for that one order through the link the page keeps in its session after a successful read, never in a URL;
+    the order's PDF, the stored confirmation as placed, is streamed by the facade, its location never answered. A link's token is in
+    the sent confirmation the organization keeps.";
+  - user's calls: none required; the lead may put to the user whether a cancelled order should stay visible (as cancelled) on My
+    orders and its link.
+
 ### P18 — Forecast and targets
 
 Design §8 Forecast and TargetAttainment, §9 Targets; SAL-FORECAST.

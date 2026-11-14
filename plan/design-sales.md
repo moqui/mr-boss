@@ -1886,7 +1886,8 @@ A bearer link from the confirmation mail reaches this one order only. **Needs:**
   confirmation as placed (Customer Service's stored OctOrderConfirmation, the one the confirmation mail attached), never made by
   a read; an order with none shows no PDF.
 - **Which orders.** A placed sales order of the site's organization to the customer, every part the seller's to it, with no
-  store, not a recurring base or a quote template, and not being changed, cancelled or rejected. A store order's one public
+  store, not a recurring base or a quote template, and not cancelled or rejected (a placed order is never Being changed: a
+  commercial change holds and releases it inside its apply, and a Credit hold it leaves shows as being reviewed). A store order's one public
   page stays Shop's (F42): `SalesOrder` OrderView's page goes by the order's store (ExternalAccess `recordPage`), so a storeless
   order's link opens CustomerOrder on a site whose Sales mount targets the organization and a store order's keeps Shop's
   `/Orders/Status` on the store's site; CustomerOrders lists no store order and CustomerOrder refuses one.
