@@ -334,7 +334,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | built and reviewed Nov 13, merged |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | built and reviewed Nov 13, merged |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
-| P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | — |
+| P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | — |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | — |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
@@ -2297,7 +2297,7 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
   (the SalesQuoteApproval row as built, OrderChangeApproval's link per recipient, the Sales row's service), design-drawers-commons §4
   (the SalesQuoteApproval row, the link) and design-customer-service §4 (Approvals' context: the link resolved per recipient), owner
   contracts.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F156 to F164 in order:
   - the approval setting, the templates, response requirements, acceptance thresholds and net-terms option are stored by
     store#SalesPolicy but shown on SalesDefaults only when P10, P11 and P13 read them; until then a configurer sets them through the
     service alone;
@@ -2376,7 +2376,7 @@ new on it) against P9, §2, §4 (the Nov 11 rows on OrderDecision, the approval 
     `check#OrderPreApprove` (today the server log, from P11 the order screens); they now name the rule's kind and id only.
   - R4 (low, §2 revisions): `store#SalesPolicy` and `store#SalesApprovalPolicy` accepted a replacing write that named no revision; it
     is refused REVISION_REQUIRED (the screens pass it).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F165 to F169 in order:
   - any holder of `SALES_APPROVE` in the seller sees a quote once its approval was asked, also one outside the rule's approver group
     who cannot decide it (design §1.1 "its authorized approver"); narrow it to the approvers of its rules if wanted;
   - an owner or team reassignment of a quote (OrderPartParty) moves its revision and so ends its approvals, with the commercial
@@ -3099,6 +3099,20 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F153 | P7 (Review Nov 13): `modify#ProductPriceList` declares `pricingContext` (a Map) and is `allow-remote="false"`: an in-process caller passing one could set `storeAuthority` or `sellerAuthority`; no screen or service does today (Shop's pattern, not P7's) | P7: as its Review note says |
 | F154 | P7 (Review Nov 13): find#Quotes' `state: all` includes a quote placed later, so OpportunityDetail's Quotes box and its Orders box will both show an accepted quote once P11 places one; P11 to decide which list owns it | P7: as its Review note says |
 | F155 | P7 (Review Nov 13): The Built note's findings stand but the two fixed here (Chatter and files, R1; the lifecycle transfer, R2) | P7: as its Review note says |
+| F156 | P9 (Built Nov 13): the approval setting, the templates, response requirements, acceptance thresholds and net-terms option are stored by store#SalesPolicy but shown on SalesDefaults only when P10, P11 and P13 read them; until then a configurer sets them through the service alone | P9: as its Built note says |
+| F157 | P9 (Built Nov 13): the commercial revision is set only on a seller's own accounting preference: Retail and the other Ziziwork organizations inherit ORG_ZIZI_CORP's, so SalesDefaults shows where it is set and does not change it there (Accounting's settings own that row) | P9: as its Built note says |
+| F158 | P9 (Built Nov 13): a notice is sent when the rep asks for approval; a later line change supersedes the decisions and reads the notices, and the rep asks again (there is no automatic resubmission, unlike Purchasing's placed orders) | P9: as its Built note says |
+| F159 | P9 (Built Nov 13): an approval by the topic's handler without a rule named decides every open rule the approver may decide; one the approver may not (another group's) stays open, and a refusal from the list refuses each | P9: as its Built note says |
+| F160 | P9 (Built Nov 13): a SapOrder rule warns on every sales order of its seller that meets it, store orders included, so with the setting off such an order waits for a person as §4 says; nothing yet records an order-purpose decision (P11's `approve#Order` direction) | P9: as its Built note says |
+| F161 | P9 (Built Nov 13): an amount rule in one currency does not meet a quote in another (no conversion), as Purchasing's bands; design §9's "missing FX blocks" is not built | P9: as its Built note says |
+| F162 | P9 (Built Nov 13): `get#RecordLink`'s order-change branch sends a Sales approver to Approvals, not to the change, until P14's OrderChangeDetail | P9: as its Built note says |
+| F163 | P9 (Built Nov 13): the Approvals screen's own permission check runs in its always-actions before the artifact deny is reported, so a refused render names PERMISSION_DENIED rather than the authorization (the deny row holds: checked by `isPermitted`) | P9: as its Built note says |
+| F164 | P9 (Built Nov 13): `docs/security/Attack-Surface.md` (mr-moqui) does not name the Sales approval verbs; all are `allow-remote="false"` and check SALES_APPROVE or SALES_CONFIGURE and the organization themselves; P9 had no mr-moqui worktree | P9: as its Built note says |
+| F165 | P9 (Review Nov 13): any holder of `SALES_APPROVE` in the seller sees a quote once its approval was asked, also one outside the rule's approver group who cannot decide it (design §1.1 "its authorized approver"); narrow it to the approvers of its rules if wanted | P9: as its Review note says |
+| F166 | P9 (Review Nov 13): an owner or team reassignment of a quote (OrderPartParty) moves its revision and so ends its approvals, with the commercial revision on too; P10 and P14 may want it counted as not commercial | P9: as its Review note says |
+| F167 | P9 (Review Nov 13): OrderDetail's Approve and Refuse send no operation key (a double submit writes a second, identical decision); the list's goes through the notice once | P9: as its Review note says |
+| F168 | P9 (Review Nov 13): a rule ended after a free line was drafted under it leaves that line needing no approval when other quote rules remain (the manual-price rule applies only while none is set) | P9: as its Review note says |
+| F169 | P9 (Review Nov 13): the Built note's findings stand but the fourth, fixed here (R1) | P9: as its Review note says |
 
 ## 7. Later
 
