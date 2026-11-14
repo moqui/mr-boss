@@ -345,7 +345,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | built and reviewed Nov 14, merged |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | built and reviewed Nov 14, merged |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
-| P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | — |
+| P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
 | P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | — |
 | P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | — |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
@@ -4359,7 +4359,7 @@ mr-moqui unchanged, no Rust built.
 - Inventories: usl-inventory's "Added in the Sales build: PASS Sales orders" table; ss-inventory has no row naming a PASS Sales path.
 - Design edits: design-sales §10 "As built (impl-sales P17)" (and P13's note's forward reference); design-crosscut CX-CUSTOMER-ACCOUNT
   (OrderView's page by the order's store). design-shop (mr-pass) unchanged: Shop's contract holds.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F263 to F272 in order:
   - the PASS operations are `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument`, GET reads; design §10.1 names them
     `sales.findOrders` and `sales.getOrder`;
   - the order's PDF is the stored confirmation as placed; an order with none (Projects' or Customer Service's storeless orders, which
@@ -4456,7 +4456,7 @@ mailing-list operations and the eight Sales operations (five quote, three order)
     its recent direct orders missing from My orders and the hub's count. The candidates now come from OrderHeaderAndPart filtered by
     no store, a shown status and a placed date, newest first. No spec check (it needs over a thousand parts); the existing list checks
     pass.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F273 to F277 in order:
   - Built finding 4 (orders being changed hidden) does not hold against P14 (above); a cancelled order still leaves My orders and its
     link reads not available, which may be worth the user's look (a customer may want to see that it was cancelled);
   - an order link admits Support's request pages for that order (a cancellation request is a write by the link's reader), as Shop's
@@ -5022,6 +5022,21 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F260 | P15 (Review Nov 14): Products' price-list editor (`store#ProductPriceList`, PriceLists.js) may still attach a price list to a customer agreement under `PRICE_EDIT`; the guard applies it only while the agreement is active, but the list is not on the agreement's revision or activation checks | P15: as its Review note says |
 | F261 | P15 (Review Nov 14): `salesAgreementContent` (BOSS) adds a document, which counts as acceptance evidence, to an agreement of any status and names no revision (it checks `agreementEdit` and the organization) | P15: as its Review note says |
 | F262 | P15 (Review Nov 14): the Built note's fourth and fifth findings stand (the keeper sees linked lines only of quotes and orders they read; the template print, contract schedules and the other apps' AgreementDetail contexts are not built) | P15: as its Review note says |
+| F263 | P17 (Built Nov 14): the PASS operations are `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument`, GET reads; design §10.1 names them `sales.findOrders` and `sales.getOrder` | P17: as its Built note says |
+| F264 | P17 (Built Nov 14): the order's PDF is the stored confirmation as placed; an order with none (Projects' or Customer Service's storeless orders, which send no confirmation, P11) shows no PDF, and has no link either, though a signed-in contact sees it under My orders | P17: as its Built note says |
+| F265 | P17 (Built Nov 14): PASS Sales shows storeless orders only (F42): a customer who also buys in the organization's store follows those orders in Shop | P17: as its Built note says |
+| F266 | P17 (Built Nov 14): an order being changed (OrderBeingChanged), cancelled or rejected is not shown, so while P14's commercial change holds an order in a change its link and My orders show it as not available; a cancelled order disappears from My orders | P17: as its Built note says |
+| F267 | P17 (Built Nov 14): a contact invited to Sales reaches Billing and Support only with its own invitation to each (contact grants are per app); a person customer's own verified account reaches all three; the page links each only where the site's mount of it serves the same organization | P17: as its Built note says |
+| F268 | P17 (Built Nov 14): an order link lasts 366 days, as Shop's, is made at each delivery attempt (an uncertain attempt's earlier link stays valid, as P13's quote links), is never revoked but by the order's cancellation (resolve refuses a cancelled order), and its token stays in the stored confirmation mail as F235's | P17: as its Built note says |
+| F269 | P17 (Built Nov 14): F236 is settled by the revision: it relies on the seller counting commercial changes only (required to issue); a placement or approval that moved the revision would hide an accepted quote's lines too (not seen for an organization without a tax gateway; not checked with a storeless tax gateway) | P17: as its Built note says |
+| F270 | P17 (Built Nov 14): master's ForumSchema.js and mr-pass Schema.js had diverged (P13 and Dogfood DG6 merged in opposite orders), failing mr-pass Forum's copies check; fixed here by making Mantle's copy equal | P17: as its Built note says |
+| F271 | P17 (Built Nov 14): My orders filters by state and by the order or PO, not by a date range (design's MyOrderFind) | P17: as its Built note says |
+| F272 | P17 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name PASS Sales' orders; P17 had no mr-moqui worktree (the text below) | P17: as its Built note says |
+| F273 | P17 (Review Nov 14): Built finding 4 (orders being changed hidden) does not hold against P14 (above); a cancelled order still leaves My orders and its link reads not available, which may be worth the user's look (a customer may want to see that it was cancelled) | P17: as its Review note says |
+| F274 | P17 (Review Nov 14): an order link admits Support's request pages for that order (a cancellation request is a write by the link's reader), as Shop's order link does; with F235 a reader of the organization's sent mail can file one as the customer | P17: as its Review note says |
+| F275 | P17 (Review Nov 14): signed-in reads by order ID are not rate limited (as P13's quote reads); every token lookup is | P17: as its Review note says |
+| F276 | P17 (Review Nov 14): the PDF is the confirmation as placed; after a commercial change the page shows the order now and the PDF the order as placed (P14 stores its changed document separately), with no label saying so | P17: as its Review note says |
+| F277 | P17 (Review Nov 14): the Built note's other findings stand (operation names, storeless only, no date filter, contact grants per app) | P17: as its Review note says |
 
 ## 7. Later
 
