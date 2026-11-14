@@ -3608,14 +3608,26 @@ along with this software (see the LICENSE.md file). If not, see
             description="Stock value beside the inventory accounts, by product; values need financial read." purpose="Inventory"
             basis="As of a day" routePath="Accounting/Inventory/InventoryValuation" parameterContract="organizationPartyId"
             sourceReference="mantle.product.InventoryReportServices.run#InventoryValuation" sequenceNum="240"/>
-    <!-- Sales (owner contract, impl-insights §4, F18): SalesAnalysis is one entry, Sales', opening Accounting's built report until Sales is built and Accounting mounts Sales' report; Accounting's catalogue decides who reads it, as its route's -->
+    <!-- Sales (owner contract, impl-insights §4, F18; impl-sales P19, F59): SalesAnalysis is Sales' report at Sales' route, read through
+        Sales' catalogue (get#SalesReports, the app root Sales); Accounting's catalogue refuses any root but Accounting, so Accounting's
+        mount of the same report has an entry of its own under it, with Accounting's finance columns -->
     <ironstone.insights.ReportCatalogEntry entryId="Sales.SalesAnalysis" version="1" ownerApp="Sales" title="Sales analysis"
-            description="Ordered, shipped, invoiced and returned, by product, customer or class." purpose="Sales"
-            basis="Placed, shipped and invoiced dates" routePath="Accounting/Reports/SalesAnalysis"
+            description="Ordered, shipped, invoiced and returned, by product, customer or class; margin for a price and cost reader."
+            purpose="Sales" basis="Placed, shipped and invoiced dates" routePath="Sales/Reports/SalesAnalysis"
             parameterContract="organizationPartyId,timePeriodId"
             sourceReference="mantle.sales.SalesReportServices.run#SalesAnalysis"
             metricIds="Sales.Orders,Sales.OrderValue,Accounting.InvoicedRevenue"
-            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="SalesAnalysis" sequenceNum="250"/>
+            catalogueService="mantle.sales.SalesWorkspaceServices.get#SalesReports" catalogueKey="Sales.SalesAnalysis"
+            exportFormats="CSV,XLSX" sequenceNum="250"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.SalesAnalysis" version="1" ownerApp="Accounting"
+            title="Sales analysis (finance)"
+            description="Sales' analysis in Accounting: ordered, shipped, invoiced and returned, with the cost of what shipped and its margin."
+            purpose="Finance" basis="Placed, shipped and invoiced dates" routePath="Accounting/Reports/SalesAnalysis"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.sales.SalesReportServices.run#SalesAnalysis"
+            metricIds="Sales.Orders,Sales.OrderValue,Accounting.InvoicedRevenue"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="SalesAnalysis"
+            exportFormats="CSV,XLSX" sequenceNum="251"/>
     <!-- Warehouse (owner contract, design-warehouse §14): stock at date, operations history and count variance, by their routes -->
     <ironstone.insights.ReportCatalogEntry entryId="Warehouse.StockAtDate" version="1" ownerApp="Warehouse"
             title="Stock at date"

@@ -120,7 +120,7 @@ feature("a warehouse reader finds Stock at date and not the Accounting statement
         !warehouse.output.includes("Balance sheet")
         !warehouse.output.includes("Trial balance")
         finance.map(row => row.entryId + " " + row.ownerApp + " " + row.url) ==
-            ["Sales.SalesAnalysis Sales /qapps/Accounting/Reports/SalesAnalysis"]
+            ["Accounting.SalesAnalysis Accounting /qapps/Accounting/Reports/SalesAnalysis"]
     }
 })
 

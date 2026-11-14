@@ -12,13 +12,32 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
+<!-- Sales › Reports › Sales summary (design-sales §8 SalesSummary; impl-sales P1 as ported, rebuilt in P19, F77, F81): one organization
+    of the user's sales scope and one currency (its base currency by default), never two added together, over Mantle's guarded summaries
+    (SalesReportServices: get#SalesOrderSummary by placed date, get#SalesInvoiceSummary by invoice date, issued invoices, not cash
+    collected; get#SalesTopProduct and get#InvoicesByCustomerClass for the same organization and currency), each answering a holder of
+    SALES_REPORT_VIEW for the organizations of their sales scope with costs withheld without PRODUCT_COST_VIEW. Its drop-downs are Sales'
+    choices (the organization, its stores, accounts and products); the basis of each figure is named beside it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales summary" default-menu-index="1" menu-image="sym_o_list_alt" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="currencyUomId"/>
 
-    <transition-include name="searchPartyList" location="component://mr-boss/template/SearchTransitions.xml"/>
-    <transition-include name="getProductList" location="component://mr-boss/template/SearchTransitions.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
 
     <actions>
+        <!-- P19: one organization of the scope and one currency (the organization's base currency unless chosen), F77 and F81: the four
+            summaries are asked for the same organization and currency, so no figure adds another organization's or currency's -->
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <if condition="organizationPartyId &amp;&amp; !currencyUomId">
+            <service-call name="mantle.ledger.LedgerServices.find#PartyAcctgPreference" in-map="{organizationPartyId:organizationPartyId}"
+                    out-map="acctgPreference" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="currencyUomId" from="acctgPreference?.partyAcctgPreference?.baseCurrencyUomId || 'USD'"/>
+        </if>
+        <set field="vendorPartyIds" from="organizationPartyId ? [organizationPartyId] : ['_NA_']"/>
+        <set field="currencyUomIds" from="currencyUomId ? [currencyUomId] : []"/>
+        <set field="organizationLabel" from="organizationPartyId ? (sales.organizationOptions || []).find(option =&gt; option.value == organizationPartyId)?.label || organizationPartyId : ''"/>
         <!-- costs are the services' to withhold (null, never zero) from a Sales report reader without PRODUCT_COST_VIEW (impl-sales P1,
             F2); the cost columns, charts and panel are left out for them, so nothing withheld is shown as zero -->
         <set field="costShown" from="!!sales.capabilities.reportCosts"/>
@@ -27,19 +46,21 @@ along with this software (see the LICENSE.md file). If not, see
 
         <service-call name="mantle.sales.SalesReportServices.get#SalesOrderSummary" out-map="context"
                 in-map="{interval:(interval||'w'), intervalCount:intervalCount, thruDate:thruDate, maPeriods:maPeriods,
-                    vendorPartyIds:vendorPartyIds, customerPartyIds:customerPartyIds, productStoreIds:productStoreIds,
+                    vendorPartyIds:vendorPartyIds, customerPartyIds:customerPartyIds, productStoreIds:productStoreIds, currencyUomIds:currencyUomIds,
                     customerClassificationIds:customerClassificationIds, productIds:productIds}"/>
         <if condition="salesOrderSummaryList == null"><return error="true" message="Search not available"/></if>
 
         <service-call name="mantle.sales.SalesReportServices.get#SalesInvoiceSummary" out-map="context"
                 in-map="{interval:(interval||'w'), intervalCount:intervalCount, thruDate:thruDate, maPeriods:maPeriods,
-                    fromPartyIds:vendorPartyIds, toPartyIds:customerPartyIds, productStoreIds:productStoreIds,
+                    fromPartyIds:vendorPartyIds, toPartyIds:customerPartyIds, productStoreIds:productStoreIds, currencyUomIds:currencyUomIds,
                     customerClassificationIds:customerClassificationIds, productIds:productIds}"/>
 
         <service-call name="mantle.sales.SalesReportServices.get#SalesTopProduct" out-map="context" transaction="force-new" ignore-error="true"
-                in-map="{interval:(interval||'w'), intervalCount:intervalCount, thruDate:thruDate, topLimit:(topLimit||15)}"/>
+                in-map="{interval:(interval||'w'), intervalCount:intervalCount, thruDate:thruDate, topLimit:(topLimit||15),
+                    vendorPartyIds:vendorPartyIds, productStoreIds:productStoreIds, currencyUomIds:currencyUomIds}"/>
         <service-call name="mantle.sales.SalesReportServices.get#InvoicesByCustomerClass" out-map="context" transaction="force-new" ignore-error="true"
-                in-map="{interval:(interval||'w'), intervalCount:intervalCount, thruDate:thruDate}"/>
+                in-map="{interval:(interval||'w'), intervalCount:intervalCount, thruDate:thruDate, fromPartyIds:vendorPartyIds,
+                    currencyUomIds:currencyUomIds}"/>
 
         <script><![CDATA[
             defaultColors = ['rgba(92, 184, 92, 1.0)', 'rgba(91, 192, 222, 1.0)', 'rgba(240, 173, 78, 1.0)', 'rgba(217, 83, 79, 1.0)',
@@ -161,13 +182,6 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="statsPanelColStyle" value="col-lg-3 col-md-4 col-sm-4 col-xs-6"/>
         <set field="statsChartColStyle" value="col-md-6 col-sm-6"/>
 
-        <if condition="vendorPartyIds &amp;&amp; (!Array.isArray(vendorPartyIds) || vendorPartyIds.length)">
-            <set field="vendorPartyIdList" from="Array.isArray(vendorPartyIds) ? vendorPartyIds : String(vendorPartyIds).split(',')"/>
-            <entity-find entity-name="mantle.party.PartyDetail" list="selectedVendorPartyList">
-                <econdition field-name="partyId" operator="in" from="vendorPartyIdList"/>
-                <order-by field-name="pseudoId"/>
-            </entity-find>
-        </if>
         <if condition="productStoreIds &amp;&amp; (!Array.isArray(productStoreIds) || productStoreIds.length)">
             <set field="productStoreIdList" from="Array.isArray(productStoreIds) ? productStoreIds : String(productStoreIds).split(',')"/>
             <entity-find entity-name="mantle.product.store.ProductStore" list="selectedProductStoreList">
@@ -207,13 +221,16 @@ along with this software (see the LICENSE.md file). If not, see
                 <field name="maPeriods"><default-field title="MA Periods" tooltip="Moving Average look back periods, set to 0 to disable">
                     <text-line size="2" default-value="0"/></default-field></field>
 
-                <field name="vendorPartyIds"><default-field title="Vendors"><drop-down allow-empty="true" allow-multiple="true">
-                    <dynamic-options transition="searchPartyList" server-search="true" min-length="0" parameter-map="{roleTypeId:'OrgInternal'}"/>
+                <field name="organizationPartyId"><default-field title="Organization"><drop-down allow-empty="false">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
                 </drop-down></default-field></field>
+                <field name="currencyUomId"><default-field title="Currency" tooltip="One currency at a time: amounts in two currencies are never added">
+                    <drop-down allow-empty="false"><dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'currencies', selected:currencyUomId}"/></drop-down></default-field></field>
                 <field name="productStoreIds"><default-field title="Stores"><drop-down allow-empty="true" allow-multiple="true">
-                    <entity-options key="${productStoreId}" text="${productStoreId}: ${storeName}">
-                        <entity-find entity-name="mantle.product.store.ProductStore">
-                            <order-by field-name="storeName"/></entity-find></entity-options>
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'stores', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
                 </drop-down></default-field></field>
 
                 <field name="customerClassificationIds"><default-field title="Customer Classes">
@@ -225,11 +242,12 @@ along with this software (see the LICENSE.md file). If not, see
                     </drop-down>
                 </default-field></field>
                 <field name="customerPartyIds"><default-field title="Customers"><drop-down allow-empty="true" allow-multiple="true">
-                    <dynamic-options transition="searchPartyList" server-search="true" min-length="0" parameter-map="{roleTypeId:'Customer'}"/>
+                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'accounts'}"/>
                 </drop-down></default-field></field>
 
                 <field name="productIds"><default-field title="Products"><drop-down allow-multiple="true">
-                    <dynamic-options transition="getProductList" server-search="true" min-length="0" parameter-map="{assetClassEnumId:'AsClsInventoryFin'}"/>
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'products', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
                 </drop-down></default-field></field>
                 <field name="productNote"><default-field title="">
                     <label text="NOTE: Invoice level stats (total, pre-paid, paid, etc) are not available by Product and will show as having no data"/>
@@ -239,7 +257,9 @@ along with this software (see the LICENSE.md file). If not, see
         </container-dialog>
         <container>
             <label text="Sales Summary for ${intervalCount||13} ${{d:'Days', w:'Weeks', M:'Months', q:'Quarters', y:'Years'}[interval||'w']}${thruDate ? ' thru ' + ec.l10n.format(thruDate, 'dd MMM yyyy') : ''}${maPeriods ? ' with ' + maPeriods + ' Period MA' : ''}" type="h3"/>
-            <label text="Vendors: ${selectedVendorPartyList.map((it) => ec.resource.expand('PartyNameTemplate', '', it)).join(', ')}" condition="(selectedVendorPartyList?.length > 0)" type="h5"/>
+            <label text="${organizationLabel} · ${currencyUomId || ''}" condition="organizationPartyId" type="h5"/>
+            <label text="Orders by placed date (placed, approved, shipped and completed; no draft, quote, template or recurring base); invoices by invoice date (issued, not cash collected). Amounts in ${currencyUomId || 'one currency'} only."
+                    type="p" style="text-caption m-muted"/>
             <label text="Stores: ${selectedProductStoreList.map((it) => it.productStoreId + ': ' + it.storeName).join(', ')}" condition="(selectedProductStoreList?.length > 0)" type="h5"/>
             <label text="Customer Classes: ${selectedClassificationList.map((it) => it.description).join(', ')}" condition="(selectedClassificationList?.length > 0)" type="h5"/>
             <label text="Customers: ${selectedCustomerPartyList.map((it) => ec.resource.expand('PartyNameTemplate', '', it)).join(', ')}" condition="(selectedCustomerPartyList?.length > 0)" type="h5"/>

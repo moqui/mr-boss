@@ -1053,6 +1053,9 @@ Object.assign(choiceSources, {
     }
 })
 // ===== end of P18 =====
+// ===== P19: reports (impl-sales P19; design-sales §8 Reports, PipelineAnalysis, WinLoss) =====
+linkPaths.push("Reports/Catalogue", "Reports/PipelineAnalysis", "Reports/WinLoss")
+// ===== end of P19 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(

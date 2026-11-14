@@ -69,12 +69,13 @@ spec({
     }
 })
 
-feature("a reader sees only the entries their owner grants; SalesAnalysis is one entry, Sales'", {
+feature("a reader sees only the entries their owner grants; SalesAnalysis is Sales' entry and Accounting's mount's", {
     when() {
         const salesAnalysis = system(() =>
             Array.from(ec.entity.find("ironstone.insights.ReportCatalogEntry").list())
                 .filter(row => /SalesAnalysis/.test(row.entryId + " " + (row.routePath || "") + " " + (row.catalogueKey || "")))
                 .map(row => row.entryId + " " + row.ownerApp + " " + row.routePath)
+                .sort()
         )
         return {
             reader: entryIds(users.reader),
@@ -96,12 +97,16 @@ feature("a reader sees only the entries their owner grants; SalesAnalysis is one
         warehouse.includes("Warehouse.OperationsHistory")
         !warehouse.includes("Accounting.BalanceSheet")
         !warehouse.some(id => id.startsWith("Accounting.") || id.startsWith("CustomerService."))
-        // the financial reader: Accounting's catalogue, and SalesAnalysis once, as Sales'
+        // the financial reader: Accounting's catalogue, and SalesAnalysis once, as Accounting's mount of Sales' report (impl-sales P19,
+        // F59: Sales' entry is at Sales' route under Sales' catalogue, which a reader without Sales does not read)
         finance.includes("Accounting.TrialBalance")
         finance.includes("Accounting.BalanceSheet")
-        finance.filter(id => /SalesAnalysis/.test(id)) == ["Sales.SalesAnalysis"]
+        finance.filter(id => /SalesAnalysis/.test(id)) == ["Accounting.SalesAnalysis"]
         !finance.some(id => id.startsWith("CustomerService."))
-        salesAnalysis == ["Sales.SalesAnalysis Sales Accounting/Reports/SalesAnalysis"]
+        salesAnalysis == [
+            "Accounting.SalesAnalysis Accounting Accounting/Reports/SalesAnalysis",
+            "Sales.SalesAnalysis Sales Sales/Reports/SalesAnalysis"
+        ]
     }
 })
 

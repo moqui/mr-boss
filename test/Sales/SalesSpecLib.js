@@ -11,7 +11,7 @@ const ids = {
     staffMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements"],
     reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements", "Reports"],
     // P18 adds Target attainment
-    reportsMenu: ["SalesSummary", "SalesAnalysis", "TargetAttainment"],
+    reportsMenu: ["Catalogue", "SalesSummary", "SalesAnalysis", "TargetAttainment", "PipelineAnalysis", "WinLoss"],
     accountsMenu: ["Accounts", "Contacts"],
     keys: ["g s", "g a", "g c", "g o", "g l", "g q", "g r", "g m"],
     // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
