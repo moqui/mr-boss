@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     Comms' own mount comes with a Comms settings area. Everything is decided by mantle.party.MessageServices (MessageTemplates.js): who
     reads (MESSAGE_TEMPLATE_VIEW or MESSAGE_TEMPLATE_EDIT, the organizations they work for), who makes and copies a template
     (MESSAGE_TEMPLATE_EDIT); the mounting root adds nothing but its organization choices and the detail's link (sharedLinks). Copy makes
-    an unpublished template; Use (a draft send) arrives with Sends (P8). -->
+    an unpublished template; Use (P8) opens the mounting root's Sends with its New send dialog and the template chosen, shown under
+    a mount that has Sends (sharedLinks) to a user who writes sends there, for a published promotional template. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Templates" default-menu-index="2">
     <parameter name="text"/>
@@ -53,6 +54,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="templateListPageRangeLow" from="found?.templateListPageRangeLow"/>
         <set field="templateListPageRangeHigh" from="found?.templateListPageRangeHigh"/>
         <set field="detailUrl" from="sharedLinks?.['Sends/MessageTemplateDetail']"/>
+        <!-- P8: Use makes a draft send under a mount that has Sends, for a user who writes sends (create#Send checks it again) -->
+        <set field="sendsUrl" from="sharedLinks?.['Sends/Sends'] &amp;&amp; marketing?.capabilities?.sendEdit ? sharedLinks['Sends/Sends'] : null"/>
         <set field="organizationOptions" from="Array.from(marketing?.organizationOptions || [])"/>
         <set field="filtered" from="!!(text || organizationPartyId || purposeEnumId || localeId || (state &amp;&amp; state != 'active'))"/>
         <set field="newValues" from="{organizationPartyId: organizationOptions.length == 1 ? organizationOptions[0].value : null,
@@ -144,16 +147,24 @@ along with this software (see the LICENSE.md file). If not, see
                                     </render-mode>
                                 </default-field>
                             </field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <link url="${sendsUrl}" text="Use" link-type="anchor-button" icon="sym_o_send"
+                                            condition="sendsUrl &amp;&amp; state == 'published' &amp;&amp; purposeEnumId != 'MtpTransactional'"
+                                            parameter-map="{messageTemplateId:messageTemplateId, organizationPartyId:organizationPartyId, _openDialog:'NewSendDialog'}"/>
+                                </default-field>
+                            </field>
                             <columns>
                                 <column><field-ref name="templateName"/><field-ref name="organizationName"/></column>
                                 <column><field-ref name="purposeText"/><field-ref name="localeText"/></column>
                                 <column><field-ref name="subjectText"/></column>
                                 <column><field-ref name="effectiveText"/></column>
                                 <column><field-ref name="stateText"/></column>
+                                <column><field-ref name="rowActions"/></column>
                             </columns>
                             <columns type="mobile">
                                 <column><field-ref name="templateName"/><field-ref name="subjectText"/></column>
-                                <column><field-ref name="stateText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="rowActions"/></column>
                             </columns>
                         </form-list>
                         <section name="NoTemplates" condition="!templateList.length">

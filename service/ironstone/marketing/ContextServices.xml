@@ -110,6 +110,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="organizationPartyId"><description>P2: narrows campaigns, people, lists and segments to an organization of
                 the scope</description></parameter>
             <parameter name="excludeId"><description>P2: a campaign left out of the campaigns (its own parent choice)</description></parameter>
+            <parameter name="campaignSendId"><description>P8: the send whose files sendFiles lists</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

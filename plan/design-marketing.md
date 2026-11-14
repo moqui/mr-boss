@@ -762,6 +762,24 @@ text and structured HTML/source editing with the same validation. **Needs:** MKT
 
 **Source:** research §4; Twenty CampaignComposer, Odoo preview/test and shared Comms rich-text controls.
 
+As built (impl-marketing P8): Sends is the area's default tab (`Marketing/Sends/Sends`, a list, a board by state and a calendar by
+schedule), with SendDetail and Compose beside it (`Marketing/Sends/SendDetail`, `Marketing/Sends/Compose`); the area is the authors',
+approvers' and dispatchers'. A send (Mantle `CampaignSend`, a status flow of its own: Draft, Awaiting approval, Approved, Scheduled,
+Sending, Paused, Completed, Completed with failures, Cancelled) belongs to an open campaign and takes its organization; its topic is a
+Marketing list of email of that organization, its audience lists and segments of it (none: the topic's members), its sending profile
+promotional or for both. Its content is its own: a template's published content is copied when the send starts (New send with a
+template, or Use on a template), then edited; a later change of the template never reaches it. The content is checked as a
+template's, and a link to a staff page or a stored file is refused; the values a send has are each recipient's first name, last name
+and name, so a required variable that names none of them blocks preparation. Attachments are files of the send (it is a files and
+Chatter host) or of its campaign; a publicly retrievable inline file is not offered. SendDetail shows its sections as boxes, as
+CampaignDetail does (Summary with what approval still needs, the content, Audience, Schedule, Decisions, Activity and Files), not
+tabs. Prepare (a draft, as the user who prepares) evaluates the audience in pages over the topic's members, so a list of any size is
+sent to (the 5,000 cap stays for an interactive preview, §4 Nov 14), records each eligible person as a `CampaignRecipient` with an
+execution key, and keeps the content as a rendered resource of its own with the content and policy time; a preview's result given
+that no longer matches is refused. Approval is asked of the prepared revision and needs an eligible recipient, an approved campaign
+and a ready promotional profile. A test goes to the organization's test list (Campaign defaults, at most ten addresses), marked TEST,
+as a ledger delivery of its own source naming the profile, and counts nowhere.
+
 ### MessageTemplates
 
 Comms owns one shared template library (registry `Shared/MessageTemplates`), mounted here at
@@ -809,7 +827,7 @@ variables are written `${name}` and declared with a label, fallback and whether 
 undeclared name, an expression, a template tag, a variable inside a link and a script, frame, form, embedded object, event handler or
 script link when it is stored. The body is a `dbresource://` `.html.fancy-locked` file of its own per store, rendered by location with a
 map of the declared variables alone (each its value, else its fallback); the subject and preheader are filled the same way. The
-preview takes synthetic sample values only. A Copy makes an unpublished template; Use (a draft send) comes with Sends (P8). TextBlocks
+preview takes synthetic sample values only. A Copy makes an unpublished template; Use (P8) opens New send with the template. TextBlocks
 are not offered in the editor yet. The ledger's template source (MdsrcMessageTemplate) sends a delivery of the template's EmailTemplate
 from the content in effect at the attempt, with the delivery's values for the declared variables.
 

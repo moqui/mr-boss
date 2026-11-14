@@ -2285,6 +2285,210 @@ its text alternative and the test message); MKT-SEND, MKT-TEMPLATE, MKT-APPROVAL
   asks for approval; `marketing.approver` sees the count and approves; the author's edit of the subject returns it
   to review.
 
+**Built Nov 14 (P8).** mr-mantle and mr-boss on branch `mkt/p8` (hashes in the worker's reply), from master after gate 2 (P1–P7 merged)
+and Sales P14, P15 and P17; mr-moqui unchanged, no Rust built. Built beside Sales P16 and P18 (the hot spots below).
+- Checked first (the code over the plan): P5's to P7's Built and Review notes, F90–F189 and §4's rows (the user's call of Nov 14: the
+  5,000 cap for an interactive evaluation, a send evaluated in pages; the one-person-team flag; suppressions promotional but a hard
+  bounce); P2's approvals (MarketingApprovals.js, whose targetKinds left the send's slot), P5's `classify#Recipients` and the universe,
+  P6's MessageTemplates.js, MessageSendingProfiles.js and the ledger (MessageDeliveries.js), Sales P10's own-message source. The code
+  over the plan:
+  - "the ledger, extended: a source's build may answer the subject, body and text alternative" was already built: Sales P10 gave a
+    source its body, text and attachments and P6 its subject (used as given, never expanded). P8 adds the test source, the ledger's
+    test consent snapshot, and the P6 review's profile check (F172): a promotional delivery naming a transactional-only profile is
+    refused at `queue#Delivery` (PROFILE_PURPOSE), and the send services choose promotional (or unset) profiles only;
+  - the policy had no test allowlist: MarketingPolicy gains `testAddresses` (at most ten, audited), edited on Campaign defaults;
+  - a send's variables need values: they are each recipient's own first name, last name and name (a plain snapshot of allowlisted
+    values, design §5), so "a required unknown variable" is a required variable that names none of them (VARIABLE_UNKNOWN), and any
+    other takes its fallback; an author previews with synthetic values, an audience reader as a person of the topic;
+  - the content is the send's own: "Use" and New send with a template copy the template's published content when the send starts;
+    the prepared content is a resource of its own as well (`prepared*` fields), so the template's later change reaches neither;
+  - the paged evaluation (§4 Nov 14) narrows the universe to the topic's members: only an accepted member of the topic is ever
+    eligible, and a segment's match of a party does not depend on who else is evaluated, so each page of members (in party id order,
+    keyset paging) is matched against the send's lists and segments less its exclusions and classified, and the rules across people
+    (a withdrawal at an address, the duplicates) are settled once over every page; the eligible people and the resultDigest are a
+    preview's (MarketingEligibility.js `evaluateSend`, `classifyPeople`, `settle`; MarketingSegments.js `context(..., candidates)`);
+  - assets: a file of the send (a RecordFiles host, CampaignSendContent) or of its campaign (CampaignAsset), attached; "the public's
+    access" has no store for staff files to publish from, so a publicly retrievable inline file is refused (USAGE_INVALID) and a link
+    to a staff page or a stored file in the body is refused (PRIVATE_LINK): no private file becomes public;
+  - SendDetail's sections are boxes, as CampaignDetail's are (design §5 says tabs); QuickSend is CampaignDetail's Sends box's New send
+    (the campaign fixed), not a quick-create kind; the Sends area opens to the approvers and dispatchers (design §2: Sends is the
+    app's; an approver decides on SendDetail);
+  - "a draft, an approved and a scheduled send" of the demo: Scheduled is the state of a released send (P9), so the third is approved
+    with its schedule for 1 December (state Approved).
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P8 block): CampaignSend (its status flow CampaignSend with the transitions P9 needs too, the
+    revision `sendRevision`, the audience as JSON, the content files, the preparation's fields, audited key fields), CampaignRecipient
+    (CrsSelected, CrsReplaced; a unique execution key), CampaignSendContent (the send's files and attachments); MarketingPolicy
+    `testAddresses`. `data/MarketingSeedData.xml` (a P8 block): the ledger source MdsrcCampaignSendTest and its EmailTemplate.
+  - `CampaignSendServices.xml` over `MarketingSends.js`: `find#Sends`, `create#Send`, `duplicate#Send`, `get#Send`, `store#Send`,
+    `store#SendContent`, `store#SendAssets`, `schedule#Send`, `preview#Send`, `test#Send`, `build#TestDelivery`, `prepare#Send`,
+    `check#SendAccess`, `create#CampaignSendContent`; the approvals' send kind (MarketingApprovals.js `targetKinds.send`, its rules in
+    MarketingSends.js `sendKind`; a `requested` hook moves a send to Awaiting approval); refusals in each service's description.
+    MessageTemplates.js exports its parse and render helpers; MarketingPolicies.js the test list; MessageDeliveries.js (a P8 block) the
+    test snapshot and the profile check; CommunicationServices.xml get#RecordLinkInfo's send host.
+- BOSS:
+  - Screens: `Marketing/Sends/Sends` (SendFind, SendList with its board by state and calendar by schedule, NewSend; the area's default
+    tab), `Sends/SendDetail` (the record header with Prepare, Request approval or Approve by state; Summary with what approval still
+    needs, the content rendered with sample values, Audience with its buckets and the AudiencePreview link, Schedule, Decisions,
+    Activity and Files), `Sends/Compose` (MessageContent in the rich editor, MessageAssets, MessagePreview, TestSend), all in XML;
+    `template/MarketingSends.xml` (the transitions and NewSendForm); CampaignDetail's Sends box with QuickSend; MessageTemplates' Use;
+    Campaign defaults' Test addresses; the root's send panel host, SendDetail's "Why were recipients excluded?" chip and `g n`;
+    Newsletters now redirects to Sends (F2).
+  - `Marketing.js`: `sendRead` and `sendsRead`, the record kind `send`, choices `sendTopics`, `sendProfiles`, `sendFiles`,
+    `sendMembers`, the palette's sends, the P8 link paths; ContextServices get#Choices takes `campaignSendId`; RecordFilesServices the
+    send host. `BossSetupMarketingData.xml` (a P8 block): BOSS_MKT_SENDS for the approver and dispatcher groups, the send approval
+    notice's link. Demo (`BossZZMarketingDemoData.xml`, a P8 block): Retail's test list; the draft spring invitation, the November
+    newsletter prepared (Maya) and approved, the December one approved for 1 December.
+  - `skill/marketing-prepare-send.md`, its alias (`send`) and two retrieval cases.
+- Specs:
+  - Mantle `test/marketing/Sends` (new, 7 features, 2.3 s: from a template the content copied, a required variable no recipient gives
+    refused and then prepared with a fallback, a private link and a stale revision refused; a page of two over six members (three
+    pages) and a segment source each with the preview's resultDigest, a stale digest refused, a second preparation replacing the
+    first's rows; a content, sender, audience and schedule change each ending an approval and returning the send to draft, an author's
+    own approval refused, a refusal back to draft; an empty eligible audience prepared and not approvable; a test to the allowlist
+    marked TEST with the profile's VERP sender, another address refused, a suppressed one suppressed, no count or state changed, a
+    reader refused; the prepared body unchanged after the template's next publication and the content's change; another
+    organization's send and campaign, an unknown template, a transactional or another organization's profile, another's topic and a
+    reader's write refused); `test/party/DeliveryLedger` (+1 feature, 0.1 s: a source's own subject, body and text sent as given, the
+    subject's literal `${own}` not expanded; a promotional delivery naming a transactional profile refused).
+  - mr-boss `MarketingSends` (new, 2 features, 0.2 s: SendDetail's one qvt render, Compose's one qvt render); `MarketingAccess` (the
+    approver's and dispatcher's Sends menu and tab, the `sendRead`, `sendsRead` and `sends` capabilities per group, Sends opened by an
+    approver and refused a reader, another organization's send refused by check#Record, the send's files panel; about +0.2 s);
+    `MarketingSpecLib` (ids, menus, keys).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingComposeWalk` (4 features, scenario 10: Use a template, a
+    script and another record's file refused, a test to an allowed address and one refused, prepare and ask; the approver sees the
+    count and approves; the author's subject edit returns it to review).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Sends 7 of 7, DeliveryLedger 5 of 5, Eligibility,
+  Segments, MarketingApprovals, Campaigns, MessageTemplates, SendingProfiles, DeliveryReports, MarketingSubscriptions, CartRecovery,
+  SalesQuoteIssue, StoreReviews, ContactListSend (65 of 65), Audiences, Consent, MarketingScope, AudienceImport, ListMerge,
+  Suppressions, RecordVisibility, RecordLinks, ChatRecords, ShopCheckout, SalesQuoteResponse, SalesPortal (100 of 100); mr-boss
+  MarketingSends 2 of 2, MarketingAccess 7 of 7, MarketingCampaigns, MarketingTemplates, MarketingLists, MarketingSegments,
+  MarketingImport, AdminRegistries, QuickCreate, SalesQuoteSend, Consent, Unsubscribe, RecordFiles (82 of 82); mr-pass Outbox,
+  ShopAccount, MarketingAccess (19 of 19); `moqui test mr-boss --skills` 54 of 54. A throwaway walk of the screens' transitions (the
+  acceptance walk's steps, then the audience, header, schedule and duplicate transitions, the four new choices, the palette) and
+  render of Sends, SendDetail, Compose, MessageTemplates, CampaignDetail and Campaign defaults in qvt, tui and html passed and was not
+  kept. `moqui lint --screens`: 141 flagged sites, as before, none in Marketing; parse failures 0. Prettier clean on the changed
+  JavaScript. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P8" table; ss-inventory has no row for P8's screens.
+- Design edits: design-marketing §5 Compose's as-built paragraph (and MessageTemplateDetail's Use); design-drawers-commons' Mailboxes
+  row (owner contract: the ledger's own-message sources, the profile check, the test source).
+- Findings (provisional, numbered by the lead):
+  - the ledger's own-message extension was built by Sales P10 and P6 before P8 (the code over the plan above); P8 adds the test
+    source and the profile check;
+  - the paged evaluation counts the topic's members only: a person a list or segment finds who is not on the topic is not read, so a
+    prepared send's buckets differ from a preview's in "not subscribed"; and a withdrawal at a shared address by such a person (a
+    purpose withdrawn, a solicitation refused) does not block the address for a member, as F155 has it for anyone outside the
+    selection; the resultDigest then differs from the preview's and a prepare given it is refused (PREVIEW_STALE);
+  - a send's variables are the recipient's first name, last name and name only; a template variable beyond them takes its fallback;
+  - a publicly retrievable inline file is not offered (no public store for a staff file); files are attachments, and the test message
+    does not yet carry them (the ledger takes attachments; P9's message builds them for the recipients);
+  - a send's reply-to is kept and shown but the ledger sends the profile's reply-to (P9's message to apply it);
+  - a test message carries the draft as it is now with synthetic values, from the send's profile, at most 20 a day a send; its
+    recipient party is the tester's (the ledger is keyed by party), its address the allowlist's;
+  - a re-preparation marks the earlier recipients replaced and keeps them (no hand-off exists before P9); a large list's repeated
+    preparations keep each set;
+  - the policy's audience limit is checked at preparation (AUDIENCE_LIMIT) as well as P9's release;
+  - CampaignDefaults' preview box read `preview.effectiveText` with no preview, an error in every mode (P2's); now `preview?.`;
+  - a link to `//Marketing/...` renders disabled in a spec rendered from the app's root file (SendDetail's AudiencePreview link,
+    MessageTemplates' Use), as Practices-App-Dev says, so the specs check the link's text and not that it is enabled.
+- For the lead:
+  - budget share: mr-mantle about 2.4 s (Sends 2.3 s, DeliveryLedger +0.1 s); mr-boss server about 0.4 s (MarketingSends 0.2 s,
+    MarketingAccess +0.2 s); no client spec;
+  - merge hot spots (Sales P16 and P18 beside): mr-mantle `service/mantle/party/MessageDeliveries.js` (queue#Delivery's profile check
+    after the organization check, consentOf's test line; P8 lines only), `service/mantle/party/CommunicationServices.xml`
+    (get#RecordLinkInfo: the send content host after the campaign's, the send visibility after the campaign's, a description
+    paragraph), `entity/MarketingEntities.xml` and `data/MarketingSeedData.xml` (P8 blocks after P7's),
+    `service/mantle/marketing/MarketingApprovals.js` (targetKinds.send, the requested hook), `MarketingEligibility.js`,
+    `MarketingSegments.js` (context and evaluate), `MarketingPolicies.js`, `CampaignServices.xml` (the policy's testAddresses),
+    `service/mantle/party/MessageTemplates.js` (exports), `test/party/DeliveryLedger.spec.js` (a feature at the end);
+    MessageServices.xml is not changed; mr-boss `service/ironstone/shared/RecordFilesServices.xml` (the send host after the campaign's),
+    `data/BossSetupMarketingData.xml` and `data/BossZZMarketingDemoData.xml` (P8 blocks), `service/ironstone/marketing/Marketing.js`,
+    `ContextServices.xml`, `template/MarketingParts.xml`, `screen/Marketing.xml`, `screen/Marketing/Sends.xml`,
+    `Campaigns/CampaignDetail.xml`, `Settings/CampaignDefaults.xml`, `screen/Shared/MessageTemplates.xml`, `Newsletters.xml`,
+    `test/Marketing/MarketingAccess.spec.js`, `MarketingSpecLib.js`, `skill/aliases.json`, `test/skill-retrieval.json`,
+    `plan/usl-inventory.md`, `plan/design-marketing.md`, `plan/design-drawers-commons.md`, this file. Not touched: Sales files, PASS;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, no mr-moqui worktree; no public endpoint is added), a sentence for
+    the ledger's paragraph: "A Marketing send's test message (`mantle.marketing.CampaignSendServices.test#Send`, MARKETING_SEND_EDIT,
+    the send's organization) goes only to an address of the organization's MarketingPolicy test list (at most ten), at most 20 a day
+    a send, as a promotional ledger delivery from the send's sending profile, so every suppression refuses it; it asks no recipient's
+    consent and is marked TEST. A promotional delivery naming a transactional-only sending profile is refused at queue#Delivery.";
+  - the user's calls: none required; to confirm, the recipient fields a send's variables take (first name, last name, name), the
+    approvers and dispatchers in the Sends area, attachments only (no public inline file), and the demo's third send approved with a
+    schedule rather than released.
+
+**Review Nov 14 (P8).** A fresh review of `mkt/p8` (mr-mantle fccc463a, mr-boss b9c2450f) against P8, §2, §4 and design §5, §14
+and §18, after merging master (Sales P17, P18, Marketing P7's numbering) into both worktrees (clean; no Rust).
+- Checked and sound:
+  - nothing reaches a recipient: the only ledger hand-off in P8 is `test#Send` (MARKETING_SEND_EDIT, the send's organization): an
+    address of the policy's test list (at most ten, normalized), at most 20 a day a send, a promotional delivery (`transactional`
+    N) naming the send's profile, so every suppression applies (the blocked address spec'd); its consent snapshot says test, no
+    CampaignRecipient, state or count changes. No service moves a send past Approved (no release, no Scheduled), and the recipient
+    rows are selections only;
+  - approval: `revise` raises `sendRevision`, supersedes the live requests and decisions and returns the send to draft for every
+    change of subject, preheader, body, text, variables, topic, audience, profile, reply-to, schedule and attachment; the name and
+    locale are not material. A request needs a draft and `sendProblems` (a preparation at the current revision with an eligible
+    recipient, an approved campaign, a ready promotional profile, a subject), checked again at the decision; preparation is for a
+    draft only, so an approved send's recipients never change. The authors are the creator, the last material editor
+    (`revisedByUserId`, P2 R1) and the requester; the one-person flag admits a send only with a count under 500 (none without a
+    preparation);
+  - the paged evaluation: keyset pages of the topic's members in any state, each page's segments matched with the page as
+    candidates (a match depends on the party alone; explicit members intersected), the exclusions applied whole per page, and
+    `settle` once over everything; it runs as the preparing user (F157). A segment's refusals come before any page;
+  - profile purpose: the send services take a promotional or unset profile only, and `queue#Delivery` refuses a promotional
+    delivery naming a transactional-only profile. The existing callers are unaffected: P7's verification and Sales' quotes and
+    order confirmations are transactional (the default), Cart recovery and review requests name no profile (DeliveryLedger,
+    SalesQuoteIssue, MarketingSubscriptions pass);
+  - content: `checkContent` (P6's stored-body checks) on every store and again at preparation, variables only from the declared
+    set (a fallback plain text), PRIVATE_LINK on store and preparation; the subject is filled by Marketing and handed to the ledger
+    as the per-call subject, never expanded; the composer's preview is `cleanHtml` under `v-pre`;
+  - hosts: the send and CampaignSendContent are visible only through `check#SendAccess` (a Marketing reader of the send's
+    organization; none with no user) in get#RecordLinkInfo and RecordFiles; BOSS's record kind, palette and choices check the
+    organization; another organization's send, campaign, topic, profile and template answer as missing (spec'd).
+- Fixed:
+  - R1 (high; consent, the lead's question): the paged evaluation read only the topic's members, so a person of the send's lists or
+    segments who is not on the topic and withdrew (the purpose, the address's solicitation) at a member's address did not block it,
+    where the preview (F147, F155: anyone matched at the address) does: the member was prepared as eligible, and a prepare given
+    the preview's digest was refused PREVIEW_STALE. `evaluateSend` now finds, for each page, the people holding an address the page
+    may send to (an email by its text in any case, or the same contact mech) who are not on the topic, keeps those in the selection
+    (a source list's member or a segment's match, less the exclusions), classifies them once and settles with them, so the eligible
+    people and the digest are the preview's. Sends gains a case (a non-member at a member's address, in another case, withdrawn:
+    the member excluded, the digest the preview's at a page of one); it fails on the unfixed code;
+  - R2 (medium; approval): `check#SendAccess` let the author change the send's files (RecordFiles remove, a new version through
+    the records drive) while it awaited approval or was approved, which changed an attached file without ending the approval; its
+    `canEdit` is now a draft's only (the composer's `store#SendAssets` revises). Sends checks it after each approval and back in
+    draft;
+  - R3 (low; defense in depth): `build#TestDelivery` now suppresses a test delivery whose address is not on the organization's test
+    list at the attempt (a retry after the list changed, or any other queuer of the test source, which asks no consent). Sends
+    queues one off the list: suppressed, no mail;
+  - R4 (low; disclosure): SendDetail's sample-person choice (`sendMembers`) listed another user's personal contacts, disabled and
+    merged parties on the topic by name; now through Mantle's `inScopeParties`, as `preview#Send` refuses them.
+- Provisional findings (for the lead to number):
+  - a campaign file attached to a send stays the campaign's: its editor can remove or replace it after the send's approval; P9
+    should attach copies made at preparation, or refuse a release whose attachment changed;
+  - R1's sharers are not restricted to the organization's audience: a segment's match outside it (the preview's universe) blocks
+    an address the preview would not, the stricter way; an SMS topic (P22) matches a sharer by the same contact mech only;
+  - a prepared send's buckets still differ from a preview's in "not subscribed" (non-members at other addresses are not read);
+  - the test daily limit is counted without a lock (concurrent tests can pass 20 by a few); a test does not run the PRIVATE_LINK
+    check (a template's link reaches only the test list), which preparation does;
+  - preparation creates each CampaignRecipient by its own call: a large list's preparation is slow (P9's load test);
+  - the Built note's findings stand as written (variables, attachments only, reply-to, a re-preparation keeping replaced rows, the
+    audience limit at preparation).
+- Tests run (release, `--nobuild`, this worktree's runtime, after the merge and the fixes): mr-mantle Sends (8 of 8, 3.4 s of
+  features), DeliveryLedger, Eligibility, Segments, MarketingApprovals, MarketingSubscriptions, SalesQuoteIssue, SalesForecasts
+  (36 of 36); mr-boss MarketingSends, MarketingAccess, MarketingTemplates, RecordFiles, SalesForecast (23 of 23). Prettier on the
+  changed JavaScript. Not run: test-apps, lint (no screen changed), the acceptance walk.
+- For the lead:
+  - budget share: mr-mantle about 3.5 s (Sends 3.4 s with the new case, DeliveryLedger +0.1 s); mr-boss server about 0.4 s;
+  - merge hot spots: as the Built note, and `MarketingEligibility.js` `evaluateSend` (R1), `MarketingSends.js` `access` and
+    `buildTest`, `CampaignSendServices.xml` check#SendAccess, mr-boss `Marketing.js` `sendMembers` and the segments loader;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, the ledger's paragraph; no public endpoint is added): "A Marketing
+    send's test message (`mantle.marketing.CampaignSendServices.test#Send`, MARKETING_SEND_EDIT, the send's organization) goes only
+    to an address of the organization's MarketingPolicy test list (at most ten), checked again at each attempt, at most 20 a day a
+    send, as a promotional ledger delivery from the send's sending profile, so every suppression refuses it; it asks no
+    recipient's consent, is marked TEST and enters no count. A promotional delivery naming a transactional-only sending profile is
+    refused at queue#Delivery. No P8 service hands a send to its recipients (that is P9's release).";
+  - the user's call: none required; R1 follows P5's rule (F147, F155) as the lead asked; the Built note's confirmations stand.
+
 ### P9 — Dispatch and delivery
 
 Design §5 SendDetail's control, CampaignDelivery and RecipientDetail, §15.2, §15.3 (the dispatch and reconciliation

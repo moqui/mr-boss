@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The send transitions and forms of the IronStone Marketing screens (impl-marketing P8; design-marketing §5 Sends, SendDetail,
+    Compose; §14.3 QuickSend): each transition calls Mantle's guarded service (mantle.marketing.CampaignSendServices, and
+    CampaignServices' approvals with targetKind send), which checks the permission, the organization, every record it is given and the
+    revision read, so a screen that includes one adds no authority. A screen includes each transition it uses by name
+    (transition-include); links go through the root's sharedLinks.
+    - NewSendForm: the Sends list's, CampaignDetail's QuickSend (the campaign fixed) and a template's Use (the template fixed) form
+      (design §5 NewSend), over the map newSendValues. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new draft send: its Compose, else the screen again -->
+    <transition name="createSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.create#Send" out-map="created"
+                    in-map="{marketingCampaignId:marketingCampaignId, sendName:sendName, contactListId:contactListId,
+                        messageTemplateId:(messageTemplateId || null), sendingProfileId:(sendingProfileId || null)}"/>
+            <set field="composePath" from="sharedLinks?.['Sends/Compose'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Send ${created.campaignSendId} started as a draft</message></if>
+        </actions>
+        <conditional-response url="${composePath}"><condition><expression>composePath &amp;&amp; created?.campaignSendId</expression></condition>
+            <parameter name="campaignSendId" from="created.campaignSendId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="duplicateSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.duplicate#Send" out-map="created"
+                    in-map="{campaignSendId:campaignSendId, sendName:(sendName || null)}"/>
+            <set field="detailPath" from="sharedLinks?.['Sends/SendDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Send ${created.campaignSendId} started as a draft</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; created?.campaignSendId</expression></condition>
+            <parameter name="campaignSendId" from="created.campaignSendId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the header, topic, audience and sender at the revision read; an audience form names audienceForm so an emptied choice clears it -->
+    <transition name="storeSend">
+        <actions>
+            <script><![CDATA[
+                const asList = value =>
+                    value == null || value === "" ? [] : Array.from(typeof value === "string" ? value.split(",") : value).filter(Boolean)
+                const given = ec.context
+                ec.context.putAll({audience: given.audienceForm == "Y" ? {listIds: asList(given.listIds), segmentIds: asList(given.segmentIds),
+                    excludeListIds: asList(given.excludeListIds), excludeSegmentIds: asList(given.excludeSegmentIds)} : {}})
+            ]]></script>
+            <service-call name="mantle.marketing.CampaignSendServices.store#Send" out-map="stored"
+                    in-map="Object.assign({campaignSendId:campaignSendId, expectedRevision:expectedRevision, sendName:ec.context.sendName,
+                        contactListId:ec.context.contactListId, sendingProfileId:ec.context.sendingProfileId,
+                        replyToAddress:ec.context.replyToAddress}, audience)"/>
+            <if condition="!ec.message.hasError()"><message type="success">Send saved${stored?.approvalEnded ? '; its approval ended: prepare and ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- MessageContent: the variables a line each, name | label | fallback | required -->
+    <transition name="storeSendContent">
+        <actions>
+            <set field="variableList" from="String(variablesText || '').split(/\r?\n/).map(line =&gt; line.trim()).filter(Boolean).map(line =&gt; {
+                    const [name, label, fallback, required] = line.split(/\|/).map(part =&gt; part.trim())
+                    return {name, label: label || name, fallback: fallback || '', required: /^(y|yes|required|true)$/i.test(required || '')}})"/>
+            <service-call name="mantle.marketing.CampaignSendServices.store#SendContent" out-map="stored"
+                    in-map="{campaignSendId:campaignSendId, expectedRevision:expectedRevision, subject:(subject ?? ''),
+                        preheader:(preheader ?? ''), body:(body ?? ''), bodyText:(bodyText ?? ''), variables:variableList}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Content saved${stored?.approvalEnded ? '; its approval ended: prepare and ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- MessageAssets: attach a file of the send or its campaign, or take one out -->
+    <transition name="storeSendAssets">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.store#SendAssets"
+                    in-map="{campaignSendId:campaignSendId, expectedRevision:expectedRevision, action:(action || 'add'),
+                        contentLocation:(contentLocation || null), assetLabel:(assetLabel || null),
+                        campaignSendContentId:(campaignSendContentId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'end' ? 'Attachment removed' : 'File attached'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- SendSchedule -->
+    <transition name="scheduleSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.schedule#Send" out-map="stored"
+                    in-map="{campaignSendId:campaignSendId, expectedRevision:expectedRevision, scheduledDate:(scheduledDate || null),
+                        scheduleTimeZone:(scheduleTimeZone || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Schedule saved${stored?.approvalEnded ? '; its approval ended: prepare and ask again' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- prepare: the recipients and the content kept at the revision read -->
+    <transition name="prepareSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.prepare#Send" out-map="prepared"
+                    in-map="{campaignSendId:campaignSendId, expectedRevision:expectedRevision, resultDigest:(resultDigest || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Prepared: ${prepared.eligibleCount} eligible recipients</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- TestSend: to an address of the organization's test list -->
+    <transition name="testSend">
+        <actions>
+            <service-call name="mantle.marketing.CampaignSendServices.test#Send" out-map="tested"
+                    in-map="{campaignSendId:campaignSendId, toAddress:toAddress, note:(note || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="${tested?.stateEnumId == 'MdsSent' ? 'success' : 'warning'}">Test to ${toAddress}: ${tested?.stateText}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- SendDecision: ask for approval, or decide, at the send's revision -->
+    <transition name="requestSendApproval">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.request#MarketingApproval" out-map="asked"
+                    in-map="{targetKind:'send', targetId:campaignSendId, targetRevision:(targetRevision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Approval requested; ${asked.notifiedCount} approvers told</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideSendApproval">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.decide#MarketingApproval" out-map="decided"
+                    in-map="{targetKind:'send', targetId:campaignSendId, targetRevision:targetRevision, decision:decision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'approve' ? 'Approved' : 'Refused'}${decided?.selfApproval ? ' (self-approval)' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <section name="NewSendForm">
+            <widgets>
+                <label text="A send starts as a draft: it reaches no one until it is prepared, approved and released." type="p" style="m-muted"/>
+                <form-single name="NewSend" transition="createSend" map="newSendValues">
+                    <field name="marketingCampaignId">
+                        <conditional-field title="Campaign" condition="newSendValues.campaignFixed"><hidden/></conditional-field>
+                        <default-field title="Campaign">
+                            <drop-down>
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'campaigns', selected:newSendValues.marketingCampaignId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="sendName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                    <field name="contactListId">
+                        <default-field title="Topic" tooltip="The list whose subscribers, with their consent, may receive it">
+                            <drop-down>
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sendTopics', organizationPartyId:newSendValues.organizationPartyId, selected:newSendValues.contactListId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="messageTemplateId">
+                        <conditional-field title="Template" condition="newSendValues.templateFixed"><hidden/></conditional-field>
+                        <default-field title="Template" tooltip="Its published content becomes the send's own">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'messageTemplates', organizationPartyId:newSendValues.organizationPartyId, selected:newSendValues.messageTemplateId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="sendingProfileId">
+                        <default-field title="Sending profile">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sendProfiles', organizationPartyId:newSendValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title=""><submit text="Start the draft"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
