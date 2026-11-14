@@ -2191,10 +2191,10 @@ remain historical; these rows add no implementation claim.
 | --- | --- | --- | --- |
 | order/OrderServices | hold#Order | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Hold, a Manual or Change hold, through SalesOrderServices.hold#SalesOrder; Sales P11) |
 | order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Release of a Manual or Change hold, through SalesOrderServices.release#SalesOrderHold; Sales P11) |
-| party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse | PASS:Supplier/SupplierHome; PASS:Supplier/QuoteResponse; PASS:Supplier/OrderAcknowledgement (its rule, through mantle.order.SupplierPortalServices) (Purchasing P16) |
-| party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail | Purchasing/Sourcing/QuoteRequestDetail (Send: each quote's QuoteResponse link); Purchasing/Orders/OrderDetail (Send: the revision's OrderAcknowledgement link) (its rule, through send#QuoteRequest and send#PurchaseOrder) (Purchasing P16) |
-| party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16) |
-| party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail |  |
+| party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse | PASS:Supplier/SupplierHome; PASS:Supplier/QuoteResponse; PASS:Supplier/OrderAcknowledgement (its rule, through mantle.order.SupplierPortalServices) (Purchasing P16); PASS:Sales/CustomerQuote, PASS:Sales/QuoteResponse, PASS:Sales/CustomerQuotes (its rule, the SalesOrder kind's QuoteView and QuoteRespond, through mantle.order.SalesPortalServices; Sales P13) |
+| party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail | Purchasing/Sourcing/QuoteRequestDetail (Send: each quote's QuoteResponse link); Purchasing/Orders/OrderDetail (Send: the revision's OrderAcknowledgement link) (its rule, through send#QuoteRequest and send#PurchaseOrder) (Purchasing P16); Sales/Orders/QuoteSend (Send: each recipient's QuoteView and QuoteRespond link in its mail, its rule through send#Quote's ledger build and own-mail send; the service itself refuses the quote scopes; Sales P13) |
+| party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16); Shared/Customer360 and Sales/Accounts/ContactDetail (Sales: Invite to Sales, through mantle.sales.AccountServices.invite#SalesContact; Sales P13) |
+| party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Revise and Withdraw end the quote's links, its rule through revise#Quote and withdraw#Quote; Sales P13) |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
 | sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
 
@@ -2351,6 +2351,17 @@ remain historical; these rows add no implementation claim.
 | order/SalesQuoteServices | publish#QuoteTemplate, end#QuoteTemplate | Sales/Quotes/QuoteTemplateDetail (TemplateHeader) | Sales/Quotes/QuoteTemplateDetail (Publish; End or Set aside) |
 | order/SalesQuoteServices | preview#QuoteTemplate | Sales/Quotes/QuoteTemplateDetail (TemplatePreview) | Sales/Quotes/QuoteTemplateDetail (Preview) |
 | order/SalesQuoteServices | store#QuoteLine, delete#QuoteLine (a template draft's lines) | Sales/Quotes/QuoteTemplateDetail (TemplateItems) | Sales/Quotes/QuoteTemplateDetail (Add line, Add shipping charge, Edit, Remove) |
+
+### Added in the Sales build: PASS Sales quotes (P13, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesPortalServices | find#CustomerQuotes | PASS:Sales/CustomerQuotes (MyQuoteFind, MyQuotes) | PASS:Sales/CustomerQuotes (findSalesQuotes); the PASS Account hub's card (get#AccountCard) |
+| order/SalesPortalServices | get#CustomerQuote, get#QuoteDocument | PASS:Sales/CustomerQuote (QuoteOffer) | PASS:Sales/CustomerQuote (getSalesQuote; the PDF through getSalesQuoteDocument, streamed by the facade) |
+| order/SalesPortalServices | respond#CustomerQuote | PASS:Sales/CustomerQuote (AcceptQuote, DeclineQuote) | PASS:Sales/CustomerQuote (respondSalesQuote, a bearer write; respond#Quote's lifecycle) |
+| order/SalesPortalServices | get#QuoteResponse | PASS:Sales/QuoteResponse (ResponseReceipt) | PASS:Sales/QuoteResponse (getSalesQuoteResponse) |
+| order/SalesPortalServices | check#SalesAppReadiness, get#AccountCard | — (PASS's app registry, PublicApps.js) | PASS:Sites/SiteDetail readiness; PASS:Account/Home |
+| sales/AccountServices | get#SalesInvite, invite#SalesContact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail (Invite to Sales) | Shared/Customer360 (Sales header); Sales/Accounts/ContactDetail (template/SalesInvite.xml) |
 
 ### Added in the Sales build: agreements and customer prices (P15, Nov 14, 2026)
 

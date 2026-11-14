@@ -18,8 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
     revision a quote's issue binds (store#SalesCommercialRevision, X2, F9). The defaults shown are those Sales reads today: a new
     quote's validity and default team, and the unverified intake retention; P10 adds whether an acceptance needs the customer's
     purchase order and the reminder days (the daily reminder job sends none while they are empty); the templates and the stored
-    text locations are set through store#SalesPolicy; the acceptance thresholds, the approval setting and the net-terms option
-    join this form with the phases that read them (P11, P13).
+    text locations are set through store#SalesPolicy; P13 adds the acceptance threshold of a currency (above it a customer's
+    quote link alone cannot accept: PASS sign-in as an invited contact; empty: none), the other currencies' kept; the approval
+    setting and the net-terms option join this form with the phase that reads them.
     SALES_CONFIGURE, which Mantle checks with the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Defaults" default-menu-index="6"
@@ -28,12 +29,21 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <transition name="publishDefaults">
         <actions>
+            <!-- P13: one currency's acceptance threshold replaced (empty: removed), the policy's other currencies' kept -->
+            <if condition="thresholdCurrencyUomId">
+                <service-call name="mantle.order.SalesApprovalServices.get#SalesPolicy" out-map="current"
+                        in-map="{organizationPartyId:organizationPartyId}"/>
+                <set field="acceptanceThresholds" from="(current?.policy?.thresholds || [])
+                        .filter(t =&gt; t.currencyUomId != thresholdCurrencyUomId)
+                        .map(t =&gt; ({currencyUomId: t.currencyUomId, thresholdAmount: t.thresholdAmount}))
+                        .concat(thresholdAmount ? [{currencyUomId: thresholdCurrencyUomId, thresholdAmount: thresholdAmount}] : [])"/>
+            </if>
             <service-call name="mantle.order.SalesApprovalServices.store#SalesPolicy" out-map="stored"
                     in-map="{organizationPartyId:organizationPartyId, revision:(revision || null), fromDate:(fromDate || null),
                         defaultTeamPartyId:(defaultTeamPartyId ?? ''), quoteValidityDays:(quoteValidityDays ?? ''),
                         intakeRetentionDays:(intakeRetentionDays ?? ''), responsePoRequired:(responsePoRequired ?? ''),
-                        reminderDays:(reminderDays ?? ''), changeReason:(changeReason || null),
-                        previewOnly:(previewOnly == 'Y' ? 'Y' : null)}"/>
+                        reminderDays:(reminderDays ?? ''), acceptanceThresholds:(acceptanceThresholds ?? null),
+                        changeReason:(changeReason || null), previewOnly:(previewOnly == 'Y' ? 'Y' : null)}"/>
             <if condition="!ec.message.hasError()">
                 <set field="changeText" from="(stored.changes || []).map(change =&gt; ec.l10n.localize(change.field) + ': '
                         + (change.beforeText || '—') + ' → ' + (change.afterText || '—')).join('; ')"/>
@@ -73,13 +83,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="publishValues" from="{organizationPartyId: organizationPartyId, revision: policy?.revision || null,
                 defaultTeamPartyId: policy?.defaultTeamPartyId || null, quoteValidityDays: policy?.quoteValidityDays ?? null,
                 intakeRetentionDays: policy?.intakeRetentionDays ?? null, responsePoRequired: policy?.responsePoRequired || 'N',
-                reminderDays: policy?.reminderDays ?? null}"/>
+                reminderDays: policy?.reminderDays ?? null, thresholdCurrencyUomId: policy?.thresholds?.[0]?.currencyUomId || 'USD',
+                thresholdAmount: policy?.thresholds?.[0]?.thresholdAmount ?? null}"/>
         <set field="revisionValues" from="{organizationPartyId: organizationPartyId, commercialRevisionOnly: found?.commercialRevisionOnly ? 'N' : 'Y'}"/>
         <set field="policyRows" from="policy ? [['Default team', policy.teamName || 'None: the author\'s only team, else none'],
                 ['Quote validity', policy.quoteValidityDays ? policy.quoteValidityDays + ' days' : 'No end set'],
                 ['Unverified intakes kept', (policy.intakeRetentionDays || 30) + ' days'],
                 ['Acceptance needs the customer\'s PO', policy.responsePoRequired == 'Y' ? 'Yes' : 'No'],
                 ['Quote reminder', policy.reminderDays ? policy.reminderDays + ' days after it is sent' : 'None'],
+                ['Online acceptance needs sign-in above', (policy.thresholds || []).map(t =&gt; t.thresholdText).join(', ') || 'None: a quote link accepts any amount'],
                 ['In effect', policy.fromText + (policy.thruText ? ' until ' + policy.thruText : '')],
                 ['Published by', [policy.changedByName, policy.changeReason].filter(Boolean).join(' · ')]]
                 .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]})) : []"/>
@@ -123,6 +135,14 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="reminderDays">
                             <default-field title="Remind the customer days after a quote is sent" tooltip="Empty: no reminder"><text-line size="6" input-type="number"/></default-field>
                         </field>
+                        <!-- P13: the high-value acceptance threshold of one currency (impl-sales §4) -->
+                        <field name="thresholdAmount">
+                            <default-field title="Online acceptance needs sign-in above" tooltip="Above it, a customer's quote link alone cannot accept: they sign in as a contact you invited. Empty: none">
+                                <text-line size="10" input-type="number"/></default-field>
+                        </field>
+                        <field name="thresholdCurrencyUomId">
+                            <default-field title="In currency"><text-line size="4"/></default-field>
+                        </field>
                         <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
                         <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
                         <field name="previewOnly">
@@ -132,6 +152,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-layout>
                             <field-row><field-ref name="defaultTeamPartyId"/><field-ref name="quoteValidityDays"/></field-row>
                             <field-row><field-ref name="intakeRetentionDays"/><field-ref name="fromDate"/></field-row>
+                            <!-- P13: P10's two fields were in no row, so the dialog did not show them; the threshold beside them -->
+                            <field-row><field-ref name="responsePoRequired"/><field-ref name="reminderDays"/></field-row>
+                            <field-row><field-ref name="thresholdAmount"/><field-ref name="thresholdCurrencyUomId"/></field-row>
                             <field-ref name="changeReason"/>
                             <field-ref name="previewOnly"/>
                             <field-ref name="submitButton"/>
