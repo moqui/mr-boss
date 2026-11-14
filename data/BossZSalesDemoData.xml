@@ -256,4 +256,84 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.sales.OpportunityServices.create-LeadFromEmail emailMessageId="BOSS_SAL_MSG_INQUIRY" emailAccountId="BOSS_SAL_INTAKE_MAIL"
             emailRuleId="BOSS_SAL_INTAKE_RULE" ruleOwnerUserId="BOSS_SAL_MANAGER"/>
     <!-- ===== end of Sales P5 ===== -->
+
+    <!-- ===== Sales P7 (design-sales §5; impl-sales P7, F72): quote drafts, pricing and the storeless seller's tax ===== -->
+    <!-- Ziziwork Sales, the storeless seller: its own accounting preference naming Mantle's LOCAL gateway (X1), with what it took from
+        Ziziwork Industries' before (the commercial revision and kit costs, BossCustomerServiceDemoData and BossWarehouseDemoData), its
+        Utah nexus and rate (6.1 %, shipping taxed), and Fabrikam Industrial's Utah address -->
+    <mantle.ledger.config.PartyAcctgPreference organizationPartyId="ORG_ZIZI_SALES" baseCurrencyUomId="USD" taxGatewayConfigId="LOCAL"
+            salesCommercialRevisionOnly="Y" kitCostFromComponents="Y"/>
+    <mantle.other.tax.TaxAuthority taxAuthorityId="BOSS_SAL_TAX_UT" taxAuthorityTypeEnumId="TatState" taxAuthGeoId="USA_UT"
+            description="Utah"/>
+    <mantle.other.tax.TaxAuthorityParty taxAuthorityId="BOSS_SAL_TAX_UT" partyId="ORG_ZIZI_SALES" fromDate="2026-01-01 00:00:00"
+            isNexus="Y" partyTaxId="UT-SALES-DEMO"/>
+    <mantle.other.tax.TaxAuthorityRate taxAuthorityRateId="BOSS_SAL_TAX_UT_2026" taxAuthorityId="BOSS_SAL_TAX_UT"
+            rateTypeEnumId="TarSalesTax" organizationPartyId="ORG_ZIZI_SALES" taxPercentage="6.1" taxShipping="Y"
+            fromDate="2026-01-01 00:00:00" description="Utah combined sales tax"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_FABRIKAM_ADDR" contactMechTypeEnumId="CmtPostalAddress"/>
+    <mantle.party.contact.PostalAddress contactMechId="BOSS_SAL_FABRIKAM_ADDR" toName="Fabrikam Industrial" address1="410 Foundry Way"
+            city="Ogden" stateProvinceGeoId="USA_UT" postalCode="84401" countryGeoId="USA"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_ACC_FABRIKAM" contactMechId="BOSS_SAL_FABRIKAM_ADDR"
+            contactMechPurposeId="PostalShippingDest" fromDate="2026-01-01 00:00:00"/>
+    <!-- Ziziwork Sales' products: a line upgrade kit and its installation, priced by the seller -->
+    <mantle.product.Product productId="BOSS_SAL_PRD_UPGRADE" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Line upgrade kit" ownerPartyId="ORG_ZIZI_SALES" amountUomId="OTH_ea"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_SAL_PRD_UPGRADE_L" productId="BOSS_SAL_PRD_UPGRADE" vendorPartyId="ORG_ZIZI_SALES"
+            pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptList" fromDate="2026-01-01 00:00:00" minQuantity="1" price="1350"
+            priceUomId="USD"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_SAL_PRD_UPGRADE_C" productId="BOSS_SAL_PRD_UPGRADE" vendorPartyId="ORG_ZIZI_SALES"
+            pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="1" price="1200"
+            priceUomId="USD"/>
+    <mantle.product.Product productId="BOSS_SAL_PRD_INSTALL" productTypeEnumId="PtService" productName="Upgrade installation"
+            ownerPartyId="ORG_ZIZI_SALES" amountUomId="OTH_ea"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_SAL_PRD_INSTALL_C" productId="BOSS_SAL_PRD_INSTALL" vendorPartyId="ORG_ZIZI_SALES"
+            pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="1" price="450"
+            priceUomId="USD"/>
+    <!-- Wingtip Traders' own price of Demo Product One-One from Retail (a customer price a rep reads through the quote) -->
+    <mantle.product.ProductPrice productPriceId="BOSS_SAL_PRICE_WINGTIP" productId="DEMO_1_1" vendorPartyId="ORG_ZIZI_RETAIL"
+            customerPartyId="BOSS_SAL_ACC_WINGTIP" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent"
+            fromDate="2026-01-01 00:00:00" minQuantity="1" price="17.5" priceUomId="USD"/>
+    <!-- Retail East's draft for Wingtip's refit (sales.rep, East; the Wingtip refit opportunity): ten of Demo Product One-One at
+        Wingtip's own price, and Demo Product One-Two entered below its price with the reason (the manual override); no store and
+        Retail names no gateway, so no tax -->
+    <mantle.order.OrderHeader orderId="BOSS_SAL_QTE_WINGTIP" orderName="Wingtip store refit" orderPurposeEnumId="OrpSalesQuote"
+            statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 10:00:00" orderRevision="1"/>
+    <mantle.order.OrderPart orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_RETAIL"
+            customerPartyId="BOSS_SAL_ACC_WINGTIP" validFromDate="2026-11-12 00:00:00" validThruDate="2027-01-31 00:00:00"/>
+    <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_REP" roleTypeId="SalesRepresentative"/>
+    <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_TEAM_EAST" roleTypeId="SalesTeam"/>
+    <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_CON_DANA" roleTypeId="Contact"/>
+    <mantle.sales.opportunity.SalesOpportunityOrder salesOpportunityId="BOSS_SAL_OPP_WINGTIP_Q4" orderId="BOSS_SAL_QTE_WINGTIP"/>
+    <mantle.order.OrderItem orderId="BOSS_SAL_QTE_WINGTIP" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="DEMO_1_1" itemDescription="Demo Product One-One" quantity="10" unitAmount="17.5" unitListPrice="19.99"
+            calculatedUnitAmount="17.5" productPriceId="BOSS_SAL_PRICE_WINGTIP" priceSource="product-price" isModifiedPrice="N"
+            salesOpportunityId="BOSS_SAL_OPP_WINGTIP_Q4"/>
+    <mantle.order.OrderItem orderId="BOSS_SAL_QTE_WINGTIP" orderItemSeqId="02" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="DEMO_1_2" itemDescription="Demo Product One-Two" quantity="1" unitAmount="10500" calculatedUnitAmount="11119.99"
+            productPriceId="DEMO_1_2_C" priceSource="manual" isModifiedPrice="Y" priceOverrideReason="Bundled with the refit"
+            priceOverrideUserId="BOSS_SAL_REP" priceOverrideDate="2026-11-12 10:05:00" salesOpportunityId="BOSS_SAL_OPP_WINGTIP_Q4"/>
+    <mantle.order.OrderServices.update-OrderPartTotal orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01"/>
+    <!-- Ziziwork Sales' storeless draft for Fabrikam's line upgrade (sales.rep3, Direct): two kits and their installation at the
+        seller's prices and a freight charge, taxed through the seller's LOCAL gateway at Fabrikam's Utah address (X1) -->
+    <mantle.order.OrderHeader orderId="BOSS_SAL_QTE_FABRIKAM" orderName="Fabrikam line upgrade" orderPurposeEnumId="OrpSalesQuote"
+            statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 11:00:00" orderRevision="1"/>
+    <mantle.order.OrderPart orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_SALES"
+            customerPartyId="BOSS_SAL_ACC_FABRIKAM" postalContactMechId="BOSS_SAL_FABRIKAM_ADDR"
+            validFromDate="2026-11-12 00:00:00" validThruDate="2027-02-28 00:00:00"/>
+    <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" partyId="BOSS_SAL_REP3" roleTypeId="SalesRepresentative"/>
+    <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" partyId="BOSS_SAL_TEAM_DIRECT" roleTypeId="SalesTeam"/>
+    <mantle.sales.opportunity.SalesOpportunityOrder salesOpportunityId="BOSS_SAL_OPP_FABRIKAM_LINE" orderId="BOSS_SAL_QTE_FABRIKAM"/>
+    <mantle.order.OrderItem orderId="BOSS_SAL_QTE_FABRIKAM" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_SAL_PRD_UPGRADE" itemDescription="Line upgrade kit" quantity="2" unitAmount="1200" unitListPrice="1350"
+            calculatedUnitAmount="1200" productPriceId="BOSS_SAL_PRD_UPGRADE_C" priceSource="product-price" isModifiedPrice="N"
+            salesOpportunityId="BOSS_SAL_OPP_FABRIKAM_LINE"/>
+    <mantle.order.OrderItem orderId="BOSS_SAL_QTE_FABRIKAM" orderItemSeqId="02" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_SAL_PRD_INSTALL" itemDescription="Upgrade installation" quantity="1" unitAmount="450"
+            calculatedUnitAmount="450" productPriceId="BOSS_SAL_PRD_INSTALL_C" priceSource="product-price" isModifiedPrice="N"
+            salesOpportunityId="BOSS_SAL_OPP_FABRIKAM_LINE"/>
+    <mantle.order.OrderItem orderId="BOSS_SAL_QTE_FABRIKAM" orderItemSeqId="03" orderPartSeqId="01" itemTypeEnumId="ItemShipping"
+            itemDescription="Freight" quantity="1" unitAmount="80" priceSource="manual"/>
+    <mantle.order.OrderServices.handle-OrderMajorChange orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01"/>
+    <mantle.order.OrderServices.update-OrderPartTotal orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01"/>
+    <!-- ===== end of Sales P7 ===== -->
 </entity-facade-xml>

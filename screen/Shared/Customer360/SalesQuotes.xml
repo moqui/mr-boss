@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Sales Quotes tab (crosscut §3.2 Sales row; design-sales §4 Customer360; impl-sales P7): the account's quotes the user
+    sees (Mantle's scoped find#Quotes for the customer: the user's and their teams', or the organization's for SALES_TEAM_VIEW), every
+    state, newest first, each opening the one OrderDetail route; New quote for the account for a holder of SALES_QUOTE_EDIT. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quotes" default-menu-index="5">
+    <parameter name="customerPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <condition><expression>appRoot == 'Sales' &amp;&amp; !!sales?.capabilities?.anyRead</expression></condition>
+    <actions>
+        <if condition="customerFound">
+            <service-call name="mantle.order.SalesQuoteServices.find#Quotes" out-map="accountQuotes" transaction="force-new" ignore-error="true"
+                    in-map="{customerPartyId:customerPartyId, state:'all', pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="quoteRows" from="accountQuotes?.quoteList || []"/>
+        <set field="quoteDetailPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="newQuoteDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, customerPartyId: customerPartyId}"/>
+    </actions>
+    <widgets>
+        <section name="SalesQuotesTab" condition="customerFound">
+            <widgets>
+                <container style="row justify-end q-mb-sm">
+                    <container-dialog id="AccountNewQuoteDialog" button-text="New quote" icon="sym_o_add" width="760"
+                            title="New quote" condition="sales.capabilities.quoteEdit">
+                        <section-include name="NewQuoteForm" location="component://mr-boss/template/SalesQuoteForms.xml"/>
+                    </container-dialog>
+                </container>
+                <form-list name="SalesAccountQuotes" list="quoteRows" skip-form="true" paginate="false">
+                    <field name="orderName">
+                        <conditional-field title="Quote" condition="quoteDetailPath">
+                            <link url="${quoteDetailPath}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                        </conditional-field>
+                        <default-field title="Quote"><display/></default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'OrderOpen' ? 'secondary' : statusId == 'OrderCancelled' ? 'grey-7' : 'primary'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="validThruText"><default-field title="Valid through"><display/></default-field></field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="orderName"/><field-ref name="validThruText"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No quotes for this account you can see" condition="!quoteRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

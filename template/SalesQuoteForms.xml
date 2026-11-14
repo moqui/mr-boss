@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- NewQuote (design-sales §5 Quotes: customer and contact, selling organization, opportunity, currency, optional store, validity;
+    impl-sales P7), shared by Quotes, quick create, OpportunityDetail and Customer360: the form posts to the screen's createQuote
+    (template/SalesQuotes.xml) and reads its values from newQuoteDefaults (the organization, and the customer and opportunity when
+    opened from one). Without a store the quote is taxed through the seller's gateway (X1). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="NewQuoteForm">
+            <widgets>
+                <form-single name="NewQuote" transition="createQuote" map="newQuoteDefaults">
+                    <field name="organizationPartyId">
+                        <default-field title="Selling organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <default-field title="Customer">
+                            <drop-down allow-empty="false" required-manual-select="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactPartyId">
+                        <default-field title="Contact" tooltip="A contact of the customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'dealContacts', selected:contactPartyId, accountPartyId:customerPartyId}">
+                                    <depends-on field="customerPartyId" parameter="accountPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="salesOpportunityId">
+                        <default-field title="Opportunity">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'deals', selected:salesOpportunityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="orderName"><default-field title="Name"><text-line/></default-field></field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency" tooltip="The opportunity's or the seller's currency when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productStoreId">
+                        <default-field title="Store" tooltip="Empty for a quote without a store, taxed through the seller's tax gateway">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stores', selected:productStoreId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="validThruDate"><default-field title="Valid through"><date-time type="date"/></default-field></field>
+                    <field name="otherPartyOrderId"><default-field title="Customer reference"><text-line/></default-field></field>
+                    <field name="submitButton"><default-field title="Create quote"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="customerPartyId"/></field-row>
+                        <field-row><field-ref name="contactPartyId"/><field-ref name="salesOpportunityId"/></field-row>
+                        <field-row><field-ref name="orderName"/><field-ref name="currencyUomId"/></field-row>
+                        <field-row><field-ref name="productStoreId"/><field-ref name="validThruDate"/></field-row>
+                        <field-ref name="otherPartyOrderId"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

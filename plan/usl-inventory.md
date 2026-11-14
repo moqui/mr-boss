@@ -877,18 +877,18 @@ Added in Marketing P2 (Nov 13, 2026; `mantle.marketing.CampaignServices`, impl-m
 | OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order); Purchasing/Orders/OrderDetail (Approve: approve#Order meets check#PurchaseApprovalRequired's warning, the SECA on this service) (Purchasing P3, P4); CustomerService/Orders/OrderDetail (its credit hold read only, Customer Service P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
 | OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail | — Purchasing: send#PurchaseOrder mails the purchase order (Purchasing P3); — Commerce: the store's order emails go out from Mantle's order flow (the store's PsetOrderPlaced binding, StoreDetail's Emails tab, Commerce P2); Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
 | OrderInfoServices | notify#OrderHighPriority |  |  |
-| OrderServices | create#Order | Purchasing/Orders/PurchaseOrders; Sales/Quotes/Quotes; Sales/Orders/Orders; Sales/Quotes/QuoteRequestDetail | Purchasing/Orders/PurchaseOrders and Purchasing/NewPurchaseOrder (through mantle.order.PurchaseServices.create#PurchaseOrder) (Purchasing P3) |
+| OrderServices | create#Order | Purchasing/Orders/PurchaseOrders; Sales/Quotes/Quotes; Sales/Orders/Orders; Sales/Quotes/QuoteRequestDetail | Purchasing/Orders/PurchaseOrders and Purchasing/NewPurchaseOrder (through mantle.order.PurchaseServices.create#PurchaseOrder) (Purchasing P3); Sales/Quotes/Quotes (NewQuote, through mantle.order.SalesQuoteServices.create#Quote) (Sales P7) |
 | OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft's reference through PurchaseServices.update#PurchaseOrder); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
-| OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; Sales/Orders/Orders; Sales/Quotes/Quotes | — Purchasing: one part per order, made by create#PurchaseOrder (Purchasing P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); Shop's cart order has its one part from create#Order (ShopCart.js; Shop P4) |
+| OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; Sales/Orders/Orders; Sales/Quotes/Quotes | — Purchasing: one part per order, made by create#PurchaseOrder (Purchasing P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); Shop's cart order has its one part from create#Order (ShopCart.js; Shop P4); — Sales: one selling part per quote, made by create#Quote (Sales P7) |
 | OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft's receiving facility through PurchaseServices.update#PurchaseOrder); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
 | OrderServices | get#OrderItemTotal |  |  |
-| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: a short pick's substitute line; Customer Service P10); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); Commerce/Integrations/ChannelImport and the channel intake make a channel order's lines (StoreChannels.js consume#ChannelOrder; Commerce P13) |
+| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: a short pick's substitute line; Customer Service P10); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); Commerce/Integrations/ChannelImport and the channel intake make a channel order's lines (StoreChannels.js consume#ChannelOrder; Commerce P13); Sales/Orders/OrderDetail (Add line, Add shipping charge, through SalesQuoteServices.store#QuoteLine at the seller's price) (Sales P7) |
 | OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft line through PurchaseServices.store#PurchaseOrderItem, the entity update); PASS:Shop/Cart (through mantle.order.ShopCartServices; Shop P4); PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5) (the frozen prices); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
 | OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Remove, through PurchaseServices.delete#PurchaseOrderItem) (Purchasing P3); PASS:Shop/Cart (through mantle.order.ShopCartServices; Shop P4) (remove#CartItem); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
 | OrderServices | recalc#OrderItemAmount |  |  |
 | OrderServices | recalc#OrderPartItemAmounts |  |  |
 | OrderServices | check#AvailableInventory |  |  |
-| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: lines through PurchaseServices.store#PurchaseOrderItem, create#OrderItem at the resolver's supplier price); PASS:Shop/Cart (through mantle.order.ShopCartServices; Shop P4) (add#CartItem, from PASS:Shop/Products/ProductDetail too); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
+| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: lines through PurchaseServices.store#PurchaseOrderItem, create#OrderItem at the resolver's supplier price); PASS:Shop/Cart (through mantle.order.ShopCartServices; Shop P4) (add#CartItem, from PASS:Shop/Products/ProductDetail too); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); — Sales P7: lines through SalesQuoteServices.store#QuoteLine (create#OrderItem at get#SellerProductPrice's price) |
 | OrderServices | update#OrderProductQuantity | PASS:Shop/Cart | — Shop: a line's quantity through ShopCartServices.update#CartItem (update#OrderItem; Shop P4) |
 | OrderServices | merge#OrderItems |  |  |
 | OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5) (set#CheckoutAddresses); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
@@ -921,7 +921,7 @@ Added in Marketing P2 (Nov 13, 2026; `mantle.marketing.CampaignServices`, impl-m
 | OrderServices | create#RecurringOrder |  |  |
 | OrderServices | handle#OrderItemChange |  |  |
 | OrderServices | handle#OrderPartChange |  |  |
-| OrderServices | handle#OrderMajorChange |  |  |
+| OrderServices | handle#OrderMajorChange |  | — (no screen; the order rules) X1: a storeless order's tax step through the seller's gateway (Sales P7) |
 | OrderServices | update#OrderHeaderTotal |  |  |
 | OrderServices | update#OrderPartTotal |  |  |
 | OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly); Purchasing/Orders/OrderChanges (ApplyRevision counts the revision once, through apply#PurchaseRevision; Purchasing P9); (Customer Service P10: a sales order's commercial revision behind PartyAcctgPreference.salesCommercialRevisionOnly, F55) |
@@ -972,7 +972,7 @@ Added in Marketing P2 (Nov 13, 2026; `mantle.marketing.CampaignServices`, impl-m
 | BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail | — (§7: budget item details by asset or facility, F316) |
 | BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail | — (§7: budget item details by asset or facility, F316) |
 | TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
-| TaxServices | calculate#OrderSalesTax | PASS:Shop/Checkout | PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5) |
+| TaxServices | calculate#OrderSalesTax | PASS:Shop/Checkout | PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5); Sales/Orders/OrderDetail (X1: a storeless quote's tax through the seller's gateway, by the native order rules) (Sales P7) |
 | TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail | Mantle, change#InvoiceState on finalize or approve (Accounting/Receivables/InvoiceDetail) |
 | TaxServices | calculate#SalesTaxLocal | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates (simulate#SalesTax); invoice finalize |
 | TaxServices | create#TaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements (create#SalesTaxStatement, run#Vendor1099Statements) |
@@ -1222,7 +1222,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
 | PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Orders/OrderDetail; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail; Sales/Agreements/PriceListDetail; Sales/Agreements/PriceExplain; Sales/Quotes/QuoteTemplateDetail | Shared/PriceExplain; Purchasing/Suppliers/PriceExplain (Shared/PriceExplain) (Purchasing P2); Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail (P3); PASS:Shop/Home; PASS:Shop/Categories/CategoryDetail; PASS:Shop/Search; PASS:Shop/Products/ProductDetail (its resolver as the store's authority, through mantle.product.PriceServices.get#StoreProductPrice and ShopCatalogServices; Shop P3) |
-| PriceServices | get#OrderProductPrice | Sales/Orders/OrderDetail |  |
+| PriceServices | get#OrderProductPrice | Sales/Orders/OrderDetail | — Sales P7: a quote line's price is get#SellerProductPrice's (the seller's authority after Sales' checks) |
 | ProductServices | find#ProductByIdValue | Products; Products/Products; Products/Units/Packaging; Products/Settings/IdentificationTypes | Products (guarded exact-ID palette) |
 | ProductServices | clone#Product | Products/Products/Product360; Shared/Product360 |  |
 | ProductServices | create#ProductFeature | Products/Features; Products/Products/Product360; Shared/Product360 |  |
@@ -1300,7 +1300,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | ProductServices | get#CatalogOwnerScope | PRD-ACCESS | Products; Products/Products/List; Products/Products/Product360; Products/Categories/CategoryDetail; shared catalog record visibility |
-| ProductServices | check#ProductUsable | PRD-LIFECYCLE | OrderServices create#OrderItem and add#OrderProductQuantity (through check#OrderProductUsable) |
+| ProductServices | check#ProductUsable | PRD-LIFECYCLE | OrderServices create#OrderItem and add#OrderProductQuantity (through check#OrderProductUsable); Sales/Orders/OrderDetail (store#QuoteLine, usage Sell) (Sales P7) |
 | ProductServices | check#OrderProductUsable | PRD-LIFECYCLE | Both order entry paths; explicit sale/purchase direction |
 | ProductServices | store#ProductIdentifier | PRD-IDENTIFIERS | Shared/Product360/Identifiers; internal/scoped clone IDs |
 | ProductServices | store#KitComponent | PRD-KITS | Shared/Product360/KitComponents |
@@ -2227,6 +2227,20 @@ remain historical; these rows add no implementation claim.
 | sales/OpportunityServices | add#OpportunityActivity | Sales/QuickCreate | Sales/QuickCreate/NewActivity |
 | sales/AccountServices | create#Account, create#Contact | Sales/QuickCreate | Sales/QuickCreate/NewAccount, NewContact (template/SalesAccountForms.xml, shared with Accounts and Contacts) |
 | party/UserFactServices | get#OrganizationFacts | — (Assist, CX-ASSIST) | Mantle's llm-facade user-facts provider (every agent conversation's prompt; no screen) |
+
+### Added in the Sales build: quote drafts, pricing and storeless tax (P7, Nov 13, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesQuoteServices | find#Quotes | Sales/Quotes/Quotes | Sales/Quotes/Quotes (QuoteList, the saved lists); Sales/Pipeline/OpportunityDetail (Quotes); Shared/Customer360 (Sales: Quotes tab); the Sales palette |
+| order/SalesQuoteServices | create#Quote | Sales/Quotes/Quotes (NewQuote) | Sales/Quotes/Quotes, Sales/QuickCreate/NewQuote, Sales/Pipeline/OpportunityDetail and Shared/Customer360 (NewQuote) |
+| order/SalesQuoteServices | get#Quote | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: template/SalesOrderDetail.xml) |
+| order/SalesQuoteServices | update#Quote | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Edit quote) |
+| order/SalesQuoteServices | store#QuoteLine | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Add line, Add shipping charge, Edit) |
+| order/SalesQuoteServices | delete#QuoteLine | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Remove) |
+| order/SalesQuoteServices | explain#QuoteLinePrice | Sales/Products/PriceExplain | Shared/PriceExplain (Sales: the quote line's selected price) |
+| product/PriceServices | get#SellerProductPrice | — (Sales' quote lines) | SalesQuotes.js (store#QuoteLine, explain#QuoteLinePrice; no screen) |
+| other/TaxServices | check#OrderTaxGateway | — (the order rules, X1) | OrderServices handle#OrderItemChange, handle#OrderPartChange, handle#OrderMajorChange (no screen) |
 
 ## Marketing design — source-verified service additions
 

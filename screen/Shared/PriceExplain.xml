@@ -30,6 +30,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="termUomId" />
     <parameter name="shipToCountryGeoId" />
     <parameter name="billToCountryGeoId" />
+    <!-- Sales (impl-sales P7): the quote line whose price is explained -->
+    <parameter name="orderId" />
+    <parameter name="orderItemSeqId" />
     <always-actions>
         <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
         <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
@@ -44,9 +47,30 @@ along with this software (see the LICENSE.md file). If not, see
             &amp;&amp; (appRoot != 'CustomerService' || !!sharedMountContext.capabilities.priceRead)</expression>
     </condition>
     <actions>
+        <!-- Sales (impl-sales P7, F67; design-sales §7, crosscut §3.21's Sales row): a quote line's safe explanation for anyone who sees
+            the quote (mantle.order.SalesQuoteServices.explain#QuoteLinePrice: the selected price, its source, the entered price and
+            its reason, never a cost), and the full trace below only for a price reader (PRICE_VIEW), on the line's own context -->
+        <set field="salesReader" from="appRoot == 'Sales' &amp;&amp; !sharedMountContext.capabilities.priceRead"/>
+        <if condition="appRoot == 'Sales' &amp;&amp; orderId &amp;&amp; orderItemSeqId">
+            <service-call name="mantle.order.SalesQuoteServices.explain#QuoteLinePrice" in-map="{orderId:orderId, orderItemSeqId:orderItemSeqId}"
+                    out-map="salesExplained" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="salesExplanation" from="salesExplained?.explanation || null"/>
+            <if condition="salesExplanation">
+                <set field="productId" from="salesExplanation.productId"/>
+                <set field="organizationPartyId" from="salesExplanation.organizationPartyId"/>
+                <set field="customerPartyId" from="salesExplanation.customerPartyId"/>
+                <set field="priceUomId" from="salesExplanation.currencyUomId"/>
+                <set field="quantity" from="salesExplanation.quantityText"/>
+            </if>
+        </if>
+        <if condition="salesReader">
+            <set field="traceRows" from="[]"/>
+            <return/>
+        </if>
         <service-call name="ironstone.products.PriceListServices.get#PriceListOptions" out-map="context" />
         <set field="organizationPartyId" from="organizationPartyId || defaultOrganizationPartyId" />
-        <set field="direction" from="appRoot == 'Purchasing' ? 'purchase' : appRoot == 'CustomerService' ? 'sales' : direction || (pricingAccess.canPriceRead ? 'sales' : 'purchase')" />
+        <set field="direction" from="appRoot == 'Purchasing' ? 'purchase' : appRoot == 'CustomerService' || appRoot == 'Sales' ? 'sales' : direction || (pricingAccess.canPriceRead ? 'sales' : 'purchase')" />
         <set field="priceUomId" from="priceUomId || 'USD'" />
         <set field="quantity" from="quantity || '1'" />
         <set field="vendorPartyId" from="vendorPartyId || (direction === 'sales' ? organizationPartyId : null)" />
@@ -59,7 +83,31 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
     </actions>
     <widgets>
-        <section name="ExplainContextControls" condition="sri.getRenderMode() !== 'html-print'">
+        <!-- Sales (impl-sales P7): the quote line's selected price, for anyone who sees the quote -->
+        <section name="SalesQuotePrice" condition="appRoot == 'Sales'">
+            <widgets>
+                <section name="SalesQuotePriceFound" condition="salesExplanation">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Price of quote ${salesExplanation.orderId} line ${salesExplanation.orderItemSeqId}"/>
+                            <box-body>
+                                <label type="h6" text="${salesExplanation.productName} · ${salesExplanation.quantityText} at ${salesExplanation.unitText}"/>
+                                <label type="p" text="${salesExplanation.overridden ? 'Entered price' : salesExplanation.priceSourceText}${salesExplanation.customerPrice ? ' · the customer’s own price' : ''}${salesExplanation.priceListName ? ' · price list ' + salesExplanation.priceListName : ''}"/>
+                                <label type="p" text="Calculated price: ${salesExplanation.calculatedText}${salesExplanation.listText ? ' · list price ' + salesExplanation.listText : ''}"/>
+                                <label type="p" text="Entered because: ${salesExplanation.overrideReason}" condition="salesExplanation.overridden"/>
+                                <label type="p" style="text-warning" text="Today's price is ${salesExplanation.currentText}; the line keeps the price it was given."
+                                        condition="salesExplanation.currentChanged"/>
+                                <link url="${sharedLinks['Orders/OrderDetail'] || '//Sales/Orders/OrderDetail'}" text="Back to the quote" link-type="anchor"
+                                        parameter-map="{orderId:salesExplanation.orderId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label type="p" text="Open a quote line's price to see where it came from." condition="!salesExplanation &amp;&amp; salesReader"/>
+                <label type="p" style="m-muted" text="The full price trace is for price readers." condition="salesReader"/>
+            </widgets>
+        </section>
+        <section name="ExplainContextControls" condition="sri.getRenderMode() !== 'html-print' &amp;&amp; !salesReader">
             <widgets>
                 <container-box>
                     <box-header title="Transaction price context" />
@@ -197,7 +245,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <label text="Product ${productId || &quot;not selected&quot;} · Organization ${organizationPartyId} · Quantity ${quantity} ${quantityUomId || &quot;stock units&quot;} · ${direction}" type="p" />
+        <label condition="!salesReader" text="Product ${productId || &quot;not selected&quot;} · Organization ${organizationPartyId} · Quantity ${quantity} ${quantityUomId || &quot;stock units&quot;} · ${direction}" type="p" />
         <label text="Choose the supplier whose offer to explain." type="p" condition="supplierNeeded" />
         <section name="ResolvedPriceAvailable" condition="!!priceResult">
             <widgets>
