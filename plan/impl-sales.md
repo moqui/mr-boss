@@ -346,7 +346,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | built and reviewed Nov 14, merged |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
-| P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | — |
+| P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | built and reviewed Nov 14, merged |
 | P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | — |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
@@ -4601,7 +4601,7 @@ built.
   TargetAttainment (the baseline has no forecast screens).
 - Design edits: design-sales §1.1's BOSS_SALES_REP row (SALES_FORECAST_EDIT, own forecast only), §8 "As built (impl-sales P18)", §9
   Targets.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F278 to F286 in order:
   - SALES_FORECAST_EDIT is granted to the representative, beside the manager and the administrator, so a rep submits their own
     forecast as design §8 and the usable-when have it; design §1.1's table did not list it for the rep (the user's call);
   - OrderPartParty carries no dates, so order and invoice attribution is the order part's current representative, not one dated at the
@@ -4673,7 +4673,7 @@ built.
     or category (showing its name). Now two categories sharing a member overlap (DETAIL_OVERLAP) and the product or category is the
     forecast organization's or a shared one, as Sales' choices offer (PRODUCT_INVALID, CATEGORY_INVALID).
 - Recorded: the user's call on `SALES_FORECAST_EDIT` for the representative (§4 row; design §1.1's row names it).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F287 to F289 in order:
   - `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on
     `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged);
   - a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets);
@@ -5226,6 +5226,18 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F275 | P17 (Review Nov 14): signed-in reads by order ID are not rate limited (as P13's quote reads); every token lookup is | P17: as its Review note says |
 | F276 | P17 (Review Nov 14): the PDF is the confirmation as placed; after a commercial change the page shows the order now and the PDF the order as placed (P14 stores its changed document separately), with no label saying so | P17: as its Review note says |
 | F277 | P17 (Review Nov 14): the Built note's other findings stand (operation names, storeless only, no date filter, contact grants per app) | P17: as its Review note says |
+| F278 | P18 (Built Nov 14): SALES_FORECAST_EDIT is granted to the representative, beside the manager and the administrator, so a rep submits their own forecast as design §8 and the usable-when have it; design §1.1's table did not list it for the rep (the user's call) | P18: as its Built note says |
+| F279 | P18 (Built Nov 14): OrderPartParty carries no dates, so order and invoice attribution is the order part's current representative, not one dated at the order's placement; an order whose owner changes later moves its amount to the new owner, and two representative rows leave it unassigned | P18: as its Built note says |
+| F280 | P18 (Built Nov 14): an invoice is attributed only through OrderItemBilling to its order; a sales invoice of no order is unassigned and shown only to a SALES_TEAM_VIEW holder; a written-off invoice counts as finalized | P18: as its Built note says |
+| F281 | P18 (Built Nov 14): the won amount is a won deal's estimated amount (SalesOpportunity has no separate won amount), counted in the period of its latest close; a deal reopened and won again counts once, in its latest close's period | P18: as its Built note says |
+| F282 | P18 (Built Nov 14): a target's audit history (quota, basis, the reason) is kept in the audit log but no screen shows it (AuditChanges reads no SalesForecast projection, F57's rule) | P18: as its Built note says |
+| F283 | P18 (Built Nov 14): `ensure#SalesPeriods` makes calendar-year periods only; an organization whose sales year is offset enters its periods otherwise (the forecast accepts its Fiscal periods too) | P18: as its Built note says |
+| F284 | P18 (Built Nov 14): an allocation's overlap check reads a category's direct members, not its sub-categories (ProductCategoryRollup) | P18: as its Built note says |
+| F285 | P18 (Built Nov 14): a deal's list is capped at 2,000 deals for one key, as are a period's orders and invoices; past that a measure would undercount without saying so | P18: as its Built note says |
+| F286 | P18 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the forecast services; P18 had no mr-moqui worktree | P18: as its Built note says |
+| F287 | P18 (Review Nov 14): `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged) | P18: as its Review note says |
+| F288 | P18 (Review Nov 14): a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets) | P18: as its Review note says |
+| F289 | P18 (Review Nov 14): Targets' list refuses past 2,000 forecasts of one organization without a screen message (find#Targets' refusal is cleared like any load error there) | P18: as its Review note says |
 
 ## 7. Later
 
