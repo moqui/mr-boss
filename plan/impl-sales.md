@@ -5789,7 +5789,7 @@ Rust built. A test-stability fix, no product code changed.
   MaintenancePlans' "Due maintenance offers November's filter change ..." failing on `report.output.includes("33.3% on time")`; it
   fails alone and with the spec as on master (this branch's base, unchanged), so it is not this change's (below). Prettier clean on
   the changed JavaScript. No screen changed. Not run: ./moq test-apps, test-framework, the acceptance suite.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F343 to F344 in order:
   - SalesOrderApproval's batch flake (F210) was the confirmation's revision raised after placement on a service worker; fixed in the
     spec. Other specs that place a storeless direct order of a seller counting every change and then act on its revision at once
     have the same race; none was seen failing;
@@ -5832,7 +5832,7 @@ Rust built. A test-stability fix, no product code changed.
     headers do. Only comments changed. Dispatch (P8 team defaults), Foundation and AccessWalk keep MaintenanceAccess.
   - R3 (low, comment): SalesOrderApproval's `confirmed` comment said B and C count every change. Only B does: the fixtures set C,
     like A, to commercial changes only. The Built note above has the same slip.
-- Provisional findings (for the lead to number):
+- Finding, numbered by the lead F345:
   - MaintenancePlans' P14 feature depended on the clock (R1). Other Maintenance specs and walks that assert outcomes around the
     demo's fixed November dates may turn the same way as the calendar moves. None other was seen failing today.
 - Tests run (release binary, `--nobuild`, this worktree's runtime, machine load around 16): mr-boss MaintenanceAccess and
@@ -6276,6 +6276,9 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F340 | P20 (Review Nov 14): Sales' change operator may send the confirmation of any applied change of an order of their sales scope, Customer Service's cancel and substitute kinds included (`mayApply` names no kind); it sends only the stored PDF to the customer's own addresses | P20: as its Review note says |
 | F341 | P20 (Review Nov 14): the access walk and the sweeps (acceptance, not run by the reviewer) do not cover the agreement print or the SalesDefaults field; SalesAccessWalk's print checks would take `Agreements/AgreementDetail/salesAgreementPrint` beside the quote's | P20: as its Review note says |
 | F342 | P20 (Review Nov 14): the Built note's findings stand otherwise (the record-lookup provider's leads and deals only, QuoteRequestDetail's Create quote without the deal, native services written inside Sales', john.doe's doubled Customer360 tabs, Marketing's public lead page) | P20: as its Review note says |
+| F343 | Follow-up 3 (Built Nov 14): SalesOrderApproval's batch flake (F210) was the confirmation's revision raised after placement on a service worker; fixed in the spec. Other specs that place a storeless direct order of a seller counting every change and then act on its revision at once have the same race; none was seen failing | Follow-up 3: as its Built note says |
+| F344 | Follow-up 3 (Built Nov 14): MaintenancePlans' P14 feature fails on master's mr-boss with this worktree's runtime ("33.3% on time" not in the Preventive compliance report), alone as well; not looked into here (out of scope) | Follow-up 3: as its Built note says |
+| F345 | Follow-up 3 (Review Nov 14): MaintenancePlans' P14 feature depended on the clock (R1). Other Maintenance specs and walks that assert outcomes around the demo's fixed November dates may turn the same way as the calendar moves. None other was seen failing today | Follow-up 3: as its Review note says |
 
 ## 7. Later
 
