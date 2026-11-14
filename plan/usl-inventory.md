@@ -1036,7 +1036,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1); Insights (the root's always-actions, Insights P1) |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1); Insights (the root's always-actions, Insights P1) ; Marketing (the root's always-actions, Marketing P1) |
 | PartyServices | get#PartyOrganizationInfo |  | Insights (every screen, through ironstone.insights.ContextServices.get#Context; Insights P1) |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |

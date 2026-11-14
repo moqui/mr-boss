@@ -12,9 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Marketing: root of the app for marketing staff (initial-design.md app table); its sections follow
-    design-marketing.md when that file is written. Not yet implemented: its BOSS_MARKETING grant in data/BossSetupData.xml
-    is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Marketing (design-marketing §1): the root of the app for authors, audience managers, approvers, dispatchers, events
+    managers, analysts, readers and administrators. The root user group BOSS_MARKETING and the administrator group
+    BOSS_MARKETING_ADMIN open it (data/BossSetupMarketingData.xml, data/BossSetupData.xml), as ADMIN does (impl-marketing F1: the
+    grant was live for ADMIN and BOSS_MARKETING_ADMIN before P1, whatever this comment said). The root grant opens navigation only:
+    ironstone.marketing.ContextServices.get#SharedContext checks the user and resolves their capabilities, organizations and links
+    for every subscreen, and each Mantle marketing service checks the permissions and the organization again
+    (mantle/marketing/MarketingAccess.js). The menu of design §1.2 grows by phase and shows built areas only: P1 builds Home (every
+    Marketing user's) and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
+    redirects of their old links (F2), to Audiences and Sends once those exist (P5, P8). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -22,6 +28,19 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Marketing"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.marketing.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="marketing"/>
+        <!-- the record panels serve Marketing's own record hosts only (the People P2, Insights P12, Maintenance P1 and Sales P1 mount
+            lesson): this root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to
+            a user given Marketing without Commons. P1 has none, so a panel request naming a record is refused; the campaign (P2), the
+            send (P8) and the event registration (P17) join with their checks (design §14.3). A panel request with no record (a
+            person search, an avatar) names none. -->
+        <script><![CDATA[
+            const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+            const panelName = pathNames[pathNames.indexOf('Marketing') + 1]
+            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && ec.context.recordEntity)
+                throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+        ]]></script>
+        <set field="sharedLinks" from="marketing.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -29,7 +48,24 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- P1: Settings (design §12), the administrator's (MARKETING_CONFIGURE); BOSS_MKT_SETTINGS denies the root user group, and
+            Mantle's settings and adoption services check the permission again -->
+        <subscreens-item name="Settings" location="component://mr-boss/screen/Marketing/Settings.xml" menu-index="10"
+                menu-include="ec.user.hasPermission('MARKETING_CONFIGURE')"/>
+        <!-- the old placeholders' links (F2, design §1.2), hidden from the menu: Segments to Audiences (P5), Newsletters to Sends (P8);
+            until those exist, Home -->
+        <subscreens-item name="Segments" location="component://mr-boss/screen/Marketing/Segments.xml" menu-include="false"/>
+        <subscreens-item name="Newsletters" location="component://mr-boss/screen/Marketing/Newsletters.xml" menu-include="false"/>
     </subscreens>
+
+    <!-- P1: the marketing keymap (design §1.2). The palette source (P2), quick create (P2, P3, P16), Today (P8), the Comms providers
+        (record-lookup and call-context, P2, P8, P17), Assist's chips and answer actions (P21) and the notification topics (P2)
+        arrive with their records. -->
+    <shell-providers>
+        <keymap scope="marketing">
+            <key keys="g m" label="Marketing home" screen="Marketing/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="marketing-panel" type="popup"/></widgets>
 </screen>

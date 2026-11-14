@@ -12,10 +12,155 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Marketing landing page (initial-design.md); design-marketing.md designs it. -->
+<!-- Marketing Home (design-marketing §3 Home, §1.2; style-guide §3.1 Landing; impl-marketing P1): HomeScope (the organization, from
+    those of the user's marketing scope, checked by ironstone.marketing.ContextServices.check#Record and shown "not available"
+    when refused), and the frame of design §3's panels over Mantle's mantle.marketing.MarketingWorkspaceServices: MarketingCards
+    (get#Home), Upcoming (get#Upcoming) and Attention (get#Attention). Each panel answers by source: a source whose records are not
+    built yet shows "Not available" (never zero) until its phase, a source that fails is named and the others are shown, and a panel
+    whose service fails says so alone. P1's one answered source is Attention's records awaiting adoption, the administrator's. A
+    Marketing user who reads nothing of Marketing (an edit permission alone) is told what Home holds. P2 adds New campaign (the
+    author's primary action), the period and mine or team filters, and the first counts. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <if condition="can.anyRead &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="organizationRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
+        <set field="scope" from="{organizationPartyId: organizationPartyId || null}"/>
+        <set field="scopeText" from="organizationRecord?.label || (marketing.allOrganizations ? 'Every organization' : 'Your organizations')"/>
+        <!-- each panel on its own: a refusal or failure of one leaves the others -->
+        <if condition="can.anyRead &amp;&amp; !organizationRefused">
+            <service-call name="mantle.marketing.MarketingWorkspaceServices.get#Home" out-map="homeFound" transaction="force-new"
+                    ignore-error="true" in-map="scope"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="mantle.marketing.MarketingWorkspaceServices.get#Upcoming" out-map="upcomingFound" transaction="force-new"
+                    ignore-error="true" in-map="scope"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="mantle.marketing.MarketingWorkspaceServices.get#Attention" out-map="attentionFound"
+                    transaction="force-new" ignore-error="true" in-map="scope"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="stateText" from="{available: 'Available', notAvailable: 'Not available', failed: 'Could not be read'}"/>
+        <set field="cardRows" from="Array.from(homeFound?.cards || []).map(card =&gt; Object.assign({}, card, {
+                shown: card.state === 'available' ? String(card.value ?? '') : stateText[card.state] || card.state}))"/>
+        <set field="upcomingRows" from="Array.from(upcomingFound?.rows || [])"/>
+        <set field="upcomingSources" from="Array.from(upcomingFound?.sources || []).map(source =&gt; Object.assign({}, source, {
+                shown: stateText[source.state] || source.state}))"/>
+        <!-- the places of the route keys a row names: Marketing's own screens -->
+        <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index']}"/>
+        <set field="attentionRows" from="Array.from(attentionFound?.rows || []).map(row =&gt; Object.assign({}, row, {
+                actionUrl: row.route ? places[row.route] || null : null}))"/>
+        <set field="attentionSources" from="Array.from(attentionFound?.sources || []).filter(source =&gt; source.state !== 'available')
+                .map(source =&gt; Object.assign({}, source, {shown: stateText[source.state] || source.state}))"/>
+        <set field="failedText" from="Array.from(new Set([].concat(Array.from(homeFound?.failedSources || []),
+                Array.from(upcomingFound?.failedSources || []), Array.from(attentionFound?.failedSources || [])))).join(', ')"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Marketing landing page for marketing staff." type="p"/>
+        <label text="Marketing" type="h5"/>
+        <section name="NoRead" condition="!can.anyRead">
+            <widgets>
+                <label text="Home summarizes the campaigns, sends, audiences and events of your organizations. Nothing of it is open to you."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ReaderHome" condition="can.anyRead">
+            <widgets>
+                <form-single name="HomeScope" transition="." map="scope">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:scope.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row>
+                    </field-layout>
+                </form-single>
+                <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationRefused"/>
+                <label text="${scopeText}" type="p" style="text-caption m-muted" condition="!organizationRefused"/>
+                <label text="Could not be read just now: ${failedText}. The rest is shown." type="p" style="text-warning"
+                        condition="failedText"/>
+                <container-box condition="!organizationRefused">
+                    <box-header title="Marketing at a glance"/>
+                    <box-body>
+                        <label text="The cards open their lists as campaigns, sends, audiences and events are set up; until then each is not available, and none is shown as zero."
+                                type="p" style="text-caption m-muted"/>
+                        <label text="Home could not be read just now." type="p" style="text-negative" condition="!homeFound?.cards"/>
+                        <form-list name="MarketingCards" list="cardRows" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Card"><display/></default-field></field>
+                            <field name="shown"><default-field title="Now"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="shown"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box condition="!organizationRefused">
+                    <box-header title="Upcoming"/>
+                    <box-body>
+                        <label text="Upcoming could not be read just now." type="p" style="text-negative" condition="!upcomingFound?.sources"/>
+                        <label text="Nothing planned yet." type="p" style="m-muted" condition="upcomingFound?.sources &amp;&amp; !upcomingRows.length"/>
+                        <form-list name="Upcoming" list="upcomingRows" skip-form="true" paginate="false" condition="upcomingRows.length">
+                            <field name="kind"><default-field title="Kind"><display/></default-field></field>
+                            <field name="title"><default-field title="Title"><display/></default-field></field>
+                            <field name="date"><default-field title="Date"><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                            <field name="state"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="kind"/></column>
+                                <column><field-ref name="date"/><field-ref name="state"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="UpcomingSources" list="upcomingSources" skip-form="true" paginate="false"
+                                condition="upcomingSources.length">
+                            <field name="title"><default-field title="Source"><display/></default-field></field>
+                            <field name="shown"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="shown"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box condition="!organizationRefused">
+                    <box-header title="Attention"/>
+                    <box-body>
+                        <label text="Attention could not be read just now." type="p" style="text-negative" condition="!attentionFound?.sources"/>
+                        <label text="Nothing needs attention." type="p" style="m-muted" condition="attentionFound?.sources &amp;&amp; !attentionRows.length"/>
+                        <form-list name="Attention" list="attentionRows" skip-form="true" paginate="false" condition="attentionRows.length">
+                            <field name="record"><default-field title="Record"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="action">
+                                <default-field title="Action">
+                                    <link url="${actionUrl}" text="${action}" link-type="anchor" condition="actionUrl"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="record"/><field-ref name="reason"/></column>
+                                <column><field-ref name="action"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="AttentionSources" list="attentionSources" skip-form="true" paginate="false"
+                                condition="attentionSources.length">
+                            <field name="title"><default-field title="Source"><display/></default-field></field>
+                            <field name="shown"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="shown"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

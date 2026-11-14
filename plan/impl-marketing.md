@@ -409,7 +409,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 13 (§6 F1–F89) |
-| P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | — |
+| P1 Foundation | Mantle, BOSS | the Marketing root and menu, Home, Settings | built and reviewed Nov 13, merged |
 | P2 Campaigns and approvals | Mantle, BOSS | Campaigns, CampaignDetail, Approvals, CampaignDefaults, Vocabularies | — |
 | P3 Lists, consent and suppressions | Mantle, BOSS | Lists, ListDetail, MemberDetail, Consent, ConsentDetail, Suppressions; Sales' Leads and Accounts bulk action | — |
 | P4 Audience import and merge | Mantle, BOSS | AudienceImport, AudienceMerge | — |
@@ -564,6 +564,221 @@ seeds); stage M0.
   ORG_ZIZI_RETAIL's campaigns, lists or segments by URL, choice, palette or direct service; the administrator adopts
   a legacy list and it becomes editable; a Projects client and a PASS public account are refused the root and every
   `ironstone.marketing` service.
+
+**Built Nov 13 (P1).** mr-mantle and mr-boss on branch `mkt/p1` (hashes in the worker's reply); mr-moqui unchanged, no Rust
+built.
+- Checked first (the code over the plan): F1 (the root grant live for `ADMIN` and `BOSS_MARKETING_ADMIN`, ALWAYS with
+  `MANTLE_ACTIVE_ORG`; the root's comment said otherwise), F2 (nine placeholders), F3, F4, F7, F10, F45, F58, F69 and F77;
+  impl-sales P1's Built and Review notes (the scope module, the all-organizations permission of the user's call, the bundles,
+  the area deny, the root's record panels of its own hosts only) and Sales.js, SalesAccess.js, SalesAccess.spec.js and
+  SalesSpecLib.js as the pattern; Sales' readiness and settings rows (P2) for the registries. The code over the plan:
+  - the ContactList filter as the plan words it would hide every mailbox and every other organization's list from each BOSS
+    read under an ordinary grant: the Inbox's mailboxes (owned by their creators' organizations or none), Commons' contact record
+    Consent tab (a Services user lost Retail's "Ziziwork News" from a contact's consent state; Comms' `Consent` spec failed) and
+    the list services' own finds, which the contact administrator's "every list" needs. Built: the filter leaves a mailbox out
+    (`contactListTypeEnumId` MAILBOX or the owner), and the list services, Mantle's `ConsentServices` (13 reads),
+    `CommunicationServices` (2) and Comms' `get#ConsentOptions` read lists with authorization off under their own rules, as
+    before P1 (no filter applied then); the view `ForumMailboxReceipt` gains the list's type and owner as aliases, as a filter
+    refuses a view that lacks the field's alias;
+  - the plan names no all-organizations permission: `MARKETING_ALL_ORGANIZATIONS` is added for the administrator alone, on
+    Sales', People's and Maintenance's pattern (the user's calls for those apps), so the administrator's services agree with its
+    root's `MANTLE_ACTIVE_ORG`;
+  - the plan names no Mantle scope module for P1: `mantle/marketing/MarketingAccess.js`, as Sales' P1 built SalesAccess.js;
+  - Marketing's Mantle seeds other than the permissions and filter rows go in a file of their own, `data/MarketingSeedData.xml`.
+- Mantle:
+  - `data/MantleSetupData.xml` (one block after `WORKING_HOURS_EDIT`): the fifteen `MARKETING_*` permissions of design §1.1 with
+    `MARKETING_AUDIENCE_IMPORT`, `MARKETING_ALL_ORGANIZATIONS` and Comms' `MESSAGE_TEMPLATE_VIEW`, `_EDIT`,
+    `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW`, each granted to `ADMIN`; the filter rows `MANTLE_USER_ORG_MCMP`,
+    `_MSEG`, `_CLST` and their `MANTLE_ACTIVE_ORG_*` twins (MarketingCampaign by `organizationPartyId`, MarketSegment and
+    ContactList by `ownerPartyId`, a mailbox left out), an unowned or `_NA_` row found only by an administrator's grant with no
+    organization active.
+  - `entity/MarketingEntities.xml`: `MarketingCampaign.organizationPartyId`, audit-logged, with its Organization relationship;
+    `ContactList.ownerPartyId` audit-logged on update (adoption changes it, §2's "a list's owner"). `data/MarketingSeedData.xml`:
+    the role `MarketingOrganization`, `PcpTracking` and `PcsCheckout` (F10), and `get#Readiness` callable by every user (it checks
+    `MARKETING_CONFIGURE` itself, as Sales' readiness).
+  - `service/mantle/marketing/MarketingAccess.js` (no service): `capabilities()` (each permission; the reads `anyRead` of
+    `MARKETING_VIEW`, `MARKETING_AUDIENCE_VIEW` or `MARKETING_REPORT_VIEW`, `audienceRead`, `reportRead`; an edit permission alone
+    reads nothing), `scope()` (the caller's own organizations, the active one when it is theirs; every internal organization for a
+    system administrator or a holder of `MARKETING_ALL_ORGANIZATIONS`), `covers` (never an unowned record), `requireCapability`,
+    `requireOrganization` (`ORGANIZATION_DENIED`), `organizationIds`, and the list rule `listReachable` and `requireListOwner`
+    (F77).
+  - `ContactListServices.xml`: `get#ContactListAccess` answers a list that is not a mailbox as missing (`exists` false) unless the
+    current user works for its owner, holds `MARKETING_ALL_ORGANIZATIONS` (an internal organization's list) or is a contact
+    administrator or `ADMIN`; an unowned list is reached by no one else until adopted, so `update#`, `find#ContactLists`,
+    `find#ContactListParties`, `join#`, `add#`, `remove#`, `decline#` and `set#ContactListPartyDelivery` refuse it as they refuse
+    a missing list; with no user (a run as the system) as before; `create#ContactList` takes such a list's owner from the caller's
+    organizations (`ORGANIZATION_DENIED`), any for a contact administrator; mailboxes, the list sends and Shop's internal
+    subscription service are unchanged.
+  - `CampaignServices.xml` over `MarketingAdoption.js`: `preview#Adoption` (the unowned campaigns, non-mailbox lists and segments,
+    200 of each, with their revision) and `apply#Adoption` (each assignment on its own transaction with one result: adopted, or
+    `UNKNOWN_KIND`, `RECORD_UNAVAILABLE`, `ALREADY_OWNED`, `REVISION_CHANGED`, `ORGANIZATION_DENIED`; a campaign gains its dated
+    MarketingOrganization row; the owner audited with the reason "Adopted by"), `MARKETING_CONFIGURE`.
+  - `MarketingWorkspaceServices.xml` over `MarketingWorkspace.js`: `get#Home` (six cards), `get#Upcoming` (four sources) and
+    `get#Attention` (adoption for a configurer; approvals, deliveries), each source answered by name, `notAvailable` until its
+    phase, a failing one named in `failedSources` with the others answered; `get#Settings` (the adoption entry) and `get#Readiness`
+    (`marketing.adoption`: the unowned records, instance-wide as they are no organization's, fix `marketingAdoption`).
+- BOSS:
+  - `data/BossSetupMarketingData.xml` (new, F69): the root user group `BOSS_MARKETING` and `_AUTHOR`, `_AUDIENCE`, `_APPROVER`,
+    `_DISPATCH`, `_EVENTS`, `_ANALYST`, `_READ`; on the `BOSS_MARKETING` artifact group (a second element) the
+    `ironstone\.marketing\..*` pattern and `BOSS_MARKETING_ROOT` (ALLOW, `MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`);
+    `BOSS_MKT_SETTINGS` (Settings denied to the root user group); design §1.1's grants (the author also `MESSAGE_TEMPLATE_VIEW`; the
+    administrator `MARKETING_CONFIGURE` with every view and edit, `MESSAGE_TEMPLATE_VIEW` and `MARKETING_ALL_ORGANIZATIONS`, no
+    approval, dispatch or Comms configuration); nine capability bundles (1600–1680, the launcher's artifact with the root's
+    filter sets); the readiness provider `marketing.setup` and the settings entry `marketing.settings`. `data/BossSetupData.xml`:
+    `marketing` in all fifteen deny rows (the longest 254, none split) and two comments. `service/ironstone/admin/Admin.js`
+    settingsRoutes `marketingSettings` and `marketingAdoption`.
+  - `ironstone.marketing.ContextServices` (`get#SharedContext`, `check#Record`, `get#Choices`, `search#Records`) over
+    `service/ironstone/marketing/Marketing.js` (tables `mountRoots`, `areas`, `recordKinds`, `choiceSources`, `searchFinds`,
+    `linkPaths`): the root grant read from the user's own groups; a root other than `Marketing` refused (`MARKETING_CONTEXT`);
+    record kinds organization, campaign, list (not a mailbox) and segment, each by its organization, an unowned one
+    `RECORD_UNAVAILABLE`; choices organizations; no palette source yet (none registered); capability `settings` (the area's
+    grant and `MARKETING_CONFIGURE`). `template/MarketingParts.xml` holds `choices`.
+  - Screens: the root (`get#SharedContext` in always-actions; a record panel naming a record refused, Marketing having no host
+    yet; `<shell-providers>` with the `marketing` keymap, `g m`; the stale comment replaced, F1; Settings `menu-include`
+    `MARKETING_CONFIGURE`); Home's frame (HomeScope's organization checked by `check#Record`; MarketingCards, Upcoming and Attention
+    each from its W service, sources shown Not available, a failing source named, a failing panel alone; a user who reads nothing
+    told so); Settings (Index: SettingsIndex and the readiness with its fix places; Adoption: the records awaiting adoption, each
+    adopted to an organization chosen at the revision read, its result as a message). The five placeholders removed; Segments and
+    Newsletters are redirects to Home hidden from the menu, to Audiences and Sends at P5 and P8 (F2).
+  - Demo: `data/BossZZMarketingDemoData.xml` (new): `marketing.author`, `.audience`, `.approver`, `.dispatch`, `.events`,
+    `.analyst`, `.reader` (agents of Retail, each in `BOSS_USERS`, `BOSS_MARKETING` and their group), `marketing.admin` (Retail,
+    `BOSS_MARKETING_ADMIN` alone) and `marketing.author2` (Ziziwork Services only); none in `ADMIN`. BossUsersDemoData is not
+    touched.
+- Specs:
+  - Mantle `test/marketing/MarketingScope` (6 features, 1.1 s): the filters under an ordinary and an administrator's grant
+    (another organization's and the unowned campaign, segment and list left out, a mailbox of another organization kept, the
+    active organization's only); the list services (own list reached, another's and the unowned one missing, rename of the
+    unowned refused, a contact administrator reaching both, create for another organization or none refused); MarketingAccess's
+    organizations, refusal and an edit permission reading none; adoption (preview, readiness warning, the seven outcomes, a
+    second apply `ALREADY_OWNED`, the campaign's MarketingOrganization row, the adopted list then reached, a non-configurer and
+    another organization refused); Home's sources Not available, Attention's adoption source, the refusals.
+  - mr-boss `test/Marketing/MarketingSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`, `screenRefusal`,
+    `hit`, `shell`); `MarketingAccess` (7 features, 3.0 s feature time, the slowest 0.9 s): the context and its refusals (another
+    root, another app's user, a client, a PASS account); the menu, keys and launcher per group; each group's capabilities exactly
+    (a custom group with the root grant and `MARKETING_CAMPAIGN_EDIT` alone reading no organization, record or choice, and told so
+    on Home); the authors of Retail and Services refused each other's campaign, list and segment with the same parameters, the
+    administrator every organization's and no unowned record; the services refused without the root grant, a write verb of the
+    package denied a client and admitted for an author, the raw Mantle mutators and `apply#Adoption` permitted to no Marketing
+    group; Home's one qvt render, Settings/Index's and Settings/Adoption's one html render (the administrator's), Settings refused
+    an author, a Party's panel refused under the root; the bundles exactly their groups' grants, the import permission the
+    audience manager's and administrator's, the provider and the entry, Admin's index listing the entry to the administrator only.
+    `AppOrganizationFilters` gains the three entities in its two filter features (+0.1 s).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingFoundationWalk` (5 features: each group's menu with each
+    entry opened or refused; `marketing.reader` opens Home and no settings; the Services author sees none of Retail's records by
+    record check, choice, palette, Home or the list services; the administrator adopts a legacy list on Settings › Adoption, a
+    second adoption refused, and the Retail author then reaches it; a client and a PASS account refused the root and every
+    `ironstone.marketing` service, an author not). `test/acceptance/AppStructure`'s placeholder count is now none (it said at least
+    16 with 9 left).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingScope 6 of 6; Consent, ContactListSend,
+  DeliveryLedger, InboxThreads, Mailboxes, ContactBooks, OrganizationRowFilter, RecordVisibility, SalesOrganizationScope,
+  SalesLeadIntake, SalesWorkspace, ShopCheckout, ShopCustomer, UniversalSearch, MantleSearch, InternalOrganizations, Constitution,
+  SitePages, SupportChannels and InternalMessages 189 of 189 (before the authorization-off list reads; Consent, ContactListSend,
+  DeliveryLedger, InboxThreads, Mailboxes, InternalMessages, ShopCheckout and ShopCustomer again after them, 98 of 98). mr-boss
+  MarketingAccess 7 of 7, AppOrganizationFilters 7 of 7; ProjectsAccess (the deny rows), AdminRegistries, AdminCapabilities,
+  AdminAccess, AdminGroups, AdminUsers, AdminLifecycle, AdminOrganizations, CommsModeration, Compose, Consent, Contacts, Inbox,
+  InboxMailboxes, Unsubscribe, SalesAccess, SalesSettings, PeopleAccess, MaintenanceAccess, InsightsAccess, CommerceAccess,
+  CustomerServiceAccess, ManufacturingAccess and PurchasingAccess, all passing (Consent once the list reads were authorization-off),
+  then CommonsSettings, SalesOpportunities, SalesIntake, SalesHome and SalesAccounts 23 of 23. `moqui lint --screens` (release
+  binary): 141 flagged sites, as before, none in the Marketing screens. Prettier clean on the new JavaScript. Not run:
+  ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's `setup#UserOrganizationInfo` row names Marketing's root; ss-inventory has no row for P1's screens.
+- Design edits: design-marketing §1.1 (as built: the permissions, the scope module, the grants, the administrator, the filter rows,
+  the list rule and Commons' authorization-off reads), §3 Home, §12 Settings and §15.4 (as built); design-admin §14.2's Marketing
+  row; design-drawers-commons' Mailboxes row (owner contract: the list services' organization check, F77).
+- Findings, numbered by the lead F90 to F98 in order:
+  - the ContactList filter, worded as the plan has it, would have hidden mailboxes and other organizations' lists from every BOSS
+    read under an ordinary grant (Commons' contact record Consent tab, the list services, Comms' consent options): the mailbox
+    exemption and the authorization-off reads keep Commons' and Comms' behavior as before P1; consent's organization scope is P3's;
+  - `ForumMailboxReceipt` named ContactList without its owner or type, so any find of it under an app root's grant would have been
+    refused once the list filter existed; aliases added;
+  - the plan names no all-organizations permission for Marketing; `MARKETING_ALL_ORGANIZATIONS` is built for the administrator
+    alone, as Sales', People's and Maintenance's are by the user's calls;
+  - design §1.1 gives the administrator "MARKETING_CONFIGURE plus explicit view/edit grants": built as every view and edit of the
+    table, `MESSAGE_TEMPLATE_VIEW` and the all-organizations permission, no approval, dispatch or Comms configuration (Sales'
+    choice; Maintenance's administrator got every app permission by the user's call);
+  - `MESSAGE_TEMPLATE_EDIT`, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` are held by `ADMIN` alone: design §1.1
+    gives them to "designated template editors" and as explicit grants with no group named, which P6 needs (a Comms or Admin
+    group, or a Marketing one);
+  - the list services' new rule is the organization alone, with no Marketing permission (any employee of a list's organization
+    reaches it through ContactListServices as before; Marketing's own list services and the list policy are P3's), and a call with
+    no user is unchanged;
+  - the Settings area's deny is met after the screen's own capability check in a render (always-actions run first), as Sales'
+    and Maintenance's settings are; the spec takes either refusal;
+  - the readiness check of unowned records is instance-wide (they are no organization's), under a provider scoped by
+    organization, so Admin's Health shows it once per organization asked;
+  - `test/acceptance/AppStructure`'s placeholder count was stale before this phase (at least 16 with 9 left), now none.
+- For the lead:
+  - budget share: mr-mantle about 1.1 s (MarketingScope); mr-boss server about 3.1 s (MarketingAccess 3.0 s, AppOrganizationFilters'
+    rows 0.1 s); no client spec;
+  - merge hot spots (Sales P7 on `sal/p7` may touch the first three): mr-boss `data/BossSetupData.xml` (all fifteen deny rows; the
+    deny comment; the capability registry comment), `data/BossUsersDemoData.xml` not touched, `service/ironstone/admin/Admin.js`
+    (settingsRoutes, after Sales'), `service/ironstone/comms/ConsentServices.xml` (one read), `test/AppOrganizationFilters.spec.js`
+    and `test/screens/OrganizationRows.xml`, `test/acceptance/AppStructure.spec.js`, `plan/design-admin.md` §14.2,
+    `plan/design-drawers-commons.md` (the Mailboxes row), `plan/design-marketing.md`, `plan/usl-inventory.md`; mr-mantle
+    `data/MantleSetupData.xml` (the Marketing permission block after `WORKING_HOURS_EDIT`; the filter rows at the end of both
+    sets, after Sales'), `entity/MarketingEntities.xml`, `entity/ForumEntities.xml`, `service/mantle/party/ConsentServices.xml`
+    and `CommunicationServices.xml` (the list reads), `service/mantle/marketing/ContactListServices.xml`;
+  - the user's calls: whether Marketing gets `MARKETING_ALL_ORGANIZATIONS` (built), the administrator's grants (built as above),
+    and who holds Comms' three explicit permissions (before P6); built meanwhile as above.
+
+**Review Nov 13 (P1).** A fresh review of `mkt/p1` (mr-mantle 4bee3a0c, mr-boss a51564a1) against P1, §2, §4 and design §1.1,
+§1.2, §3, §12 and §15.4.
+- Checked and sound:
+  - the twenty permissions each granted to `ADMIN`; the six filter rows (MarketingCampaign by `organizationPartyId`, MarketSegment and
+    ContactList by `ownerPartyId`, the list rows leaving a mailbox out); the only view over the three entities is
+    `ForumMailboxReceipt`, whose new aliases are found by the filter through their member field (`listOwnerPartyId` reads
+    `ownerPartyId`) and whose own condition keeps it to mailboxes, so the filter never narrows it; no screen of BOSS, PASS or the base
+    components reads the three entities directly; Products' `marketSegmentId` columns read no MarketSegment row; Shop's checkout
+    opt-in and store topics (StoreTopics.js, StoreCheckout.js) and the Forum's list reads go through EntityLib or Forum's helpers
+    with authorization off, and every Forum list is a mailbox;
+  - the 22 authorization-off reads (ContactListServices 6, Mantle ConsentServices 13, CommunicationServices 2, Comms'
+    `get#ConsentOptions` 1): a find with `disableAuthz()` is neither checked nor filtered, and ContactList had no filter
+    before P1, so each reads exactly what it read on master and none returns a list, member or consent row its caller could not see
+    before. Each keeps its own rule after the read: the list services ask `get#ContactListAccess` (now narrower: F77) before using
+    the list, except `end#ContactListParty` (internal; `leave#` ends only the caller's own rows, so a member outside the owner's
+    organization can still leave a list) and `send#ContactListEmail` (`allow-remote="false"`, unchanged by the plan); the consent
+    services are unchanged (their callers' contact-admin and token checks; their organization scope is P3's); the two
+    CommunicationServices reads take only `defaultDeliveryEnumId` of the caller's own memberships;
+  - the list rule: `get#ContactListAccess` answers a non-mailbox list outside the rule as missing (`exists` false), so `update#`,
+    `find#ContactLists`, `find#ContactListParties`, `join#`, `add#`, `remove#`, `decline#` and `set#ContactListPartyDelivery` refuse it
+    as a missing list; `ADMIN` reaches every list through `CONTACT_ADMIN`; every caller of the list services in Mantle, BOSS
+    (BasicComms Mail, Inbox, Compose, Comms Home) and the Forum works on mailboxes, whose branch is unchanged; `create#Message`'s
+    non-mailbox branch now needs the owner's organization (no caller posts to one); Shop's subscriptions and both unsubscribe pages
+    use ConsentServices, not the list services;
+  - adoption's scope (`MARKETING_CONFIGURE`; an organization of the configurer's scope; mailboxes excluded; once per record; the
+    campaign's dated MarketingOrganization row; the owner audited "Adopted by"); Marketing.js (root grant from the user's own rows,
+    Projects clients and PASS accounts refused, record checks one answer for missing, outside and unowned); the area deny with
+    `MARKETING_CONFIGURE` on the menu; Home's sources (Not available, never zero; a failure named); the bundles equal to the grants;
+    the fifteen deny rows (all name `marketing`, the longest 254); the demo users.
+- Fixed:
+  - R1 (integrity, medium). `apply#Adoption` read and checked each record (unowned, revision) before its own transaction and wrote it
+    inside, unlocked: two administrators adopting the same record at once could both pass, the second overwriting the first's owner
+    and a campaign gaining two MarketingOrganization rows. The record is now read `forUpdate` inside the adoption's transaction and
+    checked there, so the second waits and answers `ALREADY_OWNED`.
+  - R2 (revisions, low). The revision was checked only when given, so an assignment naming none adopted whatever the record had
+    become (§2: every write names the revision it read). It is now required (`REVISION_REQUIRED`, after `ALREADY_OWNED` so a
+    repeat still answers that). The Adoption screen always posted it; MarketingScope's campaign assignment now names it and a case
+    with none is refused (fails on the unfixed code); the acceptance MarketingFoundationWalk posts the list's revision (not run).
+  - R3 (scope, low). Comms' `get#ConsentOptions` now reads every list past the new filter, and checked no permission itself (its
+    two callers check the contact admin first). It now lists the lists to a contact admin only, so the authorization-off read
+    cannot reach anyone else if a later caller forgets.
+- Findings, numbered by the lead F99 to F102 in order:
+  - `apply#Adoption`'s check-then-write race and optional revision (R1, R2);
+  - Comms' `get#ConsentOptions` gated on the contact admin (R3);
+  - `create#ContactList` lets a contact administrator create a non-mailbox list with no owner, which is then unowned (awaiting
+    adoption, reached only by contact administrators): kept, as the plan gives the contact administrator every list;
+  - the readiness check and the Adoption preview are instance-wide (unowned records are no organization's): a configurer of one
+    organization sees every unowned record's name; today only `BOSS_MARKETING_ADMIN` (every organization) holds the permission.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingScope 6 of 6 (1.0 s), Consent 17 of 17 (0.8 s),
+  ContactListSend 14 of 14 (0.6 s); mr-boss MarketingAccess 7 of 7 (3.1 s), Consent 12 of 12 (0.7 s), AppOrganizationFilters 7 of 7
+  (0.3 s), Contacts 43 of 43, Unsubscribe 8 of 8. Not run: the acceptance MarketingFoundationWalk (changed: its adoption posts the
+  revision; AGENTS.md asks a changed acceptance test to be run, the reviewer brief says not to), test-apps.
+- For the lead:
+  - budget share unchanged by the review (MarketingScope gains one assignment);
+  - merge hot spots as the Built note, plus `service/ironstone/comms/ConsentServices.xml` `get#ConsentOptions` (mr-boss) and
+    `MarketingAdoption.js` (mr-mantle);
+  - the user's three calls (Marketing's `MARKETING_ALL_ORGANIZATIONS`, the administrator's grants, who holds `MESSAGE_TEMPLATE_EDIT`,
+    `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW`) are open; nothing in the review depends on their answers.
 
 ### P2 — Campaigns and approvals
 
@@ -1467,6 +1682,9 @@ design-marketing.md or the owner's design.
 | Nov 13, 2026 | Sales' Accounts is mounted at `Marketing/Leads/Accounts` (P3) for the bulk action, beside Leads; design §2 gains the row | The user's call (Nov 13, as recommended). The plan's choice (F64): Sales' mount row admits Leads and LeadSources only, and impl-sales §4 (Nov 11) has Marketing mount Accounts; the design had no path for it |
 | Nov 13, 2026 | Marketing's BOSS setup and demo go in files of their own (`data/BossSetupMarketingData.xml`, `data/BossZZMarketingDemoData.xml`), as Sales' and Maintenance's do | The plan's choice (F69), so Marketing's track and Sales' do not meet in one file |
 | Nov 13, 2026 | §5 Q6 answered as recommended: P22 adds framework support in mr-moqui, a conf-level `sms-consent` provider a component such as Mantle registers, and a per-number day limit for promotional texts apart from `smsSystemMaxPerDay`; a campaign text is sent by the system, not as the releasing user | The user's call; F72, F74. P22 works in an mr-moqui worktree |
+| Nov 13, 2026 | `MARKETING_ALL_ORGANIZATIONS` is kept, granted to `ADMIN` and `BOSS_MARKETING_ADMIN` alone, as Sales', People's and Maintenance's all-organizations permissions | The user's call (P1) |
+| Nov 13, 2026 | `BOSS_MARKETING_ADMIN` keeps the grants P1 built: every Marketing view and edit, `MESSAGE_TEMPLATE_VIEW` and all-organizations; no approve, dispatch or Comms configuration, so approval and dispatch stay with their own groups | The user's call (P1), as Sales' administrator |
+| Nov 13, 2026 | Comms' explicit permissions are split by Marketing role: `MESSAGE_TEMPLATE_EDIT` to the Marketing content author group, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` to `BOSS_MARKETING_ADMIN`; Comms' own groups gain them when Comms' settings area exists (§7). Granted in P6 with the screens that use them | The user's call (P1) |
 
 ## 5. Open questions
 
@@ -1575,6 +1793,19 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F87 | P0 (Nov 13): nothing writes TrackingCodeVisit, TrackingCodeOrder, TrackingCodeOrderReturn or SalesOpportunityTracking in any component or crate; only their definitions exist (mr-mantle MarketingEntities.xml:354-418, SalesEntities.xml:188) | P15 and P20 as designed; Sales P5 writes SalesOpportunityTracking |
 | F88 | P0 (Nov 13): the demo: ORG_ZIZI_RETAIL owns POPC_DEFAULT (its store's tax gateway LOCAL, mr-mantle data/ZcaProductDemoData.xml:196) and the gateways TEST_APPROVE and BOSS_COM_HOSTED (mr-boss data/BossCommerceDemoData.xml:74-90), and the PASS site ZIZI_SHOP, made by Commerce's demo service, disabled until published, with Account, Billing, Support and Shop mounts (BossZCommerceDemoData.xml:15-19; service/ironstone/commerce/Demo.js:16); ORG_ZIZI_SERVICES owns BOSS_COM_DIGITAL and ZIZI_DIGITAL; no organization has a seller tax preference (impl-sales F62). A run captures mail with `mail_capture_sends=true` (docs/dev/JS-Testkit.md:341-346) | P1's users of ORG_ZIZI_RETAIL and ORG_ZIZI_SERVICES as written; P7 adds the Marketing mount to ZIZI_SHOP; P17 sets ORG_ZIZI_RETAIL's tax preference. P17 changed |
 | F89 | P0 (Nov 13): the earlier plans' §7 rows naming this plan: impl-sales §7 (P3, P5, P11, P13, P15, P17, P20, under the names §1 uses), impl-people §7 (P12, P21, CheckIn's route group), impl-maintenance §7 (none) | Consistent with §1, but for Accounts' mount (F64), which impl-sales F110 already names |
+| F90 | P1 (Built Nov 13): the ContactList filter, worded as the plan has it, would have hidden mailboxes and other organizations' lists from every BOSS read under an ordinary grant (Commons' contact record Consent tab, the list services, Comms' consent options): the mailbox exemption and the authorization-off reads keep Commons' and Comms' behavior as before P1; consent's organization scope is P3's | P1: as its Built note says |
+| F91 | P1 (Built Nov 13): `ForumMailboxReceipt` named ContactList without its owner or type, so any find of it under an app root's grant would have been refused once the list filter existed; aliases added | P1: as its Built note says |
+| F92 | P1 (Built Nov 13): the plan names no all-organizations permission for Marketing; `MARKETING_ALL_ORGANIZATIONS` is built for the administrator alone, as Sales', People's and Maintenance's are by the user's calls | P1: as its Built note says |
+| F93 | P1 (Built Nov 13): design §1.1 gives the administrator "MARKETING_CONFIGURE plus explicit view/edit grants": built as every view and edit of the table, `MESSAGE_TEMPLATE_VIEW` and the all-organizations permission, no approval, dispatch or Comms configuration (Sales' choice; Maintenance's administrator got every app permission by the user's call) | P1: as its Built note says |
+| F94 | P1 (Built Nov 13): `MESSAGE_TEMPLATE_EDIT`, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` are held by `ADMIN` alone: design §1.1 gives them to "designated template editors" and as explicit grants with no group named, which P6 needs (a Comms or Admin group, or a Marketing one) | P1: as its Built note says |
+| F95 | P1 (Built Nov 13): the list services' new rule is the organization alone, with no Marketing permission (any employee of a list's organization reaches it through ContactListServices as before; Marketing's own list services and the list policy are P3's), and a call with no user is unchanged | P1: as its Built note says |
+| F96 | P1 (Built Nov 13): the Settings area's deny is met after the screen's own capability check in a render (always-actions run first), as Sales' and Maintenance's settings are; the spec takes either refusal | P1: as its Built note says |
+| F97 | P1 (Built Nov 13): the readiness check of unowned records is instance-wide (they are no organization's), under a provider scoped by organization, so Admin's Health shows it once per organization asked | P1: as its Built note says |
+| F98 | P1 (Built Nov 13): `test/acceptance/AppStructure`'s placeholder count was stale before this phase (at least 16 with 9 left), now none | P1: as its Built note says |
+| F99 | P1 (Review Nov 13): `apply#Adoption`'s check-then-write race and optional revision (R1, R2) | P1: as its Review note says |
+| F100 | P1 (Review Nov 13): Comms' `get#ConsentOptions` gated on the contact admin (R3) | P1: as its Review note says |
+| F101 | P1 (Review Nov 13): `create#ContactList` lets a contact administrator create a non-mailbox list with no owner, which is then unowned (awaiting adoption, reached only by contact administrators): kept, as the plan gives the contact administrator every list | P1: as its Review note says |
+| F102 | P1 (Review Nov 13): the readiness check and the Adoption preview are instance-wide (unowned records are no organization's): a configurer of one organization sees every unowned record's name; today only `BOSS_MARKETING_ADMIN` (every organization) holds the permission | P1: as its Review note says |
 
 ## 7. Later
 
