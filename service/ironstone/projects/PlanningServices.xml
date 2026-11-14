@@ -103,8 +103,9 @@ along with this software (see the LICENSE.md file). If not, see
             const openSprintIds = sprints.map((sprint) => sprint.workEffortId)
 
             // the project's tasks: parents, which have children (cancelled ones aside), names, for the leaves and the epics
-            const all = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', rootWorkEffortId)
-                    .condition('workEffortTypeEnumId', 'WetTask').selectField('workEffortId').selectField('parentWorkEffortId').selectField('workEffortName')
+            // (never a confidential issue's task the user is no Owner of: HiddenItems.js)
+            const all = Array.from(ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', rootWorkEffortId)
+                    .condition('workEffortTypeEnumId', 'WetTask')).selectField('workEffortId').selectField('parentWorkEffortId').selectField('workEffortName')
                     .selectField('statusId').selectField('sequenceNum').selectField('estimatedPoints').selectField('estimatedWorkTime').limit(20000).list())
             const byId = {}
             const openChildren = {}
@@ -1307,7 +1308,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const ids = projects.map((row) => row.workEffortId)
                 // a project without dates spans its items
                 const spans = {}
-                if (ids.length) for (const row of ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', 'in', ids).condition('workEffortTypeEnumId', 'WetTask')
+                if (ids.length) for (const row of ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', 'in', ids).condition('workEffortTypeEnumId', 'WetTask'), vis)
                         .condition('statusId', 'not-equals', 'WeCancelled').selectField('rootWorkEffortId,estimatedStartDate,estimatedCompletionDate').list()) {
                     const span = spans[row.rootWorkEffortId] || (spans[row.rootWorkEffortId] = [null, null])
                     const start = dayOf(row.estimatedStartDate) || dayOf(row.estimatedCompletionDate)

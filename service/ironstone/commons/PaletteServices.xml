@@ -304,6 +304,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (type === 'MantleWorkEffort') type = workEffortTypeEnumId === 'WetEvent' ? 'MantleEvent' : workEffortTypeEnumId === 'WetTask' ? 'MantleTask'
                 : workEffortTypeEnumId === 'WetProject' ? 'MantleProject' : workEffortTypeEnumId === 'WetSprint' ? 'MantleSprint'
                 : workEffortTypeEnumId === 'WetMilestone' ? 'MantleMilestone' : workEffortTypeEnumId === 'WetRelease' ? 'MantleRelease' : null
+            // a confidential issue's task the user is no Owner of has no link, from a search result, a notification or a card
+            // (projects/HiddenItems.js)
+            if (type === 'MantleTask' && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').shown(id)) { url = null; icon = 'sym_o_task_alt'; return }
             // a client contact (the PROJECT_CLIENT permission, impl-projects.md P10) has Projects alone: a project, work item, milestone,
             // release or request opens its detail there (which checks the client may see it), anything else has no link
             if (ec.user.userId && ec.user.hasPermission('PROJECT_CLIENT')) {
@@ -435,6 +438,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{q:text, entityType:docTypes.join(','), limit:limit || 5, highlight:false, indexName:'mantle', linkSet:'boss'}"/>
             <script><![CDATA[
                 const asLink = (url) => url ? String(url).replace(/^\/apps\//, '/qapps/') : null
+                const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
                 for (const result of (found.results || [])) {
                     const key = result.key || {}
                     const id = key[Object.keys(key)[0]] || result.id
@@ -442,6 +446,10 @@ along with this software (see the LICENSE.md file). If not, see
                         partyTypeEnumId: result.attributes ? result.attributes.partyTypeEnumId : null}).call()
                     // a Warehouse kind (shipment, asset, facility) opens under Warehouse or not at all, never the search's own screen
                     const warehouseDoc = ['MantleShipment', 'MantleAsset', 'MantleFacility'].includes(result.entityType)
+                    // a task is a row only with its own link and for a user who may see it (HiddenItems.js mayName): never the
+                    // search's own link and title for one that is not the user's to see
+                    const taskDoc = result.entityType === 'MantleTask'
+                    if (taskDoc && (!link.url || !hiddenItems.mayName(id))) continue
                     const url = link.url || (warehouseDoc ? null : asLink(result.url))
                     if (!url) continue
                     const subtitle = [result.entityTypeName, result.code, result.subtitle].filter((part) => part).join(' · ')

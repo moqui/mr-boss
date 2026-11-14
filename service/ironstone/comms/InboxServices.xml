@@ -912,6 +912,7 @@ along with this software (see the LICENSE.md file). If not, see
                 seen.add(value)
                 optionList.push({value: value, label: `${L(kind)} · ${title || id}${title && title !== id ? ' (' + id + ')' : ''}`, recordEntityName: entityName, recordId: id})
             }
+            const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
             ec.message.pushErrors()
             try {
                 const found = ec.service.sync().name('mantle.GeneralServices.lookup#ById').parameter('lookupId', text).requireNewTransaction(true).call() || {}
@@ -919,7 +920,8 @@ along with this software (see the LICENSE.md file). If not, see
                     ec.resource.expand('PartyNameOnlyTemplate', '', found.party).trim())
                 if (found.orderHeader) add('mantle.order.OrderHeader', found.orderHeader.orderId, 'Order', found.orderHeader.orderName)
                 if (found.request) add('mantle.request.Request', found.request.requestId, 'Request', found.request.requestName)
-                if (found.workEffort) add('mantle.work.effort.WorkEffort', found.workEffort.workEffortId,
+                // a work effort by its id only when the user may see it (projects/HiddenItems.js mayName)
+                if (found.workEffort && hiddenItems.mayName(found.workEffort.workEffortId)) add('mantle.work.effort.WorkEffort', found.workEffort.workEffortId,
                     {WetEvent: 'Event', WetProject: 'Project', WetGoal: 'Goal'}[found.workEffort.workEffortTypeEnumId] || 'Task',
                     found.workEffort.workEffortName)
                 if (found.invoice) add('mantle.account.invoice.Invoice', found.invoice.invoiceId, 'Invoice', found.invoice.description)
@@ -938,7 +940,9 @@ along with this software (see the LICENSE.md file). If not, see
                         const target = ENTITIES[result.entityType]
                         if (!target) continue
                         const key = result.key || {}
-                        add(target[0], key[Object.keys(key)[0]] || result.id, target[1], result.title)
+                        const foundId = key[Object.keys(key)[0]] || result.id
+                        if (target[0] === 'mantle.work.effort.WorkEffort' && !hiddenItems.mayName(foundId)) continue
+                        add(target[0], foundId, target[1], result.title)
                     }
                 } catch (err) { ec.logger.warn(`Record search of ${text} failed: ${err && err.message ? err.message : err}`) }
                 finally { ec.message.clearErrors(); ec.message.popErrors() }

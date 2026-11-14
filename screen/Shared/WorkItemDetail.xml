@@ -42,7 +42,11 @@ along with this software (see the LICENSE.md file). If not, see
     user's timer runs on the item; one timer runs per person, so a start stops a timer on another item
     (mantle.work.TimesheetServices.start#Timer); the Time tab's Clock in and Clock out are the same timer (Start and Stop timer in
     Projects). With peek=true (WorkItems' Peek pane, whose bar has Open full) it renders compact: the title row, the facts, then the
-    description, the sub-items and Chatter one under the other (the tabs would load the whole page, not the pane).
+    description, the sub-items and Chatter one under the other (the tabs would load the whole page, not the pane). A task that is an issue
+    of a repository (Smithy, mr-pass plan/design-smithy.md §8.1, N-BOSS-ISSUE; get#WorkItemDetail's issue) has its number in the
+    repository beside the key, linked to its public page, and on the Overview a Public conversation box with the posts of the issue's
+    topic, apart from Chatter, which stays the internal notes; its description is not edited here (it is the issue's first post). Which tasks and posts the user sees is Mantle's rule (a confidential
+    issue's task is hidden there from all but its Owners).
 
     Customer Service (impl-customer-service P2, crosscut §3.12 Customer Service row): a work item of a case the user sees, at
     CustomerService/Cases/WorkItemDetail, on the Commons task rule, with the way back to its case; finishing it tells the case's
@@ -266,6 +270,8 @@ along with this software (see the LICENSE.md file). If not, see
                 let changed = 0
                 for (const field of Object.keys(posted)) {
                     if (posted[field] === undefined || posted[field] === null) continue
+                    // an issue's text is its topic's first post (mr-pass design-smithy §8.1): never edited as the task's description
+                    if (field === 'description' && detail.issue) continue
                     const value = String(posted[field]).trim()
                     const before = field === 'due' || field === 'start' ? current[field] : field === 'estimate' || field === 'remaining' || field === 'points' || field === 'budget'
                             ? current[field] : current[field]
@@ -440,6 +446,8 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <script><![CDATA[
             projects = appRoot === 'Projects'
+            workItemIssue = null
+            issuePostList = []
             // a client contact (the PROJECT_CLIENT permission; impl-projects.md P10b): the item's overview, its shared sub-items and its
             // messages, no internal tab (links, code, time, files) and no control it would be refused
             clientView = !!ec.user.userId && ec.user.hasPermission('PROJECT_CLIENT')
@@ -510,6 +518,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (projects) {
                 extra = ec.service.sync().name('ironstone.projects.WorkItemServices.get#WorkItemDetail').parameters({workEffortId: workEffortId}).call() || {}
                 detail = extra.detail || {}
+                // a task that is an issue of a repository (Smithy): its number, its public page and its outward conversation
+                workItemIssue = extra.issue || null
+                issuePostList = Array.from(workItemIssue?.postList || [])
             } else {
                 detail = ec.service.sync().name('ironstone.commons.TaskServices.get#TaskDetail').parameters({workEffortId: workEffortId}).call() || {}
             }
@@ -777,6 +788,12 @@ along with this software (see the LICENSE.md file). If not, see
                             <container style="row items-center no-wrap">
                                 <render-mode><text type="qvt"><![CDATA[<q-icon name="${WebUtilities.encodeHtml(typeIcon)}" size="sm" class="q-mr-sm m-muted"><q-tooltip>${WebUtilities.encodeHtml(task.purposeLabel || '')}</q-tooltip></q-icon>${keyChipHtml}]]></text>
                                     <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "WorkItemKey", style: "strong", text: workEffortId})}]]></text></render-mode>
+                                <!-- an issue's number in its repository, linked to its public page -->
+                                <section name="WorkItemIssueNumber" condition="!!workItemIssue"><widgets>
+                                    <link url="${workItemIssue.pageUrl}" url-type="plain" link-type="anchor" target-window="_blank" text="${workItemIssue.numberText}"
+                                            tooltip="The public issue page of ${workItemIssue.repositoryPath}" style="q-mr-sm text-mono" condition="!!workItemIssue.pageUrl"/>
+                                    <label text="${workItemIssue.numberText}" type="span" style="q-mr-sm text-mono m-muted" condition="!workItemIssue.pageUrl"/>
+                                </widgets></section>
                                 <label text="${task.workEffortName}" type="h5" style="${task.isDone ? 'm-muted' : ''}"/>
                             </container>
                         </widgets></section>
@@ -891,7 +908,10 @@ along with this software (see the LICENSE.md file). If not, see
                                             <entity-find entity-name="moqui.basic.Enumeration" cache="true"><econdition field-name="enumTypeId" value="WorkEffortResolution"/>
                                                 <order-by field-name="description"/></entity-find></entity-options></drop-down>
                                     </conditional-field><default-field><ignored/></default-field></field>
-                                    <field name="description"><default-field title="Description (markdown)"><text-area rows="6" cols="70"/></default-field></field>
+                                    <!-- an issue's text is its topic's first post, with the post's revisions: it is not edited here -->
+                                    <field name="description"><conditional-field condition="!!workItemIssue" title="Description">
+                                            <display text="The text is the first post of issue ${workItemIssue?.numberText}: edit it on the issue's page." also-hidden="false"/></conditional-field>
+                                        <default-field title="Description (markdown)"><text-area rows="6" cols="70"/></default-field></field>
                                     <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                                     <field-layout>
                                         <field-ref name="workEffortName"/>
@@ -1109,6 +1129,28 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="value"><default-field><display/></default-field></field>
                                     </form-list>
                                 </box-body-nopad></container-box>
+                                <!-- an issue's outward conversation: what the repository's visitors read and write on its public page -->
+                                <section name="WorkItemIssueConversation" condition="!!workItemIssue"><widgets>
+                                    <container-box><box-header title="Public conversation"/>
+                                        <box-toolbar>
+                                            <link url="${workItemIssue.pageUrl}" url-type="plain" link-type="anchor" target-window="_blank" icon="sym_o_open_in_new"
+                                                    text="Issue ${workItemIssue.numberText}" condition="!!workItemIssue.pageUrl"/>
+                                        </box-toolbar>
+                                        <box-body>
+                                            <label text="What the visitors of ${workItemIssue.repositoryPath} read and write on the issue's page${workItemIssue.confidential ? ' (a confidential issue: its Owners and its reporter)' : ''}. Internal notes stay in Chatter."
+                                                    type="p" style="text-caption m-muted"/>
+                                            <section-iterate name="WorkItemIssuePosts" list="issuePostList" entry="issuePost"><widgets>
+                                                <container style="q-mb-sm">
+                                                    <label text="${issuePost.authorName} · ${issuePost.dateText}${issuePost.markText ? ' · ' + issuePost.markText : ''}" type="div" style="text-caption m-muted"/>
+                                                    <html-view html="${issuePost.bodyHtml}"/>
+                                                </container>
+                                            </widgets></section-iterate>
+                                            <label text="More messages are on the issue's page" type="p" style="m-muted q-mb-none" condition="workItemIssue.hasMore"/>
+                                            <label text="No public messages to show" type="p" style="m-muted q-mb-none" condition="workItemIssue.readable &amp;&amp; !issuePostList.length"/>
+                                            <label text="You cannot read this conversation here" type="p" style="m-muted q-mb-none" condition="!workItemIssue.readable"/>
+                                        </box-body>
+                                    </container-box>
+                                </widgets></section>
                             </container>
                             <container style="col-12 col-md-5">
                                 <container-box><box-header title="Labels"/>

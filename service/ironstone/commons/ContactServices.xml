@@ -631,14 +631,16 @@ along with this software (see the LICENSE.md file). If not, see
                 const closedIds = ['WeComplete', 'WeClosed', 'WeCancelled']
                 const task = (row, roleTypeId) => ({workEffortId: row.workEffortId, workEffortName: row.workEffortName, statusId: row.statusId,
                     estimatedCompletionDate: row.estimatedCompletionDate, roleTypeId: roleTypeId, closed: closedIds.includes(row.statusId)})
-                const rows = Array.from(ec.entity.find('mantle.work.effort.WorkEffortAndParty').condition('partyId', partyId)
-                        .condition('workEffortTypeEnumId', 'WetTask').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
+                // never a confidential issue's task the user is no Owner of (projects/HiddenItems.js)
+                const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
+                const rows = Array.from(hiddenItems.without(ec.entity.find('mantle.work.effort.WorkEffortAndParty').condition('partyId', partyId)
+                        .condition('workEffortTypeEnumId', 'WetTask').condition(cf.makeConditionDate('fromDate', 'thruDate', null)))
                         .orderBy('-estimatedCompletionDate').limit(100).list()).map((row) => task(row, row.roleTypeId))
                 // tasks linked to the party as a record (WorkEffortRecord) have no role
                 const linkedIds = Array.from(ec.entity.find('mantle.work.effort.WorkEffortRecord').condition('recordEntityName', 'mantle.party.Party')
                         .condition('recordId', partyId).selectField('workEffortId').list()).map((link) => link.workEffortId)
-                if (linkedIds.length) rows.push(...Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', linkedIds)
-                        .condition('workEffortTypeEnumId', 'WetTask').orderBy('-estimatedCompletionDate').limit(100).list()).map((row) => task(row, null)))
+                if (linkedIds.length) rows.push(...Array.from(hiddenItems.without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', linkedIds)
+                        .condition('workEffortTypeEnumId', 'WetTask')).orderBy('-estimatedCompletionDate').limit(100).list()).map((row) => task(row, null)))
                 // open ones first, each group undated then latest due; the visibility check stops at the first 100 shown
                 const due = (row) => row.estimatedCompletionDate == null ? Infinity : Number(String(row.estimatedCompletionDate))
                 rows.sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || due(b) - due(a))

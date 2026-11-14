@@ -407,8 +407,8 @@ along with this software (see the LICENSE.md file). If not, see
                 // a maintenance work order only for one Maintenance admits to it (impl-maintenance P4, F69, F78: its reporter follows it in
                 // the request's Maintenance summary, never its time or people)
                 const maintenanceAccess = ec.resource.script('component://mr-mantle/service/mantle/work/MaintenanceAccess.js')
-                const tasks = taskIds.length ? Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', taskIds)
-                        .condition('workEffortTypeEnumId', 'WetTask').orderBy('estimatedCompletionDate').list())
+                const tasks = taskIds.length ? Array.from(ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', taskIds)
+                        .condition('workEffortTypeEnumId', 'WetTask')).orderBy('estimatedCompletionDate').list())
                         .filter((task) => task.purposeEnumId !== 'WepMaintenance' || !maintenanceAccess.workHidden(task.workEffortId, partyId))
                         .map((task) => task.getMap()) : []
                 taskList = tasks.length ? (ec.service.sync().name('ironstone.commons.TaskServices.decorate#TaskRows').parameters({taskList: tasks}).call()?.rowList || []) : []

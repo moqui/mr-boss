@@ -259,9 +259,11 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const parties = (id, roles) => Array.from(ec.entity.find('mantle.work.effort.WorkEffortParty').condition('workEffortId', id).condition('roleTypeId', 'in', roles)
                     .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).orderBy('fromDate').list())
+            const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
             const itemStats = (id) => {
                 const stats = {total: 0, done: 0, open: 0, overdue: 0, actual: 0, estimated: 0, remaining: 0}
-                for (const item of ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', id).condition('workEffortTypeEnumId', 'WetTask')
+                // (a confidential issue's task the user is no Owner of is in no count: HiddenItems.js)
+                for (const item of hiddenItems.without(ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', id).condition('workEffortTypeEnumId', 'WetTask'))
                         .selectField('statusId').selectField('estimatedCompletionDate').selectField('estimatedWorkTime').selectField('actualWorkTime')
                         .selectField('remainingWorkTime').limit(10000).list()) {
                     if (item.statusId === 'WeCancelled') continue
@@ -536,7 +538,7 @@ along with this software (see the LICENSE.md file). If not, see
                     const itemIds = Array.from(ec.entity.find('mantle.work.effort.WorkEffortAssoc').condition('workEffortId', plan.workEffortId)
                             .condition('workEffortAssocTypeEnumId', type).condition(cf.makeConditionDate('fromDate', 'thruDate', null)).selectField('toWorkEffortId').list()).map((row) => row.toWorkEffortId)
                     let total = 0, done = 0
-                    if (itemIds.length) for (const item of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', itemIds).selectField('statusId').list()) {
+                    if (itemIds.length) for (const item of ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', itemIds)).selectField('statusId').list()) {
                         if (item.statusId === 'WeCancelled') continue
                         total++
                         if (item.statusId === 'WeComplete' || item.statusId === 'WeClosed') done++
@@ -580,7 +582,7 @@ along with this software (see the LICENSE.md file). If not, see
             })
             if (access.canManage) box('time', () => {
                 const sums = {estimated: 0, actual: 0, remaining: 0}
-                for (const item of ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', workEffortId).condition('workEffortTypeEnumId', 'WetTask')
+                for (const item of ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', workEffortId).condition('workEffortTypeEnumId', 'WetTask'))
                         .condition('statusId', 'not-equals', 'WeCancelled').selectField('estimatedWorkTime').selectField('actualWorkTime').selectField('remainingWorkTime').limit(10000).list()) {
                     sums.estimated += num(item.estimatedWorkTime); sums.actual += num(item.actualWorkTime); sums.remaining += num(item.remainingWorkTime)
                 }

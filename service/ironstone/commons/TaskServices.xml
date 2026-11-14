@@ -83,6 +83,12 @@ along with this software (see the LICENSE.md file). If not, see
                 if (need !== 'check') ec.message.addError(notAvailable())
                 return
             }
+            // a confidential issue's task (Smithy) that the user is no Owner of is as a task that does not exist, whatever the role
+            // on its project and for its own parties too (projects/HiddenItems.js; Mantle's get#VisibleProjectInfo hiddenItemIds)
+            if (!ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').shown(workEffortId)) {
+                if (need !== 'check') ec.message.addError(notAvailable())
+                return
+            }
             // a production run's operation (a WetTask whose root or parent is a WepProductionRun, impl-manufacturing F38) is
             // shop-floor work, changed only through Manufacturing's production services: no work item in Projects, and
             // read only in Commons
@@ -245,7 +251,10 @@ along with this software (see the LICENSE.md file). If not, see
             for (let i = 0; i < 7; i++) weekText = nextDay(weekText)
             const weekEnd = dayStart(weekText)
 
-            // the slice: the user's rows, the tasks owned, the tasks followed
+            // the slice: the user's rows, the tasks owned, the tasks followed; never a confidential issue's task the user is no
+            // Owner of (projects/HiddenItems.js)
+            const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
+            const hiddenIds = hiddenItems.ids()
             const entries = new Map()
             const entryOf = (id) => {
                 let entry = entries.get(id)
@@ -255,6 +264,7 @@ along with this software (see the LICENSE.md file). If not, see
             for (const wep of ec.entity.find('mantle.work.effort.WorkEffortAndParty').condition('partyId', partyId)
                     .condition('workEffortTypeEnumId', 'WetTask').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
                     .condition(cf.makeCondition('partyStatusId', 'not-in', ['WeptDeclined', 'WeptUnassigned'], true)).list()) {
+                if (hiddenIds.has(wep.workEffortId)) continue
                 const entry = entryOf(wep.workEffortId)
                 entry.roles.add(wep.roleTypeId)
                 const snoozedThru = toMillis(wep.snoozedThruDate)
@@ -263,12 +273,14 @@ along with this software (see the LICENSE.md file). If not, see
             }
             for (const owned of ec.entity.find('mantle.work.effort.WorkEffort').condition('ownerPartyId', partyId)
                     .condition('workEffortTypeEnumId', 'WetTask').list()) {
+                if (hiddenIds.has(owned.workEffortId)) continue
                 const entry = entryOf(owned.workEffortId)
                 entry.row = owned
             }
             const followed = Array.from(ec.entity.find('mantle.party.communication.RecordFollower').condition('recordEntityName', 'mantle.work.effort.WorkEffort')
                     .condition('userId', ec.user.userId).list()).map((follower) => follower.recordId)
             for (const id of followed) {
+                if (hiddenIds.has(id)) continue
                 if (entries.has(id)) { entries.get(id).follower = true; continue }
                 // a task followed and not otherwise the user's: only while the user may see it
                 const task = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', id).one()
@@ -731,7 +743,13 @@ along with this software (see the LICENSE.md file). If not, see
                     fields.workEffortName = String(workEffortName).trim()
                 }
                 if (purposeEnumId) fields.purposeEnumId = purposeEnumId
-                if (description != null) fields.description = description
+                // the text of a task that is an issue is its conversation's first post, edited on the issue's page (mr-pass
+                // design-smithy §8.1)
+                if (description != null && String(description) !== String(access.workEffort.description ?? '')) {
+                    if (ec.service.sync().name('mantle.smithy.SmithyIssueServices.get#TaskIssue').parameters({workEffortId: workEffortId}).call()?.issueNumber) {
+                        ec.message.addError(ec.l10n.localize('This task is an issue: its text is the first post, edited on the issue\'s page')); return }
+                    fields.description = description
+                }
                 if (Object.keys(fields).length > 1) {
                     ec.service.sync().name('mantle.work.TaskServices.update#Task').parameters(fields).call()
                     if (ec.message.hasError()) return
@@ -1034,8 +1052,8 @@ along with this software (see the LICENSE.md file). If not, see
                     addRecord(link.recordEntityName, link.recordId)
 
                 // the sub-tasks
-                subTaskList = decorate(Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('parentWorkEffortId', workEffortId)
-                        .condition('workEffortTypeEnumId', 'WetTask').orderBy('estimatedCompletionDate').orderBy('priority').list()).map((row) => row.getMap()))
+                subTaskList = decorate(Array.from(ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('parentWorkEffortId', workEffortId)
+                        .condition('workEffortTypeEnumId', 'WetTask')).orderBy('estimatedCompletionDate').orderBy('priority').list()).map((row) => row.getMap()))
 
                 // the user's time on it, and an entry open on it or on another task
                 timeEntryList = []

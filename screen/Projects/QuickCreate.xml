@@ -96,7 +96,9 @@ along with this software (see the LICENSE.md file). If not, see
             defaultTimeItem = ''
             if (hasRecord && recordEntity === 'mantle.work.effort.WorkEffort') {
                 const record = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', recordId).one()
-                if (record && ['WetTask', 'WetProject'].includes(record.workEffortTypeEnumId)) {
+                // only an item the user may see is named (HiddenItems.js mayName)
+                if (record && ['WetTask', 'WetProject'].includes(record.workEffortTypeEnumId)
+                        && ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(record.workEffortId)) {
                     defaultTimeItem = record.workEffortId
                     if (!timeItemOptions.some((option) => option.value === defaultTimeItem))
                         timeItemOptions.unshift({value: defaultTimeItem, label: defaultTimeItem + ' ' + (record.workEffortName || '')})

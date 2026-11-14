@@ -267,8 +267,8 @@ along with this software (see the LICENSE.md file). If not, see
             const links = Array.from(ec.entity.find('mantle.request.RequestWorkEffort').condition('requestId', 'in', ids).list())
             const itemIds = Array.from(new Set(links.map((link) => link.workEffortId)))
             const itemStatus = {}
-            if (itemIds.length) for (const item of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', itemIds)
-                    .condition('workEffortTypeEnumId', 'WetTask').selectField('workEffortId,statusId').list()) itemStatus[item.workEffortId] = item.statusId
+            if (itemIds.length) for (const item of ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', itemIds)
+                    .condition('workEffortTypeEnumId', 'WetTask')).selectField('workEffortId,statusId').list()) itemStatus[item.workEffortId] = item.statusId
             for (const link of links) {
                 if (!(link.workEffortId in itemStatus)) continue
                 const entry = work[link.requestId] || (work[link.requestId] = {done: 0, total: 0})
@@ -628,7 +628,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (ec.message.hasError()) return
             if (parentWorkEffortId) {
                 const parent = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', parentWorkEffortId).one()
-                if (parent == null || parent.rootWorkEffortId !== projectId) { ec.message.addError(ec.resource.expand('${id} is not a work item of ${project}', '', {id: parentWorkEffortId, project: projectId})); return }
+                if (parent == null || parent.rootWorkEffortId !== projectId || !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(parent.workEffortId)) { ec.message.addError(ec.resource.expand('${id} is not a work item of ${project}', '', {id: parentWorkEffortId, project: projectId})); return }
             }
             const day = estimatedCompletionDate ? String(estimatedCompletionDate).trim().substring(0, 10) : ''
             if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) { ec.message.addError(L('A due date is yyyy-MM-dd')); return }
@@ -682,6 +682,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             ec.service.sync().name('ironstone.projects.ProjectRequestServices.get#ProjectRequestAccess').parameters({requestId: requestId, need: 'triage'}).call()
             if (ec.message.hasError()) return
+            // an item the user may not see is not taken off, and not told of (HiddenItems.js mayName); a link to an item that is gone is
+            if (ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).disableAuthz().count() > 0
+                    && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(workEffortId)) { ec.message.addError(ec.resource.expand('${id} is not a work item of the request', '', {id: workEffortId})); return }
             ec.entity.find('mantle.request.RequestWorkEffort').condition('requestId', requestId).condition('workEffortId', workEffortId).deleteAll()
             message = ec.resource.expand('${id} taken off the request', '', {id: workEffortId})
         ]]></script></actions>

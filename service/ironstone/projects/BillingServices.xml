@@ -1212,7 +1212,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const effort = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).disableAuthz().one()
                 const project = effort ? (effort.workEffortTypeEnumId === 'WetProject' ? effort.workEffortId : effort.rootWorkEffortId) : null
                 const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
-                if (!effort || (!vis.allProjects && !Array.from(vis.visibleProjectIds || []).includes(project))) {
+                // (a task only when the user may see that task: HiddenItems.js mayName)
+                if (!effort || (!vis.allProjects && !Array.from(vis.visibleProjectIds || []).includes(project))
+                        || (effort.workEffortTypeEnumId === 'WetTask' && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(effort.workEffortId))) {
                     ec.message.addError(ec.resource.expand('${workEffortId} is not available', '', {workEffortId})); return }
             }
             let on = ec.user.nowTimestamp

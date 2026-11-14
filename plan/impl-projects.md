@@ -1067,3 +1067,52 @@ Each result is a row in §9.6 and, where it changes the design, an edit there. S
 - **Per phase,** §9.2's Done; the phases' "usable when" acceptance tests with `./moq accept mr-pass`, when asked.
 - **End to end,** the demo PASS site as sheldon.acme and gob.bluth, locally and through a remote frontend, walking
   each built phase's "usable when" in order; after C7, P10's client walk as the same steps in the app.
+
+## 10. Addendum: issues of a public tracker (Smithy)
+
+Nov 13, 2026 — built (Dogfood DG3; mr-pass `plan/design-smithy.md` §8.1, §8.3, N-BOSS-ISSUE)
+
+A repository of IronStone PASS's Smithy app with issues on names a project, and an issue is a task of that project.
+Projects is the maintainers' view of the same task. Which tasks and posts a user sees is Mantle's rule; BOSS adds none.
+
+- **WorkItemDetail** (`screen/Shared/WorkItemDetail.xml`, `get#WorkItemDetail`'s `issue`, from
+  `mantle.smithy.SmithyIssueServices.get#TaskIssue`): the issue's number in its repository (`#12`) beside the key,
+  linked to the public page, and on the Overview a **Public conversation** box with the posts of the issue's topic that
+  `mantle.forum.ForumServices.get#Posts` gives the user, apart from Chatter, which stays the internal notes. The Edit
+  dialog does not offer the description: it is the issue's first post, edited on the issue's page.
+- **Confidential issues.** Mantle keeps a confidential issue's task in a companion project of the repository, whose
+  only members are the Smithy Owners (mr-pass `plan/design-smithy.md` §8.3), so BOSS's ordinary rule, the tasks of the
+  projects one is on, hides it everywhere: the tracker's project manager is not on that project. This replaced
+  filtering alone: the review found about forty readers in BOSS and Mantle that a filter did not reach.
+- **The second layer.** `mantle.work.ProjectServices.get#VisibleProjectInfo` still answers `hiddenItemIds`: the tasks
+  of confidential issues whose repository the user is no Owner of (none for an administrator). BOSS's own reads of
+  tasks leave them out through one helper, `service/ironstone/projects/HiddenItems.js` (`ids`, `condition`, `without`,
+  `rows`; `shown` asks Mantle's `check#TaskHidden` for one task). It reads the list once for an instance and fails
+  closed: when the list cannot be read, no task is shown. It is applied in:
+  - `ironstone.commons.TaskServices.get#TaskAccess` (so the detail, in Projects and in Commons, is "not available", and
+    every change that checks access is refused), Commons' task list (the user's, owned and followed tasks) and a
+    task's sub-tasks;
+  - `WorkItemServices`: `find#WorkItems` (the list, board, calendar and tree views, their counts and sums, and what
+    reads through it: a sprint's items, a plan item's candidates), the parent options, the names of parents in a row, a
+    work item's relations;
+  - `PlanningServices`: the backlog and the Timeline's project spans; `ProjectServices`: a project's item counts, a
+    plan item's progress and the time box; `ProjectRequestServices`: the progress of a request's work;
+  - `CodeServices`: `get#VisibleWorkEfforts` (the work items a commit, branch, tag or merge request links), the task a
+    branch's name suggests, and linking a commit, a branch or a merge request to a task by its id;
+  - `TimeServices`: the items offered for a time entry; Commons' contact tasks and a request's tasks; and the record
+    link of a task (`PaletteServices.get#RecordLink`), so a search result, a notification or a card has no link to one.
+- **A work effort named by an id from the request** (`HiddenItems.js` `mayName`: a task by `get#TaskAccess`, a project
+  or what is in one by the projects the user sees). These did not go by project membership, for any task, and now do:
+  the item of a new time entry (`get#TimeEntryEdit`) and of QuickCreate's time form; an approver's time written on an
+  item (`set#DayHours`'s and the entry save's check); a universal search row and a notification of a task; Comms'
+  "Link to record"; `get#WhichRate`; taking a link off a commit, a branch, a merge request or a request; a request's
+  new work item's parent, and a work item's new parent.
+- **An issue's text.** `update#WorkItemField` `description` and Commons' `update#TaskInfo` refuse the description of a
+  task that is an issue; when the forum does not let the user read the conversation, the box says so.
+- **Left to Mantle:** the work item tree, the reports and report scope, the time entry check and
+  `mantle.party.CommunicationServices.get#RecordLinkInfo` (Chatter's check of a record) are Mantle's reads.
+- **Tests:** `test/Projects/WorkItemDetail.spec.js` (an issue's task with its number, link and conversation; a
+  confidential issue's task nowhere for the tracker's project manager, in the list, its detail, Today, a time entry
+  asked by its id and a commit's links, and there for a Smithy Owner, made one through the Members operation, and an
+  administrator).
+

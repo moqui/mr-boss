@@ -114,6 +114,9 @@ along with this software (see the LICENSE.md file). If not, see
 
             // the base: the visible items of projects that are not templates
             const base = [cf.makeCondition('workEffortTypeEnumId', 'equals', 'WetTask'), cf.makeCondition('rootWorkEffortId', 'is-not-null', null)]
+            // never a confidential issue's task the user is no Owner of, a project's manager included (HiddenItems.js)
+            const notHidden = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').condition(vis)
+            if (notHidden) base.push(notHidden)
             if (rootWorkEffortId) base.push(cf.makeCondition('rootWorkEffortId', 'equals', rootWorkEffortId))
             if (!all) {
                 base.push(cf.makeCondition('rootWorkEffortId', 'in', visibleIds))
@@ -308,7 +311,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the projects and parents by name
             const names = {}
             const otherIds = Array.from(new Set(tasks.map((task) => task.rootWorkEffortId).concat(tasks.map((task) => task.parentWorkEffortId)).filter((id) => id)))
-            if (otherIds.length) for (const row of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', otherIds)
+            if (otherIds.length) for (const row of ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', otherIds), vis)
                     .selectField('workEffortId').selectField('workEffortName').list()) names[row.workEffortId] = row.workEffortName || row.workEffortId
             // the assignees
             const assignees = {}
@@ -506,8 +509,8 @@ along with this software (see the LICENSE.md file). If not, see
             if (!root) return
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
             if (!vis.allProjects && !Array.from(vis.visibleProjectIds || []).includes(root)) return
-            let find = ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', root).condition('workEffortTypeEnumId', 'WetTask')
-                    .condition('statusId', 'not-in', ['WeClosed', 'WeCancelled'])
+            let find = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').without(ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', root).condition('workEffortTypeEnumId', 'WetTask')
+                    .condition('statusId', 'not-in', ['WeClosed', 'WeCancelled']), vis)
             if (excluded.length) find = find.condition('workEffortId', 'not-in', excluded)
             const words = term ? String(term).trim() : ''
             if (words) find = find.condition(cf.makeCondition([cf.makeCondition('workEffortName', 'like', `%${words}%`, false, true),
@@ -657,6 +660,10 @@ along with this software (see the LICENSE.md file). If not, see
                     if (!update({workEffortName: text})) return
                     valueText = text; message = ec.resource.expand('Renamed: ${text}', '', {text})
                 } else if (field === 'description') {
+                    // the text of a task that is an issue is its conversation's first post, edited on the issue's page
+                    // (mr-pass design-smithy §8.1)
+                    if (ec.service.sync().name('mantle.smithy.SmithyIssueServices.get#TaskIssue').parameters({workEffortId}).call()?.issueNumber) {
+                        ec.message.addError(ec.l10n.localize('This item is an issue: its text is the first post, edited on the issue\'s page')); return }
                     if (!update({description: value == null ? null : String(value)})) return
                     valueText = text; message = ec.l10n.localize('Description saved')
                 } else if (field === 'type') {
@@ -700,6 +707,8 @@ along with this software (see the LICENSE.md file). If not, see
                         : ec.resource.expand('${name}: no ${field}', '', {name, field: ec.l10n.localize(field)})
                 } else if (field === 'parent') {
                     let previous = null
+                    // the new parent is an item the user may see (HiddenItems.js mayName), else it is as one that does not exist
+                    if (text && !ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js').mayName(text)) { ec.message.addError(ec.resource.expand('Work item ${text} is not available', '', {text})); return }
                     if (text) {
                         const siblings = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('parentWorkEffortId', text)
                                 .condition('workEffortId', 'not-equals', workEffortId).selectField('workEffortId').selectField('sequenceNum').orderBy('sequenceNum').list())
@@ -819,7 +828,11 @@ along with this software (see the LICENSE.md file). If not, see
             and the item's path (the project, then each ancestor from the top: breadcrumbs), its type icon, the plan items
             (milestone, release, sprint, component), labels, the roll-up of its subtree with its own numbers, its sub-items (one
             level, get#WorkItemTree), its relations (WorkEffortAssoc of the relation kinds, both ways, with the other item's
-            status and the lag of a dependency), the requests it serves, and its repeat rule in words.</description>
+            status and the lag of a dependency), the requests it serves, and its repeat rule in words. For a task that is an
+            issue of a repository (Smithy; mr-pass plan/design-smithy.md §8.1, N-BOSS-ISSUE): issue, with its number in the
+            repository, the address of its public page (mantle.smithy.SmithyIssueServices.get#TaskIssue) and its
+            outward conversation, the posts of the issue's topic that Mantle's forum lets this user read
+            (mantle.forum.ForumServices.get#Posts; no rule is added here). Chatter stays the internal notes.</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters>
             <parameter name="detail" type="Map"/>
@@ -833,6 +846,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="requestList" type="List"/>
             <parameter name="recurrence" type="Map"/>
             <parameter name="typeIcon"/>
+            <parameter name="issue" type="Map"/>
         </out-parameters>
         <actions>
             <service-call name="ironstone.commons.TaskServices.get#TaskDetail" out-map="detail"
@@ -901,8 +915,10 @@ along with this software (see the LICENSE.md file). If not, see
                     WeatCausedBy: ['Caused by', 'Causes'], WeatClone: ['Clones', 'Cloned by'], WeatBasedOn: ['Based on', 'Basis of'], WeatIndependentOf: ['Independent of', 'Independent of']}
                 relationList = []
                 const statusLabel = (id) => id ? (ec.entity.find('moqui.basic.StatusItem').condition('statusId', id).useCache(true).one()?.description || id) : ''
+                const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
                 const addRelation = (assoc, otherId, outward) => {
-                    const other = find(otherId)
+                    // a relation to a confidential issue's task the user is no Owner of is not shown
+                    const other = hiddenItems.shown(otherId) ? find(otherId) : null
                     if (other == null) return
                     relationList.push({workEffortId: assoc.workEffortId, toWorkEffortId: assoc.toWorkEffortId, workEffortAssocTypeEnumId: assoc.workEffortAssocTypeEnumId,
                         fromDate: assoc.fromDate, kindText: ec.l10n.localize(kinds[assoc.workEffortAssocTypeEnumId][outward ? 0 : 1]),
@@ -936,6 +952,33 @@ along with this software (see the LICENSE.md file). If not, see
                 if (rule?.rrule) recurrence = {seriesWorkEffortId: seriesId, rrule: rule.rrule, recurFromCompletion: rule.recurFromCompletion === 'Y',
                     text: ec.service.sync().name('ironstone.projects.WorkItemServices.describe#RepeatRule').parameters({rrule: rule.rrule,
                         recurFromCompletion: rule.recurFromCompletion}).call()?.text || rule.rrule}
+                // a task that is an issue of a repository: its number, its public page and its outward conversation
+                issue = null
+                // (Mantle's get#TaskIssue: empty for a task that is no issue's, and for a confidential one the user is no Owner of)
+                const taskIssue = ec.service.sync().name('mantle.smithy.SmithyIssueServices.get#TaskIssue').parameters({workEffortId: workEffortId}).call() || {}
+                if (taskIssue.issueNumber) {
+                    const number = Number(taskIssue.issueNumber)
+                    issue = {issueNumber: number, numberText: '#' + number, repositoryPath: taskIssue.repositoryPath, confidential: !!taskIssue.confidential,
+                        pageUrl: taskIssue.publicUrl || null, postList: [], hasMore: false, readable: false}
+                    // the posts Mantle's forum lets this user read of the issue's topic; a refusal leaves the box empty
+                    ec.message.pushErrors()
+                    try {
+                        const posts = ec.service.sync().name('mantle.forum.ForumServices.get#Posts')
+                                .parameters({input: {siteId: taskIssue.siteId, rootCommEventId: taskIssue.rootCommEventId, limit: 50}}).call()?.result
+                        if (!ec.message.hasError() && posts) {
+                            issue.readable = true
+                            issue.hasMore = !!posts.nextCursor
+                            issue.postList = Array.from(posts.postList || []).map((post) => ({postId: post.postId,
+                                authorName: post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : ec.l10n.localize('Community member')),
+                                dateText: post.entryDate ? ec.l10n.format(post.entryDate, 'yyyy-MM-dd HH:mm') : '',
+                                markText: post.postKind === 'event' ? ec.l10n.localize('state change') : post.visibility === 'staff' ? ec.l10n.localize('Owners only')
+                                    : post.visibility === 'pending' ? ec.l10n.localize('waiting for review') : post.hasHistory ? ec.l10n.localize('edited') : '',
+                                bodyHtml: post.body || ''}))
+                        }
+                    } catch (err) {
+                        issue.readable = false
+                    } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                }
             ]]></script>
         </actions>
     </service>
