@@ -430,7 +430,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | built and reviewed Nov 14, merged |
 | P10 Experiments | Mantle, BOSS | ExperimentDetail | built and reviewed Nov 14, merged |
 | P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | built and reviewed Nov 14, merged |
-| P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | — |
+| P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | built and reviewed Nov 14, merged |
 | P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | — |
 | P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | — |
 | P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | — |
@@ -3444,7 +3444,7 @@ the Rust 1.100 rebuild; mr-moqui unchanged, no Rust built. Built beside Sales fo
 - Inventories: usl-inventory's "Added in Marketing P12" table; ss-inventory's Survey rows gain Marketing's Implemented in.
 - Design edits: design-marketing §10 SurveyDistribution and §13 SubmitForm (as built); design-drawers-commons' form publication row (owner
   contract: the services, FormSubmission, the scores, the audience, the scope).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F254 to F263 in order:
   - the operations are camelCase; the survey purpose is the framework's DbfpSurvey; FormPurpose gains fieldAudienceEnumId (the code over the
     plan above);
   - an invitation is an ordinary send of the publication's campaign (its promotional eligibility is the send's preparation and dispatch), its
@@ -3549,7 +3549,7 @@ had nothing new. Fixes mr-mantle 6cec5686, mr-pass 3d6929a.
     another site's publication "This page is not available", so the operations' answers told a good token from a forged one. The check's
     NotFound is now the page's own. SubmitForm's spec compared the draft's, closed's and other site's words but left the forged one out; it
     now compares all five (failed before the fix).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F264 to F268 in order:
   - accept#Submission is `authenticate="anonymous-all"` and trusts the invitationId and partyId its caller verified; `allow-remote="false"`
     keeps it off REST, and the Marketing page calls the JavaScript directly, as CaseFeedback's anonymous internal services are built;
   - a published option's new score ends it and starts an option of the same value at the next sequence number, so the rescored option
@@ -4303,6 +4303,21 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F251 | P11 (Review Nov 14): the cart trigger's send step does not check the cart again: a shopper who checked out after the visit was filed still gets the step's mail unless a goal segment ends it (built-in recovery's build checks the cart) | P11: as its Review note says |
 | F252 | P11 (Review Nov 14): the subscription trigger's cursor reads acceptances decided at or after it: one committed late with an earlier decidedDate is missed; acceptances while an edited automation was back in draft are admitted at its re-activation (the cursor is kept) | P11: as its Review note says |
 | F253 | P11 (Review Nov 14): the worker's findings stand otherwise (the store#Steps copy of current template content, the cart trigger's topic consent, audience readers reading automations, a delivery already with the ledger when an enrollment stops, no Home card) | P11: as its Review note says |
+| F254 | P12 (Built Nov 14): the operations are camelCase; the survey purpose is the framework's DbfpSurvey; FormPurpose gains fieldAudienceEnumId (the code over the plan above) | P12: as its Built note says |
+| F255 | P12 (Built Nov 14): an invitation is an ordinary send of the publication's campaign (its promotional eligibility is the send's preparation and dispatch), its FormInvitation made at the build and its link per attempt; a publication needs a campaign and a site before an invitation send | P12: as its Built note says |
+| F256 | P12 (Built Nov 14): a published option's new score is a new option of the same value from now, so a response reads the score of its date; scores are whole numbers 0–1000 on a single choice only (design §10's declared aggregation limits for negative or multi-select scores are not built) | P12: as its Built note says |
+| F257 | P12 (Built Nov 14): an anonymous publication cannot limit people (each new request key is a submission; FprOnce limits an invitation or an account); two concurrent anonymous posts with one request key: the second fails on the unique key (Unavailable), not the first answer | P12: as its Built note says |
+| F258 | P12 (Built Nov 14): the page answers an unknown field or an oversized value with the neutral receipt and a hidden field's answer with what to fix | P12: as its Built note says |
+| F259 | P12 (Built Nov 14): the shared response screens' publication branch is an owner contract change of Customer Service's screens (its specs unchanged) | P12: as its Built note says |
+| F260 | P12 (Built Nov 14): the respondent of a response is named for an audience reader only; a report reader sees "A respondent" | P12: as its Built note says |
+| F261 | P12 (Built Nov 14): the form-submission trigger files only a submission with a known party (an invitation's recipient or a signed-in account); it is not spec'd (it needs an activated automation and its owner) | P12: as its Built note says |
+| F262 | P12 (Built Nov 14): the demo's ZIZI_SHOP is a Commerce demo site left unpublished, so the demo publications' site check reads Missing until it is published (as P7's offer) | P12: as its Built note says |
+| F263 | P12 (Built Nov 14): in one run of the mr-boss group CustomerServiceAccess (17.7 s) and PeopleAccessLater (21.6 s) passed the 15-second bound on a loaded machine (other workers running); neither is changed by this phase beyond the shared screens; to check on master | P12: as its Built note says |
+| F264 | P12 (Review Nov 14): accept#Submission is `authenticate="anonymous-all"` and trusts the invitationId and partyId its caller verified; `allow-remote="false"` keeps it off REST, and the Marketing page calls the JavaScript directly, as CaseFeedback's anonymous internal services are built | P12: as its Review note says |
+| F265 | P12 (Review Nov 14): a published option's new score ends it and starts an option of the same value at the next sequence number, so the rescored option moves to the end of the question's options (a relabel stays in place) | P12: as its Review note says |
+| F266 | P12 (Review Nov 14): the invitation link is made, and the FormInvitation marked sent with its attempt counted, before the build's later checks and the attempt itself, so a delivery suppressed after it (no unsubscribe address) or failed still reads as sent (Responses' "Delivered") | P12: as its Review note says |
+| F267 | P12 (Review Nov 14): the option score parser applies to every purpose's builder: a non-Marketing option line ending "\| <number>" now stores a score (unused there) instead of keeping it in its label | P12: as its Review note says |
+| F268 | P12 (Review Nov 14): the worker's findings stand (the operations camelCase, the purposes, the invitation as an ordinary send, scores 0–1000 on single choices, an anonymous publication taking each new key, the respondent named for audience readers, the trigger not spec'd, the demo site unpublished); its concurrent anonymous one is R1 | P12: as its Review note says |
 
 ## 7. Later
 
