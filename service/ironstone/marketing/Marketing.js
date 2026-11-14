@@ -206,6 +206,8 @@ const linkPaths = [
     // P9: a send's delivery and one recipient (design §5 CampaignDelivery, RecipientDetail)
     "Sends/CampaignDelivery",
     "Sends/RecipientDetail",
+    // P10: a send's experiment (design §5 ExperimentDetail)
+    "Sends/ExperimentDetail",
     // P11: the automations, one automation and one enrollment (design §6)
     "Automations",
     "Automations/Automations",

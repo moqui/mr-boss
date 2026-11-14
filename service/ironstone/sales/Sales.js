@@ -328,30 +328,8 @@ const recordKinds = {
     }
 }
 // ===== P9: a commercial order change (impl-sales P9, F58) =====
-// A commercial-kind change of a sales order of the scope (RqtOrderChange; not a cancel or substitute, Customer Service's), for a
-// sales approver (SALES_APPROVE), who decides it from Approvals until P14 gives it its OrderChangeDetail under Sales; Mantle's
-// decide#OrderChange checks the permission and the organization again.
-recordKinds.orderChange = {
-    name: "Order change",
-    icon: "sym_o_edit_note",
-    destination: "Quotes/Approvals",
-    parameter: "requestId",
-    read: (userScope, requestId) => {
-        if (!userScope.capabilities.approve) return null
-        const request = one("mantle.request.Request", {requestId})
-        if (!request || request.requestTypeEnumId !== "RqtOrderChange" || !request.orderId) return null
-        if (["OckCancel", "OckSubstitute"].includes(request.orderChangeKindEnumId)) return null
-        const part = Array.from(
-            find("mantle.order.OrderPart").condition("orderId", request.orderId).orderBy("orderPartSeqId").list()
-        )[0]
-        if (!part || !covers(userScope, part.vendorPartyId)) return null
-        return {
-            organizationPartyId: part.vendorPartyId,
-            label: request.requestName || "Order change " + requestId,
-            detail: "Order change"
-        }
-    }
-}
+// P9 opened a commercial-kind change from Approvals for its approver; P14's recordKinds.orderChange (below) replaced it with
+// OrderChangeDetail under Sales (the one definition since P20's review).
 // ===== end of P9 =====
 // ===== P11: a sales order (impl-sales P11; design §6) =====
 // A sales order the user sees (SalesAccess.js orderOf: a direct order, an accepted quote or another sales order of a seller of the scope,

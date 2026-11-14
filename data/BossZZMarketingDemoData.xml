@@ -441,6 +441,27 @@ along with this software (see the LICENSE.md file). If not, see
             decidedByPartyId="BOSS_MKT_APPROVER" reason="For the first of December"/>
     <!-- ===== end of Marketing P8 ===== -->
 
+    <!-- ===== Marketing P10: experiments (impl-marketing P10; design-marketing §5 ExperimentDetail) ===== -->
+    <!-- A draft send of the spring campaign set up as a subject test: a 20% sample split between variant A (the send's content) and
+        variant B, "Urgent", whose subject alone differs; observed for a day once its sample goes out. Not prepared yet. -->
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_ABTEST" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Spring sale subject test" channelEnumId="MdcEmail"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_NEWS"
+            sendingProfileId="BOSS_MKT_PROFILE_RETAIL" subject="The spring sale is on, ${firstName}" preheader="Seeds and tools"
+            bodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            bodyTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]" localeId="en"
+            statusId="CsDraft" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-11-13 09:00:00"/>
+    <mantle.marketing.campaign.CampaignExperiment campaignExperimentId="BOSS_MKT_EXPT_SPRING" campaignSendId="BOSS_MKT_SEND_ABTEST"
+            organizationPartyId="ORG_ZIZI_RETAIL" samplePercent="20" measureEnumId="MxmUniqueClickRate" observationHours="24"
+            createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-11-13 09:05:00"/>
+    <mantle.marketing.campaign.CampaignExperimentVariant campaignExperimentVariantId="BOSS_MKT_EXPT_SPRING_A"
+            campaignExperimentId="BOSS_MKT_EXPT_SPRING" variantLabel="A" sequenceNum="1"/>
+    <mantle.marketing.campaign.CampaignExperimentVariant campaignExperimentVariantId="BOSS_MKT_EXPT_SPRING_B"
+            campaignExperimentId="BOSS_MKT_EXPT_SPRING" variantLabel="B" variantName="Urgent" sequenceNum="2"
+            subject="Last days of the spring sale, ${firstName}"/>
+    <!-- ===== end of Marketing P10 ===== -->
+
     <!-- ===== Marketing P11: automation (impl-marketing P11; design-marketing §6) ===== -->
     <!-- Retail's three-step welcome sequence on the garden newsletter's confirmed subscription (the spring campaign, the Retail news
         profile): a welcome, a wait of three days and the garden tips; written by the author, approved by the approver at revision 1 and

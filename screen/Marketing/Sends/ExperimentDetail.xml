@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Sends › ExperimentDetail (design-marketing §5 ExperimentDetail: ExperimentSetup, Variants, ExperimentResults,
+    ReleaseWinner; style-guide §3.9 Task; impl-marketing P10): one send's A/B experiment (check#Record send; else "Not available",
+    linking back). The record header: the send's id and name, the sample, measure and observation, the experiment's state; one primary
+    action by state (Set up the test for a draft's editor, Choose the winner for a dispatcher once the observation period has passed,
+    Release the winner once chosen), the others in More (Back to the send, Edit the setup, Choose again, Remove the test). The boxes:
+    Setup; Variants (each the parts it changes over the send's content, with Edit and Test in its row for an editor); Results (each
+    variant's assigned, accepted and delivered counts with their denominators and tracking coverage, clicks and conversions not
+    available until tracking records them; the remainder; the decision shown, never acted on); Winner (who chose it, why, and its
+    release). Every change is Mantle's guarded service (store#Experiment, store#ExperimentVariant at the send's revision read; a change
+    ends the send's approval; choose#ExperimentWinner, release#ExperimentWinner a dispatcher's). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Experiment" default-menu-include="false">
+    <parameter name="campaignSendId" required="true"/>
+    <transition-include name="storeExperiment" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="storeExperimentVariant" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="chooseExperimentWinner" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="releaseExperimentWinner" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="testSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="sendCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'send', recordId:campaignSendId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="sendCheck?.recordId">
+            <service-call name="mantle.marketing.CampaignSendServices.get#Experiment" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.send"/>
+        <set field="send" from="detail?.send || {}"/>
+        <set field="experiment" from="detail?.experiment || null"/>
+        <set field="exp" from="experiment || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="variantList" from="detail?.variantList || []"/>
+        <set field="remainder" from="detail?.remainder || {}"/>
+        <set field="decision" from="detail?.decision || {}"/>
+        <set field="releasePreview" from="detail?.releasePreview || {}"/>
+        <set field="measureOptions" from="detail?.measureOptions || []"/>
+        <set field="winnerOptions" from="variantList.map(row =&gt; ({value: row.campaignExperimentVariantId, label: row.labelText}))"/>
+        <set field="testOptions" from="[]"/>
+        <set field="sendPath" from="sharedLinks['Sends/SendDetail']"/>
+        <set field="listPath" from="sharedLinks['Sends/Sends']"/>
+        <set field="captionText" from="experiment ? [exp.samplePercent + '% sample, split equally', 'the rest held for the winner', 'measure: ' + exp.measureText,
+                'observed ' + exp.observationHours + ' h'].join(' · ') : 'No A/B test yet'"/>
+        <set field="countsText" from="experiment &amp;&amp; exp.sampleCount != null ? 'Prepared: ' + exp.sampleCount + ' in the samples, ' + exp.remainderCount + ' held for the winner' : 'Counted when the send is prepared'"/>
+        <set field="setupValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision, samplePercent:exp.samplePercent || 20,
+                measureEnumId:exp.measureEnumId || 'MxmUniqueClickRate', observationHours:exp.observationHours || 24}"/>
+        <set field="winnerValues" from="{campaignSendId:campaignSendId, expectedRevision:exp.revision, campaignExperimentVariantId:exp.winnerVariantId || decision.leaderVariantId || null}"/>
+        <set field="remainderText" from="experiment ? [remainder.heldCount + ' held', remainder.waitingCount + ' waiting', remainder.handedOffCount + ' handed off',
+                remainder.skippedCount + ' left out', remainder.cancelledCount ? remainder.cancelledCount + ' not sent: cancelled' : null].filter(Boolean).join(' · ') : ''"/>
+        <if condition="recordFound &amp;&amp; can.canTest">
+            <service-call name="mantle.marketing.CampaignSendServices.get#Send" out-map="sendDetail" transaction="force-new" ignore-error="true"
+                    in-map="{campaignSendId:campaignSendId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="testOptions" from="(sendDetail?.testAddresses || []).map(address =&gt; ({value: address, label: address}))"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="ExperimentNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Send ${campaignSendId} is not available: it does not exist, or it is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to sends" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ExperimentFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.marketing.campaign.CampaignSend" record-id="${campaignSendId}" title="A/B test of ${send.sendName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${campaignSendId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="A/B test of ${send.sendName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${countsText}" type="div" style="text-caption m-muted" condition="experiment"/>
+                            <label text="The send is ${send.statusText.toLowerCase()} at revision ${send.sendRevision}: a change of the sample or a variant ends its approval."
+                                    type="div" style="text-caption m-muted" condition="can.canEdit"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${experiment ? 'primary' : 'grey-7'}">${WebUtilities.encodeHtml(experiment ? exp.stateText : 'No test')}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(experiment ? exp.stateText : "No test")})}]]></text>
+                                <text type="html">${experiment ? exp.stateText : 'No test'}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <!-- the primary action by state: Set up the test, Choose the winner, Release the winner -->
+                            <container-dialog id="SetUpExperimentDialog" button-text="Set up the test" icon="sym_o_science" type="primary"
+                                    title="Set up an A/B test of ${send.sendName}" width="560" condition="can.canSetUp">
+                                <label text="Two variants of the content go to equal samples; the rest of the prepared audience waits until you choose the winner and a dispatcher releases it. Setting it up ends an approval."
+                                        type="p" style="m-muted"/>
+                                <form-single name="SetUpExperiment" transition="storeExperiment" map="setupValues">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="samplePercent">
+                                        <default-field title="Total sample %" tooltip="Both variants together, split equally (1 to 90)"><text-line size="5" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="measureEnumId">
+                                        <default-field title="Measure" tooltip="Shown to compare the variants; a person chooses the winner">
+                                            <drop-down><list-options list="measureOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="observationHours">
+                                        <default-field title="Observation, hours" tooltip="From the sample's sending until a winner may be chosen"><text-line size="5" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title=""><submit text="Set up the test"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ChooseWinnerDialog" button-text="Choose the winner" icon="sym_o_emoji_events" type="primary"
+                                    title="Choose the winner of ${send.sendName}" width="560" condition="can.canChoose &amp;&amp; !exp.winnerVariantId">
+                                <label text="${decision.reasonText}${decision.leaderText ? ': ' + decision.leaderText : ''}. Nothing is chosen for you: give your reason." type="p"/>
+                                <form-single name="ChooseWinner" transition="chooseExperimentWinner" map="winnerValues">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="campaignExperimentVariantId">
+                                        <default-field title="Winner"><drop-down><list-options list="winnerOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Choose"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ReleaseWinnerDialog" button-text="Release the winner" icon="sym_o_send" type="primary"
+                                    title="Release ${exp.winnerText} to the remainder" width="560" condition="can.canRelease">
+                                <label text="${releasePreview.heldCount} recipients wait for the winner; ${releasePreview.excludedSinceCount} of the ${releasePreview.checkedCount} checked now have withdrawn, been suppressed or changed address since the sample and will not be sent. The audience is checked again at the release: no one is added, and no one is sent this send twice."
+                                        type="p"/>
+                                <label text="Only ${releasePreview.checkedCount} of the ${releasePreview.heldCount} were checked here; the release checks every one." type="p" style="text-warning"
+                                        condition="releasePreview.checkedCount &lt; releasePreview.heldCount"/>
+                                <label text="You wrote, asked for or approved this send: the one-person team's policy lets you release it, and it is recorded so." type="p" style="text-warning"
+                                        condition="can.releaseSelf"/>
+                                <form-single name="ReleaseWinner" transition="releaseExperimentWinner" map="{campaignSendId:campaignSendId, campaignExperimentVariantId:exp.winnerVariantId}">
+                                    <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                    <field name="campaignExperimentVariantId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Note"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Release the winner" confirmation="Release ${exp.winnerText} to up to ${releasePreview.eligibleNowCount} recipients? It is released once."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="${sendPath}" text="Open the send" link-type="anchor" icon="sym_o_forward_to_inbox" parameter-map="{campaignSendId:campaignSendId}"/>
+                                <container-dialog id="EditExperimentDialog" button-text="Edit the setup" icon="sym_o_edit" title="The A/B test of ${send.sendName}"
+                                        width="560" condition="experiment &amp;&amp; can.canEdit">
+                                    <label text="A change of the setup ends an approval." type="p" style="m-muted"/>
+                                    <form-single name="EditExperiment" transition="storeExperiment" map="setupValues">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="samplePercent"><default-field title="Total sample %"><text-line size="5" input-type="number"/></default-field></field>
+                                        <field name="measureEnumId">
+                                            <default-field title="Measure"><drop-down><list-options list="measureOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                        </field>
+                                        <field name="observationHours"><default-field title="Observation, hours"><text-line size="5" input-type="number"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ChooseAgainDialog" button-text="Choose again" icon="sym_o_emoji_events" title="Choose the winner again"
+                                        width="560" condition="can.canChoose &amp;&amp; exp.winnerVariantId">
+                                    <form-single name="ChooseAgain" transition="chooseExperimentWinner" map="winnerValues">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="campaignExperimentVariantId">
+                                            <default-field title="Winner"><drop-down><list-options list="winnerOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Reason"><text-area rows="2" cols="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Choose"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="RemoveExperimentDialog" button-text="Remove the test" icon="sym_o_delete" title="Remove the A/B test"
+                                        width="480" condition="experiment &amp;&amp; can.canRemove">
+                                    <label text="The send then goes to its whole audience with its own content. Removing it ends an approval." type="p" style="m-muted"/>
+                                    <form-single name="RemoveExperiment" transition="storeExperiment" map="{campaignSendId:campaignSendId, expectedRevision:send.revision, action:'remove'}">
+                                        <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Remove the test" type="danger" confirmation="Remove the A/B test of ${send.sendName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box condition="!experiment">
+                    <box-header title="No A/B test"/>
+                    <box-body>
+                        <label text="This send goes to its whole audience with one content. Set up a test to compare two subjects or contents on samples first; the winner then goes to the rest."
+                                type="p"/>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="experiment">
+                    <box-header title="Variants"/>
+                    <box-body>
+                        <form-list name="Variants" list="variantList" skip-form="true" paginate="false">
+                            <field name="labelText"><default-field title="Variant"><display/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                            <field name="changedText"><default-field title="Its own parts" tooltip="The rest is the send's content"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditVariant_${campaignExperimentVariantId}" button-text="Edit" icon="sym_o_edit" type="default" width="760"
+                                            title="Edit ${labelText}" condition="can.canEdit">
+                                        <label text="A part left as the send's stays the send's. A change ends an approval." type="p" style="m-muted"/>
+                                        <form-single name="EditVariant" transition="storeExperimentVariant"
+                                                map="{campaignSendId:campaignSendId, campaignExperimentVariantId:campaignExperimentVariantId, expectedRevision:send.revision,
+                                                    variantName:variantName, subject:subject, preheader:preheader, body:body, bodyText:bodyText}">
+                                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                            <field name="campaignExperimentVariantId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="variantName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                            <field name="subject"><default-field title="Subject"><text-line size="60"/></default-field></field>
+                                            <field name="preheader"><default-field title="Preheader"><text-line size="60"/></default-field></field>
+                                            <field name="body"><default-field title="Body"><text-area rows="10" cols="80" editor-type="rich"/></default-field></field>
+                                            <field name="bodyText"><default-field title="Text alternative"><text-area rows="5" cols="80"/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="Save the variant"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="TestVariant_${campaignExperimentVariantId}" button-text="Test" icon="sym_o_outgoing_mail" type="default" width="520"
+                                            title="Send a test of ${labelText}" condition="can.canTest &amp;&amp; testOptions.length">
+                                        <label text="A test goes to the organization's test list, marked TEST; it is no recipient and enters no result." type="p" style="m-muted"/>
+                                        <form-single name="TestVariant" transition="testSend"
+                                                map="{campaignSendId:campaignSendId, campaignExperimentVariantId:campaignExperimentVariantId}">
+                                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                                            <field name="campaignExperimentVariantId"><default-field><hidden/></default-field></field>
+                                            <field name="toAddress">
+                                                <default-field title="To"><drop-down><list-options list="testOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                            </field>
+                                            <field name="note"><default-field title="Note"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="Send the test"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="labelText"/><field-ref name="subject"/></column>
+                                <column><field-ref name="changedText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="experiment">
+                    <box-header title="Results"/>
+                    <box-body>
+                        <label text="${decision.reasonText}${decision.leaderText ? ': ' + decision.leaderText : ''}. Open rates are not a measure; a person chooses the winner."
+                                type="p" style="text-weight-medium"/>
+                        <label text="Counted at the send's preparation and from the delivery service; a test message counts nowhere." type="p" style="text-caption m-muted"/>
+                        <form-list name="ExperimentResults" list="variantList" skip-form="true" paginate="false">
+                            <field name="labelText"><default-field title="Variant"><display/></default-field></field>
+                            <field name="assignedCount" align="right"><default-field title="Assigned"><display format="#,##0"/></default-field></field>
+                            <field name="acceptedCount" align="right"><default-field title="Accepted" tooltip="Of the assigned, taken by the mail service"><display format="#,##0"/></default-field></field>
+                            <field name="deliveredCount" align="right"><default-field title="Confirmed delivered" tooltip="Of the accepted, with a delivery report"><display format="#,##0"/></default-field></field>
+                            <field name="failedCount" align="right"><default-field title="Failed or refused"><display format="#,##0"/></default-field></field>
+                            <field name="clicksText"><default-field title="Unique clicks" tooltip="Of the accepted with tracking"><display/></default-field></field>
+                            <field name="conversionsText"><default-field title="Conversions"><display/></default-field></field>
+                            <field name="coverageText"><default-field title="Tracking-enabled"><display/></default-field></field>
+                            <field name="denominatorText"><default-field title="Denominator"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="labelText"/><field-ref name="assignedCount"/></column>
+                                <column><field-ref name="acceptedCount"/><field-ref name="clicksText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="The remainder: ${remainderText}" type="p"/>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="experiment &amp;&amp; (exp.winnerVariantId || exp.released)">
+                    <box-header title="Winner"/>
+                    <box-body>
+                        <label text="${exp.winnerText}, chosen ${exp.winnerChosenDateText} by ${exp.winnerChosenByName}: ${exp.winnerReason}" type="p" condition="exp.winnerVariantId"/>
+                        <label text="Released ${exp.winnerReleasedDateText} by ${exp.winnerReleasedByName}${exp.winnerSelfDispatch ? ' (one-person team)' : ''} to ${exp.winnerReleaseCount} recipients; ${exp.winnerDroppedCount} left out (no longer in the audience, or sent already)."
+                                type="p" condition="exp.released"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

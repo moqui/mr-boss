@@ -2,7 +2,9 @@
 // approved November newsletter for its author, with all of its checks on that render (the header and its state, the preparation and
 // its count, the prepared content rendered with sample values, the audience's buckets, the approver's decision, no decision offered to
 // its author); and Compose's one qvt render of the draft spring invitation (its content in the editor with its declared variable, the
-// test list of Campaign defaults, the preview with sample values). The send rules are Mantle's (test/marketing/Sends); the access
+// test list of Campaign defaults, the preview with sample values); P10: ExperimentDetail's one qvt render of the draft subject test for
+// its author (its setup, its variants with the parts each changes, the results' denominators and clicks not available, the author's
+// Edit and no winner's choice). The send rules are Mantle's (test/marketing/Sends, Experiments); the access
 // rules MarketingAccess's. The compose-to-approval scenario is the acceptance MarketingComposeWalk.
 // Run: ./moq test mr-boss --spec MarketingSends
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
@@ -48,5 +50,26 @@ feature("Compose shows a draft's content, its test list and its preview with sam
         compose.output.includes("You are invited, Alex") && compose.output.includes("Dear Alex")
         compose.output.includes("No text alternative")
         compose.output.includes("Attach a file")
+    }
+})
+
+feature("ExperimentDetail shows a draft's A/B test: its setup, its variants and results not yet counted", {
+    when() {
+        return {detail: asUser(users.author, () => page("Sends/ExperimentDetail", {campaignSendId: ids.experimentSendId}))}
+    },
+    then({detail}) {
+        detail.status == 200 && detail.errors.length == 0
+        detail.output.includes("A/B test of Spring sale subject test") && detail.output.includes("Not sent yet")
+        detail.output.includes("20% sample, split equally") && detail.output.includes("measure: Unique click rate")
+        detail.output.includes("Counted when the send is prepared")
+        // the variants: A the send's content, B its own subject
+        detail.output.includes("Variant B: Urgent") && detail.output.includes("Last days of the spring sale")
+        detail.output.includes("none: the send's content")
+        // the results: clicks not available, the decision undecided
+        detail.output.includes("Unique clicks") && detail.output.includes("Not available")
+        detail.output.includes("No observations")
+        // the author edits the variants and the setup; no winner is chosen or released before the sample
+        detail.output.includes("EditVariant_BOSS_MKT_EXPT_SPRING_B") && detail.output.includes("Edit the setup")
+        !detail.output.includes("ChooseWinnerDialog") && !detail.output.includes("ReleaseWinnerDialog")
     }
 })

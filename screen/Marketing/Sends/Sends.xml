@@ -61,7 +61,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="newSendValues" from="Object.assign({}, newSendValues, {sendingProfileId: profileChoices?.options?.length == 1 ? profileChoices.options[0].value : null})"/>
         </if>
-        <set field="boardColumns" from="['Draft', 'Awaiting approval', 'Approved', 'Scheduled', 'Sending', 'Paused', 'Completed', 'Completed with failures', 'Cancelled']"/>
+        <set field="boardColumns" from="['Draft', 'Awaiting approval', 'Approved', 'Scheduled', 'Sending', 'Paused', 'Sample sent', 'Completed', 'Completed with failures', 'Cancelled']"/>
         <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
                 {key:'awaiting', text:'Awaiting approval', icon:'sym_o_approval', parameters:{statusId:'CsAwaitingApproval'}},
                 {key:'all', text:'Every state', icon:'sym_o_view_list', parameters:{statusId:'all'}}]"/>
@@ -116,6 +116,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <option key="CsScheduled" text="Scheduled"/>
                                         <option key="CsSending" text="Sending"/>
                                         <option key="CsPaused" text="Paused"/>
+                                        <option key="CsSampleSent" text="Sample sent"/>
                                         <option key="CsCompleted" text="Completed"/>
                                         <option key="CsCompletedFailures" text="Completed with failures"/>
                                         <option key="CsCancelled" text="Cancelled"/>

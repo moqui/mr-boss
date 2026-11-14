@@ -61,6 +61,8 @@ const ids = {
     draftSendId: "BOSS_MKT_SEND_PREVIEW",
     approvedSendId: "BOSS_MKT_SEND_NOV",
     scheduledSendId: "BOSS_MKT_SEND_DEC",
+    // P10: the draft subject test (an A/B experiment, not prepared)
+    experimentSendId: "BOSS_MKT_SEND_ABTEST",
     // P11's demo automation: Retail's garden newsletter welcome (active; Maya in its wait, Olive stopped at her request)
     welcomeAutomationId: "BOSS_MKT_AUTO_WELCOME",
     waitingEnrollmentId: "BOSS_MKT_ENR_MAYA",

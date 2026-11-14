@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     quote's validity and default team, and the unverified intake retention; P10 adds whether an acceptance needs the customer's
     purchase order and the reminder days (the daily reminder job sends none while they are empty); the templates and the stored
     text locations are set through store#SalesPolicy; P13 adds the acceptance threshold of a currency (above it a customer's
-    quote link alone cannot accept: PASS sign-in as an invited contact; empty: none), the other currencies' kept; the approval
+    quote link alone cannot accept: PASS sign-in as an invited contact; empty: none), the other currencies' kept; P20's review adds
+    whether a request for quote made from mail is acknowledged to its sender (off by default); the approval
     setting and the net-terms option join this form with the phase that reads them.
     SALES_CONFIGURE, which Mantle checks with the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -42,7 +43,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:organizationPartyId, revision:(revision || null), fromDate:(fromDate || null),
                         defaultTeamPartyId:(defaultTeamPartyId ?? ''), quoteValidityDays:(quoteValidityDays ?? ''),
                         intakeRetentionDays:(intakeRetentionDays ?? ''), responsePoRequired:(responsePoRequired ?? ''),
-                        reminderDays:(reminderDays ?? ''), acceptanceThresholds:(acceptanceThresholds ?? null),
+                        reminderDays:(reminderDays ?? ''), rfqAcknowledge:(rfqAcknowledge ?? ''), acceptanceThresholds:(acceptanceThresholds ?? null),
                         changeReason:(changeReason || null), previewOnly:(previewOnly == 'Y' ? 'Y' : null)}"/>
             <if condition="!ec.message.hasError()">
                 <set field="changeText" from="(stored.changes || []).map(change =&gt; ec.l10n.localize(change.field) + ': '
@@ -83,7 +84,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="publishValues" from="{organizationPartyId: organizationPartyId, revision: policy?.revision || null,
                 defaultTeamPartyId: policy?.defaultTeamPartyId || null, quoteValidityDays: policy?.quoteValidityDays ?? null,
                 intakeRetentionDays: policy?.intakeRetentionDays ?? null, responsePoRequired: policy?.responsePoRequired || 'N',
-                reminderDays: policy?.reminderDays ?? null, thresholdCurrencyUomId: policy?.thresholds?.[0]?.currencyUomId || 'USD',
+                reminderDays: policy?.reminderDays ?? null, rfqAcknowledge: policy?.rfqAcknowledge || 'N', thresholdCurrencyUomId: policy?.thresholds?.[0]?.currencyUomId || 'USD',
                 thresholdAmount: policy?.thresholds?.[0]?.thresholdAmount ?? null}"/>
         <set field="revisionValues" from="{organizationPartyId: organizationPartyId, commercialRevisionOnly: found?.commercialRevisionOnly ? 'N' : 'Y'}"/>
         <set field="policyRows" from="policy ? [['Default team', policy.teamName || 'None: the author\'s only team, else none'],
@@ -91,6 +92,7 @@ along with this software (see the LICENSE.md file). If not, see
                 ['Unverified intakes kept', (policy.intakeRetentionDays || 30) + ' days'],
                 ['Acceptance needs the customer\'s PO', policy.responsePoRequired == 'Y' ? 'Yes' : 'No'],
                 ['Quote reminder', policy.reminderDays ? policy.reminderDays + ' days after it is sent' : 'None'],
+                ['Requests for quote by mail', policy.rfqAcknowledge == 'Y' ? 'Acknowledged to the sender' : 'Not acknowledged'],
                 ['Online acceptance needs sign-in above', (policy.thresholds || []).map(t =&gt; t.thresholdText).join(', ') || 'None: a quote link accepts any amount'],
                 ['In effect', policy.fromText + (policy.thruText ? ' until ' + policy.thruText : '')],
                 ['Published by', [policy.changedByName, policy.changeReason].filter(Boolean).join(' · ')]]
@@ -135,6 +137,12 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="reminderDays">
                             <default-field title="Remind the customer days after a quote is sent" tooltip="Empty: no reminder"><text-line size="6" input-type="number"/></default-field>
                         </field>
+                        <!-- P20 review: the acknowledgement of a request for quote made from mail (design-sales §16; off by default) -->
+                        <field name="rfqAcknowledge">
+                            <default-field title="Acknowledge a request for quote by mail" tooltip="Yes: a request made from mail is answered once, to the address it came from, with its reference, when the sender is a contact or account of yours">
+                                <drop-down allow-empty="false"><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                            </default-field>
+                        </field>
                         <!-- P13: the high-value acceptance threshold of one currency (impl-sales §4) -->
                         <field name="thresholdAmount">
                             <default-field title="Online acceptance needs sign-in above" tooltip="Above it, a customer's quote link alone cannot accept: they sign in as a contact you invited. Empty: none">
@@ -155,6 +163,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P13: P10's two fields were in no row, so the dialog did not show them; the threshold beside them -->
                             <field-row><field-ref name="responsePoRequired"/><field-ref name="reminderDays"/></field-row>
                             <field-row><field-ref name="thresholdAmount"/><field-ref name="thresholdCurrencyUomId"/></field-row>
+                            <field-ref name="rfqAcknowledge"/>
                             <field-ref name="changeReason"/>
                             <field-ref name="previewOnly"/>
                             <field-ref name="submitButton"/>

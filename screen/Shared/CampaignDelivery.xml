@@ -119,6 +119,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <option key="suppressed" text="Suppressed at sending"/>
                                         <option key="skipped" text="Skipped at dispatch"/>
                                         <option key="cancelled" text="Not sent: cancelled"/>
+                                        <option key="held" text="Held for the A/B winner"/>
                                     </drop-down>
                                 </header-field>
                             </field>
@@ -143,6 +144,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="attempts" align="right"><default-field title="Attempts"><display/></default-field></field>
                             <field name="receiptText"><default-field title="Latest report"><display/></default-field></field>
                             <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="variantText"><default-field title="Variant"><display/></default-field></field>
                             <field name="handedOffDateText"><default-field title="Handed off"><display/></default-field></field>
                             <field name="sentDateText"><default-field title="Sent"><display/></default-field></field>
                             <columns>
@@ -150,7 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <column><field-ref name="recipientName"/></column>
                                 <column><field-ref name="statusText"/><field-ref name="deliveryStateText"/></column>
                                 <column><field-ref name="attempts"/><field-ref name="receiptText"/></column>
-                                <column><field-ref name="reasonText"/></column>
+                                <column><field-ref name="reasonText"/><field-ref name="variantText"/></column>
                                 <column><field-ref name="handedOffDateText"/><field-ref name="sentDateText"/></column>
                             </columns>
                             <columns type="mobile">

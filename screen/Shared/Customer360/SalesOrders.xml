@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Customer360's Sales Orders tab (crosscut §3.2 Sales row; design-sales §4 Customer360; impl-sales P3): the account's orders with
     the organizations of the user's sales scope, newest first (get#CustomerSales, Customer360's always-actions; no quote template
-    or recurring base), for a holder of SALES_TEAM_VIEW until Sales' own order scope (P11) shows a representative their assigned
-    and team orders; read only, the order's number shown without a link until Sales' OrderDetail (P7, P11). -->
+    or recurring base), for a holder of SALES_TEAM_VIEW alone (P11 did not widen it: a representative's assigned and team orders are
+    Sales' Orders list); read only, the order's number shown without a link. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Orders" default-menu-index="3">
     <parameter name="customerPartyId"/>
