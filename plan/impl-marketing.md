@@ -1186,6 +1186,75 @@ both; mr-moqui unchanged, no Rust built.
     `MarketingAccess.js`, `MarketingWorkspace.js`, `test/party/Consent.spec.js`;
   - the user's calls: whether the consent mutators' new rule (first finding) and suppressions on transactional notices (fifth) stand.
 
+**Review Nov 14 (P3).** A fresh review of `mkt/p3` (mr-mantle da93115d, mr-boss 035836b1) against P3, §2, §4 and design §4, §10,
+§14.1; master (Sales P10, which also changed the ledger: the body and attachments of a build, requeue#Delivery) merged into both
+worktrees during the review, clean, both sides kept. The user's two calls (Nov 14) are recorded in §4.
+- Checked and sound:
+  - `request#Subscriptions`: the audience edit permission and the list's organization first (a mailbox, another organization's or an
+    unowned list RECORD_UNAVAILABLE), an acceptance the consent permission too, evidence text and a source of PartyConsentSource
+    required, a future evidence date refused; Sales leads and accounts resolved under the caller's Sales read (`requireOpportunity`,
+    `requireAccount`, an account's contacts by `visibleParty`), a record not seen RECORD_UNAVAILABLE and one with no contact
+    MISSING_CONTACT as that item's result; each party in its own transaction (`file#SubscriptionRequest`, internal, allow-remote
+    false), every outcome recorded as a SubscriptionRequest, a failure logged and the rest going on; a party once per call; 500 at
+    most; evidence no later than the latest list or purpose withdrawal WITHDRAWN, a staff acceptance of a withdrawn purpose
+    CONSENT_WITHDRAWN, a newer request over a list withdrawal accepted only with the consent permission (design §4: re-subscription
+    records new evidence and clears only the matching withdrawal); a suppressed address filed and kept suppressed;
+  - the bulk action: Sales' LeadList and AccountList show it from `hasPermission('MARKETING_AUDIENCE_EDIT')`, Assign and Disqualify
+    keep `canEdit`, the transitions call Mantle only; the list choices are Marketing's `get#Choices` (an audience editor's lists of
+    the scope); Sales.js `mountRoots`' Marketing row maps paths only; Sales' specs pass unchanged but SalesAccess' Marketing links;
+  - PartyConsent's organization: a scoped row never touches allowSolicitation; `get#PartyConsentState` with an organization takes its
+    scoped row unless the latest global row withdraws, without one the global rows alone; `get#PartyConsentHistory` and
+    `find#Consents` with organizations leave other organizations' scoped rows and lists out; Comms' Consent for a Marketing consent
+    editor reads only contacts of their organizations' lists or scoped consents (`check#ScopedContact`, missing and other answered
+    alike), records scoped consent only, subscribes through the evidenced request, and the export stays the contact administrator's;
+  - suppressions: normalized destinations, another organization's blocks left out of the find, the address masked for a reader
+    without the audience view and not searchable by them, ending only with MESSAGE_SUPPRESSION_REVIEW and new evidence, the row
+    kept; the ledger's attempt refuses after the consent and before the hand-off;
+  - the Audiences area's deny and ALWAYS; Leads mounts Sales' screens in Sales' context for the Marketing root.
+- Fixed:
+  - R1 (compatibility, high). P3's who-may rule sat inside `store#PartyConsent`, which `set#ContactListPartySubscription` and the token
+    paths of `unsubscribe#ContactListParty` call: a visitor signed in as anyone else (a staff member opening a forwarded link, a
+    customer signed in to PASS as another account) had the unsubscribe link, one-click POST and preferences page refused
+    PERMISSION_DENIED, the list left subscribed (the bulk loop logs it as failed); a checkout opt-in's confirmation link the same.
+    `store#PartyConsent` now checks the rule and calls the new internal `record#PartyConsent` (allow-remote false), which the services
+    that decide by the link's token or code call (set#, the token's all-marketing withdrawal, StoreTopics' confirmed grant). New
+    Audiences feature (fails on the unfixed code); the rule itself is unchanged for every direct caller.
+  - R2 (the user's call, Nov 14). Suppressions refused every delivery. Now a hard bounce refuses every delivery to the address and a
+    complaint, staff block or repeated soft failures a promotional one only (the ledger's `transactional` N), never a transactional
+    notice (`MessageSuppressions.js` `blocksEveryDelivery`; `check#Suppressions` takes `transactional`). New Suppressions feature: a
+    complaint and a staff block each send a notice and suppress a promotional delivery, an unblocked promotional one is sent (fails
+    on the unfixed code); the first feature's hard bounce still refuses a notice.
+  - R3 (integrity, low). `store#Suppression` took the caller's fromDate and thruDate, so an audience editor could add a complaint block
+    that ended itself, past the reviewer; only a reviewer or the intake (no user) dates a block now (in the new feature).
+  - R4 (scope, low). A lead's contacts were taken without Sales' `visibleParty`, as an account's are; now filtered alike.
+  - R5 (scope, medium; Sales P10 review's note). The ledger took a delivery's organization from its store alone, so a storeless
+    delivery (Sales P10's quote and reminder mail, from the seller) met only every organization's blocks, never the seller's own.
+    MessageDelivery gains `organizationPartyId` (queue#Delivery's parameter; a Comms ledger extension ahead of P9's campaign
+    delivery, which will use it), the attempt uses it before the store's, and SalesQuoteIssues.js names the seller on both queues.
+    Suppressions' feature: a hard bounce of A's refuses a storeless delivery from A and not one from B.
+- Provisional findings (for the lead to number):
+  - the token and code paths' consent writes go through the internal `record#PartyConsent` (R1);
+  - suppressions by kind of delivery (R2) and the editor's undated blocks (R3); the lead contacts' visibility (R4); the delivery's
+    own organization (R5, which touches Sales P10's SalesQuoteIssues.js: two queue parameters);
+  - a Sales record of one organization may be filed to a list of another when the caller holds both (Sales there, Marketing here);
+    nothing requires the lead's or account's organization to be the list's; left as built (the caller sees both);
+  - Comms' Consent/Contact for a Marketing consent editor of several organizations shows the global purpose states only (the scoped
+    state is asked for one organization); history and lists are theirs; a display gap, no disclosure;
+  - a contact with only a scoped consent appears in a contact administrator's registry with no purpose state (its scoped rows hidden).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Audiences 7 of 7, Suppressions 4 of 4,
+  Consent 18 of 18, ContactListSend 14, DeliveryLedger 4, CartRecovery 4, StoreReviews 5, ShopCheckout 8, ShopCustomer 5, Mailboxes 22,
+  MarketingScope 6; mr-pass ShopAccount 3, Outbox 13, Integrations 6; mr-boss MarketingLists 2, MarketingAccess 7, SalesAccess 10,
+  Consent 12, Unsubscribe 8, Contacts 43, SalesAccounts 4, SalesOpportunities 3; after the master merge and R5: mr-mantle
+  DeliveryLedger 4, Suppressions 4 (1.0 s of features), Audiences 7, SalesQuoteIssue 6, SalesQuoteResponse 3, Consent 18; mr-boss
+  SalesQuoteSend 1 (all passing). Not run: test-apps, the acceptance MarketingAudienceWalk (unchanged by the review).
+- For the lead:
+  - budget share: mr-mantle about +0.3 s over the Built note (Suppressions' new feature 0.2 s, Audiences' 0.1 s); mr-boss unchanged;
+  - merge hot spots: add `service/mantle/party/ConsentServices.xml` (store# split into store# and record#),
+    `service/mantle/public/StoreTopics.js`, `MessageSuppressions.js`, `MessageDeliveries.js`, `MessageServices.xml`,
+    `entity/MessageDeliveryEntities.xml` (MessageDelivery `organizationPartyId`) and `service/mantle/order/SalesQuoteIssues.js` to the
+    Built note's; P9 should queue a campaign delivery with `organizationPartyId` rather than add another field;
+  - the user's calls are answered and recorded in §4 (Nov 14): the consent rule kept; suppressions promotional only but a hard bounce.
+
 ### P4 — Audience import and merge
 
 Design §4 AudienceImport and AudienceMerge, §18 (the import preview, error rows and membership export);
@@ -1984,6 +2053,8 @@ design-marketing.md or the owner's design.
 | Nov 13, 2026 | Comms' explicit permissions are split by Marketing role: `MESSAGE_TEMPLATE_EDIT` to the Marketing content author group, `MESSAGE_SENDING_CONFIGURE` and `MESSAGE_SUPPRESSION_REVIEW` to `BOSS_MARKETING_ADMIN`; Comms' own groups gain them when Comms' settings area exists (§7). Granted in P6 with the screens that use them | The user's call (P1) |
 | Nov 13, 2026 | The one-person-team flag also admits an author's own campaign approval, recorded as a self-approval, as built in P2: a campaign sends nothing itself, and each of its sends is approved on its own under the 500-recipient limit | The user's call (P2) |
 | Nov 13, 2026 | `MARKETING_OWNER_CHANGE` (the lifecycle participant `marketing.campaigns`) is granted to `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`, as built in P2, as Sales' `SALES_OWNER_CHANGE`; no Marketing group holds it | The user's call (P2) |
+| Nov 14, 2026 | The consent mutators keep P3's rule, an owner contract of Comms and Commons: `subscribe#ContactListParty`, `store#PartyConsent` and the signed-in `unsubscribe#ContactListParty` change another party's consent only for the party's own user, a contact administrator or Marketing's consent editor of the list's or purpose's organization; the callers' specs pass unchanged | The user's call (P3). The services that decide who may by a link's token or code (the unsubscribe and preferences links, a checkout opt-in's confirmation) record through the internal `record#PartyConsent`, so a visitor signed in as someone else still unsubscribes (P3 review R1) |
+| Nov 14, 2026 | Suppressions block promotional mail only, except a hard bounce: a complaint, a staff block or repeated soft failures refuse a promotional delivery (the ledger's `transactional` N: a list's, campaign's or topic's) and never a transactional notice (an order confirmation, a password reset, a system notice); a hard bounce refuses every delivery to the address | The user's call (P3). Built in the P3 review (R2) in the ledger's attempt (`MessageSuppressions.js` `blocksEveryDelivery`); design-drawers-commons' Mailboxes row records it as the ledger's owner contract |
 
 ## 5. Open questions
 

@@ -640,7 +640,7 @@ purpose's organization (`MarketingAccess.requireConsentChange`); Comms' consent 
 organizations of their scope (their lists, contacts with a row on one or a scoped consent, scoped records, subscriptions through
 `request#Subscriptions`), and the export of a data request stays the contact administrator's. MessageSuppression (Comms', in
 `mantle.party.MessageServices`: `find#`, `store#`, `check#Suppressions`) is destination-scoped and normalized, for every
-organization or one; the ledger's attempt refuses an active block of every organization or of the delivery's store's organization;
+organization or one; the ledger's attempt refuses an active block of every organization or of the delivery's store's organization (a hard bounce for every delivery; a complaint, staff block or soft failures for a promotional one only, never a transactional notice: the user's call, Nov 14);
 an audience editor adds a block for an organization of their scope, a reviewer (MESSAGE_SUPPRESSION_REVIEW, the Marketing
 administrator's since P3) ends one with new evidence.
 
