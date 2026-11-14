@@ -3121,6 +3121,90 @@ Rust built.
   - nothing needs the user's call; the approver's reach (Placed and held only) and Sales' Approve recording the order rules with the
     setting off may be worth the user's look.
 
+**Review 2026-11-14 (P11).** A fresh review of `sal/p11` (mr-mantle e8938fd9, mr-boss 897aa9ec), with master (Marketing P3) merged into
+each first without conflict (mr-mantle 4a9d9ad3, mr-boss b69ab77b), against P11, §2, §4 (the Nov 11 approval-setting row, Q12), design
+§5, §6, §13.1 and §16, F11, F12, F15, F52, F60, F61 and F78.
+- Checked and sound:
+  - Owner contracts: with the seller's setting off and no Sales rule, `approve#Order` asks ORDER_APPROVE as before (`approveRefusal`'s
+    gated parts are empty), `autoApprove#Order` returns early only where `approvalWaits` finds a gated sales part, and the replacement
+    orders (ReturnServices.xml, both places) and Projects' estimate approval add only that same test before their approval. Shop's
+    checkout and renewals, Commerce's orders, Customer Service's orders, holds and replacements, Projects and Accounting's credit pass
+    unchanged (below). With the setting on, only the documented changes: the order stays placed (payment authorized) for
+    SALES_ORDER_APPROVE in the approver's sales scope with every order rule decided at the revision.
+  - The net-terms system approval: the claim is `ec.context.sharedMap.SalesSystemApproval`, set only by `asSystemApproval` in
+    SalesOrders.js around one `approve#Order` call, for that order id, and restored in a `finally`; the framework writes no request
+    value or parameter into the shared map (only its own `telemetryPageTraceId` and form-list counters), and `approveRefusal` admits
+    it only for the order it names and only for ungated parts. `approveAccepted` runs only with the setting off on every sales part,
+    the seller's `approveNetTermsOrders` and no Sales pre-approval warning; `approve#Order`'s credit check still runs (the spec's
+    credit hold).
+  - Visibility: `orderOf` (owner or team, SALES_TEAM_VIEW, an order approver only while Placed or held and then read only:
+    `canEdit` false, so line, place, cancel and clone refuse) is the one test of get#SalesOrder, every verb, the record kinds `order`
+    and `orderDocument` (the root's Chatter and RecordFiles), and the palette and Home and Insights counts through the scoped
+    find#SalesOrders, whose approver reach is the same organizations and statuses. Another organization's order answers as missing on
+    each (RECORD_UNAVAILABLE, HOLD_UNAVAILABLE, `orderFound` false, a batch row's RECORD_UNAVAILABLE). The operation key is the
+    caller's (EntityLib `operation` checks the user), so a retry answering after the approval took the order out of sight discloses
+    nothing to another user.
+  - hold#Order and release#OrderHold (F12, F78): the organization check reads the user's member organizations, skips Credit and
+    Payment reasons and a call with no user, and answers as missing; Customer Service's specs pass unchanged.
+  - approve#SalesOrder: the order is locked, then its status and revision checked, then each open order rule decided by the caller
+    (separation per rule: owner, enterer, placer from the status audit log, a line's price author; the approver group), then
+    `approve#Order` with its credit check. The batch runs each order in its own transaction (`lib.probe`) with its own key and names
+    a refusal per row.
+  - The storeless confirmation: once per order revision and recipient (the ledger's event key), only for Sales' direct orders and
+    placed quotes without a store, from the organization's own address (P10 R1's rule), never failing the placement.
+- Fixed:
+  - R1 (medium, Marketing P3 contract): the confirmation's `queue#Delivery` named no organization, so after Marketing P3 only blocks of
+    every organization applied to it, not the seller's own (a hard bounce recorded for the seller). It now passes
+    `organizationPartyId` (the selling organization), as P10's quote and reminder deliveries do. StorelessOrderConfirmation checks the
+    delivery's organization; fails on the unfixed code.
+  - R2 (low, spec coverage): SalesOrderApproval checked neither no self-approval nor the system claim being cleared; it now checks that
+    an approver who owns, entered and placed an order is refused SELF_APPROVAL by its order rule (the order stays placed), and that no
+    claim is left in the shared map after the net-terms approval. The batch check names a refused row's reason.
+- Provisional findings (for the lead to number):
+  - with the seller's setting on and no order rule the order meets, `approve#SalesOrder` and `approve#Order` admit the order's own
+    owner who holds SALES_ORDER_APPROVE: separation is per rule (design §5), so the setting alone forces a manual approval but not a
+    second person;
+  - hold#Order's direction check (a Purchase reason only on a purchase part, HOLD_TYPE_DIRECTION) applies to a call with no user too;
+    nothing places one so today;
+  - the hold organization check reuses FacilityScope, so a holder of FACILITY_ALL_ORGANIZATIONS (Warehouse's) holds and releases a
+    Manual or Change hold of any organization's order;
+  - with the setting on, the native `approve#Order` answers an order outside the approver's sales scope ORGANIZATION_DENIED, not as
+    missing (only to a holder of SALES_ORDER_APPROVE);
+  - SalesOrderApproval's batch feature failed once (successCount 1) on the first run after the master merge with
+    StorelessOrderConfirmation beside it, and passed in the five runs after; no cause found;
+  - the Built note's findings stand. On its first two: Sales' Approve deciding the order rules with the setting off is right to
+    keep (the rule is the seller's ask for separation and leaves an audit of who decided; the native path stays as built, the owner
+    contract); for the unassigned approver, recommend read-only sight of an order they decided (an OrderDecision of theirs), not the
+    organization's approved orders, so they can follow it without SALES_TEAM_VIEW.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOrderApproval 4 of 4 and StorelessOrderConfirmation
+  1 of 1 (six runs together or alone, 27 to 62 s; the one batch failure above); SalesWorkspace, SalesQuoteResponse, SalesQuoteIssue, SalesQuoteApprovals,
+  OrderLifecycle, OrderChanges, PurchaseApprovals, PurchaseHoldPermission, ShopCheckout, StoreCheckout, ShopSubscriptions,
+  OrderToCashBasicFlow, WorkProjectMilestones, AccountingCredit, AccountingReturns, ReturnToResponseBasicFlow, OrderConfirmations,
+  DeliveryLedger, Suppressions, Audiences and OrderBulk 180 of 180 (24 specs with dependencies, 80 s). mr-boss SalesOrders,
+  SalesAccess, SalesHome, SalesQuotes, SalesQuoteSend, SalesApprovals, SalesOpportunities, InsightsHome, CustomerServiceOrders,
+  CustomerServiceOrderChanges, CustomerServiceAccess, CommerceOrders, CommerceAccess, ProjectsAccess, AccountingReceivables,
+  MarketingLists, RecordFiles and Chat 129 of 129 (57 s). mr-pass whole suite 190 of 190 (13.4 s of its 20 s). R1's check fails on
+  the unfixed code. Prettier clean. Not run: test-apps, test-framework, acceptance (SalesOrderScenarios written, not run).
+- For the lead:
+  - budget share: mr-mantle about 3.2 s (R2's checks add about 0.2 s to SalesOrderApproval); mr-boss as the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `test/order/SalesOrderApproval.spec.js`,
+    `test/order/StorelessOrderConfirmation.spec.js`, `service/mantle/order/SalesOrders.js` sendConfirmation;
+  - Attack-Surface: the worker's paragraph is right but for three points; corrected: "Sales' orders
+    (`mantle.order.SalesOrderServices`, all `allow-remote="false"`): each verb needs its permission on an order of the caller's sales
+    scope (another's answers as missing); an order approver (`SALES_ORDER_APPROVE` or `ORDER_APPROVE`) reads the organization's placed
+    and held orders to decide them, never edits, cancels or copies them, and holds or releases only a Manual or Change hold by that
+    type's permission; `approve#SalesOrder` locks the order and records each order rule's decision at the revision read, the
+    order's owner, enterer, placer and a line's price author refused unless the rule allows it, then calls `approve#Order`, whose
+    credit check runs; where the seller's SalesPolicy approval setting is on, `autoApprove#Order` approves no order with a sales part
+    of it and `approve#Order` needs `SALES_ORDER_APPROVE` in the approver's sales scope and those decisions; the only system approval
+    is Sales' own of an accepted net-terms order while that setting is off, a claim Mantle's code sets in the execution context's
+    shared map for that one order and clears when `approve#Order` returns, never a request value; `hold#Order` and
+    `release#OrderHold` answer a user's Manual, Change or Purchase reason on an order of an organization they do not work for as
+    missing, and Sales places and releases only Manual and Change holds; the storeless confirmation goes once for an order's revision
+    and recipient from the organization's own address, the delivery naming the organization so its suppressions apply.";
+  - the user's call, if the lead agrees: whether the approval setting with no order rule should also refuse the order's own owner,
+    enterer or placer (the first finding above).
+
 ### P12 — Quote templates
 
 Design §5 QuoteTemplates and QuoteTemplateDetail, §19 item 2; SAL-TEMPLATE.
