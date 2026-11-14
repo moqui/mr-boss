@@ -344,7 +344,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | built and reviewed Nov 14, merged |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | built and reviewed Nov 14, merged |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | built and reviewed Nov 14, merged |
-| P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
+| P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | built and reviewed Nov 14, merged |
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
 | P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | built and reviewed Nov 14, merged |
 | P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | — |
@@ -4369,7 +4369,7 @@ P7) merged in before the last runs; mr-moqui and mr-pass unchanged, no Rust buil
   recurring orders and subscriptions" table; ss-inventory's OrderDetail RecurOptions row.
 - Design edits: design-sales §7 "As built (impl-sales P16)"; design-commerce §6 Subscriptions "As built (Nov 14, impl-sales P16)" (owner
   contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F290 to F298 in order:
   - with `copyPayment=false` a native base's generated order has no payment, so it is never auto-approved and auto-invoice (which
     bills only a part approved at its placement) bills nothing; native renewals wait for an approver, and a renewal payment through
     Accounting's attempt with recorded consent (design §7) is not built for native bases;
@@ -4474,7 +4474,7 @@ had nothing newer, so no merge; P16's specs were run again.
   order-item price summary (`MantleInventoryOrderItem`, a report); `notify#OrderHighPriority` and `DropShip.js approved()` on a base
   re-approved (no reservation, so no drop-ship order); MarketingSegments and the `mantle-sales-orders`, `mantle-sales-items` and
   `mantle-sales-daily-floor` reports, bounded by the placed date their time field is.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F299 to F303 in order:
   - with no payment copied a native renewal waits in Awaiting approval every period, and `recurAutoInvoice` never bills (it bills only a
     part approved at placement), while Accounting's Recurring invoices still says "Invoiced on approval"; Accounting's renewal payment
     attempt with recorded consent (design §7) is not built for native bases;
@@ -5498,6 +5498,20 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F287 | P18 (Review Nov 14): `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged) | P18: as its Review note says |
 | F288 | P18 (Review Nov 14): a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets) | P18: as its Review note says |
 | F289 | P18 (Review Nov 14): Targets' list refuses past 2,000 forecasts of one organization without a screen message (find#Targets' refusal is cleared like any load error there) | P18: as its Review note says |
+| F290 | P16 (Built Nov 14): with `copyPayment=false` a native base's generated order has no payment, so it is never auto-approved and auto-invoice (which bills only a part approved at its placement) bills nothing; native renewals wait for an approver, and a renewal payment through Accounting's attempt with recorded consent (design §7) is not built for native bases | P16: as its Built note says |
+| F291 | P16 (Built Nov 14): the cadence is read in the base's zone by a wall-clock shift; around a clock change an occurrence at the repeated or skipped hour may move by that hour; a zone-aware cron reader in the framework would remove it (`ec.service.nextCronExecution` with a zone) | P16: as its Built note says |
+| F292 | P16 (Built Nov 14): a base has no detail screen (Sales' OrderDetail does not show a template); RecurrenceList's first column is not a link, and the base's lines are seen only as its amount | P16: as its Built note says |
+| F293 | P16 (Built Nov 14): missed occurrences are not each made: as the native worker, one order for the latest due occurrence (a base down for two months makes one order) | P16: as its Built note says |
+| F294 | P16 (Built Nov 14): the job now runs native bases one after another in its own call, not asynchronously; a long list of due bases lengthens the job run | P16: as its Built note says |
+| F295 | P16 (Built Nov 14): readers that still list an approved base as an order, low or display only (from the sweep): Commerce's palette and store-order record (Commerce.js orderSearch, readStoreOrder), Commerce's call context and store customers' counts (StoreOperations.js storeCallRecords, findStoreCustomers), Accounting's order detail offering Invoice (the backend refuses), `get#CustomerFinance`'s order list, Projects' order-line picker (BillingServices.xml), the bulk part status change (OrderBulkServices.xml), projected inventory (`MantleInventoryOrderItem` document, no purpose condition), `notify#OrderHighPriority` and `DropShip.js approved()` on a base re-approved; and readers that leave a base out only because it has no placed date (SalesAnalysis.js and its screen without a date filter, MarketingSegments.js, the `mantle-sales-orders` and `mantle-sales-items` datasets and the `mantle-sales-daily-floor` alert) | P16: as its Built note says |
+| F296 | P16 (Built Nov 14): find#SalesSubscriptions and find#RecurringSalesOrders read up to 500 candidates and filter by scope in the script; fine for the demo, a joined query when volumes grow | P16: as its Built note says |
+| F297 | P16 (Built Nov 14): a Sales reader of the organization sees its store contracts (customer, product, paid-through, next renewal and amount) whatever their own assignments, as agreements are read (P15); no payment method or consent is returned | P16: as its Built note says |
+| F298 | P16 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the recurrence services; P16 had no mr-moqui worktree | P16: as its Built note says |
+| F299 | P16 (Review Nov 14): with no payment copied a native renewal waits in Awaiting approval every period, and `recurAutoInvoice` never bills (it bills only a part approved at placement), while Accounting's Recurring invoices still says "Invoiced on approval"; Accounting's renewal payment attempt with recorded consent (design §7) is not built for native bases | P16: as its Review note says |
+| F300 | P16 (Review Nov 14): `clone#Order`'s `productItemsOnly` default: a base and each order made from it repeat only the product lines, so the source's shipping charge, discount and tax lines are not repeated and nothing computes tax at placement; a generated order's total is its product lines alone (the native worker had the same default; P16 newly makes Sales' bases through it) | P16: as its Review note says |
+| F301 | P16 (Review Nov 14): a base made from a store order keeps its store, so its generated orders follow the store's rules (approval delay, store mail) | P16: as its Review note says |
+| F302 | P16 (Review Nov 14): the clock-change hour (Built finding 2, as judged above) | P16: as its Review note says |
+| F303 | P16 (Review Nov 14): the Built note's other findings stand: no base detail screen; missed occurrences make one order; the job runs native bases in series; 500-candidate reads filtered in the script; a Sales reader sees the organization's store contracts | P16: as its Review note says |
 
 ## 7. Later
 
