@@ -1863,7 +1863,7 @@ reused as a payment or support grant. **Needs:** SAL-PORTAL, SAL-QUOTE.
 - **Invite to Sales.** On Customer360's header and ContactDetail, for a holder of `SALES_CUSTOMER_INVITE`:
   `mantle.sales.AccountServices.invite#SalesContact` for a customer account of the user's scope (or a person account
   itself), one of the contact's own addresses, and an organization with a published PASS Sales site.
-- **Not built here.** The Account hub's card shows quotes only (orders in P17); the one-time code for high-value acceptance
+- **Not built here.** The Account hub's card shows quotes only (orders joined in P17, below); the one-time code for high-value acceptance
   is later (§11); no notice tells the rep of a customer's online response (the order and OrderDetail show it).
 
 ### CustomerOrders
@@ -1899,6 +1899,37 @@ the order page never takes payment.
 A bearer link from the confirmation mail reaches this one order only. **Needs:** SAL-PORTAL.
 
 **Source:** reference SAL-R01; Odoo `sale` portal; PASS Billing InvoicePay.
+
+### As built (impl-sales P17, Nov 14, 2026)
+
+- **Operations.** `findSalesOrders`, `getSalesOrder` and `getSalesOrderDocument` (GET reads, no bearer write) over
+  `mantle.order.SalesPortalServices` find#CustomerOrders, get#CustomerOrder and get#OrderDocument; the PDF is the order's
+  confirmation as placed (Customer Service's stored OctOrderConfirmation, the one the confirmation mail attached), never made by
+  a read; an order with none shows no PDF.
+- **Which orders.** A placed sales order of the site's organization to the customer, every part the seller's to it, with no
+  store, not a recurring base or a quote template, and not cancelled or rejected (a placed order is never Being changed: a
+  commercial change holds and releases it inside its apply, and a Credit hold it leaves shows as being reviewed). A store order's one public
+  page stays Shop's (F42): `SalesOrder` OrderView's page goes by the order's store (ExternalAccess `recordPage`), so a storeless
+  order's link opens CustomerOrder on a site whose Sales mount targets the organization and a store order's keeps Shop's
+  `/Orders/Status` on the store's site; CustomerOrders lists no store order and CustomerOrder refuses one.
+- **Links.** The storeless confirmation (`send#OrderConfirmation`, P11) carries each recipient's own OrderView link, made at
+  each attempt of the ledger's build as a quote's is, lasting a year as Shop's order link does; none with no published Sales
+  site. A link reaches its one order and never lists; a signed-in account (a contact grant of the `sales` app, or the
+  customer's own verified account) reaches and lists the orders of the customers it acts for. A quote link never opens an order
+  and an order link never a quote.
+- **The page.** Lines and totals as text, the line's needed-by date and the part's ship-by and delivery-by dates, the accepted
+  quote (its revision and acceptance; a link to its page for a signed-in account), shipments (packed, shipped, delivered) with
+  carrier, dates and tracking (a carrier's link only when it is https), invoices of the organization to the customer with their
+  due date and open amount, and the PDF. Read only. Billing's InvoicePay is linked for a signed-in account where the site's
+  Billing serves the organization (Billing checks its own access; a link's reader pays from the invoice's own mail); Support's
+  NewCustomerCase (ask or change, OrderCancelRequest while cancellable) and RequestReturn (once shipped) where the site's
+  Support serves it, each checking its own access: a link's reader through the order link the page keeps in its session, as
+  Shop's guest's (mr-pass Support.js `orderLink`).
+- **The quote after the order.** Once a quote is accepted, a commercial change of the order moves its revision past the
+  issue's; the quote's page then shows none of the changed lines or totals, says the order changed and points to the order's
+  page (F236); the issued PDF stays the offer.
+- **The Account hub** card counts open quotes and open orders (not completed), with My quotes and My orders.
+- **Not built here.** A date-range filter on My orders (state and the order or PO only); reorder (§11).
 
 ## 11. Later capabilities
 

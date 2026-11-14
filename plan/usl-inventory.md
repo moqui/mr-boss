@@ -908,6 +908,21 @@ impl-marketing P6), called by built screens, the ledger and the intake:
 | party/MessageServices | find#DeliveryReceipts | CampaignDelivery and RecipientDetail (P9) | (no screen until P9) |
 | party/MessageServices | queue#Delivery (sendingProfileId) | the sends' release (P9) | attempt#Delivery sends from the profile (Marketing P6) |
 
+Added in Marketing P7 (Nov 14, 2026; PASS Marketing's public subscription in `mantle.marketing.MarketingPortalServices`, the list
+policy's public offer and the consent services' organization scope, impl-marketing P7), called by PASS pages, the ledger and Shop's
+checkout:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingPortalServices | get#Publication, request#Subscription | PASS:Marketing/Subscribe (SubscriptionRequest, SubscriptionReceipt) | PASS:Marketing/Subscribe (the operations getMarketingPublication, requestSubscription) (Marketing P7) |
+| marketing/MarketingPortalServices | get#SubscriptionRequest, verify#Subscription | PASS:Marketing/VerifySubscription (VerifyIntent) | PASS:Marketing/VerifySubscription (getSubscriptionRequest, verifySubscription) (Marketing P7) |
+| marketing/MarketingPortalServices | check#MarketingAppReadiness | the site's readiness (PublicApps.js) | Forum.js site readiness for a marketing mount (Marketing P7) |
+| marketing/MarketingPortalServices | build#VerificationDelivery | the ledger's source MdsrcSubscriptionVerify | attempt#Delivery (Marketing P7) |
+| marketing/MarketingPortalServices | file#CheckoutSubscription | Shop's checkout opt-in (impl-shop §7, F26) | StoreTopics.js apply#CheckoutOptIn, the store-news choice (Marketing P7) |
+| marketing/AudienceServices | store#SubscriptionPolicy (publicSiteId, offerFromDate, offerThruDate) | Marketing/Audiences/ListDetail (SubscriptionPolicy's public offer) | Marketing/Audiences/ListDetail (Marketing P7) |
+| party/ConsentServices | unsubscribe#ContactListParty (organizationPartyId) | PASS:Account/EmailPreferences (Marketing's context) | AccountHub.js store#EmailPreferences, "No more email from" (Marketing P7) |
+| public/AccountHubServices | get#EmailPreferences, store#EmailPreferences (Marketing's context) | PASS:Account/EmailPreferences (Marketing's context, design-marketing §13) | PASS:Account/EmailPreferences (Marketing P7) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -2399,6 +2414,14 @@ remain historical; these rows add no implementation claim.
 | party/SalesAgreementServices | store#SalesAgreement, store#AgreementParty, store#AgreementTerm, store#AgreementItem | Sales/Agreements/AgreementDetail | Shared/AgreementDetail (Edit agreement, Add party, Add term, Add item, Price, Remove) |
 | party/SalesAgreementServices | activate#SalesAgreement, end#SalesAgreement, renew#SalesAgreement | Sales/Agreements/AgreementDetail (ActivateAgreement, EndAgreement) | Shared/AgreementDetail (Activate, End agreement or Cancel draft, Renew) |
 | party/SalesAgreementServices | expire#SalesAgreements | — (job) | ServiceJob expire_SalesAgreements (data/SalesAgreementSetupData.xml) |
+
+### Added in the Sales build: PASS Sales orders (P17, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesPortalServices | find#CustomerOrders | PASS:Sales/CustomerOrders (MyOrderFind, MyOrders) | PASS:Sales/CustomerOrders (findSalesOrders); the PASS Account hub's card (get#AccountCard, open orders) |
+| order/SalesPortalServices | get#CustomerOrder, get#OrderDocument | PASS:Sales/CustomerOrder (OrderSummary, OrderShipments, OrderInvoices) | PASS:Sales/CustomerOrder (getSalesOrder; the confirmation's PDF through getSalesOrderDocument, streamed by the facade) |
+| order/SalesOrderServices | send#OrderConfirmation, build#OrderConfirmationMessage | Sales/Orders/OrderDetail (the storeless confirmation's order link) | the confirmation mail's link to PASS:Sales/CustomerOrder (the SalesOrder kind's OrderView, per recipient and attempt) |
 
 ### Added in the Sales build: forecast and targets (P18, Nov 14, 2026)
 
