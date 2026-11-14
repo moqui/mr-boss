@@ -246,4 +246,40 @@ along with this software (see the LICENSE.md file). If not, see
             organizationPartyId="ORG_ZIZI_RETAIL" reasonEnumId="MsrComplaint" sourceEnumId="MssProvider" sourceRef="arf-2026-11-01"
             evidenceText="Marked the October newsletter as spam" fromDate="2026-11-01 18:00:00"/>
     <!-- ===== end of Marketing P3 ===== -->
+
+    <!-- ===== Marketing P4: audience import and merge (impl-marketing P4; design-marketing §4 AudienceImport) ===== -->
+    <!-- A completed import into Retail's store announcements from the fall fair's sign-up sheet (evidence: the sheet, each person to
+        confirm): Noah filed pending, Olive filed pending with her complaint suppression kept, and a row with no valid address left out
+        as invalid. Its staged file is not part of the demo, so it offers no error rows' download. -->
+    <mantle.marketing.contact.AudienceImport audienceImportId="BOSS_MKT_IMP_FAIR" contactListId="BOSS_MKT_LIST_STORE" organizationPartyId="ORG_ZIZI_RETAIL"
+            importKey="demo-fall-fair" fileName="fall-fair-signups.csv" fileHash="demo" rowCount="3"
+            mappingJson="{&quot;columnMapping&quot;:{&quot;Name&quot;:&quot;fullName&quot;,&quot;Email&quot;:&quot;email1&quot;}}"
+            sourceEnumId="PcsForm" evidenceDate="2026-11-08 14:00:00" evidenceText="Fall fair sign-up sheet: store news by email"
+            acceptEvidence="N" stateEnumId="AisComplete" stagedDate="2026-11-12 10:00:00" stagedByUserId="BOSS_MKT_AUDIENCE"
+            appliedDate="2026-11-12 10:05:00" appliedByUserId="BOSS_MKT_AUDIENCE" completedDate="2026-11-12 10:05:00"
+            expireDate="2026-12-12 10:00:00" pendingCount="2" acceptedCount="0" existingCount="0" refusedCount="1" skippedCount="0" failedCount="0"/>
+    <mantle.marketing.contact.SubscriptionRequest subscriptionRequestId="BOSS_MKT_SR_FAIR1" contactListId="BOSS_MKT_LIST_STORE" partyId="BOSS_MKT_CON_NOAH"
+            contactMechId="BOSS_MKT_CON_NOAH_EM" organizationPartyId="ORG_ZIZI_RETAIL" purposeEnumId="PcpMarketingEmail" requestKindEnumId="SrkImport"
+            sourceEnumId="PcsForm" evidenceDate="2026-11-08 14:00:00" evidenceText="Fall fair sign-up sheet: store news by email"
+            sourceRecordId="BOSS_MKT_IMP_FAIR:1" statusEnumId="SrsPending" requestedDate="2026-11-12 10:05:00" requestedByUserId="BOSS_MKT_AUDIENCE"
+            decidedDate="2026-11-12 10:05:00"/>
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_STORE" partyId="BOSS_MKT_CON_NOAH" fromDate="2026-11-12 10:05:00"
+            statusId="CLPT_PENDING" preferredContactMechId="BOSS_MKT_CON_NOAH_EM" revision="1"/>
+    <mantle.marketing.contact.SubscriptionRequest subscriptionRequestId="BOSS_MKT_SR_FAIR2" contactListId="BOSS_MKT_LIST_STORE" partyId="BOSS_MKT_CON_OLIVE"
+            contactMechId="BOSS_MKT_CON_OLIVE_EM" organizationPartyId="ORG_ZIZI_RETAIL" purposeEnumId="PcpMarketingEmail" requestKindEnumId="SrkImport"
+            sourceEnumId="PcsForm" evidenceDate="2026-11-08 14:00:00" evidenceText="Fall fair sign-up sheet: store news by email"
+            sourceRecordId="BOSS_MKT_IMP_FAIR:2" statusEnumId="SrsPending" requestedDate="2026-11-12 10:05:00" requestedByUserId="BOSS_MKT_AUDIENCE"
+            decidedDate="2026-11-12 10:05:00"/>
+    <mantle.marketing.contact.ContactListParty contactListId="BOSS_MKT_LIST_STORE" partyId="BOSS_MKT_CON_OLIVE" fromDate="2026-11-12 10:05:00"
+            statusId="CLPT_PENDING" preferredContactMechId="BOSS_MKT_CON_OLIVE_EM" revision="1"/>
+    <mantle.marketing.contact.AudienceImportItem audienceImportId="BOSS_MKT_IMP_FAIR" rowNumber="1" proposedAction="match" matchedPartyId="BOSS_MKT_CON_NOAH"
+            matchReason="email" addressMasked="n***@zizi-customers.example" contactName="Noah Brandt" outcome="pending" partyId="BOSS_MKT_CON_NOAH"
+            subscriptionRequestId="BOSS_MKT_SR_FAIR1" attemptCount="1" appliedDate="2026-11-12 10:05:00"/>
+    <mantle.marketing.contact.AudienceImportItem audienceImportId="BOSS_MKT_IMP_FAIR" rowNumber="2" proposedAction="match" matchedPartyId="BOSS_MKT_CON_OLIVE"
+            matchReason="email" addressMasked="o***@zizi-customers.example" contactName="Olive Harper" exclusionCode="SUPPRESSED" outcome="pending"
+            partyId="BOSS_MKT_CON_OLIVE" subscriptionRequestId="BOSS_MKT_SR_FAIR2" attemptCount="1" appliedDate="2026-11-12 10:05:00"/>
+    <mantle.marketing.contact.AudienceImportItem audienceImportId="BOSS_MKT_IMP_FAIR" rowNumber="3" proposedAction="exclude" addressMasked="o***"
+            contactName="Owen" exclusionCode="INVALID_ADDRESS" problemText="Email owen at home is not a valid address" outcome="invalid"
+            reasonCode="INVALID_ADDRESS" attemptCount="1" appliedDate="2026-11-12 10:05:00"/>
+    <!-- ===== end of Marketing P4 ===== -->
 </entity-facade-xml>

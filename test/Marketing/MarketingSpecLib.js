@@ -31,7 +31,10 @@ const ids = {
     pendingPartyId: "BOSS_MKT_CON_NOAH",
     acceptedPartyId: "BOSS_MKT_CON_MAYA",
     salesAccountId: "BOSS_SAL_ACC_WINGTIP",
-    salesContactId: "BOSS_SAL_CON_DANA"
+    salesContactId: "BOSS_SAL_CON_DANA",
+    // P4's demo import: Retail's fall fair sign-ups into its store announcements (two pending, one invalid row)
+    fairImportId: "BOSS_MKT_IMP_FAIR",
+    storeListId: "BOSS_MKT_LIST_STORE"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

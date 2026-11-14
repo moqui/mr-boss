@@ -523,6 +523,28 @@ send/attribution links retain original lists. **Needs:** MKT-AUDIENCE, MKT-CONSE
 
 **Source:** research §3; Odoo Merge Mailing Lists and native dated list membership.
 
+**As built (impl-marketing P4).** `Marketing/Audiences/AudienceImport` and `AudienceMerge` are hidden from the Audiences tabs and
+opened from Lists (Import, Merge) and ListDetail's More (Import members, Merge lists into this one, Export members); Admin's
+Imports opens a run at AudienceImport (`marketingAudienceImport`). The import is one screen: without an import, ImportFile and
+ImportEvidence as one form (list, file, encoding, evidence source, date and text, the columns giving a row's own evidence or date,
+accept for a consent editor) and the recent imports; with one, its header, the columns and evidence again while it is previewed,
+and its rows (ImportMatches, then ImportResults) with Apply at the revision read, Retry failures and the error rows' download.
+L.`preview#AudienceImport` reads the file with Commons' `parse#ContactFile` and `read#ContactRows` (the parser `preview#Contacts`
+and `import#Contacts` use) and matches a row by the list channel's address alone with `match#Contact` (never a personal contact,
+the importer's own included: a list's member is the organization's); `preview#Contacts` and `import#Contacts` themselves are not
+called, as they match by name and import into a contact book; a new contact is a directory contact made by `import#ContactRow`.
+The file is staged as a dbresource file by reference and sha256 (AudienceImport), its rows' previews and outcomes are
+AudienceImportItem rows (the address masked, never in full), and the file is purged after 30 days by the job
+`purge_MarketingAudienceImports`, the outcomes kept. L.`apply#AudienceImport` applies each row in a transaction of its own, the
+item locked, through `file#SubscriptionRequest` (request#Subscriptions' own filing; kind Import, the import and row its source
+record), so a restart applies only the rows not yet applied and a withdrawal after the preview is refused WITHDRAWN. The merge's
+decisions: a member accepted on a source of the target's purpose with a grant of that list is accepted with that grant's evidence
+and date (by a consent editor; pending otherwise); a pending member, one of another purpose and a legacy member with no evidence
+are filed pending; a member withdrawn from any source or from the target is not carried; `merge#Lists` names the preview's key
+(STALE_PREVIEW when the lists changed) and an operation key, files each member through the same filing (kind List merge, the
+source list its source record) and archives the sources when asked. The membership export is the framework's rows export
+`marketingAudienceMembers` (scope a list; `MARKETING_AUDIENCE_EXPORT`; the address a field of `MARKETING_AUDIENCE_VIEW`).
+
 ### Segments
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

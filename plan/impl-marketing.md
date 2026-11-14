@@ -1289,6 +1289,109 @@ MKT-AUDIENCE.
   in Admin's Imports for a data operator who also holds `MARKETING_AUDIENCE_VIEW`, as a summary with no row or
   address; two lists merge with their histories kept.
 
+**Built Nov 14 (P4).** mr-mantle and mr-boss on branch `mkt/p4` (hashes in the worker's reply), from master after P3's merge;
+mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P1–P3's Built and Review notes, F82, F90–F131, §4's import-permission row; Sales P6's
+  opportunities import (a `rows` target through Shared/DataImport, its hashed operation key) and People's, Maintenance's and Commerce's
+  targets; the framework's DataTransferServices (a `wizard` target registers only its place and runs finder; `importPermission` is
+  informational for it and `viewPermission` decides Admin's listing; run#Export is every user's and asks the target's export
+  permission, its owner services reached as the caller); Commons' ContactImportServices. The code over the plan:
+  - AudienceMerge is list consolidation (design §4), not a party merge: nothing of `merge#Parties`, PartyMerge.js or F82 is needed here,
+    and those guards stay P19's;
+  - the import does not call `preview#Contacts` or `import#Contacts`: both match a row by name as well as address (consent belongs to
+    the address's owner) and the second imports into a contact book; it reads the file with `parse#ContactFile` and `read#ContactRows`
+    (the parser they use), matches with `match#Contact` given the list channel's address alone, and makes a new contact with
+    `import#ContactRow` (a directory contact), so there is still no second parser or party merger;
+  - "through request#Subscriptions": each row is filed through `file#SubscriptionRequest`, the internal service request#Subscriptions
+    files each item through, in the row's own transaction with its contact (a new transaction per request, as request#Subscriptions
+    uses, could not see a contact made in the row's transaction); the evidence checks are request#Subscriptions' own, shared
+    (`evidenceTextOf`, `sourceOf`, `evidenceDateOf`);
+  - the route key is added to Admin.js `mountRoutes` (where ownerRoutes moved, DataImport.js :18-27 says so), not DataImport.js; no
+    Marketing branch in DataImport.js, as nothing is staged through the shared wizard;
+  - AudienceImport and AudienceMerge are hidden screens under Audiences, opened from Lists and ListDetail, so the Audiences tabs (and
+    MarketingAccess' tab list, which P5's Segments changes) are untouched.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P4 block): AudienceImport (the list and organization, the staged file's location, name and sha256,
+    the import key, the mapping, the evidence and its columns, accept, state AisStaged/AisApplying/AisComplete/AisPartial/AisExpired,
+    who staged and applied it, the expiry and purge, the counts) and AudienceImportItem (the row's proposed action, matched contact,
+    masked address, exclusion or note, outcome, reason, contact, request and attempts); the request kind SrkMerge.
+  - `AudienceServices.xml` (a P4 block) over `MarketingAudienceTransfers.js`: `preview#AudienceImport`, `apply#AudienceImport`, the
+    internal `apply#AudienceImportRow`, `get#AudienceImport`, `find#AudienceImportRuns` (find#TargetRuns), `get#AudienceImportErrors`,
+    `purge#AudienceImports`, `find#MemberExportScopes` (find#TargetScopes) and `export#MemberTransfer` (run#TargetExport); over
+    `MarketingListMerge.js`: `preview#ListMerge`, `merge#Lists`. Rules and refusals in each service's description and design §4's
+    as-built note. `MarketingAudiences.js` shares its scope, list, policy, evidence checks, `fileApart` and masks (`audience`).
+  - `data/MarketingAudienceTransferData.xml` (a file of its own): the targets `marketingAudience` (import, wizard, its runs finder,
+    `MARKETING_AUDIENCE_IMPORT,MARKETING_AUDIENCE_EDIT`, view `MARKETING_AUDIENCE_VIEW`, owner route `marketingAudienceImport`) and
+    `marketingAudienceMembers` (export, rows, scope a list, `MARKETING_AUDIENCE_EXPORT`, the address field `MARKETING_AUDIENCE_VIEW`,
+    owner route `marketingLists`); MantleMarketingTransferServices (the runs finder and the export's services for every user, each
+    checking its permission and organization); the job `purge_MarketingAudienceImports` with its JobRegistration (MARKETING_CONFIGURE).
+- BOSS:
+  - Screens: `Marketing/Audiences/AudienceImport` (ImportFile and ImportEvidence as one form; recent imports; an import's header,
+    columns and evidence again, rows with outcomes, Apply, Retry failures, Download error rows) and `AudienceMerge` (MergeSelection,
+    MergePreview with totals and conflicts, ApplyMerge with a reason and an operation key made of the preview's key); Lists' Import and
+    Merge buttons; ListDetail's More gains Import members, Merge lists into this one and Export members (the framework's run#Export).
+    `template/MarketingAudiences.xml` (a P4 block): previewImport, applyImport, downloadImportErrors, mergeLists, exportMembers.
+  - `Marketing.js` linkPaths (a P4 block): Audiences/AudienceImport, Audiences/AudienceMerge. Admin.js `mountRoutes`:
+    marketingAudienceImport, marketingLists. No BossSetupMarketingData change: BOSS_MARKETING_AUDIENCE already holds and bundles the
+    import and export permissions (P1), and the Audiences area's ALWAYS covers the new screens.
+  - Demo (`BossZZMarketingDemoData.xml`, a P4 block): Retail's fall fair import into Store announcements (Noah and Olive filed pending,
+    Olive's complaint suppression noted, a row with no valid address invalid), its staged file not part of the demo.
+- Specs:
+  - Mantle `test/marketing/AudienceImport` (3 features, 0.9 s: an editor without the import permission refused, no evidence refused (a
+    list supplies none), an acceptance without the consent permission refused, another organization's list missing; a preview files
+    nothing, a malformed row invalid and a duplicate skipped alone, another user's personal contact never matched (a new directory
+    contact), a withdrawal after the preview refused WITHDRAWN at the apply, each request naming its row and evidence, a second apply
+    changing nothing, a stale revision refused; a restart applying only the rows not yet applied, each once; the runs and the import
+    by the audience view and organization, no address in full); `test/marketing/ListMerge` (1 feature, 0.3 s: the reader refused,
+    another organization's list missing; accepted with evidence, pending stays pending, another topic's grant not carried, a
+    withdrawal from a source or the target not carried; no party made or merged, the source rows kept, the requests naming their
+    source list; a retry answering the first result, a changed list refused STALE_PREVIEW).
+  - mr-boss `MarketingImport` (3 features, 0.5 s: AudienceImport's one qvt render of the demo import; Admin's Imports listing it for a
+    data operator with the audience view and not without; the membership export for the audience manager, refused an author).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingImportWalk` (3 features: a CSV of six imported through the
+    screens' transitions, four pending, the malformed and the unsubscribed named; the run in Admin's Imports for a data operator with
+    the audience view, no address; two lists merged into a third with their histories kept).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle AudienceImport, ListMerge, Audiences, Suppressions,
+  Consent, MarketingScope, ContactListSend, MarketingApprovals, Campaigns (65 of 65); mr-boss MarketingImport, MarketingLists,
+  MarketingAccess, MarketingCampaigns, AdminImports, AdminExports, QuickCreate (43 of 43). A throwaway render of AudienceImport
+  (start and an import), AudienceMerge with a preview, ListDetail and Lists in qvt, tui and html, the previewImport transition, the
+  error rows' download, a merge preview and the members' export through the screen passed and was not kept. `moqui lint --screens`:
+  141 flagged sites, as before, none in the P4 screens. Prettier clean on the changed JavaScript. Not run: test-apps, the acceptance
+  suite.
+- Inventories: usl-inventory's ContactImportServices rows and a Marketing P4 block; ss-inventory has no row for P4's screens.
+- Design edits: design-marketing §4 (as built); design-admin §11.1's Marketing row (owner contract: the runs finder, permissions and
+  the export target).
+- Findings (provisional, numbered by the lead):
+  - the merge is of lists only; party-merge guards (F82) stay P19's, and P4 needed nothing of them;
+  - the import matches by the list channel's address alone and never uses a personal contact, the importer's own included (P3's
+    request#Subscriptions admits the caller's own personal contact); a row matching only someone's personal contact makes a new
+    directory contact with the same address;
+  - the import calls neither `preview#Contacts` nor `import#Contacts` (name matching; contact books), using their parser and
+    `match#Contact`/`import#ContactRow` (the code over the plan above);
+  - a row's request is filed in the row's transaction through `file#SubscriptionRequest` rather than through request#Subscriptions'
+    per-item new transaction (the code over the plan above); the exactly-once rule is the locked item;
+  - a merge carries an acceptance only for a source of the target's purpose with a list grant (a legacy member with no evidence and
+    a member of another purpose are filed pending), and only for a consent editor; a member withdrawn from any source is not carried
+    even when accepted on another (the withdrawal wins over the preview's other sources);
+  - error rows are downloadable only while the staged file is kept (30 days); the demo import has no staged file and offers none;
+  - the membership export's view permission (who reads others' export records) is MARKETING_AUDIENCE_EXPORT; Marketing has no screen
+    of export records, so they are read in Admin's Exports by its own permissions;
+  - `./moq run lint --screens --release --nobuild` passed `--nobuild` to moqui and rebuilt the shared release binary (from master's
+    sources; 3 m 43 s) before failing; lint was then run with the binary directly. The brief's lint command should be
+    `target/release/moqui lint --screens` with the runtime.
+- For the lead:
+  - budget share: mr-mantle about 1.3 s (AudienceImport 0.9 s, ListMerge 0.3 s); mr-boss server about 0.5 s (MarketingImport); no
+    client spec;
+  - merge hot spots (P5 on mkt/p5 appends to the same files): mr-mantle `entity/MarketingEntities.xml` (the P4 block after P3's),
+    `service/mantle/marketing/AudienceServices.xml` (the P4 block at the end), `MarketingAudiences.js` (the evidence checks split out of
+    requestSubscriptions, the `audience` export at the end); mr-boss `data/BossZZMarketingDemoData.xml` (the P4 block after P3's),
+    `service/ironstone/marketing/Marketing.js` (linkPaths' P4 lines at the end), `screen/Marketing/Audiences.xml` (its comment only),
+    `screen/Marketing/Audiences/Lists.xml` and `ListDetail.xml`, `template/MarketingAudiences.xml` (a P4 block before the widgets),
+    `test/Marketing/MarketingSpecLib.js` (ids), `service/ironstone/admin/Admin.js` (mountRoutes), `plan/usl-inventory.md`,
+    `plan/design-marketing.md` (§4), `plan/design-admin.md`, this file. Not touched: BossSetupMarketingData.xml, Marketing.xml's menu,
+    Sales and order files;
+  - nothing needs the user's call; the findings' second and fifth are choices the review may want to confirm.
+
 ### P5 — Segments and audience preview
 
 Design §4 Segments, SegmentDetail and AudiencePreview; MKT-SEGMENT, MKT-ACCESS; gate 1.

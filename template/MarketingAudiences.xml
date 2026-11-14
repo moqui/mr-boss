@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     - addToList and audienceListChoices are the Sales bulk action's, included by Sales' Leads and Accounts (owner contract, F64,
       F65): they post the selected leads or accounts with the chosen list and evidence, and Mantle resolves each one's contacts
       under the caller's Sales read.
-    - NewListForm: the Lists screen's and QuickList's form (design §4 NewList, §14.3 QuickList). -->
+    - NewListForm: the Lists screen's and QuickList's form (design §4 NewList, §14.3 QuickList).
+    - P4: previewImport, applyImport and downloadImportErrors are AudienceImport's, mergeLists AudienceMerge's and exportMembers
+      ListDetail's (the framework's run#Export of the target marketingAudienceMembers). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <!-- a new list: its ListDetail, else the list again -->
@@ -131,6 +133,78 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
+
+    <!-- ===== P4: the audience import, the list merge and the members' export (design §4 AudienceImport, AudienceMerge, §18) ===== -->
+    <!-- ImportFile, ImportEvidence and the mapping step: stage a file (or preview a staged import again at its revision); the import
+        opens on its preview -->
+    <transition name="previewImport">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.preview#AudienceImport" out-map="previewed"
+                    in-map="{contactListId:(contactListId || null), audienceImportId:(audienceImportId || null), expectedRevision:(expectedRevision || null),
+                        importFile:importFile, fileText:(fileText || null), fileName:(fileName || null), characterSet:(characterSet || null),
+                        emailColumn:(emailColumn || null), phoneColumn:(phoneColumn || null), firstNameColumn:(firstNameColumn || null),
+                        lastNameColumn:(lastNameColumn || null), nameColumn:(nameColumn || null), organizationColumn:(organizationColumn || null),
+                        evidenceColumn:(evidenceColumn || ''), evidenceDateColumn:(evidenceDateColumn || ''), sourceEnumId:(sourceEnumId || null),
+                        evidenceDate:(evidenceDate || null), evidenceText:(evidenceText || null), accept:(accept == 'Y')}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="audienceImportId" from="previewed.audienceImportId"/>
+                <message type="info">${previewed.rowCount} rows: ${previewed.addCount} new contacts, ${previewed.matchCount} existing, ${previewed.excludeCount} excluded, ${previewed.skipCount} skipped${previewed.suppressedCount ? ', ' + previewed.suppressedCount + ' suppressed addresses' : ''}. Nothing is filed until you apply.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="audienceImportId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- ImportResults: apply the previewed import at its revision, or retry its failed rows -->
+    <transition name="applyImport">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.apply#AudienceImport" out-map="applied"
+                    in-map="{audienceImportId:audienceImportId, expectedRevision:expectedRevision, retryFailed:(retryFailed == 'Y')}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="info">${applied.pendingCount} pending, ${applied.acceptedCount} accepted, ${applied.existingCount} already on the list, ${applied.refusedCount} refused, ${applied.invalidCount} invalid, ${applied.skippedCount} skipped${applied.failedCount ? ', ' + applied.failedCount + ' failed: retry them' : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="audienceImportId"/></default-response>
+        <error-response url="."><parameter name="audienceImportId"/></error-response>
+    </transition>
+    <!-- the error rows as the file held them, with their reasons (CSV) -->
+    <transition name="downloadImportErrors" read-only="true">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.get#AudienceImportErrors" out-map="errorRows"
+                    in-map="{audienceImportId:audienceImportId}"/>
+            <script>if (!ec.message.hasError()) ec.web.sendTextResponse(errorRows.fileText, 'text/csv', errorRows.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="audienceImportId"/></error-response>
+    </transition>
+    <!-- ApplyMerge: the previewed merge with its key, a reason and an operation key made of the key (a second submit answers the first) -->
+    <transition name="mergeLists">
+        <actions>
+            <set field="sourceListIdList" from="sourceListIds ? (sourceListIds instanceof Array ? sourceListIds : String(sourceListIds).split(',')) : []"/>
+            <service-call name="mantle.marketing.AudienceServices.merge#Lists" out-map="merged"
+                    in-map="{contactListId:contactListId, sourceListIdList:sourceListIdList, archiveSources:(archiveSources == 'Y'),
+                        previewKey:previewKey, reasonText:(reasonText || null), operationKey:('lm-' + String(previewKey || '').substring(0, 37))}"/>
+            <set field="detailPath" from="sharedLinks['Audiences/ListDetail']"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Merged: ${merged.acceptedCount} accepted, ${merged.pendingCount} pending confirmation, ${merged.existingCount} already on the list, ${merged.refusedCount} refused, ${merged.skippedCount} not carried${merged.archivedCount ? '; ' + merged.archivedCount + ' lists archived' : ''}${merged.archiveRefusals?.length ? '; not archived: ' + merged.archiveRefusals.map(r =&gt; r.contactListId + ' ' + r.reasonCode).join(', ') : ''}</message>
+            </if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>!ec.message.hasError()</expression></condition>
+            <parameter name="contactListId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the list's members as a file through the framework's export (MARKETING_AUDIENCE_EXPORT; the address for an audience reader) -->
+    <transition name="exportMembers" read-only="true">
+        <actions>
+            <service-call name="org.moqui.admin.DataTransferServices.run#Export" out-map="exported"
+                    in-map="{targetId:'marketingAudienceMembers', scopeKey:contactListId, selection:{memberStatus:(memberStatus || 'current')}}"/>
+            <script>if (!ec.message.hasError() &amp;&amp; exported.exported) ec.web.sendTextResponse(exported.fileText, exported.contentType || 'text/csv', exported.filename)
+                else if (!ec.message.hasError()) ec.message.addError(exported.reason || 'The export was refused')</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="contactListId"/></error-response>
+    </transition>
+    <!-- ===== end of P4 ===== -->
 
     <widgets>
         <!-- NewList (design §4 NewList): never a mailbox; it subscribes no one -->

@@ -440,6 +440,9 @@ const mountRoutes = {
     salesOpportunityImport: {url: "/qapps/Sales/Pipeline/OpportunityImport", plain: true},
     salesOpportunities: {url: "/qapps/Sales/Pipeline/Opportunities", plain: true},
     salesLeads: {url: "/qapps/Sales/Pipeline/Leads", plain: true},
+    // Marketing's audience import and its list members' export (impl-marketing P4)
+    marketingAudienceImport: {url: "/qapps/Marketing/Audiences/AudienceImport", plain: true},
+    marketingLists: {url: "/qapps/Marketing/Audiences/Lists", plain: true},
     // Maintenance's due list: the preventive generation job's and its recovery's owner place (impl-maintenance P14, F117)
     maintenanceDue: {url: "/qapps/Maintenance/Preventive/DueMaintenance", plain: true},
     // Maintenance's Reports: its reports' exports (impl-maintenance P17, F72)
