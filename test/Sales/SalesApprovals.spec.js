@@ -57,8 +57,9 @@ feature("the approver's Approvals list has the asked quote with no amount in its
 })
 
 // F58: OrderChangeApproval's one link goes through Commons' openRecord and resolves per recipient: a commercial change opens Customer
-// Service's OrderChangeDetail for its order desk and Sales' Approvals for a sales approver, nothing for a representative
-feature("an order change's link opens Customer Service for its order desk and Sales' Approvals for a sales approver", {
+// Service's OrderChangeDetail for its order desk and (impl-sales P14) Sales' OrderChangeDetail for a sales approver, nothing for a
+// representative who does not see the order
+feature("an order change's link opens Customer Service for its order desk and Sales' OrderChangeDetail for a sales approver", {
     when() {
         const requestId = system(
             () =>
@@ -99,7 +100,7 @@ feature("an order change's link opens Customer Service for its order desk and Sa
     },
     then({topic, approver, orderDesk, rep}) {
         topic.startsWith("/apps/Commons/openRecord?recordEntityName=mantle.request.Request")
-        approver.includes("/Sales/Quotes/Approvals")
+        approver.includes("/Sales/Orders/OrderChangeDetail")
         orderDesk.includes("/CustomerService/Orders/OrderChangeDetail")
         rep == ""
     }

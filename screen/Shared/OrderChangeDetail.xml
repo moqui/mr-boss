@@ -13,11 +13,13 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- OrderChangeDetail, the canonical shared screen of an order change (design-customer-service §4 OrderChangeDetail, crosscut
-    §2; impl-customer-service §4, P10), mounted by Customer Service at CustomerService/Orders/OrderChangeDetail and by Sales
-    when Sales is built; only the Customer Service context exists now (appRoot CustomerService), every other app root is
-    "not available". Every read and write goes through ironstone.customerservice.AccessServices.check#Record first (the
-    orderChange or order kind and its capability), then mantle.order.OrderChangeServices, which checks the permission of the
-    change's kind and the order's organization again:
+    §2; impl-customer-service §4, P10), mounted by Customer Service at CustomerService/Orders/OrderChangeDetail and by Sales at
+    Sales/Orders/OrderChangeDetail (impl-sales P14; design-sales §6 OrderChangeDetail); every other app root is "not available".
+    Every read and write goes through the root's check#Record first (Customer Service's ironstone.customerservice.AccessServices,
+    the orderChange or order kind and its capability; Sales' ironstone.sales.ContextServices, a commercial change or an order of
+    the user's sales scope), then mantle.order.OrderChangeServices, which checks the permission of the change's kind and the
+    order's organization again. In Sales the proposal form is the commercial kinds' (template/SalesOrderChanges.xml), the Effects
+    box shows the total, tax, freight and credit effects, and Apply is the change operator's (SALES_ORDER_CHANGE):
     - a new proposal (orderId, from OrderDetail's Propose change, CaseDetail's Request order change with caseRequestId, or a
       short pick's substitute with pickExceptionId): ChangeProposal, through save#OrderChange;
     - a proposal (requestId): the record header with its state and the one primary action its state allows (Decide, Apply,
@@ -36,12 +38,18 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pickExceptionId"/>
 
     <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- impl-sales P14: Sales' choices for its proposal form (the order's lines, the customer's addresses, carriers) -->
+    <transition-include name="salesChangeChoices" location="component://mr-boss/template/SalesOrderChanges.xml"/>
     <transition name="saveChange">
         <actions>
-            <if condition="requestId"><then>
+            <!-- impl-sales P14: in Sales the change or the order is Sales' (check#Record); Mantle checks who may file it -->
+            <if condition="appRoot == 'Sales'"><then>
+                <service-call name="ironstone.sales.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:(requestId ? 'orderChange' : 'order'), recordId:(requestId || orderId)}"/>
+            </then><else-if condition="requestId">
                 <service-call name="ironstone.customerservice.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId, capability:'orderChangeRequest'}"/>
-            </then><else>
+            </else-if><else>
                 <service-call name="ironstone.customerservice.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'orderChangeRequest'}"/>
                 <if condition="caseRequestId">
@@ -49,14 +57,17 @@ along with this software (see the LICENSE.md file). If not, see
                             in-map="{appRoot:appRoot, recordType:'case', recordId:caseRequestId}"/>
                 </if>
             </else></if>
-            <set field="lines" from="orderItemSeqId ? [{orderItemSeqId:orderItemSeqId, productId:(productId || null),
+            <!-- a line names an order line, or (impl-sales P14) a new line's product -->
+            <set field="lines" from="orderItemSeqId || (orderChangeKindEnumId == 'OckQuantity' &amp;&amp; productId) ? [{orderItemSeqId:(orderItemSeqId || null), productId:(productId || null),
                     quantity:(quantity || null), proposedUnitAmount:(proposedUnitAmount || null),
                     requiredByDate:(requiredByDate || null), pickExceptionId:(pickExceptionId || null)}] : []"/>
             <service-call name="mantle.order.OrderChangeServices.save#OrderChange" out-map="saved"
                     in-map="{requestId:(requestId || null), orderId:(orderId || null), orderChangeKindEnumId:orderChangeKindEnumId,
                         reason:(reason || null), customerConsentRef:(customerConsentRef || null),
                         cancellationReason:(cancellationReason || null), caseRequestId:(caseRequestId || null), lines:lines,
-                        operationKey:(operationKey || null)}"/>
+                        orderPartSeqId:(orderPartSeqId || null), addressContactMechId:(addressContactMechId || null),
+                        shipmentMethodEnumId:(shipmentMethodEnumId || null), carrierPartyId:(carrierPartyId || null),
+                        expectedOrderRevision:(expectedOrderRevision || null), operationKey:(operationKey || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">Order change ${saved.requestId} is filed for approval</message></if>
         </actions>
@@ -65,8 +76,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="decideChange">
         <actions>
-            <service-call name="ironstone.customerservice.AccessServices.check#Record"
-                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <if condition="appRoot == 'Sales'"><then>
+                <service-call name="ironstone.sales.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </then><else>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </else></if>
             <service-call name="mantle.order.OrderChangeServices.decide#OrderChange" out-map="decided"
                     in-map="{requestId:requestId, sourceRevision:(sourceRevision || null), decision:decision, reason:(reason || null),
                         operationKey:(operationKey || null)}"/>
@@ -78,8 +94,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="applyChange">
         <actions>
-            <service-call name="ironstone.customerservice.AccessServices.check#Record"
-                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId, capability:'orderChangeApply'}"/>
+            <if condition="appRoot == 'Sales'"><then>
+                <service-call name="ironstone.sales.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </then><else>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId, capability:'orderChangeApply'}"/>
+            </else></if>
             <service-call name="mantle.order.OrderChangeServices.apply#OrderChange" out-map="applied"
                     in-map="{requestId:requestId, sourceRevision:(sourceRevision || null),
                         expectedOrderRevision:(expectedOrderRevision || null), previewVersion:(previewVersion || null),
@@ -93,8 +114,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="withdrawChange">
         <actions>
-            <service-call name="ironstone.customerservice.AccessServices.check#Record"
-                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <if condition="appRoot == 'Sales'"><then>
+                <service-call name="ironstone.sales.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </then><else>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </else></if>
             <service-call name="mantle.order.OrderChangeServices.withdraw#OrderChange" in-map="{requestId:requestId, reason:reason}"/>
             <if condition="!ec.message.hasError()"><message type="success">Order change ${requestId} is withdrawn</message></if>
         </actions>
@@ -103,8 +129,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="sendChangeConfirmation">
         <actions>
-            <service-call name="ironstone.customerservice.AccessServices.check#Record"
-                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <if condition="appRoot == 'Sales'"><then>
+                <service-call name="ironstone.sales.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </then><else>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </else></if>
             <service-call name="mantle.order.OrderChangeServices.send#OrderChangeConfirmation" out-map="sent"
                     in-map="{requestId:requestId, toAddress:toAddress, emailAccountId:(emailAccountId || null), note:(note || null),
                         operationKey:operationKey}"/>
@@ -117,8 +148,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="appliedFile" read-only="true" method="get">
         <actions>
-            <service-call name="ironstone.customerservice.AccessServices.check#Record"
-                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <if condition="appRoot == 'Sales'"><then>
+                <service-call name="ironstone.sales.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </then><else>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            </else></if>
             <service-call name="mantle.order.OrderChangeServices.get#OrderChange" out-map="fileOut" in-map="{requestId:requestId}"/>
             <if condition="!fileOut?.change?.orderContentId">
                 <return error="true" message="Order change ${requestId} has no stored PDF"/></if>
@@ -133,9 +169,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="change" from="null"/>
         <set field="impact" from="null"/>
         <set field="newOrder" from="null"/>
-        <if condition="appRoot == 'CustomerService' &amp;&amp; requestId"><then>
-            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="checked" transaction="force-new"
-                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+        <!-- impl-sales P14: Sales' context checks the change or the order with Sales' check#Record (Sales.js recordKinds) -->
+        <set field="recordCheck" from="appRoot == 'Sales' ? 'ironstone.sales.ContextServices.check#Record'
+                : 'ironstone.customerservice.AccessServices.check#Record'"/>
+        <set field="contextRoot" from="appRoot == 'CustomerService' || appRoot == 'Sales'"/>
+        <if condition="contextRoot &amp;&amp; requestId"><then>
+            <script>ec.message.pushErrors()
+                try { checked = ec.service.sync().name(recordCheck).parameters({appRoot: appRoot, recordType: 'orderChange', recordId: requestId})
+                    .requireNewTransaction(true).call() } catch (error) { checked = null }
+                finally { ec.message.clearErrors(); ec.message.popErrors() }</script>
             <if condition="checked?.recordId">
                 <service-call name="mantle.order.OrderChangeServices.get#OrderChange" out-map="changeOut" transaction="force-new"
                         ignore-error="true" in-map="{requestId:requestId}"/>
@@ -146,9 +188,11 @@ along with this software (see the LICENSE.md file). If not, see
                         transaction="force-new" ignore-error="true" in-map="{requestId:requestId}"/>
                 <set field="impact" from="previewOut?.preview || null"/>
             </if>
-        </then><else-if condition="appRoot == 'CustomerService' &amp;&amp; orderId">
-            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="checked" transaction="force-new"
-                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'orderChangeRequest'}"/>
+        </then><else-if condition="contextRoot &amp;&amp; orderId">
+            <script>ec.message.pushErrors()
+                try { checked = ec.service.sync().name(recordCheck).parameters({appRoot: appRoot, recordType: 'order', recordId: orderId,
+                        capability: appRoot == 'Sales' ? null : 'orderChangeRequest'}).requireNewTransaction(true).call() } catch (error) { checked = null }
+                finally { ec.message.clearErrors(); ec.message.popErrors() }</script>
             <set field="newOrder" from="checked?.recordId ? checked : null"/>
         </else-if></if>
         <script>ec.message.clearErrors()</script>
@@ -157,6 +201,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="stateColors" from="{requested: 'info', needsInfo: 'warning', approved: 'positive', applied: 'positive',
                 rejected: 'negative', cancelled: 'grey-7', stale: 'warning'}"/>
         <set field="orderLink" from="sharedLinks?.['Orders/OrderDetail']"/>
+        <set field="salesRoot" from="appRoot == 'Sales'"/>
         <set field="changesLink" from="sharedLinks?.['Orders/OrderChanges']"/>
         <set field="caseLink" from="sharedLinks?.['Cases/CaseDetail']"/>
         <set field="proposeValue" from="newOrder ? {orderId:orderId, caseRequestId:caseRequestId || '', orderItemSeqId:orderItemSeqId || '',
@@ -202,7 +247,9 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
 
         <!-- ===== a new proposal ===== -->
-        <section name="NewOrderChange" condition="newOrder &amp;&amp; !change">
+        <!-- impl-sales P14: Sales' proposal of a commercial kind (template/SalesOrderChanges.xml) -->
+        <section-include name="SalesNewOrderChange" location="component://mr-boss/template/SalesOrderChanges.xml"/>
+        <section name="NewOrderChange" condition="newOrder &amp;&amp; !change &amp;&amp; !salesRoot">
             <widgets>
                 <context record-entity="mantle.order.OrderHeader" record-id="${orderId}" title="Propose a change to order ${orderId}"/>
                 <container style="m-record-header">
@@ -380,7 +427,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                         <button-menu text="More" icon="more_horiz">
                             <container-dialog id="OrderChangeEdit" button-text="Edit" icon="sym_o_edit" width="640"
-                                    title="Edit order change ${requestId}" condition="change.actions.save.allowed">
+                                    title="Edit order change ${requestId}" condition="change.actions.save.allowed &amp;&amp; !salesRoot">
                                 <form-single name="ChangeProposalEdit" transition="saveChange" map="editValue">
                                     <field name="requestId"><default-field><hidden/></default-field></field>
                                     <field name="orderId"><default-field><hidden/></default-field></field>
@@ -450,7 +497,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             ? ' (the order is at ' + change.orderRevision + ' now)' : ''),
                                         change.customerConsentRef ? 'customer consent: ' + change.customerConsentRef : '',
                                         change.appliedText ? 'applied ' + change.appliedText : ''].filter(Boolean).join(' · ')}"/>
-                                <label type="p" style="text-warning" condition="!change.appliedHere"
+                                <label type="p" style="text-warning" condition="!change.appliedHere &amp;&amp; !salesRoot"
                                         text="The order's owner (Sales) decides and applies this kind of change; Customer Service files it."/>
                             </box-body>
                         </container-box>
@@ -502,6 +549,19 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                             </box-body-nopad>
+                        </container-box>
+                        <!-- impl-sales P14: a commercial kind's effects (the total, tax, freight and credit) and a part's change -->
+                        <container-box condition="impact?.effects || change.partAfterText">
+                            <box-header title="Effects"/>
+                            <box-body>
+                                <label type="p" condition="change.partAfterText"
+                                        text="${change.kindText} of part ${change.orderPartSeqId}: ${change.partBeforeText} → ${change.partAfterText}"/>
+                                <label type="p" condition="impact?.effects?.afterText"
+                                        text="Order total ${impact.effects.beforeText} → about ${impact.effects.afterText} (lines ${impact.effects.deltaText})"/>
+                                <label type="p" style="text-caption m-muted" condition="impact?.effects" text="${impact.effects.taxText}."/>
+                                <label type="p" style="text-caption m-muted" condition="impact?.effects" text="${impact.effects.freightText}."/>
+                                <label type="p" style="text-caption m-muted q-mb-none" condition="impact?.effects" text="${impact.effects.creditText}."/>
+                            </box-body>
                         </container-box>
                         <section-iterate name="ChangeConflicts" list="conflictList" entry="conflict">
                             <widgets>

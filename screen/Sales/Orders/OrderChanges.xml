@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Orders › Changes (design-sales §6 OrderChanges: ChangeFind, ChangeList, NewChange; style-guide §3.2 List; impl-sales P14):
+    the commercial proposals of the user's organizations' sales orders (price, quantity increase and a new line, ship date, address,
+    ship method, carrier), whether Customer Service filed them or Sales did, from Mantle's
+    mantle.order.OrderChangeServices.find#OrderChanges (kindGroup owner; its own permission and organization check), with the saved
+    lists To decide, Approved (to apply), Applied, Stale and All, found by order, customer and organization; each row opens the shared
+    OrderChangeDetail under Sales. No copy of a proposal into a Sales table (design §6). New change chooses an order of the scope and
+    opens OrderChangeDetail's proposal form. For the change operator, the sales approver and the manager (BOSS_SAL_CHANGES; Sales.js
+    areas.changes). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Changes" default-menu-index="2" default-menu-include="sales?.capabilities?.changes">
+    <parameter name="orderId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <always-actions>
+        <script>if (!sales.capabilities.changes) throw new Error('PERMISSION_DENIED: Sales order changes are the change operator\'s, the approver\'s and the manager\'s')</script>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <!-- NewChange: the chosen order's proposal form on OrderChangeDetail (a transition with an action, so the form posts) -->
+    <transition name="newChange">
+        <actions>
+            <service-call name="ironstone.sales.ContextServices.check#Record" in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+        </actions>
+        <default-response url="../OrderChangeDetail"><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="state" from="state || (can.approve &amp;&amp; !can.orderChange ? 'requested' : can.orderChange ? 'approved' : '')"/>
+        <service-call name="mantle.order.OrderChangeServices.find#OrderChanges" out-map="context"
+                in-map="{kindGroup:'owner', orderId:(orderId || null), customerPartyId:(customerPartyId || null),
+                    organizationPartyId:(organizationPartyId || null), state:(state == 'all' ? null : state || null),
+                    pageIndex:pageIndex}"/>
+        <set field="changeList" from="changeList || []"/>
+        <set field="detailPath" from="sharedLinks['Orders/OrderChangeDetail'] || null"/>
+        <set field="orderPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="savedLists" from="[{label: 'To decide', state: 'requested'}, {label: 'Approved', state: 'approved'},
+                {label: 'Applied', state: 'applied'}, {label: 'Stale', state: 'stale'}, {label: 'All', state: 'all'}]"/>
+        <set field="stateColors" from="{requested: 'info', needsInfo: 'warning', approved: 'positive', applied: 'positive',
+                rejected: 'negative', cancelled: 'grey-7', stale: 'warning'}"/>
+        <set field="newChangeValue" from="{orderId: ''}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Order changes" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewOrderChangeDialog" button-text="New change" title="Propose a change to an order" icon="sym_o_add"
+                        width="560" type="primary" condition="can.orderChange || can.orderEdit">
+                    <form-single name="NewChange" transition="newChange" map="newChangeValue">
+                        <field name="orderId">
+                            <default-field title="Order" tooltip="A placed, approved or held order of your organization">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'changeOrders'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Continue"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="ChangeSavedLists" list="savedLists" entry="saved">
+                <widgets>
+                    <link url="." text="${saved.label}" link-type="anchor-button"
+                            style="${state == saved.state ? 'text-primary text-weight-bold' : ''}"
+                            parameter-map="{state:saved.state, orderId:'', customerPartyId:'', pageIndex:''}"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <form-list name="ChangeList" list="changeList" skip-form="true" paginate="true" header-dialog="true">
+            <field name="requestId">
+                <default-field title="Change">
+                    <link url="${detailPath}" url-type="plain" text="${requestId}" link-type="anchor" parameter-map="{requestId:requestId}"
+                            condition="detailPath"/>
+                </default-field>
+            </field>
+            <field name="orderId">
+                <header-field title="Order"><text-line size="12"/></header-field>
+                <default-field title="Order">
+                    <link url="${orderPath}" url-type="plain" text="${orderId}" link-type="anchor" parameter-map="{orderId:orderId}"
+                            condition="orderPath"/>
+                </default-field>
+            </field>
+            <field name="customerPartyId">
+                <header-field title="Customer">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="organizationPartyId">
+                <header-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+            <field name="kindText"><default-field title="Change"><display/></default-field></field>
+            <field name="linesText"><default-field title="Lines"><display/></default-field></field>
+            <field name="requestedByName">
+                <default-field title="Asked by"><display text="${requestedByName} · ${requestedText}"/></default-field>
+            </field>
+            <field name="decidedText">
+                <default-field title="Decision"><display text="${[decidedText, approverName].filter(Boolean).join(' · ')}"/></default-field>
+            </field>
+            <field name="conflictText"><default-field title="Conflict"><display/></default-field></field>
+            <field name="stateText">
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-7'}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="submitButton"><header-field title="Find"><submit/></header-field></field>
+            <columns type="mobile">
+                <column><field-ref name="requestId"/><field-ref name="kindText"/><field-ref name="customerName"/></column>
+                <column><field-ref name="stateText"/><field-ref name="orderId"/></column>
+            </columns>
+        </form-list>
+        <label text="No order change here." type="p" style="m-muted" condition="!changeList.length"/>
+    </widgets>
+</screen>

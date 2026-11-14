@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales' parts of the shared OrderChangeDetail (design-sales §6 OrderChangeDetail, NewChange; impl-sales P14): the proposal form of
+    a commercial kind (price, quantity increase or a new line, ship date, address, ship method, carrier) on an order of the user's
+    sales scope, posted to OrderChangeDetail's saveChange (mantle.order.OrderChangeServices.save#OrderChange, which admits the change
+    operator and the order's editor for these kinds and checks each kind's fields), and its choices (the order's lines, the
+    customer's addresses, carriers, products) through Sales' get#Choices. Included by Shared/OrderChangeDetail.xml. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="salesChangeChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
+                        organizationPartyId:(organizationPartyId || null), orderId:(orderId || null)}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <section name="SalesNewOrderChange" condition="salesRoot &amp;&amp; newOrder &amp;&amp; !change">
+            <actions>
+                <set field="salesProposeValue" from="{orderId: orderId, orderChangeKindEnumId: 'OckPrice', orderItemSeqId: orderItemSeqId || '',
+                        quantity: '', productId: '', proposedUnitAmount: '', requiredByDate: '', addressContactMechId: '',
+                        shipmentMethodEnumId: '', carrierPartyId: '', customerConsentRef: '', reason: '',
+                        operationKey: 'change-' + ec.user.randomString(24)}"/>
+                <set field="salesOrganizationPartyId" from="newOrder.organizationPartyId"/>
+            </actions>
+            <widgets>
+                <context record-entity="mantle.order.OrderHeader" record-id="${orderId}" title="Propose a change to order ${orderId}"/>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Propose a change to order ${orderId}" type="h5"/>
+                        <label text="${newOrder.label}" type="p" style="text-caption m-muted"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Commercial change"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" text="A sales approver decides the change; then the change operator
+                                applies it to the order as it is then. Customer Service cancels a remainder or substitutes a short pick."/>
+                        <form-single name="SalesChangeProposal" transition="saveChange" map="salesProposeValue">
+                            <field name="orderId"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="orderChangeKindEnumId">
+                                <default-field title="Change">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="OrderChangeKind"/>
+                                                <econdition field-name="enumCode" value="owner"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="orderItemSeqId">
+                                <default-field title="Order line" tooltip="Empty with a product for a new line">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="salesChangeChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'orderLines', orderId:orderId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="New quantity" tooltip="Above the line's quantity, or a new line's"><text-line size="8"/></default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="New line's product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="salesChangeChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', organizationPartyId:salesOrganizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="proposedUnitAmount">
+                                <default-field title="New unit price"><text-line size="10"/></default-field>
+                            </field>
+                            <field name="requiredByDate">
+                                <default-field title="New ship date"><date-time type="date"/></default-field>
+                            </field>
+                            <field name="addressContactMechId">
+                                <default-field title="New ship-to address">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="salesChangeChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'customerAddresses', orderId:orderId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="shipmentMethodEnumId">
+                                <default-field title="New ship method">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="ShipmentMethod"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="carrierPartyId">
+                                <default-field title="New carrier">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="salesChangeChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'carriers'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="customerConsentRef">
+                                <default-field title="Customer's agreement" tooltip="The call, message or reference where the customer agreed">
+                                    <text-line size="40"/></default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><text-area rows="3" cols="50"/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="File for approval"><submit confirmation="File this change of order ${orderId} for a sales approver?"/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="orderChangeKindEnumId"/><field-ref name="orderItemSeqId"/></field-row>
+                                <field-row><field-ref name="proposedUnitAmount"/><field-ref name="quantity"/></field-row>
+                                <field-row><field-ref name="productId"/><field-ref name="requiredByDate"/></field-row>
+                                <field-row><field-ref name="addressContactMechId"/><field-ref name="shipmentMethodEnumId"/></field-row>
+                                <field-row><field-ref name="carrierPartyId"/><field-ref name="customerConsentRef"/></field-row>
+                                <field-ref name="reason"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <link url="${orderLink}" text="Back to order ${orderId}" link-type="anchor"
+                                parameter-map="{orderId:orderId}" condition="orderLink"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

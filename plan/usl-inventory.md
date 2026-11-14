@@ -2376,6 +2376,19 @@ remain historical; these rows add no implementation claim.
 | order/SalesPortalServices | check#SalesAppReadiness, get#AccountCard | — (PASS's app registry, PublicApps.js) | PASS:Sites/SiteDetail readiness; PASS:Account/Home |
 | sales/AccountServices | get#SalesInvite, invite#SalesContact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail (Invite to Sales) | Shared/Customer360 (Sales header); Sales/Accounts/ContactDetail (template/SalesInvite.xml) |
 
+### Added in the Sales build: commercial changes and the fulfillment and billing handoffs (P14, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/OrderChangeServices | save#OrderChange (the commercial kinds, filed in Sales) | Sales/Orders/OrderChanges (NewChange); Sales/Orders/OrderChangeDetail | Sales/Orders/OrderChanges (New change); Sales/Orders/OrderChangeDetail (SalesChangeProposal, template/SalesOrderChanges.xml); Sales/Orders/OrderDetail (More › New change) |
+| order/OrderChangeServices | find#OrderChanges (kindGroup owner; one order's for a Sales reader) | Sales/Orders/OrderChanges (ChangeFind, ChangeList) | Sales/Orders/OrderChanges (ChangeList with its saved lists); Sales/Orders/OrderDetail (Changes) |
+| order/OrderChangeServices | get#OrderChange, preview#OrderChange (the commercial kinds' effects) | Sales/Orders/OrderChangeDetail | Sales/Orders/OrderChangeDetail (Proposal, Decisions, Impact, Effects) |
+| order/OrderChangeServices | decide#OrderChange | Sales/Orders/OrderChangeDetail; Sales/Quotes/Approvals | Sales/Orders/OrderChangeDetail (Decide); Sales/Quotes/Approvals (the topic's handlers) |
+| order/OrderChangeServices | apply#OrderChange (the commercial kinds, SALES_ORDER_CHANGE) | Sales/Orders/OrderChangeDetail | Sales/Orders/OrderChangeDetail (Apply) |
+| order/SalesOrderServices | get#SalesShipment | Sales/Orders/ShipmentDetail | Sales/Orders/ShipmentDetail (template/SalesHandoffs.xml SalesShipment); Sales/Orders/OrderDetail (Fulfillment's links) |
+| order/SalesOrderServices | check#SalesInvoice | Sales/Orders/InvoiceDetail | Sales/Orders/InvoiceDetail (template/SalesHandoffs.xml SalesInvoice, over InvoiceServices.get#InvoiceFinanceDetail); Sales/Orders/OrderDetail (Invoices' links) |
+| account/InvoiceServices | get#InvoiceFinanceDetail, send#Invoice | Sales/Orders/InvoiceDetail | Sales/Orders/InvoiceDetail (the overview, lines and payments; Send with pay link for a receivables editor) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section

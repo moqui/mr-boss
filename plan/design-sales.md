@@ -1226,6 +1226,39 @@ otherwise; no unguarded entity read. Crosscut §3.16 row:
 | --- | --- | --- | --- | --- |
 | Sales | Overview, Items and source lines, Payments and settlement (by grant) | invoices of permitted sales orders; receivable view | read only; send a PASS Billing pay link when the Accounting issuer grant is held | what the customer was billed and still owes |
 
+### As built (impl-sales P14, Nov 14, 2026)
+
+- **C, the commercial kinds.** `mantle.order.OrderChangeServices` stays Customer Service's (OrderChanges.js); for a commercial kind
+  it calls Sales' `SalesOrderChanges.js`. Filing (`save#OrderChange`): Customer Service's `ORDER_CHANGE_REQUEST` as before, or in
+  Sales `SALES_ORDER_CHANGE` or the order's editor; each kind's fields checked (a new price, a quantity above the line's or a new
+  line's product, a date, the part and a customer's address, a ship method or a carrier; the part is the new
+  `Request.orderPartSeqId`, audit-logged, so in the proposal's revision). Deciding stays `SALES_APPROVE`. Applying
+  (`apply#OrderChange`) needs `SALES_ORDER_CHANGE` in the seller's sales scope (the order desk FORBIDDEN as before); under the
+  order's lock the proposal's and the order's revisions, the approval's expiry and the fiscal period are checked as for Customer
+  Service's kinds, then each conflict refused by name: ACTIVE_PICK (picked and not packed, or a shipment of the part being
+  prepared), ALREADY_SHIPPED, BILLING_CONFLICT (a finalized invoice, or a packed quantity's draft invoice when the applier is no
+  receivables editor), PRICE_UNAVAILABLE and PRODUCT_NOT_USABLE for a new line, STOCK_CHANGED against the preview. The writes: the
+  Change hold; Accounting's `release#ShipmentDraftInvoice` for a packed price line (RECEIVABLE_EDIT); `update#OrderItem` (whose
+  reservation rule releases and rebuilds the line's open reservations), `create#OrderItem` at the seller's price
+  (`get#SellerProductPrice`, as a quote line's), `update#OrderPart`; `handle#OrderMajorChange` per part (X1 retax for a storeless
+  order); `evaluate#OrderCredit` with a hold on a higher total; only its own Change hold released; the approvals of the order's
+  other open proposals ended; the PDF stored. `preview#OrderChange` adds the effects: the total before and after, a tax estimate at
+  the order's rate, the freight (a storeless order's charge line unchanged, a store's recalculated) and the customer's credit now.
+  Reads: a Sales reader who sees the order reads its changes and their prices; `SALES_TEAM_VIEW` alone lists the organization's
+  commercial ones (a cancel or substitute only on an order's own Changes; P14 review). The preview's credit standing is shown only
+  to a credit reader or an approver.
+- **Order scope.** A change operator (`SALES_ORDER_CHANGE`) sees the organization's Placed, Processing, Approved and held orders read
+  only (SalesAccess.js `changeStatuses`, find#SalesOrders' reach), to propose and apply changes; a completed order leaves their sight.
+- **Screens.** Changes (`Sales/Orders/OrderChanges`, BOSS_SAL_CHANGES: the change operator, the approver, the manager): ChangeList
+  over find#OrderChanges' commercial kinds with To decide, Approved, Applied, Stale and All, New change. OrderChangeDetail in Sales'
+  context: Sales' check#Record, the commercial proposal form (template/SalesOrderChanges.xml), the Effects box, Decide and Apply;
+  editing a filed commercial proposal is not offered in Sales (withdraw and file again). OrderChangeApproval's link opens it for a
+  Sales approver, change operator or reader of the order. ShipmentDetail (`get#SalesShipment`, read only: items and sources of the
+  orders the user sees, packages, tracking) and InvoiceDetail (`check#SalesInvoice` for a receivable reader, then Accounting's
+  `get#InvoiceFinanceDetail`; Send with pay link through `send#Invoice` for a receivables editor) under Orders; OrderDetail's
+  shipment and invoice rows link to them, a Changes box lists the order's changes and More offers New change.
+- **Grants.** `BOSS_SALES_CHANGE` holds `SALES_ORDER_CHANGE` and `ORDER_CHANGE_HOLD_RELEASE` (F43), in its bundle.
+
 ## 7. Agreements, pricing and recurrence
 
 ### Agreements
