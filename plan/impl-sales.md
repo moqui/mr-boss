@@ -353,7 +353,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
 | P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | built and reviewed Nov 14, merged |
 | P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | built and reviewed Nov 14, merged |
-| P20 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P20 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 14, merged |
 
 ### P0 — Checks
 
@@ -5320,7 +5320,7 @@ mr-mantle and mr-boss first, both sides kept (nothing conflicted). No Rust built
   InsightsCatalog, InsightsAccess, SalesAccess, InsightsFlowMaps, InsightsHome and InsightsDelivery 49 of 49; SalesOrderChanges,
   SalesRecurrence and CustomerServiceOrderChanges 4 of 4. No screen changed, so no lint. Prettier on the new and changed
   JavaScript. Not run: ./moq test-apps, test-framework, the acceptance suite (the new and changed acceptance specs included).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F328 to F337 in order:
   - the RFQ acknowledgement and the agreement print of §16 (P20's list) are not built: the RFQ's decline mail is P8's, and
     AgreementDetail has no print or stored approved PDF (F257); a later row (§7) or a follow-up, for the lead or the user;
   - the pipeline document's derived owner, team and stage label were mapped as numbers from P6 on (fixed above): the stalled-deal
@@ -5421,7 +5421,7 @@ re-run on the merge before any change: SalesQuoteDataset, SalesPipelineDataset, 
     rows of the two new services, mr-mantle `docs/Upgrading.md` (a paragraph at the end of P20's section), Attack-Surface (below,
     committed in the mr-moqui worktree), Remaining-Work's Sales row (the print and the acknowledgement built; amendments' stored PDFs
     stay later), the gate 3 status line at the top and the §4 row.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F338 to F342 in order:
   - the RFQ acknowledgement answers only a sender matched to a contact or account of the organization (the ledger needs a recipient
     party, and an unknown From is the address a forged or bulk mail gives); a new prospect's first RFQ by mail gets none. A user's call
     if every sender should get one (it would need a recipient for an unknown address and a rate limit per address);
@@ -6160,6 +6160,21 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F325 | Follow-up 2 (Review Nov 14): R1 above (medium): a recurring order could be invoiced twice when two approvals' tx-commit rules ran at once; fixed | Follow-up 2: as its Review note says |
 | F326 | Follow-up 2 (Review Nov 14): A legacy base (made recurring before Sales, not marked `OrpRecurringTemplate`) with `recurAutoInvoice` Y is billed on approval too. Before, it was billed only when approved at placement, which never happened with no payment copied. That matches §4's call ("a native recurring order"), but its auto-invoice may have been set through Mantle's `update#OrderRecur`, without Sales' `RECEIVABLE_EDIT` check | Follow-up 2: as its Review note says |
 | F327 | Follow-up 2 (Review Nov 14): `clone#Order` maps a child's parent only when the parent's id sorts before it, which is how Mantle creates lines. A child listed before its parent keeps the source's id, as every child did before | Follow-up 2: as its Review note says |
+| F328 | P20 (Built Nov 14): the RFQ acknowledgement and the agreement print of §16 (P20's list) are not built: the RFQ's decline mail is P8's, and AgreementDetail has no print or stored approved PDF (F257); a later row (§7) or a follow-up, for the lead or the user | P20: as its Built note says |
+| F329 | P20 (Built Nov 14): the pipeline document's derived owner, team and stage label were mapped as numbers from P6 on (fixed above): the stalled-deal alert never fired and the owner panel showed nothing; any other app's DataDocument with an expression field it splits or filters on as text has the same trap (not swept) | P20: as its Built note says |
+| F330 | P20 (Built Nov 14): InsightsAlerts failed from P19 to here (fixed above): P19's runs did not include it | P20: as its Built note says |
+| F331 | P20 (Built Nov 14): Sales' record-lookup provider answers leads and opportunities only (SalesComms.js `lookup`), where design §1.4 also names quotes and orders; coverage, not a leak | P20: as its Built note says |
+| F332 | P20 (Built Nov 14): QuoteRequestDetail's "Create quote" (`template/SalesQuoteRequests.xml` rfqCreateQuote) passes no `salesOpportunityId`, so a quote made from an RFQ cannot carry its deal from the screen, though `create#QuoteFromRequest` takes one | P20: as its Built note says |
+| F333 | P20 (Built Nov 14): `ironstone.sales` Sales.js defines `recordKinds.orderChange` twice (P9's and P14's); the later silently replaces the first | P20: as its Built note says |
+| F334 | P20 (Built Nov 14): several native services the design has Sales call are not called: header, part, line, address and agreement price edits are written inside Sales' own services (update#Quote, store#QuoteLine, apply#OrderChange, store#AgreementItem); the inventories say so | P20: as its Built note says |
+| F335 | P20 (Built Nov 14): john.doe's Customer360 under Sales also offers Customer Service's tabs beside Sales' (Orders and SalesOrders, Agreements and SalesAgreements, Activities and ServiceActivities): probably ADMIN holding both apps' permissions, not checked with a plain Sales user | P20: as its Built note says |
+| F336 | P20 (Built Nov 14): `screen/Shared/Customer360/SalesOrders.xml`'s comment says the tab is SALES_TEAM_VIEW-only "until P11"; P11 did not widen it | P20: as its Built note says |
+| F337 | P20 (Built Nov 14): Marketing's public lead page (`PASS:Marketing/SubmitForm`, impl-marketing P13) is not built yet; the inventories say so | P20: as its Built note says |
+| F338 | P20 (Review Nov 14): the RFQ acknowledgement answers only a sender matched to a contact or account of the organization (the ledger needs a recipient party, and an unknown From is the address a forged or bulk mail gives); a new prospect's first RFQ by mail gets none. A user's call if every sender should get one (it would need a recipient for an unknown address and a rate limit per address) | P20: as its Review note says |
+| F339 | P20 (Review Nov 14): `get#QuoteRowFilter` does not repeat `quoteOf`'s customer-not-internal and first-part rules (a quote with an internal customer, or a second part, would be a dataset row its reader cannot open); `create#Quote` makes neither, so not reachable through Sales today | P20: as its Review note says |
+| F340 | P20 (Review Nov 14): Sales' change operator may send the confirmation of any applied change of an order of their sales scope, Customer Service's cancel and substitute kinds included (`mayApply` names no kind); it sends only the stored PDF to the customer's own addresses | P20: as its Review note says |
+| F341 | P20 (Review Nov 14): the access walk and the sweeps (acceptance, not run by the reviewer) do not cover the agreement print or the SalesDefaults field; SalesAccessWalk's print checks would take `Agreements/AgreementDetail/salesAgreementPrint` beside the quote's | P20: as its Review note says |
+| F342 | P20 (Review Nov 14): the Built note's findings stand otherwise (the record-lookup provider's leads and deals only, QuoteRequestDetail's Create quote without the deal, native services written inside Sales', john.doe's doubled Customer360 tabs, Marketing's public lead page) | P20: as its Review note says |
 
 ## 7. Later
 
