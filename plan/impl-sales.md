@@ -1,3 +1,6 @@
+Nov 13, 2026 — gate 1 built: P1–P6 (stage S1), a working CRM, each phase reviewed by a fresh agent and merged on its focused
+specs, with follow-up 1 (a new record's organization defaults to the user's own across the apps, F111) and the basic-comms
+Mail actions slot (P5). The user's calls of the build are in §4 (Nov 13). Next: Marketing's track starts beside Sales (P7 on).
 # IronStone BOSS — Sales implementation
 
 Nov 13, 2026 — P0 done: the checks left after the plan's review, F53–F73 (§6), against the code as People, Maintenance,
@@ -328,7 +331,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Accounts and contacts | Mantle, BOSS | Accounts, Contacts, Customer360, ContactDetail, MergeAccounts | built and reviewed Nov 13, merged |
 | P4 Leads and opportunities | Mantle, BOSS | Opportunities, Leads, OpportunityDetail, WorkItemDetail | built and reviewed Nov 13, merged |
 | P5 Lead intake, Comms hooks and account sync | mr-moqui, Mantle, BOSS | Leads' intake rows; the Comms actions | built and reviewed Nov 13, merged |
-| P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | — |
+| P6 Home, shell, Assist and the pipeline dataset | Mantle, BOSS | Home, QuickCreate; the import mount | built and reviewed Nov 13, merged |
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | — |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | — |
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | — |
@@ -1735,7 +1738,7 @@ funnel). Ends stage 1.
   names Sales/Home or QuickCreate.
 - Design edits: design-sales §3 Home's "As built (impl-sales P6)", OpportunityImport's as-built, Leads' purge and rule owner;
   design-admin §11.1's Sales import row and §14's Sales participant (owner contracts).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F130 to F136 in order:
   - the import's repeat key is a hash of the framework's 43-character row key, as a PostingOperation key holds 40; a framework
     row key within 40 characters (or a PostingOperation key of 64) would let an owner use it as is;
   - `docs/security/Attack-Surface.md` (mr-moqui) does not name the `opportunities` import target, the pipeline dataset's row filter
@@ -1818,7 +1821,7 @@ funnel). Ends stage 1.
     the unfixed code).
   - R4 (hardening, low). validate#OpportunityImportRow answered "valid" for any stored operation of the row's hashed key; now only
     for this importer's import row of this organization (the apply already refused any other).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F137 to F143 in order:
   - the purge's two-minute "untouched" margin: the intake's writes share one transaction, so the intake row's own stamp (read before
     the purge writes it) plus a second or two would treat fewer early edits as part of the intake;
   - a deal moved by the lifecycle keeps its team, as a manager's owner change does (`ownerFor` never sets the team): the new owner of
@@ -2477,6 +2480,7 @@ the owner's design.
 | Nov 13, 2026 | Changing the instance's shared lost reasons and recurring plans needs every-organization scope (`SALES_ALL_ORGANIZATIONS` or `ADMIN`), as the shared default pipeline does; a configurer of one organization reads them only. Built in P4 | The user's call (P2's review); design §9 "the reasons are the instance's" holds |
 | Nov 13, 2026 | The purge of unverified lead intakes also clears the lead it made, when that lead is still unqualified and untouched since intake: its name and description blanked, the filed mail unlinked, and the lead closed Lost with a purge reason; a lead someone worked on is kept. Built in P6 | The user's call (P5's review) |
 | Nov 13, 2026 | A mail rule's "Create lead" action requires its owner to hold `SALES_OPPORTUNITY_EDIT` (beside working for the team's organization), when the rule is saved and when it runs, as People's Recruiting requires its edit permission. Built in P6 | The user's call (P5's review) |
+| Nov 13, 2026 | A lifecycle transfer of a leaving rep's deals keeps each deal's team, as a manager's owner change does; a manager sets the team afterwards | The lead's call, as P6's review recommended: changing the team would widen or narrow who sees the deal without a Sales decision |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
 | Nov 13, 2026 | Sales edits a contact's identity and channels through Commons: `check#ContactAccess` (owner contract) also admits a holder of `SALES_ACCOUNT_EDIT` for a person who is a current contact of an account of their sales scope (`Party.ownerPartyId` in SalesAccess's organizations, or a shared `_NA_` account), with Commons' own forms (P3 review) | The user's call (the P3 Built note's second finding); a person with a user account stays the contact administrator's, and no delete; written into design-drawers-commons §6 |
@@ -2637,6 +2641,20 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F127 | Follow-up 1 (Built Nov 13): Insights' report organization (Insights.js) has the same "active, else the only one" fallback for a report's organization; left, as a report choice rather than a new record's | Follow-up 1: as its Built note says |
 | F128 | Follow-up 1 (Built Nov 13): "the scope's first" stays in other apps' new-record defaults and services (Purchasing's new orders, bills, quotes, requests and agreements, Products' new categories, features and owners, Prices, People ChecklistTemplates, Maintenance WorkPolicy, CustomerService SavedReplies and Cases, the DataImport contexts, Mantle's catalog and price policies): the first of get#PartyInternalOrgIds' list is the user's own organization before its children, so the rollup case gives the right one there; a user of two organizations of their own gets the first rather than an empty field. Moving them to the rule (with the first as the fallback, as Sales' settings now do) is a consistency change, not this fix | Follow-up 1: as its Built note says |
 | F129 | Follow-up 1 (Review Nov 13): Low: Purchasing's get#SharedContext now answers `defaultOrganizationPartyId`, but only Shared InspectionTemplates reads it. Purchasing's own New forms (NewPurchaseOrder, NewQuoteRequest, NewPurchaseRequest, PurchaseOrders, BillList, Quotes, QuoteRequests, PurchaseRequests, AgreementList, SupplierList, MatchExceptions; Suppliers/Settings/Approvals.js) still take "active, else the first". The first is the first row of an unordered PartyRelationship find that also counts PrtMember rows, so for a user of several organizations it is not stable. When these move to the rule, put it ahead of the first, as Sales' settings screens do; Products, Commerce and CustomerService the same | Follow-up 1: as its Review note says |
+| F130 | P6 (Built Nov 13): the import's repeat key is a hash of the framework's 43-character row key, as a PostingOperation key holds 40; a framework row key within 40 characters (or a PostingOperation key of 64) would let an owner use it as is | P6: as its Built note says |
+| F131 | P6 (Built Nov 13): `docs/security/Attack-Surface.md` (mr-moqui) does not name the `opportunities` import target, the pipeline dataset's row filter or Mantle's user-facts provider; P6 had no mr-moqui worktree, so they are for the next framework docs pass | P6: as its Built note says |
+| F132 | P6 (Built Nov 13): the lifecycle transfer of a deal keeps its team: a deal of East moved to a rep of West shows to the new owner and to East, not West's other reps, until a manager sets its team | P6: as its Built note says |
+| F133 | P6 (Built Nov 13): Home's funnel counts open opportunities created in the last three years (`createdDate` is the dataset's time field); an older open deal is not in it, while My pipeline shows it | P6: as its Built note says |
+| F134 | P6 (Built Nov 13): "My activities due" is not a counter (above): a Sales list of due activities, or a Commons task filter by record kind, would let Home count them | P6: as its Built note says |
+| F135 | P6 (Built Nov 13): the purge's "untouched" margin (two minutes after the lead was made) treats an edit in the first two minutes as part of the intake | P6: as its Built note says |
+| F136 | P6 (Built Nov 13): `skill/people-policy-question.md`'s description is 201 characters, over the index's 160, so the skill is left out of the index (`./moq test mr-boss --skills` logs it); not Sales', seen while running the retrieval | P6: as its Built note says |
+| F137 | P6 (Review Nov 13): the purge's two-minute "untouched" margin: the intake's writes share one transaction, so the intake row's own stamp (read before the purge writes it) plus a second or two would treat fewer early edits as part of the intake | P6: as its Review note says |
+| F138 | P6 (Review Nov 13): a deal moved by the lifecycle keeps its team, as a manager's owner change does (`ownerFor` never sets the team): the new owner of another team sees it as owner, the old team's members still see it and the new team's do not until a manager sets the team. Keep (recommended: consistent with store#OpportunityParty, and a team is a queue the manager owns) or set the new owner's only team of the organization is the user's call | P6: as its Review note says |
+| F139 | P6 (Review Nov 13): the lifecycle's new owner needs only to work for the record's organization, not to hold any Sales permission, so a deal can be handed to someone who cannot open it (as store#OpportunityParty's `ownerFor`) | P6: as its Review note says |
+| F140 | P6 (Review Nov 13): the import ignores a matched deal's `teamPartyId` under Update (only owner, stage and facts change), silently | P6: as its Review note says |
+| F141 | P6 (Review Nov 13): Home's funnel is over every organization of the scope, not Home's organization filter (report-embed is given no filter) | P6: as its Review note says |
+| F142 | P6 (Review Nov 13): get#OrganizationFacts is `authenticate="false"`: with no user it answers the userId given. It is not remote and the facade calls it as the user; a caller without a user is the runtime's own | P6: as its Review note says |
+| F143 | P6 (Review Nov 13): the Built note's findings stand (the repeat key's hash, the funnel's three years, no due-activities counter, the people-policy skill's description) | P6: as its Review note says |
 
 ## 7. Later
 
