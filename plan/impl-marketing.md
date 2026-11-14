@@ -423,7 +423,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Templates, sending profiles and bounce intake | mr-moqui, Mantle, BOSS | MessageTemplates, MessageTemplateDetail, SendingProfiles | built and reviewed Nov 14, merged |
 | P7 PASS Marketing: the app, subscription and preferences | Mantle, PASS, BOSS | PASS Subscribe, VerifySubscription, EmailPreferences' Marketing context; ListDetail's public offer | built and reviewed Nov 14, merged |
 | P8 Sends and the composer | Mantle, BOSS | Sends, SendDetail, Compose | built and reviewed Nov 14, merged |
-| P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | — |
+| P9 Dispatch and delivery | Mantle, BOSS | SendDetail's control, CampaignDelivery, RecipientDetail | built and reviewed Nov 14, merged |
 | P10 Experiments | Mantle, BOSS | ExperimentDetail | — |
 | P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | — |
 | P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | — |
@@ -2621,7 +2621,7 @@ unchanged, no Rust built. Built beside Sales P16 (in review) and P19 (the hot sp
 - Inventories: usl-inventory's "Added in Marketing P9" table; ss-inventory has no row for P9's screens.
 - Design edits: design-marketing §5 (the as-built paragraph after RecipientDetail); design-drawers-commons' Mailboxes row (owner contract:
   the topic consent within an organization, the build's reply-to, the reviewer's reach and resolution, the receipts' reach).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F206 to F216 in order:
   - the ledger's natural key holds the execution key in the eventKey (`CampaignSend:<send>:<key>`), so a send's deliveries are counted by
     a prefix of it (the code over the plan above);
   - MESSAGE_DELIVERY_REVIEW's every-organization reach is a system administrator's only now (receipts, resolution, the mail queue's
@@ -2738,7 +2738,7 @@ did not touch the ledger's `MessageDeliveries.js`; no Rust).
     poll's last text (the testkit checks each settle's text as well). Golden path kept whole (template Use, prepare, ask, approve,
     release, delivered and completed). Five runs: 7.95, 8.62, 8.27, 8.10, 8.19 s (median 8.2 s). The steps left are the path's own
     (prepare, approve and release are about 1.1 s each, the dialogs and their confirmations).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F217 to F223 in order:
   - the approver kept from releasing (beyond the plan's "the author"): kept, as design §5's separation; the user's confirmation;
   - R1's recheck reads everyone at the address now, the stricter way (F201): a topic-only send's preparation reads no sharer and its
     dispatch does; the ledger's build (each attempt, a retry) does not recheck another person's withdrawal, only the recipient's
@@ -3571,6 +3571,24 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F203 | P8 (Review Nov 14): the test daily limit is counted without a lock (concurrent tests can pass 20 by a few); a test does not run the PRIVATE_LINK check (a template's link reaches only the test list), which preparation does | P8: as its Review note says |
 | F204 | P8 (Review Nov 14): preparation creates each CampaignRecipient by its own call: a large list's preparation is slow (P9's load test) | P8: as its Review note says |
 | F205 | P8 (Review Nov 14): the Built note's findings stand as written (variables, attachments only, reply-to, a re-preparation keeping replaced rows, the audience limit at preparation) | P8: as its Review note says |
+| F206 | P9 (Built Nov 14): the ledger's natural key holds the execution key in the eventKey (`CampaignSend:<send>:<key>`), so a send's deliveries are counted by a prefix of it (the code over the plan above) | P9: as its Built note says |
+| F207 | P9 (Built Nov 14): MESSAGE_DELIVERY_REVIEW's every-organization reach is a system administrator's only now (receipts, resolution, the mail queue's reconciliation): an owner contract change of Comms, needed to grant it to the dispatcher | P9: as its Built note says |
+| F208 | P9 (Built Nov 14): the releaser may be neither an author nor the approver (but under the flag): the plan names the author only | P9: as its Built note says |
+| F209 | P9 (Built Nov 14): the dispatch's recheck reads the recipient's own membership, consent, suppression, solicitation and address and the frequency cap, not a withdrawal by another person at the same address (P5's DESTINATION_WITHDRAWN, settled at preparation); the ledger rechecks the recipient's consent and the suppressions at each attempt | P9: as its Built note says |
+| F210 | P9 (Built Nov 14): a cancelled or paused send's deliveries already with the ledger (queued or retrying) still go out, as design §5 says; the UI states their count; the build suppresses one whose recipient left the topic or whose address changed | P9: as its Built note says |
+| F211 | P9 (Built Nov 14): a send with an uncertain delivery stays Sending until it is reconciled; the frequency cap counts the organization's campaign-send deliveries only (P11's automation steps are not yet a source) | P9: as its Built note says |
+| F212 | P9 (Built Nov 14): a profile with no site gives the /u/ link from the root of the release's request; a send released with no web request (none in P9) would get a relative link | P9: as its Built note says |
+| F213 | P9 (Built Nov 14): throughput: 20 pages of 100 a send a run, a run every two minutes by default, the profile's throttle applied by the ledger | P9: as its Built note says |
+| F214 | P9 (Built Nov 14): ContactListCommStatus is stored CeReady at the hand-off and given its Message-ID by the next sweep (the ledger does not call back) | P9: as its Built note says |
+| F215 | P9 (Built Nov 14): the golden walk opens the New send dialog by the Use link's address with the campaign chosen (the template list's Use is an icon button the walk did not match by its text), to stay under 15 s a spec | P9: as its Built note says |
+| F216 | P9 (Built Nov 14): MarketingApprovals looked up its decisions by target id alone, which a send of another spec run before it can share | P9: as its Built note says |
+| F217 | P9 (Review Nov 14): the approver kept from releasing (beyond the plan's "the author"): kept, as design §5's separation; the user's confirmation | P9: as its Review note says |
+| F218 | P9 (Review Nov 14): R1's recheck reads everyone at the address now, the stricter way (F201): a topic-only send's preparation reads no sharer and its dispatch does; the ledger's build (each attempt, a retry) does not recheck another person's withdrawal, only the recipient's own consent and every suppression | P9: as its Review note says |
+| F219 | P9 (Review Nov 14): R2's refusal (NOT_READY, no address for the link) is reachable only by a release with no web request; a deployment with several sites should give its sending profiles a site with Account or their relays a web base URL, else the links carry the conf webapp's host | P9: as its Review note says |
+| F220 | P9 (Review Nov 14): the walk's median 8.2 s is about 0.2 s over the estimate (up to 0.6 s in a slow run): the user's call, or the estimate raised | P9: as its Review note says |
+| F221 | P9 (Review Nov 14): the New send dialog's profile default is a small UX change to Marketing's own screen, made for the walk | P9: as its Review note says |
+| F222 | P9 (Review Nov 14): `resumeSend` takes no stamp and does not recheck the audience limit (each claim rechecks the campaign and the profile); `resolveDelivery`'s `checkReach` is never passed (not a parameter); CampaignDelivery shows the Address filter to a masked reader, which ignores it | P9: as its Review note says |
+| F223 | P9 (Review Nov 14): the Built note's findings stand as written (the event key prefix, the reviewer's reach, the in-flight deliveries of a stopped send, an uncertain delivery keeping the send Sending, throughput, the list rows' Message-IDs by the sweep, MarketingApprovals' kind), but its "a send released with no web request would get a relative link" (R2: worse, another site's page; fixed) | P9: as its Review note says |
 
 ## 7. Later
 
