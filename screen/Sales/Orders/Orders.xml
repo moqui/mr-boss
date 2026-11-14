@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Orders › Orders (design-sales §6 Orders: OrderFind, OrderList, NewSalesOrder, OrderBatch; style-guide §3.2 List; impl-sales
+    P11): the sales orders of the user's sales scope (Mantle's mantle.sales.SalesWorkspaceServices.find#SalesOrders: orders whose
+    first part sells, theirs and their teams' or, for SALES_TEAM_VIEW, the organization's, and for an order approver those awaiting
+    approval or held; never a quote not yet placed, a quote template, a recurring base or an open cart), paged in the query, with the
+    saved lists Recent, Awaiting approval (the approver's queue, each row with its pre-approval warnings, which tell and do not
+    refuse), Held, To fulfill, Part fulfilled, To invoice, Drafts and Cancelled, found by text, organization, customer, opportunity and
+    mine; each row opens the one OrderDetail route with its customer, kind, state, total, holds and progress (shipped by line unit,
+    billed by currency). New order for a holder of SALES_ORDER_EDIT (create#SalesOrder checks the organization, customer, opportunity
+    and store); OrderBatch on the rows' selection approves or closes remainders, each order on its own through Mantle's guarded verbs
+    (apply#SalesOrderBatch: approve#Order's credit check runs for each). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Orders" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="salesOpportunityId"/>
+    <parameter name="mine"/>
+    <parameter name="list"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="createSalesOrder" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="applyOrderBatch" location="component://mr-boss/template/SalesOrders.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="approver" from="!!(can.orderApprove || ec.user.hasPermission('ORDER_APPROVE'))"/>
+        <set field="list" from="list || (approver &amp;&amp; !can.orderEdit ? 'awaiting' : 'recent')"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.sales.SalesWorkspaceServices.find#SalesOrders" out-map="context"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                        salesOpportunityId:salesOpportunityId, mine:mine, list:list, pageIndex:pageIndex,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+        </if>
+        <set field="orderList" from="orderList || []"/>
+        <!-- each row's batch key names the revision listed, so an order changed since is refused, not approved -->
+        <set field="orderList" from="orderList.map(row =&gt; Object.assign({}, row, {selectionKey: row.orderId + '@' + row.orderRevision}))"/>
+        <set field="detailPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || salesOpportunityId || mine)"/>
+        <set field="newOrderDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, customerPartyId: customerPartyId || null,
+                salesOpportunityId: salesOpportunityId || null}"/>
+        <!-- the saved lists (design §6): each a link to this list with its filter -->
+        <set field="savedLists" from="[{label: 'Recent', list: 'recent'}, {label: 'Awaiting approval', list: 'awaiting'},
+                {label: 'Held', list: 'held'}, {label: 'To fulfill', list: 'toFulfill'}, {label: 'Part fulfilled', list: 'partFulfilled'},
+                {label: 'To invoice', list: 'toInvoice'}, {label: 'Drafts', list: 'draft'}, {label: 'Cancelled', list: 'cancelled'}]"/>
+        <set field="showAwaitingNote" from="list == 'awaiting'"/>
+    </actions>
+    <widgets>
+        <label text="You do not read orders in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="OrdersRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Orders" type="h5"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewSalesOrderDialog" button-text="New order" title="New sales order" icon="sym_o_add"
+                                width="760" type="primary" condition="can.orderEdit">
+                            <section-include name="NewSalesOrderForm" location="component://mr-boss/template/SalesOrders.xml"/>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row q-gutter-xs q-mb-sm">
+                    <section-iterate name="OrderSavedLists" list="savedLists" entry="saved">
+                        <widgets>
+                            <link url="." text="${saved.label}" link-type="anchor-button"
+                                    style="${list == saved.list ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{list:saved.list, text:'', customerPartyId:'', salesOpportunityId:'', mine:'', pageIndex:''}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <label text="Pre-approval warnings tell the person approving; they do not refuse the approval. Each order is approved on its own, with its credit check."
+                        type="p" style="text-caption m-muted" condition="showAwaitingNote"/>
+                <form-list name="OrderList" list="orderList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <!-- OrderBatch (design §6): each order on its own; one refused (changed, not yours, on hold) is named -->
+                    <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="approver || can.orderEdit">
+                        <action>
+                            <form-single name="OrderBatchApprove" transition="applyOrderBatch">
+                                <field name="batch" from="'approve'"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <conditional-field title="Approve" condition="approver">
+                                        <submit icon="sym_o_check" confirmation="Approve the selected orders? Each is approved on its own, after its credit check."/>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <form-single name="OrderBatchClose" transition="applyOrderBatch">
+                                <field name="batch" from="'close'"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <conditional-field title="Close remainders" condition="can.orderEdit">
+                                        <submit type="danger" icon="sym_o_block" confirmation="Cancel what is left to ship of the selected orders? What was shipped and billed stays."/>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="text">
+                        <header-field title="Id, name or customer reference"><text-line size="20"/></header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="salesOpportunityId">
+                        <header-field title="Opportunity">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'deals', selected:salesOpportunityId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="mine">
+                        <header-field title="Mine"><check><option key="Y" text="My orders"/></check></header-field>
+                    </field>
+                    <field name="list">
+                        <header-field title="List">
+                            <drop-down allow-empty="false">
+                                <option key="recent" text="Recent"/>
+                                <option key="awaiting" text="Awaiting approval"/>
+                                <option key="held" text="Held"/>
+                                <option key="blocked" text="Awaiting approval or held"/>
+                                <option key="toFulfill" text="To fulfill"/>
+                                <option key="partFulfilled" text="Part fulfilled"/>
+                                <option key="toInvoice" text="To invoice"/>
+                                <option key="draft" text="Drafts"/>
+                                <option key="cancelled" text="Cancelled"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="orderName">
+                        <conditional-field title="Order" condition="detailPath">
+                            <link url="${detailPath}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                        </conditional-field>
+                        <default-field title="Order"><display/></default-field>
+                    </field>
+                    <field name="orderId"><default-field title="Id"><display/></default-field></field>
+                    <field name="customerName">
+                        <default-field title="Customer">
+                            <display/>
+                            <label text="PO ${otherPartyOrderId}" type="div" style="text-caption m-muted" condition="otherPartyOrderId"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusId == 'OrderHold' ? 'negative' : statusId == 'OrderPlaced' ? 'warning' : statusId == 'OrderCancelled' ? 'grey' : 'primary'}">${statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                            </render-mode>
+                            <label text="${holdsText}" type="div" style="text-caption text-negative" condition="holdsText"/>
+                            <label text="${warningsText}" type="div" style="text-caption text-warning" condition="warningsText"/>
+                        </default-field>
+                    </field>
+                    <field name="totalText" align="right">
+                        <default-field title="Total"><label text="${totalText}" type="span" style="text-no-wrap"/></default-field>
+                    </field>
+                    <field name="shippedText"><default-field title="Shipped"><display/></default-field></field>
+                    <field name="billedText"><default-field title="Billed"><display/></default-field></field>
+                    <field name="placedText"><default-field title="Placed"><display/></default-field></field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <columns>
+                        <column><field-ref name="orderName"/><field-ref name="orderId"/></column>
+                        <column><field-ref name="customerName"/></column>
+                        <column><field-ref name="kindText"/></column>
+                        <column><field-ref name="statusText"/></column>
+                        <column><field-ref name="totalText"/></column>
+                        <column><field-ref name="shippedText"/><field-ref name="billedText"/></column>
+                        <column><field-ref name="placedText"/></column>
+                        <column><field-ref name="ownerName"/></column>
+                        <column><field-ref name="organizationName"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="orderName"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoOrders" condition="!orderList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No orders match' : 'No orders in this list' + (can.orderEdit ? ' · Create one with New order' : '')}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

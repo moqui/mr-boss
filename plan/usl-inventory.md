@@ -922,9 +922,9 @@ framework's transfer services:
 | OrderServices | update#OrderStatus | Purchasing/Orders/OrderDetail | — Purchasing: the status moves through mantle.order.PurchaseServices (place, decide#PurchaseApproval, send, hold, cancel) (Purchasing P3) |
 | OrderServices | propose#Order | Sales/Orders/OrderDetail |  |
 | OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Place, through PurchaseServices.place#PurchaseOrder) (Purchasing P3); PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5); the renewal's order (Shop P7); Commerce/Integrations/ChannelImport and the channel intake (StoreChannels.js; Commerce P13); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8) |
-| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Approve) and Purchasing/Orders/PurchaseOrders (bulk), through PurchaseServices.decide#PurchaseApproval; its direction check and the approval gate (Purchasing P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); store orders approve by Mantle's store approval checks (StoreDetail's Order checks tab, Commerce P2) |
+| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Approve, through SalesOrderServices.approve#SalesOrder; the sales direction under the seller's approval setting; Sales P11); Sales/Orders/Orders (OrderBatch's Approve, each order on its own; Sales P11); Purchasing/Orders/OrderDetail (Approve) and Purchasing/Orders/PurchaseOrders (bulk), through PurchaseServices.decide#PurchaseApproval; its direction check and the approval gate (Purchasing P3); — Commerce/Orders/OrderDetail read only (StoreOperationsServices.get#StoreOrder; its order work is Customer Service's and Accounting's; Commerce P8); store orders approve by Mantle's store approval checks (StoreDetail's Order checks tab, Commerce P2) |
 | OrderServices | autoApprove#OrdersDelayed |  |  |
-| OrderServices | autoApprove#Order |  |  |
+| OrderServices | autoApprove#Order |  | no screen (the seller's approval setting leaves a sales order placed for Sales/Orders/Orders' Awaiting approval; Sales P11) |
 | OrderServices | isFulfilled#OrderPart |  |  |
 | OrderServices | isFulfilled#OrderItem |  |  |
 | OrderServices | checkComplete#OrderPart |  |  |
@@ -2180,8 +2180,8 @@ remain historical; these rows add no implementation claim.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| order/OrderServices | hold#Order | Sales/Orders/OrderDetail |  |
-| order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail |  |
+| order/OrderServices | hold#Order | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Hold, a Manual or Change hold, through SalesOrderServices.hold#SalesOrder; Sales P11) |
+| order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Release of a Manual or Change hold, through SalesOrderServices.release#SalesOrderHold; Sales P11) |
 | party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse | PASS:Supplier/SupplierHome; PASS:Supplier/QuoteResponse; PASS:Supplier/OrderAcknowledgement (its rule, through mantle.order.SupplierPortalServices) (Purchasing P16) |
 | party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail | Purchasing/Sourcing/QuoteRequestDetail (Send: each quote's QuoteResponse link); Purchasing/Orders/OrderDetail (Send: the revision's OrderAcknowledgement link) (its rule, through send#QuoteRequest and send#PurchaseOrder) (Purchasing P16) |
 | party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16) |
@@ -2314,6 +2314,23 @@ remain historical; these rows add no implementation claim.
 | order/SalesQuoteIssueServices | apply#QuoteBatch | Sales/Quotes/Quotes (QuoteBatch) | Sales/Quotes/Quotes (the rows' Send and Withdraw) |
 | order/SalesQuoteIssueServices | get#QuotePrint, get#QuoteIssueDocument | Sales/Orders/OrderDetail (html-print and PDF, design §16) | Shared/OrderDetail (Sales: Print (PDF); an issue's PDF) |
 | party/MessageServices | requeue#Delivery | — (a source's retry of a failed delivery) | no screen (send#Quote) |
+
+### Added in the Sales build: orders, approval and the storeless confirmation (P11, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesOrderServices | create#SalesOrder | Sales/Orders/Orders (NewSalesOrder) | Sales/Orders/Orders (New order) |
+| order/SalesOrderServices | store#SalesOrderLine, delete#SalesOrderLine | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: a direct draft's Add line and Remove) |
+| order/SalesOrderServices | place#SalesOrder | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Place) |
+| order/SalesOrderServices | approve#SalesOrder | Sales/Orders/OrderDetail; Sales/Orders/Orders (Awaiting approval) | Shared/OrderDetail (Sales: Approve); apply#SalesOrderBatch |
+| order/SalesOrderServices | hold#SalesOrder, release#SalesOrderHold | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Hold; a hold's Release) |
+| order/SalesOrderServices | cancel#SalesOrderRemainder | Sales/Orders/OrderDetail; Sales/Orders/Orders (OrderBatch) | Shared/OrderDetail (Sales: Cancel remainder); apply#SalesOrderBatch |
+| order/SalesOrderServices | clone#SalesOrder | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Copy as a new order) |
+| order/SalesOrderServices | apply#SalesOrderBatch | Sales/Orders/Orders (OrderBatch) | Sales/Orders/Orders (the rows' Approve and Close remainders) |
+| order/SalesOrderServices | get#SalesOrder | Sales/Orders/OrderDetail (sales-order context) | Shared/OrderDetail (Sales: the order context) |
+| order/SalesOrderServices | get#SalesWorkSummary | Sales/Home; Insights/Home (attention) | Sales/Home (through get#SalesHome); Insights/Home (Sales.QuotesToSend, Sales.QuotesExpiring, Sales.OrdersAwaitingApproval) |
+| order/SalesOrderServices | send#OrderConfirmation, build#OrderConfirmationMessage | — (the OrderPlacedSalesConfirmation rule; the delivery ledger's MdsrcSalesOrderConfirmation) | no screen |
+| sales/SalesWorkspaceServices | find#SalesOrders | Sales/Orders/Orders (OrderFind, OrderList) | Sales/Orders/Orders; Sales/Home (Orders blocked); the Sales palette |
 
 ## Marketing design — source-verified service additions
 

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The sales order transitions of IronStone Sales (design-sales §6; impl-sales P11), each one a call of Mantle's guarded order
+    service (mantle.order.SalesOrderServices, which checks the permission, the selling organization, the assignment and the revision
+    itself, before the native primitive and its own checks): createSalesOrder (NewSalesOrder, from Orders; it opens the new order's
+    OrderDetail), applyOrderBatch (OrderBatch on Orders' selection: approve or close remainders, each order on its own), and
+    OrderDetail's sales-order context: salesStoreOrderLine and salesDeleteOrderLine (a direct draft's lines), salesPlaceOrder,
+    salesApproveOrder (with an operation key the form makes, so a double submit answers the first), salesHoldOrder and
+    salesReleaseHold (a Manual or a Change hold), salesCancelRemainder and salesCloneOrder. NewSalesOrderForm is the dialog's form,
+    reading newOrderDefaults. A screen includes each transition and section it uses by name. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createSalesOrder">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.create#SalesOrder" out-map="created"
+                    in-map="{organizationPartyId:(organizationPartyId || null), customerPartyId:customerPartyId,
+                        contactPartyId:(contactPartyId || null), salesOpportunityId:(salesOpportunityId || null),
+                        currencyUomId:(currencyUomId || null), productStoreId:(productStoreId || null), orderName:(orderName || null),
+                        otherPartyOrderId:(otherPartyOrderId || null), shipBeforeDate:(shipBeforeDate || null)}"/>
+            <set field="detailPath" from="sales.sharedLinks['Orders/OrderDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Order ${created.orderId} created</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath</expression></condition>
+            <parameter name="orderId" from="created.orderId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="applyOrderBatch">
+        <actions>
+            <set field="orderKeys" from="Array.isArray(selectedKeys) ? selectedKeys : String(selectedKeys || '').split(',').filter(Boolean)"/>
+            <service-call name="mantle.order.SalesOrderServices.apply#SalesOrderBatch" out-map="batchOut"
+                    in-map="{operation:batch, orderKeys:orderKeys, operationKey:('batch-' + ec.user.randomString(24))}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const verb = {approve: 'Approved', close: 'Closed'}[batch] || 'Done'
+                    if (batchOut.successCount) ec.message.addMessage(verb + ' ' + batchOut.successCount + ' of ' + batchOut.results.length + ': '
+                            + batchOut.results.filter(row => row.ok).map(row => row.orderId + (row.outcome && row.outcome != 'approved' ? ' (' + row.outcome + ')' : '')).join(', '), 'success')
+                    for (const row of batchOut.results.filter(row => !row.ok))
+                        ec.message.addMessage('Not done ' + row.orderId + ': ' + String(row.message || '').replace(/^(Error: )?([A-Z_]+: )/, ''), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="salesStoreOrderLine">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.store#SalesOrderLine"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, orderItemSeqId:(orderItemSeqId || null),
+                        itemTypeEnumId:(itemTypeEnumId || null), productId:(productId || null), quantity:(quantity || null),
+                        unitAmount:(unitAmount || null), freeLine:(freeLine || null), overrideReason:(overrideReason || null),
+                        itemDescription:itemDescription}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Line saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesDeleteOrderLine">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.delete#SalesOrderLine"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, orderItemSeqId:orderItemSeqId}"/>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesPlaceOrder">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.place#SalesOrder" out-map="placed"
+                    in-map="{orderId:orderId, orderRevision:orderRevision}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Order ${orderId} ${placed.outcome}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesApproveOrder">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.approve#SalesOrder" out-map="approved"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="${approved.creditHeld ? 'warning' : 'success'}">Order ${orderId} ${approved.creditHeld ? 'held for credit' : approved.outcome}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesHoldOrder">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.hold#SalesOrder"
+                    in-map="{orderId:orderId, holdTypeEnumId:(holdTypeEnumId || 'OhtManual'), holdComment:holdComment}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Order ${orderId} held</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesReleaseHold">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.release#SalesOrderHold"
+                    in-map="{orderHoldReasonId:orderHoldReasonId, releaseComment:releaseComment}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Hold released</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesCancelRemainder">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.cancel#SalesOrderRemainder" out-map="cancelled"
+                    in-map="{orderId:orderId, orderRevision:orderRevision}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Cancelled what was left of ${cancelled.cancelledCount} line(s)</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesCloneOrder">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.clone#SalesOrder" out-map="cloned" in-map="{orderId:orderId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Order ${cloned.orderId} copied from ${orderId}</message></if>
+        </actions>
+        <conditional-response url="."><condition><expression>!ec.message.hasError()</expression></condition>
+            <parameter name="orderId" from="cloned.orderId"/></conditional-response>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <widgets>
+        <!-- NewSalesOrder (design §6: customer, seller, currency, required date, store if applicable, an optional opportunity) -->
+        <section name="NewSalesOrderForm">
+            <widgets>
+                <form-single name="NewSalesOrder" transition="createSalesOrder" map="newOrderDefaults">
+                    <field name="organizationPartyId">
+                        <default-field title="Selling organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <default-field title="Customer">
+                            <drop-down allow-empty="false" required-manual-select="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contactPartyId">
+                        <default-field title="Contact" tooltip="A contact of the customer, who gets the confirmation">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'dealContacts', selected:contactPartyId, accountPartyId:customerPartyId}">
+                                    <depends-on field="customerPartyId" parameter="accountPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="salesOpportunityId">
+                        <default-field title="Opportunity">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'deals', selected:salesOpportunityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="orderName"><default-field title="Name"><text-line/></default-field></field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency" tooltip="The opportunity's or the seller's currency when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productStoreId">
+                        <default-field title="Store" tooltip="Empty for an order without a store, taxed through the seller's tax gateway">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stores', selected:productStoreId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="shipBeforeDate"><default-field title="Required by"><date-time type="date"/></default-field></field>
+                    <field name="otherPartyOrderId"><default-field title="Customer reference (PO)"><text-line/></default-field></field>
+                    <field name="submitButton"><default-field title="Create order"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="customerPartyId"/></field-row>
+                        <field-row><field-ref name="contactPartyId"/><field-ref name="salesOpportunityId"/></field-row>
+                        <field-row><field-ref name="orderName"/><field-ref name="currencyUomId"/></field-row>
+                        <field-row><field-ref name="productStoreId"/><field-ref name="shipBeforeDate"/></field-row>
+                        <field-ref name="otherPartyOrderId"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

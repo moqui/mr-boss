@@ -1062,6 +1062,49 @@ Mounted at `Sales/Orders/OrderDetail`; crosscut §3.6 rows (one record, two acti
 
 **Needs:** SAL-QUOTE, SAL-CHANGE; CX-ORDER-HOLD, CX-CREDIT, CX-POSTING.
 
+### As built (impl-sales P11, Nov 14, 2026)
+
+- **The approval setting.** `SalesPolicy.orderApprovalRequired` (P9's field) is enforced in Mantle for every caller:
+  `autoApprove#Order` approves no order with a sales part of a seller whose setting is on (it stays Placed, its payment
+  authorized); `approve#Order`'s sales direction (PurchaseOrders.js `approveRefusal`, SalesOrders.js) asks of such a part
+  `SALES_ORDER_APPROVE` in the approver's sales scope (ORGANIZATION_DENIED outside it) and an approved Sales decision of each
+  order rule (SalesApprovalPolicy purpose SapOrder) the order meets at its revision (SALES_APPROVAL_REQUIRED); elsewhere
+  `ORDER_APPROVE` as before. Customer Service's replacement orders and Projects' estimate approval leave such an order placed
+  (§4 Q12). Pre-approval warnings never refuse a person's approval (`approve#Order` does not call the check).
+- **Q.** `mantle.order.SalesOrderServices` (SalesOrders.js): `create#SalesOrder` (purpose `OrpSalesOrder`, through Q's draft
+  maker, no validity, the required date on the part), `store#SalesOrderLine` and `delete#SalesOrderLine` (Q's line editor on a
+  direct draft), `place#SalesOrder`, `approve#SalesOrder` (SALES_ORDER_APPROVE where the setting is on, else ORDER_APPROVE; each
+  order rule decided by the approver as an OrderDecision of purpose SapOrder at the revision, its owner, enterer and placer
+  refused unless the rule allows it; then `approve#Order`, whose credit check may hold it; an operation key), `hold#SalesOrder`
+  and `release#SalesOrderHold` (Manual and Change only; another type HOLD_TYPE_DENIED), `cancel#SalesOrderRemainder` (each open
+  line's unissued quantity through `cancel#OrderItem`), `clone#SalesOrder`, `apply#SalesOrderBatch` (approve or close, each order
+  on its own), `get#SalesOrder` and `get#SalesWorkSummary` (Home's and Insights' counts). `SalesWorkspaceServices.find#SalesOrders`
+  lists the scope's sales orders by saved list (recent, awaiting, held, blocked, toFulfill, partFulfilled, toInvoice, draft,
+  cancelled) with holds, shipped of ordered per line unit and billed of the total per currency. An accepted quote keeps purpose
+  `OrpSalesQuote`: once placed it is an order (find#Quotes' "all" leaves it out, P7's review), a draft or proposed one a quote.
+- **Order scope.** SalesAccess.js `orderOf`: an order whose first part sells, of a seller of the scope, assigned to the user or a
+  team of theirs, the organization's for `SALES_TEAM_VIEW`, and for an order approver (`SALES_ORDER_APPROVE` or `ORDER_APPROVE`)
+  one Placed or on hold, to decide, not to change.
+- **Net-terms option.** With the seller's setting off and `approveNetTermsOrders` Y, `respond#Quote`'s acceptance, once placed
+  and with no Sales rule open, is approved as the system through `approve#Order` (a claim only Mantle's code sets for that order),
+  whose credit check may hold it (the response's outcome held).
+- **Holds.** `hold#Order` and `release#OrderHold` check the order's organization for a user's Manual, Change or Purchase reason
+  (the user works for the part's internal party, or administers every organization; another's answers as missing) and a Purchase
+  reason's direction (HOLD_TYPE_DIRECTION); Credit and Payment reasons stay their owner services' (Customer Service F78, F12).
+- **The storeless confirmation.** `send#OrderConfirmation`, on the `OrderPlacedSalesConfirmation` rule after a placement or an
+  approval commits: a storeless direct order or accepted quote has Customer Service's stored confirmation as placed sent to its
+  contact, else its customer, through the delivery ledger (`MdsrcSalesOrderConfirmation`, the seller's confirmation template or
+  `MANTLE_SALES_ORDER_CONFIRMATION`), once for the order's revision and recipient, from the organization's own email. Another
+  app's storeless order (Projects', a replacement) and a store order send none.
+- **Screens.** Orders in the menu (`Sales/Orders/Orders`: the saved lists Recent, Awaiting approval with each row's warnings,
+  Held, To fulfill, Part fulfilled, To invoice, Drafts, Cancelled; New order; OrderBatch's Approve and Close remainders on the
+  rows' selection); OrderDetail's sales-order context (asked before the quote context): the header with the customer's PO, the
+  accepted quote's evidence and the state's primary (Place, Add line, Approve), More (Hold, Cancel remainder, Copy as a new
+  order), Holds with Release, Approval (the setting, each order rule, the warnings), Overview, Fulfillment and Invoices and
+  payments (a finance reader's) without links until P14, Items with shipped and billed, History, Chatter and Files. Home's
+  quote and order counters and Insights' attention cards Quotes to send, Quotes expiring and Orders awaiting approval; the
+  palette's orders. Print of an order is not built (the confirmation as placed is Customer Service's document).
+
 ### OrderChanges
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

@@ -49,7 +49,9 @@ feature("Home's counters are their lists' counts, with the rep's assigned work, 
         home.output.includes('title="Leads to work" value="' + leadsCount + '"')
         leads.listPath == "Pipeline/Leads"
         home.output.includes("My open opportunities")
-        home.output.includes("Not configured")
+        // P11: the quote and order counters are counts too, never "Not configured"
+        !home.output.includes("Not configured")
+        home.output.includes("Quotes to send")
         home.output.includes("Assigned to me")
         home.output.includes("Wingtip stores refit")
         home.output.includes("My pipeline")

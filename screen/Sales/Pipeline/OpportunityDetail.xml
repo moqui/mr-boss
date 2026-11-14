@@ -21,8 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     beside it and the others (Change stage, Disqualify a lead, the account) in More. The
     boxes: Overview (the facts, Edit), People (the owner, team and contacts, dated: Change owner, Set team, Add contact, End),
     Competitors, Activities (the linked tasks, each opening WorkItemDetail; Schedule activity), Quotes (P7: the deal's quotes the user
-    sees, find#Quotes; New quote the primary of an open opportunity), Orders (the linked orders an organization reader sees, until
-    the order scope, P11), Conversation (Chatter) and Files (RecordFiles), the
+    sees, find#Quotes; New quote the primary of an open opportunity), Orders (P11: the deal's orders the user sees, Mantle's
+    find#SalesOrders, each opening OrderDetail), Conversation (Chatter) and Files (RecordFiles), the
     opportunity being a Chatter and files host (get#RecordLinkInfo, F69). Every change is Mantle's guarded service at the revision
     read; a stage move is not a closure. An account the user may not see is unnamed. P5: Inquiries, the intakes that made or
     joined a lead (what the inquirer submitted, until purged), which QualifyLead's new account and contact start from. -->
@@ -55,7 +55,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="partyList" from="detail?.parties || []"/>
         <set field="competitorList" from="detail?.competitors || []"/>
         <set field="activityList" from="detail?.activities || []"/>
-        <set field="orderList" from="detail?.orders || []"/>
+        <!-- P11: the deal's orders the user sees (Mantle's scoped find#SalesOrders; an accepted quote is listed here once placed, not
+            among the quotes too, P7's review) -->
+        <if condition="recordFound">
+            <service-call name="mantle.sales.SalesWorkspaceServices.find#SalesOrders" out-map="dealOrders" transaction="force-new" ignore-error="true"
+                    in-map="{salesOpportunityId:salesOpportunityId, list:'recent', pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="orderList" from="Array.from(dealOrders?.orderList || []).map(row =&gt; ({orderId: row.orderId, orderName: row.orderName,
+                dateText: row.placedText || row.entryText, statusText: row.statusText, amountText: row.totalText}))"/>
         <!-- P7: the deal's quotes the user sees (Mantle's scoped find#Quotes), and New quote's values from the deal -->
         <if condition="recordFound">
             <service-call name="mantle.order.SalesQuoteServices.find#Quotes" out-map="dealQuotes" transaction="force-new" ignore-error="true"
@@ -568,7 +576,12 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Orders"/>
                             <box-body-nopad>
                                 <form-list name="RelatedSalesList" list="orderList" skip-form="true" paginate="false">
-                                    <field name="orderName"><default-field title="Document"><display/></default-field></field>
+                                    <field name="orderName">
+                                        <conditional-field title="Order" condition="quoteDetailPath">
+                                            <link url="${quoteDetailPath}" text="${orderName}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                        </conditional-field>
+                                        <default-field title="Order"><display/></default-field>
+                                    </field>
                                     <field name="dateText"><default-field title="Date"><display/></default-field></field>
                                     <field name="statusText"><default-field title="State"><display/></default-field></field>
                                     <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>

@@ -366,7 +366,7 @@ feature(
             repHome.errors.length == 0
             repHome.output.includes("Sales work")
             repHome.output.includes("RFQs awaiting response")
-            repHome.output.includes("Not configured")
+            repHome.output.includes("Orders blocked")
             repHome.output.includes("Ziziwork Retail")
             !repHome.output.includes("Nothing of it is open to you.")
             // the representative has no Reports shortcut
@@ -605,6 +605,40 @@ feature("a quote's send is its rep's, of their organization", {
     },
     then({rep, other}) {
         rep.includes("QUOTE_NOT_PROPOSED")
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})
+
+// P11 (impl-sales P11): approving a sales order is an order approver's, of their organization: with the same parameters (a stale
+// revision, so nothing is written) the rep who placed it is refused for the permission, the approver reaches the revision check, and
+// Ziziwork Sales' rep is refused it as missing
+feature("approving a sales order is an order approver's, of their organization", {
+    when() {
+        const O = "mantle.order.SalesOrderServices."
+        const revisionOf = id =>
+            Number(ec.entity.find("mantle.order.OrderHeader").condition("orderId", id).disableAuthz().one().orderRevision)
+        const orderId = asUser(users.rep, () =>
+            system(() => {
+                const id = invoke(O + "create#SalesOrder", {
+                    organizationPartyId: ids.organizationId,
+                    customerPartyId: ids.accounts.wingtip
+                }).orderId
+                invoke(O + "store#SalesOrderLine", {
+                    orderId: id,
+                    orderRevision: revisionOf(id),
+                    productId: "DEMO_1_1",
+                    quantity: 1
+                })
+                invoke(O + "place#SalesOrder", {orderId: id, orderRevision: revisionOf(id)})
+                return id
+            })
+        )
+        const approve = user => asUser(user, () => system(() => refusal(O + "approve#SalesOrder", {orderId, orderRevision: "0"})))
+        return {rep: approve(users.rep), approver: approve(users.approver), other: approve(users.otherRep)}
+    },
+    then({rep, approver, other}) {
+        rep.includes("PERMISSION_DENIED")
+        approver.includes("REVISION_CHANGED")
         other.includes("RECORD_UNAVAILABLE")
     }
 })
