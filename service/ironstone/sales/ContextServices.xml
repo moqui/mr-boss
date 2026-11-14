@@ -140,6 +140,29 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="opportunityRows" from="found.opportunityRows || []"/>
         </actions>
     </service>
+    <!-- P6: Today (design §1.3 "Today reuses WorkEffort activities rather than nextStep text") -->
+    <service verb="get" noun="TodayItems" allow-remote="false" read-only="true">
+        <description>The Sales today-source (Commons' get#UserTodayItems calls it): the user's own open leads and opportunities whose
+            expected close falls by thruDate (Mantle's find#Opportunities, mine), each opening OpportunityDetail with the deal as the
+            record and no Mark done (canUpdate false); a deal's activities are Commons' tasks, in Today already. Another user's Today,
+            and a user who reads nothing of Sales, get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/sales/Sales.js"/>
+            <set field="today" from="ec.resource.script(module).execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
     <service verb="search" noun="Records" allow-remote="false" read-only="true">
         <description>The palette's Sales records, each opening its Sales screen, with recordEntity and recordId for Assist's
             search (Sales.js searchFinds). None yet: accounts join with their screens (P3), opportunities and leads (P4), quotes

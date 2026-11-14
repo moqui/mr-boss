@@ -24,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     mounting root does not mount (Marketing's) shows its name without a link. LeadList has row selection; Marketing's bulk action
     "Add to list (evidenced)" joins it as an owner contract (impl-marketing P3). P5: the intake columns (Came by, Received,
     Verification) of a lead that came in through store#LeadIntake: mail to a team's intake address, Comms' Create lead, Marketing's
-    lead forms. -->
+    lead forms. P6: the filtered result as CSV or XLSX, and Import (the shared wizard's `opportunities` target) for a manager who
+    imports; under Marketing's mount, whose sharedLinks hold no import, Import is not shown. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Leads" default-menu-index="2">
     <parameter name="text"/>
@@ -83,12 +84,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <section-include name="NewLeadForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
                         </container-dialog>
                         <link url="." text="Mine" link-type="anchor-button" icon="sym_o_person" parameter-map="{mine:'Y'}"/>
+                        <link url="${sales.sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"
+                                condition="can.teamRead &amp;&amp; can.import &amp;&amp; sales.sharedLinks['Pipeline/OpportunityImport']"/>
                     </container>
                 </container>
                 <container-box>
                     <box-body-nopad>
                         <form-list name="LeadList" list="leadList" skip-form="true" paginate="true" header-dialog="true"
-                                saved-finds="true" select-columns="true" show-csv-button="true">
+                                saved-finds="true" select-columns="true" show-csv-button="true" show-xlsx-button="true">
                             <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="canEdit">
                                 <action>
                                     <form-single name="LeadAssign" transition="applyBatch">

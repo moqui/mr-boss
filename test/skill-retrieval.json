@@ -39,6 +39,13 @@
         {"query": "what is left to do before I complete the repair order", "expect": ["maintenance-close-work-order"]},
         {"query": "summarize this equipment's history", "page": "/qapps/Maintenance/Equipment/EquipmentDetail", "expect": ["maintenance-equipment-history"]},
         {"query": "when was the compressor last serviced and how often does it break down", "expect": ["maintenance-equipment-history"]},
-        {"query": "show me the repair history of the forklift", "expect": ["maintenance-equipment-history"]}
+        {"query": "show me the repair history of the forklift", "expect": ["maintenance-equipment-history"]},
+        {"query": "qualify this lead", "page": "/qapps/Sales/Pipeline/OpportunityDetail", "expect": ["sales-qualify-lead"]},
+        {"query": "turn the Northwind enquiry into an opportunity", "expect": ["sales-qualify-lead"]},
+        {"query": "is this prospect ready to convert to a deal", "expect": ["sales-qualify-lead"]},
+        {"query": "draft a follow-up to the customer on this deal", "page": "/qapps/Sales/Pipeline/OpportunityDetail", "expect": ["sales-follow-up"]},
+        {"query": "what changed on the Wingtip deal since the last activity", "expect": ["sales-follow-up"]},
+        {"query": "I just called Dana at Wingtip, log the call", "expect": ["sales-log-call"]},
+        {"query": "record my call notes on this opportunity", "page": "/qapps/Sales/Pipeline/OpportunityDetail", "expect": ["sales-log-call"]}
     ]
 }

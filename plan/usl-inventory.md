@@ -2197,6 +2197,24 @@ remain historical; these rows add no implementation claim.
 | sales/SalesWorkspaceServices | get#AccountContactProjection | Sales/Accounts/Contacts (My accounts) | the projected CardDAV address book projected-SalesMyAccounts (mantle.party.ContactDavServices; no screen) |
 | party/ContactDavServices | get#ProjectionObjects | — (CardDAV) | get#DavCollections and get#DavObjects for projected-{projectionId} (no screen) |
 
+### Added in the Sales build: Home, shell, Assist and the pipeline dataset (P6, Nov 13, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| sales/SalesWorkspaceServices | get#SalesHome | Sales/Home | Sales/Home (SalesWork's counters, AssignedWork) |
+| sales/SalesWorkspaceServices | get#PipelineRowFilter | — (the pipeline dataset) | report/mantle-sales-pipeline.json's row filter (the ReportScopePolicy MantleSalesScope; no screen); Sales/Home (PipelineFunnel, through report-embed) |
+| sales/SalesWorkspaceServices | find#OwnedSalesAssignments | Admin/Users/UserDetail (offboarding) | Admin's lifecycle participant sales.assignments (Admin/Users/UserDetail's disable and removal, LifecycleDetail) |
+| sales/SalesWorkspaceServices | transfer#SalesAssignment | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (Transfer on a Sales assignment step) |
+| sales/OpportunityServices | validate#OpportunityImportRow | Sales/Pipeline/Opportunities (OpportunityImport) | Sales/Pipeline/OpportunityImport (Shared/DataImport, target opportunities); Admin/Data/Imports |
+| sales/OpportunityServices | apply#OpportunityImportRow | Sales/Pipeline/Opportunities (OpportunityImport) | Sales/Pipeline/OpportunityImport (Shared/DataImport, target opportunities) |
+| sales/OpportunityServices | find#OpportunityImportScopes | Sales/Pipeline/Opportunities (OpportunityImport) | Sales/Pipeline/OpportunityImport; Admin/Data/Imports |
+| sales/OpportunityServices | check#LeadRuleOwner | — (mail rules) | the framework's create#EmailRule and update#EmailRule (SalesIntake.secas.xml; Comms' Mail settings, no Sales screen) |
+| sales/OpportunityServices | find#Opportunities | Sales/Home (MyPipeline) | Sales/Home (MyPipeline); Sales/QuickCreate/NewActivity (the deal choice); the Sales today-source; Assist's sales_find_opportunities tool |
+| sales/OpportunityServices | create#Opportunity | Sales/QuickCreate | Sales/QuickCreate/NewLead, NewOpportunity; Assist's sales_create_opportunity tool (approved first) |
+| sales/OpportunityServices | add#OpportunityActivity | Sales/QuickCreate | Sales/QuickCreate/NewActivity |
+| sales/AccountServices | create#Account, create#Contact | Sales/QuickCreate | Sales/QuickCreate/NewAccount, NewContact (template/SalesAccountForms.xml, shared with Accounts and Contacts) |
+| party/UserFactServices | get#OrganizationFacts | — (Assist, CX-ASSIST) | Mantle's llm-facade user-facts provider (every agent conversation's prompt; no screen) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section

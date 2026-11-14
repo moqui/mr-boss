@@ -1,21 +1,121 @@
 {
-    "case": ["ticket", "support request", "incident", "complaint"],
-    "queue": ["inbox", "team queue"],
-    "reply": ["respond", "answer", "write back"],
-    "customer": ["client", "buyer"],
-    "cart": ["basket", "shopping cart", "checkout"],
-    "store": ["shop", "storefront"],
-    "integration": ["channel", "marketplace", "connector"],
-    "retry": ["resend", "reprocess", "try again"],
-    "metric": ["kpi", "measure"],
-    "dashboard": ["scorecard", "overview"],
-    "leave": ["time off", "vacation", "holiday", "pto", "day off"],
-    "payslip": ["pay slip", "salary slip", "pay stub", "wage slip"],
-    "work order": ["maintenance job", "repair order", "job card"],
-    "equipment": ["machine", "asset", "device"],
-    "problem": ["fault", "breakdown", "defect", "malfunction"],
-    "employee": ["staff member", "worker", "team member"],
-    "hire": ["onboard", "take on", "recruit"],
-    "policy": ["handbook", "rule", "guideline"],
-    "headcount": ["staff count", "number of employees", "fte"]
+    "case": [
+        "ticket",
+        "support request",
+        "incident",
+        "complaint"
+    ],
+    "queue": [
+        "inbox",
+        "team queue"
+    ],
+    "reply": [
+        "respond",
+        "answer",
+        "write back"
+    ],
+    "customer": [
+        "client",
+        "buyer"
+    ],
+    "cart": [
+        "basket",
+        "shopping cart",
+        "checkout"
+    ],
+    "store": [
+        "shop",
+        "storefront"
+    ],
+    "integration": [
+        "channel",
+        "marketplace",
+        "connector"
+    ],
+    "retry": [
+        "resend",
+        "reprocess",
+        "try again"
+    ],
+    "metric": [
+        "kpi",
+        "measure"
+    ],
+    "dashboard": [
+        "scorecard",
+        "overview"
+    ],
+    "leave": [
+        "time off",
+        "vacation",
+        "holiday",
+        "pto",
+        "day off"
+    ],
+    "payslip": [
+        "pay slip",
+        "salary slip",
+        "pay stub",
+        "wage slip"
+    ],
+    "work order": [
+        "maintenance job",
+        "repair order",
+        "job card"
+    ],
+    "equipment": [
+        "machine",
+        "asset",
+        "device"
+    ],
+    "problem": [
+        "fault",
+        "breakdown",
+        "defect",
+        "malfunction"
+    ],
+    "employee": [
+        "staff member",
+        "worker",
+        "team member"
+    ],
+    "hire": [
+        "onboard",
+        "take on",
+        "recruit"
+    ],
+    "policy": [
+        "handbook",
+        "rule",
+        "guideline"
+    ],
+    "headcount": [
+        "staff count",
+        "number of employees",
+        "fte"
+    ],
+    "lead": [
+        "prospect",
+        "inquiry",
+        "enquiry"
+    ],
+    "opportunity": [
+        "deal",
+        "pipeline deal",
+        "sales opportunity"
+    ],
+    "quote": [
+        "quotation",
+        "offer",
+        "proposal"
+    ],
+    "rfq": [
+        "request for quote",
+        "request for quotation",
+        "quote request"
+    ],
+    "account": [
+        "customer account",
+        "client account"
+    ]
 }

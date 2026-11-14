@@ -6,7 +6,8 @@
 //
 // A mount is the app the wizard is opened under (the root sets appRoot, never the request). Under a catalog app (Products)
 // the target is the catalog and nothing else, with the app's own catalog context; under People it is the employees target
-// (impl-people P7); under Maintenance the equipment target (impl-maintenance P18); under Admin it is the target the request names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW
+// (impl-people P7); under Maintenance the equipment target (impl-maintenance P18); under Sales the opportunities target
+// (impl-sales P6); under Admin it is the target the request names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW
 // reads an import there). Any other root is refused.
 const T = "org.moqui.admin.DataTransferServices."
 const text = value => String(value ?? "").trim()
@@ -82,6 +83,27 @@ function mount(p) {
             listLink: null,
             detailLink: null,
             activeOrganizationPartyId: maintenance.activeOrganizationPartyId || maintenance.organizationPartyIds?.[0] || null
+        }
+    }
+    // Sales' mount (impl-sales P6, design-sales §3 OpportunityImport): the opportunities target only, whatever the request names,
+    // for a reader of the organization's pipeline (SALES_TEAM_VIEW, the target's view permission); an import is run by a holder of
+    // SALES_IMPORT with SALES_OPPORTUNITY_EDIT and SALES_TEAM_MANAGE (the target asks all three, its row services Sales' own
+    // permission and organization checks)
+    if (appRoot === "Sales") {
+        const sales = call("ironstone.sales.ContextServices.get#SharedContext", {appRoot})
+        const caps = sales.capabilities || {}
+        if (!caps.teamRead) throw new Error("SALES_TEAM_VIEW is required")
+        return {
+            appRoot,
+            targetId: "opportunities",
+            canRun: !!caps.import && !!caps.opportunityEdit && !!caps.teamManage,
+            runRefusal: "Importing leads and opportunities needs SALES_IMPORT, SALES_OPPORTUNITY_EDIT and SALES_TEAM_MANAGE",
+            downloadBase: "/apps/Sales/Pipeline/OpportunityImport/Index",
+            selfLink: sales.sharedLinks["Pipeline/OpportunityImport"],
+            listLink: null,
+            detailLink: null,
+            activeOrganizationPartyId:
+                sales.activeOrganizationPartyId || sales.defaultOrganizationPartyId || sales.organizationPartyIds?.[0] || null
         }
     }
     // a catalog app's mount: the catalog target only, whatever the request names

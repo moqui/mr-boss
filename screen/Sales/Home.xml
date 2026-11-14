@@ -12,14 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Sales Home (design-sales §3 Home, §1.2; style-guide §3.1 Landing; impl-sales P1): HomeFilters (the organization, from those of
-    the user's sales scope, checked by ironstone.sales.ContextServices.check#Record and shown "not available" when refused), and
-    the frame of design §3's panels: SalesWork's counters (RFQs awaiting response, quotes to send, quotes expiring, orders blocked,
-    activities due), AssignedWork and MyPipeline, each shown "Not configured" until the opportunities, quotes and orders that
-    answer them exist (mantle.sales.SalesWorkspaceServices.get#SalesHome and find#Opportunities, P4 and P6), never zero; and the
-    shortcut to Reports for a report reader. A Sales user who reads nothing of Sales (an edit permission alone) is told what Home
-    holds. P6 adds the counts that open the scoped lists, the actions (New opportunity primary, New lead, quote and activity) and
-    the PipelineFunnel. -->
+<!-- Sales Home (design-sales §3 Home, §1.2; style-guide §3.1 Landing; impl-sales P1, P6): HomeFilters (the organization, from those of
+    the user's sales scope, checked by ironstone.sales.ContextServices.check#Record and shown "not available" when refused); SalesWork,
+    the counter strip of mantle.sales.SalesWorkspaceServices.get#SalesHome, each card the count of the scoped list it opens with that
+    list's own filters (the leads to work, the user's open opportunities, those past their expected close), a failed one
+    "Unavailable", never zero, and those of the records not built yet (requests for quote, quotes, blocked orders) "Not configured";
+    AssignedWork, the user's own open leads and opportunities with their next activity; MyPipeline, the user's open opportunities
+    (Mantle's find#Opportunities, the same query as Opportunities) by stage; PipelineFunnel, the funnel panel of the shipped dashboard
+    report/boss-sales-pipeline.json over the pipeline dataset, whose row filter is Sales' scope, through report-embed (rendered for
+    the viewer, so Home declares no server-static template: impl-sales F66), a table in html and print and text bars in the
+    terminal. New opportunity is the primary action; New lead, Schedule activity and Import (a manager's) beside it. A Sales user who
+    reads nothing of Sales (an edit permission alone) is told what Home holds; a report reader gets the Sales summary shortcut. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -34,17 +37,47 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
         <set field="scope" from="{organizationPartyId: organizationPartyId || null}"/>
         <set field="scopeText" from="organizationRecord?.label || (sales.allOrganizations ? 'Every organization' : 'Your organizations')"/>
-        <!-- design §3's SalesWork counters, none answered until its records exist: each is not configured, never zero -->
-        <set field="counterRows" from="[
-                {counter: 'RFQs awaiting response', source: 'Requests for quote'},
-                {counter: 'Quotes to send', source: 'Quotes'},
-                {counter: 'Quotes expiring', source: 'Quotes'},
-                {counter: 'Orders blocked', source: 'Orders'},
-                {counter: 'My activities due', source: 'Activities'}
-            ].map(row =&gt; Object.assign(row, {state: 'Not configured'}))"/>
+        <set field="shownOrganizationId" from="organizationRefused ? null : (organizationPartyId || null)"/>
+        <if condition="can.anyRead &amp;&amp; !organizationRefused">
+            <service-call name="mantle.sales.SalesWorkspaceServices.get#SalesHome" out-map="home" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:shownOrganizationId}"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="mantle.sales.OpportunityServices.find#Opportunities" out-map="pipeline" transaction="force-new"
+                    ignore-error="true" in-map="{typeEnumId:'SotOpportunity', mine:'Y', statusId:'SalesOppOpen', organizationPartyId:shownOrganizationId,
+                        orderByField:'estimatedCloseDate', pageSize:10}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <!-- each counter's card: its count (Unavailable or Not configured otherwise) and the link to its list with the list's filters -->
+        <set field="counterOf" from="Object.fromEntries(Array.from(home?.counters || []).map(counter =&gt; [counter.counterKey, Object.assign({}, counter, {
+                link: counter.state == 'ready' &amp;&amp; counter.listPath &amp;&amp; sharedLinks[counter.listPath] ? sharedLinks[counter.listPath] +
+                    (Object.keys(counter.parameters || {}).length ? '?' + Object.entries(counter.parameters).map(([key, value]) =&gt; key + '=' + encodeURIComponent(value)).join('&amp;') : '') : ''})]))"/>
+        <set field="unavailable" from="{stateText: 'Unavailable', link: ''}"/>
+        <set field="leadsCard" from="counterOf.leads || unavailable"/>
+        <set field="mineCard" from="counterOf.myOpportunities || unavailable"/>
+        <set field="lateCard" from="counterOf.pastClose || unavailable"/>
+        <set field="laterCards" from="Array.from(home?.counters || []).filter(counter =&gt; counter.state == 'notConfigured')"/>
+        <set field="assignedList" from="Array.from(home?.assignedWork || [])"/>
+        <set field="assignedUnavailable" from="!home || home.assignedState == 'unavailable'"/>
+        <set field="pipelineList" from="Array.from(pipeline?.opportunityList || [])"/>
+        <set field="pipelineCount" from="pipeline?.opportunityListCount ?? null"/>
+        <set field="totalsText" from="(pipeline?.totals || []).map(total =&gt; total.amountText + ' (' + total.count + ')').join(' · ')"/>
+        <set field="detailPath" from="sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+        <set field="canEdit" from="!!can.opportunityEdit"/>
+        <set field="canImport" from="!!(can.teamRead &amp;&amp; can.import)"/>
     </actions>
     <widgets>
-        <label text="Sales" type="h5"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Sales" type="h5"/></container>
+            <container style="col-auto row items-center q-gutter-xs" condition="can.anyRead &amp;&amp; canEdit">
+                <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" btn-type="primary" icon="sym_o_add"
+                        parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
+                <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
+                        parameter-map="{_openDialog:'NewLeadDialog'}"/>
+                <link url="${sharedLinks['QuickCreate']}/NewActivity" text="Schedule activity" link-type="anchor-button" icon="sym_o_event"/>
+                <link url="${sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"
+                        condition="canImport"/>
+            </container>
+        </container>
         <section name="NoRead" condition="!can.anyRead">
             <widgets>
                 <label text="Home summarizes the sales work, pipeline and orders of your organizations. Nothing of it is open to you."
@@ -72,31 +105,102 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Sales work"/>
                     <box-body>
-                        <label text="The counts open here as requests for quote, quotes, orders and activities are set up; until then none is configured, and none is shown as zero."
-                                type="p" style="text-caption m-muted"/>
-                        <form-list name="SalesWork" list="counterRows" skip-form="true" paginate="false">
-                            <field name="counter"><default-field title="Counter"><display/></default-field></field>
-                            <field name="state"><default-field title="State"><display/></default-field></field>
-                            <field name="source"><default-field title="Counted from"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="counter"/><field-ref name="source"/></column>
-                                <column><field-ref name="state"/></column>
-                            </columns>
-                        </form-list>
+                        <dashboard min-width="160">
+                            <number-card title="Leads to work" value="${leadsCard.stateText}" icon="sym_o_person_search" size="sm"
+                                    link="${leadsCard.link}"/>
+                            <number-card title="My open opportunities" value="${mineCard.stateText}" icon="sym_o_trending_up" size="sm"
+                                    link="${mineCard.link}"/>
+                            <number-card title="Past their expected close" value="${lateCard.stateText}" icon="sym_o_event_busy" size="sm"
+                                    link="${lateCard.link}"/>
+                            <number-card title="RFQs awaiting response" value="Not configured" icon="sym_o_request_quote" size="sm"/>
+                            <number-card title="Quotes to send" value="Not configured" icon="sym_o_send" size="sm"/>
+                            <number-card title="Quotes expiring" value="Not configured" icon="sym_o_hourglass_bottom" size="sm"/>
+                            <number-card title="Orders blocked" value="Not configured" icon="sym_o_block" size="sm"/>
+                        </dashboard>
+                        <label text="Requests for quote, quotes and orders are counted here once they are set up; until then none is shown as zero."
+                                type="p" style="text-caption m-muted" condition="laterCards.length"/>
                     </box-body>
                 </container-box>
                 <container-box>
                     <box-header title="Assigned to me"/>
                     <box-body>
-                        <label text="Not configured: the opportunities, quotes and orders assigned to you show here once they are set up."
-                                type="p" style="m-muted"/>
+                        <label text="Your assigned work is unavailable right now." type="p" style="text-negative" condition="assignedUnavailable"/>
+                        <label text="Nothing is assigned to you. New leads and opportunities you own show here, the soonest to close first."
+                                type="p" style="m-muted" condition="!assignedUnavailable &amp;&amp; !assignedList.length"/>
+                        <section name="AssignedShown" condition="assignedList.length">
+                            <widgets>
+                                <form-list name="AssignedWork" list="assignedList" skip-form="true" paginate="false">
+                                    <field name="opportunityName">
+                                        <conditional-field title="Deal" condition="detailPath">
+                                            <link url="${detailPath}" text="${opportunityName}" link-type="anchor"
+                                                    parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                        </conditional-field>
+                                        <default-field title="Deal"><display/></default-field>
+                                    </field>
+                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="accountName"><default-field title="Account"><display/></default-field></field>
+                                    <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="closeText"><default-field title="Expected close"><display/></default-field></field>
+                                    <field name="nextActivityText"><default-field title="Next activity"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="opportunityName"/><field-ref name="accountName"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="closeText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="${home.assignedCount} assigned in all; the soonest ten are shown." type="p" style="text-caption m-muted"
+                                        condition="home.assignedCount &gt; assignedList.length"/>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
                 <container-box>
                     <box-header title="My pipeline"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Pipeline/Opportunities']}" text="Open the board" link-type="anchor" parameter-map="{mine:'Y'}"/>
+                    </box-toolbar>
                     <box-body>
-                        <label text="Not configured: your open opportunities by stage show here once the pipeline is set up."
-                                type="p" style="m-muted"/>
+                        <label text="Total ${totalsText}" type="p" style="text-caption m-muted" condition="totalsText"/>
+                        <section name="EmptyPipeline" condition="pipelineCount === 0">
+                            <widgets>
+                                <label text="You have no open opportunities." type="p" style="m-muted"/>
+                                <container style="row q-gutter-xs" condition="canEdit">
+                                    <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
+                                            parameter-map="{_openDialog:'NewLeadDialog'}"/>
+                                    <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" icon="sym_o_add"
+                                            parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
+                                </container>
+                            </widgets>
+                        </section>
+                        <label text="Your pipeline is unavailable right now." type="p" style="text-negative" condition="pipelineCount == null"/>
+                        <section name="PipelineShown" condition="pipelineList.length">
+                            <widgets>
+                                <form-list name="MyPipeline" list="pipelineList" skip-form="true" paginate="false">
+                                    <field name="opportunityName">
+                                        <conditional-field title="Opportunity" condition="detailPath">
+                                            <link url="${detailPath}" text="${opportunityName}" link-type="anchor"
+                                                    parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                        </conditional-field>
+                                        <default-field title="Opportunity"><display/></default-field>
+                                    </field>
+                                    <field name="accountName"><default-field title="Account"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                                    <field name="nextActivityText"><default-field title="Next activity"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="opportunityName"/><field-ref name="stageText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="nextActivityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Pipeline by stage"/>
+                    <box-body>
+                        <label text="Open opportunities of your pipeline by stage, as you may read them." type="p" style="text-caption m-muted"/>
+                        <report-embed definition-id="boss-sales-pipeline" panel-id="funnel" from="now-3y" thru="now"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -107,7 +211,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Shortcuts"/>
                     <box-body>
                         <label text="Read the sales of your organizations: orders, invoices, top products and customer classes." type="p"/>
-                        <link url="${sharedLinks['Reports/SalesSummary']}" text="Sales summary" link-type="anchor-button" btn-type="primary"
+                        <link url="${sharedLinks['Reports/SalesSummary']}" text="Sales summary" link-type="anchor-button"
                                 icon="sym_o_table_chart"/>
                     </box-body>
                 </container-box>

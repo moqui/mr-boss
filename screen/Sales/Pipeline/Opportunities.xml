@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     list and a calendar of the expected close; the views share the filters, sort, saved finds and page. The totals are over the whole
     filtered result, by currency. New opportunity is the primary action (SALES_OPPORTUNITY_EDIT); the selection moves, assigns or
     loses the chosen deals, each on its own, naming each refused one. A stage move is not a closure: Won and Lost are
-    OpportunityDetail's. -->
+    OpportunityDetail's. P6: the filtered result as CSV or XLSX (the same scoped query, every page, up to its export cap), and Import
+    (the shared wizard's `opportunities` target) for a manager who imports. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Opportunities" default-menu-index="1">
     <parameter name="text"/>
@@ -93,6 +94,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 width="760" type="primary" condition="canEdit">
                             <section-include name="NewOpportunityForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
                         </container-dialog>
+                        <link url="${sales.sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"
+                                condition="can.teamRead &amp;&amp; can.import &amp;&amp; sales.sharedLinks['Pipeline/OpportunityImport']"/>
                         <section-iterate name="SavedFinds" list="savedFinds" entry="saved">
                             <widgets>
                                 <link url="." text="${saved.text}" link-type="anchor-button" icon="${saved.icon}" parameter-map="saved.parameters"/>
@@ -103,7 +106,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-body-nopad>
                         <form-list name="OpportunityList" list="opportunityList" skip-form="true" paginate="true" header-dialog="true"
-                                saved-finds="true" select-columns="true" views="board,list,calendar" show-csv-button="true">
+                                saved-finds="true" select-columns="true" views="board,list,calendar" show-csv-button="true" show-xlsx-button="true">
                             <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="canEdit">
                                 <action>
                                     <form-single name="BatchMove" transition="applyBatch">

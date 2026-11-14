@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales' quick create (design-sales §12.2 QuickCreate, §1.3; impl-sales P6): the shell's + menu opens these in its quick-create
+    frame, one screen a kind (Sales.xml's quick-create entries): Lead, Opportunity, Account, Contact and Activity (Quote joins in P7),
+    each the host list's own form (template/SalesOpportunityForms.xml, template/SalesAccountForms.xml) or OpportunityDetail's
+    activity on a deal the user chooses, posting to the same guarded transition. A user without the capability a kind needs is told
+    so; Mantle refuses them anyway. Hidden from the menu. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Create" default-menu-include="false">
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

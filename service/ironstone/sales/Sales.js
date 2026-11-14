@@ -173,7 +173,12 @@ const linkPaths = [
     "Pipeline/Opportunities",
     "Pipeline/Leads",
     "Pipeline/OpportunityDetail",
-    "Pipeline/WorkItemDetail"
+    "Pipeline/WorkItemDetail",
+    // P6: Home's counters' lists above, the import wizard's mount, and the shell's quick create and Assist answer actions
+    "Pipeline/OpportunityImport",
+    "QuickCreate",
+    "LogNote",
+    "SendMessage"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
@@ -574,6 +579,24 @@ Object.assign(choiceSources, {
             partyId => partyLabel(one("mantle.party.Party", {partyId}))
         )
 })
+// P6: a deal to put an activity on (QuickCreate's Activity): the open leads and opportunities the user sees, by name or id, in
+// Mantle's scoped find (add#OpportunityActivity checks the deal and the edit permission again)
+choiceSources.deals = (userScope, term, selected) =>
+    withSelected(
+        Array.from(
+            lib.probe("mantle.sales.OpportunityServices.find#Opportunities", {
+                text: term || null,
+                statusId: "SalesOppOpen",
+                pageSize: choiceLimit
+            }).opportunityList || []
+        ).map(row => ({value: row.salesOpportunityId, label: row.opportunityName + " · " + row.typeText})),
+        selected,
+        salesOpportunityId => !!salesAccess.opportunityOf(userScope.mantle, salesOpportunityId),
+        salesOpportunityId => {
+            const row = one("mantle.sales.opportunity.SalesOpportunity", {salesOpportunityId})
+            return row?.opportunityName || salesOpportunityId
+        }
+    )
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(
@@ -757,7 +780,55 @@ function workItemContext(p) {
     return {available: opportunityRows.length > 0, opportunityRows}
 }
 
-const operations = {sharedContext, checkRecord, choices, search, workItemContext}
+// ===== P6: Today =====
+// The Sales today-source (Commons' get#UserTodayItems calls it): the user's own open leads and opportunities whose expected close
+// falls by thruDate (Mantle's find#Opportunities, mine), each opening OpportunityDetail with the deal as the record and no Mark
+// done; the activities on deals are Commons' tasks and already in Today. Another user's Today, and a user who reads nothing of Sales,
+// get none.
+function today(p) {
+    const label = "Sales"
+    if (p.userId && p.userId !== ec.user.userId) return {items: [], label}
+    const userScope = scope()
+    if (!userScope.read || !userScope.capabilities.anyRead) return {items: [], label}
+    const thru = p.thruDate ? lib.ms(p.thruDate) : null
+    const found = lib.probe("mantle.sales.OpportunityServices.find#Opportunities", {
+        mine: "Y",
+        statusId: "SalesOppOpen",
+        closeThru: thru != null ? ec.l10n.format(new Date(thru), "yyyy-MM-dd") : null,
+        orderByField: "estimatedCloseDate",
+        pageSize: 50
+    })
+    const items = []
+    for (const row of Array.from(found.opportunityList || [])) {
+        const due = lib.ms(row.estimatedCloseDate)
+        if (due == null || (thru != null && due >= thru)) continue
+        items.push({
+            kind: "salesDeal",
+            workEffortId: null,
+            requestId: null,
+            title:
+                (row.typeText ? row.typeText + " " : "") + row.opportunityName + (row.accountName ? " · " + row.accountName : ""),
+            dueDate: new Date(due),
+            startDate: null,
+            endDate: null,
+            allDay: true,
+            priority: null,
+            statusId: row.statusId,
+            assignees: [],
+            canUpdate: false,
+            hasCallLink: false,
+            url: recordUrl("opportunity", row.salesOpportunityId),
+            record: {
+                recordEntityName: "mantle.sales.opportunity.SalesOpportunity",
+                recordId: row.salesOpportunityId,
+                recordName: row.opportunityName
+            }
+        })
+    }
+    return {items, label}
+}
+
+const operations = {sharedContext, checkRecord, choices, search, workItemContext, today}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Sales operation " + op)
     return operations[op](p || {})

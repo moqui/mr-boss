@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Quick create › Activity (design-sales §12.2, §3 OpportunityDetail's Schedule activity): an activity (a Commons task, for the user)
+    on an open lead or opportunity the user sees and edits, chosen from Mantle's scoped find (Sales.js choice deals);
+    add#OpportunityActivity checks the deal and SALES_OPPORTUNITY_EDIT again. Today and the user's calendar show it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New activity" default-menu-include="false">
+    <parameter name="salesOpportunityId"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition-include name="addActivity" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <actions>
+        <set field="activityValues" from="{salesOpportunityId: salesOpportunityId || null}"/>
+    </actions>
+    <widgets>
+        <label text="Schedule an activity" type="h6"/>
+        <label text="You do not schedule activities on deals in Sales." type="p" style="m-muted"
+                condition="!sales.capabilities.opportunityEdit"/>
+        <section name="ActivityShown" condition="sales.capabilities.opportunityEdit">
+            <widgets>
+                <form-single name="NewActivity" transition="addActivity" map="activityValues">
+                    <field name="salesOpportunityId">
+                        <default-field title="Lead or opportunity">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'deals', selected:salesOpportunityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="workEffortName"><default-field title="Activity"><text-line size="40" required="true"/></default-field></field>
+                    <field name="estimatedCompletionDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                    <field name="description"><default-field title="Notes"><text-area rows="3" cols="50"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Schedule"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
