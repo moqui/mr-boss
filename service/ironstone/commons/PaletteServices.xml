@@ -71,6 +71,13 @@ along with this software (see the LICENSE.md file). If not, see
                 icon = 'sym_o_trending_up'
                 return
             }
+            // a campaign (IronStone Marketing P2): its CampaignDetail under Marketing for a Marketing reader of its organization, else
+            // nowhere
+            if (recordEntityName === 'mantle.marketing.campaign.MarketingCampaign') {
+                url = ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js').recordLink('campaign', id)?.url || null
+                icon = 'sym_o_campaign'
+                return
+            }
             // a sales quote (IronStone Sales P7, F39, impl-purchasing F46): its OrderDetail under Sales for a Sales reader of it; one
             // Sales does not take (another user's, or one Sales does not admit) falls through to the order branches below
             if (recordEntityName === 'mantle.order.OrderHeader' && ec.entity.find('mantle.order.OrderHeader').condition('orderId', id)

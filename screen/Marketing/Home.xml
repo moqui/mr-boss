@@ -18,12 +18,14 @@ along with this software (see the LICENSE.md file). If not, see
     (get#Home), Upcoming (get#Upcoming) and Attention (get#Attention). Each panel answers by source: a source whose records are not
     built yet shows "Not available" (never zero) until its phase, a source that fails is named and the others are shown, and a panel
     whose service fails says so alone. P1's one answered source is Attention's records awaiting adoption, the administrator's. A
-    Marketing user who reads nothing of Marketing (an edit permission alone) is told what Home holds. P2 adds New campaign (the
-    author's primary action), the period and mine or team filters, and the first counts. -->
+    Marketing user who reads nothing of Marketing (an edit permission alone) is told what Home holds. P2: New campaign (the author's
+    primary action), the running campaigns and pending approvals cards opening their lists, the campaign windows of the next 60 days
+    and the approvals awaiting the approver; the period and mine or team filters wait for more sources. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createCampaign" location="component://mr-boss/template/MarketingCampaigns.xml"/>
     <actions>
         <set field="can" from="marketing.capabilities"/>
         <if condition="can.anyRead &amp;&amp; organizationPartyId">
@@ -46,14 +48,19 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new" ignore-error="true" in-map="scope"/>
             <script>ec.message.clearErrors()</script>
         </if>
+        <!-- the places of the route keys a row names: Marketing's own screens -->
+        <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index'],
+                marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: sharedLinks['Campaigns/Approvals'],
+                marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults']}"/>
+        <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
         <set field="stateText" from="{available: 'Available', notAvailable: 'Not available', failed: 'Could not be read'}"/>
         <set field="cardRows" from="Array.from(homeFound?.cards || []).map(card =&gt; Object.assign({}, card, {
-                shown: card.state === 'available' ? String(card.value ?? '') : stateText[card.state] || card.state}))"/>
-        <set field="upcomingRows" from="Array.from(upcomingFound?.rows || [])"/>
+                shown: card.state === 'available' ? String(card.value ?? '') : stateText[card.state] || card.state,
+                cardUrl: card.linkPath ? places[card.linkPath] || null : null}))"/>
+        <set field="upcomingRows" from="Array.from(upcomingFound?.rows || []).map(row =&gt; Object.assign({}, row, {
+                rowUrl: row.route &amp;&amp; places[row.route] ? places[row.route] + (row.recordId ? '?marketingCampaignId=' + encodeURIComponent(row.recordId) : '') : null}))"/>
         <set field="upcomingSources" from="Array.from(upcomingFound?.sources || []).map(source =&gt; Object.assign({}, source, {
                 shown: stateText[source.state] || source.state}))"/>
-        <!-- the places of the route keys a row names: Marketing's own screens -->
-        <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index']}"/>
         <set field="attentionRows" from="Array.from(attentionFound?.rows || []).map(row =&gt; Object.assign({}, row, {
                 actionUrl: row.route ? places[row.route] || null : null}))"/>
         <set field="attentionSources" from="Array.from(attentionFound?.sources || []).filter(source =&gt; source.state !== 'available')
@@ -62,7 +69,16 @@ along with this software (see the LICENSE.md file). If not, see
                 Array.from(upcomingFound?.failedSources || []), Array.from(attentionFound?.failedSources || [])))).join(', ')"/>
     </actions>
     <widgets>
-        <label text="Marketing" type="h5"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Marketing" type="h5"/></container>
+            <container style="col-auto">
+                <!-- P2: New campaign, the author's primary action (design §3 Home) -->
+                <container-dialog id="HomeNewCampaignDialog" button-text="New campaign" title="New campaign" icon="sym_o_add" width="760"
+                        type="primary" condition="marketing.capabilities.campaignEdit &amp;&amp; marketing.capabilities.anyRead">
+                    <section-include name="NewCampaignForm" location="component://mr-boss/template/MarketingCampaigns.xml"/>
+                </container-dialog>
+            </container>
+        </container>
         <section name="NoRead" condition="!can.anyRead">
             <widgets>
                 <label text="Home summarizes the campaigns, sends, audiences and events of your organizations. Nothing of it is open to you."
@@ -96,7 +112,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="p" style="text-caption m-muted"/>
                         <label text="Home could not be read just now." type="p" style="text-negative" condition="!homeFound?.cards"/>
                         <form-list name="MarketingCards" list="cardRows" skip-form="true" paginate="false">
-                            <field name="title"><default-field title="Card"><display/></default-field></field>
+                            <field name="title">
+                                <conditional-field title="Card" condition="cardUrl"><link url="${cardUrl}" text="${title}" link-type="anchor"/></conditional-field>
+                                <default-field title="Card"><display/></default-field>
+                            </field>
                             <field name="shown"><default-field title="Now"><display/></default-field></field>
                             <columns type="mobile">
                                 <column><field-ref name="title"/></column>
@@ -112,7 +131,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Nothing planned yet." type="p" style="m-muted" condition="upcomingFound?.sources &amp;&amp; !upcomingRows.length"/>
                         <form-list name="Upcoming" list="upcomingRows" skip-form="true" paginate="false" condition="upcomingRows.length">
                             <field name="kind"><default-field title="Kind"><display/></default-field></field>
-                            <field name="title"><default-field title="Title"><display/></default-field></field>
+                            <field name="title">
+                                <conditional-field title="Title" condition="rowUrl"><link url="${rowUrl}" text="${title}" link-type="anchor"/></conditional-field>
+                                <default-field title="Title"><display/></default-field>
+                            </field>
                             <field name="date"><default-field title="Date"><display format="yyyy-MM-dd HH:mm"/></default-field></field>
                             <field name="state"><default-field title="State"><display/></default-field></field>
                             <columns type="mobile">

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Settings › CampaignDefaults (design-marketing §12 CampaignDefaults: MarketingPolicy, PolicyPreview; style-guide §3.9
+    Settings; impl-marketing P2): an organization's campaign policy, the Marketing administrator's (MARKETING_CONFIGURE), dated: a
+    change starts a policy from now and ends the one in effect, named as read (mantle.marketing.CampaignServices.store#MarketingPolicy);
+    Preview shows what it would change first (preview#MarketingPolicy). The one-person-team flag is off by default: with it on an author
+    approves their own campaign and their own send to fewer than 500 recipients, recorded as a self-approval. The history below. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Campaign defaults" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="previewing"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#MarketingPolicy" in-map="context"/>
+            <if condition="!ec.message.hasError()"><message type="success">Campaign defaults saved from now</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || marketing.organizationPartyIds[0] || null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.marketing.CampaignServices.get#MarketingPolicy" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="policy" from="found?.policy || null"/>
+        <set field="historyList" from="found?.history || []"/>
+        <set field="policyValues" from="Object.assign({selfApprovalAllowed: 'N', managerRequired: 'Y'}, policy || {},
+                {organizationPartyId: organizationPartyId, expectedPolicyId: policy?.marketingPolicyId || ''})"/>
+        <if condition="previewing == 'Y' &amp;&amp; organizationPartyId">
+            <service-call name="mantle.marketing.CampaignServices.preview#MarketingPolicy" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:organizationPartyId, selfApprovalAllowed:(ec.context.selfApprovalAllowed || null),
+                        managerRequired:(ec.context.managerRequired || null), currencyUomId:(ec.context.currencyUomId || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="findingList" from="preview?.findings || []"/>
+    </actions>
+    <widgets>
+        <label text="Campaign defaults" type="h5"/>
+        <form-single name="PolicyScope" transition="." map="{organizationPartyId:organizationPartyId}">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+        <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationPartyId &amp;&amp; !found"/>
+        <section name="PolicyShown" condition="found">
+            <widgets>
+                <label text="${policy ? 'In effect since ' + policy.fromDateText : 'No policy yet: campaigns use the defaults (no self-approval, a manager required) and the accounting currency.'}"
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-header title="Policy"/>
+                    <box-body>
+                        <form-single name="MarketingPolicy" transition="storePolicy" map="policyValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="expectedPolicyId"><default-field><hidden/></default-field></field>
+                            <field name="currencyUomId">
+                                <default-field title="Currency" tooltip="A new campaign's; the accounting currency when empty">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'currencies', selected:policyValues.currencyUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="selfApprovalAllowed">
+                                <default-field title="One-person team" tooltip="An author may approve their own campaign, and their own send to fewer than 500 recipients, recorded as a self-approval">
+                                    <radio><option key="N" text="Another approver decides"/><option key="Y" text="Authors may self-approve"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="managerRequired">
+                                <default-field title="Manager">
+                                    <radio><option key="Y" text="Required for approval"/><option key="N" text="Optional"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="audienceLimit"><default-field title="Audience limit" tooltip="The most recipients one send may have"><text-line size="8"/></default-field></field>
+                            <field name="frequencyCapCount"><default-field title="Messages at most"><text-line size="4"/></default-field></field>
+                            <field name="frequencyCapDays"><default-field title="per days"><text-line size="4"/></default-field></field>
+                            <field name="recipientRetentionDays"><default-field title="Keep recipients (days)"><text-line size="6"/></default-field></field>
+                            <field name="statisticsRetentionDays"><default-field title="Keep statistics (days)"><text-line size="6"/></default-field></field>
+                            <field name="explanation"><default-field title="Explanation"><text-area rows="2" cols="60"/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title=""><submit text="Save from now" confirmation="Start these campaign defaults now, ending the ones in effect?"/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="currencyUomId"/><field-ref name="audienceLimit"/></field-row>
+                                <field-row><field-ref name="selfApprovalAllowed"/><field-ref name="managerRequired"/></field-row>
+                                <field-row><field-ref name="frequencyCapCount"/><field-ref name="frequencyCapDays"/></field-row>
+                                <field-row><field-ref name="recipientRetentionDays"/><field-ref name="statisticsRetentionDays"/></field-row>
+                                <field-ref name="explanation"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="What a change would do"/>
+                    <box-body>
+                        <form-single name="PolicyPreviewChoice" transition="." map="Object.assign({}, policyValues, ec.context.previewing == 'Y' ? {
+                                selfApprovalAllowed: ec.context.selfApprovalAllowed, managerRequired: ec.context.managerRequired,
+                                currencyUomId: ec.context.currencyUomId} : {})">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="previewing" from="'Y'"><default-field><hidden/></default-field></field>
+                            <field name="currencyUomId">
+                                <default-field title="Currency">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'currencies', selected:policyValues.currencyUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="selfApprovalAllowed">
+                                <default-field title="One-person team">
+                                    <radio><option key="N" text="Another approver decides"/><option key="Y" text="Authors may self-approve"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="managerRequired">
+                                <default-field title="Manager">
+                                    <radio><option key="Y" text="Required for approval"/><option key="N" text="Optional"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box condition="preview">
+                    <box-header title="What this would change"/>
+                    <box-body>
+                        <label text="${preview.effectiveText}" type="p" style="text-caption m-muted"/>
+                        <label text="Nothing else changes." type="p" style="m-muted" condition="!findingList.length"/>
+                        <form-list name="PolicyPreview" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
+                            <field name="text"><default-field title="Finding"><display/></default-field></field>
+                            <columns type="mobile"><column><field-ref name="text"/></column></columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box condition="historyList.length">
+                    <box-header title="History"/>
+                    <box-body>
+                        <form-list name="PolicyHistory" list="historyList" skip-form="true" paginate="false">
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="selfApprovalAllowed"><default-field title="Self-approval"><display/></default-field></field>
+                            <field name="explanation"><default-field title="Explanation"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="fromDateText"/><field-ref name="explanation"/></column>
+                                <column><field-ref name="thruDateText"/><field-ref name="selfApprovalAllowed"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

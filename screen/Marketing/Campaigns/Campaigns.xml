@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Campaigns › Campaigns (design-marketing §3 Campaigns: CampaignFind, CampaignList, NewCampaign; style-guide §3.2 List,
+    §3.6 Board; impl-marketing P2): the campaigns of the user's organizations (mantle.marketing.CampaignServices.find#Campaigns,
+    scoped in the query), open ones by default, as a list (the default), a board by status and a calendar by start; the views share
+    the filters, sort and page. New campaign is the primary action (MARKETING_CAMPAIGN_EDIT); each row opens CampaignDetail, where a
+    campaign is duplicated, approved, started, completed or cancelled. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Campaigns" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="parentCampaignId"/>
+    <parameter name="rangeFrom"/>
+    <parameter name="rangeThru"/>
+    <parameter name="mine"/>
+    <parameter name="orderByField"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createCampaign" location="component://mr-boss/template/MarketingCampaigns.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <set field="statusFilter" from="statusId || 'open'"/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.marketing.CampaignServices.find#Campaigns" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, statusId:statusFilter, parentCampaignId:parentCampaignId,
+                        rangeFrom:(rangeFrom || null), rangeThru:(rangeThru || null), mine:mine, orderByField:orderByField,
+                        pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignList" from="found?.campaignList || []"/>
+        <set field="campaignListCount" from="found?.campaignListCount"/>
+        <set field="campaignListPageIndex" from="found?.campaignListPageIndex"/>
+        <set field="campaignListPageSize" from="found?.campaignListPageSize"/>
+        <set field="campaignListPageMaxIndex" from="found?.campaignListPageMaxIndex"/>
+        <set field="campaignListPageRangeLow" from="found?.campaignListPageRangeLow"/>
+        <set field="campaignListPageRangeHigh" from="found?.campaignListPageRangeHigh"/>
+        <set field="detailPath" from="sharedLinks['Campaigns/CampaignDetail'] || null"/>
+        <set field="canEdit" from="!!can.campaignEdit"/>
+        <set field="filtered" from="!!(text || organizationPartyId || (statusId &amp;&amp; statusId != 'open') || parentCampaignId || rangeFrom || rangeThru || mine)"/>
+        <set field="emptyText" from="filtered ? 'No campaign matches these filters.' : 'No open campaigns' + (canEdit ? ' · Plan one with New campaign.' : '.')"/>
+        <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
+        <set field="boardColumns" from="['Planned', 'Approved', 'In progress', 'Completed', 'Cancelled']"/>
+        <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
+                {key:'all', text:'Every status', icon:'sym_o_view_list', parameters:{statusId:'all'}}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read campaigns in Marketing." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="CampaignsRegister" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Campaigns" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewCampaignDialog" button-text="New campaign" title="New campaign" icon="sym_o_add"
+                                width="760" type="primary" condition="canEdit">
+                            <section-include name="NewCampaignForm" location="component://mr-boss/template/MarketingCampaigns.xml"/>
+                        </container-dialog>
+                        <section-iterate name="SavedFinds" list="savedFinds" entry="saved">
+                            <widgets>
+                                <link url="." text="${saved.text}" link-type="anchor-button" icon="${saved.icon}" parameter-map="saved.parameters"/>
+                            </widgets>
+                        </section-iterate>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="CampaignList" list="campaignList" skip-form="true" paginate="true" header-dialog="true"
+                                select-columns="true" views="list,board,calendar" show-csv-button="true">
+                            <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
+                            <field name="text">
+                                <header-field title="Name or id"><text-line size="20"/></header-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="Status">
+                                    <drop-down allow-empty="true">
+                                        <option key="open" text="Open"/>
+                                        <option key="MKTG_CAMP_PLANNED" text="Planned"/>
+                                        <option key="MKTG_CAMP_APPROVED" text="Approved"/>
+                                        <option key="MKTG_CAMP_INPROGRESS" text="In progress"/>
+                                        <option key="MKTG_CAMP_COMPLETED" text="Completed"/>
+                                        <option key="MKTG_CAMP_CANCELLED" text="Cancelled"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="parentCampaignId">
+                                <header-field title="Part of">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'campaigns', selected:parentCampaignId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="rangeFrom"><header-field title="Running from"><date-time type="date"/></header-field></field>
+                            <field name="rangeThru"><header-field title="Running through"><date-time type="date"/></header-field></field>
+                            <field name="mine">
+                                <header-field title="Mine"><check><option key="Y" text="Campaigns I manage or contribute to"/></check></header-field>
+                            </field>
+                            <field name="campaignName">
+                                <conditional-field title="Campaign" condition="detailPath">
+                                    <link url="${detailPath}" text="${campaignName}" link-type="anchor"
+                                            parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                                </conditional-field>
+                                <default-field title="Campaign"><display/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status name"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="parentName"><default-field title="Part of"><display/></default-field></field>
+                            <field name="datesText"><default-field title="Dates"><display/></default-field></field>
+                            <field name="fromDate"><default-field title="Starts"><display format="yyyy-MM-dd"/></default-field></field>
+                            <field name="budgetText" align="right"><default-field title="Budget"><display/></default-field></field>
+                            <field name="actualText" align="right"><default-field title="Actual"><display/></default-field></field>
+                            <field name="managerName"><default-field title="Manager"><display/></default-field></field>
+                            <columns>
+                                <column><field-ref name="campaignName"/><field-ref name="parentName"/></column>
+                                <column><field-ref name="statusId"/></column>
+                                <column><field-ref name="datesText"/></column>
+                                <column><field-ref name="budgetText"/><field-ref name="actualText"/></column>
+                                <column><field-ref name="managerName"/></column>
+                                <column><field-ref name="organizationName"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="campaignName"/><field-ref name="datesText"/></column>
+                                <column><field-ref name="statusId"/><field-ref name="budgetText"/></column>
+                            </columns>
+                            <view-board group-field="statusText" card-title-field="campaignName" card-fields="datesText,budgetText,managerName"
+                                    key-fields="marketingCampaignId" column-order="${boardColumns}"/>
+                            <view-calendar start-field="fromDate" title-field="campaignName" key-fields="marketingCampaignId"
+                                    card-fields="statusText,budgetText"/>
+                        </form-list>
+                        <section name="NoCampaigns" condition="!campaignList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

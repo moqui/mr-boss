@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.marketing.ContextServices.get#SharedContext checks the user and resolves their capabilities, organizations and links
     for every subscreen, and each Mantle marketing service checks the permissions and the organization again
     (mantle/marketing/MarketingAccess.js). The menu of design §1.2 grows by phase and shows built areas only: P1 builds Home (every
-    Marketing user's) and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
+    Marketing user's), P2 Campaigns (with Approvals, the approvers') and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
     redirects of their old links (F2), to Audiences and Sends once those exist (P5, P8). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
@@ -31,15 +31,26 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.marketing.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="marketing"/>
         <!-- the record panels serve Marketing's own record hosts only (the People P2, Insights P12, Maintenance P1 and Sales P1 mount
             lesson): this root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to
-            a user given Marketing without Commons. P1 has none, so a panel request naming a record is refused; the campaign (P2), the
-            send (P8) and the event registration (P17) join with their checks (design §14.3). A panel request with no record (a
-            person search, an avatar) names none. -->
+            a user given Marketing without Commons. P2: the campaign, checked by check#Record (a Marketing reader of its
+            organization); the send (P8) and the event registration (P17) join with their checks (design §14.3). Any other record is
+            refused; a panel request with no record (a person search, an avatar) names none. -->
         <script><![CDATA[
             const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
             const panelName = pathNames[pathNames.indexOf('Marketing') + 1]
-            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && ec.context.recordEntity)
-                throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+            panelRecordType = null
+            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && ec.context.recordEntity) {
+                const panelHosts = {'mantle.marketing.campaign.MarketingCampaign': 'campaign'}
+                const entityName = String(ec.context.recordEntity)
+                if (!Object.hasOwn(panelHosts, entityName))
+                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+                panelRecordType = panelHosts[entityName]
+            }
         ]]></script>
+        <if condition="panelRecordType">
+            <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="panelRecord" ignore-error="true"
+                    in-map="{appRoot:'Marketing', recordType:panelRecordType, recordId:ec.context.recordId || ''}"/>
+            <script>ec.message.clearErrors(); if (!panelRecord?.recordId) throw new Error('RECORD_PANEL_UNAVAILABLE: This record is not available')</script>
+        </if>
         <set field="sharedLinks" from="marketing.sharedLinks"/>
     </always-actions>
 
@@ -48,6 +59,12 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- P2: Campaigns (design §3): the campaigns list and board, CampaignDetail, its plan print and Approvals (the approvers',
+            BOSS_MKT_APPROVALS), for a user who reads Marketing; Mantle's campaign services scope every read to the organizations -->
+        <subscreens-item name="Campaigns" location="component://mr-boss/screen/Marketing/Campaigns.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('MARKETING_VIEW') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW') || ec.user.hasPermission('MARKETING_REPORT_VIEW')"/>
+        <!-- P2: quick create's campaign form (QuickCampaign), hidden from the menu -->
+        <subscreens-item name="QuickCreate" location="component://mr-boss/screen/Marketing/QuickCreate.xml" menu-include="false"/>
         <!-- P1: Settings (design §12), the administrator's (MARKETING_CONFIGURE); BOSS_MKT_SETTINGS denies the root user group, and
             Mantle's settings and adoption services check the permission again -->
         <subscreens-item name="Settings" location="component://mr-boss/screen/Marketing/Settings.xml" menu-index="10"
@@ -58,12 +75,28 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Newsletters" location="component://mr-boss/screen/Marketing/Newsletters.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- P1: the marketing keymap (design §1.2). The palette source (P2), quick create (P2, P3, P16), Today (P8), the Comms providers
-        (record-lookup and call-context, P2, P8, P17), Assist's chips and answer actions (P21) and the notification topics (P2)
-        arrive with their records. -->
+    <!-- P1: the marketing keymap (design §1.2). P2: the palette's campaigns, QuickCampaign, the approval topics and CampaignDetail's
+        Assist chip. Quick create's list and event (P3, P16), Today (P8), the Comms providers (record-lookup and call-context, P8,
+        P17) and Assist's answer actions (P21) arrive with their records. -->
     <shell-providers>
+        <!-- P2: the palette's Marketing records, the campaigns of the user's organizations (ironstone.marketing.ContextServices.search#Records) -->
+        <palette-source group="Marketing" label="Marketing records" icon="sym_o_campaign"
+                service="ironstone.marketing.ContextServices.search#Records" sequence="52"/>
+        <!-- P2 (design §14.3 QuickCreate): QuickCampaign, the Campaigns list's NewCampaign; a user without campaign edit is told so -->
+        <quick-create kind="marketingCampaign" label="Campaign" icon="sym_o_campaign" screen="Marketing/QuickCreate/NewCampaign"
+                sequence="92"/>
+        <!-- P2: the approval topics (Mantle's MarketingSeedData; their links BossSetupMarketingData); sends' and automations' are sent
+            from P8 and P11 -->
+        <notification-topic topic="MarketingCampaignApproval"/>
+        <notification-topic topic="MarketingSendApproval"/>
+        <notification-topic topic="MarketingAutomationApproval"/>
+        <!-- P2 (design §1.3 CX-ASSIST): CampaignDetail's chip; its results arrive with the reports (P20) -->
+        <assist-prompt label="Summarize this campaign's results" text="Summarize this campaign's results: its plan, budget and actual cost, approvals and what is next"
+                screen="Marketing/Campaigns/CampaignDetail" entity="mantle.marketing.campaign.MarketingCampaign" sequence="64"/>
         <keymap scope="marketing">
             <key keys="g m" label="Marketing home" screen="Marketing/Home"/>
+            <!-- P2 -->
+            <key keys="g c" label="Campaigns" screen="Marketing/Campaigns/Campaigns"/>
         </keymap>
     </shell-providers>
 

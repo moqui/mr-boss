@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Campaigns area of IronStone Marketing (design-marketing §3 Campaigns, CampaignDetail, Approvals, §1.2; impl-marketing P2):
+    Campaigns (the list and the board by status over one scoped query) and Approvals (Commons' Notifications with Marketing's
+    approval topics, the approvers', BOSS_MKT_APPROVALS), in the menu; CampaignDetail and its plan print (CampaignPlan), hidden. Shown
+    to a user who reads Marketing (the root's menu condition); every read is Mantle's scoped find and every write Mantle's guarded
+    campaign service. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Campaigns" default-menu-index="2" menu-image="sym_o_campaign" menu-image-type="icon">
+    <subscreens default-item="Campaigns" always-use-full-path="true">
+        <!-- the approvers' (the menu for a holder of MARKETING_APPROVE; the area's deny for the root user group) -->
+        <subscreens-item name="Approvals" location="component://mr-boss/screen/Marketing/Campaigns/Approvals.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('MARKETING_APPROVE')"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingCampaignsPanel" type="tab"/>
+    </widgets>
+</screen>

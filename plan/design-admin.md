@@ -1345,7 +1345,11 @@ Registrations are trusted component definitions, validated at load. They are not
   `salesResourceId`: `deal:` an open lead or opportunity the user owns, `account:` an account they manage; quotes join in P7), its
   permission `SALES_OWNER_CHANGE`, held by `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`; the new owner works for the record's
   organization; no pause service.
-- Marketing, `marketing.campaigns`: a departing user's campaign manager and contributor rows; approvals and scheduled sends are not a person's and are not moved (impl-marketing P2).
+- Marketing, `marketing.campaigns`: a departing user's campaign manager and contributor rows; approvals and scheduled sends are not a person's and are not moved (impl-marketing P2). As built (P2):
+  over Mantle's `CampaignServices.find#OwnedCampaignRoles` and `transfer#CampaignRole` (resource `campaignResourceId`, `role:campaign`,
+  a manager or contributor row of a campaign not completed or cancelled), its permission `MARKETING_OWNER_CHANGE`, held by
+  `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`; the successor works for the campaign's organization; a manager's move on a campaign not
+  yet in progress returns an approved plan to review; no pause service.
 - Maintenance, `maintenance.assignments`: a user's open work order and step assignments and equipment custody (impl-maintenance P3), with a leaver's booking approver roles later (its P15).
 
 Safe result envelopes carry provider/key, canonical source identity, state, reasonCode, user-safe message, revision, checked/completed time, authorized link and counts only when permitted. Never include credentials, arbitrary code, hidden HR columns or another recipient's report body. Service implementations declare out-parameters. All operations revalidate current permission and scope, and mutating ones use expected revision plus stable operation identity where retries can repeat effects.

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The campaign transitions and forms of the IronStone Marketing screens (impl-marketing P2; design-marketing §3 Campaigns,
+    CampaignDetail, Approvals): each transition calls Mantle's guarded service (mantle.marketing.CampaignServices, which checks the
+    permission, the organization, every party and record it is given and the revision read), so a screen that includes one adds no
+    authority. A screen includes each transition it uses by name (transition-include); links go through the root's sharedLinks.
+    - NewCampaignForm: the Campaigns list's and QuickCampaign's form (design §3 NewCampaign, §14.3 QuickCampaign). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new campaign: its CampaignDetail, else the list again -->
+    <transition name="createCampaign">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.create#Campaign" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, campaignName:campaignName, campaignSummary:(campaignSummary || null),
+                        parentCampaignId:(parentCampaignId || null), managerPartyId:(managerPartyId || null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), costUomId:(costUomId || null), budgetedCost:(budgetedCost || null)}"/>
+            <set field="detailPath" from="sharedLinks['Campaigns/CampaignDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Campaign ${created.marketingCampaignId} created</message></if>
+        </actions>
+        <conditional-response url="${detailPath}"><condition><expression>detailPath &amp;&amp; created?.marketingCampaignId</expression></condition>
+            <parameter name="marketingCampaignId" from="created.marketingCampaignId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- CampaignHeader: the plan at the revision read -->
+    <transition name="storeCampaign">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#Campaign"
+                    in-map="{marketingCampaignId:marketingCampaignId, expectedRevision:expectedRevision, campaignName:campaignName,
+                        campaignSummary:(campaignSummary || null), parentCampaignId:(parentCampaignId || null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), expectedResponsePercent:(expectedResponsePercent || null),
+                        expectedRevenue:(expectedRevenue || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Campaign saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- Budget: the target and expected spend, a material change -->
+    <transition name="storeBudget">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#CampaignBudget"
+                    in-map="{marketingCampaignId:marketingCampaignId, expectedRevision:expectedRevision, budgetedCost:(budgetedCost || null),
+                        estimatedCost:(estimatedCost || null), costUomId:(costUomId || null), explanation:(explanation || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Budget saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- CampaignParties: add or end a manager, contributor or the organization's successor -->
+    <transition name="storeParty">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#CampaignParty"
+                    in-map="{marketingCampaignId:marketingCampaignId, expectedRevision:expectedRevision, roleTypeId:roleTypeId,
+                        partyId:partyId, action:(action || 'add')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">People saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- RelatedWork: link or end a link to a list or segment of the campaign's organization -->
+    <transition name="storeAssociation">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#CampaignAssociation"
+                    in-map="{marketingCampaignId:marketingCampaignId, action:(action || 'add'), associationKindEnumId:(associationKindEnumId || null),
+                        sourceId:(listId || segmentId || sourceId || null), purpose:(purpose || null), campaignAssociationId:(campaignAssociationId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Links saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- CostEntries: a manual cost, an Accounting line or a reversal -->
+    <transition name="storeCost">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.store#CampaignCost"
+                    in-map="{marketingCampaignId:marketingCampaignId, costSourceEnumId:(costSourceEnumId || null), invoiceId:(invoiceId || null),
+                        invoiceItemSeqId:(invoiceItemSeqId || null), acctgTransId:(acctgTransId || null),
+                        acctgTransEntrySeqId:(acctgTransEntrySeqId || null), amount:(amount || null), description:(description || null),
+                        costDate:(costDate || null), reversalOfCostId:(reversalOfCostId || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${reversalOfCostId ? 'Cost reversed' : 'Cost recorded'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- approval: the author's request, an approver's decision at the revision reviewed -->
+    <transition name="requestApproval">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.request#MarketingApproval" out-map="asked"
+                    in-map="{targetKind:'campaign', targetId:marketingCampaignId, targetRevision:(targetRevision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Approval requested; ${asked.notifiedCount} approvers told</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideApproval">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.decide#MarketingApproval" out-map="decided"
+                    in-map="{targetKind:'campaign', targetId:marketingCampaignId, targetRevision:targetRevision, decision:decision,
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'approve' ? 'Approved' : 'Refused'}${decided?.selfApproval ? ' (self-approval)' : ''}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the flow: start, complete or cancel at the revision read -->
+    <transition name="changeStatus">
+        <actions>
+            <if condition="action == 'start'">
+                <service-call name="mantle.marketing.CampaignServices.start#Campaign"
+                        in-map="{marketingCampaignId:marketingCampaignId, expectedRevision:expectedRevision}"/>
+                <else-if condition="action == 'complete'">
+                    <service-call name="mantle.marketing.CampaignServices.complete#Campaign"
+                            in-map="{marketingCampaignId:marketingCampaignId, expectedRevision:expectedRevision}"/>
+                </else-if>
+                <else-if condition="action == 'cancel'">
+                    <service-call name="mantle.marketing.CampaignServices.cancel#Campaign"
+                            in-map="{marketingCampaignId:marketingCampaignId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+                </else-if>
+                <else><return error="true" message="Choose start, complete or cancel"/></else>
+            </if>
+            <if condition="!ec.message.hasError()"><message type="success">${{start: 'Started', complete: 'Completed', cancel: 'Cancelled'}[action]}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- duplicate: the new planned campaign's detail -->
+    <transition name="duplicateCampaign">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.duplicate#Campaign" out-map="copied"
+                    in-map="{marketingCampaignId:marketingCampaignId, campaignName:(campaignName || null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Campaign ${copied.marketingCampaignId} created as a copy</message></if>
+        </actions>
+        <conditional-response url="."><condition><expression>copied?.marketingCampaignId</expression></condition>
+            <parameter name="marketingCampaignId" from="copied.marketingCampaignId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <!-- NewCampaign (design §3): the Campaigns list's dialog and QuickCampaign; newDefaults names the organization first offered -->
+        <section name="NewCampaignForm">
+            <widgets>
+                <form-single name="NewCampaign" transition="createCampaign" map="newDefaults">
+                    <field name="campaignName"><default-field title="Name"><text-line size="40" required="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="false" required-manual-select="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:newDefaults.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="managerPartyId">
+                        <default-field title="Manager" tooltip="You when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'people'}"><depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="parentCampaignId">
+                        <default-field title="Part of">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'campaigns'}"><depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                    <field name="costUomId">
+                        <default-field title="Currency" tooltip="The organization's when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'currencies'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="budgetedCost"><default-field title="Budget"><text-line size="12"/></default-field></field>
+                    <field name="campaignSummary"><default-field title="Summary"><text-area rows="3" cols="60"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Create campaign"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="campaignName"/><field-ref name="organizationPartyId"/></field-row>
+                        <field-row><field-ref name="managerPartyId"/><field-ref name="parentCampaignId"/></field-row>
+                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                        <field-row><field-ref name="costUomId"/><field-ref name="budgetedCost"/></field-row>
+                        <field-ref name="campaignSummary"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

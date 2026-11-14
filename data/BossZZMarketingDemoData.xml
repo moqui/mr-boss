@@ -111,4 +111,56 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_MARKETING" userId="BOSS_MKT_AUTHOR2" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MARKETING_AUTHOR" userId="BOSS_MKT_AUTHOR2" fromDate="0"/>
     <!-- ===== end of Marketing P1 ===== -->
+
+    <!-- ===== Marketing P2: campaigns and approvals (impl-marketing P2) ===== -->
+    <!-- Retail's policy with separation on (the one-person-team flag off, the default): another approver decides -->
+    <mantle.marketing.campaign.MarketingPolicy marketingPolicyId="BOSS_MKT_POLICY_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            fromDate="2026-01-01 00:00:00" currencyUomId="USD" selfApprovalAllowed="N" managerRequired="Y" audienceLimit="50000"
+            frequencyCapCount="3" frequencyCapDays="7" explanation="Separation on: an author never approves their own"/>
+    <!-- Retail's running campaign, approved at revision 1 by the approver, with a planned child; and a planned one -->
+    <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_SPRING" campaignName="Spring garden launch"
+            campaignSummary="The spring garden range: newsletter, store promotion and a launch event" organizationPartyId="ORG_ZIZI_RETAIL"
+            statusId="MKTG_CAMP_INPROGRESS" fromDate="2026-11-01 00:00:00" thruDate="2027-01-31 00:00:00" startDate="2026-11-02 09:00:00"
+            costUomId="USD" budgetedCost="12000" estimatedCost="10000" actualCost="0" campaignRevision="1" createdByUserId="BOSS_MKT_AUTHOR"
+            isActive="Y"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SPRING" partyId="ORG_ZIZI_RETAIL"
+            roleTypeId="MarketingOrganization" fromDate="2026-10-15 09:00:00"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SPRING" partyId="BOSS_MKT_AUTHOR"
+            roleTypeId="MarketingCampaignManager" fromDate="2026-10-15 09:00:00"/>
+    <mantle.party.PartyRole partyId="BOSS_MKT_AUTHOR" roleTypeId="MarketingCampaignManager"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_SPRING_REQ" targetKindEnumId="MdtCampaign"
+            targetId="BOSS_MKT_CMP_SPRING" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddRequested"
+            marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00" decisionDate="2026-10-20 10:00:00"
+            decidedByUserId="BOSS_MKT_AUTHOR" decidedByPartyId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_SPRING_OK" targetKindEnumId="MdtCampaign"
+            targetId="BOSS_MKT_CMP_SPRING" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddApproved"
+            requestDecisionId="BOSS_MKT_DEC_SPRING_REQ" selfApproval="N" marketingPolicyId="BOSS_MKT_POLICY_RETAIL"
+            policyFromDate="2026-01-01 00:00:00" decisionDate="2026-10-21 15:00:00" decidedByUserId="BOSS_MKT_APPROVER"
+            decidedByPartyId="BOSS_MKT_APPROVER" reason="Within the season's budget"/>
+    <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_SPRING_EVENT" campaignName="Spring launch evening"
+            parentCampaignId="BOSS_MKT_CMP_SPRING" organizationPartyId="ORG_ZIZI_RETAIL" statusId="MKTG_CAMP_PLANNED"
+            fromDate="2027-01-10 00:00:00" thruDate="2027-01-12 00:00:00" costUomId="USD" budgetedCost="2000" campaignRevision="1"
+            createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SPRING_EVENT" partyId="ORG_ZIZI_RETAIL"
+            roleTypeId="MarketingOrganization" fromDate="2026-10-25 09:00:00"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SPRING_EVENT" partyId="BOSS_MKT_AUTHOR"
+            roleTypeId="MarketingCampaignManager" fromDate="2026-10-25 09:00:00"/>
+    <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_HOLIDAY" campaignName="Holiday gift guide"
+            campaignSummary="The holiday gift guide and its sends" organizationPartyId="ORG_ZIZI_RETAIL" statusId="MKTG_CAMP_PLANNED"
+            fromDate="2026-12-01 00:00:00" thruDate="2026-12-31 00:00:00" costUomId="USD" budgetedCost="8000" campaignRevision="1"
+            createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_HOLIDAY" partyId="ORG_ZIZI_RETAIL"
+            roleTypeId="MarketingOrganization" fromDate="2026-11-05 09:00:00"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_HOLIDAY" partyId="BOSS_MKT_AUTHOR"
+            roleTypeId="MarketingCampaignManager" fromDate="2026-11-05 09:00:00"/>
+    <!-- Services' campaign, its own author's, for the isolation scenarios -->
+    <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_SERVICES" campaignName="Service plan renewals"
+            organizationPartyId="ORG_ZIZI_SERVICES" statusId="MKTG_CAMP_PLANNED" fromDate="2026-12-01 00:00:00"
+            thruDate="2027-02-28 00:00:00" costUomId="USD" budgetedCost="3000" campaignRevision="1" createdByUserId="BOSS_MKT_AUTHOR2"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SERVICES" partyId="ORG_ZIZI_SERVICES"
+            roleTypeId="MarketingOrganization" fromDate="2026-11-05 09:00:00"/>
+    <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SERVICES" partyId="BOSS_MKT_AUTHOR2"
+            roleTypeId="MarketingCampaignManager" fromDate="2026-11-05 09:00:00"/>
+    <mantle.party.PartyRole partyId="BOSS_MKT_AUTHOR2" roleTypeId="MarketingCampaignManager"/>
+    <!-- ===== end of Marketing P2 ===== -->
 </entity-facade-xml>
