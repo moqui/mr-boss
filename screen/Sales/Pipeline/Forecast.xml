@@ -62,11 +62,14 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <set field="can" from="sales.capabilities"/>
         <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || null"/>
+        <set field="loadRefusal" value=""/>
         <if condition="can.anyRead">
             <service-call name="mantle.sales.ForecastServices.get#Forecast" out-map="context" transaction="force-new" ignore-error="true"
                     in-map="{salesForecastId:(salesForecastId || null), organizationPartyId:organizationPartyId, internalPartyId:(internalPartyId || null),
                         timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null), asOfDate:(asOfDate || null),
                         pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+            <!-- a refusal other than a missing forecast (too many records to count) is said as Mantle words it -->
+            <set field="loadRefusal" from="ec.message.hasError() &amp;&amp; !ec.message.getErrorsString().includes('RECORD_UNAVAILABLE') ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="forecastFound" from="!!forecastFound"/>
@@ -169,7 +172,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <widgets>
                         <label text="This organization has no sales periods yet. A sales manager adds them under Settings › Targets."
                                 type="p" style="m-muted" condition="noPeriod"/>
-                        <label text="This forecast is not available to you." type="p" style="text-negative" condition="!noPeriod"/>
+                        <label text="${loadRefusal || 'This forecast is not available to you.'}" type="p" style="text-negative" condition="!noPeriod"/>
                         <link url="${targetsPath}" url-type="plain" text="Open Targets" link-type="anchor-button"
                                 condition="noPeriod &amp;&amp; targetsPath &amp;&amp; can.teamManage"/>
                     </widgets>

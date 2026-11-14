@@ -30,10 +30,13 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <actions>
         <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <set field="loadRefusal" value=""/>
         <if condition="sales.capabilities.reportRead &amp;&amp; organizationPartyId">
             <service-call name="mantle.sales.ForecastServices.get#TargetAttainment" out-map="context" transaction="force-new" ignore-error="true"
                     in-map="{organizationPartyId:organizationPartyId, timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null),
                         basisEnumId:(basisEnumId || null), asOfDate:(asOfDate || null), pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+            <!-- a refusal is said as Mantle words it (a period of another organization, too many records to count) -->
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="resultList" from="resultList || []"/>
@@ -93,7 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
         <label text="No sales period to report on: a sales manager adds them under Settings › Targets." type="p" style="m-muted"
                 condition="!reportFound &amp;&amp; noPeriod"/>
-        <label text="This report is not available to you." type="p" style="text-negative"
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative"
                 condition="!reportFound &amp;&amp; !noPeriod"/>
         <section name="TargetResultsFound" condition="reportFound">
             <widgets>

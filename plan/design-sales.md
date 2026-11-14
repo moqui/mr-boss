@@ -139,7 +139,7 @@ does not confer unrestricted read access.
 | Group | Permissions and boundary |
 | --- | --- |
 | BOSS_SALES | Root entry and SALES_VIEW for authorized Sales records |
-| BOSS_SALES_REP | SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT, SALES_FORECAST_EDIT (their own forecast only; impl-sales P18); assigned/team opportunities, own/team quotes/orders, permitted organization accounts |
+| BOSS_SALES_REP | SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT, SALES_FORECAST_EDIT (their own forecast only; the user's call, impl-sales P18 and §4); assigned/team opportunities, own/team quotes/orders, permitted organization accounts |
 | BOSS_SALES_MANAGER | SALES_TEAM_VIEW, SALES_TEAM_MANAGE, SALES_FORECAST_EDIT, SALES_REPORT_VIEW, SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT, SALES_CUSTOMER_INVITE and SALES_IMPORT (the opportunity import, §3); all Sales records of permitted organizations |
 | BOSS_SALES_APPROVE | SALES_APPROVE, proposed SALES_ORDER_APPROVE (approve#Order on sales parts of a seller whose approval setting is on, X4) and ORDER_APPROVE (sales parts elsewhere, and Manual holds); decide policy exceptions and own the Awaiting approval queue for permitted records; does not grant credit, purchase or payment hold release or price-list editing |
 | BOSS_SALES_CHANGE | SALES_ORDER_CHANGE and proposed ORDER_CHANGE_HOLD_RELEASE (OhtChange, X4); propose/apply approved commercial changes; approval requires SALES_APPROVE separately (`OrderChangeServices` checks by change kind, §6) |
