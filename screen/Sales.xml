@@ -145,6 +145,11 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="Sales/Pipeline/OpportunityDetail" entity="mantle.sales.opportunity.SalesOpportunity" sequence="62"/>
         <assist-prompt label="Open work for this account" text="What open work does this account have: deals, activities and the next steps?"
                 screen="Sales/Accounts/Customer360" entity="mantle.party.Party" sequence="63"/>
+        <!-- P10: a quote's chips on OrderDetail (skill sales-issue-quote) -->
+        <assist-prompt label="Check this quote before I send it" text="Check this quote before I send it: its lines, validity, tax, approvals and who it goes to"
+                screen="Sales/Orders/OrderDetail" entity="mantle.order.OrderHeader" sequence="64"/>
+        <assist-prompt label="Draft the cover note" text="Draft a short cover note for sending this quote to the customer's contact"
+                screen="Sales/Orders/OrderDetail" entity="mantle.order.OrderHeader" sequence="65"/>
         <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Sales/LogNote" text-parameter="noteText"
                 requires-record="true" sequence="70"/>
         <response-action label="Send as message" icon="sym_o_send" screen="Sales/SendMessage" text-parameter="messageText"

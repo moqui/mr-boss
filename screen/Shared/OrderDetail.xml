@@ -55,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
     stores, read only, its Payment hold shown for Accounting to release, cancellation proposals linking Customer Service, and
     Order again (a new open order at today's prices).
     Sales (appRoot Sales, mounted at Sales/Orders/OrderDetail, the one route; crosscut §3.6's Sales row, design-sales §5, impl-sales
-    P7; mantle.order.SalesQuoteServices.get#Quote; template/SalesOrderDetail.xml): a quote of the user's sales scope, its draft's
+    P7, P9, P10; mantle.order.SalesQuoteServices.get#Quote; template/SalesOrderDetail.xml): a quote of the user's sales scope, its draft's
     lines priced by the one resolver with their provenance and entered prices, the shipping charge, X1's tax, validity, history,
     Chatter and Files; P11 adds the sales-order context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -129,6 +129,14 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Sales P9: a quote's approval asked and decided -->
     <transition-include name="salesRequestApproval" location="component://mr-boss/template/SalesQuotes.xml"/>
     <transition-include name="salesDecideQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <!-- Sales P10: a quote proposed, answered, withdrawn, revised, copied and printed; its send is Sales/Orders/QuoteSend -->
+    <transition-include name="salesProposeQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesRespondQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesWithdrawQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesReviseQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesCloneQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesQuotePrint" location="component://mr-boss/template/SalesQuotes.xml"/>
+    <transition-include name="salesQuoteDocument" location="component://mr-boss/template/SalesQuotes.xml"/>
     <!-- Insights (appRoot Insights, mounted at Insights/Records/OrderDetail; design-insights §10, crosscut's Insights row, impl-insights
         P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
         below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads

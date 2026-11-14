@@ -81,12 +81,103 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.order.SalesApprovalServices.decide#Quote"
                     in-map="{orderId:orderId, orderRevision:orderRevision, salesApprovalPolicyId:(salesApprovalPolicyId || null),
-                        decision:(decision || 'approve'), reason:(reason || null)}"/>
+                        decision:(decision || 'approve'), reason:(reason || null), operationKey:(operationKey || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${decision == 'refuse' ? 'Refused' : 'Approved'}</message></if>
         </actions>
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."><parameter name="orderId"/></error-response>
     </transition>
     <!-- ===== end of Sales P9 ===== -->
+    <!-- ===== Sales P10: issue, send and the customer's response (mantle.order.SalesQuoteIssueServices; propose#Quote with its issue
+        checks): salesProposeQuote, salesRespondQuote (Record acceptance and Record decline, each with an operation key made by its
+        form), salesWithdrawQuote, salesReviseQuote and salesCloneQuote at the revision shown; salesQuotePrint (the quote as it is
+        now, a PDF) and salesQuoteDocument (an issue's stored PDF); applyQuoteBatch (Quotes' QuoteBatch). The send itself is
+        Sales/Orders/QuoteSend's, a dialog with its preview. ===== -->
+    <transition name="salesProposeQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteServices.propose#Quote" in-map="{orderId:orderId, orderRevision:orderRevision}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote proposed · send it to the customer</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesRespondQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteIssueServices.respond#Quote" out-map="responded"
+                    in-map="{orderId:orderId, issueId:(issueId || null), responseType:responseType, respondedDate:(respondedDate || null),
+                        contactPartyId:(contactPartyId || null), otherPartyOrderId:(otherPartyOrderId || null),
+                        evidenceOrderContentId:(evidenceOrderContentId || null), reason:(reason || null), operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${responseType == 'decline' ? 'Decline recorded · quote cancelled' : 'Acceptance recorded · order ' + responded.orderId + ' ' + responded.outcome}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesWithdrawQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteIssueServices.withdraw#Quote"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote withdrawn</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesReviseQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteIssueServices.revise#Quote"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote reopened for changes · propose and send it again</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesCloneQuote">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteIssueServices.clone#Quote" out-map="cloned" in-map="{orderId:orderId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Quote ${cloned.orderId} copied from ${orderId}</message></if>
+        </actions>
+        <conditional-response url="."><condition><expression>!ec.message.hasError()</expression></condition>
+            <parameter name="orderId" from="cloned.orderId"/></conditional-response>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesQuotePrint" read-only="true">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteIssueServices.get#QuotePrint" out-map="printed" in-map="{orderId:orderId}"/>
+            <script>ec.web.sendBytesResponse(ec.resource.xslFoTransform(printed.printHtml, null, null, 'application/pdf'), 'application/pdf', true, printed.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="salesQuoteDocument" read-only="true">
+        <actions>
+            <service-call name="mantle.order.SalesQuoteIssueServices.get#QuoteIssueDocument" out-map="document"
+                    in-map="{orderId:orderId, issueId:issueId}"/>
+            <script>ec.web.sendResourceResponse(document.contentLocation, true, document.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <transition name="applyQuoteBatch">
+        <actions>
+            <set field="quoteKeys" from="Array.isArray(selectedKeys) ? selectedKeys : String(selectedKeys || '').split(',').filter(Boolean)"/>
+            <service-call name="mantle.order.SalesQuoteIssueServices.apply#QuoteBatch" out-map="batchOut"
+                    in-map="{operation:batch, quoteKeys:quoteKeys, reason:(reason || null), note:(note || null),
+                        operationKey:('batch-' + ec.user.randomString(24))}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const verb = {send: 'Sent', withdraw: 'Withdrawn'}[batch] || 'Done'
+                    if (batchOut.successCount) ec.message.addMessage(verb + ' ' + batchOut.successCount + ' of ' + batchOut.results.length + ': '
+                            + batchOut.results.filter(row => row.ok).map(row => row.orderId + (row.message ? ' (' + row.message + ')' : '')).join(', '), 'success')
+                    for (const row of batchOut.results.filter(row => !row.ok))
+                        ec.message.addMessage('Not done ' + row.orderId + ': ' + String(row.message || '').replace(/^(Error: )?([A-Z_]+: )/, ''), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- ===== end of Sales P10 ===== -->
     <widgets/>
 </screen>

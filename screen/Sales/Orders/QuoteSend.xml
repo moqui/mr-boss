@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Send a quote (design-sales §5 QuoteSend; impl-sales P10): opened in a dialog from OrderDetail's quote context. Its preview is
+    mantle.order.SalesQuoteIssueServices.send#Quote with previewOnly (it writes nothing): who it goes to (the customer and its current
+    contacts, each with its email or none), from whose mail (the quote owner's own account, or the organization's through the
+    delivery ledger), the template and subject, the PDF's name (the issue standing at the revision, else the one this send stores)
+    and, on a second send, who has it already (skipped) and whom it failed to reach (tried again). Send calls send#Quote at the
+    revision shown with an operation key of its own; send#Quote checks SALES_QUOTE_EDIT, SALES_QUOTE_SEND, the organization, the
+    commercial revision and the validity itself. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Send quote" default-menu-include="false">
+    <parameter name="orderId" required="true"/>
+    <transition name="sendQuote">
+        <actions>
+            <set field="recipientList" from="Array.isArray(recipientPartyIds) ? recipientPartyIds : String(recipientPartyIds || '').split(',').filter(Boolean)"/>
+            <service-call name="mantle.order.SalesQuoteIssueServices.send#Quote" out-map="sent"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, recipientPartyIds:recipientList, sendMode:(sendMode || null),
+                        subject:(subject || null), note:(note || null), operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const rows = Array.from(sent.recipients || [])
+                    const went = rows.filter(row => row.state !== 'failed')
+                    ec.message.addMessage(ec.l10n.localize(sent.newIssue ? 'Quote issued and sent' : 'Quote sent') + ': '
+                            + went.map(row => row.name + (row.skipped ? ' (' + ec.l10n.localize('had it already') + ')' : '')).join(', '), 'success')
+                    for (const row of rows.filter(row => row.state === 'failed'))
+                        ec.message.addMessage(ec.l10n.localize('Not sent to') + ' ' + row.name + ': ' + (row.error || ''), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="../OrderDetail"><parameter name="orderId"/></default-response>
+        <error-response url="../OrderDetail"><parameter name="orderId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.order.SalesQuoteIssueServices.get#QuoteIssues" in-map="{orderId:orderId}" out-map="issuesOut"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="canSend" from="!!issuesOut?.quoteFound &amp;&amp; !!issuesOut.canSend"/>
+        <if condition="canSend">
+            <service-call name="mantle.order.SalesQuoteIssueServices.send#Quote" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{orderId:orderId, orderRevision:issuesOut.orderRevision, previewOnly:'Y'}"/>
+        </if>
+        <script><![CDATA[
+            previewError = ec.message.getErrorsString() || ''
+            ec.message.clearErrors()
+            previewFound = canSend && !!preview?.recipients
+            recipientOptions = Array.from(issuesOut?.recipientOptions || []).map(row => ({
+                value: row.partyId,
+                label: row.name + ' · ' + (row.emailAddress || ec.l10n.localize('no email address'))
+            }))
+            previewRows = previewFound ? Array.from(preview.recipients).map(row => ({
+                name: row.name,
+                emailAddress: row.emailAddress || ec.l10n.localize('no email address: the send to them fails until one is added'),
+                stateText: row.state === 'sent' ? ec.l10n.localize('Has it already') : row.state === 'failed' ? ec.l10n.localize('Failed: tried again')
+                    : row.state ? row.state : ec.l10n.localize('Will be sent')
+            })) : []
+            sendValues = previewFound ? {
+                orderId: orderId,
+                orderRevision: preview.orderRevision,
+                recipientPartyIds: Array.from(preview.recipients).map(row => row.partyId),
+                sendMode: preview.sendMode,
+                subject: preview.subject,
+                operationKey: 'send-' + ec.user.randomString(24)
+            } : {}
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="QuoteSendRefused" condition="!previewFound">
+            <widgets>
+                <label type="p" text="Quote ${orderId} cannot be sent now${previewError ? ': ' + previewError.replace(/^(Error: )?([A-Z_]+: )/, '') : ': it must be proposed, valid, and yours to send.'}"/>
+            </widgets>
+        </section>
+        <section name="QuoteSendPreview" condition="previewFound">
+            <widgets>
+                <label type="p" text="${preview.newIssue ? 'Sending issues revision ' + preview.orderRevision + ' of the quote and stores its PDF, ' + preview.fileName + '.' : 'Revision ' + preview.orderRevision + ' was issued already; this sends its stored PDF, ' + preview.fileName + ', again.'}"/>
+                <label type="p" style="text-caption m-muted"
+                        text="${preview.sendMode == 'own' ? 'From your mail' + (preview.accountText ? ' (' + preview.accountText + ')' : '') + ', filed on the quote.' : 'From the organization, with its template ' + preview.templateName + '; each delivery is tracked and a failed one can be sent again.'}"/>
+                <form-list name="QuoteSendRecipients" list="previewRows" skip-form="true" paginate="false">
+                    <field name="name"><default-field title="To"><display/></default-field></field>
+                    <field name="emailAddress"><default-field title="Email"><display/></default-field></field>
+                    <field name="stateText"><default-field title=""><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/><field-ref name="emailAddress"/></column>
+                        <column><field-ref name="stateText"/></column>
+                    </columns>
+                </form-list>
+                <form-single name="QuoteSendForm" transition="sendQuote" map="sendValues">
+                    <field name="orderId"><default-field><hidden/></default-field></field>
+                    <field name="orderRevision"><default-field><hidden/></default-field></field>
+                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                    <field name="recipientPartyIds">
+                        <default-field title="Recipients"><check><list-options list="recipientOptions" key="${value}" text="${label}"/></check></default-field>
+                    </field>
+                    <field name="sendMode">
+                        <conditional-field title="From" condition="preview.ownAllowed">
+                            <radio><option key="own" text="My mail"/><option key="organization" text="The organization"/></radio>
+                        </conditional-field>
+                        <default-field><hidden/></default-field>
+                    </field>
+                    <field name="subject"><default-field title="Subject"><text-line/></default-field></field>
+                    <field name="note"><default-field title="Message" tooltip="Shown above the quote's cover text"><text-area rows="3"/></default-field></field>
+                    <field name="submitButton">
+                        <default-field title="Send"><submit icon="sym_o_send" confirmation="Send quote ${orderId} to the recipients checked?"/></default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
