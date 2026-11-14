@@ -3832,14 +3832,14 @@ in; mr-moqui and mr-pass unchanged, no Rust built.
   - `data/BossSetupSalesData.xml` (a P14 block at the end): SALES_ORDER_CHANGE and ORDER_CHANGE_HOLD_RELEASE for BOSS_SALES_CHANGE in
     its bundle (F43); BOSS_SAL_CHANGES (deny to BOSS_SALES, ALWAYS for the change operator, approver and manager).
 - Specs:
-  - Mantle `test/order/SalesOrderChanges` (new, 2 features, about 3 s): a price change Customer Service filed, decided by the sales
+  - Mantle `test/order/SalesOrderChanges` (new, 2 features, 2.2 s): a price change Customer Service filed, decided by the sales
     approver, refused the order desk (FORBIDDEN) and another organization's operator (RECORD_UNAVAILABLE), applied once by the change
     operator under its key (retry answers alreadyApplied, price 4, PDF stored, revision moved, no hold left); an increase below the
     line refused; a quantity increase and a new line filed by the change operator applied with a Credit hold left (5 reserved, the
     line's price kept, the new line at the seller's 7, stillHeld); ACTIVE_PICK, ALREADY_SHIPPED (with BILLING_CONFLICT in the
     preview), STALE_ORDER and APPROVAL_EXPIRED refused with the order unchanged; get#SalesShipment for who sees the order and not
     another organization's; check#SalesInvoice refused without a receivable read.
-  - mr-boss `test/Sales/SalesOrderChanges` (new, 1 feature, about 1–2 s): OrderChangeDetail's one qvt render in Sales' context as the
+  - mr-boss `test/Sales/SalesOrderChanges` (new, 1 feature, 0.35 s warm, 2.1 s cold): OrderChangeDetail's one qvt render in Sales' context as the
     change operator (Approved, Apply, Effects, the order total, Sales' wording without Customer Service's reminder); apply with the
     same parameters reaching STOCK_CHANGED for the change operator, refused the order desk and PERMISSION_DENIED for a rep; the
     approver's record link opens Sales' OrderChangeDetail. `SalesApprovals` (F58's link now Sales' OrderChangeDetail), `SalesAccess`
@@ -3881,7 +3881,8 @@ in; mr-moqui and mr-pass unchanged, no Rust built.
     shipment);
   - `docs/security/Attack-Surface.md` (mr-moqui) does not name the commercial apply; P14 had no mr-moqui worktree.
 - For the lead:
-  - budget share: mr-mantle about 3.0 s (SalesOrderChanges); mr-boss server about 1–2 s (SalesOrderChanges' one feature); client none;
+  - budget share: mr-mantle about 2.2 s (SalesOrderChanges, 1.0 and 1.2 s); mr-boss server about 0.4 s warm, 2.1 s cold
+    (SalesOrderChanges' one feature); client none;
   - merge hot spots (P15 beside it): mr-mantle `service/mantle/order/OrderChanges.js`, `OrderChangeServices.xml`,
     `service/mantle/sales/SalesAccess.js` (orderOf's unassigned branch, changeStatuses, exports after orderApprover),
     `SalesOrders.js` findOrders, `SalesOrderServices.xml` (a P14 block at the end); mr-boss `service/ironstone/sales/Sales.js` (a P14
