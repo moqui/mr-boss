@@ -337,6 +337,37 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.OrderServices.update-OrderPartTotal orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01"/>
     <!-- ===== end of Sales P7 ===== -->
 
+    <!-- ===== Sales P8 (design-sales §5 QuoteRequests, CX-MAIL-INTAKE; impl-sales P8): requests for quote ===== -->
+    <!-- Retail's RFQ address: sales.manager's rule on the intake mailbox, before the leads' rule, makes mail to sales+rfq@ a request
+        for quote in East's queue (createQuoteRequest, which stops the later rules); Wingtip Traders' buyer asks for counters by mail -->
+    <moqui.basic.email.EmailRule emailRuleId="BOSS_SAL_RFQ_RULE" ownerUserId="BOSS_SAL_MANAGER" emailAccountId="BOSS_SAL_INTAKE_MAIL"
+            ruleName="Requests for quote" sequenceNum="5" enabled="Y" matchAllEnumId="ErmAll"
+            conditionsJson='[{"field":"to","operator":"contains","value":"sales+rfq@"}]'
+            actionsJson='[{"action":"createQuoteRequest","value":"BOSS_SAL_TEAM_EAST"}]'/>
+    <moqui.basic.email.EmailMessage emailMessageId="BOSS_SAL_MSG_RFQ" emailAccountId="BOSS_SAL_INTAKE_MAIL" statusId="ES_RECEIVED"
+            receivedDate="2026-11-11 09:20:00" messageDate="2026-11-11 09:20:00" isRead="N" hasAttachment="N"
+            fromAddress="buying@wingtip.example" fromName="Wingtip Buying" toAddresses="sales+rfq@retail.example"
+            subject="Quote for checkout counters" contentType="text/plain" messageId="&lt;rfq-counters@wingtip.example&gt;"
+            bodyText="Please quote four checkout counters for our Elm Street store, delivered and installed before February."/>
+    <mantle.order.SalesQuoteServices.create-QuoteRequestFromEmail emailMessageId="BOSS_SAL_MSG_RFQ" emailAccountId="BOSS_SAL_INTAKE_MAIL"
+            emailRuleId="BOSS_SAL_RFQ_RULE" ruleOwnerUserId="BOSS_SAL_MANAGER" value="BOSS_SAL_TEAM_EAST"/>
+    <!-- sales.rep's request from Wingtip's Dana Morales by phone: three lines, the last one described only (no product yet) -->
+    <mantle.request.Request requestId="BOSS_SAL_RFQ_WINGTIP" requestTypeEnumId="RqtQuote" statusId="ReqSubmitted"
+            requestName="Wingtip stockroom shelving" requestDate="2026-11-12 15:30:00" responseRequiredDate="2026-11-30 00:00:00"
+            salesChannelEnumId="ScPhone" requestResolutionEnumId="RrUnresolved" priority="5"
+            description="Dana asked by phone for shelving for the new stockroom and one display unit, with delivery and installation."/>
+    <mantle.request.RequestParty requestId="BOSS_SAL_RFQ_WINGTIP" partyId="ORG_ZIZI_RETAIL" roleTypeId="OrgInternal" fromDate="2026-11-12 15:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_SAL_RFQ_WINGTIP" partyId="BOSS_SAL_ACC_WINGTIP" roleTypeId="Customer" fromDate="2026-11-12 15:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_SAL_RFQ_WINGTIP" partyId="BOSS_SAL_CON_DANA" roleTypeId="Contact" fromDate="2026-11-12 15:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_SAL_RFQ_WINGTIP" partyId="BOSS_SAL_REP" roleTypeId="SalesRepresentative" fromDate="2026-11-12 15:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_SAL_RFQ_WINGTIP" partyId="BOSS_SAL_TEAM_EAST" roleTypeId="SalesTeam" fromDate="2026-11-12 15:30:00"/>
+    <mantle.request.RequestItem requestId="BOSS_SAL_RFQ_WINGTIP" requestItemSeqId="01" statusId="ReqSubmitted" productId="DEMO_1_1"
+            quantity="20" description="Shelving units, grey"/>
+    <mantle.request.RequestItem requestId="BOSS_SAL_RFQ_WINGTIP" requestItemSeqId="02" statusId="ReqSubmitted" productId="DEMO_1_2"
+            quantity="1" description="Display unit"/>
+    <mantle.request.RequestItem requestId="BOSS_SAL_RFQ_WINGTIP" requestItemSeqId="03" statusId="ReqSubmitted" quantity="1"
+            description="Delivery and installation"/>
+    <!-- ===== end of Sales P8 ===== -->
     <!-- ===== Sales P9 (impl-sales P9): Retail's Sales defaults and approval rules ===== -->
     <!-- Retail's defaults: a quote is valid 30 days, unverified inquiries are kept 60 -->
     <mantle.sales.policy.SalesPolicy salesPolicyId="BOSS_SAL_POLICY_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"

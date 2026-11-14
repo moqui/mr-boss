@@ -287,4 +287,38 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="message" from="found.message"/>
         </actions>
     </service>
+
+    <!-- ===== P8: Create RFQ from a message (design-sales §1.4 Comms hooks, §5 QuoteRequests; impl-sales §4 Nov 13) ===== -->
+    <service verb="create" noun="QuoteRequestFromMessage" allow-remote="false">
+        <description>"Create RFQ" from a message, as the user (Comms' create-from kind quoteRequest on a mail, internal or chat message,
+            through ironstone.comms.ChatServices.create#FromChat): Mantle's create#QuoteRequest for the user's organization (the default
+            one, ORGANIZATION_DENIED when they sell for several), which reads the message as the user may read it before anything is
+            written (RECORD_UNAVAILABLE otherwise, as a missing one), matches the sender to an account's contact, makes the user its
+            owner and files the message with its files on the request. The same message again answers the same request. Refuses a
+            user without Sales (SALES_UNAVAILABLE) or without SALES_QUOTE_EDIT (PERMISSION_DENIED). Answers the request's record, its
+            QuoteRequestDetail link and a message.</description>
+        <in-parameters>
+            <parameter name="emailMessageId"/>
+            <parameter name="communicationEventId"/>
+            <parameter name="chatRoomId"/>
+            <parameter name="eventSeq" type="Integer"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordEntityName"/>
+            <parameter name="recordId"/>
+            <parameter name="url"/>
+            <parameter name="message"/>
+            <parameter name="roomRecordLinked" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="made" from="ec.resource.script('component://mr-boss/service/ironstone/sales/SalesComms.js').execute('quoteRequestFromMessage', context)"/>
+            <set field="recordEntityName" from="made.recordEntityName"/>
+            <set field="recordId" from="made.recordId"/>
+            <set field="url" from="made.url"/>
+            <set field="message" from="made.message"/>
+            <set field="roomRecordLinked" from="false"/>
+        </actions>
+    </service>
+    <!-- ===== end of P8 ===== -->
 </services>

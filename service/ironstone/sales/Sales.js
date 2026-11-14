@@ -186,6 +186,9 @@ const linkPaths = [
     "Products/Product360",
     "Products/InventoryAvailability",
     "Products/PriceExplain",
+    // P8: requests for quote (design §5 QuoteRequests, QuoteRequestDetail)
+    "Quotes/QuoteRequests",
+    "Quotes/QuoteRequestDetail",
     // P9: the approvals list and the defaults and approval rules
     "Quotes/Approvals",
     "Settings/SalesDefaults",
@@ -278,6 +281,23 @@ const recordKinds = {
                 organizationPartyId: found.organizationPartyId,
                 label: found.order.orderName || "Quote " + orderId,
                 detail: "Quote"
+            }
+        }
+    },
+    // P8: a request for quote the user sees (SalesAccess.js quoteRequestOf: of an organization of the scope, assigned to them or a
+    // team of theirs, or the organization's every one for SALES_TEAM_VIEW), QuoteRequestDetail
+    quoteRequest: {
+        name: "Request for quote",
+        icon: "sym_o_contract_edit",
+        destination: "Quotes/QuoteRequestDetail",
+        parameter: "requestId",
+        read: (userScope, requestId) => {
+            const found = salesAccess.quoteRequestOf(userScope.mantle, requestId)
+            if (!found) return null
+            return {
+                organizationPartyId: found.organizationPartyId,
+                label: found.request.requestName || "Request for quote " + requestId,
+                detail: "Request for quote"
             }
         }
     },
@@ -876,6 +896,22 @@ searchFinds.push({
             recordEntity: "mantle.order.OrderHeader",
             recordId: row.orderId,
             url: recordUrl("quote", row.orderId)
+        }))
+    }
+})
+// P8: requests for quote, through Mantle's scoped find (find#QuoteRequests' text: name or id), open ones
+searchFinds.push({
+    kind: "quoteRequest",
+    rows: (userScope, text, limit) => {
+        if (!userScope.capabilities.anyRead) return []
+        const found = lib.probe("mantle.order.SalesQuoteServices.find#QuoteRequests", {text, pageSize: limit})
+        return Array.from(found.quoteRequestList || []).map(row => ({
+            title: row.requestName,
+            subtitle: ["RFQ " + row.requestId, row.customerName, row.statusText].filter(Boolean).join(" · "),
+            icon: recordKinds.quoteRequest.icon,
+            recordEntity: "mantle.request.Request",
+            recordId: row.requestId,
+            url: recordUrl("quoteRequest", row.requestId)
         }))
     }
 })

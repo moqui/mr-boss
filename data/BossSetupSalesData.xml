@@ -369,5 +369,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a quote's exception to decide (Mantle's SalesQuoteApproval, F26) opens the quote's OrderDetail under Sales, whose Approval box
         decides it; the decision is decide#Quote at the message's revision, from Approvals, the Commons inbox or the detail -->
     <moqui.security.user.NotificationTopic topic="SalesQuoteApproval" linkTemplate="/qapps/Sales/Orders/OrderDetail?orderId=${orderId}"/>
+    <!-- P8 review (the user's call of Nov 13, 2026): a warranty claim's chargeable repair (Mantle's SalesRepairToQuote, to the
+        organization's default team) opens it in Sales' RFQ context, answered by its customer and products alone -->
+    <moqui.security.user.NotificationTopic topic="SalesRepairToQuote" linkTemplate="/qapps/Sales/Quotes/QuoteRequestDetail?requestId=${requestId}"/>
     <!-- ===== end of Sales P9 ===== -->
 </entity-facade-xml>

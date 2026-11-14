@@ -1925,6 +1925,10 @@ along with this software (see the LICENSE.md file). If not, see
         the claim's assessment under Customer Service -->
     <moqui.security.user.NotificationTopic topic="WarrantyRepairFinished"
             linkTemplate="/qapps/CustomerService/Returns/WarrantyAssessment?requestId=${requestId}"/>
+    <!-- Sales P8 review (the chargeable repair's handoff; the user's call of Nov 13, 2026): Sales made a claim's repair estimate
+        (Mantle's SalesRepairQuoted, to the claim's assignee or queue) opens the claim's assessment, whose Sales quotes box shows it -->
+    <moqui.security.user.NotificationTopic topic="SalesRepairQuoted"
+            linkTemplate="/qapps/CustomerService/Returns/WarrantyAssessment?requestId=${requestId}"/>
     <!-- Customer Service P13: a low feedback score's follow-up (Mantle's CaseFeedbackFollowUp, mantle.request.CaseFeedbackServices)
         opens the answer's ResponseDetail; SatisfactionResults, ResponseDetail and the feedback forms are checked in their
         services (find#CaseResponses for service management, get#CaseResponse for it and the follow-up team, the forms'

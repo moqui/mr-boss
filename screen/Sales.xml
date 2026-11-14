@@ -23,6 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     phase adds its area, and the design's later entries stay absent. P6: Home's work, QuickCreate, LogNote and SendMessage (hidden
     from the menu), and the shell's quick create, Today and Assist providers. P7: Quotes (a Sales reader's), the Orders area with its one
     OrderDetail route and Products' screens in Sales' context (both hidden from the menu until P11 shows Orders), quick create's Quote.
+    P8: RFQs (Quotes/QuoteRequests and the shared RequestDetail at Quotes/QuoteRequestDetail), whose request is a record panel host.
     P9: Quotes' Approvals tab (a sales approver's), Settings' Defaults and Approval rules, the approval topics. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
@@ -53,8 +54,9 @@ along with this software (see the LICENSE.md file). If not, see
                 try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
                 // P4: a lead or opportunity the user sees (Sales.js recordKinds opportunity, SalesAccess.js opportunityOf)
                 // P7: a quote the user sees (Sales.js recordKinds quote, SalesAccess.js quoteOf)
+                // P8: a request for quote the user sees (Sales.js recordKinds quoteRequest, SalesAccess.js quoteRequestOf)
                 const panelHosts = {'mantle.party.Party': 'contact', 'mantle.sales.opportunity.SalesOpportunity': 'opportunity',
-                    'mantle.order.OrderHeader': 'quote'}
+                    'mantle.order.OrderHeader': 'quote', 'mantle.request.Request': 'quoteRequest'}
                 if (!Object.hasOwn(panelHosts, entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
                 panelRecordType = panelHosts[entityName]
@@ -130,6 +132,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P9: the approval topics a sales approver decides (Sales/Quotes/Approvals): a quote's exception and a commercial order change -->
         <notification-topic topic="SalesQuoteApproval"/>
         <notification-topic topic="OrderChangeApproval"/>
+        <!-- P8 review (the user's call of Nov 13, 2026): a warranty claim's chargeable repair for Sales to quote -->
+        <notification-topic topic="SalesRepairToQuote"/>
         <!-- P6 (design §1.4 CX-ASSIST): Assist's chips on OpportunityDetail and Customer360 (each also needs its screen's grant) and its
             answer actions, filed through Sales' own record check: Log as note on the page's deal or account, Send as message (Comms'
             internal message, filed on the page's record when Sales admits the user to it) -->

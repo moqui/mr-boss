@@ -107,9 +107,17 @@ along with this software (see the LICENSE.md file). If not, see
         BasicComms' Mail renders in each message's More menus (message-actions), through Mail's createRecord transition and the
         create-from provider boss.records (Comms.xml; ChatServices.create#FromChat kind lead, ironstone.sales.ContextServices
         create#LeadFromMessage): the sender's inquiry as a lead of the user's, the message filed on it as its source; refused for a
-        user without Sales (its services are BOSS_SALES' alone). P8 adds Create RFQ here. -->
+        user without Sales (its services are BOSS_SALES' alone). P8 adds Create RFQ beside it. -->
     <ext-action name="sales.createLead" slot="message-actions" sequence="40" label="Create lead" icon="sym_o_person_add"
             transition="createRecord" hook="create-from">
         <parameter name="emailMessageId"/><parameter name="communicationEventId"/><parameter name="kind" value="lead"/>
+    </ext-action>
+    <!-- Sales P8 (impl-sales §4 Nov 13; design-sales §1.4, §5 QuoteRequests): Create RFQ, beside Create lead, through the same
+        createRecord transition and create-from provider (ChatServices.create#FromChat kind quoteRequest,
+        ironstone.sales.ContextServices create#QuoteRequestFromMessage): the message as a request for quote of the user's, its files
+        on it; a message the user may not read is refused before anything is written, and a user without Sales is refused. -->
+    <ext-action name="sales.createRfq" slot="message-actions" sequence="41" label="Create RFQ" icon="sym_o_contract_edit"
+            transition="createRecord" hook="create-from">
+        <parameter name="emailMessageId"/><parameter name="communicationEventId"/><parameter name="kind" value="quoteRequest"/>
     </ext-action>
 </screen-extend>
