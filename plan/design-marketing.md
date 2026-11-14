@@ -585,9 +585,11 @@ As built (impl-marketing P5): `mantle.marketing.SegmentServices` over `Marketing
 `MarketingEligibility.js` (eligibility). MarketSegment gains its name, kind (MskRule, MskExplicit), creator, archive date and a
 definition revision; MarketSegmentParty its dates and kind (MspInclude, MspExclude), ended never deleted; the saved filter is the
 dated MarketSegmentFilter, a JSON tree of registered sources only. A segment is evaluated over its organization's audience (its
-lists' current members, the parties it owns, its explicit members and what a filter's source discovers), bounded at 5,000: the
-native families and the filter all hold, the explicit inclusions join, the parent intersects (a cycle refused), the exclusions win.
-The sources are party, contact, purchases (`COMMERCE_ORDER_VIEW`), engagement (list membership, the ledger's deliveries) and Sales'
+lists' current members, the parties it owns, its explicit members and what a filter's source discovers), bounded at 5,000 and
+refused past it (AUDIENCE_TOO_LARGE), as is a preview's list or exclusion list, never cut short: the native families and the filter
+all hold, the explicit inclusions join, the parent intersects (a cycle refused), the exclusions win. The sources are party,
+contact, purchases (the store orders of the stores the caller reads in Commerce: `COMMERCE_VIEW`, `COMMERCE_ORDER_VIEW` and its
+store scope), engagement (list membership, the ledger's deliveries) and Sales'
 leads, opportunities and accounts, read under the caller's own Sales scope (SalesAccess `opportunityOf`, `accountOf`) in the
 segment's organization; registration waits for P16, its records. A filter or evaluation on a source the caller cannot read is
 refused (SOURCE_UNAVAILABLE) before any count, and the segment list shows no match count (an evaluation is the caller's own).

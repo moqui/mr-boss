@@ -1433,6 +1433,78 @@ unchanged, no Rust built. Built beside P4 (`mkt/p4`), which appends to the same 
   - the user's calls: none required; to confirm, AudiencePreview opened to authors and dispatchers by the route grant above, and the
     purchases source on `COMMERCE_ORDER_VIEW`.
 
+**Review Nov 14 (P5).** A fresh review of `mkt/p5` (mr-mantle 5376f2c8, mr-boss ec7fc04d) against P5, §2, §4 and design §4
+Segments, SegmentDetail and AudiencePreview; master had nothing newer in either repository, so no merge.
+- Checked and sound:
+  - scope: every segment service asks `MARKETING_AUDIENCE_VIEW` (a write `_EDIT`) and the segment's organization by
+    `segmentOfScope`, a missing, other or unowned one answering RECORD_UNAVAILABLE alike; a parent of the same organization, not
+    archived, a cycle refused at store and at evaluation; revisions on every segment write and on an existing member row; members
+    and filters ended, never deleted; `preview#Audience` asks a Marketing read with the audience, send or dispatch permission, the
+    topic's organization and that every list and segment is of it, before anything is counted;
+  - confidentiality: Sales' sources read through SalesAccess `opportunityOf`, `accountOf` and `contactAccounts` under the caller's
+    own Sales scope in the segment's organization; a filter naming a source the caller cannot read is refused at store and at
+    evaluation, a parent's included, before any count (SOURCE_UNAVAILABLE); nothing about an evaluation is stored, so no count of one
+    reader's sources reaches another; a person the caller may not see (another user's personal contact, disabled, merged) is an
+    unnamed row with no address; names and whole addresses only for `MARKETING_AUDIENCE_VIEW`, masked otherwise; previewKey hashes
+    the request only;
+  - `classify#Recipients` (internal, allow-remote false): the seven buckets in design §4's order, each person in exactly one, the
+    counts summing to the matched; consent by organization as P3 has it (the organization's purpose row unless the latest global
+    one withdraws); suppressions read as a promotional delivery (`suppressedOf(..., false)`), so every kind applies here, a
+    complaint, staff block and soft failures as well as a hard bounce: right for an eligibility that only promotional sends use;
+    evidenced membership (a granted consent of the topic or of the purpose; a legacy member needs evidence); duplicates by the
+    normalized address, the lowest party id kept; untracked flagged on the eligible, never excluded;
+  - the AudiencePreview route grant (the worker's choice): authz.rs gives a non-inheritable ALWAYS on Audiences.xml to the frame
+    alone, so each child is decided by its own records: Lists, Segments, SegmentDetail, Comms' Consent (no record of its own) and
+    Suppressions stay refused to authors and dispatchers, AudiencePreview opens by its inheritable ALWAYS; Audiences.xml has no
+    transition or action of its own, and the service checks the permission and organization again. Sound as built;
+  - a missing value never matches whatever the operator; no entity name, SQL or script is accepted; the screens' transitions call
+    Mantle only; one render per mode in MarketingSegments; no route fixture.
+- Fixed:
+  - R1 (the 5,000 cap, high). The cap was checked on the people left after the exclusions, and each list was read with a limit of
+    5,001: an exclusion list of more than 5,000 was applied partly, so people meant to be left out were counted eligible (and P8
+    would prepare from it), and an included list cut at 5,001 could pass the cap once exclusions removed people. The universe's own
+    contacts (internal organizations removed after the limit) and Sales' pipeline discovery (a limit of 5,000, no check) cut short
+    silently too. Now `bounded` refuses every such read past the cap (AUDIENCE_TOO_LARGE, naming the list), in MarketingSegments.js
+    and MarketingEligibility.js `listMembers`; nothing is truncated. Not covered by a spec (it takes 5,001 rows).
+  - R2 (confidentiality, medium; the worker's purchases choice). The purchase source was open to any holder of
+    `COMMERCE_ORDER_VIEW` over every order the organization vended: no Commerce store scope (a store staff member read the other
+    stores' orders) and Sales orders with no store, which are Sales' records, under a Commerce permission. Now it is readable with
+    `COMMERCE_VIEW` and `COMMERCE_ORDER_VIEW` over the organization's stores in StoreAdmin.js's store scope, and its facts and
+    discovery read those stores' orders only. Segments: an editor with both permissions and no store of the organization is refused
+    SOURCE_UNAVAILABLE (stored on the unfixed code).
+  - R3 (precedence, low). A withdrawal at an address demoted only the eligible there, so a legacy member at a withdrawn address stayed
+    "needs evidence", against the order withdrawn before evidence. Eligibility's Ned (fails on the unfixed code).
+  - R4 (confidentiality, low). `duplicate#Segment` copied a filter whose source the caller cannot read, which `store#SegmentFilter`
+    refuses; now refused alike before anything is made. Segments (fails on the unfixed code).
+  - R5 (confidentiality, low). resultDigest was an unkeyed SHA over the party, the normalized address and the tracking flag: an author
+    holding it and a masked address ("j***@domain") of a one-person preview could confirm a guessed address offline. It is now over
+    the contact mech id (an address changed is a new contact mech, so P8's comparison still moves with it).
+- Provisional findings (for the lead to number):
+  - the universe is the organization's whole audience (every Marketing list's members and its own contacts), so an organization with
+    more than 5,000 people on its lists can evaluate no rule segment and preview no segment, and a preview of a list over 5,000 is
+    refused: refused, never truncated (R1), but P8's sends to a large list need a paged or streamed evaluation or a universe narrowed
+    to the preview's lists first;
+  - purchases are store orders only (R2): a Sales order with no store is no purchase fact, a won Sales opportunity being the Sales
+    source's;
+  - a withdrawal blocks an address for the matched people only: someone outside the selection who withdrew at the same address does
+    not block it (a suppression does, address-wide);
+  - resultDigest and previewKey stay unkeyed hashes (over ids now); a keyed digest needs a server-keyed hash the script host lacks;
+  - `classify#Recipients` puts another user's personal contact in "not available" by the calling user, so a P8 or P11 caller running
+    as a job user (no user) sees every personal contact as not available; P8 and P11 should call it as the user who prepares;
+  - SegmentDetail describes a stored Sales condition (its lead sources or campaigns in words) to an editor without Sales, marked
+    unreadable; a definition, not Sales data;
+  - "has an open lead is false" matches a person whose leads the caller cannot see: it reads as "none you can see" and discloses
+    nothing.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Segments 5 of 5 and Eligibility 3 of 3 (3.8 s of
+  features; the new checks failed on the unfixed code, 2 features); mr-boss MarketingSegments 2 of 2 and MarketingAccess 7 of 7
+  (3.9 s of features). Prettier clean on the changed JavaScript. No screen changed, so no lint. Not run: test-apps, the acceptance
+  MarketingAudiencePreviewWalk (its scenario unchanged by the review).
+- For the lead:
+  - budget share: as the Built note (Segments and Eligibility gain a few calls, under 0.1 s);
+  - merge hot spots: the Built note's, and `plan/design-marketing.md` §4's as-built paragraph (the cap and the purchase source);
+  - the user's calls: none; the two worker choices judged above (the route grant kept, the purchase source scoped, R2); whether to
+    lift the 5,000 universe before P8 (the first finding) may want the user's view.
+
 ### P6 — Templates, sending profiles and bounce intake
 
 Design §5 MessageTemplates and MessageTemplateDetail, §12 SendingProfiles, §15.1 (`DeliveryReportIntake`), §15.2
