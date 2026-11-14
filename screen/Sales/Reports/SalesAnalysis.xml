@@ -18,8 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     product, customer or customer class, as ordered, shipped, invoiced and returned, quantities and values in each document's currency,
     never added across currencies, over mantle.sales.SalesReportServices.run#SalesAnalysis alone: Mantle answers a report reader
     (ACCOUNTING_VIEW) of the organization and a holder of SALES_REPORT_VIEW for an organization of their sales scope, and decides the
-    finance columns (the cost of what shipped and its margin): a report reader's, or a holder of both PRICE_VIEW and PRODUCT_COST_VIEW,
-    withheld from anyone else, so they are left out rather than shown as zero. Under Accounting the reader is Accounting's and the
+    finance columns (the cost of what shipped and its margin): a report reader's who also holds PRODUCT_COST_VIEW, or a holder of both
+    PRICE_VIEW and PRODUCT_COST_VIEW (P19 review R1), withheld from anyone else, so they are left out rather than shown as zero. Under Accounting the reader is Accounting's and the
     finance columns are shown over the same rows. The choices and links follow the root the screen is mounted under (appRoot): Sales'
     choices and its Product360 and Customer360, or Accounting's. Exports to CSV and XLSX; prints. No entity read, no cost search and
     no SQL dialog (P1's ported screen read OrderItemSalesSummary itself). -->
@@ -197,7 +197,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <column><field-ref name="invoicedValue"/><field-ref name="netValue"/></column>
                     </columns>
                 </form-list>
-                <label text="The cost and margin are shown to a finance reader, or to one who reads both prices and costs."
+                <label text="The cost and margin are shown to a reader of product costs: a finance reader who reads costs, or one who reads both prices and costs."
                         type="p" style="text-caption m-muted" condition="!costShown"/>
             </widgets>
         </section>

@@ -1594,8 +1594,8 @@ finds are). SalesSummary asks the four summaries for one organization of the sco
 by default; `get#InvoicesByCustomerClass` gains `currencyUomIds`), with Sales' choices (organization, its stores, accounts, products)
 and the basis named (orders by placed date; invoices by invoice date, issued, not cash collected). SalesAnalysis is rebuilt over
 `run#SalesAnalysis` alone (no entity read, cost search or SQL dialog; F76, F79): Mantle answers a Sales report reader of their
-organization and adds the shipped value, the cost of shipped and the margin for a report reader or a holder of PRICE_VIEW and
-PRODUCT_COST_VIEW; the screen is also Accounting's Reports/SalesAnalysis (a mount, choices and links by `appRoot`). F
+organization and adds the shipped value, the cost of shipped and the margin for a report reader who reads product costs
+(PRODUCT_COST_VIEW) or a holder of PRICE_VIEW and PRODUCT_COST_VIEW (P19 review R1); the screen is also Accounting's Reports/SalesAnalysis (a mount, choices and links by `appRoot`). F
 `get#PipelineAnalysis` and `get#WinLoss` (`mantle/sales/SalesPipelineReports.js`) read each deal as it stood at the as-of time from
 its audit log (the old value of a field's first change after it, else its value now), stage durations from audited stage changes
 (a stay whose entry or exit the log does not show is unknown), conversion over a lead-created cohort (`convertedDate`), and the

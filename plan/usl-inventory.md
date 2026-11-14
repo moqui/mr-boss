@@ -2238,7 +2238,7 @@ remain historical; these rows add no implementation claim.
 | party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16); Shared/Customer360 and Sales/Accounts/ContactDetail (Sales: Invite to Sales, through mantle.sales.AccountServices.invite#SalesContact; Sales P13) |
 | party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Revise and Withdraw end the quote's links, its rule through revise#Quote and withdraw#Quote; Sales P13) |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
-| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Sales/Reports/SalesAnalysis (Sales P19: Sales' report scope, the shipped value and, for a report reader or a price and cost reader, the cost of shipped and margin) and its mount Accounting/Reports/SalesAnalysis |
+| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Sales/Reports/SalesAnalysis (Sales P19: Sales' report scope, the shipped value and, for a report reader with PRODUCT_COST_VIEW or a price and cost reader, the cost of shipped and margin) and its mount Accounting/Reports/SalesAnalysis |
 
 ### Added in the Sales build: accounts and contacts (P3, Nov 13, 2026)
 

@@ -5,7 +5,7 @@
   "body": {
     "kind": "digest",
     "folder": "Sales",
-    "description": "The Sales pipeline dashboard for the last seven days, as a digest a sales manager schedules for themselves or for recipients who read the same deals. Each recipient's rows are their own sales scope's. Forecasts are read in Sales \u203a Pipeline \u203a Forecast.",
+    "description": "The Sales pipeline dashboard for the last seven days, as a digest a sales manager schedules for themselves or for recipients who read the same deals: it renders as its owner, over the owner's sales scope, and reaches only a recipient who would see the same rows. Forecasts are read in Sales \u203a Pipeline \u203a Forecast.",
     "commentary": "",
     "layout": "rows",
     "dashboards": [
