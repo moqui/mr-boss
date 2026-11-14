@@ -4,7 +4,7 @@
   "title": "Sales pipeline",
   "body": {
     "folder": "Sales",
-    "description": "Open opportunities by stage, among the deals each viewer's sales scope reads: their own and their teams', or their organizations' for a holder of SALES_TEAM_VIEW. Counts only; amounts by currency are on Opportunities. Sales Home shows the funnel; Sales' reports add their panels.",
+    "description": "The pipeline among the deals each viewer's sales scope reads: their own and their teams', or their organizations' for a holder of SALES_TEAM_VIEW. Open opportunities by stage (the funnel Sales Home and Pipeline analysis show), by source and by owner, the open pipeline's estimated amount by currency (never added across currencies), leads created and deals closed in the range. Amounts and weighted values by stage are in Pipeline analysis.",
     "panels": {
       "funnel": {
         "title": "Open opportunities by stage",
@@ -52,6 +52,297 @@
                   }
                 },
                 "label": "Open"
+              },
+              {
+                "query": {
+                  "field": {
+                    "name": "typeEnumId",
+                    "op": "eq",
+                    "value": "SotOpportunity"
+                  }
+                },
+                "label": "Opportunities"
+              }
+            ]
+          }
+        ]
+      },
+      "bySource": {
+        "title": "Open opportunities by source",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-pipeline",
+            "aggregations": [
+              {
+                "id": "source",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "dataSourceId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "opportunities",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "salesOpportunityId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "statusId",
+                    "op": "eq",
+                    "value": "SalesOppOpen"
+                  }
+                },
+                "label": "Open"
+              },
+              {
+                "query": {
+                  "field": {
+                    "name": "typeEnumId",
+                    "op": "eq",
+                    "value": "SotOpportunity"
+                  }
+                },
+                "label": "Opportunities"
+              }
+            ]
+          }
+        ]
+      },
+      "byOwner": {
+        "title": "Open opportunities by owner",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-pipeline",
+            "aggregations": [
+              {
+                "id": "owner",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "ownerPartyId",
+                  "size": 50
+                }
+              },
+              {
+                "id": "opportunities",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "salesOpportunityId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "statusId",
+                    "op": "eq",
+                    "value": "SalesOppOpen"
+                  }
+                },
+                "label": "Open"
+              },
+              {
+                "query": {
+                  "field": {
+                    "name": "typeEnumId",
+                    "op": "eq",
+                    "value": "SotOpportunity"
+                  }
+                },
+                "label": "Opportunities"
+              }
+            ]
+          }
+        ]
+      },
+      "openAmount": {
+        "title": "Open pipeline by currency",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-pipeline",
+            "aggregations": [
+              {
+                "id": "currency",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "currencyUomId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "opportunities",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "salesOpportunityId"
+                }
+              },
+              {
+                "id": "estimated",
+                "type": "sum",
+                "role": "metric",
+                "params": {
+                  "field": "estimatedAmount"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "statusId",
+                    "op": "eq",
+                    "value": "SalesOppOpen"
+                  }
+                },
+                "label": "Open"
+              },
+              {
+                "query": {
+                  "field": {
+                    "name": "typeEnumId",
+                    "op": "eq",
+                    "value": "SotOpportunity"
+                  }
+                },
+                "label": "Opportunities"
+              }
+            ]
+          }
+        ]
+      },
+      "leads": {
+        "title": "Leads created by source",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-pipeline",
+            "aggregations": [
+              {
+                "id": "source",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "dataSourceId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "leads",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "salesOpportunityId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "typeEnumId",
+                    "op": "eq",
+                    "value": "SotLead"
+                  }
+                },
+                "label": "Leads"
+              }
+            ]
+          }
+        ]
+      },
+      "outcomes": {
+        "title": "Won and lost deals created in the range",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-pipeline",
+            "aggregations": [
+              {
+                "id": "outcome",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "statusId",
+                  "size": 5
+                }
+              },
+              {
+                "id": "opportunities",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "salesOpportunityId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "statusId",
+                    "op": "in",
+                    "values": [
+                      "SalesOppWon",
+                      "SalesOppLost"
+                    ]
+                  }
+                },
+                "label": "Won or lost"
               },
               {
                 "query": {

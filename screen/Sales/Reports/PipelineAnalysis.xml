@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Reports › Pipeline analysis (design-sales §8 PipelineAnalysis: PipelineReportOptions, PipelineMeasures, PipelineFunnel;
+    style-guide §3.10 Report; impl-sales P19): Mantle's mantle.sales.ForecastServices.get#PipelineAnalysis over the deals the reader sees,
+    as they stood at the as-of time (each field from the deal's audit log): the open qualified deals grouped by stage, source, owner or
+    age and by currency (count, estimated, weighted and monthly recurring amounts, average age, missing estimates, next-activity
+    coverage), never added across currencies; stage durations from the audited stage changes, a stay the log does not show counted
+    unknown; lead conversion over a cohort of leads created between two days; the funnel's steps (visits once Marketing records them,
+    leads, qualified, won) and the open deals behind the measures. The pipeline dataset's funnel panel (report/boss-sales-pipeline.json,
+    the deals of the viewer's scope now) through report-embed, as Home shows it, so the screen declares no server-static template (F66). A report
+    reader's (SALES_REPORT_VIEW), as the Reports area is; Mantle checks again. CSV and XLSX of each list; print. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pipeline analysis" default-menu-index="4" menu-image="sym_o_filter_alt" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="ownerPartyId"/>
+    <parameter name="salesPipelineId"/>
+    <parameter name="opportunityStageId"/>
+    <parameter name="dataSourceId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="closeFrom"/>
+    <parameter name="closeThru"/>
+    <parameter name="cohortFrom"/>
+    <parameter name="cohortThru"/>
+    <parameter name="asOfDate"/>
+    <parameter name="groupBy"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <set field="groupBy" from="['stage', 'source', 'owner', 'age'].includes(groupBy) ? groupBy : 'stage'"/>
+        <set field="optionValues" from="{organizationPartyId, teamPartyId: teamPartyId || null, ownerPartyId: ownerPartyId || null,
+                salesPipelineId: salesPipelineId || null, opportunityStageId: opportunityStageId || null, dataSourceId: dataSourceId || null,
+                currencyUomId: currencyUomId || null, closeFrom: closeFrom || null, closeThru: closeThru || null, cohortFrom: cohortFrom || null,
+                cohortThru: cohortThru || null, asOfDate: asOfDate || null, groupBy}"/>
+        <set field="loadRefusal" value=""/>
+        <set field="report" from="null"/>
+        <if condition="sales.capabilities.reportRead">
+            <service-call name="mantle.sales.ForecastServices.get#PipelineAnalysis" out-map="report" transaction="force-new" ignore-error="true"
+                    in-map="Object.assign({}, optionValues, {pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit})"/>
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <if condition="loadRefusal"><set field="report" from="null"/></if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="measureList" from="report?.measureList || []"/>
+        <set field="stageDurationList" from="report?.stageDurationList || []"/>
+        <set field="funnelSteps" from="report?.funnelSteps || []"/>
+        <set field="dealList" from="report?.dealList || []"/>
+        <set field="dealListCount" from="report?.dealListCount || 0"/>
+        <set field="dealListPageIndex" from="report?.dealListPageIndex || 0"/>
+        <set field="dealListPageSize" from="report?.dealListPageSize || 20"/>
+        <set field="dealListPageMaxIndex" from="report?.dealListPageMaxIndex || 0"/>
+        <set field="dealListPageRangeLow" from="report?.dealListPageRangeLow || 0"/>
+        <set field="dealListPageRangeHigh" from="report?.dealListPageRangeHigh || 0"/>
+        <set field="conversion" from="report?.conversion || {}"/>
+        <set field="groupTitle" from="{stage: 'Stage', source: 'Source', owner: 'Owner', age: 'Age'}[groupBy]"/>
+        <set field="dealPath" from="sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+        <set field="printUrl" from="'/apps/Sales/Reports/PipelineAnalysis?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                optionValues)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Pipeline analysis" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="report"/>
+            </container>
+        </container>
+        <label text="Open opportunities as they stood at the as-of time, never added across currencies; stage durations from the audited stage changes; conversion over the leads created in the cohort."
+                type="p" style="text-caption m-muted"/>
+        <form-single name="PipelineReportOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization"><drop-down allow-empty="false">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/></drop-down></default-field>
+            </field>
+            <field name="teamPartyId">
+                <default-field title="Team"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'teams', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="ownerPartyId">
+                <default-field title="Owner"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'owners', organizationPartyId:organizationPartyId, selected:ownerPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="salesPipelineId">
+                <default-field title="Pipeline"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'pipelines', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="opportunityStageId">
+                <default-field title="Stage"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'stages', organizationPartyId:organizationPartyId, salesPipelineId:salesPipelineId}">
+                        <depends-on field="organizationPartyId"/><depends-on field="salesPipelineId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="dataSourceId">
+                <default-field title="Source"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'sources', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'currencies'}"/></drop-down></default-field>
+            </field>
+            <field name="groupBy">
+                <default-field title="By"><radio>
+                    <option key="stage" text="Stage"/><option key="source" text="Source"/><option key="owner" text="Owner"/><option key="age" text="Age"/>
+                </radio></default-field>
+            </field>
+            <field name="closeFrom"><default-field title="Expected close from"><date-time type="date"/></default-field></field>
+            <field name="closeThru"><default-field title="Expected close through"><date-time type="date"/></default-field></field>
+            <field name="cohortFrom"><default-field title="Leads created from" tooltip="Empty: 90 days before the as-of time"><date-time type="date"/></default-field></field>
+            <field name="cohortThru"><default-field title="Leads created through"><date-time type="date"/></default-field></field>
+            <field name="asOfDate"><default-field title="As of" tooltip="Empty: now"><date-time/></default-field></field>
+            <field name="submitButton"><default-field title=""><submit text="Run report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="teamPartyId"/><field-ref name="ownerPartyId"/></field-row>
+                <field-row><field-ref name="salesPipelineId"/><field-ref name="opportunityStageId"/><field-ref name="dataSourceId"/></field-row>
+                <field-row><field-ref name="currencyUomId"/><field-ref name="groupBy"/><field-ref name="asOfDate"/></field-row>
+                <field-row><field-ref name="closeFrom"/><field-ref name="closeThru"/></field-row>
+                <field-row><field-ref name="cohortFrom"/><field-ref name="cohortThru"/></field-row>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative" condition="!report"/>
+        <section name="PipelineResults" condition="report">
+            <widgets>
+                <label text="As of ${report.asOfText} · ${report.openDealCount} open opportunities · ${report.openLeadCount} open leads" type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-header title="Pipeline by ${groupTitle.toLowerCase()}"/>
+                    <box-body-nopad>
+                        <form-list name="PipelineMeasures" list="measureList" skip-form="true" paginate="false" show-csv-button="true" show-xlsx-button="true">
+                            <field name="groupLabel"><default-field title="${groupTitle}"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="dealCount" align="right"><default-field title="Deals"><display/></default-field></field>
+                            <field name="estimatedText" align="right"><default-field title="Estimated"><display/></default-field></field>
+                            <field name="weightedText" align="right"><default-field title="Weighted"><display/></default-field></field>
+                            <field name="monthlyRecurringText" align="right"><default-field title="Monthly recurring"><display/></default-field></field>
+                            <field name="averageAgeText" align="right"><default-field title="Average age"><display/></default-field></field>
+                            <field name="missingEstimateCount" align="right"><default-field title="No estimate"><display/></default-field></field>
+                            <field name="activityCoverageText" align="right"><default-field title="With a next activity"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupLabel"/><field-ref name="dealCount"/></column>
+                                <column><field-ref name="estimatedText"/><field-ref name="weightedText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No open opportunities match." type="p" style="m-muted q-pa-sm" condition="!measureList.length"/>
+                        <label text="${report.activityNote}" type="p" style="text-caption m-muted q-pa-sm"/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="PipelineFunnelPanel" condition="sales.capabilities.reportRead">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Open opportunities by stage now"/>
+                            <box-body><report-embed definition-id="boss-sales-pipeline" panel-id="funnel" from="now-3y" thru="now"/></box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Funnel of the lead cohort"/>
+                    <box-body-nopad>
+                        <form-list name="PipelineFunnelSteps" list="funnelSteps" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="label"><default-field title="Step"><display/></default-field></field>
+                            <field name="countText" align="right"><default-field title="Count"><display/></default-field></field>
+                            <field name="shareText" align="right"><default-field title="Of the leads"><display/></default-field></field>
+                        </form-list>
+                        <label text="Leads created ${conversion.cohortFromText} – ${conversion.cohortThruText}: ${conversion.leadCount}, qualified ${conversion.convertedCount} (${conversion.conversionText || '–'}), disqualified ${conversion.disqualifiedCount}, still open ${conversion.openLeadCount}."
+                                type="p" style="text-caption m-muted q-pa-sm"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Time in each stage"/>
+                    <box-body-nopad>
+                        <form-list name="StageDurations" list="stageDurationList" skip-form="true" paginate="false" show-csv-button="true" show-xlsx-button="true">
+                            <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                            <field name="enteredCount" align="right"><default-field title="Entered"><display/></default-field></field>
+                            <field name="completedCount" align="right"><default-field title="Left, known"><display/></default-field></field>
+                            <field name="averageText" align="right"><default-field title="Average time"><display/></default-field></field>
+                            <field name="unknownCount" align="right"><default-field title="Unknown" tooltip="A stay whose entry or exit the history does not show"><display/></default-field></field>
+                        </form-list>
+                        <label text="No stage changes recorded." type="p" style="m-muted q-pa-sm" condition="!stageDurationList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Open opportunities"/>
+                    <box-body-nopad>
+                        <form-list name="PipelineDeals" list="dealList" skip-form="true" paginate="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="opportunityName">
+                                <conditional-field title="Opportunity" condition="dealPath">
+                                    <link url="${dealPath}" url-type="plain" text="${opportunityName}" link-type="anchor" parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                </conditional-field>
+                                <default-field title="Opportunity"><display/></default-field>
+                            </field>
+                            <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Estimated"><display/></default-field></field>
+                            <field name="probabilityText" align="right"><default-field title="Probability"><display/></default-field></field>
+                            <field name="closeText"><default-field title="Expected close"><display/></default-field></field>
+                            <field name="ageText" align="right"><default-field title="Age"><display/></default-field></field>
+                            <field name="nextActivityText"><default-field title="Next activity"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="opportunityName"/><field-ref name="stageText"/></column>
+                                <column><field-ref name="amountText"/><field-ref name="ageText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

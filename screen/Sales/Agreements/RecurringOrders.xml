@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Agreements › Recurring orders (design-sales §7 RecurringOrders: RecurrenceFind, RecurrenceList, RecurrenceSettings,
+    RecurrenceAction; style-guide §3.2 List; impl-sales P16): the one editor of recurrence. The recurring bases of the user's sales scope
+    (Mantle's find#RecurringSalesOrders: an approved copy of a sales order marked as a recurring base, its cadence read in its own zone),
+    with the saved lists Active, Paused, Last run failed, Ended and All, found by id or name, organization, customer and agreement; each
+    row with its customer, cadence and zone, next order, last order made (opening it in OrderDetail), amount, state and last failure.
+    A keeper of recurrence (SALES_RECURRENCE_MANAGE) starts one from an approved order (New recurring order, which OrderDetail's Make
+    recurring opens with the order chosen), edits its schedule, agreement and dates, and pauses, resumes, ends or retries the due
+    order, each at the base's revision; a holder of SALES_TEAM_VIEW reads them. Billing each order as it is approved needs the finance
+    right. Mantle's SalesRecurrenceServices check everything again. A Shop subscription's base is Commerce's (Subscriptions). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Recurring orders" default-menu-index="4">
+    <parameter name="state"/>
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="agreementId"/>
+    <parameter name="sourceOrderId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="salesRecurrenceChoices" location="component://mr-boss/template/SalesRecurrence.xml"/>
+    <transition-include name="salesStoreRecurrence" location="component://mr-boss/template/SalesRecurrence.xml"/>
+    <transition-include name="salesChangeRecurrence" location="component://mr-boss/template/SalesRecurrence.xml"/>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="readable" from="!!(can.anyRead &amp;&amp; (can.recurrenceManage || can.teamRead))"/>
+        <if condition="readable">
+            <service-call name="mantle.order.SalesRecurrenceServices.find#RecurringSalesOrders" out-map="context"
+                    in-map="{state:(state || null), text:(text || null), organizationPartyId:(organizationPartyId || null),
+                        customerPartyId:(customerPartyId || null), agreementId:(agreementId || null), pageIndex:pageIndex}"/>
+        </if>
+        <set field="recurrenceList" from="recurrenceList || []"/>
+        <set field="orderPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
+        <set field="financeEdit" from="ec.user.hasPermission('RECEIVABLE_EDIT')"/>
+        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || agreementId || (state &amp;&amp; state != 'active'))"/>
+        <set field="newDefaults" from="{sourceOrderId: sourceOrderId || null, frequency: 'monthly', dayOfMonth: '1', hourOfDay: '6',
+                recurTimeZone: String(ec.user.timeZone || ''), recurFromDate: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'), recurAutoInvoice: 'N'}"/>
+        <set field="savedLists" from="[{label: 'Active', state: 'active'}, {label: 'Paused', state: 'paused'}, {label: 'Last run failed', state: 'failing'},
+                {label: 'Ended', state: 'ended'}, {label: 'All', state: 'all'}]"/>
+        <set field="frequencyOptions" from="[{value: 'monthly', label: ec.l10n.localize('Monthly')}, {value: 'weekly', label: ec.l10n.localize('Weekly')},
+                {value: 'yearly', label: ec.l10n.localize('Yearly')}, {value: 'cron', label: ec.l10n.localize('Cron expression')}]"/>
+        <set field="weekDayOptions" from="['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(day =&gt; ({value: day,
+                label: ec.l10n.localize({MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday', SUN: 'Sunday'}[day])}))"/>
+    </actions>
+    <widgets>
+        <label text="You do not keep or read recurring orders in Sales." type="p" style="m-muted" condition="!readable"/>
+        <section name="RecurrenceRegister" condition="readable">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Recurring orders" type="h5"/>
+                        <label text="Each one places a copy of its order on its schedule; the copy waits to be approved like any sales order."
+                                type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewRecurrence" button-text="New recurring order" title="Repeat an approved order" icon="sym_o_event_repeat"
+                                width="720" type="primary" condition="can.recurrenceManage">
+                            <form-single name="NewRecurrenceForm" transition="salesStoreRecurrence" map="newDefaults">
+                                <field name="sourceOrderId">
+                                    <default-field title="Order to repeat" tooltip="An approved sales order; it stays as it is and a copy holds the schedule">
+                                        <drop-down allow-empty="false" required-manual-select="true">
+                                            <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'recurrenceSources', selected:sourceOrderId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="frequency">
+                                    <default-field title="Repeats"><drop-down allow-empty="false"><list-options list="frequencyOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                </field>
+                                <field name="dayOfMonth"><default-field title="Day of the month" tooltip="1 to 28, or L for the last day"><text-line size="3"/></default-field></field>
+                                <field name="dayOfWeek">
+                                    <default-field title="Day of the week"><drop-down allow-empty="true"><list-options list="weekDayOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                </field>
+                                <field name="month"><default-field title="Month" tooltip="1 to 12, for a yearly order"><text-line size="3"/></default-field></field>
+                                <field name="hourOfDay"><default-field title="Hour" tooltip="0 to 23, in the zone below"><text-line size="3"/></default-field></field>
+                                <field name="recurCronExpression"><default-field title="Cron expression" tooltip="Seconds first, for Repeats: cron expression"><text-line size="20"/></default-field></field>
+                                <field name="recurTimeZone">
+                                    <default-field title="Time zone">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'timeZones', selected:recurTimeZone}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="recurFromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                <field name="recurThruDate"><default-field title="Until" tooltip="No order on or after this day; empty to repeat until ended"><date-time type="date"/></default-field></field>
+                                <field name="recurAgreementId">
+                                    <default-field title="Kept under agreement" tooltip="An order is made only while the agreement applies">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'agreements', selected:recurAgreementId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="recurAutoInvoice">
+                                    <conditional-field title="Billing" condition="financeEdit">
+                                        <check><option key="Y" text="Bill each order once it is approved"/></check>
+                                    </conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Start recurring order"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-ref name="sourceOrderId"/>
+                                    <field-row><field-ref name="frequency"/><field-ref name="hourOfDay"/></field-row>
+                                    <field-row><field-ref name="dayOfMonth"/><field-ref name="dayOfWeek"/></field-row>
+                                    <field-row><field-ref name="month"/><field-ref name="recurCronExpression"/></field-row>
+                                    <field-row><field-ref name="recurTimeZone"/><field-ref name="recurAgreementId"/></field-row>
+                                    <field-row><field-ref name="recurFromDate"/><field-ref name="recurThruDate"/></field-row>
+                                    <field-ref name="recurAutoInvoice"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row q-gutter-xs q-mb-sm">
+                    <section-iterate name="RecurrenceSavedLists" list="savedLists" entry="saved">
+                        <widgets>
+                            <link url="." text="${saved.label}" link-type="anchor-button"
+                                    style="${(state || 'active') == saved.state ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{state:saved.state, text:'', organizationPartyId:'', customerPartyId:'', agreementId:'', pageIndex:''}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <form-list name="RecurrenceList" list="recurrenceList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <field name="text"><header-field title="Id or name"><text-line size="20"/></header-field></field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'accounts', selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="agreementId">
+                        <header-field title="Agreement">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'agreements', selected:agreementId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="orderName">
+                        <default-field title="Recurring order">
+                            <label text="${orderName}" type="span"/>
+                            <label text="${baseOrderId}${agreementName ? ' · ' + agreementName : ''}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="cadenceText">
+                        <default-field title="Schedule">
+                            <label text="${cadenceText}" type="span"/>
+                            <label text="${intervalText}" type="div" style="text-caption m-muted" condition="intervalText"/>
+                        </default-field>
+                    </field>
+                    <field name="nextText"><default-field title="Next order"><display/></default-field></field>
+                    <field name="lastChildText">
+                        <conditional-field title="Last order" condition="orderPath &amp;&amp; lastChildOrderId">
+                            <link url="${orderPath}" text="${lastChildText}" link-type="anchor" parameter-map="{orderId:lastChildOrderId}"/>
+                        </conditional-field>
+                        <default-field title="Last order"><display/></default-field>
+                    </field>
+                    <field name="totalText" align="right"><default-field title="Amount"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${state == 'active' ? 'positive' : state == 'failing' ? 'negative' : state == 'paused' ? 'warning' : 'grey'}">${stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "")})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                            <label text="${failureText}" type="div" style="text-caption text-negative" condition="failureText"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="RecurrenceSettings_${baseOrderId}" button-text="Edit" icon="sym_o_edit" width="720"
+                                    title="Schedule of recurring order ${baseOrderId}" condition="canEdit">
+                                <form-single name="RecurrenceSettingsForm" transition="salesStoreRecurrence"
+                                        map="{baseOrderId:baseOrderId, recurRevision:recurRevision, frequency:frequency, dayOfMonth:dayOfMonth,
+                                            dayOfWeek:dayOfWeek, month:month, hourOfDay:hourOfDay, recurCronExpression:recurCronExpression,
+                                            recurTimeZone:recurTimeZone, recurFromDate:recurFromDate, recurThruDate:recurThruDate,
+                                            recurAgreementId:recurAgreementId, recurAutoInvoice:recurAutoInvoice}">
+                                    <field name="baseOrderId"><default-field><hidden/></default-field></field>
+                                    <field name="recurRevision"><default-field><hidden/></default-field></field>
+                                    <field name="frequency">
+                                        <default-field title="Repeats"><drop-down allow-empty="false"><list-options list="frequencyOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                    </field>
+                                    <field name="dayOfMonth"><default-field title="Day of the month" tooltip="1 to 28, or L for the last day"><text-line size="3"/></default-field></field>
+                                    <field name="dayOfWeek">
+                                        <default-field title="Day of the week"><drop-down allow-empty="true"><list-options list="weekDayOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                                    </field>
+                                    <field name="month"><default-field title="Month" tooltip="1 to 12, for a yearly order"><text-line size="3"/></default-field></field>
+                                    <field name="hourOfDay"><default-field title="Hour" tooltip="0 to 23, in the zone below"><text-line size="3"/></default-field></field>
+                                    <field name="recurCronExpression"><default-field title="Cron expression" tooltip="Seconds first, for Repeats: cron expression"><text-line size="20"/></default-field></field>
+                                    <field name="recurTimeZone">
+                                        <default-field title="Time zone">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'timeZones', selected:recurTimeZone}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="recurFromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                    <field name="recurThruDate"><default-field title="Until"><date-time type="date"/></default-field></field>
+                                    <field name="recurAgreementId">
+                                        <default-field title="Kept under agreement" tooltip="An order is made only while the agreement applies">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="salesRecurrenceChoices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'agreements', organizationPartyId:organizationPartyId, accountPartyId:customerPartyId,
+                                                            selected:recurAgreementId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="recurAutoInvoice">
+                                        <conditional-field title="Billing" condition="financeEdit">
+                                            <check><option key="Y" text="Bill each order once it is approved"/></check>
+                                        </conditional-field>
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason for the change"><text-line/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save schedule"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="frequency"/><field-ref name="hourOfDay"/></field-row>
+                                        <field-row><field-ref name="dayOfMonth"/><field-ref name="dayOfWeek"/></field-row>
+                                        <field-row><field-ref name="month"/><field-ref name="recurCronExpression"/></field-row>
+                                        <field-row><field-ref name="recurTimeZone"/><field-ref name="recurAgreementId"/></field-row>
+                                        <field-row><field-ref name="recurFromDate"/><field-ref name="recurThruDate"/></field-row>
+                                        <field-ref name="recurAutoInvoice"/>
+                                        <field-ref name="reason"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit">
+                                <container-dialog id="RecurrenceRetry_${baseOrderId}" button-text="Make the due order now" icon="sym_o_replay" width="520"
+                                        title="Make the due order of ${baseOrderId} now" condition="canRetry">
+                                    <form-single name="RecurrenceRetryForm" transition="salesChangeRecurrence"
+                                            map="{baseOrderId:baseOrderId, recurRevision:recurRevision, operation:'retry', operationKey:'retry-' + ec.user.randomString(24)}">
+                                        <field name="baseOrderId"><default-field><hidden/></default-field></field>
+                                        <field name="recurRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operation"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Make order"><submit confirmation="Make the due order of ${baseOrderId} now? It is made once for its date."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="RecurrencePause_${baseOrderId}" button-text="Pause" icon="sym_o_pause_circle" width="520"
+                                        title="Pause recurring order ${baseOrderId}" condition="canPause">
+                                    <form-single name="RecurrencePauseForm" transition="salesChangeRecurrence"
+                                            map="{baseOrderId:baseOrderId, recurRevision:recurRevision, operation:'pause'}">
+                                        <field name="baseOrderId"><default-field><hidden/></default-field></field>
+                                        <field name="recurRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operation"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason" tooltip="The orders due while it is paused are skipped"><text-line/></default-field></field>
+                                        <field name="submitButton"><default-field title="Pause"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="salesChangeRecurrence" link-type="hidden-form" text="Resume" icon="sym_o_play_circle" condition="canResume"
+                                        parameter-map="{baseOrderId:baseOrderId, recurRevision:recurRevision, operation:'resume'}"
+                                        confirmation="Resume recurring order ${baseOrderId}? The orders due while it was paused are not made."/>
+                                <container-dialog id="RecurrenceEnd_${baseOrderId}" button-text="End" icon="sym_o_block" width="520"
+                                        title="End recurring order ${baseOrderId}" condition="canEnd">
+                                    <form-single name="RecurrenceEndForm" transition="salesChangeRecurrence"
+                                            map="{baseOrderId:baseOrderId, recurRevision:recurRevision, operation:'end'}">
+                                        <field name="baseOrderId"><default-field><hidden/></default-field></field>
+                                        <field name="recurRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operation"><default-field><hidden/></default-field></field>
+                                        <field name="endDate"><default-field title="Ends" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="End"><submit type="danger" confirmation="End recurring order ${baseOrderId}? No order is made after it ends."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </default-field>
+                    </field>
+                    <columns>
+                        <column><field-ref name="orderName"/></column>
+                        <column><field-ref name="customerName"/></column>
+                        <column><field-ref name="cadenceText"/></column>
+                        <column><field-ref name="nextText"/></column>
+                        <column><field-ref name="lastChildText"/></column>
+                        <column><field-ref name="totalText"/></column>
+                        <column><field-ref name="stateText"/></column>
+                        <column><field-ref name="organizationName"/></column>
+                        <column><field-ref name="actions"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="orderName"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="nextText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoRecurrence" condition="!recurrenceList.length">
+                    <widgets>
+                        <label text="${filtered ? 'No recurring orders match' : can.recurrenceManage ? 'No recurring orders yet · Start one with New recurring order' : 'No recurring orders yet'}"
+                                type="p" style="m-muted"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

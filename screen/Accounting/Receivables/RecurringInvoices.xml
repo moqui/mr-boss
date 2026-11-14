@@ -16,8 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     invoice-only schedules (rent, retainers, recurring supplier bills; ironstone.accounting.RecurringServices.find#Schedules),
     each copying a template invoice's lines into a new draft every period (mantle.account.RecurringInvoiceServices):
     New schedule, Preview the next period, Make draft now (one draft per period however often it is asked), Pause, Resume
-    and End. Then the recurring sales orders, read only (their recurrence is edited on the order), with their last copy and
-    invoice, and the last run of the create_RecurringOrders job that copies them. -->
+    and End. Then the recurring sales orders, read only (their recurrence is edited in Sales' Recurring orders, impl-sales P16, which
+    "Manage in Sales" opens for a keeper of recurrence), with their last copy and invoice, and the last run of the create_RecurringOrders job that copies them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Recurring invoices"
@@ -328,6 +328,11 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
                 <container-box>
                     <box-header title="Recurring orders"/>
+                    <!-- impl-sales P16 (design-sales §7, owner contract): Sales' Recurring orders is the one editor of recurrence -->
+                    <box-toolbar>
+                        <link url="/qapps/Sales/Agreements/RecurringOrders" url-type="plain" text="Manage in Sales" icon="sym_o_event_repeat"
+                                link-type="anchor-button" condition="ec.user.hasPermission('SALES_RECURRENCE_MANAGE')"/>
+                    </box-toolbar>
                     <box-body-nopad>
                         <label type="p"
                                 style="q-pa-sm q-mb-none ${jobResult.failed ? 'text-negative' : 'm-muted'}"
@@ -388,8 +393,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </column>
                             </columns>
                         </form-list>
-                        <label text="The organization has no recurring orders. A sales order repeats from its recurrence on
-                                    the order."
+                        <label text="The organization has no recurring orders. A sales order repeats from Recurring orders in
+                                    Sales."
                                 type="p"
                                 style="q-pa-md m-muted"
                                 condition="!orderRows.length"/>

@@ -1007,9 +1007,9 @@ screens, the dispatch job and the ledger:
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
 | OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3); Commerce/Orders/OrderDetail (Order again, through mantle.order.StoreOperationsServices.reorder#StoreOrder: copyPayment false, then repriced; Commerce P8); Sales/Quotes/QuoteTemplateDetail and Sales/Quotes/Quotes (New quote from a template, through SalesQuoteServices.create#Quote: copyPayment false, then priced as of the quote's date; a successor through store#QuoteTemplate) (Sales P12) |
-| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
-| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
-| OrderServices | create#RecurringOrder |  |  |
+| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders | Sales/Agreements/RecurringOrders (New recurring order, Edit, through SalesRecurrenceServices.store#SalesRecurrence on the base, a copy of the approved order; OrderDetail's Make recurring opens it) (Sales P16) |
+| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run); its guards are Sales' (the base's zone, dates, pause, one order for an occurrence, a failure named and the next base run) (Sales P16) |
+| OrderServices | create#RecurringOrder |  | Sales/Agreements/RecurringOrders (Make the due order now, through SalesRecurrenceServices.change#SalesRecurrence retry) (Sales P16) |
 | OrderServices | handle#OrderItemChange |  |  |
 | OrderServices | handle#OrderPartChange |  |  |
 | OrderServices | handle#OrderMajorChange |  | — (no screen; the order rules) X1: a storeless order's tax step through the seller's gateway (Sales P7) |
@@ -1489,10 +1489,10 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AccountServices | create#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Sales/Accounts/Contacts (NewContact); Sales/Accounts/Customer360/SalesContacts (NewAccountContact) (Sales P3) |
 | AccountServices | add#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Sales/Accounts/Customer360/SalesContacts (AddAccountPerson); Sales/Accounts/ContactDetail (AddToAccount) (Sales P3) |
 | AccountServices | delete#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Sales/Accounts/Contacts; Sales/Accounts/Customer360/SalesContacts; Sales/Accounts/ContactDetail (End: the relationship ends, the person kept) (Sales P3) |
-| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis); Commerce/Home (PeriodStrip) and Commerce/Reports/OnlineSales through ironstone.commerce.ReportingServices (P11: productStoreIds of the user's store scope, by currency); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
-| SalesReportServices | get#SalesInvoiceSummary | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | Commerce/Home (PeriodStrip's net sales) and Commerce/Reports/OnlineSales (net invoiced) through ironstone.commerce.ReportingServices (P11); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
-| SalesReportServices | get#SalesTopProduct | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis); Commerce/Home and Commerce/Reports/OnlineSales (P11: productStoreIds and currencyUomIds); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
-| SalesReportServices | get#InvoicesByCustomerClass | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW) |
+| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis); Commerce/Home (PeriodStrip) and Commerce/Reports/OnlineSales through ironstone.commerce.ReportingServices (P11: productStoreIds of the user's store scope, by currency); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW); Sales P19: one organization and one currency (currencyUomIds; get#InvoicesByCustomerClass gains it), top products and classes for the chosen organization |
+| SalesReportServices | get#SalesInvoiceSummary | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | Commerce/Home (PeriodStrip's net sales) and Commerce/Reports/OnlineSales (net invoiced) through ironstone.commerce.ReportingServices (P11); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW); Sales P19: one organization and one currency (currencyUomIds; get#InvoicesByCustomerClass gains it), top products and classes for the chosen organization |
+| SalesReportServices | get#SalesTopProduct | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest; Commerce/Home; Commerce/Reports/OnlineSales | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis); Commerce/Home and Commerce/Reports/OnlineSales (P11: productStoreIds and currencyUomIds); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW); Sales P19: one organization and one currency (currencyUomIds; get#InvoicesByCustomerClass gains it), top products and classes for the chosen organization |
+| SalesReportServices | get#InvoicesByCustomerClass | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis); Sales/Reports/SalesSummary (Sales P1: a SALES_REPORT_VIEW reader's organizations, costs withheld without PRODUCT_COST_VIEW); Sales P19: one organization and one currency (currencyUomIds; get#InvoicesByCustomerClass gains it), top products and classes for the chosen organization |
 
 ## Search (1 service)
 
@@ -2254,7 +2254,7 @@ remain historical; these rows add no implementation claim.
 | party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16); Shared/Customer360 and Sales/Accounts/ContactDetail (Sales: Invite to Sales, through mantle.sales.AccountServices.invite#SalesContact; Sales P13) |
 | party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail | Shared/OrderDetail (Sales: Revise and Withdraw end the quote's links, its rule through revise#Quote and withdraw#Quote; Sales P13) |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
-| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
+| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Sales/Reports/SalesAnalysis (Sales P19: Sales' report scope, the shipped value and, for a report reader with PRODUCT_COST_VIEW or a price and cost reader, the cost of shipped and margin) and its mount Accounting/Reports/SalesAnalysis |
 
 ### Added in the Sales build: accounts and contacts (P3, Nov 13, 2026)
 
@@ -2463,6 +2463,25 @@ remain historical; these rows add no implementation claim.
 | sales/ForecastServices | store#Target, find#Targets | Sales/Settings/Targets (SalesTargets) | Sales/Settings/Targets (New target, Change, the list with CSV) |
 | sales/ForecastServices | ensure#SalesPeriods | — (not in the design) | Sales/Settings/Targets (Add sales periods) |
 | sales/ForecastServices | get#TargetAttainment | Sales/Reports/TargetAttainment (TargetOptions, TargetResults) | Sales/Reports/TargetAttainment (with CSV) |
+
+### Added in the Sales build: recurring orders and subscriptions (P16, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesRecurrenceServices | find#RecurringSalesOrders | Sales/Agreements/RecurringOrders (RecurrenceFind, RecurrenceList) | Sales/Agreements/RecurringOrders (the list with Active, Paused, Last run failed, Ended and All) |
+| order/SalesRecurrenceServices | store#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceSettings) | Sales/Agreements/RecurringOrders (New recurring order, Edit); Sales/Orders/OrderDetail (Make recurring opens it) |
+| order/SalesRecurrenceServices | change#SalesRecurrence | Sales/Agreements/RecurringOrders (RecurrenceAction) | Sales/Agreements/RecurringOrders (Make the due order now, Pause, Resume, End) |
+| order/SalesRecurrenceServices | find#SalesSubscriptions | Sales/Agreements/Subscriptions (Commerce's Subscriptions with a Sales context) | Shared/Subscriptions in Sales' context at Sales/Agreements/Subscriptions |
+| order/SalesRecurrenceServices | add#SubscriptionFollowUp | Sales/Agreements/Subscriptions (Follow up, over mantle.work.TaskServices.create#SimpleTask) | Shared/Subscriptions in Sales' context (Follow up) |
+| order/SalesRecurrenceServices | invoice#RecurringOrder | Sales/Agreements/RecurringOrders (RecurrenceSettings' auto-invoice; §4 Nov 14) | No screen: the SalesRecurrenceApprovedInvoice SECA on an order's approval (Sales follow-up 2) |
+
+### Added in the Sales build: reports and Insights registrations (P19, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| sales/ForecastServices | get#PipelineAnalysis | Sales/Reports/PipelineAnalysis (PipelineReportOptions, PipelineMeasures, PipelineFunnel) | Sales/Reports/PipelineAnalysis (measures, the funnel panel and the cohort's funnel, time in each stage, open deals; CSV and XLSX, print); Insights' Sales.OpenPipeline and Sales.WeightedPipeline |
+| sales/ForecastServices | get#WinLoss | Sales/Reports/WinLoss (OutcomeOptions, OutcomeResults) | Sales/Reports/WinLoss (outcomes by currency, loss reasons, closed deals; CSV and XLSX, print); Insights' Sales.WonValue and Sales.WinRate |
+| sales/SalesWorkspaceServices | get#SalesReports | Sales/Reports (SalesReportCatalogue) | Sales/Reports/Catalogue (All reports); the catalogue service of Sales' Insights catalog entries |
 
 ## Marketing design — source-verified service additions
 

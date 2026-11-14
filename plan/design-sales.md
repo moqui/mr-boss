@@ -1403,6 +1403,43 @@ does not end already paid access; a subscription with no billing link is shown a
 
 **Source:** research §§7–8; Commerce Subscriptions. **Needs:** SAL-RECURRENCE, SAL-COLLAB; COM-SUBSCRIPTION.
 
+### As built (impl-sales P16, Nov 14, 2026)
+
+- A recurring base is an approved copy of an approved sales order (`clone#Order` with `copyPayment=false`), marked
+  `OrpRecurringTemplate`, with no placed or approved date and no reservation, shipment or billing source; the order it came from stays
+  an ordinary order and is fulfilled and billed as before (§4 Q7: the base stays Approved). OrderHeader gains the zone the cadence is
+  read in (`recurTimeZone`), its dates (`recurFromDate`, `recurThruDate`), a pause (`recurPausedDate`, `recurResumedDate`), its
+  agreement (`recurAgreementId`), its revision (`recurRevision`), its last failure, and on a generated order the occurrence it was made
+  for (`recurOccurrenceDate`). Mantle `mantle.order.SalesRecurrenceServices` (not in `SalesAgreementServices`: the records are
+  orders, beside the worker): `find#RecurringSalesOrders`, `store#SalesRecurrence` (over `update#OrderRecur`; monthly, weekly or yearly
+  day and hour, or a cron expression), `change#SalesRecurrence` (pause, resume, end, retry), `find#SalesSubscriptions`,
+  `add#SubscriptionFollowUp`. `SALES_RECURRENCE_MANAGE` keeps the organization's bases, `SALES_TEAM_VIEW` reads them, and a keeper may
+  repeat any approved sales order of the organization (the agreement keeper sees no orders by assignment); auto-invoice needs
+  `RECEIVABLE_EDIT` to turn on.
+- The one worker (`create#RecurringOrders`, `create#RecurringOrder`): due at the latest scheduled time in the base's zone after its
+  last order and resumption, inside its dates, not paused (a paused month is skipped); one order for an occurrence under the base's
+  lock, so the job and an operator's retry answer the same order; cloned with `copyPayment=false` and no purpose, placed through
+  `place#Order`. With no payment copied, a generated order is never auto-approved: it waits in Awaiting approval like any sales order
+  (the seller's approval setting changes nothing more). As built in follow-up 2 (Nov 14, the user's calls): auto-invoice bills a
+  generated order once it is approved, at placement or later by a person (`SalesRecurrenceApprovedInvoice` SECA,
+  `invoice#RecurringOrder`, through Accounting's `create#FulfillmentInvoice`, Shop's renewals' path, once); a base copies every line of
+  its source (its charges and discounts with its products, `clone#Order` keeping each child line under its own parent) and each
+  generated order copies every line of its base and is retaxed before it is placed by its own path (`handle#OrderMajorChange`: a
+  storeless seller's gateway, X1; a store's promotions, shipping and tax). Accounting's renewal payment with recorded consent for
+  native bases stays later (§7). An agreement the base or a line's price names that no longer applies (PriceResolver's guard) fails the occurrence
+  (AGREEMENT_INACTIVE); each base runs in its own transaction, a failure is logged and kept on the base, and the next base runs. A
+  Shop contract's base is only dispatched to Shop and is not Sales'.
+- The readers that counted an approved base now leave it out (§4 Q7 confirmed against the code): supply planning's demand, shipment
+  loads, `create#OrderPartShipment` and `add#OrderPartToShipment` (RECURRING_TEMPLATE), `reserve#AssetForOrderItem`, the account's
+  open orders, Customer Service's order record, the PASS Support portal's customer orders and Shop's own orders after a cancelled
+  contract cleared the cadence.
+- Screens: RecurringOrders at `Sales/Agreements/RecurringOrders` (the list with Active, Paused, Last run failed, Ended and All; New
+  recurring order, Edit, Make the due order now, Pause, Resume, End); a base has no detail screen of its own (its last order opens
+  OrderDetail). Subscriptions is `Shared/Subscriptions` (Commerce's list made shared, design-commerce §6 as built) in Sales' context:
+  store contracts read only beside storeless subscriptions, with the source order, the base (opening RecurringOrders) and the
+  agreement; Follow up only. OrderDetail's More offers Make recurring for an approved order; Accounting's Recurring invoices links to
+  RecurringOrders for a keeper of recurrence.
+
 ## 8. Reports and forecasts
 
 ### Forecast
@@ -1552,6 +1589,33 @@ templates and recurring bases never count. Forecast is a Pipeline tab (Measures 
 pipeline with CSV, Forecasts below this one, Allocation by product or category); Targets a Settings tab of the manager and the
 administrator; Target attainment a report (CSV). Not built: the history view of a target's audit rows (the audit log keeps them), an
 FX view, and the category roll-up of allocations (a category's sub-categories are not walked).
+
+### As built (impl-sales P19, Nov 14, 2026)
+
+Reports has All reports (`Reports/Catalogue`, the default) over S `get#SalesReports` (Mantle's `SalesWorkspaceServices`, also the
+catalogue service of Sales' Insights entries; answering the root Sales only): Sales summary, Sales analysis, Pipeline analysis, Win/loss
+and Target attainment for a report reader, Forecast for every Sales reader; saved filters and last run are not kept (a list's saved
+finds are). SalesSummary asks the four summaries for one organization of the scope and one currency (the organization's base currency
+by default; `get#InvoicesByCustomerClass` gains `currencyUomIds`), with Sales' choices (organization, its stores, accounts, products)
+and the basis named (orders by placed date; invoices by invoice date, issued, not cash collected). SalesAnalysis is rebuilt over
+`run#SalesAnalysis` alone (no entity read, cost search or SQL dialog; F76, F79): Mantle answers a Sales report reader of their
+organization and adds the shipped value, the cost of shipped and the margin for a report reader who reads product costs
+(PRODUCT_COST_VIEW) or a holder of PRICE_VIEW and PRODUCT_COST_VIEW (P19 review R1); the screen is also Accounting's Reports/SalesAnalysis (a mount, choices and links by `appRoot`). F
+`get#PipelineAnalysis` and `get#WinLoss` (`mantle/sales/SalesPipelineReports.js`) read each deal as it stood at the as-of time from
+its audit log (the old value of a field's first change after it, else its value now), stage durations from audited stage changes
+(a stay whose entry or exit the log does not show is unknown), conversion over a lead-created cohort (`convertedDate`), and the
+close cohort in the final-outcome mode (default, each deal once) or the event mode; win rate over won and lost opportunities, a lead
+closed Lost apart; amounts always by currency; past 2,000 deals refused. PipelineAnalysis shows the funnel panel of
+`report/boss-sales-pipeline.json` (now) beside the cohort's funnel, whose visit step reads Marketing's
+`mantle.marketing.MarketingReportServices.count#SalesVisits` once it exists (until then not available). Insights: catalog entries
+for SalesSummary, PipelineAnalysis, WinLoss, TargetAttainment and Forecast; metrics `Sales.OpenPipeline`, `Sales.WeightedPipeline`,
+`Sales.WonValue` and `Sales.WinRate`; flow targets `Sales.Leads`, `Sales.Opportunities`, `Sales.Quotes`, `Sales.Orders` and
+`Sales.OrderChanges` (the customer flow's quote step opens Quotes). Shipped definitions: the pipeline dashboard's panels by source,
+owner, currency, leads and outcomes; the stalled-deal alert template `boss-sales-stalled-deals` over Mantle's
+`mantle-sales-pipeline-stage-age` dataset (the pipeline's document timed by `stageEnteredDate`: a deal with no stage movement for N
+days, not every activity); the weekly digest `boss-sales-weekly-digest` of the pipeline dashboard. The "quote expiring in N days"
+alert is not built: no quote dataset exists (Home's counter and Insights' Sales.QuotesExpiring attention provider show them).
+`operation` and `operation-ref` on QuoteBatch, the import's row apply and the recurrence worker (`sales.recurrence.run`).
 
 ## 9. Settings
 
@@ -1930,6 +1994,11 @@ A bearer link from the confirmation mail reaches this one order only. **Needs:**
   page (F236); the issued PDF stays the offer.
 - **The Account hub** card counts open quotes and open orders (not completed), with My quotes and My orders.
 - **Not built here.** A date-range filter on My orders (state and the order or PO only); reorder (§11).
+- **Cancelled orders (impl-sales P19, the user's call of Nov 14).** A placed storeless order since cancelled is no longer
+  hidden: My orders lists it under all (never open, so the hub's count leaves it out) and its OrderView link, which the
+  cancellation no longer ends (ExternalAccess `resolve` admits OrderCancelled for a storeless order's OrderView only; a store
+  order's link and every other scope still end with it), opens it marked Cancelled and read only: its lines, delivery and
+  invoices, Support's ask page alone (no cancellation or return request) and no Billing page. A rejected order stays hidden.
 
 ## 11. Later capabilities
 

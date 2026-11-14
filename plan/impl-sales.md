@@ -344,10 +344,10 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | built and reviewed Nov 14, merged |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | built and reviewed Nov 14, merged |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | built and reviewed Nov 14, merged |
-| P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
+| P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | built and reviewed Nov 14, merged |
 | P17 PASS Sales: orders | Mantle, PASS | PASS CustomerOrders, CustomerOrder | built and reviewed Nov 14, merged |
 | P18 Forecast and targets | Mantle, BOSS | Forecast, Targets, TargetAttainment | built and reviewed Nov 14, merged |
-| P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | — |
+| P19 Reports and Insights registrations | Mantle, BOSS | Reports, SalesSummary, SalesAnalysis, PipelineAnalysis, WinLoss | built and reviewed Nov 14, merged |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -4260,6 +4260,266 @@ Design §7 RecurringOrders and Subscriptions, §13.1 (`create_RecurringOrders`);
   skips its month, and Sales' Subscriptions shows a storeless subscription beside a store contract it can only follow
   up.
 
+**Built Nov 14 (P16).** mr-mantle and mr-boss on branch `sal/p16` (hashes in the worker's reply), with master (Sales P17, P18, Marketing
+P7) merged in before the last runs; mr-moqui and mr-pass unchanged, no Rust built.
+- Checked first (the code over the plan): P11's, P12's and P15's Built and Review notes, §4 (Q7, the Nov 11 Subscriptions row, the
+  approval-setting row), F7, F22, F23; the worker (OrderServices.xml `clone#Order`, `update#OrderRecur`, `create#RecurringOrders`,
+  `create#RecurringOrder`), Shop's base and renewal (ShopSubscriptions.js `makeBase`, `prepareStep`, `stopRenewal`), Commerce's
+  Subscriptions and StoreSubscriptions.js, Accounting's Recurring invoices, SalesAccess.js and the readers of `OrpRecurringTemplate`;
+  a sweep of every reader of approved orders in mr-mantle, mr-boss and mr-pass for Q7. The code over the plan:
+  - the worker's clone kept the base's purpose, so a native base marked `OrpRecurringTemplate` would have made children that were
+    templates too (Shop clears it in its own renewal); the native child now has no purpose;
+  - "a base may carry no reservation, shipment or billing source": an approved order has been reserved (and may be shipped or billed)
+    by the time it is made recurring, and making the order itself the base would leave its first period unfulfilled; so, as Shop does,
+    `store#SalesRecurrence` makes the base a copy of the approved order (copyPayment=false, approved, no placed or approved date,
+    marked), and the order stays an ordinary order. An order made recurring before Sales (cadence, no marker) is kept in place and
+    marked when it is edited;
+  - Q7 confirmed against the code, not as the plan assumed: these readers counted or acted on an approved base and now leave it out
+    (owner contracts, each beside its test): supply planning's demand (SupplyPlanning.js, which then pegged, reserved and routed the
+    line), shipment loads (ShipmentLoads.js evaluate: RECURRING_TEMPLATE), `create#OrderPartShipment` and `add#OrderPartToShipment`
+    (the TODO in `update#OrderRecur` replaced), `reserve#AssetForOrderItem` itself (its callers in planning, quality and drop ship
+    reached a base past the two wrappers), the account's open-order count (SalesAccounts.js), Customer Service's order record
+    (CustomerService.js readOrder and isSalesOrder, which left out only quote templates), the PASS Support portal's customer orders
+    (CustomerOrders.js, which offered a base for cancel and return) and Shop's own orders (ShopCustomer.js, which hid a base only by
+    its cadence, cleared when its contract is cancelled);
+  - "due in the base's zone": the framework reads a cron expression in the machine's zone only; SalesRecurrence.js reads the cadence in
+    the base's zone by moving a moment to the instant with the same wall clock in the machine's zone and back (exact but for the
+    hour a clock change repeats or skips); no framework change;
+  - "one child for an occurrence under its key": the occurrence is the latest scheduled time after the last order and resumption;
+    each generated order carries it (`recurOccurrenceDate`) and the unit answers an occurrence already ordered; the operator's retry
+    carries an operation key (the job has no user, so EntityLib's operation keys do not fit it);
+  - "one base's failure named and the rest run": the job called each base asynchronously and recorded nothing; it now runs each
+    native base in its own transaction one after another (Shop's dispatch stays asynchronous), logs a failure naming the base and keeps
+    it on the base (`recurFailureDate`, `recurFailureMessage`) for RecurrenceList's "Last run failed";
+  - "names its agreement": `recurAgreementId`, an active agreement of the seller with the customer; at each occurrence the agreement it
+    names and those whose prices its lines took must still apply (PriceResolver.js `agreementApplies`, now exported), else the
+    occurrence fails AGREEMENT_INACTIVE and nothing is repriced (design §7 "not replaced by the latest catalog price");
+  - "auto-invoice needs the finance right": `RECEIVABLE_EDIT` to turn it on;
+  - who repeats an order: a keeper of recurrence (SALES_RECURRENCE_MANAGE: the agreement keeper and the administrator) sees no order by
+    assignment, so `store#SalesRecurrence` takes any approved sales order of the keeper's organizations (sourceOf); SALES_TEAM_VIEW
+    reads the bases; no new permission and no setup row (BossSetupSalesData.xml is not touched);
+  - the services are `mantle.order.SalesRecurrenceServices`, not the plan's G (SalesAgreementServices): the records are orders, beside
+    the worker; Sales' Subscriptions context does not call Commerce's `find#StoreSubscriptions` (it needs COMMERCE_ORDER_VIEW) but its
+    own `find#SalesSubscriptions`;
+  - OrderDetail has no Recurrence form to point here: it gains Make recurring (More, an approved order, a keeper), which opens New
+    recurring order with the order chosen; Accounting's Recurring invoices gains "Manage in Sales" (a literal route, as other cross-app
+    links, for a holder of SALES_RECURRENCE_MANAGE).
+- Mantle:
+  - `entity/SalesRecurrenceEntities.xml` (new): OrderHeader's `recurTimeZone`, `recurFromDate`, `recurThruDate`, `recurPausedDate`,
+    `recurAgreementId` (audited), `recurResumedDate`, `recurRevision`, `recurFailureDate`, `recurFailureMessage`,
+    `recurOccurrenceDate`.
+  - `service/mantle/order/SalesRecurrence.js` and `SalesRecurrenceServices.xml` (new): `find#RecurringSalesOrders` (STATE_INVALID),
+    `store#SalesRecurrence` (ORDER_REQUIRED, ORDER_NOT_APPROVED, SCHEDULE_INVALID, ZONE_INVALID, DATE_INVALID, AGREEMENT_INVALID, the
+    finance right, the revision), `change#SalesRecurrence` (OPERATION_INVALID, STATE_INVALID, REASON_REQUIRED, NOTHING_DUE, the
+    revision, the retry's operation key), `find#SalesSubscriptions` (KIND_INVALID), `add#SubscriptionFollowUp` (OWNER_INVALID); the
+    worker's `occurrenceOf`, `agreementRefusal`, `orderForOccurrence`, `runOccurrence`; Sales.js' `recurrenceSourceOptions`.
+  - `SalesAccess.js` (a P16 block after P15's, before P18's): `recurringPurpose`, `recurrenceReader`, `recurrenceOf`,
+    `requireRecurrence`.
+  - Owner contracts: `OrderServices.xml` (`clone#Order` clears the recurrence fields on a copy; `create#RecurringOrders` and
+    `create#RecurringOrder` as above; `update#OrderRecur`'s comment), `PriceResolver.js` (the export), `SupplyPlanning.js`,
+    `ShipmentLoads.js`, `ShipmentServices.xml`, `AssetServices.xml`, `SalesAccounts.js`, `CustomerOrders.js`, `ShopCustomer.js`;
+    `test/order/SalesQuoteIssueFixtures.js` (the spec grant covers SalesRecurrenceServices).
+- BOSS:
+  - Screens: `Sales/Agreements/RecurringOrders.xml` (new, tab 4 "Recurring orders", a keeper's and a team reader's: the list with its
+    saved lists and header filters, New recurring order, the row's Edit and More with Make the due order now, Pause, Resume and End);
+    `Shared/Subscriptions.xml` (Commerce's `Customers/Subscriptions.xml` moved, its Commerce branch unchanged, a Sales branch);
+    `Sales/Agreements.xml` (tabs 4 and 5); `Commerce/Customers.xml` (the mount's location); `template/SalesRecurrence.xml` (new:
+    salesRecurrenceChoices, salesStoreRecurrence, salesChangeRecurrence, salesSubscriptionFollowUp); `template/SalesOrderDetail.xml`
+    (Make recurring); `Accounting/Receivables/RecurringInvoices.xml` (Manage in Sales; its texts).
+  - `Sales.js` (a P16 block after P15's, before P18's): linkPaths Agreements/RecurringOrders and Agreements/Subscriptions, the choices
+    `recurrenceSources`, `agreements` and `timeZones`; and P14's `changeOrders` choice called `mantle.order.SalesWorkspaceServices`,
+    which does not exist (it is `mantle.sales.`), so NewChange's order drop-down was always empty; fixed.
+  - `CustomerService.js` (owner contract): recurring bases left out of the order record.
+- Specs:
+  - Mantle `test/order/SalesRecurrence` (new, 5 features, about 2.1 s): an approved order made a monthly base in Denver's zone by the
+    keeper (a reader refused for the permission, B's keeper as missing, auto-invoice refused without the finance right, a stale revision
+    refused), the base approved and marked with no payment or placed date, the order untouched, invoice and shipment refused
+    RECURRING_TEMPLATE, listed to the keeper and not to B's, not among find#SalesOrders, the account's open orders counting the order
+    alone; two runs and the job make one order for the 1st at 07:00 Denver, placed with no payment and no purpose, the retry
+    NOTHING_DUE; a paused base makes none (REASON_REQUIRED without a reason, a stale resume refused) and after resuming the paused
+    occurrence is not made, an ended base none; a base whose agreement was closed fails AGREEMENT_INACTIVE on the base and in "Last run
+    failed" while a third base runs, and the first base's ordered occurrence is not made again; a Shop contract's base makes nothing
+    here and is not Sales' (RECORD_UNAVAILABLE), Subscriptions list a storeless subscription of a generated order (its base, "No billing
+    link") beside a store contract for A's reader and neither for B's, the agreement filter, Follow up refused without SALES_ACCOUNT_EDIT
+    and to B's user as missing, and made a task for the keeper.
+  - mr-boss `test/Sales/SalesRecurrence` (new, 1 feature, about 0.3 s): Recurring orders' one qvt render as sales.agreement (the base,
+    its zone, New recurring order, Make the due order now), Subscriptions' one html render in Sales' context as sales.rep (a storeless
+    subscription, "No billing link", Follow up, none of Commerce's find form) and the three P16 choices with a selected value outside
+    the page. `SalesAccess` (a P16 feature, about 0.36 s): pausing a base at a stale revision reaches the keeper's revision check, is
+    refused the manager for the permission and Ziziwork Sales' rep as missing. `SalesSpecLib.js`: `recurringBase()`.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesRecurrenceScenarios` (4 features through RecurringOrders' and
+    Subscriptions' transitions: sales.agreement makes Wingtip's approved order a monthly base; the job places one order, a second run and
+    a retry none; a paused base skips its month and resuming does not make it late; Subscriptions shows a storeless subscription beside
+    a store contract of Retail's store with Follow up and no cancel or retry).
+- Tests run (release binary, `--nobuild`, this worktree's runtime), after the merge of master: mr-mantle SalesRecurrence, OrderLifecycle,
+  ShopSubscriptions, Subscriptions, ShopCustomer, SalesAccounts, SupplyPlanning, ShipmentLoads, ShipmentPick, SupportPortal,
+  AssetReservationMisc, OrderToCashBasicFlow, SalesOrderApproval, SalesQuoteTemplates, SalesAgreements, ProductAgreementPrices,
+  ReplenishmentRoutes, Sourcing, SalesOrderChanges, WarehouseShipping, SalesOrganizationScope, StoreCheckout, ShopCheckout, SalesPortal
+  and SalesForecasts 202 of 202 (27 specs with dependencies, 86 s); before the merge also Replenishment, OrderChanges, CarrierServices
+  and InvoiceOrderApply (217 of 217). mr-boss SalesRecurrence, SalesAccess, SalesOrders, SalesAgreements, SalesOrderChanges, SalesHome,
+  SalesQuotes, SalesAccounts, SalesForecast, CommerceSubscriptions, CommerceOrders, CommerceAccess, CustomerServiceOrders,
+  CustomerServiceAccess, AccountingCollections and InsightsHome 91 of 91 (55 s). mr-pass whole suite 217 of 217 (16.6 s of its 20 s;
+  before the merge 11 failed against master's mr-pass, which had Marketing P7 and Sales P17 that this branch's mr-mantle lacked, and
+  passed after it). Commerce's Subscriptions (qvt as the subscription operator, html as the administrator), RecurringOrders in tui,
+  Sales' Subscriptions in qvt and tui, OrderDetail's Make recurring and Accounting's Manage in Sales were rendered once by hand without
+  errors and not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean
+  on the new and changed JavaScript. Not run: the client walk (no screen it walks changed), ./moq test-apps, test-framework, the
+  acceptance suite.
+- Inventories: usl-inventory's update#OrderRecur, create#RecurringOrders and create#RecurringOrder rows and an "Added in the Sales build:
+  recurring orders and subscriptions" table; ss-inventory's OrderDetail RecurOptions row.
+- Design edits: design-sales §7 "As built (impl-sales P16)"; design-commerce §6 Subscriptions "As built (Nov 14, impl-sales P16)" (owner
+  contract).
+- Findings, numbered by the lead F290 to F298 in order:
+  - with `copyPayment=false` a native base's generated order has no payment, so it is never auto-approved and auto-invoice (which
+    bills only a part approved at its placement) bills nothing; native renewals wait for an approver, and a renewal payment through
+    Accounting's attempt with recorded consent (design §7) is not built for native bases;
+  - the cadence is read in the base's zone by a wall-clock shift; around a clock change an occurrence at the repeated or skipped hour
+    may move by that hour; a zone-aware cron reader in the framework would remove it (`ec.service.nextCronExecution` with a zone);
+  - a base has no detail screen (Sales' OrderDetail does not show a template); RecurrenceList's first column is not a link, and the
+    base's lines are seen only as its amount;
+  - missed occurrences are not each made: as the native worker, one order for the latest due occurrence (a base down for two months
+    makes one order);
+  - the job now runs native bases one after another in its own call, not asynchronously; a long list of due bases lengthens the job
+    run;
+  - readers that still list an approved base as an order, low or display only (from the sweep): Commerce's palette and store-order
+    record (Commerce.js orderSearch, readStoreOrder), Commerce's call context and store customers' counts (StoreOperations.js
+    storeCallRecords, findStoreCustomers), Accounting's order detail offering Invoice (the backend refuses), `get#CustomerFinance`'s
+    order list, Projects' order-line picker (BillingServices.xml), the bulk part status change (OrderBulkServices.xml), projected
+    inventory (`MantleInventoryOrderItem` document, no purpose condition), `notify#OrderHighPriority` and `DropShip.js approved()` on
+    a base re-approved; and readers that leave a base out only because it has no placed date (SalesAnalysis.js and its screen without
+    a date filter, MarketingSegments.js, the `mantle-sales-orders` and `mantle-sales-items` datasets and the `mantle-sales-daily-floor`
+    alert);
+  - find#SalesSubscriptions and find#RecurringSalesOrders read up to 500 candidates and filter by scope in the script; fine for the
+    demo, a joined query when volumes grow;
+  - a Sales reader of the organization sees its store contracts (customer, product, paid-through, next renewal and amount) whatever
+    their own assignments, as agreements are read (P15); no payment method or consent is returned;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the recurrence services; P16 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 2.1 s (SalesRecurrence); mr-boss server about 0.7 s (SalesRecurrence 0.3 s, SalesAccess' P16 feature
+    0.36 s); client none;
+  - merge hot spots (P18 merged already; P17's and P19's files): mr-mantle `service/mantle/sales/SalesAccess.js` (a P16 block between
+    P15's and P18's, exports at the end), `service/mantle/order/OrderServices.xml` (clone#Order, update#OrderRecur, create#RecurringOrders,
+    create#RecurringOrder), `service/mantle/product/PriceResolver.js` (the module value), `SupplyPlanning.js`, `ShipmentLoads.js`,
+    `shipment/ShipmentServices.xml`, `product/AssetServices.xml`, `sales/SalesAccounts.js` (findAccounts' open orders),
+    `order/CustomerOrders.js`, `party/ShopCustomer.js`, `test/order/SalesQuoteIssueFixtures.js`; mr-boss `service/ironstone/sales/Sales.js`
+    (a P16 block between P15's and P18's; changeOrders' service name), `screen/Sales/Agreements.xml`, `screen/Shared/Subscriptions.xml`
+    (moved from Commerce), `screen/Commerce/Customers.xml`, `template/SalesOrderDetail.xml` (More), `screen/Accounting/Receivables/
+    RecurringInvoices.xml`, `service/ironstone/customerservice/CustomerService.js`, `test/Sales/SalesAccess.spec.js` (a feature between
+    P15's and P18's), `test/Sales/SalesSpecLib.js` (recurringBase), `plan/usl-inventory.md`, `plan/ss-inventory.md`, `plan/design-sales.md`
+    §7, `plan/design-commerce.md` §6. BossSetupSalesData.xml and Sales.xml are not touched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), after Sales' customer agreements: "Sales' recurring orders
+    (`mantle.order.SalesRecurrenceServices`, all `allow-remote="false"`): a recurring base is an approved copy of a sales order marked
+    `OrpRecurringTemplate`, which reservation, shipment, invoicing, planning and the order lists leave out; `SALES_RECURRENCE_MANAGE`
+    keeps the bases of the caller's sales organizations and repeats an approved sales order of them, `SALES_TEAM_VIEW` reads them,
+    another organization's and a Shop contract's base answer as missing; every change names the base's revision, a retry carries an
+    operation key, turning auto-invoice on needs `RECEIVABLE_EDIT`, and a base's agreement must be an active one of the seller with the
+    customer. The worker (`create#RecurringOrders`, `create#RecurringOrder`, anonymous) orders a base only when due in its zone, inside
+    its dates and not paused, one order for an occurrence under the base's lock, copied with no payment and placed through
+    `place#Order`, and fails an occurrence whose agreement no longer applies. `find#SalesSubscriptions` gives a Sales reader the
+    organization's store contracts (no method or consent) and storeless subscriptions; `add#SubscriptionFollowUp` needs
+    `SALES_ACCOUNT_EDIT` and assigns only a person who works for the organization.";
+  - nothing needs the user's call; the first finding (native renewals never auto-approved or auto-invoiced with no payment copied) may
+    be worth the user's look against design §7's renewal payment.
+
+**Review 2026-11-14 (P16).** A fresh review of `sal/p16` (mr-mantle 691a0975, mr-boss 4da81ea2) against P16, §2, §4 (Q7, the
+Subscriptions row, the approval-setting row), F22, F23 and design §7. Master (Sales P18) was already merged into both by the worker and
+had nothing newer, so no merge; P16's specs were run again.
+- Checked and sound:
+  - the worker as an owner contract: a Shop-linked base is still dispatched only to Shop (asynchronously, before any Sales guard), and a
+    Shop contract's base is refused by `create#RecurringOrder` and answers Sales as missing; every other base runs in its own
+    transaction (`runOccurrence`, `requireNewTransaction`), one after another, a failure logged naming the base and kept on it, the next
+    base run; under the base's lock (`for-update`) the occurrence is checked again (zone, dates, pause, anchor) and an occurrence already
+    ordered answers that order (`recurOccurrenceDate`), so the job and an operator's retry make one order; the order is a copy with
+    `copyPayment=false`, its purpose cleared, placed through `place#Order` (so `OrderPlacedAutoApprove`, `approvalWaits` and the seller's
+    setting apply as for any sales order); the agreement guard fails an occurrence AGREEMENT_INACTIVE and reprices nothing. ShopSubscriptions,
+    Subscriptions, OrderLifecycle (the native worker) and mr-pass pass unchanged;
+  - the base: made by `clone#Order` (entity-create, so no approval SECA, mail, reservation or drop ship fires), marked, no placed date,
+    reservations removed by `update#OrderRecur`, which also refuses a billed or shipped order, so a legacy in-place base is marked only
+    when it was never billed or shipped;
+  - scope: `recurrenceOf` needs a Sales reader with `SALES_RECURRENCE_MANAGE` or `SALES_TEAM_VIEW`, a selling first part of an
+    organization of the scope, and no Shop contract; another organization's or a Shop contract's base answers RECORD_UNAVAILABLE, a
+    reader's write PERMISSION_DENIED; every change names `recurRevision`, a retry its operation key; auto-invoice needs `RECEIVABLE_EDIT`
+    to turn on (a refused store rolls back the copy it made). The keeper repeating any approved sales order of their organizations
+    (`sourceOf`) is sound with no new permission: recurrence, like agreements (P15), is the organization's schedule, the keeper sees the
+    bases it makes anyway, and the source must be an approved sales order sold by an organization of the scope;
+  - the time zone shift (Built finding 2): exact but for an occurrence at an hour a clock change repeats or skips, in the base's zone
+    or the machine's (a cadence at 01:00-03:00 on a change day may move by the hour, or be skipped when the machine's clock skips it);
+    the occurrence is computed the same way on every run, so it never orders twice. Low, as a provisional finding;
+  - Shared/Subscriptions: Commerce's branch is the old screen's body under `appRoot != 'Sales'`, its mount and route unchanged
+    (CommerceSubscriptions passes); the Sales branch calls only `find#SalesSubscriptions` and `add#SubscriptionFollowUp`, which check
+    Sales' permissions and organizations themselves, so a supplied appRoot gains nothing; Follow up only, no lifecycle action;
+  - screens: RecurringOrders' one qvt render and Subscriptions' one html render in SalesRecurrence; no route fixture.
+- Built finding 1 (no payment copied, so native renewals are never auto-approved and auto-invoice bills nothing): P16's text asks only
+  for `copyPayment=false`; design §7's sentence says where a renewal payment may come from (Accounting's attempt, with recorded
+  off-session consent), not that P16 builds it, and only Shop's contracts have consent and a renewal charge today. So nothing P16
+  requires is missing; see For the lead for the consequence.
+- Q7, the readers the worker left: judged by whether they could ship, reserve, invoice, count as revenue or show a base as a customer's
+  order. Fixed:
+  - R1 (medium): Projects' order-line picker offered a base's lines and `link#ProjectOrderItem` linked one, after which
+    `create#MilestoneInvoiceItems` (which has no purpose guard) would bill the base. `link#ProjectOrderItem` refuses a recurring base or
+    quote template (RECURRING_TEMPLATE) and Projects' `search#OrderLines` leaves them out. WorkProjectMilestones checks the refusal.
+  - R2 (low): the bulk part status change (`change#OrderPartsStatus`) swept bases with the approved orders it cancels or completes,
+    silently ending their recurrence; it now leaves bases and quote templates out. SalesRecurrence checks a bulk cancel passes the base by.
+  - R3 (low): `get#CustomerFinance` listed a base (and a quote template) among the customer's orders; now left out. SalesRecurrence checks
+    the list.
+  - R4 (low): Commerce's store customers (their orders and last order) and the call context's open store orders
+    (StoreOperations.js `findStoreCustomers`, `storeCallRecords`) counted a base made from a store order; both now use
+    `withoutRecurringBases`.
+  - R5 (low): the sales analysis (SalesAnalysis.js) left a base out only by its placed date, so with no period (an organization without
+    a fiscal month) it counted the base as sales; it now leaves bases and quote templates out by purpose.
+  - R6 (low, test): "one order for an occurrence" was checked only through `lastOrderedDate`; SalesRecurrence now moves the last order
+    back and checks that a run answers the occurrence's existing order (it fails without `orderForOccurrence`).
+  Left, display only or unreachable for a base: Commerce's palette and store-order record (staff search; Shop's bases were there before
+  P16); Accounting's order detail offering Invoice (`create#InvoiceFromSource` refuses RECURRING_TEMPLATE); projected inventory and the
+  order-item price summary (`MantleInventoryOrderItem`, a report); `notify#OrderHighPriority` and `DropShip.js approved()` on a base
+  re-approved (no reservation, so no drop-ship order); MarketingSegments and the `mantle-sales-orders`, `mantle-sales-items` and
+  `mantle-sales-daily-floor` reports, bounded by the placed date their time field is.
+- Findings, numbered by the lead F299 to F303 in order:
+  - with no payment copied a native renewal waits in Awaiting approval every period, and `recurAutoInvoice` never bills (it bills only a
+    part approved at placement), while Accounting's Recurring invoices still says "Invoiced on approval"; Accounting's renewal payment
+    attempt with recorded consent (design §7) is not built for native bases;
+  - `clone#Order`'s `productItemsOnly` default: a base and each order made from it repeat only the product lines, so the source's
+    shipping charge, discount and tax lines are not repeated and nothing computes tax at placement; a generated order's total is its
+    product lines alone (the native worker had the same default; P16 newly makes Sales' bases through it);
+  - a base made from a store order keeps its store, so its generated orders follow the store's rules (approval delay, store mail);
+  - the clock-change hour (Built finding 2, as judged above);
+  - the Built note's other findings stand: no base detail screen; missed occurrences make one order; the job runs native bases in
+    series; 500-candidate reads filtered in the script; a Sales reader sees the organization's store contracts.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesRecurrence 5 of 5 (2.6 s of features) and
+  WorkProjectMilestones 10 of 10; OrderBulk, StoreOperations, SalesReportStoreScope, AccountingStatements, AccountingCustomerFinance,
+  OrderLifecycle, ShopSubscriptions, Subscriptions, ShopCustomer, SalesAccounts, SupplyPlanning, ShipmentLoads, SupportPortal and
+  SalesAgreements, 101 of 101 features (14 specs, 69 s). mr-boss SalesRecurrence (0.32 s), SalesAccess (P16's feature 0.30 s),
+  CommerceSubscriptions, CommerceAccess, CustomerServiceOrders, AccountingCollections, AccountingReporting, ClientBilling, Billing,
+  SalesOrders and SalesAgreements, 75 of 75 (73 s). mr-pass whole suite 217 of 217 (19.1 s of its 20 s). Each new check fails on the
+  unfixed code. No screen changed, so no screen lint; Prettier clean on the changed spec (SalesAnalysis.js was not Prettier-clean before
+  and was not reformatted). Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about 2.7 s (SalesRecurrence 2.6 s, WorkProjectMilestones' added check under 0.1 s); mr-boss server about
+    0.6 s as built; client none. mr-pass is at 19.1 s of 20 s;
+  - merge hot spots: the Built note's, and the review's mr-mantle `service/mantle/work/ProjectServices.xml` (link#ProjectOrderItem),
+    `service/mantle/account/CustomerFinanceServices.xml`, `service/mantle/order/StoreOperations.js`, `service/mantle/sales/SalesAnalysis.js`,
+    `service/mantle/order/OrderBulkServices.xml`, `test/work/WorkProjectMilestones.spec.js`; mr-boss `service/ironstone/projects/BillingServices.xml`
+    (search#OrderLines);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), after Sales' customer agreements: "Sales' recurring orders
+    (`mantle.order.SalesRecurrenceServices`, all `allow-remote="false"`): a recurring base is an approved copy of a sales order with no
+    payment, marked `OrpRecurringTemplate`, which reservation, shipment, invoicing, a project's order lines, planning, the bulk part
+    status change, the order lists and the sales measures leave out; `SALES_RECURRENCE_MANAGE` keeps the bases of the caller's sales
+    organizations and repeats an approved sales order of them, `SALES_TEAM_VIEW` reads them, and another organization's or a Shop
+    contract's base answers as missing; every change names the base's revision, a retry carries an operation key, turning auto-invoice on
+    needs `RECEIVABLE_EDIT`, and a base's agreement must be an active one of the seller with the customer. The worker
+    (`create#RecurringOrders`, `create#RecurringOrder`, `authenticate="anonymous-all"`, run by the `create_RecurringOrders` job) sends a
+    Shop contract's base to Shop only and orders any other base only when due in its zone, inside its dates and not paused, each in its
+    own transaction, one order for an occurrence under the base's lock, copied with no payment and no purpose and placed through
+    `place#Order` (so it is approved as any sales order of the seller, never on a copied payment), and fails an occurrence whose agreement
+    no longer applies. `find#SalesSubscriptions` gives a Sales reader the organization's store contracts (no payment method or consent)
+    and storeless subscriptions; `add#SubscriptionFollowUp` needs `SALES_ACCOUNT_EDIT` and assigns only a person who works for the
+    organization.";
+  - the user's call: native renewals as built wait for an approver each period and are never auto-invoiced. Options: keep it (each
+    renewal approved by a person, billed as any order); let auto-invoice bill a generated order when it is approved later (no payment
+    needed for billing on terms); or build Accounting's renewal payment attempt with recorded consent for native bases (design §7),
+    which P16 does not ask for. Also the lines a base repeats (product lines only, no tax computed at placement): keep, or copy every
+    line and compute tax on the generated order.
+
 ### P17 — PASS Sales: orders
 
 Design §10 CustomerOrders and CustomerOrder; SAL-PORTAL (SAL-R01).
@@ -4735,6 +4995,237 @@ SAL-REPORT, SAL-ANALYTICS.
   with its drill-down and export agreeing with the screen; Accounting's SalesAnalysis shows its finance columns over
   the same rows; a manager subscribes to the weekly digest and copies the stalled-deal alert so it fires.
 
+**Built Nov 14 (P19).** mr-mantle, mr-boss and mr-pass on branch `sal/p19` (hashes in the worker's reply); mr-moqui unchanged, no Rust
+built.
+- Checked first (the code over the plan): P1's, P6's, P11's and P18's Built and Review notes, §4 (the Nov 14 cancelled-order call), F2,
+  F3, F24, F59, F76, F77, F79, F81; `run#SalesAnalysis` (Accounting P16's, report read only, no cost column), the summaries'
+  `organizations` (SalesAnalysis.js) and their `currencyUomIds` (none on `get#InvoicesByCustomerClass`), Insights' catalogue contract
+  (Registry.js: a catalogue service is called with `appRoot`, its `reports` keyed by `entryId` or `reportId`), its metrics (descriptive
+  registrations), flow targets (FlowMaps.js appends the map's organization to a target's organization parameter), report-embed as Home
+  uses it, the alert and digest JSON of Customer Service and Insights, the audit log (creates and updates of audited fields, one
+  `changedDate` an update). The code over the plan:
+  - `run#SalesAnalysis` keeps Accounting's reader as it was and adds Sales' report scope beside it (a holder of `SALES_REPORT_VIEW`, an
+    organization of their sales scope, its periods the organization's own, read without Accounting's period check); the finance
+    columns are the shipped value, the cost of shipped (issuances at their asset's acquire cost; unknown, named, where a cost is
+    missing or in another currency) and the margin over the shipped value, for a report reader or a holder of both `PRICE_VIEW` and
+    `PRODUCT_COST_VIEW`. "Accounting's finance columns" are read as these: Accounting's reader always has them;
+  - the mount is Accounting/Reports.xml's subscreens-item over Sales' file (Accounting's own file removed); one screen takes the
+    root's choices (its own `analysisChoices` transition calls Accounting's or Sales' get#Choices by `appRoot`) and links;
+  - `get#SalesReports` is Mantle's (as the plan says) and answers the root Sales only; Forecast is every Sales reader's entry, the
+    others the report reader's; the design's saved filters and last run are not kept (a list's saved finds are);
+  - "deal with no activity for N days" is built as "no stage movement": the alert needs a dataset timed by the field, so Mantle ships
+    `mantle-sales-pipeline-stage-age`, the pipeline's document and row filter timed by `stageEnteredDate`; a logged task does not touch
+    the deal. "Quote expiring in N days" is not built: no quote dataset exists (finding);
+  - the visit step of the funnel (Marketing P20) reads `mantle.marketing.MarketingReportServices.count#SalesVisits` when it exists
+    (`{visitCount}` for organization, days, campaign, source), else "Not available";
+  - the five panels of the P12 review are six filters in four files (mantle-sales' three, Commerce's, Insights' two), each now
+    `orderPurposeEnumId in [OrpRecurringTemplate, OrpSalesQuoteTemplate]`, negated;
+  - the recurrence worker's `operation` is on `create#RecurringOrders` (OrderServices.xml), where P16 works beside this phase.
+- Mantle:
+  - `service/mantle/sales/SalesPipelineReports.js` (new) and ForecastServices' `get#PipelineAnalysis` and `get#WinLoss` (a P19 block at
+    the end, `allow-remote="false"`, read-only): a deal at a time from its audit log (a field's value then is the old value of its first
+    change after it, else now; owner and team by their dated rows); open qualified deals by stage, source, owner or age band and by
+    currency (count, estimated, weighted, monthly recurring, average age, missing estimates, next-activity coverage now); stage
+    durations from chained audited changes, unknown where the log shows no entry or exit; conversion over a lead-created cohort
+    (`convertedDate`); the funnel's counts; the close cohort in the final-outcome (default) or event mode, win rate over won and lost
+    opportunities, a lead closed Lost apart, loss reasons as written with the close, cycle times, reopenings; every amount by
+    currency; past 2,000 deals TOO_MANY_RECORDS.
+  - `SalesAnalysis.js` `analysisReader`, `salesOptions`, the cost and margin, `costShown` and `costIncomplete`
+    (`SalesReportServices.xml` run#SalesAnalysis description and out-parameters); `get#InvoicesByCustomerClass` gains `currencyUomIds`.
+  - `SalesWorkspace.js` and SalesWorkspaceServices' `get#SalesReports` (P19 blocks at the end).
+  - `SalesSettings.js` readiness (a P19 block after the checks): `sales.jobs` (the three Sales jobs, none missing, paused or failing on
+    its last run), `sales.templates` (the organization's or Mantle's quote, reminder and confirmation templates with a from address and
+    a mail server with a host), `sales.approvalPolicies` (the approval setting on with no rule; route `salesApprovalPolicies`).
+  - `report/mantle-sales-pipeline-stage-age.json` (new); `report/mantle-sales.json` (quote templates excluded).
+  - `operation`/`operation-ref`: `apply#OpportunityImportRow` (`sales.opportunity.import.row`, `operationKey`), `apply#QuoteBatch`
+    (`operationKey` added), `create#RecurringOrders` (`sales.recurrence.run`).
+  - Carry-over (the user's call, §4 Nov 14): `ExternalAccess.js` resolves a storeless order's OrderView link after its cancellation (a
+    store order's link and every other scope still end with it); `SalesPortal.js` lists and opens a placed order later cancelled,
+    marked Cancelled (`cancelled`), read only: Support's ask page alone, no cancellation, return or Billing pay link, never counted
+    open (the account card); a rejected order stays hidden. SalesPortalServices' descriptions.
+- BOSS:
+  - Screens: `Sales/Reports/Catalogue.xml` (All reports, the default, menu index 0), `PipelineAnalysis.xml` (4) and `WinLoss.xml` (5),
+    each with options, CSV and XLSX lists and print; `SalesAnalysis.xml` rebuilt (above; no entity read, cost search or Show SQL,
+    F76, F79); `SalesSummary.xml` (one organization and currency, the base currency by default; Sales' choices for organization,
+    stores, accounts and products, F77; the top products and classes for the same organization and currency, F81; the basis named);
+    `Accounting/Reports.xml` (the mount; `Accounting/Reports/SalesAnalysis.xml` removed); `Sales/Reports.xml` and
+    `Settings/Readiness.xml` comments.
+  - `Sales.js` (a P19 block after P18's): linkPaths Catalogue, PipelineAnalysis, WinLoss.
+  - Data: `BossSetupData.xml` `Sales.SalesAnalysis` at Sales' route under `get#SalesReports` and `Accounting.SalesAnalysis` under
+    Accounting's catalogue (F59); `BossSetupSalesData.xml` (a P19 block at the end): the stage-age dataset's artifact, admission and
+    class; catalog entries Sales.SalesSummary, .PipelineAnalysis, .WinLoss, .TargetAttainment, .Forecast; metrics Sales.OpenPipeline,
+    .WeightedPipeline, .WonValue, .WinRate; flow targets Sales.Leads, .Opportunities, .Quotes, .Orders, .OrderChanges.
+  - Reports: `boss-sales-pipeline.json` (panels by source, owner, open amount by currency, leads by source, outcomes),
+    `boss-sales-stalled-deals.json` (alert template, 14 days), `boss-sales-weekly-digest.json` (digest of the pipeline dashboard),
+    `insights-flowmap-customer.json` (the quote step opens Sales.Quotes), Commerce's and Insights' order panels (quote templates
+    excluded).
+- PASS (carry-over): `screen/Sales/CustomerOrder.html.fancy` (a cancelled order's note; "Ask about this order").
+- Specs:
+  - Mantle `test/sales/SalesPipelineReports` (new, 4 features, 0.6 s): win rate 50 % over won and lost, a disqualified lead apart, the
+    reopened deal once (Lost, one reopening) in the final mode and twice as events, dollars and euros apart, the reason's count; a
+    chained stage stay measured and a gap unknown, open deals by currency, a cohort's two leads (one qualified, one disqualified), the
+    visit step not available; a representative and another organization refused, the catalogue by capability (six entries, the rep's
+    Forecast alone) and Accounting's root refused; Sales analysis for a Sales reader without cost and with it (cost 40, margin 60,
+    60 %), another organization refused. `test/order/SalesPortal` (a P19 feature, 0.68 s): a cancelled order's link not revoked, read
+    marked Cancelled with no cancel, return or pay link, listed under all and not open, the account card's count down.
+  - mr-boss `test/Sales/SalesReports` (rewritten, 3 features, 0.25 s): SalesAnalysis's one html render with the finance columns and no
+    SQL dialog; the Sales administrator's csv with no cost or margin column; PipelineAnalysis's and WinLoss's one html render each.
+    `SalesReportCatalog` (new, 2 features, 0.3 s): Sales.SalesAnalysis at Sales' route for the Sales reader (with the other five),
+    the rep's Forecast alone, Accounting.SalesAnalysis alone for the Insights finance reader; All reports' one html render.
+    `AccountingReporting` (its SalesAnalysis render now shows "Cost of shipped" under the mount), `InsightsCatalog` (the two
+    SalesAnalysis entries), `InsightsFlowMaps` (the quote step links), `SalesSpecLib.js` (reportsMenu).
+  - mr-pass `test/Sales/SalesPortalAccess` (a P19 feature, 0.04 s): a cancelled order's render by its link shows Cancelled and no
+    Support change, return or Billing link.
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesReportsUsable` (3 features: the reader's six reports with the
+    pipeline and win/loss exports equal to the services' counts; Accounting's and Sales' analysis CSV over the same rows, Accounting's
+    with the finance columns; a manager given Insights' distributor grant subscribes to the weekly digest and copies the stalled-deal
+    alert, which fires once a deal has sat 30 days). `test/acceptance/Insights/InsightsCatalogUsable` changed (the finance reader's
+    entry is Accounting.SalesAnalysis), not run.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesPipelineReports, SalesWorkspace, SalesPipelineSetup,
+  SalesPortal, SalesReports, SalesReportStoreScope, SalesOpportunityImport and SalesForecasts 37 of 37; OrderLifecycle,
+  ShopSubscriptions, AccountingStatements, MantleSearch, SalesQuoteIssue and SalesPipelineDataset with them 70 of 70; ShopCheckout,
+  ShopCustomer, ShopOperations and ShopCart 21 of 21. mr-boss SalesReports, SalesReportCatalog, SalesAccess, SalesSettings, SalesHome,
+  AccountingReporting, InsightsCatalog, InsightsFlowMaps, CommerceReports and InsightsDashboards 58 of 58; InsightsAccess,
+  AdminRegistries and AccountingAccess 3 specs passing. mr-pass SalesPortalAccess 4 of 4, ShopAccount 3 of 3. Catalogue,
+  PipelineAnalysis, WinLoss, SalesAnalysis, SalesSummary and Readiness rendered once by hand in qvt, tui and html-print without
+  errors, not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean on
+  the new and changed JavaScript that was clean before (SalesAnalysis.js, InsightsCatalog.spec.js, AccountingReporting.spec.js and
+  ExternalAccess.js were not and are left so). Not run: ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: ss-inventory's SalesAnalysis and SalesSummary rows; usl-inventory's summaries, run#SalesAnalysis and the new "Added in
+  the Sales build: reports and Insights registrations" table.
+- Design edits: design-sales §8 "As built (impl-sales P19)", §10 a P19 bullet on cancelled orders; design-accounting §13 SalesAnalysis
+  "As built (impl-sales P19)" and its Insights registration paragraph (owner contracts).
+- Findings, numbered by the lead F304 to F313 in order:
+  - "Quote expiring in N days" is not shipped as an alert template: an alert reads a dataset and no quote dataset exists; Home's counter
+    and Insights' Sales.QuotesExpiring attention provider show them. A quote dataset (document, feed, Sales' quote row filter) would
+    let it be built;
+  - the stalled-deal alert measures stage movement (`stageEnteredDate`), not every activity: a logged call or task does not touch the
+    deal, so a worked deal sitting in one stage still fires;
+  - Pipeline analysis' next-activity coverage is of the open tasks now, not as of the report time (said on the screen);
+  - a deal's past state is read from its audit log; a deal loaded with audit off (data files) reads as it is now before its first logged
+    change, and a deal closed before the log counts by its stored close only;
+  - Sales analysis for a Sales reader takes the organization's own fiscal and sales periods, not those of an organization it rolls up
+    to (Accounting's reader keeps the rollup), and with no period or days the organization's fiscal month holding today, else the
+    calendar month; an issued line's cost in another currency than the sale's is unknown, never converted;
+  - the readiness checks for jobs and mail templates have no place of their own to fix them (Admin's jobs and mail relays are framework
+    routes with no route key), so they point to Readiness; a development instance with no SMTP host shows the templates check as a
+    warning;
+  - the report catalogue keeps no saved filters or last run (design §8's SalesReportCatalogue fields); a list's saved finds are kept;
+  - a flow target with an organization parameter is opened with the map's organization (FlowMaps.js), so the quote step links to
+    Quotes of that organization;
+  - carry-over: staff may now issue a new OrderView link for a cancelled storeless order (create resolves by the same rule); a link's
+    reader can still file a Support question on a cancelled order (intended by §4); the cancelled order's PDF is the confirmation as
+    placed, with no cancelled label;
+  - `docs/security/Attack-Surface.md` (mr-moqui) is not updated: P19 had no mr-moqui worktree (texts below).
+- For the lead:
+  - budget share: mr-mantle about 1.3 s (SalesPipelineReports 0.6 s, SalesPortal's P19 feature 0.68 s); mr-boss server about 0.45 s
+    (SalesReportCatalog 0.3 s, SalesReports 0.25 s for 0.1 s before); mr-pass about 0.04 s; client none;
+  - merge hot spots (P16 and Marketing P8 beside it): mr-mantle `service/mantle/order/OrderServices.xml` (`create#RecurringOrders`'
+    line, P16), `service/mantle/sales/SalesSettings.js` (routes and a P19 readiness block before `usesSales`), `SalesWorkspace.js` and
+    `SalesWorkspaceServices.xml` (P19 blocks at the end), `ForecastServices.xml` (P19 block at the end), `SalesAnalysis.js`,
+    `SalesReportServices.xml`, `OpportunityServices.xml` and `SalesQuoteIssueServices.xml` (one service line each),
+    `SalesPortal.js`, `ExternalAccess.js` (the `SalesOrder` kind's resolve), `report/mantle-sales.json`; mr-boss
+    `data/BossSetupSalesData.xml` (a P19 block at the end), `data/BossSetupData.xml` (the Sales.SalesAnalysis entry),
+    `service/ironstone/sales/Sales.js` (a P19 block after P18's), `screen/Sales/Reports.xml`, `screen/Accounting/Reports.xml`,
+    `report/insights-suite-*.json`, `report/boss-commerce-store-operations.json`, `report/insights-flowmap-customer.json`,
+    `test/Sales/SalesSpecLib.js` (reportsMenu), `test/Insights/InsightsCatalog.spec.js`, `InsightsFlowMaps.spec.js`,
+    `plan/design-sales.md` §8 and §10, `plan/design-accounting.md` §13, `plan/usl-inventory.md` (after P18's table),
+    `plan/ss-inventory.md`; mr-pass `screen/Sales/CustomerOrder.html.fancy`, `test/Sales/SalesPortalAccess.spec.js`;
+  - Marketing P20: the funnel's visit step calls `mantle.marketing.MarketingReportServices.count#SalesVisits` (in: organizationPartyId,
+    fromDate, thruDate, marketingCampaignId, dataSourceId; out: visitCount) once it exists (SalesPipelineReports.js `visitService`);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`): beside Sales' forecasts, "Sales' reports (`mantle.sales.ForecastServices`
+    get#PipelineAnalysis and get#WinLoss, `SalesWorkspaceServices.get#SalesReports`, all `allow-remote="false"`): a Sales report reader
+    (`SALES_REPORT_VIEW`) of the organizations of their scope, the deals they see (their own and their teams', the organization's with
+    `SALES_TEAM_VIEW`); another organization ORGANIZATION_DENIED; amounts never added across currencies; past 2,000 deals refused. The
+    catalogue answers the root Sales only. `run#SalesAnalysis` also answers a Sales report reader for an organization of their scope;
+    the cost of shipped and the margin only for a report reader or a holder of both PRICE_VIEW and PRODUCT_COST_VIEW, withheld (null)
+    otherwise; Accounting's Reports/SalesAnalysis is a mount of Sales' screen." And in the PASS Sales orders paragraph: "…ended by the
+    order's cancellation…" becomes "…not ended by the order's cancellation (a storeless order's OrderView link opens it marked
+    Cancelled, read only)…", and "…not a recurring base or template and not cancelled or rejected, is shown…" becomes "…not a recurring
+    base or template and not rejected, is shown; a cancelled one is shown read only, marked Cancelled, with Support's ask page alone
+    and no cancellation, return or payment link, and never counted open…";
+  - nothing needs the user's call; the lead may put the quote-expiring alert (first finding) to the user.
+
+**Review Nov 14 (P19).** Master (Sales P16, Marketing P8) merged into the three worktrees first, both sides kept: mr-mantle
+`OrderServices.xml` `create#RecurringOrders` keeps P16's description with P19's `operation="sales.recurrence.run"`; `SalesAnalysis.js`
+took P16 review R5's template and base exclusion beside P19's reader and cost (auto-merged); mr-boss `usl-inventory.md` has P16's table
+then P19's. mr-pass had nothing to merge.
+- Checked and sound:
+  - `run#SalesAnalysis`: Accounting's reader path unchanged (organization, periods, rollup); a Sales report reader is answered only for
+    an organization of their sales scope (`reportOrganizations`, ORGANIZATION_DENIED outside), its periods the organization's own; the
+    Sales reader's cost and margin need PRICE_VIEW and PRODUCT_COST_VIEW, so P1's rule (a SALES_REPORT_VIEW holder without
+    PRODUCT_COST_VIEW gets no cost) is kept and narrowed, not widened; withheld costs are null, never zero, and the assets' cost is not
+    read at all for a non-cost reader. The rebuilt screen reads no entity, has no cost search, cost sort or SQL dialog (F76, F79); its
+    cost columns are hidden and null for a non-cost reader in html, CSV, XLSX and saved finds (SalesReports' csv with a cost filter
+    and sort as the Sales administrator).
+  - SalesSummary: one organization of the scope and one currency, the four summaries asked for both (F77, F81), Sales' choices.
+  - Pipeline reports: `reader` requires SALES_REPORT_VIEW and an organization of the scope; `deals` reads only the reader's
+    organizations and the deals they see (`assignedOpportunityIds`; the organization's all only with SALES_TEAM_VIEW), owner and team
+    filters intersected with that; every amount keyed by currency, counts apart; past 2,000 deals TOO_MANY_RECORDS before anything is
+    counted; win rate over won and lost opportunities, a disqualified lead apart; stage stays unknown where the log does not chain.
+  - Catalogue: `get#SalesReports` answers the root Sales only, Forecast to every Sales reader and the rest to a report reader;
+    `Sales.SalesAnalysis` at Sales' route under it, `Accounting.SalesAnalysis` under Accounting's `get#Catalog` (F59); the new
+    services are `allow-remote="false"` and admitted to no Assist or MCP tool.
+  - Accounting's mount: a subscreens-item of Accounting/Reports.xml, so its authorization is Accounting's root (BOSS_SAL_REPORTS
+    names Sales/Reports.xml only); Accounting's choices by `appRoot`; AccountingReporting unchanged in behavior.
+  - Insights: the stage-age dataset is the pipeline's document with the same row filter (`get#PipelineRowFilter`, MantleSalesScope),
+    in BOSS_SAL_DATASETS with the pipeline dataset's grants; metrics descriptive; the alert and digest run as their owner under the
+    framework's business-schedule rule (Monitoring.md: only owner-equivalent recipients get the result); the dashboard's amount panel
+    is split by currency; flow targets' routes and organization parameter.
+  - The cancelled-order carry-over (§4): only a storeless order's OrderView resolves after cancellation (Download, renewal, quote
+    scopes and a store order's link still end); listed under all, never open, not on the account card's count; no cancel, return or
+    Billing link, the ask link alone ("Ask about this order"). Staff issuing a new OrderView link for a cancelled storeless order
+    (create resolves by the same rule) only gives the customer the read-only page §4 keeps reachable: acceptable. The PDF is the
+    confirmation as placed, with no cancelled mark, beside a page that says Cancelled: acceptable for now, a provisional finding.
+  - `operation`/`operation-ref` on QuoteBatch, the import row and the recurrence worker.
+- Fixed:
+  - R1 (high, confidentiality): `run#SalesAnalysis` gave Accounting's report reader the cost of shipped and the margin with
+    `ACCOUNTING_VIEW` alone (`costShown: true`), so Accounting's approvers (BOSS_ACCOUNTING_APPROVE: ACCOUNTING_VIEW, no
+    PRODUCT_COST_VIEW) and a Sales report reader who also holds ACCOUNTING_VIEW saw per-product costs; design §8 says margin columns only
+    where both price and cost rights permit, and design-accounting §13's "finance columns" are the ordered, shipped, invoiced and returns
+    columns, not cost. Now Accounting's reader needs PRODUCT_COST_VIEW too (their report read is their read of the sales values).
+    SalesPipelineReports' analysis feature checks an ACCOUNTING_VIEW and SALES_REPORT_VIEW holder without cost read (failed before:
+    costShown true). Screen, Accounting's mount comment and catalog entry, design-sales §8, design-accounting §13 and the inventories say so.
+  - R2 (low): readiness' scheduled jobs leave out the recurrence worker (`create_RecurringOrders`), which places Sales' recurring
+    orders (P16); added.
+  - R3 (low, wording): the weekly digest said each recipient's rows are their own scope's; it renders as its owner and reaches only an
+    owner-equivalent recipient.
+- Findings, numbered by the lead F314 to F318 in order:
+  - the plan (P19's Insights registrations) and design §8 L6 ship the alert template "quote expiring in N days"; it is not built (no
+    quote dataset). Building it needs a quote dataset (document, feed, Sales' quote row filter, grants and admission) beside the alert
+    JSON; Home's counter and Insights' Sales.QuotesExpiring attention provider show expiring quotes now. Required by the plan, so the
+    user's call: build it (a follow-up) or accept the attention provider in its place;
+  - "deal with no activity for N days" is built as "no stage movement" (`stageEnteredDate`): a logged call or task does not reset it,
+    so a worked deal sitting in one stage fires; the design's wording asks for activity;
+  - the "weekly pipeline and forecast digest" is the pipeline dashboard alone; forecasts are not in it (no forecast dashboard exists);
+  - the readiness additions (jobs, templates, approval rules) have no spec;
+  - a cancelled storeless order's confirmation PDF carries no cancelled mark.
+- Tests (release binary, `--nobuild`, this worktree's runtime, after the merge and the fixes): mr-mantle SalesPipelineReports,
+  SalesWorkspace, SalesReports, SalesReportStoreScope, SalesPortal, SalesPipelineSetup, SalesOpportunityImport, SalesForecasts,
+  SalesRecurrence, OrderLifecycle and SalesQuoteIssue 57 of 57 (52 s run; SalesPipelineReports 0.57 s of features); mr-boss SalesReports,
+  SalesReportCatalog, SalesAccess, SalesSettings, AccountingReporting, InsightsCatalog, InsightsFlowMaps, CommerceReports,
+  InsightsDashboards and SalesRecurrence 56 of 56 (45 s); mr-pass SalesPortalAccess 4 of 4. SalesPipelineReports with R1's check on
+  the unfixed SalesAnalysis.js: 3 of 4 (the check failed, as it should). `moqui lint --screens`: nothing in Sales/Reports or
+  Accounting/Reports.xml. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: as the Built note; R1's check adds one user and one call to an existing feature (about 0.01 s);
+  - merge hot spots: as the Built note, plus mr-mantle `SalesSettings.js` (`salesJobs`), mr-boss `data/BossSetupData.xml` (the
+    Accounting.SalesAnalysis entry's description) and `report/boss-sales-weekly-digest.json`;
+  - the user's call: the quote-expiring alert (first finding); nothing else;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' forecasts: "Sales' reports
+    (`mantle.sales.ForecastServices` get#PipelineAnalysis and get#WinLoss, `SalesWorkspaceServices.get#SalesReports`, all
+    `allow-remote="false"`): a Sales report reader (`SALES_REPORT_VIEW`) of the organizations of their scope, over the deals they see
+    (their own and their teams', the organization's with `SALES_TEAM_VIEW`); another organization ORGANIZATION_DENIED; amounts never
+    added across currencies; past 2,000 deals refused (TOO_MANY_RECORDS). The catalogue answers the root Sales only.
+    `run#SalesAnalysis` also answers a Sales report reader for an organization of their scope; the cost of shipped and the margin
+    only for a holder of PRODUCT_COST_VIEW who is Accounting's report reader (`ACCOUNTING_VIEW`) or also holds PRICE_VIEW, withheld
+    (null) otherwise, the assets' costs not read; Accounting's Reports/SalesAnalysis is a mount of Sales' screen under Accounting's
+    root authorization." And in the PASS Sales orders paragraph: "…ended by the order's cancellation…" becomes "…not ended by the
+    order's cancellation for a storeless order's OrderView link (it opens the order marked Cancelled, read only; Download and a store
+    order's link still end)…", and "…not a recurring base or template and not cancelled or rejected, is shown…" becomes "…not a
+    recurring base or template and not rejected, is shown; a cancelled one is shown read only, marked Cancelled, with Support's ask
+    page alone and no cancellation, return or payment link, and never counted open…".
+
 ### P20 — Finish
 
 - The tui and server-static screen sweeps of Sales, one acceptance test per mode (each screen's twin is built in its
@@ -4863,6 +5354,176 @@ unchanged, no Rust built. F111: a new record's organization defaults to the user
   - Merge hot spots: as the Follow-up note says. sal/p5 is already in master and both repositories' branches merge cleanly.
   - The user's call: Accounting's working-organization default (unchanged here).
 
+### Follow-up 2 — recurring orders' invoicing, lines and tax
+
+**Built Nov 14 (follow-up 2).** mr-mantle and mr-boss on branch `sal/fix2` (hashes in the worker's reply); mr-moqui and mr-pass
+unchanged, no Rust built. The user's two calls of Nov 14 (§4, P16's review; F299, F300): a native recurring order generated without a
+payment is invoiced when a person approves it, as its base's auto-invoice asks; a base copies the source's charge and discount lines
+with its products, and tax is computed on each generated order when it is placed.
+- Checked first (the code over the plan): P16's Built and Review notes, F290 to F303, §4's two Nov 14 rows; the worker
+  (OrderServices.xml `clone#Order`, `create#RecurringOrder`), `handle#OrderItemChange` and `handle#OrderMajorChange` (X1's storeless
+  step, the store's promotions, shipping and tax), TaxServices `calculate#OrderSalesTax` and SalesTax.js `order`, Shop's base and
+  renewal (ShopSubscriptions.js `makeBase`, `prepareStep`) and its invoicing (ShopFulfillment.secas.xml, ShopFulfillment.js,
+  Payables.js `fulfillmentInvoice`), the other `clone#Order` callers with `productItemsOnly: false` (SalesQuoteTemplates.js,
+  SalesQuoteIssues.js `cloneQuote`, SalesOrders.js `cloneOrder`) and Accounting's Recurring invoices (Collections.js). The code over
+  the plan:
+  - F300's "nothing computes tax at placement" holds only for the source's other lines: a generated order of a storeless seller with
+    a gateway was already taxed while it was cloned (OrderOpen; each copied line's `handle#OrderItemChange` runs X1's step), on its
+    product lines alone; a store base's order the same way, by the store's path. What was missing was the lines, so tax is now figured
+    on every line the order repeats;
+  - `clone#Order` copied a child line's `parentItemSeqId` as it was, while the copy's line ids are sequenced afresh: the source's ids
+    have gaps (each retax deletes and adds tax lines), so a discount or tax line of a copy could name the wrong parent. With
+    `productItemsOnly: false` a child now keeps its own parent (the source's id mapped to the copy's); the default, product lines only
+    (Shop's base and renewals, Commerce's reorder, the native worker's legacy bases), is unchanged. Sales' quote and order clones and
+    template successors, which copy every line, get the right parents too;
+  - "the same path Shop's renewals use": Shop invoices a renewal through Accounting's `create#FulfillmentInvoice` (the internal split
+    of `create#InvoiceFromSource`: the ordered basis, a recurring base or template refused, one invoice for a source, no user
+    permission asked), from a tx-commit rule on the order's approval; follow-up 2 uses both the same way. The worker's own branch that
+    billed with `create#EntireOrderPartInvoice` only a part approved at placement is replaced by that one path, so an automatic and a
+    person's approval bill the same way;
+  - Accounting's Recurring invoices said "Invoiced on approval" for auto-invoice (now true) and "Not invoiced" otherwise, which
+    misstated two cases: a base without auto-invoice has its orders invoiced as any order, by a person ("Not invoiced automatically"),
+    and a Shop contract's base has its renewals invoiced by the store with their payment ("Invoiced by the store at renewal").
+- Mantle:
+  - `service/mantle/order/OrderServices.xml`: `clone#Order` keeps a child line under its own parent when every line is copied;
+    `create#RecurringOrder`, for a Sales base (marked `OrpRecurringTemplate`), copies every line of the base (`productItemsOnly:
+    false`) and retaxes the order before `place#Order` through `handle#OrderMajorChange` for each part (a storeless seller with a
+    gateway: X1's `calculate#OrderSalesTax`, which replaces the copied tax lines; a store order: the store's promotions, shipping and
+    tax; a storeless seller with no gateway: the copied lines as they are, its own); a base not marked (made recurring before Sales
+    and never edited there) repeats its product lines as before; the auto-invoice branch removed; its description.
+  - `service/mantle/order/SalesRecurrence.js`: `makeBase` copies every line of the source (`productItemsOnly: false`; the base keeps
+    the source's tax lines for its amount, figured again on each order made); `invoiceRecurringOrder` (below); the header comment.
+  - `service/mantle/order/SalesRecurrenceServices.xml`: `invoice#RecurringOrder` (new, `authenticate="anonymous-all"`,
+    `allow-remote="false"`): an order the worker made for an occurrence (`recurOccurrenceDate`, a parent, no purpose) of a base whose
+    auto-invoice is on and that is no Shop contract's has each approved sale part with nothing billed yet invoiced through
+    `create#FulfillmentInvoice`, each part in its own transaction; any other order returns at once; a part that cannot be billed is
+    logged naming the base and the order and never fails the approval. `store#SalesRecurrence`'s description.
+  - `service/SalesRecurrence.secas.xml` (new): `SalesRecurrenceApprovedInvoice`, on `update#mantle.order.OrderHeader` at tx-commit
+    when the status changes to OrderApproved, calls `invoice#RecurringOrder` in a transaction of its own, ignoring its errors (as
+    Sales' storeless confirmation and Shop's fulfillment are run).
+- BOSS: `service/ironstone/accounting/Collections.js` (Recurring invoices' recurring orders: the Invoice column's three texts, a Shop
+  contract's base read in one query). No screen changed (RecurringOrders' "Bill each order once it is approved" now holds as written).
+- Specs: Mantle `test/order/SalesRecurrence` gains a feature (6 features, about 2.8 to 3.3 s; the feature about 0.6 s): an approved
+  storeless order of C (its seller's gateway, a spec-local Utah rate of 6 %) with a product line, a shipping charge and a discount of
+  the product line, made a monthly base with auto-invoice by C's keeper with the finance right; the base holds the product, the
+  charge and the discount, the discount and each tax line under their own lines; with the rate raised to 7 % the order made holds the
+  same lines, two tax lines under its product and shipping lines, a tax larger than the source's (figured then, not copied), its total
+  the lines' and placed with nothing billed; approved by a person, its lines are billed on one invoice (the approval's tx-commit rule,
+  waited for), and a second `invoice#RecurringOrder` bills nothing more; a base without auto-invoice (feature 4's third) bills nothing
+  when its order is approved. The base's lines and the billing each fail on the unfixed code (run there: the base held only
+  "ItemProduct"; with the invoice service absent, nothing billed).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesRecurrence, OrderLifecycle, SalesQuoteTemplates,
+  ShopSubscriptions, Subscriptions, SalesQuoteDrafts, SalesOrderApproval, StorelessOrderTax, StorelessOrderConfirmation,
+  StoreOperations, OrderToCashBasicFlow, ShopCheckout, DropShip, OrderChanges and SalesOrderChanges 120 of 120 (17 specs with
+  dependencies, 34 s of features); SalesPortal and ShopOperations with SalesRecurrence again 23 of 23. mr-boss SalesRecurrence,
+  AccountingCollections, CommerceSubscriptions, SalesQuotes, SalesOrders and AccountingAccess 22 of 22 (12.9 s). mr-pass
+  ShopSubscriptions and ShopCheckout 6 of 6 (master's mr-pass against this branch's mr-mantle). Shop's renewals and Commerce's specs
+  pass unchanged. Prettier clean on the changed JavaScript. No screen changed, so no screen lint. Not run: ./moq test-apps,
+  test-framework, the acceptance suite (no acceptance test changed).
+- Inventories and design: usl-inventory's "Added in the Sales build: recurring orders and subscriptions" table gains
+  `invoice#RecurringOrder`; design-sales §7 "As built (impl-sales P16)" says what follow-up 2 changed.
+- Findings, numbered by the lead F319 to F324 in order:
+  - the invoice is left as `create#EntireOrderPartInvoice` makes it (InvoiceInProcess), as Accounting's Invoice from order and the
+    worker's old branch left it; Shop finalizes its renewal's invoice after the capture, a native renewal's waits for Accounting to
+    finalize it with its other drafts;
+  - the trigger is the order header's approval; a generated order of several parts approved part by part (a credit hold on one part)
+    is billed for the parts approved when the header becomes approved, and a part approved later only by Accounting's Invoice from
+    order (`invoice#RecurringOrder` is internal); Sales' bases repeat one-part orders in practice;
+  - an order whose header returns to Approved (`checkStillComplete` after a return) runs the rule again, which bills nothing (a part
+    already billed is skipped, and `create#FulfillmentInvoice` keeps one invoice for a source);
+  - a base made in P16 holds product lines only; it repeats them as before until it is made again from its source (editing its
+    schedule does not copy lines);
+  - a storeless seller with no tax gateway: its generated orders repeat the source's tax lines as they were entered (nothing
+    recomputes them, as X1 leaves such an order untouched); a store with no tax gateway drops them, as the store's own path does;
+  - a generated order the gateway cannot tax (TAX_ADDRESS_MISSING, TAX_RATE_MISSING) now fails its occurrence with that reason, kept
+    on the base as "Last run failed"; before, X1's step during the clone would have refused it the same way.
+- For the lead:
+  - budget share: mr-mantle about +0.6 s (SalesRecurrence's sixth feature); mr-boss none; client none;
+  - merge hot spots (Sales P19 and Marketing P9 in parallel): mr-mantle `service/mantle/order/OrderServices.xml` (`clone#Order`'s
+    item loop, `create#RecurringOrder`), `service/mantle/order/SalesRecurrence.js` (header comment, `makeBase`, a block before
+    `services`), `service/mantle/order/SalesRecurrenceServices.xml` (a service at the end), `test/order/SalesRecurrence.spec.js` (setup
+    and a feature at the end); new `service/SalesRecurrence.secas.xml`; mr-boss `service/ironstone/accounting/Collections.js` (the
+    recurring orders' rows), `plan/design-sales.md` §7, `plan/usl-inventory.md` (one row), this section;
+  - Attack-Surface correction (mr-moqui `docs/security/Attack-Surface.md`, Sales' recurring orders paragraph as P16's review gave
+    it): replace "copied with no payment and no purpose and placed through `place#Order` (so it is approved as any sales order of the
+    seller, never on a copied payment), and fails an occurrence whose agreement no longer applies." with "copied with no payment and
+    no purpose, every line of the base with each child line under its own parent, retaxed by its own path (its seller's gateway or
+    its store's) and placed through `place#Order` (so it is approved as any sales order of the seller, never on a copied payment),
+    and fails an occurrence whose agreement no longer applies. `invoice#RecurringOrder` (`authenticate="anonymous-all"`, internal,
+    run only by the `SalesRecurrenceApprovedInvoice` tx-commit rule on an order's approval) bills, through `create#FulfillmentInvoice`
+    and once, only an order the worker made for an occurrence of a base whose auto-invoice (turned on only with `RECEIVABLE_EDIT`) is
+    on and that no Shop contract renews; it reads only the records.";
+  - nothing needs the user's call.
+
+**Review Nov 14 (follow-up 2).** Master (Sales P19) merged into both repositories' `sal/fix2` first, cleanly; the specs re-run on
+the merge.
+- Checked and sound:
+  - `invoice#RecurringOrder` is reached only from the `SalesRecurrenceApprovedInvoice` tx-commit rule (`allow-remote="false"`, no
+    screen, REST or Assist mount) and reads only the records. It bills only an order with a parent, no purpose and a
+    `recurOccurrenceDate`, which only `create#RecurringOrder` sets (`clone#Order` clears it and every recurrence field, so a Commerce
+    reorder, a Sales or Purchasing copy, a Customer Service replacement or a Shop renewal never carries it), of a base with
+    `recurAutoInvoice` Y and a cron and no `StoreRecurringContract`; a normal sales order, a Shop renewal (no occurrence date, and its
+    base has a contract), a Commerce order and a replacement return at once. Billing goes through `create#FulfillmentInvoice`
+    (refuses a base or quote template, keeps one invoice per source key); a re-approval (hold and release, `checkStillComplete`)
+    finds the part billed and bills nothing, and an invoice cancelled later keeps its billing rows, so a re-approval does not bill
+    again.
+  - `clone#Order`'s parent mapping applies only with `productItemsOnly: false`; the default path copies `parentItemSeqId` as before
+    (Shop's base and renewals, Commerce's reorder, a legacy base). Sales' quote, order and template copies and Purchasing's copy, which
+    copy every line, get correct parents; their specs pass unchanged.
+  - Retax at placement: `handle#OrderMajorChange` runs on the open order before `place#Order`, so neither path's status guard skips
+    it; a storeless seller with a gateway replaces the copied tax lines (X1), a store order deletes and refigures promotions, shipping
+    and tax, a storeless seller with no gateway keeps the copied lines. A tax error stops `create#RecurringOrder`, whose own
+    transaction rolls back; `runOccurrence` records it on the base and the job goes on to the next base.
+  - Accounting's Recurring invoices' three texts are right for each kind of base; the Shop-contract read is one `in` query.
+- Fixed:
+  - R1 (medium, mr-mantle `SalesRecurrence.js` `invoiceRecurringOrder`): "exactly once" did not hold under concurrency. The rule runs
+    on service workers after the commit, and the part's status and billing were read outside the transaction that billed it, with
+    nothing locked; `create#FulfillmentInvoice` checks its source key unlocked too. Two approvals' rules at once (two approvals
+    racing, or a re-approval while the first rule is still running) could both find nothing billed and make two invoices. Each part
+    is now billed in a `runRequireNew` transaction that locks the `OrderPart` (`forUpdate`), reads its status and billing again, and
+    invoices in that same transaction, as Shop's invoice step locks its fulfillment rows. A part must also be one the worker copied (the
+    base's part of the same id and seller), so an order pointed at a base by other means bills nothing.
+  - R2 (low, mr-mantle `OrderServices.xml` `clone#Order`): the line-id map was `globalThis.copiedSeqIds`, a global of the script
+    realm, shared by every later script in it. It is now a `const` local of the service's action block.
+  - R3 (low, test): the follow-up's spec did not check a retax failure. SalesRecurrence's sixth feature now makes a second
+    auto-invoiced base of C, ends the gateway's rate and runs the job: the occurrence fails with TAX_RATE_MISSING, kept on the base
+    (`recurFailureDate`, the message), and no order is made. This guards the behavior; it would pass on the worker's code too.
+    R1 has no spec of its own (two workers at once cannot be driven from a spec); the single-approval billing and the second
+    `invoice#RecurringOrder` that bills nothing still pass.
+- Findings, numbered by the lead F325 to F327 in order:
+  - R1 above (medium): a recurring order could be invoiced twice when two approvals' tx-commit rules ran at once; fixed.
+  - A legacy base (made recurring before Sales, not marked `OrpRecurringTemplate`) with `recurAutoInvoice` Y is billed on approval
+    too. Before, it was billed only when approved at placement, which never happened with no payment copied. That matches §4's call
+    ("a native recurring order"), but its auto-invoice may have been set through Mantle's `update#OrderRecur`, without Sales'
+    `RECEIVABLE_EDIT` check.
+  - `clone#Order` maps a child's parent only when the parent's id sorts before it, which is how Mantle creates lines. A child listed
+    before its parent keeps the source's id, as every child did before.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge and the fixes):
+  - mr-mantle SalesRecurrence: 6 of 6. The sixth feature takes 1.38 s (the worker's was about 0.6 s; R3 adds about 0.8 s).
+  - mr-mantle SalesRecurrence, OrderLifecycle, SalesQuoteTemplates, SalesQuoteIssue, SalesQuoteDrafts, SalesOrderChanges,
+    SalesOrderApproval, StorelessOrderTax, StorelessOrderConfirmation, StoreOperations, OrderToCashBasicFlow, ShopCheckout,
+    ShopOperations, ShopSubscriptions, Subscriptions, PurchaseOrders, OrderChanges, ReturnToResponseBasicFlow, ReturnPolicies and
+    SalesPortal: 160 of 160 (23 specs with their dependencies, 58.2 s of features).
+  - mr-boss SalesRecurrence, AccountingCollections, CommerceSubscriptions, SalesQuotes, SalesQuoteTemplates, SalesOrders,
+    SalesOrderChanges, AccountingAccess, CustomerServiceFeedback, PurchasingOrders and PurchasingReturns: 35 of 35 (22.3 s).
+  - mr-pass ShopSubscriptions and ShopCheckout: 6 of 6 (master's mr-pass).
+  - Prettier is clean on the changed JavaScript. No screen changed. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle about +1.4 s in all (SalesRecurrence's sixth feature, 1.38 s); mr-boss and client none.
+  - Merge hot spots: as the Built note says, plus `invoiceRecurringOrder`'s part loop and the sixth feature's added check.
+  - Attack-Surface correction: the worker's text is right except in three places. Every line is repeated only for a Sales base, not
+    a legacy one. A retax failure also fails the occurrence. The billing is per part, under the part's lock (R1). Replace "copied with
+    no payment and no purpose and placed through `place#Order` (so it is approved as any sales order of the seller, never on a copied
+    payment), and fails an occurrence whose agreement no longer applies." with "copied with no payment and no purpose (a Sales
+    base's every line, each child line under its own parent, retaxed by its own path, its seller's gateway or its store's; a base
+    made recurring before Sales its product lines) and placed through `place#Order` (so it is approved as any sales order of the
+    seller, never on a copied payment), and fails an occurrence whose agreement no longer applies or that cannot be taxed.
+    `invoice#RecurringOrder` (`authenticate="anonymous-all"`, internal, run only by the `SalesRecurrenceApprovedInvoice` tx-commit
+    rule on an order's approval) reads only the records and bills, through `create#FulfillmentInvoice` and once (each part under its
+    lock), only an approved part of the base's seller of an order the worker made for an occurrence of a base whose auto-invoice is
+    on and that no Shop contract renews."
+  - Nothing needs the user's call.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or
@@ -4912,6 +5573,9 @@ the owner's design.
 | Nov 14, 2026 | An agreement with no status keeps pricing by its dates alone, as Products' price lists and Customer Service's service agreements rely on; Sales' own agreements always carry a status. A raw Agreement row written by REST or an import is the remaining gap (F-row of P15) | The user's call (P15) |
 | Nov 14, 2026 | `SALES_FORECAST_EDIT` is granted to `BOSS_SALES_REP` (in its bundle) beside the manager and the administrator, so a representative submits their own forecast (design §8 SubmitForecast); Mantle confines it: a holder enters the judgement of their own key, a team they manage or, with `SALES_TEAM_VIEW`, a team or the organization, never another person's (SalesAccess.js `forecastSubmits`) | The user's call (the P18 Built note's first finding); design-sales §1.1 changed |
 | Nov 14, 2026 | A cancelled order stays on the customer's My orders and opens from its link, marked Cancelled and read only, instead of disappearing (the order link is no longer revoked by the cancellation; a Support request on it stays the customer's way to ask). Built in P19 | The user's call (P17's review) |
+| Nov 14, 2026 | A native recurring order generated without a payment is invoiced when a person approves it, as its base's auto-invoice asks; Accounting's renewal payment with recorded consent stays later (§7). Built in follow-up 2 | The user's call (P16's review) |
+| Nov 14, 2026 | A recurring base copies the source's charge and discount lines with its products, and tax is computed on each generated order when it is placed (X1 for a storeless seller). Built in follow-up 2 | The user's call (P16's review) |
+| Nov 14, 2026 | The "quote expiring in N days" alert template is built in P20, over a new quote dataset of Mantle's with Sales' scope filter (P19's review found it required and not built) | The user's call |
 | Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
@@ -5238,6 +5902,44 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F287 | P18 (Review Nov 14): `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged) | P18: as its Review note says |
 | F288 | P18 (Review Nov 14): a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets) | P18: as its Review note says |
 | F289 | P18 (Review Nov 14): Targets' list refuses past 2,000 forecasts of one organization without a screen message (find#Targets' refusal is cleared like any load error there) | P18: as its Review note says |
+| F290 | P16 (Built Nov 14): with `copyPayment=false` a native base's generated order has no payment, so it is never auto-approved and auto-invoice (which bills only a part approved at its placement) bills nothing; native renewals wait for an approver, and a renewal payment through Accounting's attempt with recorded consent (design §7) is not built for native bases | P16: as its Built note says |
+| F291 | P16 (Built Nov 14): the cadence is read in the base's zone by a wall-clock shift; around a clock change an occurrence at the repeated or skipped hour may move by that hour; a zone-aware cron reader in the framework would remove it (`ec.service.nextCronExecution` with a zone) | P16: as its Built note says |
+| F292 | P16 (Built Nov 14): a base has no detail screen (Sales' OrderDetail does not show a template); RecurrenceList's first column is not a link, and the base's lines are seen only as its amount | P16: as its Built note says |
+| F293 | P16 (Built Nov 14): missed occurrences are not each made: as the native worker, one order for the latest due occurrence (a base down for two months makes one order) | P16: as its Built note says |
+| F294 | P16 (Built Nov 14): the job now runs native bases one after another in its own call, not asynchronously; a long list of due bases lengthens the job run | P16: as its Built note says |
+| F295 | P16 (Built Nov 14): readers that still list an approved base as an order, low or display only (from the sweep): Commerce's palette and store-order record (Commerce.js orderSearch, readStoreOrder), Commerce's call context and store customers' counts (StoreOperations.js storeCallRecords, findStoreCustomers), Accounting's order detail offering Invoice (the backend refuses), `get#CustomerFinance`'s order list, Projects' order-line picker (BillingServices.xml), the bulk part status change (OrderBulkServices.xml), projected inventory (`MantleInventoryOrderItem` document, no purpose condition), `notify#OrderHighPriority` and `DropShip.js approved()` on a base re-approved; and readers that leave a base out only because it has no placed date (SalesAnalysis.js and its screen without a date filter, MarketingSegments.js, the `mantle-sales-orders` and `mantle-sales-items` datasets and the `mantle-sales-daily-floor` alert) | P16: as its Built note says |
+| F296 | P16 (Built Nov 14): find#SalesSubscriptions and find#RecurringSalesOrders read up to 500 candidates and filter by scope in the script; fine for the demo, a joined query when volumes grow | P16: as its Built note says |
+| F297 | P16 (Built Nov 14): a Sales reader of the organization sees its store contracts (customer, product, paid-through, next renewal and amount) whatever their own assignments, as agreements are read (P15); no payment method or consent is returned | P16: as its Built note says |
+| F298 | P16 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the recurrence services; P16 had no mr-moqui worktree | P16: as its Built note says |
+| F299 | P16 (Review Nov 14): with no payment copied a native renewal waits in Awaiting approval every period, and `recurAutoInvoice` never bills (it bills only a part approved at placement), while Accounting's Recurring invoices still says "Invoiced on approval"; Accounting's renewal payment attempt with recorded consent (design §7) is not built for native bases | P16: as its Review note says |
+| F300 | P16 (Review Nov 14): `clone#Order`'s `productItemsOnly` default: a base and each order made from it repeat only the product lines, so the source's shipping charge, discount and tax lines are not repeated and nothing computes tax at placement; a generated order's total is its product lines alone (the native worker had the same default; P16 newly makes Sales' bases through it) | P16: as its Review note says |
+| F301 | P16 (Review Nov 14): a base made from a store order keeps its store, so its generated orders follow the store's rules (approval delay, store mail) | P16: as its Review note says |
+| F302 | P16 (Review Nov 14): the clock-change hour (Built finding 2, as judged above) | P16: as its Review note says |
+| F303 | P16 (Review Nov 14): the Built note's other findings stand: no base detail screen; missed occurrences make one order; the job runs native bases in series; 500-candidate reads filtered in the script; a Sales reader sees the organization's store contracts | P16: as its Review note says |
+| F304 | P19 (Built Nov 14): "Quote expiring in N days" is not shipped as an alert template: an alert reads a dataset and no quote dataset exists; Home's counter and Insights' Sales.QuotesExpiring attention provider show them. A quote dataset (document, feed, Sales' quote row filter) would let it be built | P19: as its Built note says |
+| F305 | P19 (Built Nov 14): the stalled-deal alert measures stage movement (`stageEnteredDate`), not every activity: a logged call or task does not touch the deal, so a worked deal sitting in one stage still fires | P19: as its Built note says |
+| F306 | P19 (Built Nov 14): Pipeline analysis' next-activity coverage is of the open tasks now, not as of the report time (said on the screen) | P19: as its Built note says |
+| F307 | P19 (Built Nov 14): a deal's past state is read from its audit log; a deal loaded with audit off (data files) reads as it is now before its first logged change, and a deal closed before the log counts by its stored close only | P19: as its Built note says |
+| F308 | P19 (Built Nov 14): Sales analysis for a Sales reader takes the organization's own fiscal and sales periods, not those of an organization it rolls up to (Accounting's reader keeps the rollup), and with no period or days the organization's fiscal month holding today, else the calendar month; an issued line's cost in another currency than the sale's is unknown, never converted | P19: as its Built note says |
+| F309 | P19 (Built Nov 14): the readiness checks for jobs and mail templates have no place of their own to fix them (Admin's jobs and mail relays are framework routes with no route key), so they point to Readiness; a development instance with no SMTP host shows the templates check as a warning | P19: as its Built note says |
+| F310 | P19 (Built Nov 14): the report catalogue keeps no saved filters or last run (design §8's SalesReportCatalogue fields); a list's saved finds are kept | P19: as its Built note says |
+| F311 | P19 (Built Nov 14): a flow target with an organization parameter is opened with the map's organization (FlowMaps.js), so the quote step links to Quotes of that organization | P19: as its Built note says |
+| F312 | P19 (Built Nov 14): carry-over: staff may now issue a new OrderView link for a cancelled storeless order (create resolves by the same rule); a link's reader can still file a Support question on a cancelled order (intended by §4); the cancelled order's PDF is the confirmation as placed, with no cancelled label | P19: as its Built note says |
+| F313 | P19 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) is not updated: P19 had no mr-moqui worktree (texts below) | P19: as its Built note says |
+| F314 | P19 (Review Nov 14): the plan (P19's Insights registrations) and design §8 L6 ship the alert template "quote expiring in N days"; it is not built (no quote dataset). Building it needs a quote dataset (document, feed, Sales' quote row filter, grants and admission) beside the alert JSON; Home's counter and Insights' Sales.QuotesExpiring attention provider show expiring quotes now. Required by the plan, so the user's call: build it (a follow-up) or accept the attention provider in its place | P19: as its Review note says |
+| F315 | P19 (Review Nov 14): "deal with no activity for N days" is built as "no stage movement" (`stageEnteredDate`): a logged call or task does not reset it, so a worked deal sitting in one stage fires; the design's wording asks for activity | P19: as its Review note says |
+| F316 | P19 (Review Nov 14): the "weekly pipeline and forecast digest" is the pipeline dashboard alone; forecasts are not in it (no forecast dashboard exists) | P19: as its Review note says |
+| F317 | P19 (Review Nov 14): the readiness additions (jobs, templates, approval rules) have no spec | P19: as its Review note says |
+| F318 | P19 (Review Nov 14): a cancelled storeless order's confirmation PDF carries no cancelled mark | P19: as its Review note says |
+| F319 | Follow-up 2 (Built Nov 14): the invoice is left as `create#EntireOrderPartInvoice` makes it (InvoiceInProcess), as Accounting's Invoice from order and the worker's old branch left it; Shop finalizes its renewal's invoice after the capture, a native renewal's waits for Accounting to finalize it with its other drafts | Follow-up 2: as its Built note says |
+| F320 | Follow-up 2 (Built Nov 14): the trigger is the order header's approval; a generated order of several parts approved part by part (a credit hold on one part) is billed for the parts approved when the header becomes approved, and a part approved later only by Accounting's Invoice from order (`invoice#RecurringOrder` is internal); Sales' bases repeat one-part orders in practice | Follow-up 2: as its Built note says |
+| F321 | Follow-up 2 (Built Nov 14): an order whose header returns to Approved (`checkStillComplete` after a return) runs the rule again, which bills nothing (a part already billed is skipped, and `create#FulfillmentInvoice` keeps one invoice for a source) | Follow-up 2: as its Built note says |
+| F322 | Follow-up 2 (Built Nov 14): a base made in P16 holds product lines only; it repeats them as before until it is made again from its source (editing its schedule does not copy lines) | Follow-up 2: as its Built note says |
+| F323 | Follow-up 2 (Built Nov 14): a storeless seller with no tax gateway: its generated orders repeat the source's tax lines as they were entered (nothing recomputes them, as X1 leaves such an order untouched); a store with no tax gateway drops them, as the store's own path does | Follow-up 2: as its Built note says |
+| F324 | Follow-up 2 (Built Nov 14): a generated order the gateway cannot tax (TAX_ADDRESS_MISSING, TAX_RATE_MISSING) now fails its occurrence with that reason, kept on the base as "Last run failed"; before, X1's step during the clone would have refused it the same way | Follow-up 2: as its Built note says |
+| F325 | Follow-up 2 (Review Nov 14): R1 above (medium): a recurring order could be invoiced twice when two approvals' tx-commit rules ran at once; fixed | Follow-up 2: as its Review note says |
+| F326 | Follow-up 2 (Review Nov 14): A legacy base (made recurring before Sales, not marked `OrpRecurringTemplate`) with `recurAutoInvoice` Y is billed on approval too. Before, it was billed only when approved at placement, which never happened with no payment copied. That matches §4's call ("a native recurring order"), but its auto-invoice may have been set through Mantle's `update#OrderRecur`, without Sales' `RECEIVABLE_EDIT` check | Follow-up 2: as its Review note says |
+| F327 | Follow-up 2 (Review Nov 14): `clone#Order` maps a child's parent only when the parent's id sorts before it, which is how Mantle creates lines. A child listed before its parent keeps the source's id, as every child did before | Follow-up 2: as its Review note says |
 
 ## 7. Later
 
