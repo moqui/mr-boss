@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Settings › Index (design-marketing §12 Settings SettingsIndex; style-guide §3.9 Settings; impl-marketing P1): the
+    Marketing settings built so far, over Mantle's get#Settings (P1: the adoption of unowned records), each with its owner, its
+    readiness and its place; and the setup readiness of the organization chosen, over get#Readiness (the provider marketing.setup
+    that Admin's Health shows too), each finding naming its place, resolved here from its route key (fixRoute, the keys Admin.js
+    settingsRoutes gives Admin too). Infrastructure configuration stays Admin's, under its own permission. Later phases add their
+    entries and checks. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <service-call name="mantle.marketing.MarketingWorkspaceServices.get#Settings" out-map="settingsFound" transaction="force-new"
+                ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <service-call name="mantle.marketing.MarketingWorkspaceServices.get#Readiness" out-map="readinessFound" transaction="force-new"
+                ignore-error="true" in-map="{providerKey:'marketing.setup', organizationPartyId:(organizationPartyId || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <!-- the places of the route keys an entry or a check names: Marketing's own settings screens -->
+        <set field="places" from="{
+                marketingSettings: {url: sharedLinks['Settings/Index'], text: 'Settings'},
+                marketingAdoption: {url: sharedLinks['Settings/Adoption'], text: 'Adoption'}}"/>
+        <set field="entryRows" from="Array.from(settingsFound?.entries || []).map(row =&gt; Object.assign({}, row, {
+                placeUrl: places[row.route]?.url || null}))"/>
+        <set field="checkRows" from="Array.from(readinessFound?.checks || []).map(row =&gt; {
+                const place = row.fixRoute ? places[row.fixRoute] : null
+                return Object.assign({}, row, {fixUrl: place ? place.url : null, fixText: place?.text || '',
+                    stateColor: {ready: 'positive', warning: 'warning', failed: 'negative'}[row.state] || 'grey-8'})})"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
+    </actions>
+    <widgets>
+        <label text="Marketing settings" type="h5"/>
+        <label type="p" style="text-negative" condition="!settingsFound?.entries" text="The settings cannot be listed just now."/>
+        <container-box condition="entryRows.length">
+            <box-header title="Settings"/>
+            <box-body-nopad>
+                <form-list name="SettingsIndex" list="entryRows" skip-form="true" paginate="false">
+                    <field name="title">
+                        <default-field title="Setting">
+                            <link url="${placeUrl}" text="${title}" link-type="anchor" condition="placeUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="category"><default-field title="Category"><display/></default-field></field>
+                    <field name="owner"><default-field title="Owner"><display/></default-field></field>
+                    <field name="readiness"><default-field title="Readiness"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="category"/></column>
+                        <column><field-ref name="readiness"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <label text="Setup readiness" type="h6"/>
+        <form-single name="ReadinessFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Check"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="!readinessFound?.checks"
+                text="This organization is not available to you, or readiness cannot be checked just now."/>
+        <container-box condition="checkRows.length">
+            <box-body-nopad>
+                <form-list name="ReadinessRows" list="checkRows" skip-form="true" paginate="false">
+                    <field name="title"><default-field title="Check"><display/></default-field></field>
+                    <field name="state">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(state)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state})}]]></text>
+                                <text type="html">${state}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="message"><default-field title="Finding"><display/></default-field></field>
+                    <field name="fix">
+                        <default-field title="Fix in">
+                            <link url="${fixUrl}" text="${fixText}" link-type="anchor" condition="fixUrl"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="message"/></column>
+                        <column><field-ref name="state"/><field-ref name="fix"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

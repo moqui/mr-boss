@@ -124,6 +124,26 @@ permissions are all required and an Admin permission beside it would shut Market
 out (§4 AudienceImport). Mantle seeds the `MARKETING_*` permissions; BOSS grants them by the table
 above and puts each in its group's capability bundle.
 
+As built (impl-marketing P1): Mantle seeds the fifteen `MARKETING_*` permissions of the table (with
+`MARKETING_AUDIENCE_IMPORT`), `MARKETING_ALL_ORGANIZATIONS` and Comms' four `MESSAGE_*` permissions, each granted to
+`ADMIN`, and reads them in one scope module, `mantle/marketing/MarketingAccess.js`: the capabilities, the reads `anyRead`
+of `MARKETING_VIEW`, `MARKETING_AUDIENCE_VIEW` or `MARKETING_REPORT_VIEW`, `audienceRead` and `reportRead` (an edit
+permission alone reads nothing); the caller's own organizations, the active one when it is theirs, every internal
+organization for a system administrator or a holder of `MARKETING_ALL_ORGANIZATIONS`, which reads nothing by itself (the
+Marketing administrator's alone, as Sales', People's and Maintenance's all-organizations permissions are); an unowned
+record covered by no scope. The setup is mr-boss `data/BossSetupMarketingData.xml`: every ordinary group's user is in
+`BOSS_MARKETING`, which carries `MARKETING_VIEW` and the root grant (`MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`) with the
+`ironstone\.marketing\..*` service pattern; the table's grants, the author also `MESSAGE_TEMPLATE_VIEW`; the administrator
+`MARKETING_CONFIGURE` with every view and edit of the table, `MESSAGE_TEMPLATE_VIEW` and `MARKETING_ALL_ORGANIZATIONS`, and
+no approval, dispatch, template edit, sending configuration or suppression review; no Marketing group holds
+`MESSAGE_TEMPLATE_EDIT`, `MESSAGE_SENDING_CONFIGURE` or `MESSAGE_SUPPRESSION_REVIEW` (Comms' explicit grants). Settings is
+an area of its own (`BOSS_MKT_SETTINGS` denies the root user group). The filter rows are `MANTLE_USER_ORG_MCMP`, `_MSEG`
+and `_CLST` and their `MANTLE_ACTIVE_ORG` twins; a mailbox (ContactList of type `MAILBOX`) is left out of the list filter,
+the Inbox's own rules deciding it. The list services reach a list that is not a mailbox for a user who works for its owner,
+a holder of `MARKETING_ALL_ORGANIZATIONS` and a contact administrator or `ADMIN` (who keep every list for Comms' Consent);
+to anyone else it answers as missing, and `create#ContactList` takes such a list's owner from the caller's organizations.
+Commons' consent and message services read lists with authorization off, under their own contact rules as before.
+
 Grant template editing/sending-profile selection through shared Comms capabilities, promotion
 writes through Commerce's scoped promotion permission and page publication through the content
 owner's capability. A Marketing launcher grant never grants Sales pipeline, Accounting ledger,
@@ -274,6 +294,11 @@ an unavailable provider shows its own unavailable state, leaving other providers
 
 **Actions:** New campaign is primary for A; other shortcuts require their own grants. Empty state
 links to campaign and sending-profile setup. **Source:** research §1. **Needs:** MKT-ACCESS, MKT-SHELL, MKT-REPORT.
+
+As built (impl-marketing P1): HomeScope has the organization alone (period and mine/team come with the first counts,
+P2); each panel is one call of W (`get#Home`, `get#Upcoming`, `get#Attention`) whose sources answer by name: a source
+whose records are not built yet is "Not available", never zero, and a failing one is named with the others shown.
+Attention's first source is the records awaiting adoption, the administrator's (§15.4).
 
 ### Calendar — Context passed
 
@@ -1392,6 +1417,9 @@ Links to CampaignDefaults, Vocabularies, LeadSources, SendingProfiles, Templates
 Suppressions. Infrastructure configuration links to Admin under its own permission. Marketing
 can mount shared settings without another app's launcher grant. **Needs:** MKT-ACCESS.
 
+As built (impl-marketing P1): Settings is `Marketing/Settings/Index` (SettingsIndex and the setup readiness of
+`marketing.setup`) and `Marketing/Settings/Adoption` (§15.4), the administrator's; each later entry joins with its phase.
+
 **Source:** research §10; shared configuration ownership in crosscut §5.
 
 ### CampaignDefaults
@@ -1828,6 +1856,12 @@ must protect public/direct service callers while preserving declared internal MA
 contracts. Legacy unscoped consent withdrawals retain their broad blocking effect; organization-scoped
 grants cannot undo them. Adoption previews affected records and records each result independently.
 Historical sends cannot be reconstructed into verified delivery or attribution simply from counts.
+
+As built (impl-marketing P1): C.`preview#Adoption` lists the campaigns with no organization, the lists that are not
+mailboxes and the segments whose owner is empty or `_NA_`; C.`apply#Adoption` assigns each to an organization of the
+administrator's scope at the revision read, on its own transaction with one result (adopted, or `ALREADY_OWNED`,
+`REVISION_CHANGED`, `ORGANIZATION_DENIED`, `RECORD_UNAVAILABLE`), a campaign gaining its dated MarketingOrganization row;
+the owner fields are audited with the change reason. The readiness check `marketing.adoption` names what awaits it.
 
 Register new public operations and readiness before enabling a PASS mount. Enable Marketing areas
 only after their required services and scope checks are available. An unavailable SMS channel blocks

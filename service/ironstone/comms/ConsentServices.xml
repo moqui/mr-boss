@@ -45,7 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const nowMillis = Number(String(ec.user.nowTimestamp))
-            const lists = Array.from(ec.entity.find('mantle.marketing.contact.ContactList').condition('contactListTypeEnumId', 'not-equals', 'MAILBOX')
+            const lists = Array.from(ec.entity.find('mantle.marketing.contact.ContactList').disableAuthz().condition('contactListTypeEnumId', 'not-equals', 'MAILBOX')
                     .orderBy('contactListName').list())
             const archived = (list) => list.archivedDate != null && Number(String(list.archivedDate)) <= nowMillis
             listOptions = lists.sort((a, b) => (archived(a) ? 1 : 0) - (archived(b) ? 1 : 0)).map((list) => ({key: list.contactListId,

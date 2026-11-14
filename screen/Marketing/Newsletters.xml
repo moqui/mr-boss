@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Email & newsletters section of IronStone Marketing (initial-design.md app table);
-    design-marketing.md decides its screens. -->
+<!-- Marketing/Newsletters (impl-marketing F2; design-marketing §1.2): the old placeholder's route, kept so an incoming link still
+    lands, now a redirect hidden from the menu: to Marketing's Home until Sends (P8) exists, then there. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Email &amp; newsletters" default-menu-index="4" menu-image="sym_o_outgoing_mail" menu-image-type="icon">
-    <widgets>
-        <label text="Placeholder: Marketing email and newsletters." type="p"/>
-    </widgets>
+        default-menu-include="false">
+    <always-actions>
+        <script>sri.sendRedirectAndStopRender('/qapps/Marketing/Home')</script>
+    </always-actions>
+    <widgets/>
 </screen>
