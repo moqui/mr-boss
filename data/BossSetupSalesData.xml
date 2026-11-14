@@ -604,4 +604,32 @@ along with this software (see the LICENSE.md file). If not, see
             routePath="Sales/Orders/OrderChanges" parameterContract='{"organizationPartyId":{"type":"organization"}}'
             sequenceNum="9"/>
     <!-- ===== end of Sales P19 ===== -->
+    <!-- ===== Sales P20 (impl-sales P20; §4 Nov 14, the user's call): the quote dataset and the quote-expiring alert ===== -->
+    <!-- The quote dataset (mr-mantle report/mantle-sales-quotes.json, document MantleSalesQuote in data/SalesPipelineReportData.xml):
+        Sales quotes not placed, timed by their valid-through date, whose rows are each viewer's own sales quote scope (the
+        ReportScopePolicy MantleSalesQuoteScope: the organization, then the assignment or team; templates and placed quotes out); read
+        by the quote-expiring alert template (report/boss-sales-quotes-expiring.json). Granted, admitted and classed as the pipeline
+        dataset is (BOSS_SAL_DATASETS' grants: every Sales user and the Insights groups), with its own readiness and index refresh. -->
+    <artifactGroups artifactGroupId="BOSS_SAL_DATASETS" description="Sales: the pipeline and quote datasets">
+        <artifacts artifactName="org.moqui.report.dataset.mantle-sales-quotes" artifactTypeEnumId="AT_SERVICE"/>
+    </artifactGroups>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_SALES"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_SALES_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesQuote" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.report.BusinessDataset datasetId="mantle-sales-quotes" admittedDate="2026-11-14 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-sales-quotes" version="1" domainOwner="Sales" classEnumId="InsDcOperations"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-sales-quotes" version="1" ownerApp="Insights"
+            title="Sales quotes index" description="The sales quote dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-sales-quotes" expectedFrequencyMinutes="1440" sequenceNum="71"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-sales-quotes.index" version="1" ownerApp="Insights"
+            title="Rebuild the sales quotes index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="mantle-sales-quotes" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.mantle-sales-quotes"/>
+    <!-- ===== end of Sales P20 ===== -->
 </entity-facade-xml>

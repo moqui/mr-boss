@@ -1,5 +1,6 @@
 # IronStone BOSS — Sales design
 
+Nov 14, 2026 — impl-sales P20: built Nov 13–14 in phases P1–P19, each reviewed and merged, the last P16 (recurring orders and subscriptions) and P19 (reports and the Insights registrations); §2's Impl column names the phase that built each screen, each built path checked in the code (a shared screen by its subscreens-item under `screen/Sales/`); the later rows stay later (§11). Two paths differ from the design: PriceListDetail is `Sales/Agreements/PriceLists/PriceListDetail` and PriceExplain `Sales/Products/PriceExplain`; `PASS:Marketing/SubmitForm` is Marketing's page, not built yet (impl-marketing P13). Screens built beside §2's: Sales/LogNote and Sales/SendMessage (the Comms and Assist actions, P6), Pipeline/LogCall (P5), Pipeline/OpportunityImport (§3, P6), Orders/QuoteSend (P10), Accounts/MergeCompare (P3), Reports/Catalogue (P19) and Settings/Readiness (P2). The inventories' Sales columns were checked the same day (usl-inventory, ss-inventory).
 Nov 13, 2026 — impl-sales P0's remaining checks written in (impl-sales F53–F73): the Comms hooks as Comms renders them
 (Mail's `message-actions` slot made to render in P5, a voicemail's action a transition, the `contact-card` read by Mail; §§1.4, 3, 12.2);
 template text rendered by `fancy-locked-html` from a stored location with an explicit map (§§1.4, 5); the
@@ -265,65 +266,65 @@ Dialogs with a single form stay on their host. Quote and order links use one can
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Home | Sales/Home | landing | xml | Due work and sales health | SalesOpportunity/OrderHeader | own §3 | app | new | organization; scoped lists |
-| Opportunities | Sales/Pipeline/Opportunities | list | xml | One pipeline in board/list/calendar views | SalesOpportunity | own §3 | R,M,V | new | rows; find parameters |
-| Leads | Sales/Pipeline/Leads | list | xml | Qualify incoming interest | SalesOpportunity | own §3 | R,M | new | lead rows; filters |
-| OpportunityDetail | Sales/Pipeline/OpportunityDetail | detail | xml | Work a lead or opportunity | SalesOpportunity | own §3 | R,M,V | new | salesOpportunityId |
-| Forecast | Sales/Pipeline/Forecast | report | xml | Commit forecasts against pipeline | SalesForecast | own §8 | R,M,V | new | organization, party, period, currency |
-| WorkItemDetail | Sales/Pipeline/WorkItemDetail | detail | xml | Follow linked activity/task | WorkEffort | Projects §5; CX §3.12 | app | parity | workEffortId |
-| Accounts | Sales/Accounts/Accounts | list | xml | Find/create customer accounts | Party | own §4 | app | parity | Party rows; filters |
-| Contacts | Sales/Accounts/Contacts | list | xml | Find/create account contacts | Party | Commons contacts; context §4 | app | parity | party/account filters |
-| Customer360 | Sales/Accounts/Customer360 | 360 | xml | Customer's commercial work | Party | CX §3.2; context §4 | app | parity | customerPartyId |
-| ContactDetail | Sales/Accounts/ContactDetail | detail | xml | Maintain a person and channels | Party | Commons contact; CX §3.1 | app | parity | partyId |
-| MergeAccounts | Sales/Accounts/MergeAccounts | list | xml | Review and merge duplicate parties | Party | Commons §6 Duplicates; context §4 | M,S | parity | selected source/survivor |
-| Quotes | Sales/Quotes/Quotes | list | xml | Draft, proposed and expired offers | OrderHeader | own §5 | R,M,V | parity | rows; quote filters |
-| QuoteRequests | Sales/Quotes/QuoteRequests | list | xml | Customer RFQ intake | Request | own §5 | R,M | parity | RqtQuote rows |
-| QuoteRequestDetail | Sales/Quotes/QuoteRequestDetail | detail | xml | RFQ lines, evidence and quote creation | Request | Projects RequestDetail; CX §3.11 | R,M,V | parity | requestId |
-| QuoteTemplates | Sales/Quotes/QuoteTemplates | list | xml | Reusable standard offers | OrderHeader (purpose `OrpSalesQuoteTemplate`) | own §5 | R,M,S | new | template rows |
-| QuoteTemplateDetail | Sales/Quotes/QuoteTemplateDetail | detail | xml | Maintain template lines and terms | OrderHeader (purpose `OrpSalesQuoteTemplate`) | own §5 | M,S | new | orderId |
-| Approvals | Sales/Quotes/Approvals | list | xml | Sales exceptions awaiting decision | OrderDecision/NotificationMessage | Commons approvals; context §5 | A | new | topics; source revision |
-| Orders | Sales/Orders/Orders | list | xml | Commitments and fulfillment | OrderHeader | own §6 | app | parity | sales-part rows; filters |
-| OrderDetail | Sales/Orders/OrderDetail | detail | xml | Quote and sales-order action sets | OrderHeader | CX §3.6; contexts §§5–6 | app | parity | orderId; part/item selection |
-| OrderChanges | Sales/Orders/OrderChanges | list | xml | Commercial proposals awaiting action | Request | own §6 | C,A,M | new | RqtOrderChange rows |
-| OrderChangeDetail | Sales/Orders/OrderChangeDetail | detail | xml | Compare, decide and apply a change | Request/OrderChangeDecision | Customer Service §4; context §6 | C,A,M | new | requestId; orderRevision |
-| ShipmentDetail | Sales/Orders/ShipmentDetail | detail | xml | Follow shipment and tracking | Shipment | CX §3.8; §12.2 | app | parity | shipmentId |
-| InvoiceDetail | Sales/Orders/InvoiceDetail | detail | xml | Permitted invoice and settlement facts | Invoice | Accounting; CX §3.16; §12.2 | finance view | parity | invoiceId |
-| Agreements | Sales/Agreements/Agreements | list | xml | Customer terms and contracts | Agreement | own §7 | app | parity | sales agreement rows |
-| AgreementDetail | Sales/Agreements/AgreementDetail | detail | xml | Parties, terms, prices and evidence | Agreement | own §7; reusable | agreement capability | parity | agreementId |
-| CustomerPrices | Sales/Agreements/CustomerPrices | list | xml | Scoped customer/agreement price rows | ProductPrice | Products Prices; context §7 | price view/edit | parity | seller, customer, agreement |
-| PriceLists | Sales/Agreements/PriceLists | list | xml | Sales lists and rules | ProductPriceList | Products §7; CX §3.21 | price view/edit | new | pricing scope |
-| PriceListDetail | Sales/Agreements/PriceListDetail | detail | xml | Maintain authorized list/rules | ProductPriceList | Products §7; CX §3.21 | price view/edit | new | priceListId |
-| PriceExplain | Sales/Agreements/PriceExplain | report | xml | Explain transaction pricing | PriceServices.get#ProductPrice | Products §7; CX §3.21 | price view | new | price context |
-| RecurringOrders | Sales/Agreements/RecurringOrders | list | xml | The one editor of native recurring bases | OrderHeader | own §7 | recurrence capability | parity | baseOrderId; filters |
-| Subscriptions | Sales/Agreements/Subscriptions | list | xml | Access periods and renewal sources | Subscription; StoreRecurringContract | Commerce §6 Subscriptions; context §7 | app | new | subscription rows |
-| Product360 | Sales/Products/Product360 | 360 | xml | Product, variants and permitted prices | Product | CX §3.5; §12.2 | app | parity | productId; sale context |
-| InventoryAvailability | Sales/Products/InventoryAvailability | list | xml | Stock and promise evidence | Product/Asset | CX §3.7; §12.2 | app | parity | product, facility, quantity/date |
-| Reports | Sales/Reports | landing | xml | Report catalogue | report definitions | own §8 | report view | new | organization |
-| SalesSummary | Sales/Reports/SalesSummary | report | xml | Orders, invoices and top customers/products | SalesReportServices | own §8 | report view | parity | report filters |
-| SalesAnalysis | Sales/Reports/SalesAnalysis | report | xml | Sales dimensions and drill-down | OrderItemSalesSummary | own §8 | report view | parity | report filters |
-| PipelineAnalysis | Sales/Reports/PipelineAnalysis | report | xml | Stage, source, age and activity analysis | SalesOpportunity | own §8 | report view | new | filters; as-of |
-| WinLoss | Sales/Reports/WinLoss | report | xml | Outcomes and loss reasons | SalesOpportunity | own §8 | report view | new | filters; period |
-| TargetAttainment | Sales/Reports/TargetAttainment | report | xml | Targets, forecast and actuals | SalesForecast | own §8 | report view | new | party, period, currency |
-| Settings | Sales/Settings | settings | xml | Sales configuration index | — | own §9 | S | new | organization |
-| Stages | Sales/Settings/Stages | settings | xml | Pipeline ordering and defaults | SalesOpportunityStage | own §9 | S | new | pipeline scope |
-| Teams | Sales/Settings/Teams | settings | xml | Dated sales teams and members | Party/PartyRelationship | own §9 | M,S | new | team party |
-| LeadSources | Sales/Settings/LeadSources | settings | xml | Shared acquisition sources | moqui.basic.DataSource | own §9; shared with Marketing | S | new | dataSourceId |
-| Targets | Sales/Settings/Targets | settings | xml | Period quotas by party | SalesForecast | own §9 | M,S | new | forecast key |
-| TypesAndReasons | Sales/Settings/TypesAndReasons | settings | xml | Types and structured outcomes | Enumeration | own §9 | S | new | enum type |
-| SalesDefaults | Sales/Settings/SalesDefaults | settings | xml | Effective organization defaults | proposed SalesPolicy | own §9 | S | new | organization; effective date |
-| ApprovalPolicies | Sales/Settings/ApprovalPolicies | settings | xml | Discount/amount exception rules | proposed SalesApprovalPolicy | own §9 | S | new | policy rows |
-| QuickCreate | Sales/QuickCreate | panel | xml | Shell quick-create provider | selected record kind | own §12.2 | by action | new | source context |
-| CustomerQuotes | PASS:Sales/CustomerQuotes | list | xml | Find own issued quotes | OrderHeader | own §10 | E signed in | new | self; organization |
-| CustomerQuote | PASS:Sales/CustomerQuote | detail | xml | Review and respond to issued offer | OrderHeader | own §10 | E or scoped bearer | new | safe quote projection |
-| QuoteResponse | PASS:Sales/QuoteResponse | detail | xml | Acceptance/decline receipt | proposed SalesQuoteResponse | own §10 | E or scoped bearer | new | response-scoped projection |
-| CustomerOrders | PASS:Sales/CustomerOrders | list | xml | Find own accounts' orders, shipments and invoices | OrderHeader | own §10 | E signed in | new | self; organization |
-| CustomerOrder | PASS:Sales/CustomerOrder | detail | xml | Follow one order's delivery and billing | OrderHeader | own §10 | E signed in or scoped bearer | new | safe order projection |
+| Home | Sales/Home | landing | xml (built P1; counters and assigned work P6) | Due work and sales health | SalesOpportunity/OrderHeader | own §3 | app | new | organization; scoped lists |
+| Opportunities | Sales/Pipeline/Opportunities | list | xml (built P4; exports and Import P6) | One pipeline in board/list/calendar views | SalesOpportunity | own §3 | R,M,V | new | rows; find parameters |
+| Leads | Sales/Pipeline/Leads | list | xml (built P4; intake P5) | Qualify incoming interest | SalesOpportunity | own §3 | R,M | new | lead rows; filters |
+| OpportunityDetail | Sales/Pipeline/OpportunityDetail | detail | xml (built P4; Verification P5, quotes P7, orders P11) | Work a lead or opportunity | SalesOpportunity | own §3 | R,M,V | new | salesOpportunityId |
+| Forecast | Sales/Pipeline/Forecast | report | xml (built P18) | Commit forecasts against pipeline | SalesForecast | own §8 | R,M,V | new | organization, party, period, currency |
+| WorkItemDetail | Sales/Pipeline/WorkItemDetail | detail | xml (mount built P4) | Follow linked activity/task | WorkEffort | Projects §5; CX §3.12 | app | parity | workEffortId |
+| Accounts | Sales/Accounts/Accounts | list | xml (built P3) | Find/create customer accounts | Party | own §4 | app | parity | Party rows; filters |
+| Contacts | Sales/Accounts/Contacts | list | xml (built P3; My accounts P5) | Find/create account contacts | Party | Commons contacts; context §4 | app | parity | party/account filters |
+| Customer360 | Sales/Accounts/Customer360 | 360 | xml (mount built P3; Invite to Sales P13, agreements P15) | Customer's commercial work | Party | CX §3.2; context §4 | app | parity | customerPartyId |
+| ContactDetail | Sales/Accounts/ContactDetail | detail | xml (built P3; Invite to Sales P13) | Maintain a person and channels | Party | Commons contact; CX §3.1 | app | parity | partyId |
+| MergeAccounts | Sales/Accounts/MergeAccounts | list | xml (built P3, with MergeCompare) | Review and merge duplicate parties | Party | Commons §6 Duplicates; context §4 | M,S | parity | selected source/survivor |
+| Quotes | Sales/Quotes/Quotes | list | xml (built P7; QuoteBatch P10) | Draft, proposed and expired offers | OrderHeader | own §5 | R,M,V | parity | rows; quote filters |
+| QuoteRequests | Sales/Quotes/QuoteRequests | list | xml (built P8) | Customer RFQ intake | Request | own §5 | R,M | parity | RqtQuote rows |
+| QuoteRequestDetail | Sales/Quotes/QuoteRequestDetail | detail | xml (mount built P8) | RFQ lines, evidence and quote creation | Request | Projects RequestDetail; CX §3.11 | R,M,V | parity | requestId |
+| QuoteTemplates | Sales/Quotes/QuoteTemplates | list | xml (built P12) | Reusable standard offers | OrderHeader (purpose `OrpSalesQuoteTemplate`) | own §5 | R,M,S | new | template rows |
+| QuoteTemplateDetail | Sales/Quotes/QuoteTemplateDetail | detail | xml (built P12) | Maintain template lines and terms | OrderHeader (purpose `OrpSalesQuoteTemplate`) | own §5 | M,S | new | orderId |
+| Approvals | Sales/Quotes/Approvals | list | xml (built P9) | Sales exceptions awaiting decision | OrderDecision/NotificationMessage | Commons approvals; context §5 | A | new | topics; source revision |
+| Orders | Sales/Orders/Orders | list | xml (built P11) | Commitments and fulfillment | OrderHeader | own §6 | app | parity | sales-part rows; filters |
+| OrderDetail | Sales/Orders/OrderDetail | detail | xml (mount built P7; approval P9, issue and response P10, sales-order context P11, changes and handoffs P14) | Quote and sales-order action sets | OrderHeader | CX §3.6; contexts §§5–6 | app | parity | orderId; part/item selection |
+| OrderChanges | Sales/Orders/OrderChanges | list | xml (built P14) | Commercial proposals awaiting action | Request | own §6 | C,A,M | new | RqtOrderChange rows |
+| OrderChangeDetail | Sales/Orders/OrderChangeDetail | detail | xml (mount built P14) | Compare, decide and apply a change | Request/OrderChangeDecision | Customer Service §4; context §6 | C,A,M | new | requestId; orderRevision |
+| ShipmentDetail | Sales/Orders/ShipmentDetail | detail | xml (mount built P14) | Follow shipment and tracking | Shipment | CX §3.8; §12.2 | app | parity | shipmentId |
+| InvoiceDetail | Sales/Orders/InvoiceDetail | detail | xml (mount built P14) | Permitted invoice and settlement facts | Invoice | Accounting; CX §3.16; §12.2 | finance view | parity | invoiceId |
+| Agreements | Sales/Agreements/Agreements | list | xml (built P15) | Customer terms and contracts | Agreement | own §7 | app | parity | sales agreement rows |
+| AgreementDetail | Sales/Agreements/AgreementDetail | detail | xml (mount built P15) | Parties, terms, prices and evidence | Agreement | own §7; reusable | agreement capability | parity | agreementId |
+| CustomerPrices | Sales/Agreements/CustomerPrices | list | xml (mount built P15: Shared/Prices) | Scoped customer/agreement price rows | ProductPrice | Products Prices; context §7 | price view/edit | parity | seller, customer, agreement |
+| PriceLists | Sales/Agreements/PriceLists | list | xml (mount built P15: Shared/PriceLists) | Sales lists and rules | ProductPriceList | Products §7; CX §3.21 | price view/edit | new | pricing scope |
+| PriceListDetail | Sales/Agreements/PriceLists/PriceListDetail (as built, P15; the design had it under Agreements) | detail | xml (mount built P15) | Maintain authorized list/rules | ProductPriceList | Products §7; CX §3.21 | price view/edit | new | priceListId |
+| PriceExplain | Sales/Products/PriceExplain (as built, P7; the design had it under Agreements) | report | xml (mount built P7) | Explain transaction pricing | PriceServices.get#ProductPrice | Products §7; CX §3.21 | price view | new | price context |
+| RecurringOrders | Sales/Agreements/RecurringOrders | list | xml (built P16) | The one editor of native recurring bases | OrderHeader | own §7 | recurrence capability | parity | baseOrderId; filters |
+| Subscriptions | Sales/Agreements/Subscriptions | list | xml (mount built P16) | Access periods and renewal sources | Subscription; StoreRecurringContract | Commerce §6 Subscriptions; context §7 | app | new | subscription rows |
+| Product360 | Sales/Products/Product360 | 360 | xml (mount built P7) | Product, variants and permitted prices | Product | CX §3.5; §12.2 | app | parity | productId; sale context |
+| InventoryAvailability | Sales/Products/InventoryAvailability | list | xml (mount built P7) | Stock and promise evidence | Product/Asset | CX §3.7; §12.2 | app | parity | product, facility, quantity/date |
+| Reports | Sales/Reports | landing | xml (built P1; Catalogue, the default, P19) | Report catalogue | report definitions | own §8 | report view | new | organization |
+| SalesSummary | Sales/Reports/SalesSummary | report | xml (ported P1; rebuilt P19) | Orders, invoices and top customers/products | SalesReportServices | own §8 | report view | parity | report filters |
+| SalesAnalysis | Sales/Reports/SalesAnalysis | report | xml (ported P1; rebuilt P19) | Sales dimensions and drill-down | OrderItemSalesSummary | own §8 | report view | parity | report filters |
+| PipelineAnalysis | Sales/Reports/PipelineAnalysis | report | xml (built P19) | Stage, source, age and activity analysis | SalesOpportunity | own §8 | report view | new | filters; as-of |
+| WinLoss | Sales/Reports/WinLoss | report | xml (built P19) | Outcomes and loss reasons | SalesOpportunity | own §8 | report view | new | filters; period |
+| TargetAttainment | Sales/Reports/TargetAttainment | report | xml (built P18) | Targets, forecast and actuals | SalesForecast | own §8 | report view | new | party, period, currency |
+| Settings | Sales/Settings | settings | xml (built P2; its default Readiness P2, P9, P13, P19) | Sales configuration index | — | own §9 | S | new | organization |
+| Stages | Sales/Settings/Stages | settings | xml (built P2) | Pipeline ordering and defaults | SalesOpportunityStage | own §9 | S | new | pipeline scope |
+| Teams | Sales/Settings/Teams | settings | xml (built P2) | Dated sales teams and members | Party/PartyRelationship | own §9 | M,S | new | team party |
+| LeadSources | Sales/Settings/LeadSources | settings | xml (built P2; UTM map P5) | Shared acquisition sources | moqui.basic.DataSource | own §9; shared with Marketing | S | new | dataSourceId |
+| Targets | Sales/Settings/Targets | settings | xml (built P18) | Period quotas by party | SalesForecast | own §9 | M,S | new | forecast key |
+| TypesAndReasons | Sales/Settings/TypesAndReasons | settings | xml (built P2) | Types and structured outcomes | Enumeration | own §9 | S | new | enum type |
+| SalesDefaults | Sales/Settings/SalesDefaults | settings | xml (built P9) | Effective organization defaults | proposed SalesPolicy | own §9 | S | new | organization; effective date |
+| ApprovalPolicies | Sales/Settings/ApprovalPolicies | settings | xml (built P9) | Discount/amount exception rules | proposed SalesApprovalPolicy | own §9 | S | new | policy rows |
+| QuickCreate | Sales/QuickCreate | panel | xml (built P6; NewQuote P7) | Shell quick-create provider | selected record kind | own §12.2 | by action | new | source context |
+| CustomerQuotes | PASS:Sales/CustomerQuotes | list | xml (built P13) | Find own issued quotes | OrderHeader | own §10 | E signed in | new | self; organization |
+| CustomerQuote | PASS:Sales/CustomerQuote | detail | xml (built P13) | Review and respond to issued offer | OrderHeader | own §10 | E or scoped bearer | new | safe quote projection |
+| QuoteResponse | PASS:Sales/QuoteResponse | detail | xml (built P13) | Acceptance/decline receipt | proposed SalesQuoteResponse | own §10 | E or scoped bearer | new | response-scoped projection |
+| CustomerOrders | PASS:Sales/CustomerOrders | list | xml (built P17) | Find own accounts' orders, shipments and invoices | OrderHeader | own §10 | E signed in | new | self; organization |
+| CustomerOrder | PASS:Sales/CustomerOrder | detail | xml (built P17) | Follow one order's delivery and billing | OrderHeader | own §10 | E signed in or scoped bearer | new | safe order projection |
 | ContractSchedules | Sales/Agreements/ContractSchedules | detail | xml | Advanced contract amendments/billing | Agreement | own §11 | agreement/finance | later | agreementId |
 | Commissions | Sales/Reports/Commissions | report | xml | Explain source-earned commission | Agreement, AgrCommission | own §11 | M; restricted rep self | later | period; payee scope |
 | Territories | Sales/Settings/Territories | tree list | xml | Effective coverage assignments | proposed SalesTerritory | own §11 | M,S | later | territory |
 | AssignmentRules | Sales/Settings/AssignmentRules | settings | xml | Explain automatic routing | proposed SalesAssignmentRule | own §11 | M,S | later | organization/team |
 | LeadIntakeForms | Sales/Settings/LeadIntakeForms | settings | xml | Publish bounded lead forms | DbForm; proposed FormPublication | Commons form publication (X16); context §11 | S | later | form/publication scope |
-| SubmitForm | PASS:Marketing/SubmitForm | task | xml | Submit public interest (the lead context of Marketing's one public form page) | DbForm; FormResponse; proposed SalesLeadIntake | Marketing §13 SubmitForm; lead context §11 (X15) | public published form | new | publication; no internal context |
+| SubmitForm | PASS:Marketing/SubmitForm | task | xml (not built: Marketing's page, impl-marketing P13; Sales' side, store#LeadIntake, built P5) | Submit public interest (the lead context of Marketing's one public form page) | DbForm; FormResponse; proposed SalesLeadIntake | Marketing §13 SubmitForm; lead context §11 (X15) | public published form | new | publication; no internal context |
 | QuoteExtraction | Sales/Quotes/QuoteExtraction | wizard | xml | Map extracted RFQ lines | Request/RequestItem | own §11 | R,M | later | requestId; evidence |
 | QuoteConfiguration | Sales/Quotes/QuoteConfiguration | wizard | xml | Select optional/configured products | OrderHeader | own §11 | R,M; E projection later | later | order/revision |
 | ManufacturingEstimate | Sales/Quotes/ManufacturingEstimate | task | xml | Request and consume approved costing | OrderItem | own §11; Manufacturing costs | cost/estimate grant | later | quote item; method |
@@ -750,6 +751,15 @@ both ways (the user's call, impl-sales §4 Nov 13): a chargeable decision tells 
 (SalesPolicy, topic SalesRepairToQuote), and a repair's quote tells the claim's assignee, else its queue (SalesRepairQuoted);
 neither names the fault text, diagnosis, decision or an amount. A customer's request for quote is Sales' alone: Commons' and
 Projects' requests neither list nor open it.
+
+**As built (impl-sales P20 review, Nov 14, 2026): the RFQ acknowledgement (§16).** Off unless the organization's SalesPolicy
+turns it on (SalesDefaults' "Acknowledge a request for quote by mail", `rfqAcknowledge`): a request made from mail
+(`create#QuoteRequestFromEmail`) whose sender matched a contact or account of the organization is acknowledged once, to the
+mail's From address, through the delivery ledger from the organization (`MdsrcSalesRfqAck`, `MANTLE_SALES_RFQ_ACK`, a
+transactional delivery naming it, so its suppressions apply), never to automatic, list, bulk or system mail and marked an
+automatic reply itself. Its text is the organization's stored `.html.fancy-locked` resource (`rfqAcknowledgeTextLocation`, else
+Mantle's `SalesQuoteRequestAck`) rendered with an explicit map: the request's reference and the seller's name, nothing of the
+request's content. A request made by a rep or from Comms is not acknowledged.
 
 ### OrderDetail — Quote context passed
 
@@ -1350,6 +1360,10 @@ and cost/margin additionally requires cost authority. Promotion editing remains 
   and Price lists (Products' shared screens, for a holder of Products' price permissions), OrderDetail's Agreements box (the
   agreements whose prices the lines took) and Customer360's Agreements tab. PriceExplain stays at `Sales/Products/PriceExplain` (P7's
   one route), not `Sales/Agreements/PriceExplain`. An agreement is a record panel host of the root and in the palette.
+- Print (impl-sales P20 review, §16 Agreement): AgreementDetail's More › Print (PDF) renders the agreement as it is now from its
+  own records (`get#SalesAgreementPrint`, Mantle's `template/party/SalesAgreement.print.html.fancy`: parties, items with their
+  negotiated prices, terms and text, marked a draft until active) for one who reads it; no cost or linked orders. A stored approved
+  PDF of an amendment stays §11.
 
 ### RecurringOrders
 

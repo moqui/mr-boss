@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     agreement it renews and its renewal); what activation still needs; Overview; Parties (AgreementParties); Items and prices
     (AgreementItems, AgreementPrices: the negotiated price of each product, kept on the agreement); Terms (AgreementTerms); Linked
     quotes and orders (AgreementConnections, the lines priced from it that the user sees); Documents; History; Conversation and Files
-    (AgreementCollaboration). Every change is Mantle's guarded service at the revision shown (template/SalesAgreements.xml). -->
+    (AgreementCollaboration). Every change is Mantle's guarded service at the revision shown (template/SalesAgreements.xml). More's
+    Print (PDF) renders the agreement as it is now from its own records (get#SalesAgreementPrint; Sales P20 review). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Agreement" default-menu-include="false">
     <parameter name="agreementId" required="true"/>
@@ -36,6 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="salesEndAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
     <transition-include name="salesRenewAgreement" location="component://mr-boss/template/SalesAgreements.xml"/>
     <transition-include name="salesAgreementContent" location="component://mr-boss/template/SalesAgreements.xml"/>
+    <transition-include name="salesAgreementPrint" location="component://mr-boss/template/SalesAgreements.xml"/>
     <actions>
         <if condition="appRoot == 'Sales'">
             <service-call name="mantle.party.SalesAgreementServices.get#SalesAgreement" out-map="detail" transaction="force-new"
@@ -278,6 +280,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                 </form-single>
                             </container-dialog>
+                            <link url="salesAgreementPrint" text="Print (PDF)" icon="sym_o_print" target-window="_blank" parameter-map="{agreementId:agreementId}"/>
                             <link url="." text="Renews ${ag.predecessorName}" parameter-map="{agreementId:ag.predecessorAgreementId}" condition="ag.predecessorAgreementId"/>
                             <link url="." text="Renewal ${ag.successorName}" parameter-map="{agreementId:ag.successorAgreementId}" condition="ag.successorAgreementId"/>
                             <link url="${customerUrl}" url-type="plain" text="Customer" parameter-map="{customerPartyId:ag.customerPartyId}"

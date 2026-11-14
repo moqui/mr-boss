@@ -251,4 +251,188 @@ function recurringBase(customerPartyId = ids.accounts.wingtip) {
     return {sourceOrderId, baseOrderId: stored.baseOrderId}
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell, recurringBase})
+// ===== P20 sweeps =====
+// The screen sweeps (acceptance SalesTui and SalesServerStatic, impl-sales P20), as MaintenanceSpecLib's: the shared screens Sales
+// mounts, as [path under the root, location], read from each Sales screen file's subscreens-items (walkChildTree follows files, not
+// mounts). Commons' Notifications under Quotes/Approvals is Commons' (it opens on a notification), not swept here.
+function mountedScreens() {
+    const files = []
+    ec.resource.getLocationReference("component://mr-boss/screen/Sales.xml").walkChildTree(files, null)
+    const found = []
+    for (const file of files) {
+        if (!file.location.endsWith(".xml")) continue
+        const parent = file.path === "Sales" ? "" : file.path.substring("Sales/".length) + "/"
+        const text = String(ec.resource.getLocationReference(file.location).getText())
+        const item = /<subscreens-item name="([^"]+)"\s+location="(component:\/\/mr-boss\/screen\/Shared\/[^"]+\.xml)"/g
+        for (let match = item.exec(text); match; match = item.exec(text)) found.push([parent + match[1], match[2]])
+    }
+    return found
+}
+// The tabs of a mounted screen that the current user's menu shows under Sales (a shared screen's tabs of another app's context are
+// not offered there), as paths under the root; none when its menu names none
+function mountTabs(path, parameters = {}) {
+    const name = path.substring(path.lastIndexOf("/") + 1)
+    const query = Object.entries(parameters)
+        .map(([key, value]) => key + "=" + encodeURIComponent(value))
+        .join("&")
+    const menu = ec.screen
+        .makeTest()
+        .rootScreen("component://webroot/screen/webroot.xml")
+        .render("menuData/apps/Sales/" + path + (query ? "?" + query : ""), {}, null)
+    ec.message.clearErrors()
+    if (menu.status != 200) return []
+    // the deepest level of that name (the menu lists each level of the path; a leaf has no subscreens)
+    const level = JSON.parse(menu.output)
+        .filter(level => level.name === name)
+        .pop()
+    return (level?.subscreens || []).filter(item => item.menuInclude).map(item => path + "/" + item.name)
+}
+// The records the Sales demo has no row of, made for the sweeps (as SalesOrderChanges makes them): a rep's direct order for Wingtip,
+// placed and approved, with a price change the change operator filed and the approver decided; a second order, part shipped and so
+// invoiced; and a monthly recurring base (recurringBase). {orderId, requestId, shippedOrderId, shipmentId, invoiceId, baseOrderId}
+function sweepOrders() {
+    const O = "mantle.order.SalesOrderServices."
+    const revisionOf = id =>
+        Number(ec.entity.find("mantle.order.OrderHeader").condition("orderId", id).disableAuthz().one().orderRevision)
+    const approved = (orderName, quantity) => {
+        const id = asUser(users.rep, () =>
+            system(() => {
+                const made = invoke(O + "create#SalesOrder", {
+                    organizationPartyId: ids.organizationId,
+                    customerPartyId: ids.accounts.wingtip,
+                    contactPartyId: ids.contacts.dana,
+                    orderName
+                }).orderId
+                invoke(O + "store#SalesOrderLine", {
+                    orderId: made,
+                    orderRevision: revisionOf(made),
+                    productId: "DEMO_1_1",
+                    quantity
+                })
+                invoke(O + "place#SalesOrder", {orderId: made, orderRevision: revisionOf(made)})
+                return made
+            })
+        )
+        asUser(users.approver, () =>
+            system(() =>
+                invoke(O + "approve#SalesOrder", {
+                    orderId: id,
+                    orderRevision: revisionOf(id),
+                    operationKey: "sweep-approve-" + id
+                })
+            )
+        )
+        return id
+    }
+    const orderId = approved("Wingtip sweep shelving", 4)
+    const saved = asUser(users.change, () =>
+        system(() =>
+            invoke("mantle.order.OrderChangeServices.save#OrderChange", {
+                orderId,
+                orderChangeKindEnumId: "OckPrice",
+                reason: "Volume discount agreed on the phone",
+                lines: [{orderItemSeqId: "01", proposedUnitAmount: 7}]
+            })
+        )
+    )
+    asUser(users.approver, () =>
+        system(() =>
+            invoke("mantle.order.OrderChangeServices.decide#OrderChange", {
+                requestId: saved.requestId,
+                sourceRevision: saved.sourceRevision
+            })
+        )
+    )
+    const shippedOrderId = approved("Wingtip sweep shipped shelving", 3)
+    const shipped = system(() => {
+        const S = "mantle.shipment.ShipmentServices."
+        const shipment = invoke(S + "create#OrderPartShipment", {orderId: shippedOrderId, orderPartSeqId: "01"})
+        invoke(S + "pack#ShipmentProduct", {
+            shipmentId: shipment.shipmentId,
+            shipmentPackageSeqId: shipment.shipmentPackageSeqId,
+            productId: "DEMO_1_1",
+            quantity: 1
+        })
+        invoke(S + "pack#Shipment", {shipmentId: shipment.shipmentId})
+        invoke(S + "ship#Shipment", {shipmentId: shipment.shipmentId})
+        const billing = ec.entity.find("mantle.order.OrderItemBilling").condition("orderId", shippedOrderId).list()
+        return {shipmentId: shipment.shipmentId, invoiceId: billing.size() ? billing.get(0).invoiceId : null}
+    })
+    ec.message.clearErrors()
+    return Object.assign(
+        {orderId, requestId: saved.requestId || null, shippedOrderId, baseOrderId: recurringBase().baseOrderId},
+        shipped
+    )
+}
+// The demo record a swept screen opens on: the entry of the screen or its nearest parent (a tab takes its record's); made is
+// sweepOrders' records (an order, its change, a shipment and an invoice)
+const opportunityRecord = {recordEntity: "mantle.sales.opportunity.SalesOpportunity", recordId: ids.deals.wingtip}
+const organization = {organizationPartyId: ids.organizationId}
+const sweepRecords = (made = {}) => ({
+    Home: organization,
+    Chatter: opportunityRecord,
+    RecordFiles: opportunityRecord,
+    LogNote: {entityName: opportunityRecord.recordEntity, recordId: ids.deals.wingtip},
+    SendMessage: {entityName: opportunityRecord.recordEntity, recordId: ids.deals.wingtip},
+    "QuickCreate/NewActivity": {salesOpportunityId: ids.deals.wingtip},
+    "QuickCreate/NewContact": {accountPartyId: ids.accounts.wingtip},
+    "Pipeline/OpportunityDetail": {salesOpportunityId: ids.deals.wingtip},
+    "Pipeline/WorkItemDetail": {workEffortId: ids.wingtipActivity},
+    "Pipeline/Forecast": {organizationPartyId: ids.organizationId, timePeriodId: ids.periods.q4},
+    "Accounts/Customer360": {organizationPartyId: ids.organizationId, customerPartyId: ids.accounts.wingtip},
+    "Accounts/ContactDetail": {partyId: ids.contacts.dana},
+    "Accounts/MergeCompare": {partyId: ids.accounts.adatum, otherPartyId: ids.accounts.adatum2},
+    "Quotes/QuoteRequestDetail": {requestId: ids.rfqs.wingtip},
+    "Quotes/QuoteTemplateDetail": {orderId: ids.templates.refit},
+    "Orders/OrderDetail": {orderId: made.orderId || ""},
+    "Orders/OrderChangeDetail": {requestId: made.requestId || ""},
+    "Orders/ShipmentDetail": {shipmentId: made.shipmentId || ""},
+    "Orders/InvoiceDetail": {invoiceId: made.invoiceId || ""},
+    "Orders/QuoteSend": {orderId: ids.quotes.wingtip},
+    "Products/Product360": {productId: "DEMO_1_1", organizationPartyId: ids.organizationId},
+    "Products/InventoryAvailability": {productId: "DEMO_1_1"},
+    "Products/PriceExplain": {orderId: ids.quotes.wingtip, orderItemSeqId: "01"},
+    "Agreements/AgreementDetail": {agreementId: ids.agreements.contoso},
+    "Agreements/PriceLists/PriceListDetail": {priceListId: "BOSS_PRICE_LIST"},
+    Settings: organization,
+    "Settings/Teams": {organizationPartyId: ids.organizationId, teamPartyId: "BOSS_SAL_TEAM_EAST"},
+    "Settings/Targets": {organizationPartyId: ids.organizationId, timePeriodId: ids.periods.q4},
+    Reports: organization
+})
+function sweepParameters(path, made = {}) {
+    const records = sweepRecords(made)
+    const key = Object.keys(records)
+        .filter(key => path === key || path.startsWith(key + "/"))
+        .sort((a, b) => b.length - a.length)[0]
+    return key ? records[key] : {}
+}
+// The second records of a screen the tui sweep renders again (each path's own record is sweepParameters'): OrderDetail on the
+// demo quote, the storeless seller's quote and the recurring base, OpportunityDetail on a lead, as [path, parameters]
+function sweepExtras(made = {}) {
+    return [
+        ["Orders/OrderDetail", {orderId: ids.quotes.wingtip}],
+        ["Orders/OrderDetail", {orderId: ids.quotes.fabrikam}],
+        ["Orders/OrderDetail", {orderId: made.baseOrderId || ""}],
+        ["Pipeline/OpportunityDetail", {salesOpportunityId: ids.deals.webLead}]
+    ]
+}
+
+;({
+    ids,
+    users,
+    asUser,
+    system,
+    refusal,
+    invoke,
+    page,
+    screenRefusal,
+    hit,
+    shell,
+    recurringBase,
+    mountedScreens,
+    mountTabs,
+    sweepOrders,
+    sweepRecords,
+    sweepParameters,
+    sweepExtras
+})
