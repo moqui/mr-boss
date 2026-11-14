@@ -1969,7 +1969,6 @@ built. Debug rebuilt in the mr-moqui worktree.
     docs/security/Attack-Surface.md, Mail section (commit 62d76755), ready to merge with mkt/p6;
   - the user's calls: none new; to confirm, an ARF bound by its key only and a forwarded hard bounce ignored (above).
 
-
 ### P7 — PASS Marketing: the app, subscription and preferences
 
 Design §13.1, §13 Subscribe and VerifySubscription, EmailPreferences (Marketing's context), §4 ListDetail's public
