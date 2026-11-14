@@ -40,10 +40,12 @@ along with this software (see the LICENSE.md file). If not, see
                 if (lineText == null) ec.message.addError(ec.resource.expand('Line ${number} is not in the diff of ${path}', '', {number, path}))
             }
             if (!ec.message.hasError()) {
-                ec.service.sync().name('ironstone.projects.CodeServices.comment#MergeRequest').parameters({mergeRequestId: mergeRequestId || '', body: body || '',
+                const made = ec.service.sync().name('ironstone.projects.CodeServices.comment#MergeRequest').parameters({mergeRequestId: mergeRequestId || '', body: body || '',
                     path: parentCommEventId ? null : (path || null), oldLine: !parentCommEventId && side === 'old' ? number : null,
                     newLine: !parentCommEventId && side === 'new' ? number : null, lineText: lineText, parentCommEventId: parentCommEventId || null}).call()
-                if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('Comment added'), 'success')
+                // a comment on a merge request with a public conversation may be held for review
+                if (!ec.message.hasError()) ec.message.addMessage(made?.held ? ec.l10n.localize('Your comment is held for review: it shows here once a moderator approves it')
+                    : ec.l10n.localize('Comment added'), made?.held ? 'info' : 'success')
             }
         ]]></script></actions>
         <default-response url="../Changes"><parameter name="mergeRequestId"/><parameter name="path"/></default-response>
@@ -91,10 +93,14 @@ along with this software (see the LICENSE.md file). If not, see
             }
         }
         canComment = !!changes.canComment && !clientUser
+        // a post's body is html (a public conversation's): its text, for the terminal
+        const plain = (html) => String(html || '').replace(/<\/(p|div|li|pre|h[1-6]|blockquote|tr)>|<br\s*\/{0,1}>/gi, '\n').replace(/<[^>]*>/g, '')
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&#x27;/gi, "'").replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+            .replace(/\n{3,}/g, '\n\n').trim()
         threadList = Array.from(changes.threadList || []).map((thread) => ({communicationEventId: thread.communicationEventId, filePath: thread.path,
             where: thread.path + ':' + (thread.newLine ?? thread.oldLine ?? ''), resolved: !!thread.resolved,
             stateText: [thread.resolved ? L('Resolved') : L('Open'), thread.outdated ? L('outdated') : ''].filter((part) => part).join(', '),
-            lineText: thread.lineText || '', commentsText: Array.from(thread.commentList || []).map((comment) => comment.authorName + ': ' + comment.body).join('\n'),
+            lineText: thread.lineText || '', commentsText: Array.from(thread.commentList || []).map((comment) => comment.authorName + ': ' + (comment.bodyFormat === 'html' ? plain(comment.body) : comment.body)).join('\n'),
             mergeRequestId: mergeRequestId}))
         threadOptions = threadList.map((thread) => ({key: thread.communicationEventId, text: thread.where + ' · ' + thread.stateText}))
         commentValue = {mergeRequestId: mergeRequestId, path: shownPath, lineSide: 'new'}
