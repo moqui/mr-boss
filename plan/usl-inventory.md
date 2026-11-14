@@ -2363,6 +2363,14 @@ remain historical; these rows add no implementation claim.
 | order/SalesPortalServices | check#SalesAppReadiness, get#AccountCard | — (PASS's app registry, PublicApps.js) | PASS:Sites/SiteDetail readiness; PASS:Account/Home |
 | sales/AccountServices | get#SalesInvite, invite#SalesContact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail (Invite to Sales) | Shared/Customer360 (Sales header); Sales/Accounts/ContactDetail (template/SalesInvite.xml) |
 
+### Added in the Sales build: PASS Sales orders (P17, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SalesPortalServices | find#CustomerOrders | PASS:Sales/CustomerOrders (MyOrderFind, MyOrders) | PASS:Sales/CustomerOrders (findSalesOrders); the PASS Account hub's card (get#AccountCard, open orders) |
+| order/SalesPortalServices | get#CustomerOrder, get#OrderDocument | PASS:Sales/CustomerOrder (OrderSummary, OrderShipments, OrderInvoices) | PASS:Sales/CustomerOrder (getSalesOrder; the confirmation's PDF through getSalesOrderDocument, streamed by the facade) |
+| order/SalesOrderServices | send#OrderConfirmation, build#OrderConfirmationMessage | Sales/Orders/OrderDetail (the storeless confirmation's order link) | the confirmation mail's link to PASS:Sales/CustomerOrder (the SalesOrder kind's OrderView, per recipient and attempt) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section
