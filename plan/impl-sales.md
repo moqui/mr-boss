@@ -2335,6 +2335,79 @@ OrderPreApproveCredit); SAL-APPROVAL, CX-ORDER-AUTHORITY (X4).
     defaults and rules need SALES_CONFIGURE for the organization; a price floor's cost is read on the server and never answered.";
   - nothing needs the user's call; the free line's rule is the user's call of Nov 13 as recorded.
 
+**Review 2026-11-14 (P9).** A fresh review of `sal/p9` (mr-mantle dcb31310, mr-boss f0c1843d; master merged into each first, nothing
+new on it) against P9, §2, §4 (the Nov 11 rows on OrderDecision, the approval setting and the warnings; the Nov 13 free line), design
+§5 and §9, F11, F14, F26, F43 and F58.
+- Checked and sound:
+  - The owner contract: `OrderPreApproveSales` adds nothing for a seller with no rule in effect, so every existing caller auto-approves
+    as before (ShopCheckout, StoreCheckout, ShopSubscriptions, OrderLifecycle, OrderToCashBasicFlow, WorkProjectMilestones,
+    AccountingCredit, CommerceOrders and CustomerServiceOrders pass unchanged). `approve#Order` does not call the check (F11), so a
+    person's approval is never refused. A store order meeting a SapOrder rule loses auto-approval (Built finding 5): that is §4 Nov 11
+    ("Sales' own warnings do so too ... whichever app placed it ... only for a seller with the setting on or a Sales rule set").
+  - The binding: decisions are read at the current revision only, and the `increment#OrderRevision` SECA marks the earlier ones
+    invalidated, never deleted (no OrderDecision is deleted anywhere). What moves a quote's revision with the commercial revision on:
+    a line's quantity, price or other field, a part change (validity, address, customer), an OrderPartParty change (an owner or team
+    reassignment too), a part contact or term; a file, a note and a status-only change do not. With it off every change moves it,
+    so an approval falls with a file (the readiness finding says so).
+  - Separation: owner, requester and a priced line's actor refused unless the rule allows; another organization's approver sees the
+    quote as missing; a stale or missing revision names the current one; an expired or proposed quote refused; the operation key
+    answers the first result; `propose#Quote` refuses an unapproved quote. The notice's title and messageJson carry no amount, the
+    topic is private, and the rep gets no notice.
+  - The free line (the user's call): a rep drafts a free or zero line where a SapQuote free-line, discount or floor rule meets it, or
+    while no quote rule is set (the manual-price rule); elsewhere `SALES_APPROVE` is still needed (FREE_LINE_DENIED). A floor's cost
+    is read on the server and never answered.
+  - F58: the one OrderChangeApproval link resolves per recipient: Customer Service's OrderChangeDetail for its order desk, Sales'
+    Approvals for a sales approver of a commercial kind, nothing for a rep (CustomerServiceOrderChanges and SalesApprovals pass).
+  - The defaults and rules: SALES_CONFIGURE and the organization on every writer and reader, dated successors, audit reasons; the
+    Approvals screen checks SALES_APPROVE and its artifact deny holds.
+- Fixed:
+  - R1 (medium, approval integrity; Built finding 4): approving or refusing from the notice (the Approvals list, the Commons inbox)
+    decided every rule open at the revision, a rule set after the notice was sent among them, and only those the approver might decide,
+    while the framework then reads the notice for every recipient, stranding another group's rule with no notice. The notice now
+    names its rules (`ruleKeys`), `approve#QuoteMessage` and `refuse#QuoteMessage` decide those only, and `decide#Quote` refuses
+    unless the approver may decide every rule chosen (one rule from OrderDetail still decides that rule alone). The request is now a
+    row per rule, so a rule set after a request shows as needing approval and the rep can ask for it (the earlier code left it
+    "waiting" with no notice and refused a second request), and a request after a refusal shows as waiting. SalesQuoteApprovals' new
+    feature fails on the unfixed code.
+  - R2 (medium, scope): a holder of `SALES_APPROVE` admitted to a quote only because its approval was asked could change it when they
+    also held `SALES_QUOTE_EDIT` (a lead who drafts quotes), then approve an amount rule over their own change. `quoteOf` gives such a
+    reader `canEdit` false and `requireQuote`'s edit refuses it (PERMISSION_DENIED). Fails on the unfixed code.
+  - R3 (low, confidentiality): Sales' pre-approval warnings carried the rule's threshold and the order's amounts into whatever reads
+    `check#OrderPreApprove` (today the server log, from P11 the order screens); they now name the rule's kind and id only.
+  - R4 (low, §2 revisions): `store#SalesPolicy` and `store#SalesApprovalPolicy` accepted a replacing write that named no revision; it
+    is refused REVISION_REQUIRED (the screens pass it).
+- Provisional findings (for the lead to number):
+  - any holder of `SALES_APPROVE` in the seller sees a quote once its approval was asked, also one outside the rule's approver group
+    who cannot decide it (design §1.1 "its authorized approver"); narrow it to the approvers of its rules if wanted;
+  - an owner or team reassignment of a quote (OrderPartParty) moves its revision and so ends its approvals, with the commercial
+    revision on too; P10 and P14 may want it counted as not commercial;
+  - OrderDetail's Approve and Refuse send no operation key (a double submit writes a second, identical decision); the list's goes
+    through the notice once;
+  - a rule ended after a free line was drafted under it leaves that line needing no approval when other quote rules remain (the
+    manual-price rule applies only while none is set);
+  - the Built note's findings stand but the fourth, fixed here (R1).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesQuoteApprovals 6 features (about 2.7 s, was 2.2),
+  SalesQuoteDrafts, SalesLeadIntake, SalesWorkspace, SalesPipelineSetup 24 of 24 (46 s); SalesQuoteDrafts, ShopCheckout, StoreCheckout,
+  OrderLifecycle, OrderChanges, PurchaseApprovals, ShopSubscriptions, WorkProjectMilestones, OrderToCashBasicFlow, AccountingCredit,
+  SalesOrganizationScope and StorelessOrderTax 122 of 122 (14 specs with dependencies, 69 s). mr-boss SalesApprovals, SalesAccess,
+  SalesQuotes, CustomerServiceOrderChanges, CustomerServiceOrders and CommerceOrders 24 of 24 (33 s); SalesApprovals, SalesAccess,
+  SalesQuotes, SalesSettings and Notifications 28 of 28 (57 s). R1's and R2's checks were run against the unfixed code and failed
+  there. Prettier clean on the changed JavaScript. Not run: test-apps, test-framework, acceptance (SalesApprovalUsable unchanged; its
+  approval from the list decides the one discount rule its notice names).
+- For the lead:
+  - budget share: mr-mantle about 2.7 s for P9 (SalesQuoteApprovals' sixth feature, 0.3 s); mr-boss as the Built note;
+  - merge hot spots beside the Built note's: mr-mantle `service/mantle/sales/SalesAccess.js` (quoteOf's P9 lines and requireQuote),
+    `service/mantle/order/SalesApprovals.js`; mr-boss `plan/design-sales.md` (§5's as built);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), the line: "- Sales' approvals (`mantle.order.SalesApprovalServices`,
+    all `allow-remote="false"`): `decide#Quote` and the SalesQuoteApproval handlers need `SALES_APPROVE` in the quote's selling
+    organization (a quote asked for approval is readable by such a holder, never editable through that), the revision the approver
+    read and an approver other than the quote's owner, requester or a priced line's actor unless the rule allows it; a notice decides
+    only the rules it named, and only when the approver may decide each; `request#QuoteApproval` and `propose#Quote` need
+    `SALES_QUOTE_EDIT` on an assigned quote; the defaults and rules need `SALES_CONFIGURE` for the organization and name the revision
+    they replace; a price floor's cost is read on the server and never answered; the pre-approval warnings name a rule, never an
+    amount.";
+  - nothing new needs the user's call; R1 follows the lead's preference (the notice decides only the rules it names).
+
 ### P10 — Issue, send and the customer's response
 
 Design §5 OrderDetail's quote context (propose, send, revision binding, revise, clone, record acceptance, decline and

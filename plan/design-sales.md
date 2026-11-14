@@ -923,11 +923,15 @@ crosscut §3.15 row:
   on `increment#OrderRevision`), so a file or note leaves it in force where the seller's commercial revision is on.
 - The approver holds SALES_APPROVE in the seller's organization, is in the rule's group when it names one (the "approver role" is a
   user group), and is not the quote's owner, who asked for the approval or who entered a line the rule names, unless the rule allows
-  it. A holder of SALES_APPROVE sees a quote of their organization once its approval was asked (SalesAccess.js quoteOf).
+  it. A holder of SALES_APPROVE sees a quote of their organization once its approval was asked (SalesAccess.js quoteOf), to read
+  and decide, not to change it. The rep asks for each rule (one SdrRequested row a rule); the notice names the rules asked for,
+  deciding it decides those and no rule set since, and only when the approver may decide each of them (the framework then reads
+  the notice for every recipient); a rule set since is asked for again.
 - A free or zero-price line is the rep's to draft where a rule will need it approved (the manual-price rule while none is set, a
   free-line, discount or floor rule); elsewhere it still needs SALES_APPROVE (FREE_LINE_DENIED) (the user's call of Nov 13).
 - Sales' pre-approval warnings: for a seller with a rule in effect, an accepted quote's open quote rules and the order rules the order
-  meets; an organization with none adds nothing. The notice's title names the kinds of the rules, never an amount.
+  meets, each naming the rule's kind and id, never an amount; an organization with none adds nothing. The notice's title names the
+  kinds of the rules, never an amount.
 - OrderDetail's Approval box shows the rules, their inputs and states, Ask for approval and Approve or Refuse; ApprovalPolicies shows a
   quote's preview when one is named. Approvals lists both topics; an order change's row opens where Commons' resolver sends the
   approver (Sales' Approvals until P14).
