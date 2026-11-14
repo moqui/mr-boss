@@ -12,10 +12,23 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Marketing settings (initial-design.md); design-marketing.md decides them. -->
+<!-- The Settings area of IronStone Marketing (design-marketing §12, §1.2; impl-marketing P1), linked from Admin's settings index
+    (marketing.settings): Index (the landing, SettingsIndex over Mantle's get#Settings, with the readiness of the provider
+    marketing.setup that Admin's Health shows too) and Adoption (design §15.4: the campaigns, lists and segments that belong to no
+    organization, assigned one by one). The Marketing administrator's (MARKETING_CONFIGURE). BOSS_MKT_SETTINGS denies the root user
+    group; the screens check the capability too, as the menu does, so a custom group given Marketing in Admin opens only what its
+    permissions give (impl-maintenance F346's lesson). Mantle's services check the permission and the organization again.
+    CampaignDefaults and Vocabularies (P2), Consent and Suppressions (P3), SendingProfiles and MessageTemplates (P6) and LeadSources
+    (P13) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="9" menu-image="sym_o_settings" menu-image-type="icon">
+        default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon"
+        default-menu-include="ec.user.hasPermission('MARKETING_CONFIGURE')">
+    <always-actions>
+        <script>if(!marketing.capabilities.settings)throw new Error('PERMISSION_DENIED: Marketing settings are the Marketing administrator\'s')</script>
+    </always-actions>
+    <subscreens default-item="Index" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Marketing settings." type="p"/>
+        <subscreens-menu id="MarketingSettingsTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Settings › Adoption (design-marketing §15.4, §1.1; style-guide §3.9 Settings; impl-marketing P1, X12): the campaigns,
+    lists and segments that belong to no organization, over Mantle's mantle.marketing.CampaignServices.preview#Adoption, each
+    assigned by the administrator to an organization of their scope with apply#Adoption, one record at a time at the revision read,
+    each with its own result (adopted, or refused by reason: already owned, changed since it was read, an organization outside the
+    scope). Until a record is adopted nothing edits or sends it through Marketing; adoption assigns the owner and nothing else, so
+    unknown historical consent stays unknown. The Marketing administrator's (MARKETING_CONFIGURE), as the Settings area is. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Adoption" default-menu-index="2">
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <!-- one record to an organization, at the revision read; the result as a message -->
+    <transition name="adopt">
+        <actions>
+            <service-call name="mantle.marketing.CampaignServices.apply#Adoption" out-map="adopted"
+                    in-map="{assignments: [{recordKind: recordKind, recordId: recordId, organizationPartyId: organizationPartyId || null,
+                        lastUpdatedStamp: revision || null}]}"/>
+            <script><![CDATA[
+                for (const result of Array.from(adopted.results || [])) {
+                    if (result.adopted) ec.message.addMessage(ec.l10n.localize('Adopted') + ': ' + result.recordId, 'success')
+                    else ec.message.addMessage(result.recordId + ': ' + (result.message || result.reasonCode), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.marketing.CampaignServices.preview#Adoption" out-map="previewFound" transaction="force-new"
+                ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordRows" from="Array.from(previewFound?.records || []).map(row =&gt; Object.assign({}, row,
+                {organizationPartyId: marketing.organizationPartyIds?.length === 1 ? marketing.organizationPartyIds[0] : null}))"/>
+        <set field="counts" from="previewFound?.counts || {}"/>
+        <set field="countText" from="(counts.campaign || 0) + ' campaigns, ' + (counts.list || 0) + ' lists and ' + (counts.segment || 0)
+                + ' segments await adoption'"/>
+    </actions>
+    <widgets>
+        <label text="Adoption of existing records" type="h5"/>
+        <label text="Campaigns, lists and segments made before Marketing's organizations belong to none: no one edits or sends them through Marketing until each is given an organization. Adoption gives the organization and nothing else; consent nobody recorded stays unknown."
+                type="p" style="text-caption m-muted"/>
+        <label type="p" style="text-negative" condition="!previewFound?.records" text="The records awaiting adoption cannot be listed just now."/>
+        <label type="p" condition="previewFound?.records" text="${countText}"/>
+        <label type="p" style="m-muted" condition="previewFound?.records &amp;&amp; !recordRows.length"
+                text="Every campaign, list and segment belongs to an organization."/>
+        <container-box condition="recordRows.length">
+            <box-body-nopad>
+                <form-list name="AdoptionRecords" list="recordRows" transition="adopt" paginate="false">
+                    <field name="recordKind"><default-field><hidden/></default-field></field>
+                    <field name="recordId"><default-field><hidden/></default-field></field>
+                    <field name="revision"><default-field><hidden/></default-field></field>
+                    <field name="kindName"><default-field title="Kind"><display/></default-field></field>
+                    <field name="label"><default-field title="Record"><display/></default-field></field>
+                    <field name="detail"><default-field title="Status or type"><display/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Adopt"><submit/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="label"/><field-ref name="kindName"/></column>
+                        <column><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

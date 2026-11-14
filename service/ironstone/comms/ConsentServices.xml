@@ -35,7 +35,9 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="ConsentOptions" allow-remote="false">
         <description>The choices of the consent forms: the consent lists (not mailboxes; archived ones last and marked), the
-            purposes, the sources and the statuses of the find (list statuses, then granted and withdrawn).</description>
+            purposes, the sources and the statuses of the find (list statuses, then granted and withdrawn). Every list is read
+            (authorization off, past the organization filter of ContactList, impl-marketing P1) for a contact admin only, who
+            manages every list's consent; anyone else gets no list.</description>
         <out-parameters>
             <parameter name="listOptions" type="List"/>
             <parameter name="purposeOptions" type="List"/>
@@ -45,8 +47,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const nowMillis = Number(String(ec.user.nowTimestamp))
-            const lists = Array.from(ec.entity.find('mantle.marketing.contact.ContactList').condition('contactListTypeEnumId', 'not-equals', 'MAILBOX')
-                    .orderBy('contactListName').list())
+            const consentAdmin = !!ec.service.sync().name('ironstone.comms.ConsentServices.check#ConsentAdmin').call()?.isConsentAdmin
+            const lists = !consentAdmin ? [] : Array.from(ec.entity.find('mantle.marketing.contact.ContactList').disableAuthz()
+                    .condition('contactListTypeEnumId', 'not-equals', 'MAILBOX').orderBy('contactListName').list())
             const archived = (list) => list.archivedDate != null && Number(String(list.archivedDate)) <= nowMillis
             listOptions = lists.sort((a, b) => (archived(a) ? 1 : 0) - (archived(b) ? 1 : 0)).map((list) => ({key: list.contactListId,
                 text: (list.contactListName || list.contactListId) + (archived(list) ? ' · ' + L('archived') : ''), archived: archived(list)}))
