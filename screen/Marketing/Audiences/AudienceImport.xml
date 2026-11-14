@@ -126,7 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
-                            <field name="evidenceDate"><default-field title="Evidence date" tooltip="When the people asked; now when empty"><date-time type="date-time"/></default-field></field>
+                            <field name="evidenceDate"><default-field title="Evidence date" tooltip="When the people asked (or name the column with each row's date); never today by default"><date-time type="date-time"/></default-field></field>
                             <field name="evidenceText"><default-field title="Evidence" tooltip="What the people did or said, and where"><text-area rows="3" cols="60"/></default-field></field>
                             <field name="evidenceColumn"><default-field title="Evidence column" tooltip="The file's column with each row's own evidence, if any"><text-line size="30"/></default-field></field>
                             <field name="evidenceDateColumn"><default-field title="Evidence date column" tooltip="The file's column with each row's own evidence date, if any"><text-line size="30"/></default-field></field>

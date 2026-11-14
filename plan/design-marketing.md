@@ -530,9 +530,12 @@ ImportEvidence as one form (list, file, encoding, evidence source, date and text
 accept for a consent editor) and the recent imports; with one, its header, the columns and evidence again while it is previewed,
 and its rows (ImportMatches, then ImportResults) with Apply at the revision read, Retry failures and the error rows' download.
 L.`preview#AudienceImport` reads the file with Commons' `parse#ContactFile` and `read#ContactRows` (the parser `preview#Contacts`
-and `import#Contacts` use) and matches a row by the list channel's address alone with `match#Contact` (never a personal contact,
-the importer's own included: a list's member is the organization's); `preview#Contacts` and `import#Contacts` themselves are not
-called, as they match by name and import into a contact book; a new contact is a directory contact made by `import#ContactRow`.
+and `import#Contacts` use) and matches a row by the list channel's address alone, on `match#Contact`'s address rules but never by a
+name alone and never a personal contact, the importer's own included (a list's member is the organization's; a personal contact
+never hides a directory contact of the same address); `preview#Contacts`, `import#Contacts` and `match#Contact` themselves are not
+called, as they match by name, import into a contact book or stop at a personal contact; a new contact is a directory contact made
+by `import#ContactRow`. The evidence's original date is required (the import's or a date column's), never today by default; the
+error rows (the staged file's rows) are for the import's importers.
 The file is staged as a dbresource file by reference and sha256 (AudienceImport), its rows' previews and outcomes are
 AudienceImportItem rows (the address masked, never in full), and the file is purged after 30 days by the job
 `purge_MarketingAudienceImports`, the outcomes kept. L.`apply#AudienceImport` applies each row in a transaction of its own, the

@@ -1392,6 +1392,71 @@ mr-moqui unchanged, no Rust built.
     Sales and order files;
   - nothing needs the user's call; the findings' second and fifth are choices the review may want to confirm.
 
+**Review Nov 14 (P4).** A fresh review of mr-mantle and mr-boss on `mkt/p4` against the phase text, §2, §4 and design §4/§18;
+master had nothing newer to merge in either repository.
+- Checked and sound:
+  - the targets: `marketingAudience` (wizard, `MARKETING_AUDIENCE_IMPORT,MARKETING_AUDIENCE_EDIT`, view `MARKETING_AUDIENCE_VIEW`, no
+    `ADMIN_*`, runs finder answering none without the audience view and only the caller's organizations, summaries with no row or
+    address) and `marketingAudienceMembers` (rows, `MARKETING_AUDIENCE_EXPORT` for export and view, the address a field of
+    `MARKETING_AUDIENCE_VIEW`, scopes the caller's organizations' non-mailbox lists, bounded and recorded by run#Export), as §4 and
+    design-admin §11.1 say; the ALL_USERS authz covers only the runs finder and the export's two services, each checking itself;
+  - preview and apply: both permissions and the list's organization on every path (apply rechecks them, and the consent permission
+    for an accepting import, whoever previewed it); the staged dbresource file by location and sha256, never returned or put in
+    context; the 30-day expiry and the purge job (each import apart, history rows deleted with the file, outcomes kept, a staged
+    import expired); items hold the address masked; a list supplies no evidence; a re-preview only while staged, at its revision;
+  - each row once: the item locked in the row's own transaction with its contact and its request, filed through
+    `file#SubscriptionRequest` (P3's decision: a withdrawal later than the evidence refused WITHDRAWN, an accepting request refused
+    CONSENT_WITHDRAWN on a purpose withdrawal, a suppression never touched, membership rows ended, not deleted); a restart applies
+    only staged rows, a retry only failed ones; a failure logged by row and the rest go on. Filing in the row's transaction rather
+    than request#Subscriptions' new one (Built finding 4) is right: the new contact must be visible to the filing;
+  - merge#Lists: target and sources through `listOfScope` (the caller's organizations, never a mailbox or unowned list), one
+    organization and channel, at most 10 sources and 2,000 members; decisions recomputed at the apply under the preview key; each
+    member filed apart through the same filing; no party touched, no row deleted, the sources archived only through archive#List;
+    the operation key answers a retry; nothing pending or withdrawn promoted, a withdrawal on any source not carried;
+  - the export reveals party, name, state and dates to an export holder of the list's organization, the address only with the
+    audience view; the screens' transitions call only the guarded services; the one qvt render of AudienceImport in MarketingImport;
+  - Built finding 2: the import's refusal of every personal contact is right (a list's members are read by every audience reader of
+    the organization, so a personal contact on a list publishes it); a duplicate directory contact when the only match is someone's
+    personal contact is acceptable, as Commons keeps personal contacts apart. That a personal contact could hide an existing
+    directory contact was not (R1).
+- Fixed:
+  - R1 (Medium) Matching: `matchOf` used Commons' `match#Contact`, which stops at the first party it sees and falls back to a name.
+    The importer's own personal contact with a row's address, first by id, hid the directory contact of that address and a duplicate
+    contact was made; on an SMS list a row whose number matched no one was matched to a party by name alone, its evidence then filed
+    on that party's other number (`destinationOf` falling back to the primary). `matchOf` now matches by the address alone on
+    Commons' rules (email ignoring case; phone by its last digits with the row's name), skipping personal, merged and disabled
+    parties. Spec: the importer's personal contact with Ana's address (Ana still matched), an SMS row with a name and no phone (added).
+  - R2 (Medium) The import's evidence date defaulted to now, which is later than any earlier withdrawal, so an import with no date
+    moved an unsubscribed member back to pending, or to accepted for a consent editor on a list-only withdrawal. The original date
+    (design §4 ImportEvidence) is now required: the import's or a date column's (EVIDENCE_DATE_REQUIRED; a row without one excluded).
+    request#Subscriptions' staff default of now (a request made at the counter) is unchanged. Spec: a preview with no date refused.
+  - R3 (Low) The error rows (every column of the staged file, columns the import ignores included) were given to any audience reader
+    of the organization; now to the importers (`MARKETING_AUDIENCE_IMPORT` with the edit and view), and `canDownloadErrors` says so.
+    Spec: the reader refused and not offered the download, the importer given two rows.
+  - R4 (Low) `export#MemberTransfer` gave the address to any caller asking the field (run#Export gates it, but the service is every
+    user's); it now also asks the audience view. `merge#Lists` got a transaction timeout of 1,800 s (up to 2,000 members, each in
+    its own transaction under the service's).
+- Provisional findings (for the lead to number):
+  - Built finding 5, the user's call: a merge carries an acceptance as a grant of the target list when a same-purpose source list
+    has a grant. Design §4 says target-list consent is required independently and evidence of another topic is not a grant, and
+    design §4 (Segments: "a subscription topic represented by a non-MAILBOX ContactList") calls a list a topic, so a literal reading files every carried member pending; the build's reading (topic as purpose)
+    keeps a consolidation of like lists usable. Left as built, the evidence text naming the source list;
+  - request#Subscriptions (P3) admits the caller's own personal contact onto an organization's list, which the import refuses for
+    the reason above; aligning P3 (refuse personal contacts there too) is suggested;
+  - an import stuck in Applying past its expiry has its file purged and its remaining rows stay not applied, shown so, with no
+    retry; import the file again;
+  - `get#AudienceImport` names a matched party to an importer by the file's address (a directory lookup by address), as P3's
+    request screens name parties; noted, not changed.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle AudienceImport, ListMerge, Audiences, Consent (29 of
+  29, 55 s; AudienceImport 1.1 s, its new checks failing on the unfixed service: the no-date refusal and the match counts);
+  mr-boss MarketingImport, MarketingLists, MarketingAccess, AdminImports, AdminExports (18 of 18, 80 s). `moqui lint --screens`
+  (the release binary directly): nothing flagged in the P4 screens. Prettier clean on the changed JavaScript.
+- For the lead:
+  - budget share: mr-mantle AudienceImport about 1.1 s (0.2 s over the Built note's); mr-boss unchanged;
+  - merge hot spots: as the Built note's, plus `MarketingAudienceTransfers.js` and `AudienceImport.spec.js` (P4's own files) and
+    design-marketing §4's as-built note;
+  - the user's call: the merge's carried acceptance (above).
+
 ### P5 — Segments and audience preview
 
 Design §4 Segments, SegmentDetail and AudiencePreview; MKT-SEGMENT, MKT-ACCESS; gate 1.
