@@ -38,6 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="changeStatus" location="component://mr-boss/template/MarketingCampaigns.xml"/>
     <transition-include name="duplicateCampaign" location="component://mr-boss/template/MarketingCampaigns.xml"/>
     <transition-include name="createSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <transition-include name="createAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
     <actions>
         <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="campaignCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'campaign', recordId:marketingCampaignId}"/>
@@ -86,6 +87,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sendDetailPath" from="sharedLinks['Sends/SendDetail'] || null"/>
         <set field="sendsPath" from="sharedLinks['Sends/Sends'] || null"/>
         <set field="newSendValues" from="{marketingCampaignId:marketingCampaignId, organizationPartyId:campaign.organizationPartyId, campaignFixed:true}"/>
+        <!-- P11: the campaign's automations (design §3 CampaignDetail's Automation), with New automation (the campaign fixed) -->
+        <if condition="recordFound &amp;&amp; marketing.capabilities.automationRead">
+            <service-call name="mantle.marketing.AutomationServices.find#Automations" out-map="automationsFound" transaction="force-new" ignore-error="true"
+                    in-map="{marketingCampaignId:marketingCampaignId, statusId:'all', pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignAutomationList" from="automationsFound?.automationList || []"/>
+        <set field="automationDetailPath" from="sharedLinks['Automations/AutomationDetail'] || null"/>
+        <set field="newAutomationValues" from="{marketingCampaignId:marketingCampaignId, organizationPartyId:campaign.organizationPartyId, campaignFixed:true}"/>
     </actions>
     <widgets>
         <section name="CampaignNotFound" condition="!recordFound">
@@ -526,6 +536,36 @@ along with this software (see the LICENSE.md file). If not, see
                             <columns type="mobile">
                                 <column><field-ref name="sendName"/><field-ref name="subject"/></column>
                                 <column><field-ref name="statusText"/><field-ref name="eligibleText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <!-- P11: the campaign's automations -->
+                <container-box condition="marketing.capabilities.automationRead">
+                    <box-header title="Automations"/>
+                    <box-toolbar>
+                        <container-dialog id="QuickAutomationDialog" button-text="New automation" icon="sym_o_add" title="New automation of ${campaign.campaignName}"
+                                width="640" condition="automationsFound?.canCreate &amp;&amp; ['MKTG_CAMP_PLANNED', 'MKTG_CAMP_APPROVED', 'MKTG_CAMP_INPROGRESS'].includes(campaign.statusId)">
+                            <section-include name="NewAutomationForm" location="component://mr-boss/template/MarketingAutomations.xml"/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No automations yet." type="p" style="m-muted" condition="!campaignAutomationList.length"/>
+                        <form-list name="CampaignAutomations" list="campaignAutomationList" skip-form="true" paginate="false" condition="campaignAutomationList.length">
+                            <field name="automationName">
+                                <conditional-field title="Automation" condition="automationDetailPath">
+                                    <link url="${automationDetailPath}" text="${automationName}" link-type="anchor" parameter-map="{marketingAutomationId:marketingAutomationId}"/>
+                                </conditional-field>
+                                <default-field title="Automation"><display/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="triggerText"><default-field title="Trigger"><display/></default-field></field>
+                            <field name="activeCount" align="right"><default-field title="Active"><display format="#,##0"/></default-field></field>
+                            <field name="completedCount" align="right"><default-field title="Completed"><display format="#,##0"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="automationName"/><field-ref name="triggerText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="activeCount"/></column>
                             </columns>
                         </form-list>
                     </box-body>

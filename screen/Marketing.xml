@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle/marketing/MarketingAccess.js). The menu of design §1.2 grows by phase and shows built areas only: P1 builds Home (every
     Marketing user's), P2 Campaigns (with Approvals, the approvers'), P3 Audiences (the audience managers') and Leads (Sales' Leads and
     Accounts with the bulk action, a Sales reader's) and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
-    redirects of their old links (F2), to Audiences and Sends (P5, P8); Sends gains the sends, SendDetail and Compose (P8). -->
+    redirects of their old links (F2), to Audiences and Sends (P5, P8); Sends gains the sends, SendDetail and Compose (P8); P11 builds
+    Automations (the drip sequences, AutomationDetail and EnrollmentDetail; BOSS_MKT_AUTOMATIONS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -74,6 +75,11 @@ along with this software (see the LICENSE.md file). If not, see
             template services check the permissions and the organization again -->
         <subscreens-item name="Sends" location="component://mr-boss/screen/Marketing/Sends.xml" menu-index="4"
                 menu-include="ec.user.hasPermission('MESSAGE_TEMPLATE_VIEW') || ec.user.hasPermission('MESSAGE_TEMPLATE_EDIT') || ec.user.hasPermission('MARKETING_SEND_EDIT') || ec.user.hasPermission('MARKETING_APPROVE') || ec.user.hasPermission('MARKETING_DISPATCH')"/>
+        <!-- P11: Automations (design §6): the drip sequences, AutomationDetail and EnrollmentDetail, for the authors, approvers,
+            dispatchers, audience managers and the administrator (BOSS_MKT_AUTOMATIONS denies the root user group); Mantle's
+            AutomationServices check the permissions and the organization again -->
+        <subscreens-item name="Automations" location="component://mr-boss/screen/Marketing/Automations.xml" menu-index="5"
+                menu-include="ec.user.hasPermission('MARKETING_SEND_EDIT') || ec.user.hasPermission('MARKETING_APPROVE') || ec.user.hasPermission('MARKETING_DISPATCH') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')"/>
         <!-- P3: Leads (design §10, F64): Sales' Leads and Accounts in Sales' context for this root, with the bulk "Add to list
             (evidenced)", for a user who reads Sales; Sales' own services decide what they read -->
         <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="8"
@@ -129,6 +135,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g t" label="Message templates" screen="Marketing/Sends/MessageTemplates"/>
             <!-- P8 -->
             <key keys="g n" label="Sends" screen="Marketing/Sends/Sends"/>
+            <!-- P11 -->
+            <key keys="g a" label="Automations" screen="Marketing/Automations/Automations"/>
         </keymap>
     </shell-providers>
 

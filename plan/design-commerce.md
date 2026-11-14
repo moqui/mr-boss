@@ -861,6 +861,14 @@ sender for the store's carts, built-in recovery or a named Marketing automation,
 does not send. The Comms delivery ledger deduplicates by cart and recipient as a second guard, so
 a cart never gets two recovery mails.
 
+As built (impl-marketing P11, owner contract): the sender is `builtin` or `automation`, the latter offered (RecoveryPolicy's
+`view.senderOptions`, `store#CartRecoveryPolicy` refusing it otherwise: AUTOMATION_UNAVAILABLE) while an active Marketing automation of
+the store's organization has the store's cart-abandoned trigger. With it, built-in recovery sends nothing for the store (OTHER_SENDER);
+the automation's admission reads the same carts (`CartRecovery.js` `automationCarts`: idle past the delay within the window, a signed-in
+verified shopper holding the store's cart reminders, under the most sends), files one event per cart and visit, marks the visit
+handled, and never admits a visit built-in recovery already sent for; its send goes to the automation's topic, a Marketing list, under
+the shopper's marketing consent as every automation send does.
+
 ### Returns
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

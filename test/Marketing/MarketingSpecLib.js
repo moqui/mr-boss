@@ -7,15 +7,16 @@ const ids = {
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's
     staffMenu: ["Home", "Campaigns"],
-    // P8: Sends for the approvers and dispatchers too (its Sends tab; the templates stay their readers')
-    sendsStaffMenu: ["Home", "Campaigns", "Sends"],
+    // P8: Sends for the approvers and dispatchers too (its Sends tab; the templates stay their readers'); P11 Automations too
+    sendsStaffMenu: ["Home", "Campaigns", "Sends", "Automations"],
     approverSendsMenu: ["Sends"],
     // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
-    audienceMenu: ["Home", "Campaigns", "Audiences"],
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Settings"],
-    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Leads", "Settings"],
+    // P11: Automations for the authors, approvers, dispatchers, audience managers and the administrator
+    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations"],
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Settings"],
+    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Leads", "Settings"],
     // P6: Sends (Comms' templates) for the authors and the administrator
-    authorMenu: ["Home", "Campaigns", "Sends"],
+    authorMenu: ["Home", "Campaigns", "Sends", "Automations"],
     sendsMenu: ["Sends", "MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
@@ -25,8 +26,8 @@ const ids = {
     approverCampaignsMenu: ["Campaigns", "Approvals"],
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
-    // P6: an author opens the templates (g t)
-    authorKeys: ["g m", "g c", "g t", "g n"],
+    // P6: an author opens the templates (g t); P8 the sends (g n); P11 the automations (g a)
+    authorKeys: ["g m", "g c", "g t", "g n", "g a"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
@@ -59,7 +60,11 @@ const ids = {
     // (Maya its one recipient), and the December one approved for 1 December
     draftSendId: "BOSS_MKT_SEND_PREVIEW",
     approvedSendId: "BOSS_MKT_SEND_NOV",
-    scheduledSendId: "BOSS_MKT_SEND_DEC"
+    scheduledSendId: "BOSS_MKT_SEND_DEC",
+    // P11's demo automation: Retail's garden newsletter welcome (active; Maya in its wait, Olive stopped at her request)
+    welcomeAutomationId: "BOSS_MKT_AUTO_WELCOME",
+    waitingEnrollmentId: "BOSS_MKT_ENR_MAYA",
+    stoppedEnrollmentId: "BOSS_MKT_ENR_OLIVE"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

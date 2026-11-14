@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Automations area of IronStone Marketing (design-marketing §6, §1.2; impl-marketing P11): Automations (the list, the default),
+    AutomationDetail and EnrollmentDetail (hidden, opened from it). For the authors, approvers, dispatchers, audience managers and the
+    administrator (BOSS_MKT_AUTOMATIONS denies the root user group and gives those groups an ALWAYS; the root's menu shows it to a
+    Marketing reader who writes, approves or dispatches sends or reads audiences); the area's check asks the capability too
+    (automations), so a custom group given Marketing is shown no area its services refuse. Every read and write is
+    mantle.marketing.AutomationServices, which checks the permissions and the organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Automations" default-menu-index="5" menu-image="sym_o_route" menu-image-type="icon">
+    <always-actions>
+        <script>if(!marketing.capabilities.automations)throw new Error('PERMISSION_DENIED: Automations are for the Marketing authors, approvers, dispatchers and audience managers')</script>
+    </always-actions>
+    <subscreens default-item="Automations" always-use-full-path="true">
+        <subscreens-item name="Automations" location="component://mr-boss/screen/Marketing/Automations/Automations.xml" menu-index="1"/>
+        <subscreens-item name="AutomationDetail" location="component://mr-boss/screen/Marketing/Automations/AutomationDetail.xml" menu-include="false"/>
+        <subscreens-item name="EnrollmentDetail" location="component://mr-boss/screen/Marketing/Automations/EnrollmentDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingAutomationsPanel" type="tab"/>
+    </widgets>
+</screen>

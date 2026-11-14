@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Automations › Automations (design-marketing §6 Automations: AutomationFind, AutomationList, NewAutomation; style-guide
+    §3.2 List; impl-marketing P11): the automations of the user's organizations (mantle.marketing.AutomationServices.find#Automations,
+    scoped in the query), open ones by default, each with its enrollments' counts, skipped steps and next due time. New automation is
+    the primary action (MARKETING_SEND_EDIT); each row opens AutomationDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Automations" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="triggerEnumId"/>
+    <parameter name="statusId"/>
+    <parameter name="mine"/>
+    <parameter name="orderByField"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <actions>
+        <set field="can" from="marketing.capabilities"/>
+        <if condition="can.automationRead">
+            <service-call name="mantle.marketing.AutomationServices.find#Automations" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{text:text, organizationPartyId:organizationPartyId, marketingCampaignId:marketingCampaignId, triggerEnumId:triggerEnumId,
+                        statusId:(statusId || 'open'), mine:mine, orderByField:orderByField, pageIndex:pageIndex, pageSize:pageSize,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="automationList" from="found?.automationList || []"/>
+        <set field="automationListCount" from="found?.automationListCount"/>
+        <set field="automationListPageIndex" from="found?.automationListPageIndex"/>
+        <set field="automationListPageSize" from="found?.automationListPageSize"/>
+        <set field="automationListPageMaxIndex" from="found?.automationListPageMaxIndex"/>
+        <set field="automationListPageRangeLow" from="found?.automationListPageRangeLow"/>
+        <set field="automationListPageRangeHigh" from="found?.automationListPageRangeHigh"/>
+        <set field="detailPath" from="sharedLinks['Automations/AutomationDetail'] || null"/>
+        <set field="canEdit" from="!!found?.canCreate"/>
+        <set field="filtered" from="!!(text || organizationPartyId || marketingCampaignId || triggerEnumId || (statusId &amp;&amp; statusId != 'open') || mine)"/>
+        <set field="emptyText" from="filtered ? 'No automation matches these filters.' : 'No open automations' + (canEdit ? ' · Start one with New automation.' : '.')"/>
+        <set field="newAutomationValues" from="{marketingCampaignId: marketingCampaignId || null,
+                organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
+        <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
+                {key:'active', text:'Active', icon:'sym_o_play_circle', parameters:{statusId:'MaActive'}},
+                {key:'all', text:'Every state', icon:'sym_o_view_list', parameters:{statusId:'all'}}]"/>
+    </actions>
+    <widgets>
+        <label text="You do not read automations in Marketing." type="p" style="m-muted" condition="!can.automationRead"/>
+        <section name="AutomationsRegister" condition="can.automationRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Automations" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewAutomationDialog" button-text="New automation" title="New automation" icon="sym_o_add" width="640"
+                                type="primary" condition="canEdit">
+                            <section-include name="NewAutomationForm" location="component://mr-boss/template/MarketingAutomations.xml"/>
+                        </container-dialog>
+                        <section-iterate name="SavedFinds" list="savedFinds" entry="saved">
+                            <widgets>
+                                <link url="." text="${saved.text}" link-type="anchor-button" icon="${saved.icon}" parameter-map="saved.parameters"/>
+                            </widgets>
+                        </section-iterate>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="AutomationList" list="automationList" skip-form="true" paginate="true" header-dialog="true"
+                                select-columns="true" show-csv-button="true">
+                            <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                            <field name="text"><header-field title="Name or id"><text-line size="20"/></header-field></field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="marketingCampaignId">
+                                <header-field title="Campaign">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="triggerEnumId">
+                                <header-field title="Trigger">
+                                    <drop-down allow-empty="true">
+                                        <option key="AtrSubscription" text="Confirmed subscription"/>
+                                        <option key="AtrSegment" text="Newly matched segment member"/>
+                                        <option key="AtrStaff" text="Staff enrollment"/>
+                                        <option key="AtrOrderPlaced" text="Order placed"/>
+                                        <option key="AtrCartAbandoned" text="Cart abandoned"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="open" text="Open"/>
+                                        <option key="MaDraft" text="Draft"/>
+                                        <option key="MaAwaitingApproval" text="Awaiting approval"/>
+                                        <option key="MaApproved" text="Approved"/>
+                                        <option key="MaActive" text="Active"/>
+                                        <option key="MaPaused" text="Paused"/>
+                                        <option key="MaEnded" text="Ended"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="mine">
+                                <header-field title="Mine"><check><option key="Y" text="Automations I started"/></check></header-field>
+                            </field>
+                            <field name="automationName">
+                                <conditional-field title="Automation" condition="detailPath">
+                                    <link url="${detailPath}" text="${automationName}" link-type="anchor" parameter-map="{marketingAutomationId:marketingAutomationId}"/>
+                                </conditional-field>
+                                <default-field title="Automation"><display/></default-field>
+                            </field>
+                            <field name="campaignName"><default-field title="Campaign"><display/></default-field></field>
+                            <field name="triggerText"><default-field title="Trigger"><display/></default-field></field>
+                            <field name="topicName"><default-field title="Topic"><display/></default-field></field>
+                            <field name="activeCount" align="right"><default-field title="Active"><display format="#,##0"/></default-field></field>
+                            <field name="completedCount" align="right"><default-field title="Completed"><display format="#,##0"/></default-field></field>
+                            <field name="stoppedCount" align="right"><default-field title="Stopped"><display format="#,##0"/></default-field></field>
+                            <field name="skippedCount" align="right"><default-field title="Steps skipped"><display format="#,##0"/></default-field></field>
+                            <field name="nextDueText"><default-field title="Next due"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <columns>
+                                <column><field-ref name="automationName"/><field-ref name="campaignName"/></column>
+                                <column><field-ref name="statusId"/></column>
+                                <column><field-ref name="triggerText"/><field-ref name="topicName"/></column>
+                                <column><field-ref name="activeCount"/></column>
+                                <column><field-ref name="completedCount"/></column>
+                                <column><field-ref name="stoppedCount"/></column>
+                                <column><field-ref name="skippedCount"/></column>
+                                <column><field-ref name="nextDueText"/></column>
+                                <column><field-ref name="organizationName"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="automationName"/><field-ref name="triggerText"/></column>
+                                <column><field-ref name="statusId"/><field-ref name="activeCount"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoAutomations" condition="!automationList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -2844,6 +2844,166 @@ gate 4 (M4).
   step and resume sends it within the cap, an unsubscribe ends the enrollment, and a store set to the automation
   sender sends one cart recovery, not two.
 
+**Built Nov 14 (P11).** mr-mantle and mr-boss on branch `mkt/p11` (hashes in the worker's reply), from master after P9's merge; mr-moqui
+unchanged, no Rust built. Built beside P10 (`mkt/p10`) and Sales P20 (in review) (the hot spots below).
+- Checked first (the code over the plan): P5's, P8's and P9's Built and Review notes, F90–F223 and §4's rows (the one-person-team flag; the
+  suppression split; one SECA `OrderPlacedRecordAttribution` with its handler made here); P2's approvals (MarketingApprovals.js, whose
+  targetKinds left the automation's slot and whose selfApprovalAdmits already refused an automation), P5's classifyPeople and the
+  segments' sources, P9's dispatch (checkPage, handOff, unsubscribeLink, the frequency cap over `MdsrcCampaignSend`), Commerce's
+  CartRecovery.js and the RecoveryPolicy sender (`choiceKind(["builtin"])`), EventServices get#FutureBusinessDay, BusinessTime.js's wall
+  times, the subscription requests (accepted with decidedDate, ALREADY_MEMBER), the order SECAs. The code over the plan:
+  - the owner identity (the lead's question, F157): an automation acts as the system for its organization within its approved
+    definition. Its admission and step runs run with no user (runAsSystem): P5's classifyPeople with no personal contact of any user,
+    disabled or merged party available; its trigger, goal and condition segments read only the party, contact and engagement sources, a
+    segment naming a Sales or purchase source (or whose parent does) refused when the rule or a step names it (SOURCE_UNAVAILABLE), so a
+    run answers the same whoever wrote or activated it;
+  - "a send step makes an ordinary CampaignSend recipient hand-off": each Send email step has a CampaignSend of the automation (status
+    `CsAutomation`, `marketingAutomationId`, `automationStepId`), copied from a template and prepared when the step is stored, which the
+    send services neither list, edit, prepare, approve nor release; a participant reaching the step becomes one of its CampaignRecipient
+    rows and is handed off through P9's own checks (MarketingDispatch.js `checkRecipients` and `handOffRecipient`, split out of checkPage
+    and handOff unchanged), so `build#CampaignDelivery`, the unsubscribe header and link, the ledger's consent within the organization and
+    the frequency cap (which now counts the automations' deliveries: F211) are the sends' own;
+  - the approval is P2's with targetKind automation (`automationKind`): asked of a draft, approved to Approved, never self-approved; the
+    activation (activate#Automation, MARKETING_DISPATCH) is apart from it as P9's release is: none of the revision's authors nor its
+    approver, no one-person-team exception (an automation has no recipient count); a resume is an activation of a paused one;
+  - "an active definition changes by effective-dated steps": store#Steps ends the rows in effect and starts the new set (each send step's
+    content copied again), and any change of the rule or steps raises the revision and returns the automation to draft; an enrollment
+    keeps the steps in effect at its admission (design §6) and runs again once the new revision is approved and activated;
+  - "consent, suppression, goal and campaign state rechecked before every effect": before each step a closed campaign stops the
+    enrollment, a campaign no longer approved or a sending profile ended or turned transactional pauses the automation (its pauseNote),
+    the goal met completes it, a topic withdrawal, an unsubscription, leaving the topic or a suppression stops it (design §6: unsubscribe
+    and suppression end pending work), and the channel's own withdrawal (the topic's purpose, the address's solicitation, no usable
+    address, no evidence) skips that channel's sends only; quiet hours, a profile not ready and the frequency cap postpone a send
+    (dueNote), never skip consent;
+  - triggers: a confirmed subscription is an accepted SubscriptionRequest of the topic decided after the first activation (a public
+    confirmation or a staff acceptance with evidence; ALREADY_MEMBER is no new subscription), read by a cursor; a segment trigger's
+    first scan after activation records the matches as a baseline; staff enrollment (enroll#Party) is a dispatcher's or an audience
+    editor's with evidence and an operation key, admitted at once by the same rule; the order trigger's events are filed by
+    TrackingServices.handle#OrderPlaced; the cart trigger reads the carts Commerce's recovery reads (CartRecovery.js `automationCarts`)
+    for its store when the store's sender is the automation, and needs the shopper's cart reminders (as built-in recovery does) and the
+    automation topic's marketing consent (as every send step does);
+  - waits: minutes and hours elapsed; days and business days keep the start's local time in the rule's zone (the next valid instant in a
+    daylight-saving gap), business days by get#FutureBusinessDay over the organization's WepHoliday events; the Simulation shows each due
+    time with its offset;
+  - readers: the automations and their enrollments are read by a Marketing reader who writes, approves or dispatches sends or reads
+    audiences (design §2: AutomationDetail A, V, D; EnrollmentDetail D, U; the list "app" was read as those), participants named for an
+    audience reader only;
+  - AutomationDetail's sections are boxes, as SendDetail's; Steps is a list with Add step and each row's Change (move up or down,
+    remove), the set stored again each time, not editable rows; the Simulation is a box with a start time and a sample person.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P11 block after P9's): MarketingAutomation (its status flow; revision, definition time, activation,
+    pause, end, admission cursor; audited key fields), MarketingAutomationStep (dated), AutomationSourceEvent (unique by automation and
+    source key), AutomationEnrollment (unique by automation, party and source key; its status flow), AutomationStepExecution (unique by
+    enrollment and step); CampaignSend `marketingAutomationId`, `automationStepId` and the status CsAutomation; MarketingPolicy
+    `automationMaxSteps` (ten when empty). The enumerations are in the entities' seed-data.
+  - `MarketingAutomations.js` (new) under `AutomationServices.xml` (new): find#, create#, get#Automation, store#EnrollmentRule,
+    store#Steps, preview#Automation, activate#, pause#, end#Automation, enroll#Party, find#Enrollments, get#Enrollment, stop#Enrollment,
+    the jobs run#AutomationAdmission (operation marketing.automation.admission.run) and run#AutomationSteps (marketing.automation.steps.run)
+    with collect#AdmissionEvents, admit#SourceEvent and process#EnrollmentStep; refusals in each description. `TrackingServices.xml`
+    (new) handle#OrderPlaced; `service/MarketingTracking.secas.xml` (new) OrderPlacedRecordAttribution (tx-commit on the placement, its own
+    transaction, failure logged). `data/MarketingAutomationSetupData.xml` (new, seed-initial): the two jobs with their JobRegistration
+    (MARKETING_DISPATCH) and RecoveryDescriptor.
+  - MarketingApprovals.js targetKinds.automation; MarketingSends.js `stepSend` (a P11 block) and its `forAutomation` exports, find#Sends
+    leaving CsAutomation out of every state; MarketingDispatch.js `checkRecipients` and `handOffRecipient` exported with
+    `unsubscribeLink`; MessageSendingProfiles.js exports `quietMinutes`.
+  - Commerce (owner contract): CartRecovery.js's sender `automation` (eligibility for the automation, `automationCarts`, `senderOptions`,
+    `automationSenderOffered`), get#CartRecoveryPolicy's `view.senderOptions`; StoreAdmin.js's recoverySender offers it while an active
+    automation of the store's organization has the store's cart trigger (AUTOMATION_UNAVAILABLE otherwise).
+- BOSS:
+  - Screens: `Marketing/Automations` (new area, menu 5; BOSS_MKT_AUTOMATIONS), `Automations/Automations` (AutomationFind, AutomationList,
+    NewAutomation), `Automations/AutomationDetail` (the record header with Request approval, Approve, Activate or Resume by state; More: Edit
+    enrollment rule, Enroll a person, Pause, End, the campaign; Enrollment rule, Steps, Simulation, Enrollments, Decisions),
+    `Automations/EnrollmentDetail` (Stop; Enrollment, Step history); `template/MarketingAutomations.xml` (the transitions and
+    NewAutomationForm); CampaignDetail's Automations box with New automation; the root's menu item and `g a`; Commerce's CheckoutSettings
+    sender drop-down from `senderOptions`.
+  - `Marketing.js`: the capability `automationRead` and area `automations`, record kinds `automation` and `enrollment`, choices
+    `automationStores` and `automationMembers`, the palette's automations (and its sends leaving out the steps' sends), the P11 link paths;
+    ContextServices get#Choices takes `marketingAutomationId`. `BossSetupMarketingData.xml` (a P11 block): BOSS_MKT_AUTOMATIONS for the
+    author, approver, dispatcher and audience groups, the automation approval notice's link. Demo (`BossZZMarketingDemoData.xml`, a P11
+    block): Retail's active three-step garden newsletter welcome (welcome, three days, tips) with Maya in its wait and Olive stopped at her
+    request after the welcome; its content the component files DemoWelcome.
+- Specs:
+  - Mantle `test/marketing/Automations` (new, 6 features, 3.3 s: a draft refused activation, the solo author's own approval refused under
+    the flag, an approver-dispatcher, the author and another organization's dispatcher refused activation, a dispatcher's activation and a
+    second one answered; a subscriber after the activation admitted once by two admission runs, one before it never, the welcome once with
+    its List-Unsubscribe under the relay's root; a restart that re-reads the send step replays nothing, a pause holds the due follow-up and
+    the resume sends it once, the enrollment completed; a topic withdrawal stops one enrollment while a refused solicitation skips the
+    other's send and leaves it waiting; staff enrollment refused an author and without evidence, a repeat key answered, the goal met
+    completing one, a stopped one not run again nor stopped twice, a new key ALREADY_ENROLLED; a day wait across New York's March gap
+    landing on 03:00 EDT with its offset shown, a business day from Friday landing on Monday's same time, a Sales goal segment refused,
+    another organization's automation missing, a reader refused; an order filing its event once and its customer sent once);
+    `test/order/CartRecovery` (+1 feature, 0.45 s: the automation sender refused without an active automation, offered and saved with one,
+    built-in recovery sending nothing then, the automation reading the idle cart and not a visit already handled).
+  - mr-boss `MarketingAutomations` (new, 2 features, 0.2 s: AutomationDetail's one qvt render for the dispatcher; EnrollmentDetail's one
+    html render for the audience manager); `MarketingAccess` (the capabilities `automationRead` and `automations` per group, the menus and
+    `g a`, EnrollmentDetail opened by the audience manager, Automations refused a reader, another organization's automation refused by
+    check#Record; about +0.1 s); `MarketingSpecLib` (menus, keys, the demo automation's ids).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingAutomationScenario` (4 features, scenario 9: the welcome sequence
+    written, approved and activated apart; a new subscriber welcomed once though the event is read twice; a pause holding the due tips and
+    the resume sending them once; an unsubscriber stopped before the tips; a store set to the automation sender sending one cart recovery,
+    built-in recovery none).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Automations 6 of 6, CartRecovery 5 of 5, Dispatch, Sends,
+  MarketingApprovals, Eligibility, DeliveryLedger, StoreCheckout, MarketingScope, Campaigns (46 of 46, 20.1 s), ShopCheckout, SalesPortal,
+  SalesQuoteResponse, StoreReviews, MarketingSubscriptions, ContactListSend, Segments with Automations again (53 of 53); mr-boss
+  MarketingAutomations 2 of 2, MarketingAccess 7 of 7, CommerceCheckoutSettings, CommerceRecovery, MarketingCampaigns, MarketingSends,
+  MarketingDelivery (7 of 7). A throwaway walk of the screens' transitions (create, add and move steps, the rule, request, approve,
+  activate, enroll, pause), the two new choices and the palette, and renders of Automations, AutomationDetail (dispatcher, audience reader
+  with a sample person), EnrollmentDetail and CampaignDetail in qvt, tui and html passed and was not kept. `moqui lint --screens`: 141
+  flagged sites, as before, none in Marketing or CheckoutSettings; parse failures 0. Prettier clean on the changed JavaScript. Not run:
+  test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P11" table; ss-inventory has no row for P11's screens.
+- Design edits: design-marketing §6 (the as-built paragraph after EnrollmentDetail); design-commerce §8 (One sender per cart: the as-built
+  owner contract); design-crosscut §1.3's register (OrderPlacedRecordAttribution built, its handler's P11 part).
+- Findings (provisional, numbered by the lead):
+  - the owner identity is the system within the approved definition (above): a personal contact of any user is never enrolled, and a
+    segment reading Sales or purchases is refused for a trigger, goal or condition; an automation needing Sales facts waits for a design
+    of an automation owner who signs in for its runs (as run#EtlMapping's saved owner);
+  - editing an active automation returns it to draft; its enrollments admitted earlier continue on the steps in effect at their
+    admission (approved at the earlier revision) once the new revision is approved and activated, as design §6 says; store#Steps copies
+    every send step's template content again, so a re-stored set takes the templates' current content;
+  - a send step's checks skip a channel withdrawal (the topic's purpose, the address's solicitation, no evidence) and stop the enrollment
+    on a topic withdrawal, an unsubscription or a suppression (design §6's two sentences read together); the dispatch's frequency cap
+    leaves out a step send's own earlier deliveries (a re-entered person's earlier delivery of the same step);
+  - the cart trigger's sends go to the automation's topic (a Marketing list) and need its marketing consent beside the store's cart
+    reminders; a shopper who turned on cart reminders only is not reached by an automation sender, where built-in recovery reaches them;
+  - the confirmed subscription trigger counts a staff acceptance with evidence as a confirmation (an accepted SubscriptionRequest), and
+    reads only those decided after the first activation; the segment trigger's first scan is a baseline (no one already matched is
+    enrolled); the segment universe's 5,000 cap leaves a scan with an admissionNote;
+  - the automations and enrollments are read by an audience reader too (EnrollmentDetail's D and U), not by a reader or analyst (design §2
+    listed Automations as the app's);
+  - a delivery already with the ledger when an enrollment stops still goes out unless its build finds the recipient off the topic or the
+    address changed (P9's build; F218's sharers are not rechecked there);
+  - no Home card, attention source or Today row for automations yet (stalled enrollments are Insights' alert, P20);
+  - the demo's stopped enrollment is a staff stop (Olive's unsubscription in November falls after her wait would have ended);
+  - CartRecovery's spec gains one feature (the plan names it); its earlier features are unchanged.
+- For the lead:
+  - budget share: mr-mantle about 3.8 s (Automations 3.3 s, CartRecovery +0.45 s); mr-boss server about 0.3 s (MarketingAutomations 0.2 s,
+    MarketingAccess +0.1 s); no client spec;
+  - merge hot spots (P10 on `mkt/p10` and Sales P20 beside): mr-mantle `entity/MarketingEntities.xml` (a P11 block after P9's end),
+    `service/mantle/marketing/MarketingDispatch.js` (checkPage split into checkRecipients, handOff into handOffRecipient, the exports),
+    `MarketingSends.js` (find#Sends' status condition, a P11 block before get#Send, the forAutomation export), `MarketingApprovals.js`
+    (targetKinds.automation, automationKind, the header and request comments), `CampaignServices.xml` (request#MarketingApproval's
+    description), `service/mantle/party/MessageSendingProfiles.js` (the export), `service/mantle/order/CartRecovery.js`,
+    `service/mantle/product/StoreAdmin.js` (recoverySender), `StoreAdminServices.xml` (two descriptions), `test/order/CartRecovery.spec.js`
+    (a feature at the end); new files AutomationServices.xml, TrackingServices.xml (P15 and P20 add to it), MarketingAutomations.js,
+    MarketingTracking.secas.xml, MarketingAutomationSetupData.xml, Automations.spec.js. mr-boss `data/BossSetupMarketingData.xml` and
+    `data/BossZZMarketingDemoData.xml` (P11 blocks at the ends), `service/ironstone/marketing/Marketing.js` (areas, areaReads, scope,
+    linkPaths, recordKinds, choiceSources incl. sendMembers' topic branch, searchFinds), `ContextServices.xml`, `template/MarketingParts.xml`,
+    `screen/Marketing.xml`, `Campaigns/CampaignDetail.xml`, `screen/Commerce/Settings/CheckoutSettings.xml`, `test/Marketing/MarketingAccess.spec.js`,
+    `MarketingSpecLib.js`, `plan/usl-inventory.md`, `plan/design-marketing.md`, `plan/design-commerce.md`, `plan/design-crosscut.md` (the §1.3 row), this file. MarketingSeedData.xml is
+    not changed (the enumerations are in the entities' seed-data);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, the ledger's paragraph; no public endpoint is added): "A Marketing
+    automation reaches people only after `mantle.marketing.CampaignServices.decide#MarketingApproval` (MARKETING_APPROVE, never its
+    author's, the one-person-team flag not applying) and `mantle.marketing.AutomationServices.activate#Automation` (MARKETING_DISPATCH,
+    none of the revision's authors nor its approver, an address for the unsubscribe link). Its admission and step jobs run as the system
+    for its organization: no personal contact is enrolled and its segments read only party, contact and engagement facts. Each send step
+    hands one participant to the delivery ledger through the dispatch's checks (the topic's membership, consent within the organization,
+    suppression and solicitation, a withdrawal by anyone at the address, the frequency cap), once per enrollment and step, with the
+    List-Unsubscribe header and link. The order-placed handler (the SECA OrderPlacedRecordAttribution) only files an admission event, in a
+    transaction of its own.";
+  - the user's calls: the owner identity (the system, its segments without Sales or purchase sources); to confirm, the audience readers
+    reading automations, the cart automation's topic consent, and earlier enrollments continuing on their approved steps after a re-approval.
+
 ### P12 — Surveys and form publication, with PASS SubmitForm
 
 Design §10 Surveys and SurveyDetail, SurveyDistribution, Responses and ResponseDetail, §13 SubmitForm, §18 (the

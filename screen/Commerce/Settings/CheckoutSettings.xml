@@ -227,6 +227,8 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{productStoreId:productStoreId}"/>
             <script>ec.message.clearErrors()</script>
             <set field="recoveryView" from="recoveryOut?.view || {}"/>
+            <!-- impl-marketing P11: the senders offered (a Marketing automation while one of the organization has this store's cart trigger) -->
+            <set field="recoverySenderOptions" from="recoveryView.senderOptions || [{value:'builtin', label:'Built-in recovery'}]"/>
             <set field="recoveryValues" from="Object.assign({productStoreId:productStoreId, changeReason:''}, recoveryOut?.values || {})"/>
             <!-- P12: RecurringPolicy, the store's subscription offers -->
             <service-call name="mantle.product.ShopSubscriptionServices.find#RecurringOffers" out-map="recurring" transaction="force-new"
@@ -724,8 +726,8 @@ along with this software (see the LICENSE.md file). If not, see
                             </default-field></field>
                             <field name="delayMinutes"><default-field title="Inactivity delay (minutes)" tooltip="15 minutes to 30 days after the shopper's last change">
                                 <text-line size="8"/></default-field></field>
-                            <field name="sender"><default-field title="Sender" tooltip="A Marketing automation comes with Marketing">
-                                <drop-down allow-empty="false"><option key="builtin" text="Built-in recovery"/></drop-down></default-field></field>
+                            <field name="sender"><default-field title="Sender" tooltip="A Marketing automation is offered while an active automation of the store's organization has this store's abandoned cart trigger">
+                                <drop-down allow-empty="false"><list-options list="recoverySenderOptions" key="${value}" text="${label}"/></drop-down></default-field></field>
                             <field name="maxSends"><default-field title="Most sends a cart" tooltip="1 to 5, one per visit to the cart">
                                 <text-line size="4"/></default-field></field>
                             <field name="retentionDays"><default-field title="Recovery window (days)" tooltip="How long after the last activity a cart is reminded and its link works">

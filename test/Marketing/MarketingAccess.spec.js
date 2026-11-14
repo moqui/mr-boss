@@ -247,7 +247,10 @@ const capabilityNames = [
     "sendsRead",
     "sends",
     // P8: the sends' read (a Marketing reader who writes, approves or dispatches sends)
-    "sendRead"
+    "sendRead",
+    // P11: the automations' read (a Marketing reader who writes, approves or dispatches sends or reads audiences) and their area
+    "automationRead",
+    "automations"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
@@ -268,14 +271,29 @@ const capabilityUsers = [
             "profileRead",
             "sendsRead",
             "sends",
-            "sendRead"
+            "sendRead",
+            "automationRead",
+            "automations"
         ]
     },
     {
         user: users.audience,
-        granted: ["view", ...audienceGrants, "anyRead", "audienceRead", "audiences", "previewRead", "audiencePreview"]
+        granted: [
+            "view",
+            ...audienceGrants,
+            "anyRead",
+            "audienceRead",
+            "audiences",
+            "previewRead",
+            "audiencePreview",
+            "automationRead",
+            "automations"
+        ]
     },
-    {user: users.approver, granted: ["view", "approve", "anyRead", "approvals", "sendsRead", "sends", "sendRead"]},
+    {
+        user: users.approver,
+        granted: ["view", "approve", "anyRead", "approvals", "sendsRead", "sends", "sendRead", "automationRead", "automations"]
+    },
     {
         user: users.dispatch,
         granted: [
@@ -287,7 +305,9 @@ const capabilityUsers = [
             "profileRead",
             "sendsRead",
             "sends",
-            "sendRead"
+            "sendRead",
+            "automationRead",
+            "automations"
         ]
     },
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
@@ -498,7 +518,18 @@ feature(
                 otherSend: asUser(users.otherAuthor, () =>
                     refusal(checkRecord, {recordType: "send", recordId: ids.approvedSendId})
                 ),
-                ownSend: asUser(users.approver, () => refusal(checkRecord, {recordType: "send", recordId: ids.approvedSendId}))
+                ownSend: asUser(users.approver, () => refusal(checkRecord, {recordType: "send", recordId: ids.approvedSendId})),
+                // P11: an enrollment for an audience manager, not a reader; another organization's automation is no one else's
+                audienceEnrollment: screenRefusal(users.audience, "Automations/EnrollmentDetail", {
+                    automationEnrollmentId: ids.waitingEnrollmentId
+                }),
+                readerAutomations: screenRefusal(users.reader, "Automations/Automations"),
+                otherAutomation: asUser(users.otherAuthor, () =>
+                    refusal(checkRecord, {recordType: "automation", recordId: ids.welcomeAutomationId})
+                ),
+                ownAutomation: asUser(users.author, () =>
+                    refusal(checkRecord, {recordType: "automation", recordId: ids.welcomeAutomationId})
+                )
             }
             return {
                 authorHome,
@@ -553,6 +584,10 @@ feature(
             unauthorized(sends.readerRecipient) || sends.readerRecipient.includes("PERMISSION_DENIED")
             sends.otherSend.includes("RECORD_UNAVAILABLE")
             sends.ownSend == ""
+            sends.audienceEnrollment == ""
+            unauthorized(sends.readerAutomations) || sends.readerAutomations.includes("PERMISSION_DENIED")
+            sends.otherAutomation.includes("RECORD_UNAVAILABLE")
+            sends.ownAutomation == ""
             !panels.ownSend.errors.includes("RECORD_PANEL_UNAVAILABLE") && panels.ownSend.status == 200
             // P6: the settings index links the sending profiles, templates, consent and suppressions
             adminSettings.output.includes("Sending profiles") && adminSettings.output.includes("Message templates")

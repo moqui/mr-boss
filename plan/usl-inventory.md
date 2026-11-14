@@ -953,6 +953,24 @@ screens, the dispatch job and the ledger:
 | party/MessageServices | queue#Delivery (consentOrganizationPartyId, consentContactMechId), attempt#Delivery (a source's reply-to) | the ledger's contract (F13: organization and topic consent) | handOff#Recipient (Marketing P9) |
 | party/MessageServices | resolve#Delivery (the reviewer's organization, the resolution kept), find#DeliveryReceipts (MESSAGE_DELIVERY_REVIEW scoped but for a system administrator) | the ledger's contract (F13: the permission granted to the dispatcher) | reconcile#Recipient; Admin's MailQueue (recover#OwnedMailOutcome) (Marketing P9) |
 
+Added in Marketing P11 (Nov 14, 2026; the drip sequences of `mantle.marketing.AutomationServices` over MarketingAutomations.js, the
+order-placed handler of `mantle.marketing.TrackingServices` behind the Mantle SECA OrderPlacedRecordAttribution, and Commerce's recovery
+sender, impl-marketing P11), called by built screens, the admission and step jobs and the SECA:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/AutomationServices | find#Automations, create#Automation | Marketing/Automations (AutomationFind, AutomationList, NewAutomation); CampaignDetail (Automation) | Marketing/Automations/Automations (New automation); Marketing/Campaigns/CampaignDetail (the Automations box) (Marketing P11) |
+| marketing/AutomationServices | get#Automation, store#EnrollmentRule, store#Steps | Marketing/Automations/AutomationDetail (EnrollmentRule, Steps) | Marketing/Automations/AutomationDetail (Edit enrollment rule; Add step, a row's Change) (Marketing P11) |
+| marketing/AutomationServices | preview#Automation | Marketing/Automations/AutomationDetail (Simulation) | Marketing/Automations/AutomationDetail (the Simulation box) (Marketing P11) |
+| marketing/AutomationServices | activate#Automation, pause#Automation, end#Automation | Marketing/Automations/AutomationDetail (AutomationControl) | Marketing/Automations/AutomationDetail (Activate, Resume; More: Pause, End) (Marketing P11) |
+| marketing/AutomationServices | enroll#Party | design §6 (staff enrollment with evidence) | Marketing/Automations/AutomationDetail (More: Enroll a person) (Marketing P11) |
+| marketing/AutomationServices | find#Enrollments | Marketing/Automations/AutomationDetail (EnrollmentList) | Marketing/Automations/AutomationDetail (the Enrollments box) (Marketing P11) |
+| marketing/AutomationServices | get#Enrollment, stop#Enrollment | Marketing/Automations/EnrollmentDetail (Enrollment, StepHistory, StopEnrollment) | Marketing/Automations/EnrollmentDetail (Stop) (Marketing P11) |
+| marketing/AutomationServices | run#AutomationAdmission, collect#AdmissionEvents, admit#SourceEvent, run#AutomationSteps, process#EnrollmentStep | design §15.3 (Automation admission/steps) | the run_MarketingAutomationAdmission and run_MarketingAutomationSteps jobs (JobRegistration, RecoveryDescriptor); enroll#Party (Marketing P11) |
+| marketing/TrackingServices | handle#OrderPlaced | design §15.1 (OrderPlacedRecordAttribution), §6 (order placed) | the Mantle SECA OrderPlacedRecordAttribution (MarketingTracking.secas.xml) (Marketing P11; P20 adds the attribution) |
+| marketing/CampaignServices | request#MarketingApproval, decide#MarketingApproval (targetKind automation) | Marketing/Automations/AutomationDetail (AutomationControl: C.decide#MarketingApproval) | Marketing/Automations/AutomationDetail (Request approval, Approve); the MarketingAutomationApproval notice (Marketing P11) |
+| product/StoreAdminServices | get#CartRecoveryPolicy (view.senderOptions), store#CartRecoveryPolicy (sender automation) | Commerce/Settings/CheckoutSettings (RecoveryPolicy: a Marketing automation sender) | Commerce/Settings/CheckoutSettings (Change recovery's Sender) (Marketing P11) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

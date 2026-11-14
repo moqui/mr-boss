@@ -440,4 +440,93 @@ along with this software (see the LICENSE.md file). If not, see
             policyFromDate="2026-01-01 00:00:00" decisionDate="2026-11-12 09:00:00" decidedByUserId="BOSS_MKT_APPROVER"
             decidedByPartyId="BOSS_MKT_APPROVER" reason="For the first of December"/>
     <!-- ===== end of Marketing P8 ===== -->
+
+    <!-- ===== Marketing P11: automation (impl-marketing P11; design-marketing §6) ===== -->
+    <!-- Retail's three-step welcome sequence on the garden newsletter's confirmed subscription (the spring campaign, the Retail news
+        profile): a welcome, a wait of three days and the garden tips; written by the author, approved by the approver at revision 1 and
+        activated by the dispatcher on 6 November, its waits in Chicago time. Two enrollments: Maya, welcomed and now in the wait, and
+        Olive, welcomed and then stopped by the audience manager at her request before the tips. The steps' content is the demo's component files. -->
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_AUTO_REQ" targetKindEnumId="MdtAutomation"
+            targetId="BOSS_MKT_AUTO_WELCOME" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddRequested"
+            marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00" decisionDate="2026-10-02 10:00:00"
+            decidedByUserId="BOSS_MKT_AUTHOR" decidedByPartyId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.MarketingDecision marketingDecisionId="BOSS_MKT_DEC_AUTO_OK" targetKindEnumId="MdtAutomation"
+            targetId="BOSS_MKT_AUTO_WELCOME" targetRevision="1" organizationPartyId="ORG_ZIZI_RETAIL" decisionEnumId="MddApproved"
+            requestDecisionId="BOSS_MKT_DEC_AUTO_REQ" selfApproval="N" marketingPolicyId="BOSS_MKT_POLICY_RETAIL"
+            policyFromDate="2026-01-01 00:00:00" decisionDate="2026-10-03 09:00:00" decidedByUserId="BOSS_MKT_APPROVER"
+            decidedByPartyId="BOSS_MKT_APPROVER" reason="The welcome and the tips as written"/>
+    <mantle.marketing.automation.MarketingAutomation marketingAutomationId="BOSS_MKT_AUTO_WELCOME" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" automationName="Garden newsletter welcome"
+            description="Welcomes each new subscriber of the garden newsletter and follows up with the season's tips" channelEnumId="MdcEmail"
+            contactListId="BOSS_MKT_LIST_GARDEN" purposeEnumId="PcpMarketingEmail" sendingProfileId="BOSS_MKT_PROFILE_RETAIL"
+            triggerEnumId="AtrSubscription" reentryEnumId="ArOnce" timeZone="America/Chicago" statusId="MaActive" automationRevision="1"
+            definitionDate="2026-10-02 09:00:00" createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-10-02 09:00:00"
+            revisedByUserId="BOSS_MKT_AUTHOR" activatedDate="2026-10-04 09:00:00" activatedByUserId="BOSS_MKT_DISPATCH"
+            activationDecisionId="BOSS_MKT_DEC_AUTO_OK" admissionCursorDate="2026-11-12 09:00:00" lastAdmissionDate="2026-11-12 09:00:00"/>
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_AUTO_WELCOME" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Welcome" channelEnumId="MdcEmail" contactListId="BOSS_MKT_LIST_GARDEN"
+            purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_NEWS" sendingProfileId="BOSS_MKT_PROFILE_RETAIL"
+            subject="Welcome to the garden newsletter, ${firstName}"
+            bodyLocation="component://mr-boss/template/marketing/DemoWelcome.html.fancy-locked"
+            bodyTextLocation="component://mr-boss/template/marketing/DemoWelcome.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]" localeId="en"
+            statusId="CsAutomation" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-10-02 09:00:00" preparedRevision="1" preparedDate="2026-10-02 09:00:00" preparedByUserId="BOSS_MKT_AUTHOR"
+            contentDate="2026-10-02 09:00:00" preparedSubject="Welcome to the garden newsletter, ${firstName}"
+            preparedBodyLocation="component://mr-boss/template/marketing/DemoWelcome.html.fancy-locked"
+            preparedTextLocation="component://mr-boss/template/marketing/DemoWelcome.fancy-locked" preparedVariablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]"
+            preparedAttachmentsJson="[]" marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_1"/>
+    <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_AUTO_TIPS" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" sendName="Garden tips" channelEnumId="MdcEmail" contactListId="BOSS_MKT_LIST_GARDEN"
+            purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_NEWS" sendingProfileId="BOSS_MKT_PROFILE_RETAIL"
+            subject="Garden news for ${firstName}" bodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            bodyTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]" localeId="en"
+            statusId="CsAutomation" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
+            createdDate="2026-10-02 09:00:00" preparedRevision="1" preparedDate="2026-10-02 09:00:00" preparedByUserId="BOSS_MKT_AUTHOR"
+            contentDate="2026-10-02 09:00:00" preparedSubject="Garden news for ${firstName}"
+            preparedBodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            preparedTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" preparedVariablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]"
+            preparedAttachmentsJson="[]" marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_3"/>
+    <mantle.marketing.automation.MarketingAutomationStep automationStepId="BOSS_MKT_STEP_WELCOME_1" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            sequenceNum="10" stepKindEnumId="AskSendEmail" stepName="Welcome" campaignSendId="BOSS_MKT_SEND_AUTO_WELCOME"
+            messageTemplateId="BOSS_MKT_TPL_NEWS" automationRevision="1" fromDate="2026-10-02 09:00:00"/>
+    <mantle.marketing.automation.MarketingAutomationStep automationStepId="BOSS_MKT_STEP_WELCOME_2" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            sequenceNum="20" stepKindEnumId="AskWait" waitAmount="3" waitUnitEnumId="AwuDays" automationRevision="1"
+            fromDate="2026-10-02 09:00:00"/>
+    <mantle.marketing.automation.MarketingAutomationStep automationStepId="BOSS_MKT_STEP_WELCOME_3" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            sequenceNum="30" stepKindEnumId="AskSendEmail" stepName="Garden tips" campaignSendId="BOSS_MKT_SEND_AUTO_TIPS"
+            messageTemplateId="BOSS_MKT_TPL_NEWS" automationRevision="1" fromDate="2026-10-02 09:00:00"/>
+    <!-- Maya: admitted on her confirmed subscription, welcomed, waiting three days (her next step later on) -->
+    <mantle.marketing.automation.AutomationSourceEvent automationSourceEventId="BOSS_MKT_AEV_MAYA" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            triggerEnumId="AtrSubscription" sourceKey="subscription:BOSS_MKT_SR_MAYA" sourceId="BOSS_MKT_SR_MAYA" partyId="BOSS_MKT_CON_MAYA"
+            eventDate="2026-10-06 11:00:00" filedDate="2026-10-06 11:05:00" statusEnumId="AseAdmitted"
+            automationEnrollmentId="BOSS_MKT_ENR_MAYA" processedDate="2026-10-06 11:05:00"/>
+    <mantle.marketing.automation.AutomationEnrollment automationEnrollmentId="BOSS_MKT_ENR_MAYA" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            partyId="BOSS_MKT_CON_MAYA" organizationPartyId="ORG_ZIZI_RETAIL" automationSourceEventId="BOSS_MKT_AEV_MAYA"
+            sourceKey="subscription:BOSS_MKT_SR_MAYA" triggerEnumId="AtrSubscription" definitionDate="2026-10-06 11:05:00"
+            admittedDate="2026-10-06 11:05:00" statusId="AenActive" nextSequenceNum="20" nextDueDate="2027-01-15 11:05:00"
+            skipNextSend="N" lastStepDate="2026-11-12 11:05:00"/>
+    <mantle.marketing.automation.AutomationStepExecution automationStepExecutionId="BOSS_MKT_AEX_MAYA_1" automationEnrollmentId="BOSS_MKT_ENR_MAYA"
+            marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_1" sequenceNum="10"
+            stepKindEnumId="AskSendEmail" outcomeEnumId="AsoHandedOff" executedDate="2026-10-06 11:10:00" campaignSendId="BOSS_MKT_SEND_AUTO_WELCOME"/>
+    <mantle.marketing.automation.AutomationStepExecution automationStepExecutionId="BOSS_MKT_AEX_MAYA_2" automationEnrollmentId="BOSS_MKT_ENR_MAYA"
+            marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_2" sequenceNum="20" stepKindEnumId="AskWait"
+            outcomeEnumId="AsoWaiting" executedDate="2026-11-12 11:05:00" dueDate="2027-01-15 11:05:00"/>
+    <!-- Olive: welcomed in October, then stopped at her request (the monthly newsletter only) before the tips -->
+    <mantle.marketing.automation.AutomationSourceEvent automationSourceEventId="BOSS_MKT_AEV_OLIVE" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            triggerEnumId="AtrSubscription" sourceKey="subscription:BOSS_MKT_SR_OLIVE" partyId="BOSS_MKT_CON_OLIVE"
+            eventDate="2026-10-05 10:00:00" filedDate="2026-10-05 10:05:00" statusEnumId="AseAdmitted"
+            automationEnrollmentId="BOSS_MKT_ENR_OLIVE" processedDate="2026-10-05 10:05:00"/>
+    <mantle.marketing.automation.AutomationEnrollment automationEnrollmentId="BOSS_MKT_ENR_OLIVE" marketingAutomationId="BOSS_MKT_AUTO_WELCOME"
+            partyId="BOSS_MKT_CON_OLIVE" organizationPartyId="ORG_ZIZI_RETAIL" automationSourceEventId="BOSS_MKT_AEV_OLIVE"
+            sourceKey="subscription:BOSS_MKT_SR_OLIVE" triggerEnumId="AtrSubscription" definitionDate="2026-10-05 10:05:00"
+            admittedDate="2026-10-05 10:05:00" statusId="AenStopped" nextSequenceNum="30" skipNextSend="N"
+            lastStepDate="2026-10-05 10:10:00" endReasonCode="STOPPED" endReason="Asked for the monthly newsletter only"
+            endedDate="2026-10-06 09:00:00" endedByUserId="BOSS_MKT_AUDIENCE"/>
+    <mantle.marketing.automation.AutomationStepExecution automationStepExecutionId="BOSS_MKT_AEX_OLIVE_1" automationEnrollmentId="BOSS_MKT_ENR_OLIVE"
+            marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_1" sequenceNum="10"
+            stepKindEnumId="AskSendEmail" outcomeEnumId="AsoHandedOff" executedDate="2026-10-05 10:10:00" campaignSendId="BOSS_MKT_SEND_AUTO_WELCOME"/>
+    <mantle.marketing.automation.AutomationStepExecution automationStepExecutionId="BOSS_MKT_AEX_OLIVE_2" automationEnrollmentId="BOSS_MKT_ENR_OLIVE"
+            marketingAutomationId="BOSS_MKT_AUTO_WELCOME" automationStepId="BOSS_MKT_STEP_WELCOME_2" sequenceNum="20" stepKindEnumId="AskWait"
+            outcomeEnumId="AsoWaiting" executedDate="2026-10-05 10:10:00" dueDate="2026-10-08 10:10:00"/>
+    <!-- ===== end of Marketing P11 ===== -->
 </entity-facade-xml>

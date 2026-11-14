@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Automations › AutomationDetail (design-marketing §6 AutomationDetail: EnrollmentRule, Steps, Simulation, EnrollmentList,
+    AutomationControl; style-guide §3.3 Detail; impl-marketing P11): one automation of the user's organizations (check#Record
+    automation; else "Not available", linking back). The record header: its id and name, campaign, trigger, topic, revision, sender and
+    zone, the state chip; one primary action by state (Request approval of a draft that approval is ready for, Approve for an approver
+    while it awaits a decision, Activate an approved one or Resume a paused one for a dispatcher who is none of its authors nor its
+    approver) and the others in More (Edit the enrollment rule, Enroll a person for a staff trigger, Pause, End, the campaign). The
+    boxes: Enrollment rule, Steps (add a step; move or remove one in its row: the whole set is stored again and the approval ends),
+    Simulation (a dry run from a start time, for a person an audience reader chooses: no message, no record), Enrollments (each
+    opening EnrollmentDetail) and Decisions. Every change is Mantle's guarded service at the revision read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Automation" default-menu-include="false">
+    <parameter name="marketingAutomationId" required="true"/>
+    <parameter name="simulatePartyId"/>
+    <parameter name="simulateFrom"/>
+    <parameter name="enrollmentStatusId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeEnrollmentRule" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="changeSteps" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="simulateAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="requestAutomationApproval" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="decideAutomationApproval" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="activateAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="pauseAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="endAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="enrollParty" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="automationCheck" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'automation', recordId:marketingAutomationId}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="automationCheck?.recordId">
+            <service-call name="mantle.marketing.AutomationServices.get#Automation" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{marketingAutomationId:marketingAutomationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.automation"/>
+        <if condition="recordFound">
+            <service-call name="mantle.marketing.AutomationServices.preview#Automation" out-map="simulation" transaction="force-new" ignore-error="true"
+                    in-map="{marketingAutomationId:marketingAutomationId, partyId:(marketing.capabilities.audienceRead ? (simulatePartyId || null) : null),
+                        startDate:(simulateFrom || null)}"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="mantle.marketing.AutomationServices.find#Enrollments" out-map="enrollments" transaction="force-new" ignore-error="true"
+                    in-map="{marketingAutomationId:marketingAutomationId, statusId:(enrollmentStatusId || 'all'), pageIndex:pageIndex, pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="automation" from="detail?.automation || {}"/>
+        <set field="can" from="detail?.capabilities || {}"/>
+        <set field="stepList" from="detail?.steps || []"/>
+        <set field="decisionList" from="detail?.decisions || []"/>
+        <set field="problemList" from="(detail?.approvalProblems || []).map(text =&gt; ({text}))"/>
+        <set field="simulationList" from="simulation?.stepList || []"/>
+        <set field="findingList" from="(simulation?.findings || []).map(text =&gt; ({text}))"/>
+        <set field="enrollmentList" from="enrollments?.enrollmentList || []"/>
+        <set field="enrollmentListCount" from="enrollments?.enrollmentListCount"/>
+        <set field="enrollmentListPageIndex" from="enrollments?.enrollmentListPageIndex"/>
+        <set field="enrollmentListPageSize" from="enrollments?.enrollmentListPageSize"/>
+        <set field="enrollmentListPageMaxIndex" from="enrollments?.enrollmentListPageMaxIndex"/>
+        <set field="enrollmentListPageRangeLow" from="enrollments?.enrollmentListPageRangeLow"/>
+        <set field="enrollmentListPageRangeHigh" from="enrollments?.enrollmentListPageRangeHigh"/>
+        <set field="listPath" from="sharedLinks['Automations/Automations']"/>
+        <set field="enrollmentPath" from="sharedLinks['Automations/EnrollmentDetail']"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+        <set field="captionText" from="[automation.campaignName, automation.triggerText, 'topic ' + automation.topicName, automation.organizationName, 'revision ' + automation.automationRevision].filter(Boolean).join(' · ')"/>
+        <set field="factsText" from="[automation.profileName ? 'from ' + automation.profileName : 'no sending profile', 'waits in ' + (automation.timeZone || 'the user\'s zone'),
+                'definition of ' + automation.definitionDateText].join(' · ')"/>
+        <set field="countsText" from="automation.activeCount + ' active · ' + automation.completedCount + ' completed · ' + automation.stoppedCount + ' stopped · ' + automation.skippedCount + ' steps skipped' + (automation.nextDueText ? ' · next due ' + automation.nextDueText : '')"/>
+        <set field="automationRef" from="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision}"/>
+        <set field="decisionRef" from="{marketingAutomationId:marketingAutomationId, targetRevision:automation.automationRevision}"/>
+        <set field="ruleValues" from="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, automationName:automation.automationName,
+                description:automation.description, contactListId:automation.contactListId, sendingProfileId:automation.sendingProfileId,
+                triggerEnumId:automation.triggerEnumId, triggerSegmentId:automation.triggerSegmentId, productStoreId:automation.productStoreId,
+                goalSegmentId:automation.goalSegmentId, reentryEnumId:automation.reentryEnumId, reentryCooldownDays:automation.reentryCooldownDays,
+                timeZone:automation.timeZone}"/>
+        <set field="stepValues" from="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, stepAction:'add',
+                position:stepList.length, kind:'send', waitUnitEnumId:'AwuDays', conditionFalseEnumId:'AcfSkipNextSend'}"/>
+        <set field="simulateValues" from="{marketingAutomationId:marketingAutomationId, simulatePartyId:simulatePartyId,
+                simulateFrom:simulateFrom || ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')}"/>
+        <set field="enrollValues" from="{marketingAutomationId:marketingAutomationId, operationKey:ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + marketingAutomationId}"/>
+    </actions>
+    <widgets>
+        <section name="AutomationNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Automation ${marketingAutomationId} is not available: it does not exist, or it is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to automations" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="AutomationFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${marketingAutomationId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${automation.automationName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${factsText}" type="div" style="text-caption m-muted"/>
+                            <label text="${countsText}" type="div" style="text-caption m-muted"/>
+                            <label text="Awaiting approval" type="div" style="text-caption text-warning" condition="detail.awaitingApproval"/>
+                            <label text="Paused: ${automation.pauseNote}" type="div" style="text-caption text-warning" condition="automation.statusId == 'MaPaused' &amp;&amp; automation.pauseNote"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${automation.statusColor}">${WebUtilities.encodeHtml(automation.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(automation.statusText ?? "")})}]]></text>
+                                <text type="html">${automation.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <!-- the primary action by state: Request approval, Approve, Activate, Resume -->
+                            <container-dialog id="RequestAutomationApprovalDialog" button-text="Request approval" icon="sym_o_approval" type="primary"
+                                    title="Request approval of ${automation.automationName}" width="520" condition="can.canRequestApproval">
+                                <label text="${stepList.length} steps at revision ${automation.automationRevision}: the approval covers its content, sender, topic and enrollment rule." type="p"/>
+                                <form-single name="RequestAutomationApproval" transition="requestAutomationApproval" map="decisionRef">
+                                    <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                    <field name="targetRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Note for the approver"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Request approval"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AutomationDecisionDialog" button-text="Approve" icon="sym_o_check_circle" type="primary"
+                                    title="Decide on ${automation.automationName}, revision ${automation.automationRevision}" width="560" condition="can.canDecide">
+                                <label text="${stepList.length} steps; its sends go to the topic ${automation.topicName} from ${automation.profileName}, each person checked again before each step." type="p"/>
+                                <form-single name="AutomationDecision" transition="decideAutomationApproval" map="decisionRef">
+                                    <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                    <field name="targetRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision">
+                                        <default-field title="Decision">
+                                            <radio><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason" tooltip="A refusal needs its reason"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Decide" confirmation="Decide on ${automation.automationName} at revision ${automation.automationRevision}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ActivateAutomationDialog" button-text="${can.canResume ? 'Resume' : 'Activate'}" icon="sym_o_play_arrow" type="primary"
+                                    title="${can.canResume ? 'Resume' : 'Activate'} ${automation.automationName}" width="560" condition="can.canActivate || can.canResume">
+                                <label text="From now on it admits by its trigger and runs each due step, checking each person's consent, suppression and the goal again before every step. Overdue steps run a page at a time, within the caps."
+                                        type="p"/>
+                                <form-single name="ActivateAutomation" transition="activateAutomation" map="automationRef">
+                                    <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Note"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="${can.canResume ? 'Resume' : 'Activate'}" confirmation="${can.canResume ? 'Resume' : 'Activate'} ${automation.automationName}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <label text="You wrote, asked for or approved this automation: another dispatcher activates it." type="span" style="text-caption text-warning"
+                                    condition="can.activateSelf &amp;&amp; ['MaApproved', 'MaPaused'].includes(automation.statusId)"/>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="EditRuleDialog" button-text="Edit enrollment rule" icon="sym_o_edit"
+                                        title="The enrollment rule of ${automation.automationName}" width="640" condition="can.canEdit">
+                                    <label text="A change of the topic, sender, trigger, goal, re-entry or zone ends an approval." type="p" style="m-muted"/>
+                                    <form-single name="EditRule" transition="storeEnrollmentRule" map="ruleValues">
+                                        <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="automationName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="description"><default-field title="Description"><text-area rows="2" cols="50"/></default-field></field>
+                                        <field name="contactListId">
+                                            <default-field title="Topic">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'sendTopics', organizationPartyId:automation.organizationPartyId, selected:automation.contactListId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="sendingProfileId">
+                                            <default-field title="Sending profile">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'sendProfiles', organizationPartyId:automation.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="triggerEnumId">
+                                            <default-field title="Trigger">
+                                                <drop-down allow-empty="false">
+                                                    <option key="AtrSubscription" text="Confirmed subscription"/>
+                                                    <option key="AtrSegment" text="Newly matched segment member"/>
+                                                    <option key="AtrStaff" text="Staff enrollment with evidence"/>
+                                                    <option key="AtrOrderPlaced" text="Order placed"/>
+                                                    <option key="AtrCartAbandoned" text="Cart abandoned"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="triggerSegmentId">
+                                            <default-field title="Trigger segment" tooltip="For a segment trigger">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'segments', organizationPartyId:automation.organizationPartyId, selected:automation.triggerSegmentId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="productStoreId">
+                                            <default-field title="Store" tooltip="For an order or cart trigger">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'automationStores', organizationPartyId:automation.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="goalSegmentId">
+                                            <default-field title="Goal" tooltip="Whoever matches this segment has met the goal: their enrollment ends">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'segments', organizationPartyId:automation.organizationPartyId, selected:automation.goalSegmentId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reentryEnumId">
+                                            <default-field title="Re-entry">
+                                                <drop-down allow-empty="false">
+                                                    <option key="ArOnce" text="Once per person"/>
+                                                    <option key="ArPerEvent" text="Once per new event, after a cooldown"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reentryCooldownDays"><default-field title="Cooldown (days)"><text-line size="5"/></default-field></field>
+                                        <field name="timeZone"><default-field title="Time zone" tooltip="Day and business-day waits keep their local time in it"><text-line size="30"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Save the rule"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EnrollPartyDialog" button-text="Enroll a person" icon="sym_o_person_add"
+                                        title="Enroll a person in ${automation.automationName}" width="560" condition="can.canEnroll">
+                                    <label text="Enrolls a subscriber of ${automation.topicName} who asked for it: their consent is checked now and before every step." type="p" style="m-muted"/>
+                                    <form-single name="EnrollParty" transition="enrollParty" map="enrollValues">
+                                        <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Person">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'automationMembers', marketingAutomationId:marketingAutomationId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="evidenceText"><default-field title="What they asked for, and when"><text-area rows="2" cols="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Enroll"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="PauseAutomationDialog" button-text="Pause" icon="sym_o_pause" title="Pause ${automation.automationName}"
+                                        width="480" condition="can.canPause">
+                                    <label text="No step runs and no one is admitted until it is resumed; messages already with the delivery service may still go out."
+                                            type="p" style="m-muted"/>
+                                    <form-single name="PauseAutomation" transition="pauseAutomation" map="{marketingAutomationId:marketingAutomationId}">
+                                        <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title=""><submit text="Pause" confirmation="Pause ${automation.automationName}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EndAutomationDialog" button-text="End" icon="sym_o_stop_circle" title="End ${automation.automationName}"
+                                        width="480" condition="can.canEnd">
+                                    <label text="Its ${automation.activeCount} active enrollments stop and their pending steps never run." type="p" style="m-muted"/>
+                                    <form-single name="EndAutomation" transition="endAutomation" map="{marketingAutomationId:marketingAutomationId}">
+                                        <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="End" type="danger" confirmation="End ${automation.automationName}? This cannot be undone."/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${campaignPath}" text="Open the campaign" link-type="anchor" icon="sym_o_campaign"
+                                        parameter-map="{marketingCampaignId:automation.marketingCampaignId}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Enrollment rule"/>
+                    <box-body>
+                        <label text="Trigger: ${automation.triggerText}${automation.triggerSegmentName ? ' · segment ' + automation.triggerSegmentName : ''}${automation.storeName ? ' · store ' + automation.storeName : ''}" type="p"/>
+                        <label text="Topic: ${automation.topicName} · from ${automation.profileName || 'no sending profile yet'} · re-entry: ${automation.reentryText} · goal: ${automation.goalSegmentName || 'none'}" type="p"/>
+                        <label text="${automation.description}" type="p" style="m-muted" condition="automation.description"/>
+                        <label text="It runs as the system for its organization: its segments read party, contact and engagement facts only, and no one's personal contact is enrolled." type="p" style="text-caption m-muted"/>
+                        <label text="Last admission ${automation.lastAdmissionText}" type="p" style="text-caption m-muted" condition="automation.lastAdmissionText"/>
+                        <label text="${automation.admissionNote}" type="p" style="text-warning" condition="automation.admissionNote"/>
+                        <section name="AutomationApprovalNeeds" condition="problemList.length &amp;&amp; automation.statusId == 'MaDraft'">
+                            <widgets>
+                                <label text="Before approval" type="h6"/>
+                                <form-list name="AutomationProblems" list="problemList" skip-form="true" paginate="false">
+                                    <field name="text"><default-field title="Still needed"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Steps"/>
+                    <box-toolbar>
+                        <container-dialog id="AddStepDialog" button-text="Add step" icon="sym_o_add" title="Add a step to ${automation.automationName}"
+                                width="640" condition="can.canEdit &amp;&amp; stepList.length &lt; automation.maxSteps">
+                            <label text="A send copies its template's published content now. Any change of the steps ends an approval." type="p" style="m-muted"/>
+                            <form-single name="AddStep" transition="changeSteps" map="stepValues">
+                                <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="stepAction"><default-field><hidden/></default-field></field>
+                                <field name="kind">
+                                    <default-field title="Step">
+                                        <radio><option key="send" text="Send email"/><option key="wait" text="Wait"/><option key="condition" text="Condition"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="position">
+                                    <default-field title="After step" tooltip="0 puts it first">
+                                        <text-line size="4"/>
+                                    </default-field>
+                                </field>
+                                <field name="stepName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="messageTemplateId">
+                                    <default-field title="Template" tooltip="For a send">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'messageTemplates', organizationPartyId:automation.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="waitAmount"><default-field title="Wait" tooltip="For a wait"><text-line size="5"/></default-field></field>
+                                <field name="waitUnitEnumId">
+                                    <default-field title="Unit">
+                                        <drop-down allow-empty="false">
+                                            <option key="AwuMinutes" text="Minutes"/>
+                                            <option key="AwuHours" text="Hours"/>
+                                            <option key="AwuDays" text="Days"/>
+                                            <option key="AwuBusinessDays" text="Business days"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="conditionSegmentId">
+                                    <default-field title="Matches segment" tooltip="For a condition">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'segments', organizationPartyId:automation.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="conditionFalseEnumId">
+                                    <default-field title="When not met">
+                                        <drop-down allow-empty="false">
+                                            <option key="AcfSkipNextSend" text="Skip the next send step"/>
+                                            <option key="AcfEnd" text="End the enrollment"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Add the step"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No steps yet: add a send, a wait or a condition (at most ${automation.maxSteps})." type="p" style="m-muted" condition="!stepList.length"/>
+                        <form-list name="AutomationSteps" list="stepList" skip-form="true" paginate="false" condition="stepList.length">
+                            <field name="position" align="right"><default-field title="#"><display/></default-field></field>
+                            <field name="stepKindText"><default-field title="Step"><display/></default-field></field>
+                            <field name="stepName"><default-field title="Name"><display/></default-field></field>
+                            <field name="detail"><default-field title="What it does"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="ChangeStep_${position}" button-text="Change" icon="sym_o_swap_vert"
+                                            title="Move or remove step ${position}" width="480" condition="can.canEdit">
+                                        <form-single name="ChangeStep" transition="changeSteps"
+                                                map="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, position:position, stepAction:'up'}">
+                                            <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="position"><default-field><hidden/></default-field></field>
+                                            <field name="stepAction">
+                                                <default-field title="Change">
+                                                    <radio><option key="up" text="Move up"/><option key="down" text="Move down"/><option key="remove" text="Remove"/></radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title=""><submit text="Change" confirmation="Change step ${position}? Its approval ends."/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="stepKindText"/><field-ref name="detail"/></column>
+                                <column><field-ref name="position"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Simulation"/>
+                    <box-body>
+                        <label text="A dry run from ${simulateValues.simulateFrom}: nothing is sent or stored. Due times are in ${simulation?.timeZone || 'the user\'s zone'}, with their offset. ${simulation?.sampleText || ''}." type="p" style="m-muted"/>
+                        <form-single name="SimulateAutomation" transition="simulateAutomation" map="simulateValues">
+                            <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                            <field name="simulateFrom"><default-field title="From"><date-time type="timestamp"/></default-field></field>
+                            <field name="simulatePartyId">
+                                <conditional-field title="As" condition="marketing.capabilities.audienceRead">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'automationMembers', marketingAutomationId:marketingAutomationId, selected:simulatePartyId}"/>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Simulate"/></default-field></field>
+                        </form-single>
+                        <form-list name="AutomationFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
+                            <field name="text"><default-field title="To know"><display/></default-field></field>
+                        </form-list>
+                        <form-list name="AutomationSimulation" list="simulationList" skip-form="true" paginate="false" condition="simulationList.length">
+                            <field name="position" align="right"><default-field title="#"><display/></default-field></field>
+                            <field name="stepKindText"><default-field title="Step"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="action"><default-field title="Predicted action"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="stepKindText"/><field-ref name="action"/></column>
+                                <column><field-ref name="dueText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box condition="can.canReadEnrollments">
+                    <box-header title="Enrollments"/>
+                    <box-body-nopad>
+                        <form-list name="EnrollmentList" list="enrollmentList" skip-form="true" paginate="true">
+                            <field name="automationEnrollmentId"><default-field><hidden/></default-field></field>
+                            <field name="participant">
+                                <conditional-field title="Participant" condition="enrollmentPath">
+                                    <link url="${enrollmentPath}" text="${participant}" link-type="anchor" parameter-map="{automationEnrollmentId:automationEnrollmentId}"/>
+                                </conditional-field>
+                                <default-field title="Participant"><display/></default-field>
+                            </field>
+                            <field name="admittedDateText"><default-field title="Admitted"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="nextSequenceNum" align="right"><default-field title="Next step"><display/></default-field></field>
+                            <field name="nextDueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="dueNote"><default-field title="Waiting for"><display/></default-field></field>
+                            <field name="endReason"><default-field title="Ended"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="participant"/><field-ref name="admittedDateText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="nextDueText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No one enrolled yet." type="p" style="m-muted q-pa-sm" condition="!enrollmentList.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Decisions"/>
+                    <box-body>
+                        <label text="No approval asked yet." type="p" style="m-muted" condition="!decisionList.length"/>
+                        <form-list name="AutomationDecisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
+                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                            <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
