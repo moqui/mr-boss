@@ -5123,6 +5123,107 @@ unchanged, no Rust built. F111: a new record's organization defaults to the user
   - Merge hot spots: as the Follow-up note says. sal/p5 is already in master and both repositories' branches merge cleanly.
   - The user's call: Accounting's working-organization default (unchanged here).
 
+### Follow-up 2 — recurring orders' invoicing, lines and tax
+
+**Built Nov 14 (follow-up 2).** mr-mantle and mr-boss on branch `sal/fix2` (hashes in the worker's reply); mr-moqui and mr-pass
+unchanged, no Rust built. The user's two calls of Nov 14 (§4, P16's review; F299, F300): a native recurring order generated without a
+payment is invoiced when a person approves it, as its base's auto-invoice asks; a base copies the source's charge and discount lines
+with its products, and tax is computed on each generated order when it is placed.
+- Checked first (the code over the plan): P16's Built and Review notes, F290 to F303, §4's two Nov 14 rows; the worker
+  (OrderServices.xml `clone#Order`, `create#RecurringOrder`), `handle#OrderItemChange` and `handle#OrderMajorChange` (X1's storeless
+  step, the store's promotions, shipping and tax), TaxServices `calculate#OrderSalesTax` and SalesTax.js `order`, Shop's base and
+  renewal (ShopSubscriptions.js `makeBase`, `prepareStep`) and its invoicing (ShopFulfillment.secas.xml, ShopFulfillment.js,
+  Payables.js `fulfillmentInvoice`), the other `clone#Order` callers with `productItemsOnly: false` (SalesQuoteTemplates.js,
+  SalesQuoteIssues.js `cloneQuote`, SalesOrders.js `cloneOrder`) and Accounting's Recurring invoices (Collections.js). The code over
+  the plan:
+  - F300's "nothing computes tax at placement" holds only for the source's other lines: a generated order of a storeless seller with
+    a gateway was already taxed while it was cloned (OrderOpen; each copied line's `handle#OrderItemChange` runs X1's step), on its
+    product lines alone; a store base's order the same way, by the store's path. What was missing was the lines, so tax is now figured
+    on every line the order repeats;
+  - `clone#Order` copied a child line's `parentItemSeqId` as it was, while the copy's line ids are sequenced afresh: the source's ids
+    have gaps (each retax deletes and adds tax lines), so a discount or tax line of a copy could name the wrong parent. With
+    `productItemsOnly: false` a child now keeps its own parent (the source's id mapped to the copy's); the default, product lines only
+    (Shop's base and renewals, Commerce's reorder, the native worker's legacy bases), is unchanged. Sales' quote and order clones and
+    template successors, which copy every line, get the right parents too;
+  - "the same path Shop's renewals use": Shop invoices a renewal through Accounting's `create#FulfillmentInvoice` (the internal split
+    of `create#InvoiceFromSource`: the ordered basis, a recurring base or template refused, one invoice for a source, no user
+    permission asked), from a tx-commit rule on the order's approval; follow-up 2 uses both the same way. The worker's own branch that
+    billed with `create#EntireOrderPartInvoice` only a part approved at placement is replaced by that one path, so an automatic and a
+    person's approval bill the same way;
+  - Accounting's Recurring invoices said "Invoiced on approval" for auto-invoice (now true) and "Not invoiced" otherwise, which
+    misstated two cases: a base without auto-invoice has its orders invoiced as any order, by a person ("Not invoiced automatically"),
+    and a Shop contract's base has its renewals invoiced by the store with their payment ("Invoiced by the store at renewal").
+- Mantle:
+  - `service/mantle/order/OrderServices.xml`: `clone#Order` keeps a child line under its own parent when every line is copied;
+    `create#RecurringOrder`, for a Sales base (marked `OrpRecurringTemplate`), copies every line of the base (`productItemsOnly:
+    false`) and retaxes the order before `place#Order` through `handle#OrderMajorChange` for each part (a storeless seller with a
+    gateway: X1's `calculate#OrderSalesTax`, which replaces the copied tax lines; a store order: the store's promotions, shipping and
+    tax; a storeless seller with no gateway: the copied lines as they are, its own); a base not marked (made recurring before Sales
+    and never edited there) repeats its product lines as before; the auto-invoice branch removed; its description.
+  - `service/mantle/order/SalesRecurrence.js`: `makeBase` copies every line of the source (`productItemsOnly: false`; the base keeps
+    the source's tax lines for its amount, figured again on each order made); `invoiceRecurringOrder` (below); the header comment.
+  - `service/mantle/order/SalesRecurrenceServices.xml`: `invoice#RecurringOrder` (new, `authenticate="anonymous-all"`,
+    `allow-remote="false"`): an order the worker made for an occurrence (`recurOccurrenceDate`, a parent, no purpose) of a base whose
+    auto-invoice is on and that is no Shop contract's has each approved sale part with nothing billed yet invoiced through
+    `create#FulfillmentInvoice`, each part in its own transaction; any other order returns at once; a part that cannot be billed is
+    logged naming the base and the order and never fails the approval. `store#SalesRecurrence`'s description.
+  - `service/SalesRecurrence.secas.xml` (new): `SalesRecurrenceApprovedInvoice`, on `update#mantle.order.OrderHeader` at tx-commit
+    when the status changes to OrderApproved, calls `invoice#RecurringOrder` in a transaction of its own, ignoring its errors (as
+    Sales' storeless confirmation and Shop's fulfillment are run).
+- BOSS: `service/ironstone/accounting/Collections.js` (Recurring invoices' recurring orders: the Invoice column's three texts, a Shop
+  contract's base read in one query). No screen changed (RecurringOrders' "Bill each order once it is approved" now holds as written).
+- Specs: Mantle `test/order/SalesRecurrence` gains a feature (6 features, about 2.8 to 3.3 s; the feature about 0.6 s): an approved
+  storeless order of C (its seller's gateway, a spec-local Utah rate of 6 %) with a product line, a shipping charge and a discount of
+  the product line, made a monthly base with auto-invoice by C's keeper with the finance right; the base holds the product, the
+  charge and the discount, the discount and each tax line under their own lines; with the rate raised to 7 % the order made holds the
+  same lines, two tax lines under its product and shipping lines, a tax larger than the source's (figured then, not copied), its total
+  the lines' and placed with nothing billed; approved by a person, its lines are billed on one invoice (the approval's tx-commit rule,
+  waited for), and a second `invoice#RecurringOrder` bills nothing more; a base without auto-invoice (feature 4's third) bills nothing
+  when its order is approved. The base's lines and the billing each fail on the unfixed code (run there: the base held only
+  "ItemProduct"; with the invoice service absent, nothing billed).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesRecurrence, OrderLifecycle, SalesQuoteTemplates,
+  ShopSubscriptions, Subscriptions, SalesQuoteDrafts, SalesOrderApproval, StorelessOrderTax, StorelessOrderConfirmation,
+  StoreOperations, OrderToCashBasicFlow, ShopCheckout, DropShip, OrderChanges and SalesOrderChanges 120 of 120 (17 specs with
+  dependencies, 34 s of features); SalesPortal and ShopOperations with SalesRecurrence again 23 of 23. mr-boss SalesRecurrence,
+  AccountingCollections, CommerceSubscriptions, SalesQuotes, SalesOrders and AccountingAccess 22 of 22 (12.9 s). mr-pass
+  ShopSubscriptions and ShopCheckout 6 of 6 (master's mr-pass against this branch's mr-mantle). Shop's renewals and Commerce's specs
+  pass unchanged. Prettier clean on the changed JavaScript. No screen changed, so no screen lint. Not run: ./moq test-apps,
+  test-framework, the acceptance suite (no acceptance test changed).
+- Inventories and design: usl-inventory's "Added in the Sales build: recurring orders and subscriptions" table gains
+  `invoice#RecurringOrder`; design-sales §7 "As built (impl-sales P16)" says what follow-up 2 changed.
+- Findings (provisional, numbered by the lead):
+  - the invoice is left as `create#EntireOrderPartInvoice` makes it (InvoiceInProcess), as Accounting's Invoice from order and the
+    worker's old branch left it; Shop finalizes its renewal's invoice after the capture, a native renewal's waits for Accounting to
+    finalize it with its other drafts;
+  - the trigger is the order header's approval; a generated order of several parts approved part by part (a credit hold on one part)
+    is billed for the parts approved when the header becomes approved, and a part approved later only by Accounting's Invoice from
+    order (`invoice#RecurringOrder` is internal); Sales' bases repeat one-part orders in practice;
+  - an order whose header returns to Approved (`checkStillComplete` after a return) runs the rule again, which bills nothing (a part
+    already billed is skipped, and `create#FulfillmentInvoice` keeps one invoice for a source);
+  - a base made in P16 holds product lines only; it repeats them as before until it is made again from its source (editing its
+    schedule does not copy lines);
+  - a storeless seller with no tax gateway: its generated orders repeat the source's tax lines as they were entered (nothing
+    recomputes them, as X1 leaves such an order untouched); a store with no tax gateway drops them, as the store's own path does;
+  - a generated order the gateway cannot tax (TAX_ADDRESS_MISSING, TAX_RATE_MISSING) now fails its occurrence with that reason, kept
+    on the base as "Last run failed"; before, X1's step during the clone would have refused it the same way.
+- For the lead:
+  - budget share: mr-mantle about +0.6 s (SalesRecurrence's sixth feature); mr-boss none; client none;
+  - merge hot spots (Sales P19 and Marketing P9 in parallel): mr-mantle `service/mantle/order/OrderServices.xml` (`clone#Order`'s
+    item loop, `create#RecurringOrder`), `service/mantle/order/SalesRecurrence.js` (header comment, `makeBase`, a block before
+    `services`), `service/mantle/order/SalesRecurrenceServices.xml` (a service at the end), `test/order/SalesRecurrence.spec.js` (setup
+    and a feature at the end); new `service/SalesRecurrence.secas.xml`; mr-boss `service/ironstone/accounting/Collections.js` (the
+    recurring orders' rows), `plan/design-sales.md` §7, `plan/usl-inventory.md` (one row), this section;
+  - Attack-Surface correction (mr-moqui `docs/security/Attack-Surface.md`, Sales' recurring orders paragraph as P16's review gave
+    it): replace "copied with no payment and no purpose and placed through `place#Order` (so it is approved as any sales order of the
+    seller, never on a copied payment), and fails an occurrence whose agreement no longer applies." with "copied with no payment and
+    no purpose, every line of the base with each child line under its own parent, retaxed by its own path (its seller's gateway or
+    its store's) and placed through `place#Order` (so it is approved as any sales order of the seller, never on a copied payment),
+    and fails an occurrence whose agreement no longer applies. `invoice#RecurringOrder` (`authenticate="anonymous-all"`, internal,
+    run only by the `SalesRecurrenceApprovedInvoice` tx-commit rule on an order's approval) bills, through `create#FulfillmentInvoice`
+    and once, only an order the worker made for an occurrence of a base whose auto-invoice (turned on only with `RECEIVABLE_EDIT`) is
+    on and that no Shop contract renews; it reads only the records.";
+  - nothing needs the user's call.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or

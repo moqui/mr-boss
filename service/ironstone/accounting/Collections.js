@@ -314,6 +314,12 @@ function schedules(parameters) {
         "orderId",
         clones.map(row => row.orderId)
     )
+    // a Shop contract's base: its renewals are invoiced by the store with their payment (impl-sales follow-up 2)
+    const shopBaseIds = inIds(
+        "mantle.product.subscription.StoreRecurringContract",
+        "baseOrderId",
+        orders.map(row => row.orderId)
+    ).map(row => row.baseOrderId)
     const orderRows = orders.map(row => {
         const copy = clones
             .filter(clone => clone.parentOrderId === row.orderId)
@@ -323,7 +329,12 @@ function schedules(parameters) {
             orderId: row.orderId,
             customerName: orderNames[row.customerPartyId] || row.customerPartyId,
             recurrenceText: row.recurCronExpression,
-            autoInvoiceText: row.recurAutoInvoice === "Y" ? "Invoiced on approval" : "Not invoiced",
+            // auto-invoice bills each order made once it is approved, by the job or later by a person (impl-sales follow-up 2)
+            autoInvoiceText: shopBaseIds.includes(row.orderId)
+                ? "Invoiced by the store at renewal"
+                : row.recurAutoInvoice === "Y"
+                  ? "Invoiced on approval"
+                  : "Not invoiced automatically",
             lastOrderedText: row.lastOrderedDate ? policy.dateText(row.lastOrderedDate) : "",
             lastCopyId: copy?.orderId || "",
             lastInvoiceId: billing?.invoiceId || "",
