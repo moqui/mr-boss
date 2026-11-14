@@ -48,7 +48,7 @@ feature("an author makes a send from a template, the approver approves it, the d
         const draft = author.getByRole("dialog")
         draft.getByLabel("Name", {exact: true}).fill(name)
         choose(author, draft, "Topic", null, /^Garden newsletter/)
-        choose(author, draft, "Sending profile", null, /^Retail news/)
+        // Retail's one promotional sending profile, chosen for it
         draft.getByRole("button", {name: "Start the draft", exact: true}).click()
         author.waitForURL(/Compose/)
         const campaignSendId = /campaignSendId=([^&]+)/.exec(author.url())[1]
@@ -79,13 +79,13 @@ feature("an author makes a send from a template, the approver approves it, the d
         confirmAction(dispatcher)
         // handed to the delivery service once the release commits: the Delivery box counts it sent and the send completes
         waitForText(dispatcher, "Released")
-        let delivered = dispatcher.text().includes("1 sent")
-        for (let tries = 0; tries < 20 && !delivered; tries++) {
+        let shown = dispatcher.text()
+        for (let tries = 0; tries < 20 && !shown.includes("1 sent"); tries++) {
             dispatcher.goto(detailUrl)
-            delivered = dispatcher.text().includes("1 sent")
+            shown = dispatcher.text()
         }
-        delivered
+        shown.includes("1 sent")
+        !/Error rendering|Exception in render/.test(shown)
         waitForStatus(dispatcher, "Completed")
-        !/Error rendering|Exception in render/.test(dispatcher.text())
     }
 })
