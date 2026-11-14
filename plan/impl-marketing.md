@@ -2161,6 +2161,93 @@ offer; MKT-PUBLIC, MKT-AUDIENCE, MKT-CONSENT; gate 2.
   - the user's call: none required; to confirm, the display name kept off the message, a site-less offer offered nowhere, and the
     verification from a promotional profile when the organization has no transactional one.
 
+**Review Nov 14 (P7).** A fresh review of `mkt/p7` (mr-mantle d52ae91f, mr-pass 1e1a2f3, mr-boss 14bcf186) against P7, §2, §4
+and design §13, after merging master (Sales P14, P15, Marketing P6) and then master again (Sales P17) into each worktree; no Rust.
+- Checked and sound: every operation finds the organization from the site's `marketing` mount (a published site, an internal
+  organization) and each list only by its policy's public offer on that site and open interval; a site without the mount, an
+  unoffered, closed, archived, mailbox or another organization's list, a forged, expired or another site's token answer one NotFound;
+  answers are allow-listed, the address masked, no token leaves the message (digest only, per attempt, ending with the request).
+  `requestSubscription`: input checks say nothing of the address; limits per client (the framework's requester key, a registered
+  remote frontend's forwarded client), site and address answer the receipt and keep nothing; a repeated key answers the receipt;
+  a known or new address, a member already, a refusal (suppressed, withdrawn later than the evidence, a personal contact never
+  matched) all answer the same receipt; the visitor's name never reaches the message; pending only through `fileOne`. The
+  verification's GET is read only (a lookup counts against the requester's limit); `verifySubscription` re-reads the group under
+  the first row's lock, accepts each pending topic still offered once with the request's own evidence date (a later withdrawal
+  stands; spec feature two), a replay answers the first result. CSRF (the session token on both forms), no-store,
+  `Referrer-Policy: same-origin` and the shell's CSP hold as for PASS Sales. The Email preferences page's Marketing context: a
+  token's organization is its list's and must be the mount's target; signed in, the mount's organization and the account's own
+  party; a turned-on topic is a request with its mail (a verified account's own address accepted at once); "No more email from"
+  is a withdrawal scoped to the organization; `unsubscribe#ContactListParty` without `organizationPartyId` is as before (mr-boss
+  Unsubscribe and Consent pass unchanged). Shop's news choice through `file#CheckoutSubscription`: a refusal or an error is the
+  outcome failed, logged, inside `applyAll`'s per-opt-in try, so checkout never fails; Shop's checkout specs pass unchanged.
+- Fixed:
+  - R1 (medium; a timing side channel on a public endpoint): the verification was queued with `sendNow`, so the request's answer
+    waited on the SMTP hand-off when a message went out and not when none did (a member already, a refusal, a suppression, the
+    mail limit): one timed request could tell whether an address was already on a list. The delivery is now queued and attempted by
+    the new internal `attempt#VerificationDelivery` (anonymous-all, not remote, only an MdsrcSubscriptionVerify delivery) registered
+    to run on a service worker once the request commits; the ledger's `run#Deliveries` job retries it. The specs wait for the
+    worker before reading mail (the acceptance walks already poll).
+  - R2 (medium; the Built finding): the verification went from a promotional profile when no transactional one was ready. A
+    verification is transactional: `profileFor` now takes only a ready profile with purpose transactional or none; with none the
+    request is kept, nothing is sent, and the readiness check is named "transactional sending profile". MarketingSubscriptions
+    checks a promotional-only organization: the receipt, no mail, the request pending with no delivery, the check not ready (fails
+    on the unfixed rule). Demo: Retail gains `BOSS_MKT_PROFILE_RETAIL_NOTICES` (transactional) beside the promotional "Retail news";
+    Deployment's Marketing app and design §13 say so.
+  - Merges: both schema copies rebuilt from master's (DG6, then Sales' quotes and orders) with Marketing's four operations after
+    the Sales block, byte-identical; both route copies likewise; the header's branch keeps Sales' My orders and adds Marketing;
+    README and the acceptance suite list both phases' tests.
+- Provisional findings (for the lead to number):
+  - a residual timing difference: a new address makes a person, a contact mech and its party link (a few writes) and a known one
+    does not; bounded by the address limit (5 an hour), not equalized;
+  - two concurrent posts with one request key can both pass the repeat check (two groups, two messages within the mail limit);
+  - a checkout news choice confirmed by the receipt's link records a new accepted request and leaves the placement's checkout
+    request SrsPending (the spec expects both); deciding the pending row would be cleaner;
+  - the Built note's others stand as written: a link per attempt, a site-less offer offered nowhere, the matched party the first
+    directory party with the address, a list confirmation not undoing a global marketing withdrawal (P9's dispatch check), a
+    marketing mount with no offered list holding the site's readiness.
+- Tests run (release, `--nobuild`, this worktree's runtime, after the second merge): mr-mantle MarketingSubscriptions, SalesPortal,
+  PassAuthority, ShopCheckout, Consent (44 of 44, 33 s; MarketingSubscriptions about 1.0 s of features); earlier in the review
+  StoreCheckout, Audiences, ContactListSend, DeliveryLedger, SendingProfiles, CartRecovery (75 of 75 with the first group); mr-pass
+  Forum, Smithy, SmithyAccess, Portals, MarketingAccess, SalesPortalAccess, ShopCheckout, ShopAccount, ShopCart, ShopSubscriptions,
+  Transport (71 of 71, 32 s); mr-boss Unsubscribe, Consent, MarketingLists, MarketingTemplates (24 of 24, 24 s), and MarketingAccess,
+  CommerceStores (with the first group, 33 of 33). Prettier on the changed JavaScript. Not run: test-apps, lint (no screen changed
+  in the review), the acceptance walks.
+- For the lead:
+  - budget share: unchanged (mr-mantle about 1.0 s, mr-pass about 0.15 s);
+  - merge hot spots: the two schema and route copies (Marketing after the Sales block), `Header.html.fancy`, mr-pass README and
+    `test/acceptance/client/suite.js`, mr-boss `data/BossZZMarketingDemoData.xml` (the P7 block's new profile);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Sales'): the Built note's paragraph, with "Its
+    verification message is a transactional delivery of Comms' ledger from a ready sending profile of the organization" replaced
+    by "Its verification message is a transactional delivery of Comms' ledger from a ready transactional sending profile of the
+    organization (a promotional one never sends it: the request is kept and the readiness says so), attempted on a service worker
+    once the request commits, so the answer takes the same time whether or not a message goes out"; the full paragraph:
+    "PASS Marketing's public subscription (`mantle.marketing.MarketingPortalServices`, all `allow-remote="false"`,
+    `authenticate="anonymous-all"`, reached only as the PASS operations `getMarketingPublication`, `requestSubscription`,
+    `getSubscriptionRequest` and `verifySubscription` of the authority's allowlist): each finds the organization from the site's
+    `marketing` mount (a published site, an internal organization) and a list only by its explicit public offer on that site (the
+    policy's offer, site and open interval; the legacy `isPublic` flag offers nothing), never from the request; a site without the
+    mount, an unoffered, closed, archived, mailbox or another organization's list and a forged, expired or another site's link
+    answer the same NotFound. `requestSubscription` is an anonymous write (the transport lets it through by name; the authority
+    takes it from a registered deployment as a TOKEN_WRITES operation) bounded by PASS's request key (a repeat answers the first
+    request), at most ten topics, and limits per client (30 in ten minutes), site (1,000 an hour) and address (5 an hour), over
+    which it answers the same receipt and keeps nothing; it always answers the same receipt (a known or new address, a member
+    already, a refusal), echoes no address and never says whether a party was matched or made (never a personal contact). Its
+    verification message is a transactional delivery of Comms' ledger from a ready transactional sending profile of the
+    organization (a promotional one never sends it: the request is kept and the readiness says so), attempted on a service worker
+    once the request commits, so the answer takes the same time whether or not a message goes out, with the list policy's
+    published confirmation template, at most 3 a day to an address; it carries the template's own wording, the topics' names and
+    a link, never the visitor's text. Each message's link is a 40-character random token whose digest alone is kept, ending with
+    the request (seven days); every lookup counts against the requester's limit (100 in ten minutes). `getSubscriptionRequest` is
+    read only (a scanner's GET changes nothing) and answers the address masked; `verifySubscription` (a TOKEN_WRITES bearer write,
+    a POST with the session token locally) accepts exactly the request's topics for its address under the request's lock, once (a
+    replay answers the first result), with the request's own evidence date, so a withdrawal after the request is never undone by
+    its link. The Account Email preferences page's Marketing context changes only the token's or the signed-in account's own
+    party: a topic turned on is a request with its verification message (a signed-in verified address accepted at once),
+    `unsubscribe#ContactListParty` with `organizationPartyId` withdraws for the token list's organization only. Shop's store-news
+    choice is filed through the same evidenced path (source PcsCheckout), pending until the receipt's link or a verified sign-in.";
+  - the user's call: none required (R2 follows the lead's note: a verification is transactional); to confirm, the display name
+    kept off the message and a site-less offer offered nowhere.
+
 ### P8 — Sends and the composer
 
 Design §5 Sends, SendDetail (its Summary, Content, Audience, Schedule and Decision) and Compose, §18 (the email,

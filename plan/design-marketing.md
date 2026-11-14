@@ -1704,7 +1704,8 @@ is offered by its policy alone: `publicOffer`, `publicSiteId` (a site whose mark
 interval `offerFromDate`–`offerThruDate`; P3's site-less offers are offered nowhere. A request files each topic through the audience's
 `fileOne` as one public request (SubscriptionRequest rows sharing `requestGroupId`, `siteId`, a hashed `requestKey`, a seven-day
 `expireDate`) for the address's first directory party (never a personal contact) or a new person; its verification message is a
-transactional ledger delivery (source MdsrcSubscriptionVerify) from a ready profile of the organization (a transactional one first)
+transactional ledger delivery (source MdsrcSubscriptionVerify) from a ready transactional profile of the organization (purpose
+transactional or none; never a promotional one, P7 review), attempted once the request commits,
 with the policy's confirmation template (`confirmEmailTemplateId`, the EmailTemplate of a published Comms template of the
 organization), and the template's own wording and the topics' names only: the visitor's name is never put in it. Each attempt makes
 its own link (SubscriptionRequestToken keeps its digest). Limits: 30 requests in ten minutes a client, 1,000 an hour a site, 5 an
