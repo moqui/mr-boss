@@ -4514,6 +4514,193 @@ Design §8 Forecast and TargetAttainment, §9 Targets; SAL-FORECAST.
   the quarter beside the calculated pipeline, the manager's roll-up drills to the same deals, and attainment against
   a won-deal target never adds order or invoice amounts to it.
 
+**Built Nov 14 (P18).** mr-mantle and mr-boss on branch `sal/p18` (hashes in the worker's reply); mr-moqui and mr-pass unchanged, no Rust
+built.
+- Checked first (the code over the plan): P4's, P6's and P11's Built and Review notes, §4, F53–F262; SalesForecast and
+  SalesForecastDetail as ported (no basis, no uniqueness, no service, `closedAmount`, `pipelineAmount` and the percent fields
+  unwritten); TimePeriod (SalesYear, SalesQuarter, SalesMonth seeded, no service that makes them for an organization but Payroll's);
+  SalesAccess.js (`assignedOpportunityIds`, `assignedOrderIds`, `orderExcludedPurposes`, `memberTeams`, `teamOrganization`);
+  find#Opportunities' totals by currency and find#SalesOrders' progress (never summed across currencies or units); team membership as
+  Manager (PrtSalesTeamMember with fromRoleTypeId Manager); OrderPartParty (undated) for an order's representative; OrderItemBilling for
+  an invoice's order. The code over the plan:
+  - design §1.1 gives SALES_FORECAST_EDIT to the manager and the administrator only, while §8's SubmitForecast is "a rep's judgement" and
+    the usable-when has a rep submit; P18 grants it to BOSS_SALES_REP too (BossSetupSalesData's P18 block, the bundle), and the rule
+    lets a holder enter only their own key's judgement, a team they manage, or with SALES_TEAM_VIEW a team or the organization (the
+    user's call, below; design §1.1's row changed);
+  - a target and a forecast are one SalesForecast row a key (the target its quota and basis, the judgement its forecast and best case),
+    so `store#Target` makes the row for a new key and `store#Forecast` for a key with no target; each refuses a key that has a row
+    (DUPLICATE_KEY, FORECAST_EXISTS) and changes a stored one by id and revision;
+  - the plan names no service that makes periods: `ensure#SalesPeriods` makes an organization's calendar-year Sales year, quarters and
+    months (SALES_TEAM_MANAGE or SALES_CONFIGURE), from Targets' Add sales periods;
+  - the calculated measures are never stored on the row (SalesForecast's `closedAmount`, `pipelineAmount` and percent fields stay
+    unwritten): a stored number would go stale with every deal moved;
+  - "manager roll-up uses unique opportunity ownership at the selected as-of date": a key's deals are those of its party and of its
+    descendant forecasts' parties at the as-of time, a person's owned, a team's on the team or owned by a current member, the
+    organization's all, as one set, so a deal counts once whoever owns it; only the deals the reader sees (`assignedOpportunityIds`);
+  - "an unambiguous dated primary representative": OrderPartParty has no dates, so an order (and its invoices, through
+    OrderItemBilling) is attributed to its part's one SalesRepresentative row, else its one SalesTeam row, else unassigned (two
+    representatives are unassigned too); an invoice of no order is unassigned and read only by a SALES_TEAM_VIEW holder;
+  - Forecast's measures box is number cards (quota, weighted, submitted, won) and a labelled list of every measure with its count and
+    what it is; the deals list carries "Counted", "Counted, not weighted" (no probability) or "Left out" with the reason.
+- Mantle:
+  - `entity/SalesEntities.xml`: SalesForecast's `basisEnumId` (SalesForecastBasis seeded: SfbWonOpportunity, SfbPlacedOrder,
+    SfbFinalInvoice), `forecastDate`, `forecastByUserId`; `quotaAmount`, `bestCaseAmount` and the basis audit-logged; the unique key
+    `SALES_FCST_KEY` (organization, internal party, period, currency).
+  - `SalesAccess.js` (a P18 block before the module value, exports at the end): `forecastBases`, `teamMemberIds`, `managedTeams`,
+    `forecastSubjectKind`, `forecastSees`, `forecastSubmits`, `targetManages`, `forecastOf`, `requireForecast`.
+  - `service/mantle/sales/ForecastServices.xml` and `SalesForecasts.js` (new): the interface `define#ForecastKey`; `get#Forecast` (the
+    measures: quota and basis, open and weighted pipeline, open and won monthly recurring revenue from the recurring plan's months,
+    submitted forecast, best case, won amount, placed orders, finalized invoices, and for the organization's key the unassigned orders
+    and invoices; the deals with their reasons, paged; the children with their own judgement; the allocations; `noPeriod` when the
+    organization has no period), `store#Forecast` (AMOUNT_REQUIRED, BEST_CASE_INVALID, DETAIL_OVER_FORECAST, FORECAST_EXISTS, the reason
+    in the audit log), `store#ForecastDetail` (DIMENSION_REQUIRED, DETAIL_OVERLAP through ProductCategoryMember, DETAIL_OVER_FORECAST,
+    FORECAST_REQUIRED), `store#Target` (DUPLICATE_KEY, BASIS_INVALID, PARENT_INVALID, HIERARCHY_CYCLE, `clearParent`), `find#Targets`,
+    `get#TargetAttainment` (the actual on each target's own basis, variance, percent, source count; the unassigned apart for a team
+    reader) and `ensure#SalesPeriods`; every stored write at the revision read (the row's and its details' latest stamp). All
+    `allow-remote="false"`.
+- BOSS:
+  - Screens: `Sales/Pipeline/Forecast.xml` (new, menu index 3: ForecastFind, the measures, Deals behind the pipeline with CSV, Forecasts
+    below this one, Allocation by product or category; Submit forecast, Allocate, Remove), `Sales/Settings/Targets.xml` (new, menu index
+    5, SALES_TEAM_MANAGE: the targets with CSV, New target, Change, Add sales periods), `Sales/Reports/TargetAttainment.xml` (new, menu
+    index 3: TargetOptions, TargetResults with CSV, With no representative). Settings' TypesAndReasons, SalesDefaults and
+    ApprovalPolicies move to menu index 6, 7 and 8 (design §1.2's order); `Sales.xml`, `Pipeline.xml`, `Settings.xml` and `Reports.xml`
+    comments.
+  - `Sales.js` (a P18 block after P15's): linkPaths, the choices `salesPeriods`, `forecastSubjects`, `forecastParents` and
+    `productCategories` (over SalesForecasts.js `periodOptions`, `subjectOptions`, `parentOptions`); `ContextServices.xml` get#Choices
+    and `template/SalesParts.xml`'s choices transition pass `timePeriodId`.
+  - `data/BossSetupSalesData.xml` (a P18 block at the end): SALES_FORECAST_EDIT for BOSS_SALES_REP, in its bundle.
+  - Demo (`data/BossZSalesDemoData.xml`, a P18 block at the end): Ziziwork Retail's 2026 Sales year, Q4 and its months; Retail's Q4
+    target (120,000 USD, won deals), Retail East's under it (50,000) and sales.rep's under East (30,000, with the rep's forecast 24,000
+    and best case 40,000); sales.rep2's measured on placed orders (40,000) under Retail.
+- Specs:
+  - Mantle `test/sales/SalesForecasts` (new, 5 features, 1.8 s): the weighted pipeline equals its deals' (a manual probability used), an
+    undated deal, a lead and a euro deal left out with their reasons, the won amount and its monthly recurring revenue, the rep's
+    placed order counted and a recurring base not; a team's roll-up counting the stage deal once before and after its owner changes,
+    the mate's forecast then holding it and the rep's not, the team's own judgement not the children's, a zero quota with no
+    percentage; a duplicate target and forecast, a cycle, a stale revision, a rep's target and another's judgement refused, a team
+    manager reading their member's and team's forecast, another team's rep and another organization's refused as missing, a best case
+    under the forecast refused; allocations over the forecast and a product counted twice refused; attainment on each target's own
+    basis (the order target's 250, the won target's 200), the unassigned order apart, the basis change's reason in the audit log, a rep
+    refused the report.
+  - mr-boss `test/Sales/SalesForecast` (new, 1 feature, 0.18 s): Forecast's one qvt render as sales.rep for Retail's 2026 Q4. `SalesAccess`
+    (a P18 feature, 0.21 s: store#Target refused the rep for the permission, the manager reaching the revision check, Ziziwork Sales' rep
+    refused the rep's forecast as missing; the rep's capabilities with forecastEdit). `SalesSpecLib.js` (the Pipeline, Reports and
+    Settings tabs, the manager's Settings tabs, the demo period and forecasts), `SalesSettings` (the manager's tabs Teams and Targets).
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesForecastScenarios` (4 features: sales.rep submits through Forecast's
+    transition beside an unchanged pipeline; East's roll-up drills to the rep's deals, each once, its own judgement empty and the rep's
+    among its children; a manager's target through Targets' transition; attainment of the won targets equal to the won amount alone).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesForecasts 5 of 5; with SalesOrganizationScope,
+  SalesOpportunities, SalesPipelineSetup, SalesWorkspace, SalesPipelineDataset and SalesAccounts 31 of 31 (7 specs, 8.8 s of features).
+  mr-boss SalesForecast, SalesAccess, SalesSettings, SalesReports, SalesOpportunities, SalesHome, AdminCapabilities, AdminRegistries,
+  SalesQuotes, SalesOrders, SalesAgreements and SalesApprovals 47 of 47 (12 specs, 15.4 s of features). Client SalesPipelineWalk 1 of 1
+  (7.1 s). Targets (html and qvt as the manager, refused to the rep), Target attainment (html as the manager and the reader), Forecast
+  in tui and html (the organization's key with its children) and with no period (Ziziwork Sales) were rendered once by hand without
+  errors and not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen. Prettier clean
+  on the new and changed JavaScript. Not run: ./moq test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in the Sales build: forecast and targets" table; no ss-inventory row names Forecast, Targets or
+  TargetAttainment (the baseline has no forecast screens).
+- Design edits: design-sales §1.1's BOSS_SALES_REP row (SALES_FORECAST_EDIT, own forecast only), §8 "As built (impl-sales P18)", §9
+  Targets.
+- Findings (provisional, numbered by the lead):
+  - SALES_FORECAST_EDIT is granted to the representative, beside the manager and the administrator, so a rep submits their own
+    forecast as design §8 and the usable-when have it; design §1.1's table did not list it for the rep (the user's call);
+  - OrderPartParty carries no dates, so order and invoice attribution is the order part's current representative, not one dated at the
+    order's placement; an order whose owner changes later moves its amount to the new owner, and two representative rows leave it
+    unassigned;
+  - an invoice is attributed only through OrderItemBilling to its order; a sales invoice of no order is unassigned and shown only to a
+    SALES_TEAM_VIEW holder; a written-off invoice counts as finalized;
+  - the won amount is a won deal's estimated amount (SalesOpportunity has no separate won amount), counted in the period of its latest
+    close; a deal reopened and won again counts once, in its latest close's period;
+  - a target's audit history (quota, basis, the reason) is kept in the audit log but no screen shows it (AuditChanges reads no
+    SalesForecast projection, F57's rule);
+  - `ensure#SalesPeriods` makes calendar-year periods only; an organization whose sales year is offset enters its periods otherwise
+    (the forecast accepts its Fiscal periods too);
+  - an allocation's overlap check reads a category's direct members, not its sub-categories (ProductCategoryRollup);
+  - a deal's list is capped at 2,000 deals for one key, as are a period's orders and invoices; past that a measure would undercount
+    without saying so;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the forecast services; P18 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 1.8 s (SalesForecasts); mr-boss server about 0.4 s (SalesForecast 0.18 s, SalesAccess' P18 feature
+    0.21 s); client none;
+  - merge hot spots (P16 and P17 beside it): mr-mantle `entity/SalesEntities.xml` (SalesForecast), `service/mantle/sales/SalesAccess.js`
+    (a P18 block after P15's end, exports at the end); mr-boss `service/ironstone/sales/Sales.js` (a P18 block after P15's first block
+    end; the recordKinds comment), `service/ironstone/sales/ContextServices.xml` (get#Choices' `timePeriodId` and description),
+    `template/SalesParts.xml` (the choices transition's map), `data/BossSetupSalesData.xml` (a P18 block at the end),
+    `data/BossZSalesDemoData.xml` (a P18 block at the end), `screen/Sales.xml` (the header comment only), `screen/Sales/Settings/*.xml`
+    (three menu indexes), `test/Sales/SalesSpecLib.js` (pipelineMenu, reportsMenu, settingsMenu, managerSettingsMenu, the P18 ids after
+    templates), `test/Sales/SalesAccess.spec.js` (the rep's capabilities, a feature at the end), `test/Sales/SalesSettings.spec.js`,
+    `plan/usl-inventory.md`, `plan/design-sales.md` §1.1, §8, §9;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' agreements: "Sales' forecasts and targets
+    (`mantle.sales.ForecastServices`, all `allow-remote="false"`): a SalesForecast row a key (organization, a person, sales team or the
+    organization itself, a period of the organization, a currency), unique; a Sales reader sees their own key, a team's manager their
+    teams' and members', a holder of `SALES_TEAM_VIEW` the organization's, another organization's answering as missing; a judgement
+    needs `SALES_FORECAST_EDIT` on one's own key, a team one manages or, with `SALES_TEAM_VIEW`, a team or the organization, never
+    another person's; a target needs `SALES_TEAM_MANAGE` on a key the caller sees, its parent of the same organization, period and
+    currency and never a cycle; every write names the revision read. The measures are read from the deals, orders and invoices the
+    reader sees, never stored, never added across currencies, and no template or recurring base counts.";
+  - the user's call: SALES_FORECAST_EDIT for the representative (the first finding).
+
+**Review Nov 14 (P18).** A fresh reviewer, over `sal/p18` with master merged first (Sales P17, Marketing P7; one conflict in
+`plan/usl-inventory.md`, both tables kept).
+- Checked and sound: every ForecastServices verb is `allow-remote="false"`, reads the caller's scope and checks the organization
+  again, and answers a forecast another organization's, another person's or an unseen team's as missing (RECORD_UNAVAILABLE); a judgement
+  needs `SALES_FORECAST_EDIT` on one's own key, a managed team or (with `SALES_TEAM_VIEW`) a team or the organization, never another
+  person's (now also checked for a team manager on their member's forecast); a target needs `SALES_TEAM_MANAGE` on a key the caller sees;
+  the unique key `SALES_FCST_KEY` with FORECAST_EXISTS and DUPLICATE_KEY, the cycle check and every stored write at the revision read
+  (a removed allocation can only return the revision to a state equal to the one read). The deal measures read only the deals of
+  `assignedOpportunityIds`, the orders only those of `assignedOrderIds`, a roll-up's deals as one set (each once across an owner
+  change), no template or recurring base (`orderExcludedPurposes`), and nothing across currencies (another currency's deal listed as
+  left out; orders and invoices by the key's currency). The probability used is the stored one (stage or manual, P4 writes it). The
+  unassigned orders and invoices are shown only to a `SALES_TEAM_VIEW` reader. The CSV exports read the same scoped service, capped as
+  its lists are. Screens follow one render per mode (SalesForecast's qvt).
+- Built finding 2 (orders attributed to the order part's current representative; two representative rows unassigned) and 3 (an invoice of
+  no order unassigned): sound as provisional findings. OrderPartParty carries no dates, so the current representative is the only one
+  there is; leaving an ambiguous order unassigned and showing it apart is the conservative reading of "an unambiguous primary
+  representative", and an invoice of no order cannot be attributed without inventing a rule.
+- Fixed:
+  - R1 (medium): each measure read at most 2,000 rows (deals, placed orders, finalized invoices, Targets' forecasts) and would have counted
+    short without saying so. `limitedList` reads one row past the limit and refuses (TOO_MANY_RECORDS, naming a shorter period, a team or
+    a person to narrow to); Forecast and Target attainment now show a refusal's text instead of "not available". Spec: a 2,001-deal
+    organization refused.
+  - R2 (medium): an invoice billing several orders was attributed to an arbitrary one of them and shown to a reader who saw that one, so
+    its total carried the amounts of orders the reader does not see. Now a reader without `SALES_TEAM_VIEW` counts an invoice only when
+    they see every order it bills, and an invoice of differently attributed orders is unassigned. Spec: the rep's invoices 250 (not 580),
+    the organization's 580 with 330 unassigned.
+  - R3 (low): a target's parent could be a person's forecast (whose measures would then take in every deal below it) and the
+    organization's own forecast could have a parent; now a parent is the organization's or a team's forecast and the organization's
+    takes none (PARENT_INVALID). The cycle spec builds its cycle through two teams.
+  - R4 (low): an allocation's overlap check missed a product counted through two categories, and accepted another organization's product
+    or category (showing its name). Now two categories sharing a member overlap (DETAIL_OVERLAP) and the product or category is the
+    forecast organization's or a shared one, as Sales' choices offer (PRODUCT_INVALID, CATEGORY_INVALID).
+- Recorded: the user's call on `SALES_FORECAST_EDIT` for the representative (§4 row; design §1.1's row names it).
+- Provisional findings (for the lead to number):
+  - `merge#Parties` re-points SalesForecast's `internalPartyId`; merging two people who both have a forecast for one key would fail on
+    `SALES_FCST_KEY` (a person with a forecast is an internal representative, rarely merged);
+  - a sales manager holding `SALES_TEAM_MANAGE` may set their own target and their organization's (no separation rule names targets);
+  - Targets' list refuses past 2,000 forecasts of one organization without a screen message (find#Targets' refusal is cleared like any
+    load error there).
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the merge): mr-mantle SalesForecasts 7 of 7 (4.2 s of features,
+  the row-limit feature 1.9 s of it), SalesOrganizationScope 3 of 3; mr-boss SalesForecast 1 of 1 (0.97 s), SalesAccess 16 of 16,
+  SalesSettings 3 of 3, SalesReports 2 of 2, SalesHome 4 of 4. `moqui lint --screens` (release): 141 flagged sites, as before, none in
+  P18's screens. Prettier clean on the changed JavaScript. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about 4.2 s (SalesForecasts, 2.4 s above the Built note's for the two review features); mr-boss server
+    about 0.4 s as built; client none;
+  - merge hot spots as the Built note's, and `plan/usl-inventory.md` (P17's table before P18's);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside Sales' agreements: "Sales' forecasts and targets
+    (`mantle.sales.ForecastServices`, all `allow-remote="false"`): a SalesForecast row a key (organization; a person, a sales team or the
+    organization itself; a period of the organization; a currency), unique (`SALES_FCST_KEY`). A Sales reader sees their own key, a
+    team's manager their teams' and current members', a holder of `SALES_TEAM_VIEW` the organization's; another organization's, another
+    person's or an unseen team's answers as missing. A judgement needs `SALES_FORECAST_EDIT` on one's own key, a team one manages or,
+    with `SALES_TEAM_VIEW`, a team or the organization, never another person's; a target needs `SALES_TEAM_MANAGE` on a key the caller
+    sees, its parent the organization's or a team's forecast of the same organization, period and currency, never a cycle; every write
+    names the revision read; an allocation names a product or category of the organization or a shared one. The measures are computed
+    as read, never stored, from the deals, orders and invoices the reader sees (an invoice only when the reader sees every order it
+    bills), each deal once in a roll-up, never added across currencies, no template or recurring base; a measure past 2,000 rows is
+    refused, never counted short. Orders and invoices with no single representative are shown apart, to a `SALES_TEAM_VIEW` reader
+    only.";
+  - the user's call on the representative's `SALES_FORECAST_EDIT` is recorded (§4); nothing else waits on the user.
+
 ### P19 — Reports and Insights registrations
 
 Design §8 Reports, SalesSummary, SalesAnalysis, PipelineAnalysis and WinLoss, §1.4 (CX-OPS-REPORTS), §13.2, §16;
@@ -4723,6 +4910,7 @@ the owner's design.
 | Nov 14, 2026 | An order approver keeps read-only sight of an order on which they recorded a decision, after it is approved; not of the organization's other approved orders. Built in P12 | The user's call (P11's review) |
 | Nov 14, 2026 | A quote link's token stays in the stored body of the sent mail, as Billing's and Support's links do; a cross-app redaction of stored links is later (§7) | The user's call (P13's review) |
 | Nov 14, 2026 | An agreement with no status keeps pricing by its dates alone, as Products' price lists and Customer Service's service agreements rely on; Sales' own agreements always carry a status. A raw Agreement row written by REST or an import is the remaining gap (F-row of P15) | The user's call (P15) |
+| Nov 14, 2026 | `SALES_FORECAST_EDIT` is granted to `BOSS_SALES_REP` (in its bundle) beside the manager and the administrator, so a representative submits their own forecast (design §8 SubmitForecast); Mantle confines it: a holder enters the judgement of their own key, a team they manage or, with `SALES_TEAM_VIEW`, a team or the organization, never another person's (SalesAccess.js `forecastSubmits`) | The user's call (the P18 Built note's first finding); design-sales §1.1 changed |
 | Nov 14, 2026 | A cancelled order stays on the customer's My orders and opens from its link, marked Cancelled and read only, instead of disappearing (the order link is no longer revoked by the cancellation; a Support request on it stays the customer's way to ask). Built in P19 | The user's call (P17's review) |
 | Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |

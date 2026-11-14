@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     calendar over one scoped query) and Leads, in the menu; OpportunityDetail and the shared WorkItemDetail in Sales' context (a task
     linked to a deal the user sees), hidden from the menu. Shown to a user who reads Sales (the root's menu condition); every read is
     Mantle's scoped find (mantle.sales.OpportunityServices.find#Opportunities, get#Opportunity) and every write Mantle's guarded
-    opportunity service. Forecast joins with P18. Leads is built for a second mount (impl-sales §2): Marketing's root mounts it at
+    opportunity service. P18: Forecast (a key's calculated pipeline beside the submitted judgement, Mantle's
+    mantle.sales.ForecastServices). Leads is built for a second mount (impl-sales §2): Marketing's root mounts it at
     Marketing/Leads with its own context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pipeline" default-menu-index="2" menu-image="sym_o_trending_up" menu-image-type="icon">

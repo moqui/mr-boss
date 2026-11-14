@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Settings › Targets (design-sales §9 Targets: SalesTargets; style-guide §3.9 Settings; impl-sales P18): the targets of an
+    organization by period (Mantle's find#Targets): each a forecast key (a representative, a sales team or the organization itself, a
+    period, a currency) with its quota, the one basis it is measured on (won opportunity value by default, placed sales order value
+    or finalized sales invoice value) and its parent forecast in the team hierarchy, with the submitted forecast beside it. New target
+    and Change (store#Target) for a holder of SALES_TEAM_MANAGE on a key they see; a duplicate key and a hierarchy cycle are refused,
+    a past target keeps its audit history and a change never touches measured actuals. Add this year's sales periods
+    (ensure#SalesPeriods) when the organization has none. The sales manager's and the Sales administrator's; Mantle checks again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Targets" default-menu-index="5"
+        default-menu-include="ec.user.hasPermission('SALES_TEAM_MANAGE')">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition name="storeTarget">
+        <actions>
+            <service-call name="mantle.sales.ForecastServices.store#Target"
+                    in-map="{salesForecastId:(salesForecastId || null), organizationPartyId:(organizationPartyId || null),
+                        internalPartyId:(internalPartyId || null), timePeriodId:(targetPeriodId || timePeriodId || null),
+                        currencyUomId:(currencyUomId || null), quotaAmount:(quotaAmount ?? null), basisEnumId:(basisEnumId || null),
+                        parentSalesForecastId:(parentSalesForecastId || null), clearParent:(clearParent == 'Y'), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Target saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="timePeriodId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/><parameter name="timePeriodId"/></error-response>
+    </transition>
+    <transition name="ensurePeriods">
+        <actions>
+            <service-call name="mantle.sales.ForecastServices.ensure#SalesPeriods" out-map="ensured"
+                    in-map="{organizationPartyId:(organizationPartyId || null), year:(year || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${ensured.createdCount} sales periods added</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <always-actions>
+        <script>if(!sales.capabilities.teamManage)throw new Error('PERMISSION_DENIED: Sales targets are set by the sales managers')</script>
+    </always-actions>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.sales.ForecastServices.find#Targets" out-map="context" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:(timePeriodId || null), pageIndex:pageIndex,
+                        pageNoLimit:ec.context.pageNoLimit}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="targetList" from="targetList || []"/>
+        <set field="periodsFound" from="!!periodsFound"/>
+        <set field="forecastPath" from="sharedLinks['Pipeline/Forecast'] || null"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId, timePeriodId: timePeriodId || null}"/>
+        <set field="newTarget" from="{organizationPartyId: organizationPartyId, targetPeriodId: timePeriodId || null, basisEnumId: 'SfbWonOpportunity'}"/>
+        <set field="basisOptions" from="[{key: 'SfbWonOpportunity', text: 'Won opportunity value'}, {key: 'SfbPlacedOrder', text: 'Placed sales order value'},
+                {key: 'SfbFinalInvoice', text: 'Finalized sales invoice value'}]"/>
+        <set field="thisYear" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Targets" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="A target is a quota for a period, measured on one basis. Changing a target never changes what was measured."/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="AddPeriodsDialog" button-text="Add sales periods" icon="sym_o_calendar_month" type="default" width="480"
+                        title="Add a year's sales periods" condition="organizationPartyId">
+                    <label type="p" text="The year, its four quarters and twelve months, those the organization does not have yet."/>
+                    <form-single name="AddPeriods" transition="ensurePeriods" map="{organizationPartyId: organizationPartyId, year: thisYear}">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="year"><default-field title="Year"><text-line size="6" input-type="number"/></default-field></field>
+                        <field name="submitButton"><default-field title="Add periods"><submit confirmation="Add this year's sales periods?"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="NewTargetDialog" button-text="New target" icon="sym_o_add" type="primary" width="640" title="New target"
+                        condition="organizationPartyId &amp;&amp; periodsFound">
+                    <form-single name="NewTarget" transition="storeTarget" map="newTarget">
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="internalPartyId">
+                            <default-field title="For" tooltip="A representative, a sales team or the organization itself">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'forecastSubjects', organizationPartyId:newTarget.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="targetPeriodId">
+                            <default-field title="Period">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'salesPeriods', organizationPartyId:newTarget.organizationPartyId, selected:targetPeriodId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="currencyUomId">
+                            <default-field title="Currency" tooltip="The organization's when empty">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="quotaAmount"><default-field title="Quota"><text-line size="14" input-type="number"/></default-field></field>
+                        <field name="basisEnumId">
+                            <default-field title="Measured on">
+                                <drop-down allow-empty="false"><list-options list="basisOptions" key="${key}" text="${text}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="parentSalesForecastId">
+                            <default-field title="Rolls up to" tooltip="A forecast of the same period and currency">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'forecastParents', organizationPartyId:newTarget.organizationPartyId, timePeriodId:targetPeriodId}">
+                                        <depends-on field="targetPeriodId" parameter="timePeriodId"/></dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create target"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="internalPartyId"/><field-ref name="targetPeriodId"/></field-row>
+                            <field-row><field-ref name="quotaAmount"/><field-ref name="currencyUomId"/></field-row>
+                            <field-row><field-ref name="basisEnumId"/><field-ref name="parentSalesForecastId"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="TargetsFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'salesPeriods', organizationPartyId:organizationPartyId, selected:timePeriodId}">
+                            <depends-on field="organizationPartyId"/></dynamic-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="timePeriodId"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+        <label text="This organization has no sales periods yet: add this year's first." type="p" style="m-muted"
+                condition="organizationPartyId &amp;&amp; !periodsFound"/>
+        <form-list name="SalesTargets" list="targetList" skip-form="true" paginate="true" show-csv-button="true">
+            <field name="subjectName">
+                <conditional-field title="For" condition="forecastPath">
+                    <link url="${forecastPath}" url-type="plain" text="${subjectName}" link-type="anchor" parameter-map="{salesForecastId:salesForecastId}"/>
+                    <label text="${subjectKindText}" type="div" style="text-caption m-muted"/>
+                </conditional-field>
+                <default-field title="For"><display/></default-field>
+            </field>
+            <field name="periodName"><default-field title="Period"><display/></default-field></field>
+            <field name="quotaText" align="right"><default-field title="Quota"><display/></default-field></field>
+            <field name="basisText"><default-field title="Measured on"><display/></default-field></field>
+            <field name="parentName"><default-field title="Rolls up to"><display/></default-field></field>
+            <field name="forecastText" align="right"><default-field title="Submitted forecast"><display/></default-field></field>
+            <field name="actions">
+                <default-field title="">
+                    <container-dialog id="EditTarget_${salesForecastId}" button-text="Change" icon="sym_o_edit" type="default" width="600"
+                            title="Change the target of ${subjectName}, ${periodName}" condition="canManage">
+                        <form-single name="EditTarget" transition="storeTarget"
+                                map="{salesForecastId:salesForecastId, organizationPartyId:organizationPartyId, timePeriodId:timePeriodId,
+                                    expectedRevision:revision, quotaAmount:quotaAmount, basisEnumId:basisEnumId, parentSalesForecastId:parentSalesForecastId}">
+                            <field name="salesForecastId"><default-field><hidden/></default-field></field>
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="timePeriodId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="quotaAmount"><default-field title="Quota (${currencyUomId})"><text-line size="14" input-type="number"/></default-field></field>
+                            <field name="basisEnumId">
+                                <default-field title="Measured on">
+                                    <drop-down allow-empty="false"><list-options list="basisOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="parentSalesForecastId">
+                                <default-field title="Rolls up to">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'forecastParents', organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, selected:parentSalesForecastId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="clearParent"><default-field title=" "><check><option key="Y" text="Rolls up to nothing"/></check></default-field></field>
+                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save target"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column><field-ref name="subjectName"/><field-ref name="periodName"/></column>
+                <column><field-ref name="quotaText"/><field-ref name="actions"/></column>
+            </columns>
+        </form-list>
+        <label text="No target yet: set the first with New target." type="p" style="m-muted q-pa-sm"
+                condition="periodsFound &amp;&amp; !targetList.length"/>
+    </widgets>
+</screen>

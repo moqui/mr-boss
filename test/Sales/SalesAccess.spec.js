@@ -191,7 +191,8 @@ const capabilityNames = [
 const edits = ["opportunityEdit", "accountEdit", "quoteEdit", "quoteSend", "orderEdit"]
 // design §1.1's table as P1 grants it (F43: approve and orderChange come with P9 and P14); every user in BOSS_SALES holds view
 const capabilityUsers = [
-    {user: users.rep, granted: ["view", ...edits, "anyRead"]},
+    // P18: the representative enters their own forecast (SALES_FORECAST_EDIT)
+    {user: users.rep, granted: ["view", ...edits, "forecastEdit", "anyRead"]},
     {
         user: users.manager,
         granted: ["view", "teamView", "teamManage", ...edits, "forecastEdit", "reportView", "customerInvite", "import"].concat([
@@ -728,5 +729,28 @@ feature("inviting a customer's contact to PASS Sales is an inviter's, for an acc
         manager.includes("EMAIL_INVALID")
         rep.includes("PERMISSION_DENIED")
         other.includes("RECORD_UNAVAILABLE")
+    }
+})
+
+// P18 (impl-sales P18): a target is a sales manager's to set and a forecast its key's readers' to read: with the same parameters (a
+// stale revision, so nothing is written) the rep is refused the target for the permission and the manager reaches the revision check;
+// the rep reads their own forecast and Ziziwork Sales' rep does not (another organization's answers as missing)
+feature("a target is a sales manager's to set; a forecast is read by its key's readers, not another organization's", {
+    when() {
+        const F = "mantle.sales.ForecastServices."
+        const store = user =>
+            asUser(user, () =>
+                system(() =>
+                    refusal(F + "store#Target", {salesForecastId: ids.forecasts.rep, quotaAmount: "30000", expectedRevision: "0"})
+                )
+            )
+        const seen = user => asUser(user, () => system(() => refusal(F + "get#Forecast", {salesForecastId: ids.forecasts.rep})))
+        return {rep: store(users.rep), manager: store(users.manager), repSees: seen(users.rep), otherSees: seen(users.otherRep)}
+    },
+    then({rep, manager, repSees, otherSees}) {
+        rep.includes("PERMISSION_DENIED")
+        manager.includes("REVISION_CHANGED")
+        repSees == ""
+        otherSees.includes("RECORD_UNAVAILABLE")
     }
 })
