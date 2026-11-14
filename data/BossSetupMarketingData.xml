@@ -60,10 +60,11 @@ along with this software (see the LICENSE.md file). If not, see
         MARKETING_CONSENT_EDIT; the approver MARKETING_APPROVE; the dispatcher MARKETING_DISPATCH (approval and dispatch apart: no
         group holds both but a one-person team under the policy flag of §4, P2 and P9); the events manager MARKETING_EVENT_MANAGE;
         the analyst MARKETING_REPORT_VIEW; the reader MARKETING_VIEW and MARKETING_REPORT_VIEW; the administrator MARKETING_CONFIGURE
-        with explicit view and edit grants and MARKETING_ALL_ORGANIZATIONS, and no approval, dispatch, template edit, sending
-        configuration or suppression review (design §1.1: "no implicit approval, dispatch, finance or infrastructure authority").
-        Comms' MESSAGE_TEMPLATE_EDIT, MESSAGE_SENDING_CONFIGURE and MESSAGE_SUPPRESSION_REVIEW are explicit grants Comms owns: no
-        Marketing group holds them (ADMIN does). -->
+        with explicit view and edit grants and MARKETING_ALL_ORGANIZATIONS, and no approval, dispatch or template edit (its
+        sending configuration and suppression review are Comms' explicit grants, below) (design §1.1: "no implicit approval, dispatch, finance or infrastructure authority").
+        Comms' MESSAGE_TEMPLATE_EDIT, MESSAGE_SENDING_CONFIGURE and MESSAGE_SUPPRESSION_REVIEW are explicit grants Comms owns, given by
+        Marketing role with the screens that use them (the user's call of Nov 13): the suppression review to the administrator in P3,
+        the template edit to the author and the sending configuration to the administrator in P6. -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING" userPermissionId="MARKETING_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_AUTHOR" userPermissionId="MARKETING_CAMPAIGN_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_AUTHOR" userPermissionId="MARKETING_SEND_EDIT" fromDate="0"/>
@@ -234,4 +235,29 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- ===== end of Marketing P5 ===== -->
+
+    <!-- ===== Marketing P6: templates, sending profiles and bounce intake (impl-marketing P6, F16; design-marketing §5, §12) ===== -->
+    <!-- Sends (design §5: Comms' MessageTemplates and MessageTemplateDetail now; the sends in P8) for the authors: the area denies the root
+        user group and gives the author group an ALWAYS (a deny of a group the user is in wins over an allow), with the root's filter
+        sets; the administrator and ADMIN open it through their ALWAYS on the root; Mantle's template services check
+        MESSAGE_TEMPLATE_VIEW and MESSAGE_TEMPLATE_EDIT and the organization again. The dispatchers and approvers join with the sends
+        (P8). -->
+    <artifactGroups artifactGroupId="BOSS_MKT_SENDS" description="Marketing sends and templates">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Sends.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_SENDS_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_SENDS_AUTHOR" userGroupId="BOSS_MARKETING_AUTHOR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Comms' explicit permissions by Marketing role (the user's call of Nov 13, granted with the screens that use them): the template
+        edit to the content author group (MessageTemplateDetail's editor, publication and end), the sending configuration to the
+        Marketing administrator (Settings/SendingProfiles; MESSAGE_SUPPRESSION_REVIEW was granted in P3). Comms' own groups gain them
+        with Comms' settings area. Each in its group's bundle. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_AUTHOR" userPermissionId="MESSAGE_TEMPLATE_EDIT" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_AUTHOR" userPermissionId="MESSAGE_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SENDING_CONFIGURE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MESSAGE_SENDING_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
+    <!-- ===== end of Marketing P6 ===== -->
 </entity-facade-xml>

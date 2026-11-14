@@ -304,4 +304,52 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.marketing.segment.MarketSegmentParty marketSegmentId="BOSS_MKT_SEG_VIP" partyId="BOSS_MKT_CON_OLIVE" roleTypeId="_NA_"
             fromDate="2026-11-05 10:00:00" memberKindEnumId="MspExclude" comments="Complained about the October newsletter"/>
     <!-- ===== end of Marketing P5 ===== -->
+
+    <!-- ===== Marketing P6: templates and sending profiles (impl-marketing P6; design-marketing §5, §12) ===== -->
+    <!-- Retail's library: two published templates (the garden newsletter, a subscription confirmation) and a draft (the spring preview
+        invitation). The demo's contents are component files (a template's content renders by location, F78); an edit writes a draft
+        of its own as a dbresource file. Each template's EmailTemplate sends through the demo's mail capture unless a profile names
+        its relay. -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="MT_BOSS_MKT_TPL_NEWS" description="Garden newsletter" emailServerId="BOSS_COM_DEMO_MAIL" subject=""/>
+    <mantle.party.MessageTemplate messageTemplateId="BOSS_MKT_TPL_NEWS" organizationPartyId="ORG_ZIZI_RETAIL" templateName="Garden newsletter"
+            channelEnumId="MdcEmail" purposeEnumId="MtpPromotional" localeId="en" emailTemplateId="MT_BOSS_MKT_TPL_NEWS"
+            fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-10-01 09:00:00"/>
+    <mantle.party.MessageTemplateContent messageTemplateId="BOSS_MKT_TPL_NEWS" contentSeqId="001" subject="Garden news for ${firstName}"
+            preheader="Autumn planting days"
+            bodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
+            bodyTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked"
+            variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]"
+            fromDate="2026-10-02 09:00:00" createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-10-01 09:00:00"
+            publishedByUserId="BOSS_MKT_AUTHOR" publishReason="The autumn newsletter"/>
+    <moqui.basic.email.EmailTemplate emailTemplateId="MT_BOSS_MKT_TPL_CONFIRM" description="Subscription confirmation" emailServerId="BOSS_COM_DEMO_MAIL" subject=""/>
+    <mantle.party.MessageTemplate messageTemplateId="BOSS_MKT_TPL_CONFIRM" organizationPartyId="ORG_ZIZI_RETAIL" templateName="Subscription confirmation"
+            channelEnumId="MdcEmail" purposeEnumId="MtpTransactional" localeId="en" emailTemplateId="MT_BOSS_MKT_TPL_CONFIRM"
+            fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-10-01 09:00:00"/>
+    <mantle.party.MessageTemplateContent messageTemplateId="BOSS_MKT_TPL_CONFIRM" contentSeqId="001" subject="Please confirm your subscription"
+            bodyLocation="component://mr-boss/template/marketing/DemoSubscriptionConfirmation.html.fancy-locked"
+            variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;there&quot;,&quot;required&quot;:false},{&quot;name&quot;:&quot;listName&quot;,&quot;label&quot;:&quot;List&quot;,&quot;fallback&quot;:&quot;our news&quot;,&quot;required&quot;:false}]"
+            fromDate="2026-10-02 09:00:00" createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-10-01 09:00:00"
+            publishedByUserId="BOSS_MKT_AUTHOR" publishReason="Double opt-in"/>
+    <moqui.basic.email.EmailTemplate emailTemplateId="MT_BOSS_MKT_TPL_SPRING" description="Spring preview invitation" emailServerId="BOSS_COM_DEMO_MAIL" subject=""/>
+    <mantle.party.MessageTemplate messageTemplateId="BOSS_MKT_TPL_SPRING" organizationPartyId="ORG_ZIZI_RETAIL" templateName="Spring preview invitation"
+            channelEnumId="MdcEmail" purposeEnumId="MtpPromotional" localeId="en" emailTemplateId="MT_BOSS_MKT_TPL_SPRING"
+            fromDate="2026-11-10 09:00:00" createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-11-10 09:00:00"/>
+    <mantle.party.MessageTemplateContent messageTemplateId="BOSS_MKT_TPL_SPRING" contentSeqId="001" subject="You are invited, ${firstName}"
+            bodyLocation="component://mr-boss/template/marketing/DemoSpringPreview.html.fancy-locked"
+            variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;friend&quot;,&quot;required&quot;:false}]"
+            createdByUserId="BOSS_MKT_AUTHOR" createdDate="2026-11-10 09:00:00"/>
+    <!-- The sending profiles: Retail's ready on the demo's mail capture (its relay, a sender of a domain the server's shared accounts
+        use, the bounce account bounces@bounce.retail.example); Services' not ready, as no bounce account receives its bounce domain. -->
+    <moqui.basic.email.EmailAccount emailAccountId="BOSS_MKT_BOUNCES" ownerPartyId="ORG_ZIZI_RETAIL" accountKindEnumId="EakShared"
+            emailServerId="BOSS_COM_DEMO_MAIL" emailAddress="bounces@bounce.retail.example" accountName="Retail bounces"
+            statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
+    <mantle.party.MessageSendingProfile sendingProfileId="BOSS_MKT_PROFILE_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL" profileName="Retail news"
+            channelEnumId="MdcEmail" emailServerId="BOSS_COM_DEMO_MAIL" fromAddress="news@retail.example" fromName="Ziziwork Retail"
+            replyToAddress="hello@retail.example" purposeEnumId="MtpPromotional" throttlePerHour="2000" quietFrom="21:00" quietThru="07:00"
+            timeZone="America/Chicago" trackingPolicyEnumId="MtrConsented" bounceDomain="bounce.retail.example"
+            fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_ADMIN"/>
+    <mantle.party.MessageSendingProfile sendingProfileId="BOSS_MKT_PROFILE_SERVICES" organizationPartyId="ORG_ZIZI_SERVICES" profileName="Services notices"
+            channelEnumId="MdcEmail" emailServerId="BOSS_COM_DEMO_MAIL" fromAddress="hello@services.example" fromName="Ziziwork Services"
+            trackingPolicyEnumId="MtrNone" bounceDomain="bounce.services.example" fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_ADMIN"/>
+    <!-- ===== end of Marketing P6 ===== -->
 </entity-facade-xml>

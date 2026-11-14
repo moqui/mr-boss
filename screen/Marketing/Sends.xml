@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Sends area of IronStone Marketing (design-marketing §5, §1.2; impl-marketing P6): MessageTemplates (Comms' shared template
+    library, Marketing's mount, F16) and MessageTemplateDetail (hidden, opened from it; a sibling of the list, as ListDetail is of
+    Lists). Sends, SendDetail and Compose join in P8, CampaignDelivery in P9. For the authors and the administrator (BOSS_MKT_SENDS
+    denies the root user group and gives the author group an ALWAYS; the root's menu shows it to a holder of MESSAGE_TEMPLATE_VIEW or
+    MESSAGE_TEMPLATE_EDIT); the area's check asks the capability too (sends), so a custom group given Marketing is shown no area its
+    services refuse. Every read and write is mantle.party.MessageServices, which checks the template permissions and the
+    organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sends" default-menu-index="4" menu-image="sym_o_forward_to_inbox" menu-image-type="icon">
+    <always-actions>
+        <script>if(!marketing.capabilities.sends)throw new Error('PERMISSION_DENIED: Sends are for the Marketing authors')</script>
+    </always-actions>
+    <subscreens default-item="MessageTemplates" always-use-full-path="true">
+        <subscreens-item name="MessageTemplates" location="component://mr-boss/screen/Shared/MessageTemplates.xml" menu-index="2"/>
+        <subscreens-item name="MessageTemplateDetail" location="component://mr-boss/screen/Shared/MessageTemplateDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingSendsPanel" type="tab"/>
+    </widgets>
+</screen>

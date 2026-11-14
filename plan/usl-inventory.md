@@ -831,7 +831,7 @@ the screens that call it.
 | PaymentAutoPostServices | revert#PaymentApplicationPost |  |  |
 | PaymentAutoPostServices | repost#PaymentAndApplications |  |  |
 
-## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices and P5's SegmentServices below)
+## Marketing (11 services added in the drawers-commons build; Marketing P2's CampaignServices, P3's AudienceServices, P5's SegmentServices and P6's Comms templates and sending profiles below)
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 
@@ -894,6 +894,19 @@ Added in Marketing P5 (Nov 14, 2026; `mantle.marketing.SegmentServices`, impl-ma
 | marketing/SegmentServices | get#Segment, store#Segment, archive#Segment, duplicate#Segment, store#SegmentRules, store#SegmentFilter, store#SegmentMember, evaluate#Segment | Marketing/Audiences/Segments/SegmentDetail (SegmentHeader, NativeRules, SavedFilter, ExplicitMembers, Evaluation) | Marketing/Audiences/SegmentDetail (Marketing P5) |
 | marketing/SegmentServices | preview#Audience | Marketing/Audiences/AudiencePreview (AudienceSelection, Eligibility, RecipientPreview); Marketing/Sends/SendDetail (SendAudience, P8) | Marketing/Audiences/AudiencePreview (Marketing P5) |
 | marketing/SegmentServices | classify#Recipients | the send's prepare (P8) and the automation's admission (P11) | (internal; the rule preview#Audience applies) |
+
+Added in Marketing P6 (Nov 14, 2026; Comms' templates, sending profiles and bounce intake in `mantle.party.MessageServices`,
+impl-marketing P6), called by built screens, the ledger and the intake:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| party/MessageServices | find#Templates, create#Template | Marketing/Sends/MessageTemplates (Shared/MessageTemplates: TemplateFind, TemplateList, NewTemplate) | Marketing/Sends/MessageTemplates (Marketing P6) |
+| party/MessageServices | get#Template, store#Template, store#TemplateContent, preview#Template, publish#Template, end#Template | Marketing/Sends/MessageTemplates/MessageTemplateDetail (Shared/MessageTemplateDetail: TemplateHeader, TemplateContent, TemplatePreview, TemplateRelease) | Marketing/Sends/MessageTemplateDetail (Marketing P6) |
+| party/MessageServices | build#TemplateDelivery | the ledger's template source (MdsrcMessageTemplate) | attempt#Delivery (Marketing P6) |
+| party/MessageServices | find#SendingProfiles, get#SendingProfile, store#SendingProfile, check#SendingProfile | Marketing/Settings/SendingProfiles (Shared/SendingProfiles: Profiles, SendingProfile, SenderReadiness) | Marketing/Settings/SendingProfiles; Marketing's readiness (marketing.sending) and Settings index (Marketing P6) |
+| party/MessageServices | process#DeliveryReport, handle#BouncedMessage, run#DeliveryReports | the email ECA DeliveryReportIntake and the EmailMessage ECA DeliveryReportEdgeBounce (design §15.1) | MessageReports.emecas.xml; EmailMessage.eecas.xml; the job run_DeliveryReports (Marketing P6) |
+| party/MessageServices | find#DeliveryReceipts | CampaignDelivery and RecipientDetail (P9) | (no screen until P9) |
+| party/MessageServices | queue#Delivery (sendingProfileId) | the sends' release (P9) | attempt#Delivery sends from the profile (Marketing P6) |
 
 ## Order (89 services)
 

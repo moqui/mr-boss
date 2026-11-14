@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MessageTemplates (design-marketing §5 MessageTemplates: TemplateFind, TemplateList, NewTemplate; crosscut §3.29; impl-marketing P6,
+    F16): Comms' shared template library, built by Marketing for Comms with Marketing's mount only (Marketing/Sends/MessageTemplates);
+    Comms' own mount comes with a Comms settings area. Everything is decided by mantle.party.MessageServices (MessageTemplates.js): who
+    reads (MESSAGE_TEMPLATE_VIEW or MESSAGE_TEMPLATE_EDIT, the organizations they work for), who makes and copies a template
+    (MESSAGE_TEMPLATE_EDIT); the mounting root adds nothing but its organization choices and the detail's link (sharedLinks). Copy makes
+    an unpublished template; Use (a draft send) arrives with Sends (P8). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Templates" default-menu-index="2">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="purposeEnumId"/>
+    <parameter name="localeId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition name="createTemplate">
+        <actions>
+            <service-call name="mantle.party.MessageServices.create#Template" out-map="made"
+                    in-map="{organizationPartyId:organizationPartyId, templateName:templateName, purposeEnumId:purposeEnumId,
+                        localeId:(localeId || null), copyFromTemplateId:(copyFromTemplateId || null)}"/>
+            <set field="detailUrl" from="sharedLinks?.['Sends/MessageTemplateDetail'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Template ${made.messageTemplateId} created as a draft</message></if>
+        </actions>
+        <conditional-response url="${detailUrl}"><condition><expression>detailUrl &amp;&amp; made?.messageTemplateId</expression></condition>
+            <parameter name="messageTemplateId" from="made.messageTemplateId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.party.MessageServices.find#Templates" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{text:text, organizationPartyId:organizationPartyId, purposeEnumId:purposeEnumId, localeId:localeId,
+                    state:(state || 'active'), pageIndex:pageIndex}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="readable" from="found?.templateList != null"/>
+        <set field="templateList" from="found?.templateList || []"/>
+        <set field="templateListCount" from="found?.templateListCount"/>
+        <set field="templateListPageIndex" from="found?.templateListPageIndex"/>
+        <set field="templateListPageSize" from="found?.templateListPageSize"/>
+        <set field="templateListPageMaxIndex" from="found?.templateListPageMaxIndex"/>
+        <set field="templateListPageRangeLow" from="found?.templateListPageRangeLow"/>
+        <set field="templateListPageRangeHigh" from="found?.templateListPageRangeHigh"/>
+        <set field="detailUrl" from="sharedLinks?.['Sends/MessageTemplateDetail']"/>
+        <set field="organizationOptions" from="Array.from(marketing?.organizationOptions || [])"/>
+        <set field="filtered" from="!!(text || organizationPartyId || purposeEnumId || localeId || (state &amp;&amp; state != 'active'))"/>
+        <set field="newValues" from="{organizationPartyId: organizationOptions.length == 1 ? organizationOptions[0].value : null,
+                purposeEnumId: 'MtpPromotional'}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read message templates." type="p" style="m-muted" condition="!readable"/>
+        <section name="TemplatesLibrary" condition="readable">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Message templates" type="h5"/></container>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <container-dialog id="NewTemplateDialog" button-text="New template" title="New template" icon="sym_o_add"
+                                width="640" type="primary" condition="found.canCreate">
+                            <label text="A template starts as a draft: it is used only once its content is published." type="p" style="m-muted"/>
+                            <form-single name="NewTemplate" transition="createTemplate" map="newValues">
+                                <field name="templateName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="organizationPartyId">
+                                    <default-field title="Organization">
+                                        <drop-down><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="purposeEnumId">
+                                    <default-field title="Purpose">
+                                        <drop-down>
+                                            <option key="MtpPromotional" text="Promotional"/>
+                                            <option key="MtpTransactional" text="Transactional"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="localeId"><default-field title="Locale" tooltip="As en or en_US; empty for any"><text-line size="10"/></default-field></field>
+                                <field name="copyFromTemplateId">
+                                    <default-field title="Copy from" tooltip="Starts with that template's content as an unpublished draft">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="templateList" key="${messageTemplateId}" text="${templateName} · ${organizationName}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Create"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="." text="Ended" link-type="anchor-button" icon="sym_o_history" parameter-map="{state:'ended'}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="TemplateList" list="templateList" skip-form="true" paginate="true" header-dialog="true">
+                            <field name="text"><header-field title="Name"><text-line size="20"/></header-field></field>
+                            <field name="organizationPartyId">
+                                <header-field title="Organization">
+                                    <drop-down allow-empty="true"><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                </header-field>
+                            </field>
+                            <field name="purposeEnumId">
+                                <header-field title="Purpose">
+                                    <drop-down allow-empty="true">
+                                        <option key="MtpPromotional" text="Promotional"/>
+                                        <option key="MtpTransactional" text="Transactional"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="localeId"><header-field title="Locale"><text-line size="8"/></header-field></field>
+                            <field name="state">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="active" text="In use"/>
+                                        <option key="ended" text="Ended"/>
+                                        <option key="all" text="Any"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="templateName">
+                                <conditional-field title="Name" condition="detailUrl">
+                                    <link url="${detailUrl}" text="${templateName}" link-type="anchor" parameter-map="{messageTemplateId:messageTemplateId}"/>
+                                </conditional-field>
+                                <default-field title="Name"><display/></default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
+                            <field name="localeText"><default-field title="Locale"><display text="${localeId || 'Any'}"/></default-field></field>
+                            <field name="subjectText"><default-field title="Subject"><display/></default-field></field>
+                            <field name="effectiveText"><default-field title="In effect since"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}${hasDraft && state != 'draft' ? ' · draft' : ''}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(stateText ?? "") + (hasDraft && state != 'draft' ? ' · draft' : '')})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns>
+                                <column><field-ref name="templateName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="purposeText"/><field-ref name="localeText"/></column>
+                                <column><field-ref name="subjectText"/></column>
+                                <column><field-ref name="effectiveText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                            <columns type="mobile">
+                                <column><field-ref name="templateName"/><field-ref name="subjectText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <section name="NoTemplates" condition="!templateList.length">
+                            <widgets>
+                                <container style="q-pa-sm">
+                                    <label text="${filtered ? 'No template matches these filters.' : 'No template yet.'}" type="p" style="m-muted q-mb-xs"/>
+                                    <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                                </container>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -801,6 +801,18 @@ executions. Shared template editing requires its own capability across Comms/Mar
 Keep user text blocks in existing Comms TextBlocks; selecting a block copies authored text and
 never enrolls recipients. **Source:** research §§4, 10. **Needs:** MKT-TEMPLATE, MKT-APPROVAL.
 
+As built (impl-marketing P6): `Shared/MessageTemplates` and `Shared/MessageTemplateDetail`, mounted at `Marketing/Sends/MessageTemplates`
+and `Marketing/Sends/MessageTemplateDetail` (a sibling of the list, as ListDetail is of Lists), in a Sends area of the authors' (P8 adds
+the sends). A template (organization, channel email, purpose promotional or transactional, locale, its EmailTemplate `MT_<id>`) has
+dated contents: one draft, edited; a published content never changes, the next one's publication ending it at its date. The content's
+variables are written `${name}` and declared with a label, fallback and whether each is required; the content's own parse refuses an
+undeclared name, an expression, a template tag, a variable inside a link and a script, frame, form, embedded object, event handler or
+script link when it is stored. The body is a `dbresource://` `.html.fancy-locked` file of its own per store, rendered by location with a
+map of the declared variables alone (each its value, else its fallback); the subject and preheader are filled the same way. The
+preview takes synthetic sample values only. A Copy makes an unpublished template; Use (a draft send) comes with Sends (P8). TextBlocks
+are not offered in the editor yet. The ledger's template source (MdsrcMessageTemplate) sends a delivery of the template's EmailTemplate
+from the content in effect at the attempt, with the delivery's values for the declared variables.
+
 ### ExperimentDetail
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -1611,6 +1623,19 @@ provider, so WhatsApp and other C4 channels can join later without a Marketing c
 **Needs:** MKT-TRANSPORT, MKT-CONSENT, MKT-TEMPLATE.
 
 **Source:** research §10; Twenty sending-domain readiness and shared Comms sender configuration.
+
+As built (impl-marketing P6): `Shared/SendingProfiles`, mounted at `Marketing/Settings/SendingProfiles` (the administrator's, with
+MESSAGE_SENDING_CONFIGURE). A profile binds a relay Admin approved (an EmailServer no mail account owns, chosen by id), the sender and
+reply-to, purpose, a throttle per hour, quiet hours in a time zone, the tracking policy (none, or consented recipients), the bounce
+domain and the PASS site of its unsubscribes. SenderReadiness checks: in effect; transport (the relay there, not a mail account's, not
+disabled, with a host, its last Admin test not failed; untested is a warning); the sender's domain (one this server signs, its hosted
+and shared accounts' or `mail_dkim_domains`, or a relay that passed its test; otherwise a warning, as Admin has no domain verification
+yet); the bounce account (a hosted or shared mail account `bounces@` the bounce domain, blocked without it, fixed in Comms' mail
+accounts); the unsubscribe page (the site's Account Email preferences, else the server's own `/u/`). A delivery naming a profile goes
+out through its relay from its sender with `bounces+<deliveryId>@` the bounce domain; its quiet hours and throttle make it wait, and a
+profile not ready is a retryable outcome. Receipt support is the bounce intake (§15.1): a DSN or ARF to the VERP address, or the edge
+relay's `ES_BOUNCED`, becomes a receipt fact and one suppression; Marketing's readiness (`marketing.sending`) warns of an organization
+with no ready profile.
 
 ## 13. PASS Marketing participation
 
