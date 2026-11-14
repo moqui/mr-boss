@@ -962,6 +962,44 @@ crosscut §3.15 row:
   quote's preview when one is named. Approvals lists both topics; an order change's row opens where Commons' resolver sends the
   approver (Sales' Approvals until P14).
 
+### As built (impl-sales P10, Nov 14, 2026)
+
+- **Records.** `mantle.sales.quote.SalesQuoteIssue` (the order and commercial revision it offers, seller and customer, issued date and
+  issuer, validity, the stored PDF: an OrderContent of type `OctSalesQuoteIssued` and its location, and when and why it ended:
+  revised, withdrawn, declined or superseded) and `SalesQuoteResponse` (accept or decline of one issue, staff or later PASS, the
+  customer's time and the recording, contact, purchase order, evidence (a mail, or a file of the quote), reason, the order's status
+  after it, operation key), one response an issue. SalesPolicy gains `quoteTextLocation` and `reminderTextLocation` (the stored
+  `.html.fancy-locked` cover/terms and reminder text, F70; Mantle's defaults under `template/order/` when empty).
+- **Q.** `mantle.order.SalesQuoteIssueServices` (service/mantle/order/SalesQuoteIssues.js), beside Q's draft verbs and P9's approval
+  verbs: `send#Quote`, `respond#Quote`, `withdraw#Quote`, `revise#Quote`, `clone#Quote`, `apply#QuoteBatch`, `get#QuoteIssues`,
+  `get#QuotePrint`, `get#QuoteIssueDocument`, the ledger builds and `send#QuoteReminders`. `propose#Quote` (SalesQuoteServices) runs
+  P9's approval guard after P10's checks: one seller and customer on every part, each product line priced and still usable for
+  selling, a total of zero or more, a validity in the future, and the tax current (a storeless quote of a gateway seller with no
+  address of its own takes the customer's address, kept, and the proposal is refused once with the new total, impl-sales F151; one
+  with no address at all is refused). A quote being revised (Being changed) is a draft again for the line verbs and approvals.
+- **Issue and send.** Only where the seller's `salesCommercialRevisionOnly` is on; a new issue needs every approval current at its
+  revision. The issue standing at the revision is reused, so a second send is a delivery, not another issue. Recipients are parties:
+  the customer and its current contacts, employees and representatives, each sent to at its current email. The quote's owner sends
+  from their own mail account (a mail client draft with the PDF, `send#EmailDraft`, filed on the order, an OrderEmailMessage naming
+  the PDF); anyone else, and a batch, sends from the organization through the delivery ledger (`MdsrcSalesQuote`, template
+  `MANTLE_SALES_QUOTE` or the organization's, attempted once the send commits; its build is suppressed once the issue no longer
+  stands and fails a recipient with no email). A second send skips a recipient already sent to and retries a failed one (the
+  ledger's `requeue#Delivery`; an uncertain one is reviewed, never resent blindly). The print header's QR and the customer's link
+  come with PASS Sales (P13); until then the PDF carries no link.
+- **Response.** Under the order's lock: the issue not ended, the order Proposed at its revision, the response within its validity;
+  a second acceptance answers the first; an acceptance records the customer's PO on the part and places the order through
+  `place#Order` once (outcome placed, approved or held by the native rules), a decline needs its reason and cancels through Cancel
+  Quote. `revise#Quote` moves Proposed to Being changed and counts a commercial revision (its approvals and issue end, the PDF stays);
+  `withdraw#Quote` cancels and ends the issue. Reminders: the daily `send_SalesQuoteReminders` job sends one per issue and recipient
+  once an organization sets its reminder days (none by default).
+- **Screens.** OrderDetail's quote context: the one primary by state (Propose a draft with lines, Send a proposed quote, Record
+  acceptance while an issue stands), More with Record decline, Revise, Withdraw, Copy as a new quote and Print (PDF), and Issues and
+  responses (each issue's revision, state, recipients and delivery, response and stored PDF); `Sales/Orders/QuoteSend`, the send's
+  dialog with its preview; Quotes' QuoteBatch (Send, Withdraw) on the rows' selection; SalesDefaults' PO requirement and reminder
+  days. Assist: the skill `sales-issue-quote`, two chips on OrderDetail, the tools `sales_find_quotes` (Assistant and MCP),
+  `sales_preview_quote` and `sales_send_quote` (Assistant, approved by the user). The "Responded" saved list is not built:
+  an accepted quote is placed (Orders, P11) and a declined one is cancelled (Cancelled).
+
 ## 6. Orders and commercial changes
 
 ### Orders

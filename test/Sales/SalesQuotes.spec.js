@@ -35,6 +35,11 @@ feature(
             own.output.includes("SalesQuoteFiles")
             // P9: the Approval box, Retail's discount rule met by the entered refit price
             own.output.includes("Discount at or beyond")
+            // P10: a draft with lines proposes as its primary; Print and Copy in More
+            own.output.includes("Propose")
+            own.output.includes("Copy as a new quote")
+            own.output.includes("Print (PDF)")
+            !own.output.includes("Record acceptance")
             !own.output.includes("Standard estimate")
             !own.output.includes("Margin")
             storeless.errors.length == 0
