@@ -48,7 +48,7 @@ feature(
             // 2 × 1,200 + 450 + 80 freight, taxed 6.1 %: 178.73 tax, 3,108.73 total
             storeless.output.includes("178.73")
             storeless.output.includes("3,108.73")
-            other.output.includes("Quote not available")
+            other.output.includes("Quote or order BOSS_SAL_QTE_WINGTIP is not available")
             !other.output.includes("Demo Product One-One")
         }
     }

@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     Draft, Proposed, Expiring and Expired (RFQ received and Responded join with P8 and P10), found by text, organization, customer,
     opportunity, mine and validity; each row opens the one OrderDetail route with its customer, total, validity and owner. New quote
     for a holder of SALES_QUOTE_EDIT (create#Quote checks the organization, customer, opportunity and store). P10: QuoteBatch, the
-    rows' selection sent or withdrawn each on its own (mantle.order.SalesQuoteIssueServices.apply#QuoteBatch). -->
+    rows' selection sent or withdrawn each on its own (mantle.order.SalesQuoteIssueServices.apply#QuoteBatch). P11: To send, the proposed quotes
+    with no issue standing (Home's and Insights' Quotes to send); an accepted quote, once placed, is listed with the orders. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Quotes" default-menu-index="1">
     <parameter name="text"/>
@@ -28,6 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="mine"/>
     <parameter name="state"/>
     <parameter name="validity"/>
+    <!-- P11: unsent, the proposed quotes with no issue standing (Home's and Insights' Quotes to send) -->
+    <parameter name="issue"/>
     <parameter name="pageIndex"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <transition-include name="createQuote" location="component://mr-boss/template/SalesQuotes.xml"/>
@@ -38,20 +41,21 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="can.anyRead">
             <service-call name="mantle.order.SalesQuoteServices.find#Quotes" out-map="context"
                     in-map="{text:text, organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
-                        salesOpportunityId:salesOpportunityId, mine:mine, state:(state || 'open'), validity:validity, pageIndex:pageIndex,
+                        salesOpportunityId:salesOpportunityId, mine:mine, state:(state || 'open'), validity:validity, issue:(issue || null), pageIndex:pageIndex,
                         pageNoLimit:ec.context.pageNoLimit}"/>
         </if>
         <set field="quoteList" from="quoteList || []"/>
         <!-- P10: each row's batch key names the revision listed, so a quote changed since is refused, not sent -->
         <set field="quoteList" from="quoteList.map(row =&gt; Object.assign({}, row, {selectionKey: row.orderId + '@' + row.orderRevision}))"/>
         <set field="detailPath" from="sharedLinks['Orders/OrderDetail'] || null"/>
-        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || salesOpportunityId || mine || validity || (state &amp;&amp; state != 'open'))"/>
+        <set field="filtered" from="!!(text || organizationPartyId || customerPartyId || salesOpportunityId || mine || validity || issue || (state &amp;&amp; state != 'open'))"/>
         <set field="newQuoteDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, customerPartyId: customerPartyId || null,
                 salesOpportunityId: salesOpportunityId || null}"/>
         <!-- the saved lists (design §5): each a link to this list with its filter -->
-        <set field="savedLists" from="[{label: 'Open', state: 'open', validity: ''}, {label: 'Draft', state: 'draft', validity: ''},
-                {label: 'Proposed', state: 'proposed', validity: ''}, {label: 'Expiring', state: 'open', validity: 'expiring'},
-                {label: 'Expired', state: 'open', validity: 'expired'}, {label: 'Cancelled', state: 'cancelled', validity: ''}]"/>
+        <set field="savedLists" from="[{label: 'Open', state: 'open', validity: '', issue: ''}, {label: 'Draft', state: 'draft', validity: '', issue: ''},
+                {label: 'Proposed', state: 'proposed', validity: '', issue: ''}, {label: 'To send', state: 'proposed', validity: '', issue: 'unsent'},
+                {label: 'Expiring', state: 'open', validity: 'expiring', issue: ''},
+                {label: 'Expired', state: 'open', validity: 'expired', issue: ''}, {label: 'Cancelled', state: 'cancelled', validity: '', issue: ''}]"/>
     </actions>
     <widgets>
         <label text="You do not read quotes in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
@@ -72,8 +76,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <section-iterate name="QuoteSavedLists" list="savedLists" entry="saved">
                         <widgets>
                             <link url="." text="${saved.label}" link-type="anchor-button"
-                                    style="${(state || 'open') == saved.state &amp;&amp; (validity || '') == saved.validity ? 'text-primary text-weight-bold' : ''}"
-                                    parameter-map="{state:saved.state, validity:saved.validity, text:'', customerPartyId:'', salesOpportunityId:'', mine:'', pageIndex:''}"/>
+                                    style="${(state || 'open') == saved.state &amp;&amp; (validity || '') == saved.validity &amp;&amp; (issue || '') == saved.issue ? 'text-primary text-weight-bold' : ''}"
+                                    parameter-map="{state:saved.state, validity:saved.validity, issue:saved.issue, text:'', customerPartyId:'', salesOpportunityId:'', mine:'', pageIndex:''}"/>
                         </widgets>
                     </section-iterate>
                 </container>

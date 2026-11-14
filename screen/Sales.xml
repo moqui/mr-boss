@@ -24,7 +24,9 @@ along with this software (see the LICENSE.md file). If not, see
     from the menu), and the shell's quick create, Today and Assist providers. P7: Quotes (a Sales reader's), the Orders area with its one
     OrderDetail route and Products' screens in Sales' context (both hidden from the menu until P11 shows Orders), quick create's Quote.
     P8: RFQs (Quotes/QuoteRequests and the shared RequestDetail at Quotes/QuoteRequestDetail), whose request is a record panel host.
-    P9: Quotes' Approvals tab (a sales approver's), Settings' Defaults and Approval rules, the approval topics. -->
+    P9: Quotes' Approvals tab (a sales approver's), Settings' Defaults and Approval rules, the approval topics. P11: Orders in the menu
+    (the order list, Awaiting approval, NewSalesOrder, OrderBatch), OrderDetail's sales-order context, an order as a record panel host
+    and in the palette. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
 
@@ -55,8 +57,9 @@ along with this software (see the LICENSE.md file). If not, see
                 // P4: a lead or opportunity the user sees (Sales.js recordKinds opportunity, SalesAccess.js opportunityOf)
                 // P7: a quote the user sees (Sales.js recordKinds quote, SalesAccess.js quoteOf)
                 // P8: a request for quote the user sees (Sales.js recordKinds quoteRequest, SalesAccess.js quoteRequestOf)
+                // P11: an order the user sees too (Sales.js recordKinds orderDocument: a quote, else a sales order, SalesAccess.js orderOf)
                 const panelHosts = {'mantle.party.Party': 'contact', 'mantle.sales.opportunity.SalesOpportunity': 'opportunity',
-                    'mantle.order.OrderHeader': 'quote', 'mantle.request.Request': 'quoteRequest'}
+                    'mantle.order.OrderHeader': 'orderDocument', 'mantle.request.Request': 'quoteRequest'}
                 if (!Object.hasOwn(panelHosts, entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
                 panelRecordType = panelHosts[entityName]
@@ -93,7 +96,9 @@ along with this software (see the LICENSE.md file). If not, see
             product screens in Sales' context, reached from a quote's lines -->
         <subscreens-item name="Quotes" location="component://mr-boss/screen/Sales/Quotes.xml" menu-index="4"
                 menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
-        <subscreens-item name="Orders" location="component://mr-boss/screen/Sales/Orders.xml" menu-index="5" menu-include="false"/>
+        <!-- P11: Orders (design §6), for a user who reads Sales; Mantle's find#SalesOrders and get#SalesOrder scope every read -->
+        <subscreens-item name="Orders" location="component://mr-boss/screen/Sales/Orders.xml" menu-index="5"
+                menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
         <subscreens-item name="Products" location="component://mr-boss/screen/Sales/Products.xml" menu-index="9" menu-include="false"/>
         <!-- P2: Settings (design §9), the administrator's (SALES_CONFIGURE) and, for Teams, the manager's (SALES_TEAM_MANAGE);
             BOSS_SAL_SETTINGS denies the root user group and opens it to the manager; Mantle's setup services check again -->
@@ -164,6 +169,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g l" label="Leads" screen="Sales/Pipeline/Leads"/>
             <!-- P7 -->
             <key keys="g q" label="Quotes" screen="Sales/Quotes/Quotes"/>
+            <!-- P11 -->
+            <key keys="g r" label="Orders" screen="Sales/Orders/Orders"/>
         </keymap>
     </shell-providers>
 

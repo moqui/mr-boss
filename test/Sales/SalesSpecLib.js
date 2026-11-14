@@ -6,13 +6,13 @@ const ids = {
     // sales.rep3 works alone
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SALES",
-    // the menu of design §1.2 built so far: every Sales user's (Pipeline since P4, Accounts since P3, Quotes since P7), and with
-    // Reports a report reader's
-    staffMenu: ["Home", "Pipeline", "Accounts", "Quotes"],
-    reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Reports"],
+    // the menu of design §1.2 built so far: every Sales user's (Pipeline since P4, Accounts since P3, Quotes since P7, Orders since
+    // P11), and with Reports a report reader's
+    staffMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders"],
+    reportMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Reports"],
     reportsMenu: ["SalesSummary", "SalesAnalysis"],
     accountsMenu: ["Accounts", "Contacts"],
-    keys: ["g s", "g a", "g c", "g o", "g l", "g q"],
+    keys: ["g s", "g a", "g c", "g o", "g l", "g q", "g r"],
     // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
     // Wingtip Group), Contoso Labs (a prospect, sales.rep2's), Kim Park (an individual customer) and the duplicate pair Adatum
     // Corporation and Adatum Corp; Dana Morales, a contact of Wingtip Traders and Contoso Labs; Ziziwork Sales' Fabrikam
@@ -29,7 +29,7 @@ const ids = {
     },
     contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"},
     // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
-    managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Reports", "Settings"],
+    managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Reports", "Settings"],
     // P9 adds Defaults and Approval rules
     settingsMenu: ["Readiness", "Stages", "Teams", "LeadSources", "TypesAndReasons", "SalesDefaults", "ApprovalPolicies"],
     // P4: Pipeline's tabs, and the demo deals (data/BossZSalesDemoData.xml): Retail East's (sales.rep's) Wingtip refit in Proposal with

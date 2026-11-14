@@ -2960,6 +2960,167 @@ CX-CREDIT, X1, X4.
   checks; a storeless order's placement sends one confirmation and its invoice carries the gateway's tax; a rep
   enters a direct order with no quote.
 
+**Built Nov 14 (P11).** mr-mantle and mr-boss on branch `sal/p11` (hashes in the worker's reply); mr-moqui and mr-pass unchanged, no
+Rust built.
+- Checked first (the code over the plan): P9's and P10's Built and Review notes, §4 (the Nov 11 approval-setting row, Q12), F11, F12,
+  F15, F16, F43, F46, F52, F60, F61 and F78; `approve#Order`, `autoApprove#Order`, `hold#Order`, `release#OrderHold`,
+  `check#OrderPreApprove` and its SECAs; PurchaseOrders.js `approveRefusal` and `holdAllowed`; the replacement orders
+  (ReturnServices.xml) and Projects' estimate approval (ProjectServices.xml); OrderConfirmations.js; the delivery ledger;
+  SalesApprovals.js' requirements and decisions; SalesQuotes.js and SalesQuoteIssues.js `respond#Quote`; P7's review (find#Quotes'
+  "all"). The code over the plan:
+  - an accepted quote keeps its purpose `OrpSalesQuote`; Sales' order is any order whose first part sells, a placed quote, a direct
+    order (`OrpSalesOrder`, the plan's "purpose SalesOrder") or another app's sales order of the seller; templates, bases, open carts
+    and unplaced quotes are not orders (SalesAccess.js `orderOf`, `isSalesOrder`), and find#Quotes' "all" now leaves out a placed
+    quote, so OpportunityDetail shows an accepted quote once, in Orders (P7's review);
+  - "a current Sales decision where a rule asks one": nothing recorded an order-purpose decision (F160), so `approve#SalesOrder`
+    records an SdrApproved OrderDecision of purpose SapOrder for each order rule the order meets at its revision before calling
+    `approve#Order`; with the setting on, a direct `approve#Order` without them is refused SALES_APPROVAL_REQUIRED naming the rule;
+  - the approver's reach: an order approver (`SALES_ORDER_APPROVE` or `ORDER_APPROVE`) sees the organization's Placed and held sales
+    orders to decide them, not to change them (design §1.1 "an assigned approval grants its authorized approver the source
+    projection"), as P9's quote approver sees an asked quote;
+  - Sales' approval of an accepted net-terms order "as the system" goes through `approve#Order`, whose permission check knows no
+    system caller: SalesOrders.js sets a claim for the one order in `ec.context.sharedMap` (as SupplierPortal.js' claim) that
+    `approveRefusal` admits for a sales part with the setting off; no request reaches it;
+  - `hold#Order` and `release#OrderHold` check the organization for a user's Manual, Change or Purchase reason against the
+    organizations the user works for (FacilityScope.js' member organizations, rollup children included, not narrowed to the active
+    one), every organization for a system administrator, nothing for a call with no user (a job); Credit and Payment reasons stay
+    their owner services'. A Purchase reason on a part that is not a purchase part is refused (HOLD_TYPE_DIRECTION);
+  - the storeless confirmation is the order's event once a revision (`SalesOrderConfirmation:<order>@<revision>`), so a placement
+    sends it and an approval, or a hold released back to Approved, sends none again; it is sent for Sales' own storeless orders (a
+    direct order, an accepted quote), not every storeless sales order, so Projects' and Customer Service's storeless orders send
+    nothing new (§2 "existing callers stay compatible"); the tx-commit rule runs on a service worker, so it is sent just after the
+    placement commits;
+  - Home's "Orders blocked" counts awaiting approval or held; Insights' "Quotes to send" needed find#Quotes' `issue: unsent` filter
+    (a proposed quote with no issue standing) and Quotes' "To send" saved list;
+  - Print of an order is not built: the confirmation as placed is Customer Service's document (resend#OrderConfirmation).
+- Mantle:
+  - `service/mantle/order/SalesOrders.js` and `SalesOrderServices.xml` (new): the gate (`gatedParts`, `approvalWaits`,
+    `gateRefusal`), `create#SalesOrder`, `store#SalesOrderLine`, `delete#SalesOrderLine`, `place#SalesOrder` (LINES_REQUIRED,
+    ORDER_NOT_DRAFT), `approve#SalesOrder` (PERMISSION_DENIED, ORDER_NOT_PLACED, REVISION_CHANGED, SELF_APPROVAL, APPROVER_INVALID,
+    the operation key answering a retry once the order left the approver's sight), `hold#SalesOrder` and `release#SalesOrderHold`
+    (HOLD_TYPE_INVALID, HOLD_TYPE_DENIED, HOLD_UNAVAILABLE, COMMENT_REQUIRED), `cancel#SalesOrderRemainder` (ORDER_NOT_OPEN,
+    NOTHING_TO_CANCEL), `clone#SalesOrder`, `apply#SalesOrderBatch`, `get#SalesOrder`, `get#SalesWorkSummary`,
+    `send#OrderConfirmation` and `build#OrderConfirmationMessage`; the net-terms option (`approveAccepted`).
+  - `SalesWorkspaceServices.xml` find#SalesOrders (a P11 block at the end); `SalesWorkspace.js` (Home's quote and order counters real,
+    from `get#SalesWorkSummary`); `SalesApprovals.js` (a P11 block: `orderGateOn`, the order rules' states, `orderApproveRefusal`,
+    `decideOrderRules`, `orderApprovalOf`); `SalesAccess.js` (a P11 block before P8's: `orderOf`, `requireOrder`, `orderApprover`,
+    `isSalesOrder`); `SalesQuotes.js` (`createDraft`, `storeLineOf`, `deleteLineOf` exported; find#Quotes' "all" and `issue`);
+    `SalesQuoteIssues.js` (respond#Quote's net-terms option after `place#Order`); `OrderConfirmations.js` (`storeAsSystem` exported).
+  - Owner contracts: `OrderServices.xml` (`approve#Order`'s description, `autoApprove#Order`'s gate, `hold#Order`'s and
+    `release#OrderHold`'s organization and direction), `PurchaseOrders.js` (`approveRefusal`'s sales direction and the system claim,
+    `holdScopeRefusal`), `ReturnServices.xml` (a replacement order of a gated seller left placed, F61), `ProjectServices.xml`
+    (Projects' estimate approval leaves a gated seller's order placed, §4 Q12).
+  - `service/SalesOrder.secas.xml` (new, `OrderPlacedSalesConfirmation`), `data/SalesOrderData.xml` (new: MdsrcSalesOrderConfirmation,
+    MANTLE_SALES_ORDER_CONFIRMATION), `template/order/SalesOrderConfirmationEmail.html.fancy` (new).
+- BOSS:
+  - Screens: `Sales/Orders.xml` (Orders in the menu, the area's tabs), `Sales/Orders/Orders.xml` (new: OrderFind and OrderList with the
+    saved lists, Awaiting approval with each row's warnings, New order, OrderBatch), `template/SalesOrders.xml` (new: the order
+    transitions and NewSalesOrderForm), `template/SalesOrderDetail.xml` (a P11 block: the sales-order context), `Shared/OrderDetail.xml`
+    (owner contract: get#SalesOrder asked before get#Quote; the P11 transitions), `Sales.xml` (Orders in the menu, `g r`, an order as a
+    record panel host), `Sales/Home.xml` (the three counters real), `Sales/Quotes/Quotes.xml` (To send), `Sales/Pipeline/
+    OpportunityDetail.xml` (Orders from find#SalesOrders, each opening OrderDetail).
+  - `Sales.js` (P11 blocks): linkPaths Orders and Orders/Orders, record kinds `order` and `orderDocument`, the palette's orders.
+  - `data/BossSetupSalesData.xml` (a P11 block at the end): `ORDER_APPROVE` for BOSS_SALES_APPROVE (F43) in its bundle; BOSS_SAL_WORK_SUMMARY
+    granting get#SalesWorkSummary to the Sales groups; Insights' attention providers Sales.QuotesToSend, Sales.QuotesExpiring and
+    Sales.OrdersAwaitingApproval (owner contract with Insights, in Sales' file rather than BossSetupData).
+- Specs:
+  - Mantle `test/order/SalesOrderApproval` (new, 4 features, 2.2 s): with the setting on ORDER_APPROVE alone refused a sales part, another
+    organization's SALES_ORDER_APPROVE refused, the scope's admitted; off, ORDER_APPROVE as before and SALES_ORDER_APPROVE alone refused;
+    a purchase part unchanged; with the setting on a store and a storeless order with a covering authorization stay placed with their
+    payments authorized, get#SalesOrder shows the approver the order rule and its warning, `approve#Order` refused
+    SALES_APPROVAL_REQUIRED, `approve#SalesOrder` decides the rule and approves (a retry answers the first, a stale revision refused);
+    off, a store order auto-approves; a batch credit-holds the order over its limit and approves the other; another organization's
+    user cannot release the hold natively or in Sales, a Credit hold is not Sales'; an accepted net-terms quote under the option is held
+    by the credit check (the regression P10 left for P11, F187). `test/order/StorelessOrderConfirmation` (new, 1 feature, 0.8 s; 2.0 s
+    on a cold PDF renderer): one confirmation at placement, sent from the seller's address with the PDF to the customer; none again at
+    the approval or a hold released; none for a store order. `SalesQuoteIssueFixtures.js`: `addUser` exported, the grant covering
+    SalesOrderServices and SalesWorkspaceServices. `SalesWorkspace`: the counters are counts.
+  - mr-boss `test/Sales/SalesOrders` (new, 1 feature, 0.3 s): OrderDetail's one qvt render of a placed direct order as the approver (the
+    order context, Approve, no edit or copy), Orders' one html render of Awaiting approval with it. `SalesAccess` (a P11 feature, 0.5 s):
+    approve#SalesOrder refused the rep for the permission and Ziziwork Sales' rep as missing, the approver reaching the revision check,
+    with the same parameters. `SalesSpecLib.js` (the menus with Orders, `g r`), `SalesHome`, `SalesQuotes` (the not-available text),
+    `InsightsHome` (Sales' three providers).
+  - Acceptance, written and not run: `test/acceptance/Sales/SalesOrderScenarios` (3 features: an accepted net-terms quote in Awaiting
+    approval approved by sales.approver from OrderDetail, the quote no longer listed among the quotes; Ziziwork Sales' storeless direct
+    order sends one confirmation, none at its approval, and its invoice carries the gateway's tax lines; a rep's direct order through
+    NewSalesOrder and OrderDetail placed with no response). `SalesQuoteDraftUsable`'s not-available text updated.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SalesOrderApproval, StorelessOrderConfirmation,
+  SalesWorkspace, SalesQuoteResponse, SalesQuoteIssue, SalesQuoteApprovals, SalesQuoteDrafts, SalesQuoteRequests, OrderLifecycle,
+  OrderChanges, PurchaseApprovals, PurchaseOrders, PurchaseHoldPermission, PurchaseRevisions, ShopCheckout, StoreCheckout,
+  ShopSubscriptions, OrderToCashBasicFlow, WorkProjectMilestones, AccountingCredit, AccountingReturns, ReturnPolicies,
+  OrderConfirmations, StorelessOrderTax, SalesOrganizationScope, ReturnToResponseBasicFlow, OrderBulk, DropShip, StoreOperations,
+  StoreFulfillment, DeliveryLedger and CartRecovery 233 of 233 (35 specs with dependencies, 93 s); after the last changes the new
+  specs with SalesWorkspace, SalesQuoteResponse, SalesQuoteIssue, SalesQuoteDrafts, SalesQuoteApprovals, PurchaseHoldPermission,
+  OrderChanges and AccountingCredit 45 of 45. mr-boss SalesOrders, SalesAccess, SalesHome, SalesQuotes, SalesQuoteSend, SalesApprovals,
+  SalesOpportunities, SalesAccounts, SalesSettings, SalesReports, SalesQuoteRequests, SalesIntake, InsightsHome, PeopleInsights,
+  MaintenanceReports, CustomerServiceOrders, CustomerServiceOrderChanges, CustomerServiceAccess, CommerceOrders, CommerceAccess,
+  PurchasingOrders, PurchasingAccess, AccountingCollections, AccountingReceivables, ProjectsAccess, InsightsRecords, Notifications,
+  QuickCreate, AdminRegistries, AdminCapabilities, Chat, RecordFiles, ProductsSharedContext, MaintenanceAccess, PeopleAccess,
+  WarehouseAccess and ManufacturingAccess 301 of 302 with InsightsHome's provider list then fixed and passing (37 specs, 192 s; under
+  the load of the parallel workers MaintenanceAccess and CustomerServiceAccess passed 15 s, each well under it run alone, 44 s for the
+  two), then SalesOrders, SalesAccess, SalesHome, SalesQuotes and SalesOpportunities again. mr-pass whole suite 190 of 190 (13.8 s of
+  its 20 s), Shop's checkout and renewals unchanged. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or
+  changed screen. Prettier clean on the new and changed JavaScript. Not run: the client walk (no screen it walks changed), ./moq
+  test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's hold#Order, release#OrderHold, approve#Order and autoApprove#Order rows and an "Added in the Sales build:
+  orders, approval and the storeless confirmation" table; ss-inventory's FindOrder CreateSalesOrder, ApproveOrdersForm,
+  CloseOrdersForm and OrderList and OrderDetail CloseOrderPartItems, AuditLogList, HeaderForm and SendPlacedEmailForm rows (Sales P11).
+- Design edits: design-sales §6 "As built (impl-sales P11)". design-commerce §13 and design-crosscut (`OrderPlacedAutoApprove`,
+  CX-ORDER-AUTHORITY) already say what P11 built; design-shop (mr-pass) is not edited (no mr-pass worktree; see For the lead).
+- Findings (provisional, numbered by the lead):
+  - `approve#SalesOrder` records the order rules' decisions with the seller's setting off too (an ORDER_APPROVE approver, separation
+    applied), while a direct `approve#Order` with the setting off ignores the order rules as before (P9); Sales' Approve is stricter
+    than the native one there;
+  - an order approver who is not assigned sees an order only while it is Placed or held, so cannot place a Manual hold on an approved
+    order of another rep unless they also hold SALES_TEAM_VIEW (the demo's BOSS_SALES_APPROVE does not);
+  - the hold organization check reads the user's own organizations (rollup children included), not the active one; a Customer
+    Service operator who works for a parent organization holds a child's order as before;
+  - the storeless confirmation goes only for Sales' own storeless orders (a direct order, an accepted quote); Projects' storeless
+    orders and Customer Service's replacements send none; the demo seller Retail has no primary email, so its confirmations fail and
+    wait until it has one (P10's R1 rule), as its quote mail does;
+  - find#SalesOrders' To fulfill, Part fulfilled and To invoice read the distinct order ids of every shipment source and billing row
+    before the scoped query; fine for the demo, a subquery when volumes grow; the Awaiting approval list runs check#OrderPreApprove
+    for each row of its page;
+  - Fulfillment and Invoices and payments list rows without links until P14 mounts ShipmentDetail and InvoiceDetail; Print of an order
+    and the Agreements and Changes tabs are not built (P14, P15);
+  - a placed quote opens in the order context, so its Issues and responses are no longer shown there (the accepted evidence is a line
+    of the header and Overview);
+  - `get#Opportunity`'s `orders` output is no longer read by OpportunityDetail (Orders from find#SalesOrders); left for other readers;
+  - `docs/security/Attack-Surface.md` (mr-moqui) does not name the order verbs; P11 had no mr-moqui worktree.
+- For the lead:
+  - budget share: mr-mantle about 3.0 s (SalesOrderApproval 2.2 s, StorelessOrderConfirmation 0.8 s); mr-boss server about 0.8 s
+    (SalesOrders 0.3 s, SalesAccess' P11 feature 0.5 s); client none;
+  - merge hot spots: mr-mantle `service/mantle/order/OrderServices.xml` (approve#Order's description, hold#Order, release#OrderHold,
+    autoApprove#Order), `PurchaseOrders.js` (approveRefusal, holdScopeRefusal, the salesOrders require), `ReturnServices.xml`,
+    `service/mantle/work/ProjectServices.xml`, `SalesApprovals.js` (a P11 block before the operations; exports),
+    `service/mantle/sales/SalesAccess.js` (a P11 block before P8's; exports), `SalesQuotes.js` (createQuote's kind, storeLine and
+    deleteLine split, find#Quotes, exports), `SalesQuoteServices.xml` (find#Quotes' issue), `SalesQuoteIssues.js` (respond#Quote),
+    `OrderConfirmations.js` (exports), `service/mantle/sales/SalesWorkspace.js` and `SalesWorkspaceServices.xml` (P11 block at the
+    end), `test/order/SalesQuoteIssueFixtures.js`, `test/sales/SalesWorkspace.spec.js`; mr-boss `data/BossSetupSalesData.xml` (P11
+    block at the end), `service/ironstone/sales/Sales.js` (linkPaths, record kinds after P9's block, the palette before search),
+    `screen/Sales.xml` (panel hosts, Orders' menu row, `g r`), `screen/Shared/OrderDetail.xml` (the Sales branch and P11 includes),
+    `template/SalesOrderDetail.xml`, `screen/Sales/Orders.xml`, `screen/Sales/Home.xml`, `screen/Sales/Quotes/Quotes.xml`,
+    `screen/Sales/Pipeline/OpportunityDetail.xml`, `test/Insights/InsightsHome.spec.js` (registeredKeys: Marketing's providers would
+    add there too), `test/Sales/SalesSpecLib.js` (the menus and keys), `test/Sales/SalesAccess.spec.js` (a feature at the end),
+    `test/Sales/SalesHome.spec.js`, `test/Sales/SalesQuotes.spec.js`, `test/acceptance/Sales/SalesQuoteDraftUsable.spec.js`,
+    `plan/usl-inventory.md`, `plan/ss-inventory.md`, `plan/design-sales.md` (§6 as built). MantleSetupData.xml and Admin.js (Marketing
+    P4 and P5) are not touched;
+  - design-shop (mr-pass `plan/design-shop.md`) should say, as design-commerce §13 does, that a store order of a seller with the approval
+    setting on stays Placed for a holder of SALES_ORDER_APPROVE (the owner contract; mr-pass's suite passes unchanged);
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), a paragraph after Sales' quote issue: "Sales' orders
+    (`mantle.order.SalesOrderServices`, all `allow-remote="false"`): each verb needs its permission on an order of the caller's sales
+    scope (another's answers as missing); an order approver (`SALES_ORDER_APPROVE` or `ORDER_APPROVE`) reads the organization's placed
+    and held orders, never changes them; `approve#SalesOrder` records each order rule's decision at the revision read, the order's
+    owner, enterer and placer refused unless the rule allows it, then calls `approve#Order`, whose credit check runs; where the
+    seller's SalesPolicy approval setting is on, `autoApprove#Order` approves no sales part of it and `approve#Order` needs
+    `SALES_ORDER_APPROVE` in the approver's sales scope and those decisions; the only system approval is Sales' own of an accepted
+    net-terms order, a claim Mantle's code sets for that order, never a request value; `hold#Order` and `release#OrderHold` refuse a
+    user's Manual, Change or Purchase reason on an order of an organization they do not work for, and Sales places and releases only
+    Manual and Change holds; the storeless confirmation goes once for an order's revision and recipient from the organization's own
+    address.";
+  - nothing needs the user's call; the approver's reach (Placed and held only) and Sales' Approve recording the order rules with the
+    setting off may be worth the user's look.
+
 ### P12 — Quote templates
 
 Design §5 QuoteTemplates and QuoteTemplateDetail, §19 item 2; SAL-TEMPLATE.

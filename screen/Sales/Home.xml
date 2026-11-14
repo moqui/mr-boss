@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     the user's sales scope, checked by ironstone.sales.ContextServices.check#Record and shown "not available" when refused); SalesWork,
     the counter strip of mantle.sales.SalesWorkspaceServices.get#SalesHome, each card the count of the scoped list it opens with that
     list's own filters (the leads to work, the user's open opportunities, those past their expected close), a failed one
-    "Unavailable", never zero, and those of the records not built yet (requests for quote, quotes, blocked orders) "Not configured";
+    "Unavailable", never zero; P8 the requests for quote awaiting a response, P11 the quotes to send, the quotes expiring and the orders
+    blocked (awaiting approval or held);
     AssignedWork, the user's own open leads and opportunities with their next activity; MyPipeline, the user's open opportunities
     (Mantle's find#Opportunities, the same query as Opportunities) by stage; PipelineFunnel, the funnel panel of the shipped dashboard
     report/boss-sales-pipeline.json over the pipeline dataset, whose row filter is Sales' scope, through report-embed (rendered for
@@ -57,7 +58,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="lateCard" from="counterOf.pastClose || unavailable"/>
         <!-- P8: the requests for quote awaiting a response -->
         <set field="rfqCard" from="counterOf.quoteRequests || unavailable"/>
-        <set field="laterCards" from="Array.from(home?.counters || []).filter(counter =&gt; counter.state == 'notConfigured')"/>
+        <!-- P11: the quotes to send, the quotes expiring and the orders blocked (awaiting approval or held) -->
+        <set field="toSendCard" from="counterOf.quotesToSend || unavailable"/>
+        <set field="expiringCard" from="counterOf.quotesExpiring || unavailable"/>
+        <set field="blockedCard" from="counterOf.ordersBlocked || unavailable"/>
         <set field="assignedList" from="Array.from(home?.assignedWork || [])"/>
         <set field="assignedUnavailable" from="!home || home.assignedState == 'unavailable'"/>
         <set field="pipelineList" from="Array.from(pipeline?.opportunityList || [])"/>
@@ -116,12 +120,11 @@ along with this software (see the LICENSE.md file). If not, see
                                     link="${lateCard.link}"/>
                             <number-card title="RFQs awaiting response" value="${rfqCard.stateText}" icon="sym_o_request_quote" size="sm"
                                     link="${rfqCard.link}"/>
-                            <number-card title="Quotes to send" value="Not configured" icon="sym_o_send" size="sm"/>
-                            <number-card title="Quotes expiring" value="Not configured" icon="sym_o_hourglass_bottom" size="sm"/>
-                            <number-card title="Orders blocked" value="Not configured" icon="sym_o_block" size="sm"/>
+                            <number-card title="Quotes to send" value="${toSendCard.stateText}" icon="sym_o_send" size="sm" link="${toSendCard.link}"/>
+                            <number-card title="Quotes expiring" value="${expiringCard.stateText}" icon="sym_o_hourglass_bottom" size="sm"
+                                    link="${expiringCard.link}"/>
+                            <number-card title="Orders blocked" value="${blockedCard.stateText}" icon="sym_o_block" size="sm" link="${blockedCard.link}"/>
                         </dashboard>
-                        <label text="Quotes and orders are counted here once they are set up; until then none is shown as zero."
-                                type="p" style="text-caption m-muted" condition="laterCards.length"/>
                     </box-body>
                 </container-box>
                 <container-box>

@@ -403,4 +403,42 @@ along with this software (see the LICENSE.md file). If not, see
             description="send#Quote: a proposed quote (orderId) issued and sent at the revision read with find#Quotes (orderRevision) to recipientPartyIds (the customer or its contacts; empty for the quote's contact), from the user's own mail (sendMode own, the quote's owner) or the organization's (organization); previewOnly Y first says who gets it and the PDF's name. Needs an operationKey. The user approves it first."
             classificationEnumId="AgclWrite" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
     <!-- ===== end of Sales P10 ===== -->
+    <!-- ===== Sales P11 (impl-sales P11, F43; design-sales §1.1, §6): orders, approval and the attention counts ===== -->
+    <!-- ORDER_APPROVE for the approver (F43, §4: granted with its screens), beside its SALES_ORDER_APPROVE (P1): it approves a sales order
+        of a seller whose approval setting is off (approve#Order as built) and releases a Manual hold; SALES_ORDER_APPROVE approves one
+        of a seller whose setting is on. In its bundle. No other Sales group holds it, the administrator neither (§4 Nov 13). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_SALES_APPROVE" userPermissionId="ORDER_APPROVE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_SALES_APPROVE" userPermissionId="ORDER_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <!-- Insights' attention providers (owner contract with Insights, design-insights §3, on Commerce's rows in BossSetupData): Sales'
+        counts, each the count of the scoped list it opens (mantle.order.SalesOrderServices.get#SalesWorkSummary), shown to a viewer
+        whose route opens; Insights calls the count as the viewer outside Sales' screens, so the Sales groups are granted it (it checks
+        a Sales read and the scope itself) -->
+    <artifactGroups artifactGroupId="BOSS_SAL_WORK_SUMMARY" description="Sales: the work counts Insights' attention reads">
+        <artifacts artifactName="mantle\.order\.SalesOrderServices\.get#SalesWorkSummary" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SAL_WORK_SUMMARY_SALES" userGroupId="BOSS_SALES" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_SAL_WORK_SUMMARY_ADMIN" userGroupId="BOSS_SALES_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <ironstone.insights.AttentionProvider providerKey="Sales.QuotesToSend" version="1" ownerApp="Sales" title="Quotes to send"
+            description="Proposed quotes with no issue standing."
+            countService="mantle.order.SalesOrderServices.get#SalesWorkSummary" countField="counts.quotesToSend"
+            organizationParameter="organizationPartyId"
+            routePath="Sales/Quotes/Quotes" routeParameters="state=proposed&amp;issue=unsent"
+            organizationScope="Your quotes and your teams', or your organization's" sequenceNum="10"/>
+    <ironstone.insights.AttentionProvider providerKey="Sales.QuotesExpiring" version="1" ownerApp="Sales" title="Quotes expiring"
+            description="Open quotes whose validity ends within a week."
+            countService="mantle.order.SalesOrderServices.get#SalesWorkSummary" countField="counts.quotesExpiring"
+            organizationParameter="organizationPartyId"
+            routePath="Sales/Quotes/Quotes" routeParameters="state=open&amp;validity=expiring"
+            organizationScope="Your quotes and your teams', or your organization's" sequenceNum="20"/>
+    <ironstone.insights.AttentionProvider providerKey="Sales.OrdersAwaitingApproval" version="1" ownerApp="Sales" title="Orders awaiting approval"
+            description="Placed sales orders waiting for a person's approval."
+            countService="mantle.order.SalesOrderServices.get#SalesWorkSummary" countField="counts.ordersAwaitingApproval"
+            organizationParameter="organizationPartyId"
+            routePath="Sales/Orders/Orders" routeParameters="list=awaiting"
+            organizationScope="Your orders and your teams', the organization's for an approver" sequenceNum="30"/>
+    <!-- ===== end of Sales P11 ===== -->
 </entity-facade-xml>

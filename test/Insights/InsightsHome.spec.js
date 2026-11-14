@@ -47,7 +47,11 @@ const registeredKeys = [
     // People's (impl-people P29)
     "People.NoManager",
     "People.Vacancies",
-    "People.Decisions"
+    "People.Decisions",
+    // Sales' (impl-sales P11)
+    "Sales.QuotesToSend",
+    "Sales.QuotesExpiring",
+    "Sales.OrdersAwaitingApproval"
 ]
 // The spec's own providers (owner InsightsSpec), over Insights' own services: one that answers, one whose answer lacks its
 // count and one whose call fails (both failures), one whose owner refuses, one whose route the reader cannot open and one for
