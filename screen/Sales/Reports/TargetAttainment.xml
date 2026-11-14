@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Reports › Target attainment (design-sales §8 TargetAttainment: TargetOptions, TargetResults; style-guide §3.10 Report;
+    impl-sales P18): the targets of an organization, period and currency (Mantle's get#TargetAttainment), each compared with the one
+    basis it names, won opportunity value, placed sales order value or finalized sales invoice value, never added together: the
+    quota, the submitted forecast, the actual, the variance, the percentage (none for a zero quota) and the count of source records,
+    each opening its forecast; orders and invoices with no representative apart. Only the deals, orders and invoices the reader sees
+    are counted, and no template or recurring base; one currency at a time. A report reader's (SALES_REPORT_VIEW), as the Reports area
+    is; Mantle checks again. Exports to CSV. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Target attainment" default-menu-index="3" menu-image="sym_o_flag" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="basisEnumId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <set field="loadRefusal" value=""/>
+        <if condition="sales.capabilities.reportRead &amp;&amp; organizationPartyId">
+            <service-call name="mantle.sales.ForecastServices.get#TargetAttainment" out-map="context" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null),
+                        basisEnumId:(basisEnumId || null), asOfDate:(asOfDate || null), pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+            <!-- a refusal is said as Mantle words it (a period of another organization, too many records to count) -->
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="resultList" from="resultList || []"/>
+        <set field="unassignedList" from="unassignedList || []"/>
+        <set field="reportFound" from="!!periodName"/>
+        <set field="noPeriod" from="!!noPeriod"/>
+        <set field="forecastPath" from="sharedLinks['Pipeline/Forecast'] || null"/>
+        <set field="optionValues" from="{organizationPartyId: organizationPartyId, timePeriodId: timePeriodId || null, currencyUomId: currencyUomId || null,
+                basisEnumId: basisEnumId || null, asOfDate: asOfDate || null}"/>
+    </actions>
+    <widgets>
+        <label text="Target attainment" type="h5"/>
+        <label text="Each target against the one basis it is measured on: won deals, placed orders or finalized invoices, never added together."
+                type="p" style="text-caption m-muted"/>
+        <form-single name="TargetOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'salesPeriods', organizationPartyId:organizationPartyId, selected:timePeriodId}">
+                            <depends-on field="organizationPartyId"/></dynamic-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="basisEnumId">
+                <default-field title="Measured on">
+                    <drop-down allow-empty="true">
+                        <option key="SfbWonOpportunity" text="Won opportunity value"/>
+                        <option key="SfbPlacedOrder" text="Placed sales order value"/>
+                        <option key="SfbFinalInvoice" text="Finalized sales invoice value"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="asOfDate"><default-field title="As of" tooltip="Empty: now"><date-time/></default-field></field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="timePeriodId"/></field-row>
+                <field-row><field-ref name="currencyUomId"/><field-ref name="basisEnumId"/></field-row>
+                <field-row><field-ref name="asOfDate"/><field-ref name="submitButton"/></field-row>
+            </field-layout>
+        </form-single>
+        <label text="No sales period to report on: a sales manager adds them under Settings › Targets." type="p" style="m-muted"
+                condition="!reportFound &amp;&amp; noPeriod"/>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative"
+                condition="!reportFound &amp;&amp; !noPeriod"/>
+        <section name="TargetResultsFound" condition="reportFound">
+            <widgets>
+                <label text="${organizationName} · ${periodName} · ${currencyUomId}" type="h6"/>
+                <form-list name="TargetResults" list="resultList" skip-form="true" paginate="true" show-csv-button="true">
+                    <field name="subjectName">
+                        <conditional-field title="Target" condition="forecastPath">
+                            <link url="${forecastPath}" url-type="plain" text="${subjectName}" link-type="anchor" parameter-map="{salesForecastId:salesForecastId}"/>
+                        </conditional-field>
+                        <default-field title="Target"><display/></default-field>
+                    </field>
+                    <field name="basisText"><default-field title="Measured on"><display/></default-field></field>
+                    <field name="quotaText" align="right"><default-field title="Quota"><display/></default-field></field>
+                    <field name="forecastText" align="right"><default-field title="Submitted forecast"><display/></default-field></field>
+                    <field name="actualText" align="right"><default-field title="Actual"><display/></default-field></field>
+                    <field name="varianceText" align="right"><default-field title="Variance"><display/></default-field></field>
+                    <field name="percentText" align="right"><default-field title="Of quota"><display/></default-field></field>
+                    <field name="sourceCount" align="right"><default-field title="Sources"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="subjectName"/><field-ref name="basisText"/></column>
+                        <column><field-ref name="actualText"/><field-ref name="percentText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No target is set for this period and currency." type="p" style="m-muted q-pa-sm" condition="!resultList.length"/>
+                <section name="UnassignedBox" condition="unassignedList.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="With no representative"/>
+                            <box-body-nopad>
+                                <form-list name="UnassignedResults" list="unassignedList" skip-form="true" paginate="false">
+                                    <field name="basisText"><default-field title="Measured on"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="sourceCount" align="right"><default-field title="Sources"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="basisText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="sourceCount"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

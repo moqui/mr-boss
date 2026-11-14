@@ -444,4 +444,33 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.agreement.AgreementTerm agreementTermId="BOSS_SAL_AGR_STANDARD_NET" agreementId="BOSS_SAL_AGR_STANDARD"
             termTypeEnumId="TtFinPaymentDays" termNumber="30" termText="Net 30 days from invoice"/>
     <!-- ===== end of Sales P15 ===== -->
+    <!-- ===== Sales P18 (design-sales §8 Forecast, TargetAttainment, §9 Targets): sales periods, targets and a forecast ===== -->
+    <!-- Ziziwork Retail's 2026 sales year and its fourth quarter with its months; Retail's Q4 target (won deals, 120,000 USD), Retail
+        East's under it (50,000) and sales.rep's under East (30,000), with sales.rep's submitted forecast (24,000, best case 40,000);
+        sales.rep2's Q4 target measured on placed orders, under Retail. The deals behind them are P4's: Wingtip's refit closes in the
+        quarter, Kim Park's renewal was won in it. -->
+    <mantle.party.time.TimePeriod timePeriodId="BOSS_SAL_TP_2026" partyId="ORG_ZIZI_RETAIL" timePeriodTypeId="SalesYear" periodNum="2026"
+            periodName="Ziziwork Retail 2026" fromDate="2026-01-01" thruDate="2026-12-31" isClosed="N"/>
+    <mantle.party.time.TimePeriod timePeriodId="BOSS_SAL_TP_2026Q4" partyId="ORG_ZIZI_RETAIL" timePeriodTypeId="SalesQuarter" periodNum="4"
+            periodName="Ziziwork Retail 2026 Q4" fromDate="2026-10-01" thruDate="2026-12-31" parentPeriodId="BOSS_SAL_TP_2026" isClosed="N"/>
+    <mantle.party.time.TimePeriod timePeriodId="BOSS_SAL_TP_2026_10" partyId="ORG_ZIZI_RETAIL" timePeriodTypeId="SalesMonth" periodNum="10"
+            periodName="Ziziwork Retail 2026-10" fromDate="2026-10-01" thruDate="2026-10-31" parentPeriodId="BOSS_SAL_TP_2026Q4" isClosed="N"/>
+    <mantle.party.time.TimePeriod timePeriodId="BOSS_SAL_TP_2026_11" partyId="ORG_ZIZI_RETAIL" timePeriodTypeId="SalesMonth" periodNum="11"
+            periodName="Ziziwork Retail 2026-11" fromDate="2026-11-01" thruDate="2026-11-30" parentPeriodId="BOSS_SAL_TP_2026Q4" isClosed="N"/>
+    <mantle.party.time.TimePeriod timePeriodId="BOSS_SAL_TP_2026_12" partyId="ORG_ZIZI_RETAIL" timePeriodTypeId="SalesMonth" periodNum="12"
+            periodName="Ziziwork Retail 2026-12" fromDate="2026-12-01" thruDate="2026-12-31" parentPeriodId="BOSS_SAL_TP_2026Q4" isClosed="N"/>
+    <mantle.sales.forecast.SalesForecast salesForecastId="BOSS_SAL_FC_RETAIL_Q4" organizationPartyId="ORG_ZIZI_RETAIL"
+            internalPartyId="ORG_ZIZI_RETAIL" timePeriodId="BOSS_SAL_TP_2026Q4" currencyUomId="USD" quotaAmount="120000"
+            basisEnumId="SfbWonOpportunity"/>
+    <mantle.sales.forecast.SalesForecast salesForecastId="BOSS_SAL_FC_EAST_Q4" parentSalesForecastId="BOSS_SAL_FC_RETAIL_Q4"
+            organizationPartyId="ORG_ZIZI_RETAIL" internalPartyId="BOSS_SAL_TEAM_EAST" timePeriodId="BOSS_SAL_TP_2026Q4" currencyUomId="USD"
+            quotaAmount="50000" basisEnumId="SfbWonOpportunity"/>
+    <mantle.sales.forecast.SalesForecast salesForecastId="BOSS_SAL_FC_REP_Q4" parentSalesForecastId="BOSS_SAL_FC_EAST_Q4"
+            organizationPartyId="ORG_ZIZI_RETAIL" internalPartyId="BOSS_SAL_REP" timePeriodId="BOSS_SAL_TP_2026Q4" currencyUomId="USD"
+            quotaAmount="30000" basisEnumId="SfbWonOpportunity" forecastAmount="24000" bestCaseAmount="40000"
+            forecastDate="2026-11-10 09:00:00" forecastByUserId="BOSS_SAL_REP"/>
+    <mantle.sales.forecast.SalesForecast salesForecastId="BOSS_SAL_FC_REP2_Q4" parentSalesForecastId="BOSS_SAL_FC_RETAIL_Q4"
+            organizationPartyId="ORG_ZIZI_RETAIL" internalPartyId="BOSS_SAL_REP2" timePeriodId="BOSS_SAL_TP_2026Q4" currencyUomId="USD"
+            quotaAmount="40000" basisEnumId="SfbPlacedOrder"/>
+    <!-- ===== end of Sales P18 ===== -->
 </entity-facade-xml>

@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Pipeline › Forecast (design-sales §8 Forecast: ForecastFind, ForecastMetrics, ForecastDeals, SubmitForecast, ForecastDetail;
+    style-guide §3.10 Report; impl-sales P18): one forecast key (organization, whose forecast, period, currency) as of a time, over
+    Mantle's get#Forecast. The calculated measures (quota and its basis, open and weighted pipeline, open and won monthly recurring
+    revenue, the won amount, placed orders and finalized invoices by their own dates) are labelled apart from the entered judgement
+    (the submitted forecast and best case); the deals behind them are listed with whether each counts and why one is left out, and
+    export to CSV. A rep's own key by default; a team manager chooses their teams and members, a holder of SALES_TEAM_VIEW the
+    organization's every key (SalesAccess.js forecastOf). Submit forecast for a holder of SALES_FORECAST_EDIT on their own key, a team
+    they manage or (with SALES_TEAM_VIEW) a team or the organization; the team's members' forecasts below it for its manager's review,
+    never added to it; product and category allocations reconciled to the forecast. Mantle checks every read and write again and
+    names the revision read. Nothing is added across currencies. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Forecast" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="internalPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="salesForecastId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <transition name="storeForecast">
+        <actions>
+            <service-call name="mantle.sales.ForecastServices.store#Forecast" out-map="stored"
+                    in-map="{salesForecastId:(salesForecastId || null), organizationPartyId:(organizationPartyId || null),
+                        internalPartyId:(internalPartyId || null), timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null),
+                        forecastAmount:(forecastAmount ?? null), bestCaseAmount:(bestCaseAmount || null), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="salesForecastId" from="stored.salesForecastId"/>
+                <message type="success">Forecast submitted</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="salesForecastId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeForecastDetail">
+        <actions>
+            <service-call name="mantle.sales.ForecastServices.store#ForecastDetail"
+                    in-map="{salesForecastId:salesForecastId, salesForecastDetailSeqId:(salesForecastDetailSeqId || null),
+                        productId:(productId || null), productCategoryId:(productCategoryId || null), amount:(amount || null),
+                        quantity:(quantity || null), quantityUomId:(quantityUomId || null), remove:(remove == 'Y'),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'Y' ? 'Allocation removed' : 'Allocation saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="salesForecastId"/></default-response>
+        <error-response url="."><parameter name="salesForecastId"/></error-response>
+    </transition>
+    <actions>
+        <set field="can" from="sales.capabilities"/>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || null"/>
+        <set field="loadRefusal" value=""/>
+        <if condition="can.anyRead">
+            <service-call name="mantle.sales.ForecastServices.get#Forecast" out-map="context" transaction="force-new" ignore-error="true"
+                    in-map="{salesForecastId:(salesForecastId || null), organizationPartyId:organizationPartyId, internalPartyId:(internalPartyId || null),
+                        timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null), asOfDate:(asOfDate || null),
+                        pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+            <!-- a refusal other than a missing forecast (too many records to count) is said as Mantle words it -->
+            <set field="loadRefusal" from="ec.message.hasError() &amp;&amp; !ec.message.getErrorsString().includes('RECORD_UNAVAILABLE') ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="forecastFound" from="!!forecastFound"/>
+        <set field="forecast" from="forecast || {}"/>
+        <set field="measureList" from="measures || []"/>
+        <set field="childList" from="children || []"/>
+        <set field="detailList" from="(details || []).map(row =&gt; Object.assign({}, row, {salesForecastId: forecast.salesForecastId, revision: forecast.revision}))"/>
+        <set field="dealList" from="dealList || []"/>
+        <set field="measureText" from="Object.fromEntries(measureList.map(row =&gt; [row.measureKey, row.amountText]))"/>
+        <set field="noPeriod" from="!!noPeriod"/>
+        <set field="detailPath" from="sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+        <set field="targetsPath" from="sharedLinks['Settings/Targets'] || null"/>
+        <set field="findValues" from="{organizationPartyId: forecast.organizationPartyId || organizationPartyId, internalPartyId: forecast.internalPartyId || internalPartyId,
+                timePeriodId: forecast.timePeriodId || timePeriodId, currencyUomId: forecast.currencyUomId || currencyUomId, asOfDate: asOfDate || null}"/>
+        <set field="submitValues" from="{salesForecastId: forecast.salesForecastId, organizationPartyId: forecast.organizationPartyId, internalPartyId: forecast.internalPartyId,
+                timePeriodId: forecast.timePeriodId, currencyUomId: forecast.currencyUomId, forecastAmount: forecast.forecastAmount,
+                bestCaseAmount: forecast.bestCaseAmount, expectedRevision: forecast.revision}"/>
+        <set field="newDetail" from="{salesForecastId: forecast.salesForecastId, expectedRevision: forecast.revision, organizationPartyId: forecast.organizationPartyId}"/>
+        <set field="quotaLine" from="[forecast.forecastPercentText ? 'forecast ' + forecast.forecastPercentText : null,
+                forecast.actualPercentText ? String(forecast.basisText || '').toLowerCase() + ' ' + forecast.actualPercentText : null].filter(Boolean).join(', ')"/>
+        <set field="headlineText" from="forecastFound ? forecast.subjectName + ' · ' + forecast.periodName + ' · ' + forecast.currencyUomId : ''"/>
+    </actions>
+    <widgets>
+        <label text="You do not read forecasts in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
+        <section name="ForecastReport" condition="can.anyRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Forecast" type="h5"/>
+                        <label text="A forecast is an entered judgement; the pipeline beside it is calculated from the deals you see."
+                                type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="SubmitForecastDialog" button-text="Submit forecast" icon="sym_o_send" type="primary" width="560"
+                                title="Submit the forecast for ${headlineText}" condition="forecastFound &amp;&amp; forecast.canSubmit">
+                            <form-single name="SubmitForecast" transition="storeForecast" map="submitValues">
+                                <field name="salesForecastId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="internalPartyId"><default-field><hidden/></default-field></field>
+                                <field name="timePeriodId"><default-field><hidden/></default-field></field>
+                                <field name="currencyUomId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="forecastAmount"><default-field title="Forecast" tooltip="What you expect to close in the period"><text-line size="14" input-type="number"/></default-field></field>
+                                <field name="bestCaseAmount"><default-field title="Best case" tooltip="At least the forecast"><text-line size="14" input-type="number"/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-area rows="2" cols="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Submit forecast"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="forecastAmount"/><field-ref name="bestCaseAmount"/></field-row>
+                                    <field-ref name="reason"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <form-single name="ForecastFind" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="internalPartyId">
+                        <default-field title="Whose forecast">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'forecastSubjects', organizationPartyId:organizationPartyId, selected:internalPartyId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="timePeriodId">
+                        <default-field title="Period">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'salesPeriods', organizationPartyId:organizationPartyId, selected:timePeriodId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate"><default-field title="As of" tooltip="Empty: now"><date-time/></default-field></field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="internalPartyId"/></field-row>
+                        <field-row><field-ref name="timePeriodId"/><field-ref name="currencyUomId"/></field-row>
+                        <field-row><field-ref name="asOfDate"/><field-ref name="submitButton"/></field-row>
+                    </field-layout>
+                </form-single>
+                <section name="ForecastUnavailable" condition="!forecastFound">
+                    <widgets>
+                        <label text="This organization has no sales periods yet. A sales manager adds them under Settings › Targets."
+                                type="p" style="m-muted" condition="noPeriod"/>
+                        <label text="${loadRefusal || 'This forecast is not available to you.'}" type="p" style="text-negative" condition="!noPeriod"/>
+                        <link url="${targetsPath}" url-type="plain" text="Open Targets" link-type="anchor-button"
+                                condition="noPeriod &amp;&amp; targetsPath &amp;&amp; can.teamManage"/>
+                    </widgets>
+                </section>
+                <section name="ForecastFound" condition="forecastFound">
+                    <widgets>
+                        <label text="${headlineText}" type="h6"/>
+                        <label text="${forecast.periodText} · as of ${forecast.asOfText}${forecast.parentName ? ' · rolls up to ' + forecast.parentName : ''}"
+                                type="p" style="text-caption m-muted"/>
+                        <container-box>
+                            <box-header title="Measures"/>
+                            <box-body>
+                                <dashboard min-width="180">
+                                    <number-card title="Quota" value="${measureText.quota}" icon="sym_o_flag" size="sm"/>
+                                    <number-card title="Weighted pipeline" value="${measureText.weighted}" icon="sym_o_balance" size="sm"/>
+                                    <number-card title="Submitted forecast" value="${forecast.forecastText}" icon="sym_o_send" size="sm"/>
+                                    <number-card title="Won amount" value="${measureText.won}" icon="sym_o_emoji_events" size="sm"/>
+                                </dashboard>
+                                <label text="Against the quota: ${quotaLine}" type="p" style="text-caption m-muted q-mt-sm" condition="quotaLine"/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="ForecastMetrics" list="measureList" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Measure"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="countText" align="right"><default-field title="Count"><display/></default-field></field>
+                                    <field name="note"><default-field title="What it is"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="note"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="countText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Deals behind the pipeline"/>
+                            <box-body-nopad>
+                                <form-list name="ForecastDeals" list="dealList" skip-form="true" paginate="true" show-csv-button="true">
+                                    <field name="opportunityName">
+                                        <conditional-field title="Deal" condition="detailPath">
+                                            <link url="${detailPath}" text="${opportunityName}" link-type="anchor" parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                        </conditional-field>
+                                        <default-field title="Deal"><display/></default-field>
+                                    </field>
+                                    <field name="measureText"><default-field title="Measure"><display/></default-field></field>
+                                    <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                                    <field name="probabilityText" align="right"><default-field title="Probability"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="weightedText" align="right"><default-field title="Weighted"><display/></default-field></field>
+                                    <field name="closeText"><default-field title="Close"><display/></default-field></field>
+                                    <field name="includedText">
+                                        <default-field title="Counted">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${included ? (reasonText ? 'warning' : 'positive') : 'grey'}">${includedText}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(includedText ?? "")})}]]></text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonText"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="opportunityName"/><field-ref name="reasonText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="includedText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No deal of this forecast closes in the period." type="p" style="m-muted q-pa-sm" condition="!dealList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="ForecastChildrenBox" condition="childList.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Forecasts below this one"/>
+                                    <box-body-nopad>
+                                        <form-list name="ForecastChildren" list="childList" skip-form="true" paginate="false">
+                                            <field name="subjectName">
+                                                <default-field title="Whose">
+                                                    <link url="." text="${subjectName}" link-type="anchor" parameter-map="{salesForecastId:salesForecastId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quotaText" align="right"><default-field title="Quota"><display/></default-field></field>
+                                            <field name="forecastText" align="right"><default-field title="Their forecast"><display/></default-field></field>
+                                            <field name="bestCaseText" align="right"><default-field title="Best case"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="subjectName"/><field-ref name="quotaText"/></column>
+                                                <column><field-ref name="forecastText"/><field-ref name="bestCaseText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label text="Each forecast is its own judgement; they are not added to this one." type="p" style="text-caption m-muted q-pa-sm"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="ForecastDetailBox" condition="forecast.salesForecastId &amp;&amp; (detailList.length || forecast.canSubmit)">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Allocation by product or category"/>
+                                    <box-toolbar>
+                                        <container-dialog id="AddForecastDetailDialog" button-text="Allocate" icon="sym_o_add" type="default" width="560"
+                                                title="Allocate the forecast" condition="forecast.canSubmit &amp;&amp; forecast.forecastAmount != null">
+                                            <form-single name="AddForecastDetail" transition="storeForecastDetail" map="newDetail">
+                                                <field name="salesForecastId"><default-field><hidden/></default-field></field>
+                                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                <field name="productId">
+                                                    <default-field title="Product" tooltip="A product, or a category below, not both">
+                                                        <drop-down allow-empty="true">
+                                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'products', organizationPartyId:newDetail.organizationPartyId, selected:productId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="productCategoryId">
+                                                    <default-field title="Category">
+                                                        <drop-down allow-empty="true">
+                                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'productCategories', organizationPartyId:newDetail.organizationPartyId, selected:productCategoryId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="amount"><default-field title="Amount"><text-line size="14" input-type="number"/></default-field></field>
+                                                <field name="quantity"><default-field title="Quantity"><text-line size="10" input-type="number"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Save allocation"><submit/></default-field></field>
+                                                <field-layout>
+                                                    <field-row><field-ref name="productId"/><field-ref name="productCategoryId"/></field-row>
+                                                    <field-row><field-ref name="amount"/><field-ref name="quantity"/></field-row>
+                                                    <field-ref name="submitButton"/>
+                                                </field-layout>
+                                            </form-single>
+                                        </container-dialog>
+                                    </box-toolbar>
+                                    <box-body-nopad>
+                                        <form-list name="ForecastDetail" list="detailList" skip-form="true" paginate="false">
+                                            <field name="dimensionText"><default-field title="Product or category"><display/></default-field></field>
+                                            <field name="dimensionKindText"><default-field title="Kind"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="RemoveDetail_${salesForecastDetailSeqId}" button-text="Remove" icon="sym_o_delete" type="default"
+                                                            width="480" title="Remove the allocation to ${dimensionText}" condition="forecast.canSubmit">
+                                                        <form-single name="RemoveForecastDetail" transition="storeForecastDetail"
+                                                                map="{salesForecastId:salesForecastId, salesForecastDetailSeqId:salesForecastDetailSeqId, expectedRevision:revision, remove:'Y'}">
+                                                            <field name="salesForecastId"><default-field><hidden/></default-field></field>
+                                                            <field name="salesForecastDetailSeqId"><default-field><hidden/></default-field></field>
+                                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                            <field name="remove"><default-field><hidden/></default-field></field>
+                                                            <field name="submitButton"><default-field title="Remove"><submit type="danger" confirmation="Remove the allocation to ${dimensionText}?"/></default-field></field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="dimensionText"/><field-ref name="dimensionKindText"/></column>
+                                                <column><field-ref name="amountText"/><field-ref name="actions"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label text="${forecast.allocatedText} of ${forecast.forecastText} allocated." type="p" style="text-caption m-muted q-pa-sm"
+                                                condition="detailList.length"/>
+                                        <label text="Not allocated yet: allocate the forecast to products or categories." type="p" style="m-muted q-pa-sm"
+                                                condition="!detailList.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

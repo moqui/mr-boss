@@ -139,7 +139,7 @@ does not confer unrestricted read access.
 | Group | Permissions and boundary |
 | --- | --- |
 | BOSS_SALES | Root entry and SALES_VIEW for authorized Sales records |
-| BOSS_SALES_REP | SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT; assigned/team opportunities, own/team quotes/orders, permitted organization accounts |
+| BOSS_SALES_REP | SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT, SALES_FORECAST_EDIT (their own forecast only; the user's call, impl-sales P18 and §4); assigned/team opportunities, own/team quotes/orders, permitted organization accounts |
 | BOSS_SALES_MANAGER | SALES_TEAM_VIEW, SALES_TEAM_MANAGE, SALES_FORECAST_EDIT, SALES_REPORT_VIEW, SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT, SALES_CUSTOMER_INVITE and SALES_IMPORT (the opportunity import, §3); all Sales records of permitted organizations |
 | BOSS_SALES_APPROVE | SALES_APPROVE, proposed SALES_ORDER_APPROVE (approve#Order on sales parts of a seller whose approval setting is on, X4) and ORDER_APPROVE (sales parts elsewhere, and Manual holds); decide policy exceptions and own the Awaiting approval queue for permitted records; does not grant credit, purchase or payment hold release or price-list editing |
 | BOSS_SALES_CHANGE | SALES_ORDER_CHANGE and proposed ORDER_CHANGE_HOLD_RELEASE (OhtChange, X4); propose/apply approved commercial changes; approval requires SALES_APPROVE separately (`OrderChangeServices` checks by change kind, §6) |
@@ -1533,6 +1533,26 @@ unassigned amounts appear separately. **Needs:** SAL-FORECAST, SAL-REPORT.
 
 **Source:** research §9; ERPNext salesperson target variance and SalesForecast.
 
+### As built (impl-sales P18, Nov 14, 2026)
+
+F is `mantle.sales.ForecastServices` over `mantle/sales/SalesForecasts.js`: `get#Forecast`, `store#Forecast`, `store#ForecastDetail`,
+`store#Target`, `find#Targets`, `get#TargetAttainment` and `ensure#SalesPeriods` (the design names no service that makes periods:
+a manager adds a calendar year's Sales year, quarters and months from Targets). SalesForecast gains `basisEnumId` (SalesForecastBasis:
+SfbWonOpportunity, SfbPlacedOrder, SfbFinalInvoice), `forecastDate` and `forecastByUserId`, with `quotaAmount`, `bestCaseAmount` and
+the basis audit-logged and the key unique (`SALES_FCST_KEY`); a target is the key's quota and basis, the judgement its forecast and
+best case, both on the one row. The key's internal party is a person who works for the organization, one of its sales teams or the
+organization itself; its period a Sales or Fiscal TimePeriod of the organization. Scope (SalesAccess.js `forecastOf`): a reader sees
+their own key, a team's manager (a current membership as Manager) their teams' and members', `SALES_TEAM_VIEW` the organization's;
+`SALES_FORECAST_EDIT` enters the judgement of one's own key, a team one manages or, with `SALES_TEAM_VIEW`, a team or the
+organization, never another person's; `SALES_TEAM_MANAGE` sets targets. The measures are read, never stored: the deals are those of
+the key's party and its descendant forecasts' parties at the as-of time (a person's owned, a team's on the team or owned by a member,
+the organization's all), each once, of the deals the reader sees; placed sales orders (`placedDate`) and finalized sales invoices
+(`invoiceDate`, through their order) are attributed to the order part's one representative, else its team, else unassigned, and
+templates and recurring bases never count. Forecast is a Pipeline tab (Measures as number cards and a labelled list, Deals behind the
+pipeline with CSV, Forecasts below this one, Allocation by product or category); Targets a Settings tab of the manager and the
+administrator; Target attainment a report (CSV). Not built: the history view of a target's audit rows (the audit log keeps them), an
+FX view, and the category roll-up of allocations (a category's sub-categories are not walked).
+
 ## 9. Settings
 
 ### Settings
@@ -1641,7 +1661,8 @@ Marketing's mount.
 | SalesTargets | list; dialog | Set quotas and hierarchy | organization, representative/team, TimePeriod, currency, basis, quota, parent forecast | scoped period and party choices | F.store#Target | SalesForecast; ERPNext Sales Person |
 
 Past targets retain audit history; changing a target never changes measured actuals. Duplicate
-forecast keys and hierarchy cycles are refused. **Needs:** SAL-FORECAST.
+forecast keys and hierarchy cycles are refused. **Needs:** SAL-FORECAST. As built (impl-sales P18): see §8's as-built; the
+parent is a forecast of the same organization, period and currency, and Add sales periods makes a year's periods.
 
 **Source:** research §9; SalesForecast and ERPNext Sales Person targets.
 

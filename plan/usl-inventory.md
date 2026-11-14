@@ -2437,6 +2437,17 @@ remain historical; these rows add no implementation claim.
 | order/SalesPortalServices | get#CustomerOrder, get#OrderDocument | PASS:Sales/CustomerOrder (OrderSummary, OrderShipments, OrderInvoices) | PASS:Sales/CustomerOrder (getSalesOrder; the confirmation's PDF through getSalesOrderDocument, streamed by the facade) |
 | order/SalesOrderServices | send#OrderConfirmation, build#OrderConfirmationMessage | Sales/Orders/OrderDetail (the storeless confirmation's order link) | the confirmation mail's link to PASS:Sales/CustomerOrder (the SalesOrder kind's OrderView, per recipient and attempt) |
 
+### Added in the Sales build: forecast and targets (P18, Nov 14, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| sales/ForecastServices | get#Forecast | Sales/Pipeline/Forecast (ForecastMetrics, ForecastDeals) | Sales/Pipeline/Forecast (Measures, Deals behind the pipeline with CSV, Forecasts below this one) |
+| sales/ForecastServices | store#Forecast | Sales/Pipeline/Forecast (SubmitForecast) | Sales/Pipeline/Forecast (Submit forecast) |
+| sales/ForecastServices | store#ForecastDetail | Sales/Pipeline/Forecast (ForecastDetail) | Sales/Pipeline/Forecast (Allocate, Remove) |
+| sales/ForecastServices | store#Target, find#Targets | Sales/Settings/Targets (SalesTargets) | Sales/Settings/Targets (New target, Change, the list with CSV) |
+| sales/ForecastServices | ensure#SalesPeriods | — (not in the design) | Sales/Settings/Targets (Add sales periods) |
+| sales/ForecastServices | get#TargetAttainment | Sales/Reports/TargetAttainment (TargetOptions, TargetResults) | Sales/Reports/TargetAttainment (with CSV) |
+
 ## Marketing design — source-verified service additions
 
 This active EventServices definition was verified for the shared calendar mount. Existing section

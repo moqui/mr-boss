@@ -1,6 +1,7 @@
 // Sales settings (impl-sales P2; design-sales §9 Settings, Stages, Teams, LeadSources, TypesAndReasons): the Settings area is the
-// administrator's, a manager keeps Teams alone and a representative none, and Admin's settings index lists Sales' entry for its
-// administrator only; TeamMembers' lookup offers the people who work for the manager's organization and nothing of another's;
+// administrator's, a manager keeps Teams and Targets (P18) and a representative none, and Admin's settings index lists Sales'
+// entry for its administrator only; TeamMembers' lookup offers the people who work for the manager's organization and nothing
+// of another's;
 // Stages' one qvt render (the shared and West's pipelines, a pipeline's stages with their open deals) and Teams' one html render
 // (a team's dated members, the ended one among them). The setup rules themselves (retiring a stage in use, memberships ended, a
 // source offered to one organization, the refusals) are Mantle's SalesPipelineSetup. The usable-when walk is the acceptance
@@ -17,7 +18,7 @@ feature("Settings is the administrator's, Teams also a manager's; Admin's index 
         const tabs = user => shell(user, true, "Settings/Teams", "Settings").names
         if (JSON.stringify(tabs(users.admin)) !== JSON.stringify(ids.settingsMenu))
             problems.push(`the administrator's Settings tabs: ${tabs(users.admin)}`)
-        if (JSON.stringify(tabs(users.manager)) !== '["Teams"]')
+        if (JSON.stringify(tabs(users.manager)) !== JSON.stringify(ids.managerSettingsMenu))
             problems.push(`the manager's Settings tabs: ${tabs(users.manager)}`)
         const managerStages = screenRefusal(users.manager, "Settings/Stages", {organizationPartyId: ids.organizationId})
         if (!unauthorized(managerStages)) problems.push(`the manager opens Stages: ${managerStages || "opened"}`)
