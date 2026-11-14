@@ -1,3 +1,6 @@
+Nov 14, 2026 — gate 2 built: P7–P13 (stage S2), quote to order with public acceptance on PASS, each phase reviewed by a fresh agent
+and merged on its focused specs, beside Marketing P1–P6. The user's calls of the build are in §4. Next: stage S3 (P14 beside P15, P16,
+P17, P18, P19, P20).
 Nov 13, 2026 — gate 1 built: P1–P6 (stage S1), a working CRM, each phase reviewed by a fresh agent and merged on its focused
 specs, with follow-up 1 (a new record's organization defaults to the user's own across the apps, F111) and the basic-comms
 Mail actions slot (P5). The user's calls of the build are in §4 (Nov 13). Next: Marketing's track starts beside Sales (P7 on).
@@ -338,7 +341,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | built and reviewed Nov 14, merged |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | built and reviewed Nov 14, merged |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | built and reviewed Nov 14, merged |
-| P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | — |
+| P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | built and reviewed Nov 14, merged |
 | P14 Commercial changes and handoffs | Mantle, BOSS | OrderChanges, OrderChangeDetail, ShipmentDetail, InvoiceDetail | — |
 | P15 Agreements and customer prices | Mantle, BOSS | Agreements, AgreementDetail, CustomerPrices, PriceLists, PriceListDetail | — |
 | P16 Recurring orders and subscriptions | Mantle, BOSS | RecurringOrders, Subscriptions | — |
@@ -3588,7 +3591,7 @@ mr-moqui unchanged, no Rust built.
   Sales quotes" table; ss-inventory has no row naming a PASS Sales path.
 - Design edits: design-sales §10 "As built (impl-sales P13)"; design-crosscut's PASS Sales row (built) and CX-CUSTOMER-ACCOUNT
   (a quote link only from `send#Quote`).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F223 to F234 in order:
   - the PASS operations are camelCase (`findSalesQuotes` …), and the reads GET routes with the token in the authority's query, as
     Support's; design §10.1 names them `sales.*`;
   - the issued PDF carries the quote's page for a signed-in contact and its QR, not a bearer link; a forwarded PDF opens nothing,
@@ -3699,7 +3702,7 @@ merge) against P13, §2, §4, design §10 and §12.1, X6, F17, F18, F36 and F48,
     accepted nameless). The name is required now (ACCEPTOR_REQUIRED); SalesPortal checks it (the unfixed code placed the order).
   - R4 (low, spec coverage): nothing checked that `create#AccessCapability` refuses the quote scopes; SalesPortal checks it for a quote
     sender (SCOPE_INVALID).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F235 to F239 in order:
   - a quote link's token is in the sent mail's stored body (the rep's own send saves a draft; the ledger's `send#EmailTemplate` keeps
     the message), so a reader of the organization's sent mail can open the link and, below the threshold, accept or decline as the
     customer (the response records the capability); Billing's and Support's links are kept the same way;
@@ -4078,6 +4081,7 @@ the owner's design.
 | Nov 13, 2026 | A lifecycle transfer of a leaving rep's deals keeps each deal's team, as a manager's owner change does; a manager sets the team afterwards | The lead's call, as P6's review recommended: changing the team would widen or narrow who sees the deal without a Sales decision |
 | Nov 14, 2026 | With the seller's approval setting on and no order rule matching, the order's owner, enterer or placer who holds `SALES_ORDER_APPROVE` may approve it: the setting forces a manual approval, and separation applies per order rule | The user's call (P11's review) |
 | Nov 14, 2026 | An order approver keeps read-only sight of an order on which they recorded a decision, after it is approved; not of the organization's other approved orders. Built in P12 | The user's call (P11's review) |
+| Nov 14, 2026 | A quote link's token stays in the stored body of the sent mail, as Billing's and Support's links do; a cross-app redaction of stored links is later (§7) | The user's call (P13's review) |
 | Nov 14, 2026 | `approve#SalesOrder` records a decision on every approval, rule or not: with no order rule left to decide it records one OrderDecision of purpose `SapOrder` with no rule, so an approver keeps sight of every order they approved. Built in P12's review | The user's call (the P12 Built note's second finding); no requirement reads an order decision with no policy |
 | Nov 13, 2026 | `BOSS_SALES_ADMIN`'s grants stay as P1 built them: `SALES_CONFIGURE` with the views and edits of the manager and the agreement keeper (`SALES_IMPORT` and `SALES_CUSTOMER_INVITE` among them), and no `SALES_ORDER_APPROVE`, `SALES_APPROVE`, `SALES_ORDER_CHANGE`, `ORDER_APPROVE`, `ORDER_CHANGE_HOLD_RELEASE` or `SALES_OWNER_CHANGE` (P1) | The user's call (the P1 Built note's first finding); unlike Maintenance's administrator, who holds every app permission. A later phase grants the administrator only the views and edits it builds, never an approval |
 | Nov 13, 2026 | `SALES_ALL_ORGANIZATIONS`, seeded in Mantle and granted to `ADMIN`, and in BOSS to `BOSS_SALES_ADMIN` alone (in its bundle): SalesAccess's organizations are every internal organization for a holder, as a system administrator's; it reads nothing by itself (P1 review) | The user's call (the P1 Built note's second finding), as People's `PEOPLE_ALL_ORGANIZATIONS` and Maintenance's `MAINTENANCE_ALL_ORGANIZATIONS` (impl-maintenance P1 review R3); the administrator's root keeps `MANTLE_ACTIVE_ORG`, so its entity reads and its services now agree |
@@ -4337,6 +4341,23 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F220 | P12 (Review Nov 14): the palette has no Sales link for a template (it falls through to no app); QuoteTemplateDetail is reached from Quote templates | P12: as its Review note says |
 | F221 | P12 (Review Nov 14): `decidedBy` counts any decision of the caller, a SapQuote decision on the quote before it became the order included, as the Nov 14 row reads ("a decision on it"); a quote approver who also approves orders keeps read-only sight of that order | P12: as its Review note says |
 | F222 | P12 (Review Nov 14): the Built note's other findings stand as written (no per-template terms text, no category filter, the unpriced line at 0 on the detail, Quote templates shown to every reader) | P12: as its Review note says |
+| F223 | P13 (Built Nov 14): the PASS operations are camelCase (`findSalesQuotes` …), and the reads GET routes with the token in the authority's query, as Support's; design §10.1 names them `sales.*` | P13: as its Built note says |
+| F224 | P13 (Built Nov 14): the issued PDF carries the quote's page for a signed-in contact and its QR, not a bearer link; a forwarded PDF opens nothing, and a customer with no invitation reaches the quote only by the mailed link; quotes issued before P13 carry neither | P13: as its Built note says |
+| F225 | P13 (Built Nov 14): a link is made for each mail attempt; a retried delivery's earlier link stays valid until the validity ends or the quote is revised or withdrawn (it was never delivered) | P13: as its Built note says |
+| F226 | P13 (Built Nov 14): a link ends with the quote's validity, so after an acceptance its receipt is readable by the link only until then; a contact signs in afterwards | P13: as its Built note says |
+| F227 | P13 (Built Nov 14): above the threshold the customer's own verified account (a person customer, the self relationship) accepts signed in, as an invited contact does; design §10 names only the invited contact | P13: as its Built note says |
+| F228 | P13 (Built Nov 14): a contact invited to Sales sees every issued quote of its customer at that organization (no per-contact narrowing, as Support's customer administrator has); `invite#Contact` takes no administrator flag for `sales` | P13: as its Built note says |
+| F229 | P13 (Built Nov 14): nothing tells the quote's owner of a customer's online acceptance or decline (the order is placed and listed; the response shows on OrderDetail) | P13: as its Built note says |
+| F230 | P13 (Built Nov 14): the Account hub's card shows only for an account acting for a customer of the organization (Support's always shows) | P13: as its Built note says |
+| F231 | P13 (Built Nov 14): Invite to Sales on Customer360's header says why it is not offered to an inviter (no published PASS Sales site, not a customer account, no address); the demo has no Sales site, so every inviter sees the reason | P13: as its Built note says |
+| F232 | P13 (Built Nov 14): SalesDefaults' dialog did not show P10's PO requirement and reminder days (their fields were in no row of its layout); fixed | P13: as its Built note says |
+| F233 | P13 (Built Nov 14): a customer's response runs below the portal's checks with artifact authorization disabled, as Support's; place#Order and P11's net-terms approval run with no user (the response's `recordedByUserId` empty), and the storeless confirmation still follows | P13: as its Built note says |
+| F234 | P13 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name PASS Sales; P13 had no mr-moqui worktree (the text below) | P13: as its Built note says |
+| F235 | P13 (Review Nov 14): a quote link's token is in the sent mail's stored body (the rep's own send saves a draft; the ledger's `send#EmailTemplate` keeps the message), so a reader of the organization's sent mail can open the link and, below the threshold, accept or decline as the customer (the response records the capability); Billing's and Support's links are kept the same way | P13: as its Review note says |
+| F236 | P13 (Review Nov 14): once answered, a link and a contact read the quote's lines and totals from the order as it is now (`offerOf(order)`), so a later commercial change of the placed order (P14) would show as the quote; the PDF stays the issued offer. For P14 or P17 to read the issue's own lines or show the order instead | P13: as its Review note says |
+| F237 | P13 (Review Nov 14): a refusal from below the checks that is not a listed code (`place#Order`, P11's net-terms approval) reaches the page with its text when the authority's internal-text filter passes it | P13: as its Review note says |
+| F238 | P13 (Review Nov 14): `invite#Contact` for `sales` (not remote) takes any address and any Customer of the organization; only invite#SalesContact narrows it to an account of the scope and the contact's own address. Only BOSS's template calls it for `sales` today | P13: as its Review note says |
+| F239 | P13 (Review Nov 14): the Built note's findings stand; the two user's calls are recorded in §4 (Nov 14) and design §10 | P13: as its Review note says |
 
 ## 7. Later
 
