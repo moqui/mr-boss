@@ -335,7 +335,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Quote drafts, pricing and storeless tax | Mantle, BOSS | Quotes, OrderDetail (quote), Product360, InventoryAvailability, PriceExplain | built and reviewed Nov 13, merged |
 | P8 Requests for quote | Mantle, BOSS | QuoteRequests, QuoteRequestDetail | built and reviewed Nov 13, merged |
 | P9 Sales defaults, approval policies and approvals | Mantle, BOSS | SalesDefaults, ApprovalPolicies, Approvals | built and reviewed Nov 13, merged |
-| P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | — |
+| P10 Issue, send and the customer's response | Mantle, BOSS | OrderDetail's Issues and responses; QuoteBatch | built and reviewed Nov 14, merged |
 | P11 Orders, approval and the storeless confirmation | Mantle, BOSS | Orders, OrderDetail (order) | — |
 | P12 Quote templates | Mantle, BOSS | QuoteTemplates, QuoteTemplateDetail | — |
 | P13 PASS Sales: quotes | Mantle, PASS, BOSS | PASS CustomerQuotes, CustomerQuote, QuoteResponse; Invite to Sales | — |
@@ -2770,7 +2770,7 @@ mr-moqui unchanged, no Rust built.
   ss-inventory's OrderDetail SendPlacedEmailForm, EmailMessageList and CloseOrderPartItems rows (Sales P10).
 - Design edits: design-sales §5 "As built (impl-sales P10)"; design-crosscut's X2 row (the assignment and reference kinds, owner
   contract with Customer Service's proposals and Purchasing's revisions, which pass unchanged).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F183 to F191 in order:
   - F166 decided as built: an owner or team reassignment and the customer's reference or new-customer mark alone are not commercial
     changes under the seller's commercial revision; the contact, addresses, terms, lines and validity still are;
   - the rep's own send goes from the send dialog straight through their mail account (no Compose window, so the message's text is
@@ -2852,7 +2852,7 @@ against P10, §2, §4, design §5, §13.2 and §16, F9, F16, F70, F151, F166 and
   - R4 (low, failure tolerance): the reminder job queued every issue in its own try but one transaction, so a failing service call
     could roll back all the reminders (and its attempts, in transactions of their own, could not see the queued rows); each issue now
     queues in a transaction of its own. The new feature checks no reminder without the organization's days and one with them.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F192 to F196 in order:
   - an acceptance's evidence mail (`evidenceEmailMessageId`) is any existing EmailMessage, not one filed on the quote (no screen or
     tool passes it today; the Built note's finding stands);
   - the reminder job reads the oldest 500 unended unexpired issues, and an accepted issue stays unended until it expires, so with
@@ -3573,6 +3573,20 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F180 | P8 (Review Nov 13): Message-ID dedupe is instance-wide, as P5's leads (F122): a mail carrying another's Message-ID makes no RFQ, and a rule on another organization's mailbox answers the first organization's request; a decline goes to the message's Reply-To, as forgeable as its From, shown in the preview | P8: as its Review note says |
 | F181 | P8 (Review Nov 13): with no default team in the organization's SalesPolicy a chargeable decision tells nobody (the list still shows it) | P8: as its Review note says |
 | F182 | P8 (Review Nov 13): update#QuoteRequest given a new customer alone ends the contact row | P8: as its Review note says |
+| F183 | P10 (Built Nov 14): F166 decided as built: an owner or team reassignment and the customer's reference or new-customer mark alone are not commercial changes under the seller's commercial revision; the contact, addresses, terms, lines and validity still are | P10: as its Built note says |
+| F184 | P10 (Built Nov 14): the rep's own send goes from the send dialog straight through their mail account (no Compose window, so the message's text is the dialog's message and the organization's cover); a send by anyone else, or a batch, is the organization's on the ledger | P10: as its Built note says |
+| F185 | P10 (Built Nov 14): recipients are the customer and its current contacts, employees and representatives, by party; one delivery an issue and party | P10: as its Built note says |
+| F186 | P10 (Built Nov 14): the quote PDF has no QR or customer link until P13's PASS link (Mantle names no staff route) | P10: as its Built note says |
+| F187 | P10 (Built Nov 14): a credit-held acceptance (design scenario 7) has no regression: a hold comes only from an automatic approval on a covering payment, which a net-terms acceptance never has; respond#Quote reports held from the order's holds, and P11's approval path is where its spec belongs | P10: as its Built note says |
+| F188 | P10 (Built Nov 14): Quotes' "Responded" saved list and QuoteList's "last send/response" columns (design §5) are not built: an accepted quote is placed and a declined one is cancelled; the issues show on OrderDetail | P10: as its Built note says |
+| F189 | P10 (Built Nov 14): the quote and reminder templates and the stored text locations are set through store#SalesPolicy, not on SalesDefaults (the text has no editor yet; F156 continues for them) | P10: as its Built note says |
+| F190 | P10 (Built Nov 14): an acceptance's evidence mail (`evidenceEmailMessageId`) is checked to exist, not to be filed on the quote; the dialog offers the quote's files only | P10: as its Built note says |
+| F191 | P10 (Built Nov 14): `docs/security/Attack-Surface.md` (mr-moqui) does not name the issue verbs; P10 had no mr-moqui worktree | P10: as its Built note says |
+| F192 | P10 (Review Nov 14): an acceptance's evidence mail (`evidenceEmailMessageId`) is any existing EmailMessage, not one filed on the quote (no screen or tool passes it today; the Built note's finding stands) | P10: as its Review note says |
+| F193 | P10 (Review Nov 14): the reminder job reads the oldest 500 unended unexpired issues, and an accepted issue stays unended until it expires, so with many open issues newer ones wait | P10: as its Review note says |
+| F194 | P10 (Review Nov 14): `applyQuoteBatch` makes its operation key on the server, so a double submit of the batch is two batches (the ledger and the states keep it from sending twice: a sent recipient is skipped, a withdrawn quote refused) | P10: as its Review note says |
+| F195 | P10 (Review Nov 14): Marketing P3's suppression at the attempt reads the organization from the delivery's store; a quote or reminder delivery has none, so only blocks of every organization apply to it, not the selling organization's own | P10: as its Review note says |
+| F196 | P10 (Review Nov 14): the Built note's findings stand | P10: as its Review note says |
 
 ## 7. Later
 
