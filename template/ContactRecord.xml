@@ -879,10 +879,19 @@ along with this software (see the LICENSE.md file). If not, see
                         <set field="consentPartyId" from="recordPartyId"/>
                         <set field="consentFull" from="false"/>
                         <set field="consentPageUrl" from="'/qapps/Comms/Consent/Contact?partyId=' + encodeURIComponent(recordPartyId)"/>
+                        <!-- impl-marketing P3 (F67, owner contract): a Marketing consent editor who is no contact admin goes to Marketing's
+                            Consent mount, which answers for their organizations' lists -->
+                        <set field="marketingConsentUrl" from="!isConsentAdmin &amp;&amp; ec.user.hasPermission('MARKETING_CONSENT_EDIT') &amp;&amp; ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')
+                                ? '/qapps/Marketing/Audiences/Consent/Contact?partyId=' + encodeURIComponent(recordPartyId) : null"/>
                     </actions><widgets>
                         <section name="ConsentTabLink" condition="isConsentAdmin"><widgets>
                             <container style="row justify-end q-mb-sm">
                                 <render-mode><text type="qvt"><![CDATA[<m-link href="${consentPageUrl}"><q-btn unelevated no-caps dense class="m-btn-tonal" icon="sym_o_history" label="${ec.l10n.localize('History and export in Comms Consent')}"></q-btn></m-link>]]></text></render-mode>
+                            </container>
+                        </widgets></section>
+                        <section name="ConsentTabMarketingLink" condition="marketingConsentUrl"><widgets>
+                            <container style="row justify-end q-mb-sm">
+                                <render-mode><text type="qvt"><![CDATA[<m-link href="${marketingConsentUrl}"><q-btn unelevated no-caps dense class="m-btn-tonal" icon="sym_o_history" label="${ec.l10n.localize('History in Marketing Consent')}"></q-btn></m-link>]]></text></render-mode>
                             </container>
                         </widgets></section>
                         <section-include name="ConsentRecordSection" location="component://mr-boss/template/ConsentRecord.xml"/>

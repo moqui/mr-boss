@@ -7,17 +7,31 @@ const ids = {
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's
     staffMenu: ["Home", "Campaigns"],
-    adminMenu: ["Home", "Campaigns", "Settings"],
+    // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
+    audienceMenu: ["Home", "Campaigns", "Audiences"],
+    adminMenu: ["Home", "Campaigns", "Audiences", "Settings"],
+    systemMenu: ["Home", "Campaigns", "Audiences", "Leads", "Settings"],
+    audiencesMenu: ["Lists", "Consent", "Suppressions"],
     settingsMenu: ["Index", "Adoption", "CampaignDefaults", "Vocabularies"],
     // Campaigns' tabs: Approvals the approvers'
     campaignsMenu: ["Campaigns"],
     approverCampaignsMenu: ["Campaigns", "Approvals"],
+    // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
     plannedCampaignId: "BOSS_MKT_CMP_HOLIDAY",
-    servicesCampaignId: "BOSS_MKT_CMP_SERVICES"
+    servicesCampaignId: "BOSS_MKT_CMP_SERVICES",
+    // P3's demo lists, members and suppressions: Retail's garden newsletter (Maya accepted, Noah pending, Olive unsubscribed and
+    // suppressed by her complaint, Pete a legacy member), its announcements and single-use VIP list; Sales' Wingtip Traders with its
+    // contact Dana Morales
+    gardenListId: "BOSS_MKT_LIST_GARDEN",
+    vipListId: "BOSS_MKT_LIST_VIP",
+    pendingPartyId: "BOSS_MKT_CON_NOAH",
+    acceptedPartyId: "BOSS_MKT_CON_MAYA",
+    salesAccountId: "BOSS_SAL_ACC_WINGTIP",
+    salesContactId: "BOSS_SAL_CON_DANA"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's
@@ -32,6 +46,9 @@ const users = {
     reader: "marketing.reader",
     admin: "marketing.admin",
     otherAuthor: "marketing.author2",
+    // P3: a Retail salesperson who manages audiences too, and a salesperson who does not
+    salesAudience: "marketing.sales",
+    salesRep: "sales.rep",
     client: "sheldon.acme",
     pass: "dana@joesdist.example.com",
     otherApp: "customerservice.read",

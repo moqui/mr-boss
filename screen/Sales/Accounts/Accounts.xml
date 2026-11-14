@@ -35,6 +35,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageIndex"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <transition-include name="createAccount" location="component://mr-boss/template/SalesAccounts.xml"/>
+    <!-- impl-marketing P3 (owner contract, F64, F65): Marketing's bulk "Add to list (evidenced)" and its list choices -->
+    <transition-include name="addToList" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="audienceListChoices" location="component://mr-boss/template/MarketingAudiences.xml"/>
     <actions>
         <set field="can" from="sales.capabilities"/>
         <if condition="can.anyRead">
@@ -47,6 +50,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="customer360Path" from="sharedLinks['Accounts/Customer360'] || null"/>
         <set field="filtered" from="!!(text || organizationPartyId || roleTypeId || partyTypeEnumId || managerPartyId || mine || parentAccountPartyId)"/>
         <set field="newAccountDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, roleTypeId: 'Customer'}"/>
+        <!-- impl-marketing P3: AccountList's row selection, for Marketing's bulk action alone (a holder of MARKETING_AUDIENCE_EDIT) -->
+        <set field="canRequestSubscriptions" from="!!ec.user.hasPermission('MARKETING_AUDIENCE_EDIT')"/>
     </actions>
     <widgets>
         <label text="You do not read accounts in Sales." type="p" style="m-muted" condition="!can.anyRead"/>
@@ -71,6 +76,37 @@ along with this software (see the LICENSE.md file). If not, see
                 </container>
                 <form-list name="AccountList" list="accountList" skip-form="true" paginate="true" header-dialog="true"
                         select-columns="true">
+                    <!-- impl-marketing P3: Marketing's bulk action (owner contract, F65) -->
+                    <row-selection id-field="partyId" parameter="selectedPartyIds" list-mode="true" condition="canRequestSubscriptions">
+                        <action>
+                            <dialog button-text="Add to list (evidenced)" button-icon="sym_o_playlist_add" title="Add the selected accounts' contacts to a list"/>
+                            <form-single name="AccountAddToList" transition="addToList">
+                                <field name="addToListId">
+                                    <default-field title="List">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="audienceListChoices" server-search="true" min-length="0"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sourceEnumId">
+                                    <default-field title="Evidence source">
+                                        <drop-down no-current-selected-key="PcsStaff">
+                                            <option key="PcsStaff" text="Staff"/>
+                                            <option key="PcsForm" text="Form"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="evidenceText">
+                                    <default-field title="Evidence" tooltip="What each contact asked for, and where"><text-area rows="2" cols="50"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Add to list">
+                                        <submit icon="sym_o_playlist_add" confirmation="File a subscription request for each contact of the selected accounts? Each waits for the person's confirmation."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
                     <field name="text">
                         <header-field title="Name or id">
                             <text-line size="20"/>

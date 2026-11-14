@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Audiences area of IronStone Marketing (design-marketing §4, §1.2; impl-marketing P3): Lists (the organizations' lists, New
+    list), Consent (Comms' Consent screens mounted by location, with Marketing's organizations and MARKETING_CONSENT_EDIT: their
+    services answer a Marketing consent editor for the lists and scoped consents of their organizations, F50) and Suppressions
+    (Comms' shared screen, Marketing's mount, F16), in the menu; ListDetail and MemberDetail hidden. For the audience managers and the
+    administrator (BOSS_MKT_AUDIENCES denies the root user group; the root's menu shows it to a holder of MARKETING_AUDIENCE_VIEW);
+    every read and write is Mantle's guarded audience, consent or suppression service. Segments, AudienceImport and AudienceMerge
+    join with P4 and P5. Comms' Consent keeps its own subscreen names (Consent and Consent/Contact), so its relative links hold. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Audiences" default-menu-index="3" menu-image="sym_o_groups" menu-image-type="icon">
+    <subscreens default-item="Lists" always-use-full-path="true">
+        <subscreens-item name="Consent" location="component://mr-boss/screen/Comms/Consent.xml" menu-index="3"/>
+        <subscreens-item name="Suppressions" location="component://mr-boss/screen/Shared/Suppressions.xml" menu-index="4"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingAudiencesPanel" type="tab"/>
+    </widgets>
+</screen>

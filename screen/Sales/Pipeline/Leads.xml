@@ -43,6 +43,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="createOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>
     <transition-include name="qualifyLead" location="component://mr-boss/template/SalesOpportunities.xml"/>
     <transition-include name="applyBatch" location="component://mr-boss/template/SalesOpportunities.xml"/>
+    <!-- impl-marketing P3 (owner contract, F65): Marketing's bulk "Add to list (evidenced)" and its list choices -->
+    <transition-include name="addToList" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition-include name="audienceListChoices" location="component://mr-boss/template/MarketingAudiences.xml"/>
     <actions>
         <set field="can" from="sales.capabilities"/>
         <set field="statusFilter" from="statusId == 'all' ? null : (statusId || 'SalesOppOpen')"/>
@@ -64,6 +67,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the links of the mounting root (Sales', or Marketing's, which mounts no OpportunityDetail) -->
         <set field="detailPath" from="sales.sharedLinks['Pipeline/OpportunityDetail'] || null"/>
         <set field="canEdit" from="!!can.opportunityEdit"/>
+        <!-- impl-marketing P3: the bulk "Add to list (evidenced)" shown to a holder of MARKETING_AUDIENCE_EDIT (Mantle's request#Subscriptions
+            checks it, the list's organization and each lead under the caller's Sales read) -->
+        <set field="canRequestSubscriptions" from="!!ec.user.hasPermission('MARKETING_AUDIENCE_EDIT')"/>
         <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || (statusId &amp;&amp; statusId != 'SalesOppOpen')
                 || dataSourceId || marketingCampaignId)"/>
         <set field="emptyText" from="filtered ? 'No lead matches these filters.' : 'No open leads' + (canEdit ? ' · Capture one with New lead.' : '.')"/>
@@ -92,8 +98,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="LeadList" list="leadList" skip-form="true" paginate="true" header-dialog="true"
                                 saved-finds="true" select-columns="true" show-csv-button="true" show-xlsx-button="true">
-                            <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="canEdit">
-                                <action>
+                            <row-selection id-field="selectionKey" parameter="selectedKeys" list-mode="true" condition="canEdit || canRequestSubscriptions">
+                                <action condition="canEdit">
                                     <form-single name="LeadAssign" transition="applyBatch">
                                         <field name="batch" from="'assign'"><default-field><hidden/></default-field></field>
                                         <field name="ownerPartyId">
@@ -111,7 +117,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </field>
                                     </form-single>
                                 </action>
-                                <action>
+                                <action condition="canEdit">
                                     <form-single name="LeadDisqualify" transition="applyBatch">
                                         <field name="batch" from="'lose'"><default-field><hidden/></default-field></field>
                                         <field name="lostReasonEnumId">
@@ -126,6 +132,35 @@ along with this software (see the LICENSE.md file). If not, see
                                             <default-field title="Disqualify">
                                                 <submit icon="sym_o_block" type="danger"
                                                         confirmation="Disqualify the selected leads? Each is closed as lost with the reason, on its own."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                                <!-- impl-marketing P3: Marketing's bulk action (owner contract, F65) -->
+                                <action condition="canRequestSubscriptions">
+                                    <dialog button-text="Add to list (evidenced)" button-icon="sym_o_playlist_add" title="Add the selected leads' contacts to a list"/>
+                                    <form-single name="LeadAddToList" transition="addToList">
+                                        <field name="addToListId">
+                                            <default-field title="List">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="audienceListChoices" server-search="true" min-length="0"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="sourceEnumId">
+                                            <default-field title="Evidence source">
+                                                <drop-down no-current-selected-key="PcsStaff">
+                                                    <option key="PcsStaff" text="Staff"/>
+                                                    <option key="PcsForm" text="Form"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="evidenceText">
+                                            <default-field title="Evidence" tooltip="What each contact asked for, and where"><text-area rows="2" cols="50"/></default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Add to list">
+                                                <submit icon="sym_o_playlist_add" confirmation="File a subscription request for each contact of the selected leads? Each waits for the person's confirmation."/>
                                             </default-field>
                                         </field>
                                     </form-single>

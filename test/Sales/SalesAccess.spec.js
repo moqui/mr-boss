@@ -430,7 +430,7 @@ feature(
 )
 
 // P4 (design §1.1, §3): a deal is its owner's and its team's, the organization's for a manager, never another organization's; its
-// notes and files under Sales follow it; Marketing's root mounts Leads and LeadSources alone
+// notes and files under Sales follow it; Marketing's root mounts Leads, Accounts (impl-marketing P3) and LeadSources alone
 feature(
     "a deal is the rep's and their team's, the organization's for a manager, refused another's; Marketing's root mounts Leads",
     {
@@ -465,8 +465,11 @@ feature(
             // a second root's context: Marketing's links are the Sales screens it mounts, under its own root
             const marketing = asUser(users.rep, () => invoke(context, {appRoot: "Marketing"}))
             if (
-                JSON.stringify(Object.keys(marketing.sharedLinks || {}).sort()) !== '["Pipeline/Leads","Settings/LeadSources"]' ||
-                marketing.sharedLinks["Pipeline/Leads"] !== "//Marketing/Leads"
+                JSON.stringify(Object.keys(marketing.sharedLinks || {}).sort()) !==
+                    '["Accounts/Accounts","Pipeline/Leads","Settings/LeadSources"]' ||
+                marketing.sharedLinks["Pipeline/Leads"] !== "//Marketing/Leads" ||
+                // impl-marketing P3: Accounts at Marketing/Leads/Accounts, for its bulk action
+                marketing.sharedLinks["Accounts/Accounts"] !== "//Marketing/Leads/Accounts"
             )
                 problems.push(`Marketing's links: ${JSON.stringify(marketing.sharedLinks)}`)
             const pipelineMenu = shell(users.rep, true, "Pipeline/Opportunities", "Pipeline").names

@@ -51,7 +51,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the places of the route keys a row names: Marketing's own screens -->
         <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index'],
                 marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: sharedLinks['Campaigns/Approvals'],
-                marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults']}"/>
+                marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults'],
+                marketingLists: sharedLinks['Audiences/Lists']}"/>
         <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
         <set field="stateText" from="{available: 'Available', notAvailable: 'Not available', failed: 'Could not be read'}"/>
         <set field="cardRows" from="Array.from(homeFound?.cards || []).map(card =&gt; Object.assign({}, card, {

@@ -838,10 +838,10 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | ContactListServices | get#ContactListAccess | PASS: Forum/Categories/CategoryDetail; PASS: Forum/Topics/TopicDetail | Comms/Inbox/Compose; Comms/Inbox/Mail |
-| ContactListServices | create#ContactList | PASS: Forum/Settings/Categories; Marketing/Audiences/Lists; Marketing/QuickCreate | Comms/Inbox/Mail |
-| ContactListServices | update#ContactList | PASS: Forum/Settings/Categories; Marketing/Audiences/Lists/ListDetail | Comms/Inbox/Mail |
-| ContactListServices | find#ContactLists | Marketing/Audiences/Lists | Comms; Comms/Inbox/Compose; Comms/Inbox/Mail |
-| ContactListServices | find#ContactListParties | Marketing/Audiences/Lists/ListDetail | Comms/Inbox/Mail |
+| ContactListServices | create#ContactList | PASS: Forum/Settings/Categories; Marketing/Audiences/Lists; Marketing/QuickCreate | Comms/Inbox/Mail; Marketing/Audiences/Lists and Marketing/QuickCreate/NewList (through mantle.marketing.AudienceServices.create#List; no member for a list that is not a mailbox) (Marketing P3) |
+| ContactListServices | update#ContactList | PASS: Forum/Settings/Categories; Marketing/Audiences/Lists/ListDetail | Comms/Inbox/Mail; — Marketing/Audiences/ListDetail writes through mantle.marketing.AudienceServices.store#List and archive#List (Marketing P3) |
+| ContactListServices | find#ContactLists | Marketing/Audiences/Lists | Comms; Comms/Inbox/Compose; Comms/Inbox/Mail; — Marketing/Audiences/Lists reads mantle.marketing.AudienceServices.find#Lists (Marketing P3) |
+| ContactListServices | find#ContactListParties | Marketing/Audiences/Lists/ListDetail | Comms/Inbox/Mail; — Marketing/Audiences/ListDetail reads mantle.marketing.AudienceServices.find#Members (Marketing P3) |
 | ContactListServices | join#ContactList | PASS: Forum/Categories/CategoryDetail | Comms/Inbox/Mail |
 | ContactListServices | leave#ContactList | PASS: Forum/Categories/CategoryDetail | Comms/Inbox/Mail |
 | ContactListServices | add#ContactListParty | PASS: Forum/Settings/Members | Comms/Inbox/Mail |
@@ -861,6 +861,19 @@ Added in Marketing P2 (Nov 13, 2026; `mantle.marketing.CampaignServices`, impl-m
 | marketing/CampaignServices | find#, store#Vocabulary | Marketing/Settings/Vocabularies | Marketing/Settings/Vocabularies (Marketing P2) |
 | marketing/CampaignServices | check#CampaignAccess, create#CampaignAsset | Marketing/Chatter; Marketing/RecordFiles (the campaign host, design §14.3) | Marketing/Campaigns/CampaignDetail (Activity and Files: get#RecordLinkInfo's campaign rule, RecordFiles' get#ContentType) (Marketing P2) |
 | marketing/CampaignServices | find#OwnedCampaignRoles, transfer#CampaignRole | Admin lifecycle (design-admin §14) | Admin's lifecycle registry (marketing.campaigns) (Marketing P2) |
+
+Added in Marketing P3 (Nov 14, 2026; `mantle.marketing.AudienceServices` and Comms' suppressions in `mantle.party.MessageServices`,
+impl-marketing P3), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/AudienceServices | find#Lists, create#List | Marketing/Audiences/Lists (ListFind, ContactLists, NewList); Marketing/QuickCreate (QuickList) | Marketing/Audiences/Lists; Marketing/QuickCreate/NewList (Marketing P3) |
+| marketing/AudienceServices | get#List, store#List, archive#List, store#SubscriptionPolicy, store#ContactListEmail, find#Members | Marketing/Audiences/Lists/ListDetail (ListHeader, SubscriptionPolicy, Members, ListTemplates) | Marketing/Audiences/ListDetail (Marketing P3) |
+| marketing/AudienceServices | request#Subscriptions, file#SubscriptionRequest | Marketing/Audiences/Lists/ListDetail (AddMembers); MemberDetail (SubscriptionAction); Sales Leads and Accounts (Add to list (evidenced)) | Marketing/Audiences/ListDetail; Marketing/Audiences/MemberDetail; Sales/Pipeline/Leads and Sales/Accounts/Accounts, under Sales and at Marketing/Leads (Marketing P3); Marketing/Audiences/Consent/Contact (subscribe) |
+| marketing/AudienceServices | get#Member, withdraw#Subscription | Marketing/Audiences/Lists/MemberDetail (Membership, SubscriptionAction, ConsentHistory) | Marketing/Audiences/MemberDetail (Marketing P3) |
+| marketing/AudienceServices | reserve#SingleUseList, release#SingleUseList | the send's release (design §4 ListDetail; P9) | (internal; the send's release is P9's) |
+| party/MessageServices | find#Suppressions, store#Suppression | Marketing/Audiences/Suppressions (Shared/Suppressions: SuppressionFind, SuppressionList, SuppressionChange) | Marketing/Audiences/Suppressions (Shared/Suppressions) (Marketing P3) |
+| party/MessageServices | check#Suppressions | the ledger's attempt; Marketing/Audiences/MemberDetail | attempt#Delivery; get#Member; request#Subscriptions (Marketing P3) |
 
 ## Order (89 services)
 
@@ -1114,13 +1127,13 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | get#RecordFollowers |  | Shared/Chatter |
 | CommunicationServices | findOrCreate#ChatCommunicationEvent |  | Comms/Chat |
 | CommunicationServices | create#RecordFromChatMessage |  | Comms/Chat |
-| ConsentServices | store#PartyConsent | Marketing/Audiences/Consent/ConsentDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Comms/Consent/List |
-| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/ConsentDetail; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail; Commerce/Orders/CartDetail | Comms/Consent/Contact; — for Commerce/Orders/CartDetail#RecoveryHistory (P10 reads the store's cart reminders topic through mantle.public.AccountHubServices.check#CartReminderConsent, in mantle.order.StoreOperationsServices.get#CartRecovery) |
-| ConsentServices | get#PartyConsentHistory | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Comms/Consent/Contact |
-| ConsentServices | find#Consents | Marketing/Audiences/Consent | Comms/Consent/List |
-| ConsentServices | subscribe#ContactListParty | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact |
-| ConsentServices | unsubscribe#ContactListParty | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail; PASS:Account/EmailPreferences | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Unsubscribe |
-| ConsentServices | unsubscribe#ContactListParties | Marketing/Audiences/Consent | Comms/Consent/List |
+| ConsentServices | store#PartyConsent | Marketing/Audiences/Consent/ConsentDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Comms/Consent/List; Marketing/Audiences/Consent and Consent/Contact (Comms' screens mounted, scoped to the organization; Marketing P3) |
+| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/ConsentDetail; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail; Commerce/Orders/CartDetail | Comms/Consent/Contact; — for Commerce/Orders/CartDetail#RecoveryHistory (P10 reads the store's cart reminders topic through mantle.public.AccountHubServices.check#CartReminderConsent, in mantle.order.StoreOperationsServices.get#CartRecovery); Marketing/Audiences/Consent/Contact (by organization; Marketing P3) |
+| ConsentServices | get#PartyConsentHistory | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Comms/Consent/Contact; Marketing/Audiences/Consent/Contact and Marketing/Audiences/MemberDetail (the organization's rows; Marketing P3) |
+| ConsentServices | find#Consents | Marketing/Audiences/Consent | Comms/Consent/List; Marketing/Audiences/Consent (the organizations' lists and contacts; Marketing P3) |
+| ConsentServices | subscribe#ContactListParty | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; — Marketing/Audiences/Consent/Contact subscribes through mantle.marketing.AudienceServices.request#Subscriptions, accepted with evidence (Marketing P3) |
+| ConsentServices | unsubscribe#ContactListParty | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail; PASS:Account/EmailPreferences | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Unsubscribe; Marketing/Audiences/Consent/Contact; Marketing/Audiences/MemberDetail (through AudienceServices.withdraw#Subscription) (Marketing P3) |
+| ConsentServices | unsubscribe#ContactListParties | Marketing/Audiences/Consent | Comms/Consent/List; Marketing/Audiences/Consent (Marketing P3) |
 | ConsentServices | check#UnsubscribeToken | PASS:Account/EmailPreferences | Unsubscribe |
 | ConsentServices | resolve#UnsubscribeToken | PASS:Account/EmailPreferences | Unsubscribe |
 | ConsentServices | apply#UnsubscribePreferences | PASS:Account/EmailPreferences | Unsubscribe |
