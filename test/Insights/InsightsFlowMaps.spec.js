@@ -385,9 +385,8 @@ feature("a worklist link and a count are answered only to a viewer who reads the
         edge.target == "pick"
         edge.sourceGroup == "Sales and stores"
         edge.targetGroup == "Warehouse"
-        // a step of an app that is not built
-        quote.live == false
-        quote.stateText == "Information"
+        // Sales' quotes (impl-sales P19: Sales registers its work lists, so the quote step links for a viewer who opens Sales)
+        quote.url == "/qapps/Sales/Quotes/Quotes?organizationPartyId=ORG_ZIZI_RETAIL"
         // the organization of the map's scope is set here, and counts off asks no owner
         books.url == "/qapps/Accounting/GeneralLedger/JournalEntries?isPosted=N&organizationPartyId=ORG_ZIZI_RETAIL"
         books.countText == ""

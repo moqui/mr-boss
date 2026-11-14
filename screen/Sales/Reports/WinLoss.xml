@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales › Reports › Win/loss (design-sales §8 WinLoss: OutcomeOptions, OutcomeResults; style-guide §3.10 Report; impl-sales P19):
+    Mantle's mantle.sales.ForecastServices.get#WinLoss over the deals the reader sees closed in a period: in the final-outcome mode (the
+    default) each deal once, by its outcome and close date as of the report time; in the event mode each close in the period. Won and
+    lost counts and amounts by currency (never added across currencies), the win rate as won over won and lost opportunities, leads
+    disqualified before qualification apart, loss reasons, cycle time and reopenings, and the outcomes behind them. A report reader's
+    (SALES_REPORT_VIEW); Mantle checks again. CSV and XLSX of each list; print. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Win/loss" default-menu-index="5" menu-image="sym_o_emoji_events" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="ownerPartyId"/>
+    <parameter name="accountPartyId"/>
+    <parameter name="dataSourceId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="lostReasonEnumId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="asOfDate"/>
+    <parameter name="mode"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
+        <set field="mode" from="mode == 'events' ? 'events' : 'final'"/>
+        <set field="optionValues" from="{organizationPartyId, teamPartyId: teamPartyId || null, ownerPartyId: ownerPartyId || null,
+                accountPartyId: accountPartyId || null, dataSourceId: dataSourceId || null, currencyUomId: currencyUomId || null,
+                lostReasonEnumId: lostReasonEnumId || null, fromDate: fromDate || null, thruDate: thruDate || null, asOfDate: asOfDate || null, mode}"/>
+        <set field="loadRefusal" value=""/>
+        <set field="report" from="null"/>
+        <if condition="sales.capabilities.reportRead">
+            <service-call name="mantle.sales.ForecastServices.get#WinLoss" out-map="report" transaction="force-new" ignore-error="true"
+                    in-map="Object.assign({}, optionValues, {pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit})"/>
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <if condition="loadRefusal"><set field="report" from="null"/></if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="outcomeList" from="report?.outcomeList || []"/>
+        <set field="reasonList" from="report?.reasonList || []"/>
+        <set field="dealList" from="report?.dealList || []"/>
+        <set field="dealListCount" from="report?.dealListCount || 0"/>
+        <set field="dealListPageIndex" from="report?.dealListPageIndex || 0"/>
+        <set field="dealListPageSize" from="report?.dealListPageSize || 20"/>
+        <set field="dealListPageMaxIndex" from="report?.dealListPageMaxIndex || 0"/>
+        <set field="dealListPageRangeLow" from="report?.dealListPageRangeLow || 0"/>
+        <set field="dealListPageRangeHigh" from="report?.dealListPageRangeHigh || 0"/>
+        <set field="dealPath" from="sharedLinks['Pipeline/OpportunityDetail'] || null"/>
+        <set field="printUrl" from="'/apps/Sales/Reports/WinLoss?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                optionValues)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Win/loss" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="report"/>
+            </container>
+        </container>
+        <form-single name="OutcomeOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization"><drop-down allow-empty="false">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/></drop-down></default-field>
+            </field>
+            <field name="teamPartyId">
+                <default-field title="Team"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'teams', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="ownerPartyId">
+                <default-field title="Owner"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'owners', organizationPartyId:organizationPartyId, selected:ownerPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="accountPartyId">
+                <default-field title="Account"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'accounts', selected:accountPartyId}"/>
+                </drop-down></default-field>
+            </field>
+            <field name="dataSourceId">
+                <default-field title="Source"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'sources', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'currencies'}"/></drop-down></default-field>
+            </field>
+            <field name="lostReasonEnumId">
+                <default-field title="Lost reason"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lostReasons'}"/></drop-down></default-field>
+            </field>
+            <field name="fromDate"><default-field title="Closed from" tooltip="Empty: this quarter"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Closed through"><date-time type="date"/></default-field></field>
+            <field name="asOfDate"><default-field title="As of" tooltip="Empty: now"><date-time/></default-field></field>
+            <field name="mode">
+                <default-field title="Count"><radio>
+                    <option key="final" text="Final outcome, each deal once"/><option key="events" text="Each close event"/>
+                </radio></default-field>
+            </field>
+            <field name="submitButton"><default-field title=""><submit text="Run report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="teamPartyId"/><field-ref name="ownerPartyId"/></field-row>
+                <field-row><field-ref name="accountPartyId"/><field-ref name="dataSourceId"/><field-ref name="lostReasonEnumId"/></field-row>
+                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="currencyUomId"/></field-row>
+                <field-row><field-ref name="mode"/><field-ref name="asOfDate"/></field-row>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative" condition="!report"/>
+        <section name="OutcomeResultsFound" condition="report">
+            <widgets>
+                <label text="${report.modeText}. Closed ${report.fromText} – ${report.thruText}, as of ${report.asOfText}." type="p" style="text-caption m-muted"/>
+                <label text="Won ${report.wonCount} · Lost ${report.lostCount} · Win rate ${report.winRateText || '–'} (won over won and lost opportunities) · Disqualified leads ${report.disqualifiedCount} · Reopenings ${report.reopenCount}"
+                        type="h6"/>
+                <label text="Average time to win ${report.averageWonCycleText || '–'}; to lose ${report.averageLostCycleText || '–'}." type="p" style="text-caption"/>
+                <container-box>
+                    <box-header title="Outcomes by currency"/>
+                    <box-body-nopad>
+                        <form-list name="OutcomeResults" list="outcomeList" skip-form="true" paginate="false" show-csv-button="true" show-xlsx-button="true">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="wonCount" align="right"><default-field title="Won"><display/></default-field></field>
+                            <field name="wonText" align="right"><default-field title="Won value"><display/></default-field></field>
+                            <field name="lostCount" align="right"><default-field title="Lost"><display/></default-field></field>
+                            <field name="lostText" align="right"><default-field title="Lost value"><display/></default-field></field>
+                            <field name="winRateText" align="right"><default-field title="Win rate"><display/></default-field></field>
+                            <field name="unestimatedCount" align="right"><default-field title="No estimate"><display/></default-field></field>
+                        </form-list>
+                        <label text="No opportunity closed in this period." type="p" style="m-muted q-pa-sm" condition="!outcomeList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Loss reasons"/>
+                    <box-body-nopad>
+                        <form-list name="LossReasons" list="reasonList" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="lostCount" align="right"><default-field title="Lost"><display/></default-field></field>
+                            <field name="lostText" align="right"><default-field title="Lost value"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Closed deals"/>
+                    <box-body-nopad>
+                        <form-list name="OutcomeDeals" list="dealList" skip-form="true" paginate="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="opportunityName">
+                                <conditional-field title="Opportunity" condition="dealPath">
+                                    <link url="${dealPath}" url-type="plain" text="${opportunityName}" link-type="anchor" parameter-map="{salesOpportunityId:salesOpportunityId}"/>
+                                </conditional-field>
+                                <default-field title="Opportunity"><display/></default-field>
+                            </field>
+                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                            <field name="closedText"><default-field title="Closed"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="cycleText" align="right"><default-field title="Cycle"><display/></default-field></field>
+                            <field name="reopenCount" align="right"><default-field title="Reopened"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="opportunityName"/><field-ref name="outcomeText"/></column>
+                                <column><field-ref name="amountText"/><field-ref name="closedText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1590,6 +1590,33 @@ pipeline with CSV, Forecasts below this one, Allocation by product or category);
 administrator; Target attainment a report (CSV). Not built: the history view of a target's audit rows (the audit log keeps them), an
 FX view, and the category roll-up of allocations (a category's sub-categories are not walked).
 
+### As built (impl-sales P19, Nov 14, 2026)
+
+Reports has All reports (`Reports/Catalogue`, the default) over S `get#SalesReports` (Mantle's `SalesWorkspaceServices`, also the
+catalogue service of Sales' Insights entries; answering the root Sales only): Sales summary, Sales analysis, Pipeline analysis, Win/loss
+and Target attainment for a report reader, Forecast for every Sales reader; saved filters and last run are not kept (a list's saved
+finds are). SalesSummary asks the four summaries for one organization of the scope and one currency (the organization's base currency
+by default; `get#InvoicesByCustomerClass` gains `currencyUomIds`), with Sales' choices (organization, its stores, accounts, products)
+and the basis named (orders by placed date; invoices by invoice date, issued, not cash collected). SalesAnalysis is rebuilt over
+`run#SalesAnalysis` alone (no entity read, cost search or SQL dialog; F76, F79): Mantle answers a Sales report reader of their
+organization and adds the shipped value, the cost of shipped and the margin for a report reader who reads product costs
+(PRODUCT_COST_VIEW) or a holder of PRICE_VIEW and PRODUCT_COST_VIEW (P19 review R1); the screen is also Accounting's Reports/SalesAnalysis (a mount, choices and links by `appRoot`). F
+`get#PipelineAnalysis` and `get#WinLoss` (`mantle/sales/SalesPipelineReports.js`) read each deal as it stood at the as-of time from
+its audit log (the old value of a field's first change after it, else its value now), stage durations from audited stage changes
+(a stay whose entry or exit the log does not show is unknown), conversion over a lead-created cohort (`convertedDate`), and the
+close cohort in the final-outcome mode (default, each deal once) or the event mode; win rate over won and lost opportunities, a lead
+closed Lost apart; amounts always by currency; past 2,000 deals refused. PipelineAnalysis shows the funnel panel of
+`report/boss-sales-pipeline.json` (now) beside the cohort's funnel, whose visit step reads Marketing's
+`mantle.marketing.MarketingReportServices.count#SalesVisits` once it exists (until then not available). Insights: catalog entries
+for SalesSummary, PipelineAnalysis, WinLoss, TargetAttainment and Forecast; metrics `Sales.OpenPipeline`, `Sales.WeightedPipeline`,
+`Sales.WonValue` and `Sales.WinRate`; flow targets `Sales.Leads`, `Sales.Opportunities`, `Sales.Quotes`, `Sales.Orders` and
+`Sales.OrderChanges` (the customer flow's quote step opens Quotes). Shipped definitions: the pipeline dashboard's panels by source,
+owner, currency, leads and outcomes; the stalled-deal alert template `boss-sales-stalled-deals` over Mantle's
+`mantle-sales-pipeline-stage-age` dataset (the pipeline's document timed by `stageEnteredDate`: a deal with no stage movement for N
+days, not every activity); the weekly digest `boss-sales-weekly-digest` of the pipeline dashboard. The "quote expiring in N days"
+alert is not built: no quote dataset exists (Home's counter and Insights' Sales.QuotesExpiring attention provider show them).
+`operation` and `operation-ref` on QuoteBatch, the import's row apply and the recurrence worker (`sales.recurrence.run`).
+
 ## 9. Settings
 
 ### Settings
@@ -1967,6 +1994,11 @@ A bearer link from the confirmation mail reaches this one order only. **Needs:**
   page (F236); the issued PDF stays the offer.
 - **The Account hub** card counts open quotes and open orders (not completed), with My quotes and My orders.
 - **Not built here.** A date-range filter on My orders (state and the order or PO only); reorder (§11).
+- **Cancelled orders (impl-sales P19, the user's call of Nov 14).** A placed storeless order since cancelled is no longer
+  hidden: My orders lists it under all (never open, so the hub's count leaves it out) and its OrderView link, which the
+  cancellation no longer ends (ExternalAccess `resolve` admits OrderCancelled for a storeless order's OrderView only; a store
+  order's link and every other scope still end with it), opens it marked Cancelled and read only: its lines, delivery and
+  invoices, Support's ask page alone (no cancellation or return request) and no Billing page. A rejected order stays hidden.
 
 ## 11. Later capabilities
 

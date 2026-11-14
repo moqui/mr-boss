@@ -1998,7 +1998,9 @@ general ledger, posted summary, budget variance and stock transactions are `iron
 (`Accounting.*`) read through `ReportServices.get#Catalog` by `reportId` (impl-insights F17); inventory valuation, which
 Warehouse mounts, by its route; SalesAnalysis is the one Sales-owned entry `Sales.SalesAnalysis`, opening this app's report
 and read through this catalogue until Sales is built. The invoiced revenue metric is `Accounting.InvoicedRevenue` over
-`SalesReportServices.get#SalesInvoiceSummary`.
+`SalesReportServices.get#SalesInvoiceSummary`. Since impl-sales P19 (owner contract, F59): `Sales.SalesAnalysis` opens Sales'
+route under Sales' catalogue (`mantle.sales.SalesWorkspaceServices.get#SalesReports`), since this catalogue refuses any root but
+Accounting, and this app's mount has an entry of its own, `Accounting.SalesAnalysis`, read through `get#Catalog` by `SalesAnalysis`.
 
 **Insights attention (impl-insights P5, Nov 7, 2026; F29).** Draft and posted entries (`AccountingServices.find#Records`), bills
 awaiting approval (for `INVOICE_APPROVE`) and on hold (`InvoiceServices.find#Payables`) and production runs awaiting cost close
@@ -2338,6 +2340,15 @@ Reports share organization/date/currency filters and drill-down conventions. The
 ### SalesAnalysis
 
 **Layout:** report.
+
+**As built (impl-sales P19, Nov 14, 2026; Z10, owner contract).** `Accounting/Reports/SalesAnalysis` is a mount of Sales' one
+definition, `screen/Sales/Reports/SalesAnalysis.xml` (Accounting/Reports.xml's subscreens-item; this app's own file is removed). Under
+this root it takes Accounting's choices (organizations, fiscal periods, currencies) and links (Records/Product360,
+Receivables/Customer360), and over `run#SalesAnalysis` a report reader gets the ordered, shipped (with its value), invoiced and returns
+columns, and with product cost read (PRODUCT_COST_VIEW) the cost of what shipped (its issuances at their asset's acquire cost, unknown
+where missing or in another currency) and the margin (P19 review R1: ACCOUNTING_VIEW alone is no cost right). The same
+service answers a Sales report reader of their organization, the finance columns only for a holder of both PRICE_VIEW and
+PRODUCT_COST_VIEW.
 
 **Forms:**
 
