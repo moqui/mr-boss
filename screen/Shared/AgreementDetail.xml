@@ -118,7 +118,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                         </container-dialog>
                         <link url="salesRenewAgreement" link-type="hidden-form" text="Renew" icon="sym_o_autorenew"
-                                btn-type="${primaryAction == 'renew' ? 'primary' : 'default'}" condition="ag.canRenew" parameter-map="{agreementId:agreementId}"
+                                btn-type="${primaryAction == 'renew' ? 'primary' : 'default'}" condition="ag.canRenew" parameter-map="{agreementId:agreementId, agreementRevision:ag.agreementRevision}"
                                 confirmation="Start a renewal of ${ag.description}? It is a draft until you activate it, which ends this agreement at its start."/>
                         <container-dialog id="AgreementFromTemplate" button-text="New agreement" icon="sym_o_add" width="640" type="primary"
                                 title="New agreement from ${ag.description}" condition="primaryAction == 'agree'">
