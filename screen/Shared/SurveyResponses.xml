@@ -24,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     shown its own branch: one form and optionally one of its publications, the counts (invited, delivered, answered, the response rate,
     the average score of the answered scored questions with the answered count and maximum apart), each choice's answers by option and
     the responses (publication, date, respondent as the service names them, how they came, score), each opening ResponseDetail; only
-    responses submitted to the app's publications, never a case's. The case branch is unchanged. -->
+    responses submitted to the app's publications, never a case's. impl-marketing P23 (design-marketing §18, the survey results): the
+    choices and the responses each download as CSV, the same rows and columns as shown (the respondent as the service names them). The case branch is unchanged. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Survey responses">
     <parameter name="formId"/>
@@ -129,7 +130,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container-box>
                                     <box-header title="Choices"/>
                                     <box-body-nopad>
-                                        <form-list name="ResponseChoices" list="questionRows" skip-form="true" paginate="false">
+                                        <form-list name="ResponseChoices" list="questionRows" skip-form="true" paginate="false" show-csv-button="true">
                                             <field name="question"><default-field title="Question"><display/></default-field></field>
                                             <field name="answer"><default-field title="Answer"><display/></default-field></field>
                                             <field name="count"><default-field title="Responses"><display/></default-field></field>
@@ -143,7 +144,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Responses"/>
                             <box-body-nopad>
-                                <form-list name="PublicationResponseList" list="responseRows" skip-form="true" paginate="false">
+                                <form-list name="PublicationResponseList" list="responseRows" skip-form="true" paginate="false" show-csv-button="true">
                                     <field name="submittedText">
                                         <default-field title="Answered">
                                             <link url="${detailLink}" text="${submittedText}" link-type="anchor"

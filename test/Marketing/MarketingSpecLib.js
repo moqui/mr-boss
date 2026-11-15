@@ -291,4 +291,171 @@ function promotionsAuthor() {
     return "mkpromo.author"
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell, promotionsAuthor})
+// ===== P23 sweeps =====
+// The screen sweeps (acceptance MarketingTui and MarketingServerStatic, impl-marketing P23), as SalesSpecLib's: the screens Marketing
+// mounts from elsewhere (Shared, Commons, Comms and Sales screens), as [path under the root, location], read from each Marketing screen
+// file's subscreens-items (walkChildTree follows files, not mounts). The redirects kept for the old placeholders' routes (Newsletters,
+// Segments) are listed apart (redirectScreens), since a redirect is not a document.
+const MARKETING_ROOT = "component://mr-boss/screen/Marketing.xml"
+function marketingFiles() {
+    const files = []
+    ec.resource.getLocationReference(MARKETING_ROOT).walkChildTree(files, null)
+    return files.filter(file => file.location.endsWith(".xml"))
+}
+function mountedScreens() {
+    const found = []
+    for (const file of marketingFiles()) {
+        const parent = file.path === "Marketing" ? "" : file.path.substring("Marketing/".length) + "/"
+        const text = String(ec.resource.getLocationReference(file.location).getText())
+        const item = /<subscreens-item name="([^"]+)"\s+location="(component:\/\/mr-boss\/screen\/(?!Marketing\/)[^"]+\.xml)"/g
+        for (let match = item.exec(text); match; match = item.exec(text)) found.push([parent + match[1], match[2]])
+    }
+    return found
+}
+// The paths under the root of the screen files that only redirect (sri.sendRedirectAndStopRender in their always-actions)
+function redirectScreens() {
+    return marketingFiles()
+        .filter(file => file.path !== "Marketing")
+        .filter(file => String(ec.resource.getLocationReference(file.location).getText()).includes("sendRedirectAndStopRender"))
+        .map(file => file.path.substring("Marketing/".length))
+}
+// The tabs of a mounted screen that the current user's menu shows under Marketing, as paths under the root; none when its menu names
+// none
+function mountTabs(path, parameters = {}) {
+    const name = path.substring(path.lastIndexOf("/") + 1)
+    const query = Object.entries(parameters)
+        .map(([key, value]) => key + "=" + encodeURIComponent(value))
+        .join("&")
+    const menu = ec.screen
+        .makeTest()
+        .rootScreen("component://webroot/screen/webroot.xml")
+        .render("menuData/apps/Marketing/" + path + (query ? "?" + query : ""), {}, null)
+    ec.message.clearErrors()
+    if (menu.status != 200) return []
+    const level = JSON.parse(menu.output)
+        .filter(level => level.name === name)
+        .pop()
+    return (level?.subscreens || []).filter(item => item.menuInclude).map(item => path + "/" + item.name)
+}
+// The records the demo has no row of, made for the sweeps: a confirmed staff registration of the webinar's free place (as
+// MarketingRegistrations makes it), by the events manager with the service's own rule. {registrationId}
+function sweepMade() {
+    const E = "mantle.work.EventRegistrationServices."
+    const made = asUser(users.events, () =>
+        system(() => {
+            const reserved = invoke(E + "reserve#Registration", {
+                registrationPolicyId: ids.webinarOfferId,
+                ticketTypeId: ids.webinarTicketId,
+                quantity: 1,
+                buyerName: "Sweep Attendee",
+                buyerEmail: "sweep.attendee@registrations.example.test",
+                requestKey: "mktsweep" + Math.floor(Math.random() * 1e9)
+            })
+            return invoke(E + "complete#Registration", {
+                reservationId: reserved.reservationId,
+                attendees: [{name: "Sweep Attendee"}],
+                acceptTerms: true
+            })
+        })
+    )
+    ec.message.clearErrors()
+    const blog = system(() => ec.entity.find("moqui.resource.wiki.WikiBlog").condition("wikiBlogId", ids.blogPostId).one())
+    return {registrationId: (made.registrationIds || [])[0] || "", blogPageId: blog ? blog.wikiPageId : ""}
+}
+// The demo record a swept screen opens on: the entry of the screen or its nearest parent (a tab takes its record's); made is
+// sweepMade's records
+const campaignRecord = {recordEntity: "mantle.marketing.campaign.MarketingCampaign", recordId: ids.runningCampaignId}
+const organizationOnly = {organizationPartyId: ids.organizationId}
+const sweepRecords = (made = {}) => ({
+    Home: organizationOnly,
+    Chatter: campaignRecord,
+    RecordFiles: campaignRecord,
+    LogNote: {entityName: campaignRecord.recordEntity, recordId: ids.runningCampaignId},
+    SendMessage: {entityName: campaignRecord.recordEntity, recordId: ids.runningCampaignId},
+    "QuickCreate/NewSend": campaignRecord,
+    "Campaigns/CampaignDetail": {marketingCampaignId: ids.runningCampaignId},
+    "Campaigns/CampaignPlan": {marketingCampaignId: ids.runningCampaignId},
+    "Audiences/ListDetail": {contactListId: ids.gardenListId},
+    "Audiences/MemberDetail": {contactListId: ids.gardenListId, partyId: ids.acceptedPartyId},
+    "Audiences/SegmentDetail": {marketSegmentId: ids.gardenSegmentId},
+    "Audiences/AudienceImport": {audienceImportId: ids.fairImportId},
+    "Audiences/AudienceMerge": {contactListId: ids.storeListId},
+    "Audiences/AudiencePreview": {topicListId: ids.gardenListId, listIds: ids.gardenListId},
+    "Audiences/Consent/Contact": {partyId: ids.acceptedPartyId},
+    "Sends/SendDetail": {campaignSendId: ids.approvedSendId},
+    "Sends/Compose": {campaignSendId: ids.draftSendId},
+    "Sends/ExperimentDetail": {campaignSendId: ids.experimentSendId},
+    "Sends/RecipientDetail": {campaignRecipientId: "BOSS_MKT_RCPT_NOV_MAYA"},
+    "Sends/CampaignDelivery": {campaignSendId: ids.approvedSendId},
+    "Sends/MessageTemplateDetail": {messageTemplateId: ids.newsletterTemplateId},
+    "Automations/AutomationDetail": {marketingAutomationId: ids.welcomeAutomationId},
+    "Automations/EnrollmentDetail": {automationEnrollmentId: ids.waitingEnrollmentId},
+    "Promotions/PromotionDetail": {storePromotionId: "PopcBuyGet"},
+    "Promotions/PromoCodeDetail": {promoCodeId: "TEST2"},
+    "Content/ContentDetail": {campaignContentId: ids.contentLinkId},
+    "Content/BlogPostDetail": {wikiBlogId: ids.blogPostId},
+    "Content/PageDetail": {sitePageId: ids.landingPageId},
+    "Content/Knowledge": made.blogPageId ? {wikiPageId: made.blogPageId} : {wikiSpaceId: ids.blogSpaceId},
+    "Content/KnowledgeTui": made.blogPageId ? {wikiPageId: made.blogPageId} : {wikiSpaceId: ids.blogSpaceId},
+    "Content/TrackingLinkDetail": {trackingCodeId: ids.trackingLinkId},
+    "Events/EventDetail": {workEffortId: ids.webinarEventId},
+    "Events/RegistrationSetup": {workEffortId: ids.webinarEventId, registrationPolicyId: ids.webinarOfferId},
+    "Events/Registrations": {workEffortId: ids.webinarEventId, registrationPolicyId: ids.webinarOfferId},
+    "Events/RegistrationDetail": {registrationId: made.registrationId || ""},
+    "Events/CheckIn": {registrationPolicyId: ids.webinarOfferId},
+    "Surveys/SurveyDetail": {formId: ids.surveyFormId},
+    "Surveys/SurveyDistribution": {publicationId: ids.surveyPublicationId},
+    "Surveys/Responses": {formId: ids.surveyFormId},
+    "Surveys/ResponseDetail": {formResponseId: ids.anonymousResponseId},
+    "Leads/LeadRuleDetail": {leadRuleId: ids.leadRuleId},
+    "Customers/Customer360": {customerPartyId: ids.acceptedPartyId, organizationPartyId: ids.organizationId},
+    "Contacts/ContactDetail": {partyId: ids.acceptedPartyId},
+    Reports: organizationOnly,
+    Settings: organizationOnly
+})
+function sweepParameters(path, made = {}) {
+    const records = sweepRecords(made)
+    const key = Object.keys(records)
+        .filter(key => path === key || path.startsWith(key + "/"))
+        .sort((a, b) => b.length - a.length)[0]
+    return key ? records[key] : {}
+}
+// The second records of a screen the tui sweep renders again (each path's own record is sweepParameters'), as [path, parameters]:
+// SendDetail on the draft, the scheduled send and the A/B test; the explicit segment and the single-use list; the stopped
+// enrollment; the paid workshop's setup; the invited response; the invited and lead publications
+function sweepExtras() {
+    return [
+        ["Sends/SendDetail", {campaignSendId: ids.draftSendId}],
+        ["Sends/SendDetail", {campaignSendId: ids.scheduledSendId}],
+        ["Sends/SendDetail", {campaignSendId: ids.experimentSendId}],
+        ["Audiences/SegmentDetail", {marketSegmentId: ids.vipSegmentId}],
+        ["Audiences/ListDetail", {contactListId: ids.vipListId}],
+        ["Automations/EnrollmentDetail", {automationEnrollmentId: ids.stoppedEnrollmentId}],
+        ["Events/RegistrationSetup", {workEffortId: ids.workshopEventId, registrationPolicyId: ids.workshopOfferId}],
+        ["Surveys/ResponseDetail", {formResponseId: ids.invitedResponseId}],
+        ["Surveys/SurveyDistribution", {publicationId: ids.invitedPublicationId}],
+        ["Surveys/SurveyDistribution", {publicationId: ids.leadPublicationId}],
+        ["Campaigns/CampaignDetail", {marketingCampaignId: ids.plannedCampaignId}]
+    ]
+}
+
+;({
+    ids,
+    users,
+    asUser,
+    system,
+    refusal,
+    invoke,
+    page,
+    screenRefusal,
+    hit,
+    shell,
+    promotionsAuthor,
+    mountedScreens,
+    redirectScreens,
+    mountTabs,
+    sweepMade,
+    sweepRecords,
+    sweepParameters,
+    sweepExtras
+})
