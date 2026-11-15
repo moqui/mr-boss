@@ -29,8 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{trackingCodeId:(trackingCodeId || null), expectedRevision:(expectedRevision || null),
                         marketingCampaignId:(marketingCampaignId || null), description:description, comments:(comments ?? null),
                         siteId:(siteId || null), destinationKindEnumId:(destinationKindEnumId || null), sitePageId:(sitePageId || null),
-                        redirectUrl:(redirectUrl || null), safeUrl:(safeUrl ?? null), trackingCodeTypeEnumId:(trackingCodeTypeEnumId || null),
-                        utmSource:(utmSource || null), utmMedium:(utmMedium || null), utmContent:(utmContent || null),
+                        redirectUrl:(redirectUrl || null), safeUrl:(safeUrl ?? null), trackingCodeTypeEnumId:(trackingCodeTypeEnumId ?? null),
+                        utmSource:(utmSource ?? null), utmMedium:(utmMedium ?? null), utmContent:(utmContent ?? null),
                         disabled:(disabled || null), fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
             <set field="linkDetailPath" from="sharedLinks?.['Content/TrackingLinkDetail'] || null"/>
             <set field="created" from="!trackingCodeId"/>

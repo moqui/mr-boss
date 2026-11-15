@@ -103,7 +103,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <text-area rows="3" cols="60"/></default-field>
                             </field>
                             <field name="trackingDomains">
-                                <default-field title="Tracking link hosts" tooltip="Other sites a tracking link may lead to, beside the organization's own sites: one host name a line, at most twenty">
+                                <default-field title="Tracking link hosts" tooltip="Other sites a tracking link may lead to, beside the organization's own sites: one host name a line (its subdomains included), at most twenty">
                                     <text-area rows="3" cols="60"/></default-field>
                             </field>
                             <field name="visitorKeys">
