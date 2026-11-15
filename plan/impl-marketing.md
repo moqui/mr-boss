@@ -7309,6 +7309,56 @@ reads those dates is updated. Branch `mkt/fix6` in mr-boss (mr-mantle if a Mantl
     `test/acceptance/client/Marketing/MarketingCalendarWalk.spec.js` (P23's review walks may touch the acceptance tree), this file;
   - the user's call: none new (whether the opportunities' dates follow the load stands from follow-up 3).
 
+**Review Nov 15 (follow-up 6).** A fresh review of `mkt/fix6` (mr-boss 8cb653ae; mr-mantle unchanged) against the follow-up's text,
+§4 (the Nov 15 call) and follow-ups 2 and 3's loader pattern, R2 of follow-up 3 included.
+- Checked and sound:
+  - a reload: the four campaign rows and the December send name no fromDate, thruDate, startDate or scheduledDate, so storing them
+    again changes nothing the loader wrote (follow-up 3's R2), and the loader only updates rows by fixed ID (no create), so nothing is
+    duplicated; loading again moves the dates to the new load, as the other loaders. No entity ECA rule is on MarketingCampaign or
+    CampaignSend (none in mr-mantle's or mr-boss's eecas), so the moves raise no campaignRevision or sendRevision and the revision-1
+    approvals stand (checked: 1/1, CsApproved after each move); the readiness rule's "it needs its dates" is met before any approval
+    is asked;
+  - the arithmetic: a load on Nov 15, 2026 gives exactly the old dates (Nov 1 to Jan 31 started Nov 2 09:00; Jan 10 to 12; Dec 1 to
+    31; Dec 1 to Feb 28; Dec 1 08:00 CST);
+  - the 08:00 America/Chicago wall clock around DST, run through the loader under `ec.user.setEffectiveTime` in a throwaway spec
+    (not kept): loads at 2027-02-28 23:30Z (send Mar 16 08:00 CDT, 13:00Z), 2027-03-14 01:00Z, the day of the spring change in
+    Chicago's evening before it (Mar 29 08:00 CDT), 2027-10-20 00:10Z (Chicago's Oct 19: Nov 4 08:00 CDT) and 2026-11-15 12:00Z
+    (Dec 1 08:00 CST, 14:00Z). The load day is Chicago's, the days counted in UTC, the hour read back in the zone; the campaign
+    windows are 00:00 of the server's local day (05:00 or 06:00Z here), the same day as the send's on this machine;
+  - dependencies, by grep of mr-boss, mr-mantle, mr-pass and mr-marble (regression and acceptance, server and client) and mr-moqui's
+    own tests for the literal dates (2026-11-01, 2026-11-02, 2026-12-01, 2026-12-31, 2027-01-10, 2027-01-12, 2027-01-31,
+    2027-02-28), the campaign and send IDs, `runningCampaignId`, `scheduledSendId` and the campaign and send names: no spec reads the
+    old dates. The specs that touch the campaigns read names, status, scope or records they make; the ones a window matters to now hold
+    on any day where the fixed window failed after it: MarketingReports' CampaignPerformance ("the running demo campaign meets the last
+    30 days", the period filter on fromDate and thruDate) and the acceptance MarketingReportsScenario, MarketingShell's agenda and
+    calendar, Home's Scheduled sends (60 days) and Campaign windows sources, the acceptance MarketingCalendarWalk (reads the days from
+    the records). mr-mantle's MarketingCalendar and Upcoming specs use their own organizations;
+  - failure tolerance: as load#EventDatesDemo and load#QuoteDatesDemo: a missing row is logged and skipped; an update error fails the
+    service and rolls back its moves (one transaction; fixed IDs, rare), and the data loader logs the element and goes on. Not changed,
+    as follow-up 3's review left the quote loader;
+  - the new checks fail on a broken loader (no scheduledDate: loadedDays null; no window: the days far outside).
+- Fixed:
+  - R1 (low): MarketingDelivery's lower bound of 14.5 days left about an hour of margin under `--db snapshot`, which is keyed by the
+    server's local day while the send's load day is Chicago's: a UTC server's snapshot made at midnight and read at the end of that
+    day sees 14.54 days (15.54 with a spring DST change before the send). The bound is 14 (a broken loader still fails it).
+- Provisional findings (for the lead to number):
+  - R1 above;
+  - the December send's name ("Garden newsletter, December") and its approval reason ("For the first of December"), and the Holiday
+    gift guide's window (16 to 46 days after the load), read as story on a load other than mid-November: low. Not changed: renaming
+    touches MarketingDelivery, MarketingShell's agenda, the acceptance MarketingCalendarWalk (name and palette search) and the
+    November sibling's name for symmetry, for little gain; for the lead or the user;
+  - a reload over a dev database where the December send was released or sent moves its schedule again (the row's reload already
+    resets its status to CsApproved): demo-only, as the other loaders.
+- Tests run (release, `--nobuild`, this worktree's runtime): mr-boss MarketingShell, MarketingDelivery, MarketingCampaigns,
+  MarketingReports, MarketingEvents, MarketingSends, MarketingAccess, MarketingLeads, MarketingPromotions, MarketingTracking,
+  MarketingContent, MarketingLists, MarketingSurveys on 4 workers (13 specs, 37 of 37, 52.4 s wall, 16.6 s of feature time); after the
+  fix MarketingDelivery and MarketingShell (5 of 5, 25.4 s). Prettier (mr-moqui's config) on the changed spec. Not run: test-apps,
+  test-framework, acceptance (MarketingCalendarWalk's change is a comment).
+- For the lead:
+  - budget share: unchanged;
+  - merge hot spots: as the Built note's, plus the review commit in `test/Marketing/MarketingDelivery.spec.js` and this file;
+  - the user's calls: whether the December send and the holiday guide get names that do not name a month (low); none other new.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into

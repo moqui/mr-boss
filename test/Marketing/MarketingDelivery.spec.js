@@ -12,7 +12,8 @@ spec({})
 feature("CampaignDelivery shows a released send's recipients to its dispatcher, the address masked", {
     when() {
         // the schedule as loaded: 08:00 Chicago time 16 days after the load day (follow-up 6: load#CampaignDatesDemo; a broken loader
-        // leaves none)
+        // leaves none). The load day is Chicago's and a --db snapshot is the server's local day's, up to a day old: from 14 days
+        // (a UTC server's snapshot at midnight read at its day's end is 14.54 days) to 17
         const loaded = system(() =>
             ec.entity
                 .find("mantle.marketing.campaign.CampaignSend")
@@ -52,7 +53,7 @@ feature("CampaignDelivery shows a released send's recipients to its dispatcher, 
         return {loadedDays, loadedHour, zone: loaded.scheduleTimeZone, released, delivery}
     },
     then({loadedDays, loadedHour, zone, released, delivery}) {
-        loadedDays > 14.5 && loadedDays < 17 && loadedHour == "08:00" && zone == "America/Chicago"
+        loadedDays > 14 && loadedDays < 17 && loadedHour == "08:00" && zone == "America/Chicago"
         released.statusId == "CsScheduled"
         delivery.status == 200 && delivery.errors.length == 0
         delivery.output.includes("Delivery of Garden newsletter, December")
