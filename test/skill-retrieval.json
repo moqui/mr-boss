@@ -50,6 +50,8 @@
         {"query": "why are so many recipients excluded from the garden newsletter audience", "expect": ["marketing-audience-check"]},
         {"query": "get this send ready for approval", "page": "/qapps/Marketing/Sends/SendDetail", "expect": ["marketing-prepare-send"]},
         {"query": "send a test of this mailing to me first", "expect": ["marketing-prepare-send"]},
+        {"query": "how many people can we email from the garden subscriber list", "expect": ["marketing-audience-check"]},
+        {"query": "what is planned for the spring campaign over the next weeks", "page": "/qapps/Marketing/Calendar", "expect": ["marketing-campaign-summary"]},
         {"query": "what changed on the Wingtip deal since the last activity", "expect": ["sales-follow-up"]},
         {"query": "I just called Dana at Wingtip, log the call", "expect": ["sales-log-call"]},
         {"query": "record my call notes on this opportunity", "page": "/qapps/Sales/Pipeline/OpportunityDetail", "expect": ["sales-log-call"]},

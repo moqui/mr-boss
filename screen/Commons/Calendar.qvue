@@ -32,7 +32,11 @@ along with this software (see the LICENSE.md file). If not, see
     Resource mode (design-manufacturing §6 ResourceCalendar, impl-manufacturing P3): Manufacturing's work-center calendar serves
     this component from Manufacturing/WorkCenters/ResourceCalendar.xml, whose calendarSetup answers resource {title, readOnly}.
     Then there is no rail, no search and no New, nothing moves or opens a quick event, and the grid shows the work centers' work
-    hours and holidays and their released operations (kinds workHours, holiday and operation; an operation opens its link). -->
+    hours and holidays and their released operations (kinds workHours, holiday and operation; an operation opens its link).
+
+    Marketing's campaign calendar (design-marketing §3 Calendar, impl-marketing P21) serves this component in resource mode from
+    Marketing/Calendar.xml: its campaign windows, scheduled sends, automation milestones and publication dates (kinds campaign, send,
+    automation and publication, read only, each opening its record) beside the events Marketing offers, the one kind a drag moves. -->
 <template><div class="boss-calendar">
     <m-screen-context record-entity="mantle.work.effort.WorkEffort" :record-id="contextRecordId" :title="contextTitle"></m-screen-context>
 
@@ -534,7 +538,7 @@ const VIEWS = ['day', 'workweek', 'week', 'month', 'agenda'];
 // the brand colors of a project's calendar items (project mode) and of a task
 // and of a work center's work hours, holidays and operations (resource mode)
 const PLAN_COLORS = { task: 'primary', milestone: 'accent', release: 'secondary', sprint: 'info', workHours: 'positive', holiday: 'negative',
-    operation: 'primary' };
+    operation: 'primary', campaign: 'info', send: 'primary', automation: 'secondary', publication: 'positive' };
 
 module.exports = {
     name: 'BossCalendar',
@@ -1067,7 +1071,8 @@ module.exports = {
         kindIcon(item) {
             if (item.kind === 'task') return item.done ? 'sym_o_task_alt' : 'sym_o_radio_button_unchecked';
             return { milestone: 'sym_o_diamond', release: 'sym_o_flag', sprint: 'sym_o_sprint', workHours: 'sym_o_schedule', holiday: 'sym_o_event_busy',
-                operation: 'sym_o_precision_manufacturing' }[item.kind] || null;
+                operation: 'sym_o_precision_manufacturing', campaign: 'sym_o_campaign', send: 'sym_o_forward_to_inbox', automation: 'sym_o_route',
+                publication: 'sym_o_article' }[item.kind] || null;
         },
         planView(value) {
             if (value !== 'timeline') return;

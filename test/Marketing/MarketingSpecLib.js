@@ -64,8 +64,9 @@ const ids = {
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
     // P6: an author opens the templates (g t); P8 the sends (g n); P11 the automations (g a)
-    // P12: and the surveys (g v); P14 the content (g o); P16 the events (g e, every Marketing reader's)
-    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v", "g o", "g e"],
+    // P12: and the surveys (g v); P14 the content (g o); P16 the events (g e, every Marketing reader's); P21 the calendar (g k, every
+    // Marketing reader's)
+    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v", "g o", "g e", "g k"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",

@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     primary action), the running campaigns and pending approvals cards opening their lists, the campaign windows of the next 60 days
     and the approvals awaiting the approver; the period and mine or team filters wait for more sources. P9: the sends due (released and
     due within a day, or sending) and the failed or uncertain deliveries cards opening Sends, the scheduled sends in Upcoming opening each
-    SendDetail, and a dispatcher's attention rows for a send with a failed or uncertain delivery opening its CampaignDelivery. -->
+    SendDetail, and a dispatcher's attention rows for a send with a failed or uncertain delivery opening its CampaignDelivery. P21: the
+    calendar shortcut (design §1.2), opening the campaign calendar. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -76,7 +77,10 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col"><label text="Marketing" type="h5"/></container>
-            <container style="col-auto">
+            <container style="col-auto row items-center q-gutter-xs">
+                <!-- P21: the calendar shortcut (design §1.2), every Marketing reader's -->
+                <link url="${sharedLinks['Calendar']}" text="Calendar" link-type="anchor-button" icon="sym_o_calendar_month"
+                        condition="can.anyRead"/>
                 <!-- P2: New campaign, the author's primary action (design §3 Home) -->
                 <container-dialog id="HomeNewCampaignDialog" button-text="New campaign" title="New campaign" icon="sym_o_add" width="760"
                         type="primary" condition="marketing.capabilities.campaignEdit &amp;&amp; marketing.capabilities.anyRead">

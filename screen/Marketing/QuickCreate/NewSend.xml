@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Quick create › Send (design-marketing §14.3 QuickSend; impl-marketing P21): NewSend, the Sends list's form, for a holder of
+    MARKETING_SEND_EDIT; opened from a campaign's page (the shell's recordEntity and recordId), the campaign is fixed once Marketing
+    shows it to the user (check#Record), else the user chooses it. It opens the new draft's Compose; the draft reaches no one until it
+    is prepared, approved and released (Mantle's create#Send checks the permission, the organization and every record again). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New send" default-menu-include="false">
+    <parameter name="recordEntity"/>
+    <parameter name="recordId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createSend" location="component://mr-boss/template/MarketingSends.xml"/>
+    <actions>
+        <!-- the page's campaign, fixed only when Marketing shows it to the user -->
+        <if condition="marketing.capabilities.sendEdit &amp;&amp; recordEntity == 'mantle.marketing.campaign.MarketingCampaign' &amp;&amp; recordId">
+            <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="hostCampaign" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'campaign', recordId:recordId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="newSendValues" from="hostCampaign?.recordId
+                ? {marketingCampaignId: hostCampaign.recordId, organizationPartyId: hostCampaign.organizationPartyId, campaignFixed: true}
+                : {organizationPartyId: marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
+        <set field="hostText" from="hostCampaign?.recordId ? 'A send of the campaign ' + hostCampaign.label + '.' : ''"/>
+    </actions>
+    <widgets>
+        <label text="New send" type="h6"/>
+        <label text="You do not write sends in Marketing." type="p" style="m-muted" condition="!marketing.capabilities.sendEdit"/>
+        <section name="NewSendFormShown" condition="marketing.capabilities.sendEdit">
+            <widgets>
+                <label text="${hostText}" type="p" condition="hostText"/>
+                <section-include name="NewSendForm" location="component://mr-boss/template/MarketingSends.xml"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

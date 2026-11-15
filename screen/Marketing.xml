@@ -30,7 +30,8 @@ along with this software (see the LICENSE.md file). If not, see
     managers); P18 its CheckIn, an events manager's under their own sign-in or an event's shared door tablet's (below); P19 Promotions
     (Commerce's shared promotion screens, for a user with Commerce's promotion read when a store is configured) and, hidden from the
     menu, Customers (the shared Customer360 with Marketing's engagement) and Contacts (the Commons contact record), the audience
-    readers'; P20 Reports (the report readers'; BOSS_MKT_REPORTS). -->
+    readers'; P20 Reports (the report readers'; BOSS_MKT_REPORTS); P21 the campaign calendar (every Marketing reader's, hidden from the
+    menu: Home's Calendar and the key g k), quick create's send, Today, the Comms hooks and Assist's answer actions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -144,11 +145,17 @@ along with this software (see the LICENSE.md file). If not, see
             Sends (P8) -->
         <subscreens-item name="Segments" location="component://mr-boss/screen/Marketing/Segments.xml" menu-include="false"/>
         <subscreens-item name="Newsletters" location="component://mr-boss/screen/Marketing/Newsletters.xml" menu-include="false"/>
+        <!-- P21: the campaign calendar (design §3 Calendar; every Marketing reader's, the calendar shortcut of design §1.2: Home's Calendar
+            and the key g k, hidden from the menu) with its terminal agenda, and Assist's answer actions (LogNote, SendMessage) -->
+        <subscreens-item name="Calendar" location="component://mr-boss/screen/Marketing/Calendar.xml" menu-include="false"/>
+        <subscreens-item name="CalendarTui" location="component://mr-boss/screen/Marketing/CalendarTui.xml" menu-include="false"/>
+        <subscreens-item name="LogNote" location="component://mr-boss/screen/Marketing/LogNote.xml" menu-include="false"/>
+        <subscreens-item name="SendMessage" location="component://mr-boss/screen/Marketing/SendMessage.xml" menu-include="false"/>
     </subscreens>
 
     <!-- P1: the marketing keymap (design §1.2). P2: the palette's campaigns, QuickCampaign, the approval topics and CampaignDetail's
-        Assist chip. Quick create's list and event (P3, P16), Today (P8), the Comms providers (record-lookup and call-context, P8,
-        P17) and Assist's answer actions (P21) arrive with their records. -->
+        Assist chip. Quick create's list and event (P3, P16); P21 quick create's send, Today, the Comms providers (record-lookup and
+        call-context) and Assist's answer actions. -->
     <shell-providers>
         <!-- P2: the palette's Marketing records, the campaigns of the user's organizations (ironstone.marketing.ContextServices.search#Records) -->
         <palette-source group="Marketing" label="Marketing records" icon="sym_o_campaign"
@@ -176,6 +183,23 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P2 (design §1.3 CX-ASSIST): CampaignDetail's chip; its results arrive with the reports (P20) -->
         <assist-prompt label="Summarize this campaign's results" text="Summarize this campaign's results: its plan, budget and actual cost, approvals and what is next"
                 screen="Marketing/Campaigns/CampaignDetail" entity="mantle.marketing.campaign.MarketingCampaign" sequence="64"/>
+        <!-- P21 (design §14.3 QuickSend): the Sends list's NewSend, the campaign fixed when opened from one; a user without send edit
+            is told so -->
+        <quick-create kind="marketingSend" label="Marketing send" icon="sym_o_forward_to_inbox" screen="Marketing/QuickCreate/NewSend"
+                sequence="95"/>
+        <!-- P21 (design §14.3 Today): the sends due, the approvals awaiting the approver, the sends with failed or uncertain deliveries
+            and the registrations to review, each opening its screen; a source that could not be read says so by name -->
+        <today-source service="ironstone.marketing.ContextServices.get#TodayItems" label="Marketing"/>
+        <!-- P21 (design §1.3 Comms hooks): a campaign's, a send's or a registration's card, search and links in Comms, and the caller's
+            upcoming registrations in the ring bar and the call (an events manager's); never an address, a token or an attendee's name -->
+        <record-lookup name="marketing.records" service="ironstone.marketing.ContextServices.lookup#Records" sequence="-4"/>
+        <call-context name="marketing.registrations" service="ironstone.marketing.ContextServices.get#CallContext"/>
+        <!-- P21 (design §1.3 CX-ASSIST): Assist's answer actions, filed through Marketing's own record check: Log as note on the page's
+            campaign or send, Send as message (Comms' internal message, filed on the page's record when Marketing admits the user) -->
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Marketing/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="72"/>
+        <response-action label="Send as message" icon="sym_o_send" screen="Marketing/SendMessage" text-parameter="messageText"
+                sequence="73"/>
         <keymap scope="marketing">
             <key keys="g m" label="Marketing home" screen="Marketing/Home"/>
             <!-- P2 -->
@@ -198,6 +222,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g e" label="Events" screen="Marketing/Events/Events"/>
             <!-- P20 -->
             <key keys="g r" label="Reports" screen="Marketing/Reports/Catalog"/>
+            <!-- P21: the campaign calendar -->
+            <key keys="g k" label="Campaign calendar" screen="Marketing/Calendar"/>
         </keymap>
     </shell-providers>
 
