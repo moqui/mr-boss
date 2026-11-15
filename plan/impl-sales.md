@@ -1,3 +1,4 @@
+Nov 15, 2026 — the build complete: P1–P20 and follow-ups 1–5, each reviewed by a fresh agent and merged; the full suites passing within the budgets and the acceptance suites run once and fixed (Final suites and acceptance under P20). Committed only, nothing pushed.
 Nov 14, 2026 — gate 3 built: P14–P20 (stage S3), commercial changes and the handoffs, agreements and customer prices with their
 print, recurring orders, PASS Sales' orders, forecasts and targets, reports with Insights' registrations and the quote dataset, and
 the RFQ acknowledgement, each phase reviewed by a fresh agent and merged on its focused specs, with follow-up 2 (recurring orders'
@@ -5456,6 +5457,18 @@ re-run on the merge before any change: SalesQuoteDataset, SalesPipelineDataset, 
     matched sender's From; never to automatic, list, bulk or system mail; marked an automatic reply; its locked text sees only the
     reference and the seller's name), and Sales' customer agreements gain the print (from its own records for its reader, missing
     otherwise, no cost or linked order).
+
+**Final suites and acceptance, Nov 15 (Sales and Marketing together).** After Marketing P23 the release binary was rebuilt and
+`./moq test-apps` and `./moq test-framework` run (logs `.claude/worktrees/wave-logs/sm-final*`). The apps' failures were fixed on
+Marketing follow-ups 7 and 8 (a spec's leftover door grants, the Consent registry's first page, the send walk in the demo profile's quiet
+hours, a tx-commit SECA read at once) and the framework's container-box condition (fix/boxcond, the user's call). The re-run passed all
+4,693 regression features but one order-dependent Manufacturing read, fixed with the acceptance round; every component within its
+budget, mr-boss's client raised to 94 s (the user's agreement). `./moq accept mr-mantle mr-boss mr-pass` ran once (54 failures, most in
+acceptance tests never run before), fixed on acc/sales, acc/mkt and acc/other, with the user's calls built as Sales follow-up 5,
+Marketing follow-up 9 and fix/accfw; the second run left four (none a leak: an id compared across kinds, an unguarded sharedLinks read,
+a spec's leftover holiday, an unordered read), fixed on acc/final and each re-run green. Framework failures left to their owners: the
+OpenSearch archive download in `scripts/moq-test.sh`, webroot's MoquiFind spec (unchanged since Nov 13) and its client budget, and a
+moqui-host edge SMTP test.
 
 ### Follow-up 1 — a new record's organization default (F111)
 

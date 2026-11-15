@@ -1,3 +1,4 @@
+Nov 15, 2026 — the build complete: P1–P23 and follow-ups 1–9, with the framework fixes (sms-consent, hmac, container-box conditions, the acceptance fixes), each reviewed by a fresh agent and merged; the full suites passing within the budgets and the acceptance suites run once and fixed (Final suites and acceptance under P23). Committed only, nothing pushed.
 Nov 15, 2026 — gate 8 and the build's phases done: P22 (SMS, with the framework's conf-level sms-consent provider and the promotional day limit per number), P23 (the tui and server-static sweeps, the access walk, the PASS phone check, the docs) and follow-ups 5–6, each reviewed by a fresh agent and merged on its focused specs. Next: the full suites, then the acceptance suites once.
 Nov 15, 2026 — gate 7 built: P19–P21 and follow-ups 1–4 (stage M7, Marketing's first release M0–M7), promotions, Customer360 and engagement, attribution, reports and Insights, the campaign calendar with its projected collection, the shell providers and Assist, and a remote PASS checkout's visitor key, each phase reviewed by a fresh agent and merged on its focused specs. Next: P22 (SMS, in review) and follow-up 5, then P23.
 Nov 15, 2026 — gate 6 built: P16–P18 (stage M6), events (registration setup with the PASS Event page, registrations, tickets and
@@ -6630,6 +6631,18 @@ users and the controls), deleted after; no acceptance test was run.
     `service/mantle/party/MessageServices.xml` (a comment) and mr-moqui `docs/security/Attack-Surface.md`'s shell-providers sentence;
   - the walk leaves ZIZI_SHOP published, as the other Marketing walks do;
   - nothing needs the user's call.
+
+**Final suites and acceptance, Nov 15 (Sales and Marketing together).** After Marketing P23 the release binary was rebuilt and
+`./moq test-apps` and `./moq test-framework` run (logs `.claude/worktrees/wave-logs/sm-final*`). The apps' failures were fixed on
+Marketing follow-ups 7 and 8 (a spec's leftover door grants, the Consent registry's first page, the send walk in the demo profile's quiet
+hours, a tx-commit SECA read at once) and the framework's container-box condition (fix/boxcond, the user's call). The re-run passed all
+4,693 regression features but one order-dependent Manufacturing read, fixed with the acceptance round; every component within its
+budget, mr-boss's client raised to 94 s (the user's agreement). `./moq accept mr-mantle mr-boss mr-pass` ran once (54 failures, most in
+acceptance tests never run before), fixed on acc/sales, acc/mkt and acc/other, with the user's calls built as Sales follow-up 5,
+Marketing follow-up 9 and fix/accfw; the second run left four (none a leak: an id compared across kinds, an unguarded sharedLinks read,
+a spec's leftover holiday, an unordered read), fixed on acc/final and each re-run green. Framework failures left to their owners: the
+OpenSearch archive download in `scripts/moq-test.sh`, webroot's MoquiFind spec (unchanged since Nov 13) and its client budget, and a
+moqui-host edge SMTP test.
 
 ### Follow-up 1 — Ticket capture, cancellation terms, stable entry codes and Retail's Utah tax
 
