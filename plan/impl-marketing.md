@@ -5759,6 +5759,142 @@ EventAttendance row and usl-inventory's P18 table kept beside follow-up 1's), mr
     OrderToCash chain left, R4); the framework `hmac` member for codeOf, the lead's in mr-moqui;
   - the user's call open: whether the OrderToCash chain's move (R4) is worth its size, or the nexus suspension stays for it.
 
+### Follow-up 2 — The framework hmac member for entry codes, and demo dates relative to the load
+
+The user's two calls of Nov 15 (§4): a framework `hmac` host member replacing the nested digest of the entry code (codeOf), and the
+demo data dates that regression specs depend on made relative to the load (or far future), the specs reading as of a fixed date,
+starting with BOSS_PRICE_SALES/BOSS_PRICE_NEXT. Branch `mkt/fix2` in mr-moqui, mr-mantle and mr-boss.
+
+**Built Nov 15 (follow-up 2).** mr-moqui, mr-mantle and mr-boss on branch `mkt/fix2` from master after follow-up 1's merge.
+- Checked first (the code over the plan): the script host's digest members (`ec.resource.digestText`, archive.rs `textDigest`:
+  lower-case hex; `makeGrant`'s HMAC-SHA256 tag in files.rs, hex), EventRegistrationPlaces.js codeOf, issueCode and
+  registrationOfCode, the demo services that date data from the load (commons DemoServices.xml load#CommonsDemo and the others
+  called from data files) and the test fixture's snapshot key (moqui-host fixture.rs: the day of the load is part of it, so a
+  load-relative date is the same for every spec of a day's runs). The data loader has no now-relative attribute syntax; a demo
+  service called from the data file is the existing way. The code over the plan:
+  - `ec.resource.hmac(key, message, encoding)` returns lower-case hex like digestText (or unpadded base64url with "base64url"), and
+    refuses an empty key (a keyed digest without a key is a mistake, as makeGrant refuses one);
+  - `digestText` was missing from moqui-host.d.ts and is added beside `hmac`.
+- Framework (mr-moqui): `ec.resource.hmac` (crates/moqui-core/src/script/host/archive.rs `textHmac`, the shim in tools.rs);
+  docs/dev/JS-Core-API.md (the member and the `ec.resource` list); both moqui-host.d.ts (typegen and its testdata/expected).
+  Tests: archive.rs `hmac_sha256_matches_rfc_4231` (RFC 4231 cases 1, 2 and 6, a key longer than the block), and the script-level
+  check in framework_gaps_tests.rs `resource_digests_archives_and_line_windows` (case 2 in hex and base64url, an empty key refused).
+- Entry code (mr-mantle EventRegistrationPlaces.js codeOf): "EV" and the first 24 hex characters, upper-cased, of
+  `ec.resource.hmac(entryCodeKey, registrationId + "\n" + revision)`. No version marker: a stored digest is of the code shown, and
+  registrationOfCode looks a presented code up by its digest whatever made it, so a code issued under follow-up 1's construction
+  still checks in; issueCode, finding the stored digest is not the new derivation's, writes the next revision's code (as it already
+  did for P17's random codes), which revokes the old one at that showing. So existing codes rotate at their registration's next
+  showing (a ticket sent, Send again, Show my entry code), never silently: until then the old code works, and the showing answers the
+  new one. Pre-release, and the demo data stores no entry code digest, so this is acceptable without keeping the old construction.
+- Demo dates (mr-boss):
+  - BossProductsDemoData.xml: BOSS_PRICE_SALES (15.00) ends and BOSS_PRICE_NEXT (16.00, "Scheduled next price") starts on the first
+    day of the month after next at 00:00, relative to the load: the new `ironstone.products.DemoServices.load#ScheduledPriceDemo`
+    (service/ironstone/products/DemoServices.xml), called from the data file after the rows, moves the 2099-01-01 placeholders (a
+    load on Nov 15, 2026 switches on Jan 1, 2027; loading again moves it). ProductsPriceLists reads the explanation with `validDate`
+    2026-06-01 and ProductsPricing's REST read with `asOfDate` 2026-06-01, so each asserts 13.50 and BOSS_PRICE_SALES on any day.
+    Both failed on master from Nov 15 and pass now;
+  - the sweep (records dated from today to March 2027 in mr-boss's demo data, the specs that name them, and the area specs run, below):
+    nothing else fails today, and the near ones were judged safe: Maintenance's compressor oil service (Nov 17), the vendor walk and
+    room blackout (Nov 17), the handover booking (Nov 18, its list already read from 2026-11-12), Owen's leave (Nov 16–20, ranked
+    against the work's own window, not now), the rewind request (Nov 20), Room 201's draft plan (Nov 30, no spec), the warranties (the
+    spec sets them from now), the van's registration (Dec 31, no spec); MaintenancePlans' November obligation was fixed by Sales
+    follow-up 3 (thruDate 2026-11-13); Sales' Q4 forecast (named period), quotes and RFQ (no date check before Jan 31, 2027), Purchasing's
+    acknowledgement order (Nov 20, no lateness asserted of it), Marketing's campaigns (status "open", the selected one kept), the
+    December send (MarketingDelivery moves its schedule to a week from now), the fall fair import (Dec 12, its detail reads the same
+    once expired), People's leave year 2026 (explicit dates in PeopleLeave), Projects' milestones (no date check), Warehouse's forklift
+    service (Nov 15), Manufacturing's shutdown and People's stocktake holiday (no spec). mr-mantle's demo data has no date in the window,
+    and no mr-mantle or mr-pass spec names a BOSS demo record.
+- Tests run:
+  - Rust (Debug, CARGO_BUILD_JOBS=4, this worktree): `hmac_sha256_matches_rfc_4231`, `resource_digests_archives_and_line_windows`
+    (2 of 2); moqui-devkit's typegen tests (8 of 8, the expected moqui-host.d.ts); mr-mantle EventRegistrations (16 features) and
+    EventCheckIn with this worktree's Debug binary (`--debug --nobuild`, 19 of 19, 8.7 s of feature time in Debug);
+  - mr-boss (release, `--nobuild`, this worktree's runtime): ProductsPriceLists, ProductsPricing (23 of 23); the sweep, the 169
+    regression specs of Maintenance, People, Marketing, Sales, Purchasing, Projects, Products, Warehouse, Manufacturing and
+    CustomerService on 4 workers (933 of 935): SalesQuotes and SalesQuoteSend fail alike on master's runtime (below), not a date.
+  - Prettier (mr-moqui's config) on the changed JavaScript; rustfmt on archive.rs. Not run: test-apps, test-framework, acceptance.
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above (hex by default with an optional base64url, an empty key refused; no version marker for codes);
+  - existing entry codes of follow-up 1's construction rotate at their registration's next showing (the demo data stores none);
+  - SalesQuotes ("No tax: the seller has no tax gateway" not shown for Wingtip's quote) and SalesQuoteSend (propose#Quote refused,
+    ADDRESS_REQUIRED: the customer has no address to tax the quote at) fail on master too: Retail now has a Utah nexus and inherits
+    Corp's LOCAL gateway (follow-up 1's demo change), so Retail's quotes are taxed and need an address; a follow-up for Sales' specs
+    or demo (Wingtip given an address, or the specs' expectations), not done here;
+  - dates beyond December that specs depend on, next to turn: Marketing's webinar (2027-01-28) and workshop (2027-03-13, closing
+    03-12) offers that MarketingAccess and the Marketing specs register for; Wingtip's quote valid to 2027-01-31; PeopleLeave's
+    requests of 2027-04-06/07. Not changed (outside the call's Nov–Dec window).
+- For the lead:
+  - budget share: none (two parameters in two specs; the demo service runs once per load);
+  - merge hot spots: mr-moqui `crates/moqui-core/src/script/host/archive.rs`, `tools.rs`, `framework_gaps_tests.rs`, both
+    `moqui-host.d.ts`, `docs/dev/JS-Core-API.md`; mr-mantle `service/mantle/work/EventRegistrationPlaces.js` (codeOf); mr-boss
+    `data/BossProductsDemoData.xml`, `service/ironstone/products/DemoServices.xml` (new), `test/Products/ProductsPriceLists.spec.js`,
+    `ProductsPricing.spec.js`, `plan/design-marketing.md` (§13's entry code line), this file;
+  - the user's call: whether to give the beyond-December event and quote dates the same treatment now (events relative to the load
+    would need the offers' occurrences, closing dates and the PASS pages' expectations moved together).
+
+**Review Nov 15 (follow-up 2).** A fresh review of `mkt/fix2` (mr-moqui d8df3855, mr-mantle 1cef2308, mr-boss 99db0511) against the
+user's two calls (§4 Nov 15), §2 and docs/dev/Practices-Rust.md; master had nothing newer in any of the three. Fixes committed per
+repository as "Marketing follow-up 2 review: …"; mr-mantle unchanged. The lead's addition, made here: the Sales quote specs that
+failed on master since follow-up 1 gave Retail a Utah nexus (R3).
+- Checked and sound:
+  - `ec.resource.hmac`: HMAC-SHA256 through the `hmac` crate (RFC 2104; the three RFC 4231 vectors and the base64url form checked
+    again independently), key and message as the strings' UTF-8 bytes (a binary key is passed as its text, hex or base64, which is
+    then the key: documented as UTF-8), lower-case hex by default or unpadded base64url, any other encoding refused naming only the
+    encoding; an empty or null key refused with "an hmac needs a key", the key never in a message or log. A `leaf` method like
+    textDigest (it uses no ec state). Constant-time comparison is not this member's concern (it makes tags; the entry code is
+    compared by its stored digest). JS-Core-API.md (the member and the non-Java list), both moqui-host.d.ts (digestText added too)
+    and the typegen expected file agree;
+  - the entry code: "EV" + the first 24 hex (96 bits) of HMAC(entryCodeKey, registrationId "\n" revision), upper-cased. The key is
+    the HMAC key (no concatenation with the message), the message parses one way (a sequenced id, an integer); stored only as
+    `singleUseCodeHash`; registrationOfCode looks a code up by its digest whatever made it, so a follow-up 1 code checks in until
+    its registration's next showing, where issueCode finds the stored digest is not the new derivation's, raises the revision and
+    writes the new code (the old one stops matching then, as P17's random codes did). Pre-release and the demo stores no digest:
+    acceptable as the Built note says;
+  - the price demo: load#ScheduledPriceDemo (anonymous-all, allow-remote false, a signed-in caller must be ADMIN, as the other demo
+    loaders are internal) moves the 2099 placeholders to the first of the month after next at 00:00 in the server's zone, a
+    missing row logged and skipped; the specs read `validDate` / `asOfDate` 2026-06-01, which get#PriceExplanation and
+    find#ProductPrices honor. The worker's date sweep reads right where I sampled it (Maintenance, Sales, Marketing's December
+    send); the 2027 dates are below.
+- Fixed:
+  - R1 (low) nothing checked that load#ScheduledPriceDemo ran: with the specs reading as of a fixed date, a broken loader would
+    leave the 2099 placeholders and pass. ProductsPriceLists now checks BOSS_PRICE_SALES ends where BOSS_PRICE_NEXT starts, ahead
+    of now and within 63 days (fails on master's data, which switched today);
+  - R2 (low) `ec.resource.hmac`'s script-level test covered ASCII only: a non-ASCII key and message (é, é: the UTF-8 bytes,
+    checked against Python's hmac) and an unknown encoding refused, in framework_gaps_tests.rs;
+  - R3 (medium; the lead's addition) mr-boss SalesQuotes and SalesQuoteSend failed on master: follow-up 1's Utah nexus for Retail
+    with Corp's LOCAL gateway taxes Retail's storeless quotes, so OrderDetail no longer says "No tax: the seller has no tax
+    gateway" and propose#Quote refused ADDRESS_REQUIRED (Wingtip had no address). Wingtip Traders (the only Retail customer the
+    Sales specs quote or order for) has a Provo, Utah PostalShippingDest address (BOSS_SAL_WINGTIP_ADDR,
+    BossYSalesAccountsDemoData.xml), which create#Quote takes. The demo draft BOSS_SAL_QTE_WINGTIP keeps no address of its own: it
+    loads before Retail's nexus and gateway (BossZZMarketingDemoData.xml), so it carries no tax line, and with an address of its
+    own propose#Quote would skip the retax (refreshTax returns when the part has an address) and issue it untaxed; without one,
+    OrderDetail says "Tax by the seller's gateway … the quote has no address: choose the customer's in Edit quote" and a proposal
+    takes Wingtip's address and retaxes first (F151). Its data comment says so. SalesQuotes asserts that note and no "No tax";
+    SalesQuoteSend asserts the new quote is at Wingtip's address with a sales tax line (it failed on master before reaching that).
+- Provisional findings (for the lead to number):
+  - existing entry codes of follow-up 1's construction rotate at their registration's next showing (as the Built note says);
+  - the demo quote BOSS_SAL_QTE_WINGTIP is untaxed as loaded (no tax line until a rep chooses the address or proposes it), since
+    Retail's gateway and nexus load after the Sales demo; giving it tax at load would mean taxing it after BossZZMarketingDemoData
+    or moving Retail's nexus into the Sales demo;
+  - dates beyond December that specs depend on, next to turn (the worker's list, not changed): Marketing's webinar offer
+    (2027-01-28) and workshop (2027-03-13, closing 03-12), which MarketingAccess and the Marketing specs register for; Wingtip's
+    quote valid to 2027-01-31; PeopleLeave's requests of 2027-04-06/07.
+- Tests (this worktree's runtime):
+  - Rust (Debug, CARGO_BUILD_JOBS=4): `cargo test -p moqui-core hmac` (7 of 7), `resource_digests_archives_and_line_windows` (after
+    R2), moqui-devkit typegen (8 of 8);
+  - mr-mantle EventRegistrations, EventCheckIn (Debug, `--debug --nobuild`, 19 of 19, 61 s wall in Debug); SalesQuoteIssue,
+    SalesQuoteDrafts (release, 12 of 12);
+  - mr-boss (release, `--nobuild`): before R3 ProductsPriceLists, ProductsPricing, SalesQuotes, SalesQuoteSend 25 of 27 (the two
+    Sales failures); after it SalesQuotes, SalesQuoteSend, SalesOrders, SalesQuoteTemplates, SalesApprovals, ProductsPriceLists,
+    ProductsPricing 32 of 32, and SalesOrderChanges, SalesQuoteAlert, SalesRecurrence, SalesAccess, SalesAccounts,
+    SalesQuoteRequests (the other specs that order or quote for Wingtip) passing with the address; ProductsPriceLists after R1
+    8 of 8. Prettier (mr-moqui's config) on the changed specs. Not run: test-apps, test-framework, acceptance.
+- For the lead:
+  - budget share: none measurable (one entity read in ProductsPriceLists, one count and one read in SalesQuoteSend);
+  - merge hot spots: mr-boss `data/BossYSalesAccountsDemoData.xml` (Wingtip), `data/BossZSalesDemoData.xml` (the Wingtip quote's
+    comment), `test/Sales/SalesQuotes.spec.js`, `SalesQuoteSend.spec.js`, `test/Products/ProductsPriceLists.spec.js`, this file;
+    mr-moqui `framework_gaps_tests.rs`;
+  - the user's call open (the Built note's): whether the 2027 event and quote dates get the load-relative treatment now.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into

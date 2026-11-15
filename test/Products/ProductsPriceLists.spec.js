@@ -51,16 +51,32 @@ feature("shared list and explanation services enforce direction owner and trace 
                     direction: "sales"
                 })
             ),
+            // as of a fixed date: the demo's next price (BOSS_PRICE_NEXT) starts relative to the load
             explained: as("catalog.price.read", () =>
                 call(S + "get#PriceExplanation", {
                     productId: "BOSS_PRD_OWN",
                     organizationPartyId: "ORG_ZIZI_SERVICES",
-                    direction: "sales"
+                    direction: "sales",
+                    validDate: "2026-06-01 00:00:00"
                 })
-            )
+            ),
+            // load#ScheduledPriceDemo moved the 2099 placeholders: the switch is the first of the month after next, ahead of the load
+            scheduled: (() => {
+                const at = productPriceId =>
+                    ec.entity.find("mantle.product.ProductPrice").condition({productPriceId}).disableAuthz().one()
+                const millis = value => ec.user.timestampMillis(value)
+                return {
+                    now: millis(ec.user.nowTimestamp),
+                    salesThru: millis(at("BOSS_PRICE_SALES").thruDate),
+                    nextFrom: millis(at("BOSS_PRICE_NEXT").fromDate)
+                }
+            })()
         }
     },
-    then({sales, supplier, reader, hidden, explained}) {
+    then({sales, supplier, reader, hidden, explained, scheduled}) {
+        scheduled.nextFrom == scheduled.salesThru
+        scheduled.nextFrom > scheduled.now
+        scheduled.nextFrom < scheduled.now + 63 * 86400000
         sales.priceListRows.some(r => r.priceListId === "BOSS_PRICE_LIST")
         supplier.priceListRows.length == 0
         reader.error.includes("authority")

@@ -38,6 +38,13 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_WINGTIP_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="buying@wingtip.example"/>
     <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_ACC_WINGTIP" contactMechId="BOSS_SAL_WINGTIP_EM" contactMechPurposeId="EmailPrimary"
             fromDate="2026-09-01 09:00:00"/>
+    <!-- Wingtip's Utah shipping address, where Retail's storeless quotes and orders for it are taxed (Retail's Utah nexus, Marketing
+        follow-up 1) -->
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_WINGTIP_ADDR" contactMechTypeEnumId="CmtPostalAddress"/>
+    <mantle.party.contact.PostalAddress contactMechId="BOSS_SAL_WINGTIP_ADDR" toName="Wingtip Traders" address1="250 Center Street"
+            city="Provo" stateProvinceGeoId="USA_UT" postalCode="84601" countryGeoId="USA"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_SAL_ACC_WINGTIP" contactMechId="BOSS_SAL_WINGTIP_ADDR"
+            contactMechPurposeId="PostalShippingDest" fromDate="2026-09-01 09:00:00"/>
     <mantle.party.Party partyId="BOSS_SAL_ACC_CONTOSO" pseudoId="CONTOSO" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL" disabled="N"/>
     <mantle.party.Organization partyId="BOSS_SAL_ACC_CONTOSO" organizationName="Contoso Labs"/>
     <mantle.party.PartyRole partyId="BOSS_SAL_ACC_CONTOSO" roleTypeId="Account"/>
