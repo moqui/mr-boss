@@ -7674,6 +7674,17 @@ failing run's log (`wave-logs/sm-final-apps.log`) and its worker logs (`runtime/
   - the user's calls: the container-box condition (honour it in the framework's four renderers, or lint it and move the 58 boxes to
     sections), and the client budget (about 93 s of 90), as the Built note says.
 
+### Framework fix — Container-box conditions (fix/boxcond)
+
+The user's call of Nov 15 (§4, follow-up 7's review). **Built Nov 15.** mr-moqui 8b8747c9c on `fix/boxcond`: `sri.checkCondition`
+(screen/sri/sections.rs check_widget_condition) evaluates a container-box's `condition` as a section's is (the same eval, context and
+failure handling: a security error stops the render, another is logged and shown in the box's place, an `{t:"error"}` node in tui), a
+`conditionGuard` in ScreenSupport.js for qvt, html, text, csv, xml, xlsx and html-print, a `<template v-if>` in qvt-static, the XSD
+attribute and screen/tests/boxes.rs; docs JS-Screen-Scripts.md and JS-Templates-Macros.md, moqui-host.d.ts. mr-boss's conditioned
+boxes (60) read through: none needed a change.
+**Review Nov 15.** Sound; R1 (low): a test of the csv, xml, html-print and xlsx guards (9b9368c16). Findings: a box condition's syntax
+error is caught by lint and at render, not at screen load as a section's; a box with no id is labelled "container-box []".
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
