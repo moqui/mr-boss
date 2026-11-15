@@ -6615,7 +6615,7 @@ P20's merge; mr-moqui unchanged, no Rust built. Built beside P21 (`mkt/p21`) and
   0.14 s), ShopCheckout, Tracking, MarketingReports, Experiments, MarketingRetention 23 of 23 (9.1 s); mr-pass ShopCheckout 4 of 4
   (0.6 s), Forum, MarketingTracking, ShopSubscriptions, MarketingPages 21 of 21 (2.0 s). No screen changed (no lint). Not run:
   test-apps, the acceptance scenario (changed, not run).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F402 to F403 in order:
   - Register's ticket checkout does not forward the visitor key: a ticket order through a remote PASS is attributed by recipient
     only (a follow-up like this one if wanted: `completeRegistration` and EventRegistrationPlaces' placement);
   - the order keeps the digest after its decision and past the organization's statistics retention (the events it matches are
@@ -6674,7 +6674,7 @@ section, P20's Review note "the user's call 1", §4's Nov 15 row, §2 and design
     failure named, the rest done); an organization without the setting keeps it as long as it keeps the events. MarketingRetention
     covers it (A's 40-day-old order cleared, A's recent one and another seller's kept); seen to fail without the change.
     design-marketing §11's retention sentence says so.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F404 to F407 in order:
   - Register's ticket checkout (PASS Marketing `completeRegistration`) does not forward the key (the worker's first finding): it
     stands; not fixed now. The section names Shop's checkout only, a ticket order through a remote PASS is still attributed through
     its customer as a consenting recipient, and the change crosses EventRegistrationPlaces' placement (P17's code), so it is a
@@ -7196,6 +7196,12 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F399 | P20 (Review Nov 15): the worker's list stands (the order's identity by its local visit, its key and the consenting customer; the unattributed decision; amounts from the attributed orders' own rows; the aggregation a whole recompute; the datasets' documents in mr-boss; counts, not rates, in the alerts; one attention service; Reports before Settings; split-line allocation and credits beyond returns not built; the legacy member outside Audience growth's opening and closing; no campaign dimension in the delivery dataset; Commerce Home without a conversion figure; the demo's empty reports; `get#TrackingLinkResults` on no screen; the import-row request named each night) | P20: as its Review note says |
 | F400 | P20 (Review Nov 15): amounts in the reports are summed as JavaScript numbers and rounded only for display (decimals per JS-Globals would be exact); invoiced counts OrderItemBilling whatever its invoice's status (a cancelled invoice's billing still counts); neither fixed here | P20: as its Review note says |
 | F401 | P20 (Review Nov 15): the remote PASS checkout's visitor key (the user's call of Nov 15) is the lead's follow-up: see "For the lead" | P20: as its Review note says |
+| F402 | Follow-up 4 (Built Nov 15): Register's ticket checkout does not forward the visitor key: a ticket order through a remote PASS is attributed by recipient only (a follow-up like this one if wanted: `completeRegistration` and EventRegistrationPlaces' placement) | Follow-up 4: as its Built note says |
+| F403 | Follow-up 4 (Built Nov 15): the order keeps the digest after its decision and past the organization's statistics retention (the events it matches are removed by retention unless an attribution names them); retention could clear it on orders older than the retention days | Follow-up 4: as its Built note says |
+| F404 | Follow-up 4 (Review Nov 15): Register's ticket checkout (PASS Marketing `completeRegistration`) does not forward the key (the worker's first finding): it stands; not fixed now. The section names Shop's checkout only, a ticket order through a remote PASS is still attributed through its customer as a consenting recipient, and the change crosses EventRegistrationPlaces' placement (P17's code), so it is a follow-up like this one if the user wants ticket orders attributed by the key (the user's call) | Follow-up 4: as its Review note says |
+| F405 | Follow-up 4 (Review Nov 15): after placement a customer's withdrawal leaves the digest on the order until retention (or forever without `statisticsRetentionDays`); attribution ignores it (its withdrawn early return), so it is never used, but it is kept; clearing it on withdrawal would need a hook in the consent write (left as is, low) | Follow-up 4: as its Review note says |
+| F406 | Follow-up 4 (Review Nov 15): PASS's `visitorKeyInput` (Do Not Track / GPC, the cookie's form) is reviewed but not exercised by a spec (the remote feature passes `visitorKey` to the facade directly; no spec drives the Shop submit transition with headers); TrackingLib's `doNotTrack` and `heldKey` are covered by MarketingTracking (low) | Follow-up 4: as its Review note says |
+| F407 | Follow-up 4 (Review Nov 15): deployment order: both facades refuse an input field the schema does not list, so a PASS with this change against an authority without it refuses every Shop submit that carries a key ("Unsupported field"); deploy the authority first (a note for release, nothing to fix in one repository set) | Follow-up 4: as its Review note says |
 
 ## 7. Later
 
