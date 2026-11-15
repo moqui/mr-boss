@@ -758,6 +758,7 @@ along with this software (see the LICENSE.md file). If not, see
             publicTitle="Rose pruning workshop" publicDescription="A hands-on morning: how and when to prune climbing, shrub and hybrid tea roses. Tools and gloves provided."
             timeZone="America/Denver" siteId="ZIZI_SHOP" totalSeats="12" holdMinutes="15" waitlistEnabled="Y" waitlistLimit="6"
             closesDate="2027-03-12 17:00:00" termsText="Places are held for 15 minutes while you pay." cancellationTerms="Cancel up to two days before for a full refund."
+            cancelDeadlineHours="48" refundPercent="100" lateCancelAllowed="N"
             questionScopeEnumId="ErqAttendee" policyRevision="4" termsRevision="0" publishedDate="2026-11-02 09:00:00" publishedByUserId="BOSS_MKT_EVENTS"
             createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
     <mantle.work.registration.EventTicketType ticketTypeId="BOSS_MKT_TT_STD" registrationPolicyId="BOSS_MKT_OFFER_WORKSHOP" ticketName="Standard"
@@ -775,4 +776,20 @@ along with this software (see the LICENSE.md file). If not, see
         total changes until one is given (the review's note). -->
     <mantle.ledger.config.PartyAcctgPreference organizationPartyId="ORG_ZIZI_CORP" taxGatewayConfigId="LOCAL"/>
     <!-- ===== end of Marketing P17 ===== -->
+
+    <!-- ===== Marketing follow-up 1 (§4 Nov 15, the user's call): Ziziwork Retail taxed in Utah ===== -->
+    <!-- Retail's Utah nexus and rate (6.1 %, shipping taxed, as Ziziwork Sales'), so the LOCAL gateway named on ORG_ZIZI_CORP (P17) taxes
+        its storeless orders, the workshop's ticket orders among them (at Retail's own Orem address, PostalShippingOrigin, the workshop
+        having no facility), and the ZIZI_RETAIL store's orders (the store names LOCAL itself) at their Utah destinations. The
+        store's warehouse gets Retail's Orem address as its shipping origin, where an order with no destination (a Shop order of
+        downloads only) is taxed, rather than refused for want of an address. Orders loaded as data keep their totals; orders placed
+        from now on are taxed. -->
+    <mantle.other.tax.TaxAuthorityParty taxAuthorityId="BOSS_SAL_TAX_UT" partyId="ORG_ZIZI_RETAIL" fromDate="2026-01-01 00:00:00"
+            isNexus="Y" partyTaxId="UT-RETAIL-DEMO"/>
+    <mantle.other.tax.TaxAuthorityRate taxAuthorityRateId="BOSS_MKT_TAX_UT_RETAIL" taxAuthorityId="BOSS_SAL_TAX_UT"
+            rateTypeEnumId="TarSalesTax" organizationPartyId="ORG_ZIZI_RETAIL" taxPercentage="6.1" taxShipping="Y"
+            fromDate="2026-01-01 00:00:00" description="Utah combined sales tax"/>
+    <mantle.facility.FacilityContactMech facilityId="ZIRET_WH" contactMechId="ORG_ZIZI_RTL_SA" contactMechPurposeId="PostalShippingOrigin"
+            fromDate="2026-01-01 00:00:00"/>
+    <!-- ===== end of Marketing follow-up 1 ===== -->
 </entity-facade-xml>

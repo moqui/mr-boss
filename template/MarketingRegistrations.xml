@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     - enterRegistration: StaffRegistration (reserve#Registration, then complete#Registration with the attendee named and the terms
       accepted on the buyer's behalf; a free place confirms, a paid one stays held for its payment);
     - applyRegistrations: RegistrationBatch (change#Registrations), cancel or notify the selected registrations;
-    - confirmRegistration, cancelRegistration, correctRegistration: RegistrationDetail's RegistrationChange. -->
+    - confirmRegistration, cancelRegistration, correctRegistration: RegistrationDetail's RegistrationChange; reissueRegistrationCode
+      its new entry code (follow-up 1). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="enterRegistration">
@@ -45,7 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <set field="selectedIds" from="registrationIds == null ? [] : (typeof registrationIds == 'string' ? registrationIds.split(',') : Array.from(registrationIds))"/>
             <service-call name="mantle.work.EventRegistrationServices.change#Registrations" out-map="changed"
-                    in-map="{action:batch, registrationIds:selectedIds, reason:(reason || null)}"/>
+                    in-map="{action:batch, registrationIds:selectedIds, reason:(reason || null), refundPercent:(refundPercent || null)}"/>
             <if condition="!ec.message.hasError()"><message type="${changed.failed ? 'warning' : 'success'}">${changed.changed} changed${changed.failed ? ', ' + changed.failed + ' failed: ' + Array.from(changed.results).filter(r =&gt; r.outcome == 'failed').map(r =&gt; r.registrationId + ' ' + r.message).join('; ') : ''}</message></if>
         </actions>
         <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
@@ -63,8 +64,17 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="cancelRegistration">
         <actions>
             <service-call name="mantle.work.EventRegistrationServices.cancel#Registration" out-map="cancelled"
+                    in-map="{registrationId:registrationId, expectedRevision:expectedRevision, reason:reason, refundPercent:(refundPercent || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${cancelled.refundStatusEnumId == 'ErfRequested' ? 'Registration cancelled; its refund (' + cancelled.refundPercent + '%) is handed to Accounting' : 'Registration cancelled'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="registrationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="reissueRegistrationCode">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.reissue#RegistrationCode" out-map="reissued"
                     in-map="{registrationId:registrationId, expectedRevision:expectedRevision, reason:reason}"/>
-            <if condition="!ec.message.hasError()"><message type="success">${cancelled.refundStatusEnumId == 'ErfRequested' ? 'Registration cancelled; its refund is handed to Accounting' : 'Registration cancelled'}</message></if>
+            <if condition="!ec.message.hasError()"><message type="success">New entry code ${reissued.credentialRevision} sent; the earlier one no longer works</message></if>
         </actions>
         <default-response url="."><parameter name="registrationId"/></default-response>
         <error-response url="."/>

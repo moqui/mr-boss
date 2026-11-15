@@ -1073,6 +1073,9 @@ EventRegistrationPlaces.js, EventRegistrationPayments.js and EventRegistrationNo
 | work/EventRegistrationServices | handle#RegistrationOrderStatus, offer#WaitlistPlaces, refund#RegistrationPayment, refresh#RegistrationPayment, queue#RegistrationNotice, build#RegistrationDelivery | §9 order rules, §15.3, §18 | the EventRegistrationOrderStatus SECA, after-commit services and the ledger source MdsrcEventRegistration (Marketing P17) |
 | marketing/MarketingPortalServices | reserve#Registration, complete#Registration, start#RegistrationPayment, get#Registration, cancel#Registration | PASS:Marketing/Register (RegistrationChoice, RegistrationAnswers, RegistrationPayment, RegistrationReceipt), PASS:Marketing/Registration (MyRegistration, CancelRegistration) | PASS:Marketing/Register, PASS:Marketing/Registration (Marketing P17) |
 | order/OrderInfoServices | check#OrderPreApprove | Sales §5 (pre-approval warnings) | a storeless ticket order (OrpEventRegistration) skips the new-customer and shipping-address checks (Marketing P17) |
+| work/EventRegistrationServices | reissue#RegistrationCode | Marketing/Events/RegistrationDetail (RegistrationChange) | template/MarketingRegistrations.xml reissueRegistrationCode (RegistrationDetail's New entry code) (Marketing follow-up 1) |
+| work/EventRegistrationServices | invoice#RegistrationOrder | §9 order rules (capture on approval; §4 Nov 15) | the EventRegistrationApprovedInvoice SECA, through Accounting's create#FulfillmentInvoice (Marketing follow-up 1) |
+| account/PaymentTestServices | hostedAuthorize#PaymentAuthorization | — (test gateway) | a hosted test page that only authorizes (Mantle EventRegistrations; Marketing follow-up 1) |
 
 Added in Marketing P18 (Nov 15, 2026; check-in in `mantle.work.EventRegistrationServices` over EventCheckIn.js, and the registration
 triggers of automations and lead rules, impl-marketing P18), called by built screens, a door tablet and the jobs:
