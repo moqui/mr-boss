@@ -46,7 +46,9 @@ const areas = {
     // P12: Surveys (the builder, distribution and responses), the authors', audience managers' and analysts' (BOSS_MKT_SURVEYS)
     surveys: "Surveys",
     // P13: LeadRules (the lead forms' routing to Sales and their handoffs), the authors' (BOSS_MKT_LEAD_RULES)
-    leadRules: "Leads/LeadRules"
+    leadRules: "Leads/LeadRules",
+    // P20: Reports (the catalog and the four reports), the report readers' (BOSS_MKT_REPORTS)
+    reports: "Reports"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
@@ -58,7 +60,9 @@ const areaReads = {
     sends: "sendsRead",
     automations: "automationRead",
     surveys: "surveyRead",
-    leadRules: "leadRuleRead"
+    leadRules: "leadRuleRead",
+    // P20
+    reports: "reportRead"
 }
 
 // ===== scope =====
@@ -307,6 +311,13 @@ const linkPaths = [
     "Events/RegistrationDetail",
     // P18: an offer's check-in (design §9 CheckIn)
     "Events/CheckIn",
+    // P20: the reports (design §11)
+    "Reports",
+    "Reports/Catalog",
+    "Reports/CampaignPerformance",
+    "Reports/DeliveryAnalysis",
+    "Reports/AudienceGrowth",
+    "Reports/Attribution",
     // P19: Commerce's shared promotion screens in Marketing's registration (design §7; PromoCodeDetail a sibling, as Commerce mounts it),
     // the shared Customer360 with Marketing's Engagement tab and the Commons contact record (design §10)
     "Promotions",
@@ -1345,6 +1356,55 @@ const choiceSources = {
             selected,
             id => !!one("moqui.basic.email.EmailTemplate", {emailTemplateId: id}),
             id => one("moqui.basic.email.EmailTemplate", {emailTemplateId: id})?.description || id
+        )
+    },
+    // P20: a report's campaigns: every campaign of the organization named (or of the scope) but a cancelled one, by name; the selected
+    // one's label when the user reads it
+    reportCampaigns: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find(CAMPAIGN)
+            .condition("organizationPartyId", "in", ids)
+            .condition("statusId", "not-equals", "MKTG_CAMP_CANCELLED")
+            .orderBy("^campaignName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["marketingCampaignId", "campaignName"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.marketingCampaignId,
+            label: row.campaignName || row.marketingCampaignId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => !!recordKinds.campaign.read(userScope, id),
+            id => one(CAMPAIGN, {marketingCampaignId: id})?.campaignName || id
+        )
+    },
+    // P20: a report's sends: the released sends of the organization named (of one campaign when named), the latest first, by name
+    reportSends: (userScope, term, selected, p) => {
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find(SEND)
+            .condition("organizationPartyId", "in", ids)
+            .condition("releasedDate", "is-not-null", null)
+            .orderBy("-releasedDate")
+            .limit(choiceLimit)
+        if (p.marketingCampaignId) query = query.condition("marketingCampaignId", String(p.marketingCampaignId))
+        if (term) query = query.condition(textCondition(["campaignSendId", "sendName", "subject"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.campaignSendId,
+            label:
+                (row.sendName || row.subject || row.campaignSendId) +
+                (row.releasedDate ? " · " + lib.dateText(row.releasedDate) : "")
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => {
+                const send = one(SEND, {campaignSendId: id})
+                return !!send && covers(userScope, send.organizationPartyId)
+            },
+            id => one(SEND, {campaignSendId: id})?.sendName || id
         )
     },
     // P19: the stores a promotion may take in Marketing's registration of the shared promotion screens (Commerce's store scope within the

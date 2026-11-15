@@ -8,6 +8,9 @@ const ids = {
     // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's; P14: Content every
     // Marketing reader's; P16: Events every Marketing reader's
     staffMenu: ["Home", "Campaigns", "Content", "Events"],
+    // P20: Reports for the report readers (the reader, the analyst and the administrator)
+    readerMenu: ["Home", "Campaigns", "Content", "Events", "Reports"],
+    reportsMenu: ["Catalog", "CampaignPerformance", "DeliveryAnalysis", "AudienceGrowth", "Attribution"],
     // P8: Sends for the approvers and dispatchers too (its Sends tab; the templates stay their readers'); P11 Automations too
     sendsStaffMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Events"],
     approverSendsMenu: ["Sends"],
@@ -16,7 +19,19 @@ const ids = {
     // P12: Surveys for the authors, audience managers, analysts and the administrator
     audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Content", "Events", "Surveys"],
     // P13: Leads (its lead rules) for the authors and the administrator too
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Events", "Surveys", "Leads", "Settings"],
+    adminMenu: [
+        "Home",
+        "Campaigns",
+        "Audiences",
+        "Sends",
+        "Automations",
+        "Content",
+        "Events",
+        "Surveys",
+        "Leads",
+        "Reports",
+        "Settings"
+    ],
     // P19: Promotions for a holder of Commerce's promotion read when a store of their organizations is configured (ADMIN)
     systemMenu: [
         "Home",
@@ -29,9 +44,10 @@ const ids = {
         "Events",
         "Surveys",
         "Leads",
+        "Reports",
         "Settings"
     ],
-    analystMenu: ["Home", "Campaigns", "Content", "Events", "Surveys"],
+    analystMenu: ["Home", "Campaigns", "Content", "Events", "Surveys", "Reports"],
     // P6: Sends (Comms' templates) for the authors and the administrator
     authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Events", "Surveys", "Leads"],
     // P13: the Leads tabs of an author who reads no Sales

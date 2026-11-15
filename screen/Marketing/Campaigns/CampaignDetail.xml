@@ -139,6 +139,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="campaignEventList" from="eventsFound?.eventList || []"/>
         <set field="eventPath" from="marketing.capabilities.eventSetupRead ? sharedLinks['Events/RegistrationSetup'] : sharedLinks['Events/EventDetail']"/>
         <set field="newEventValues" from="{organizationPartyId:campaign.organizationPartyId, marketingCampaignId:marketingCampaignId, campaignFixed:true}"/>
+        <!-- P20: the campaign's results (design §3 CampaignDetail's Results, §11 CampaignPerformance) from its start (else the last 30
+            days) to now, with its children counted once, for a report reader; none before it starts -->
+        <if condition="recordFound &amp;&amp; marketing.capabilities.reportRead">
+            <service-call name="mantle.marketing.MarketingReportServices.get#CampaignPerformance" out-map="resultsFound" transaction="force-new"
+                    ignore-error="true" in-map="{marketingCampaignId:marketingCampaignId, includeChildren:'true', fromDate:(campaign.fromDate || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignResults" from="(resultsFound?.campaignRows || [])[0] || null"/>
+        <set field="performancePath" from="marketing.capabilities.reports ? (sharedLinks['Reports/CampaignPerformance'] || null) : null"/>
         <!-- P19: the campaign's store promotions (design §3 CampaignDetail's Promotions, §7): its current CakPromotion links -->
         <set field="campaignPromotionList" from="associationList.filter(link =&gt; link.associationKindEnumId == 'CakPromotion')"/>
         <set field="promotionPath" from="marketing.capabilities.promotionRead ? (sharedLinks['Promotions/PromotionDetail'] || null) : null"/>
@@ -617,11 +626,22 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-body>
                 </container-box>
 
-                <!-- P13: the campaign's results so far: its lead forms' handoffs to Sales -->
-                <container-box condition="leadHandoffs">
+                <!-- P13: the campaign's results so far: its lead forms' handoffs to Sales. P20: its performance for a report reader -->
+                <container-box condition="leadHandoffs || campaignResults">
                     <box-header title="Results"/>
                     <box-body>
-                        <label text="Leads from its forms: ${leadHandoffs?.summaryText}" type="p"/>
+                        <section name="CampaignPerformanceResults" condition="campaignResults">
+                            <widgets>
+                                <label text="Accepted sends ${campaignResults.acceptedCount} · Reach ${campaignResults.reachCount} · Visits ${campaignResults.visitCount} · Leads ${campaignResults.leadCount} (${campaignResults.qualifiedLeadCount} qualified) · Orders ${campaignResults.orderCount}"
+                                        type="p"/>
+                                <label text="Order value ${campaignResults.orderValueText} · Invoiced net ${campaignResults.netText} · ROI ${campaignResults.roiText}" type="p"/>
+                                <label text="From ${resultsFound.fromText} to ${resultsFound.thruText}, its child campaigns counted once; amounts by currency." type="p"
+                                        style="text-caption m-muted"/>
+                                <link url="${performancePath}" text="Campaign performance" link-type="anchor" condition="performancePath"
+                                        parameter-map="{marketingCampaignId:marketingCampaignId, includeChildren:'true'}"/>
+                            </widgets>
+                        </section>
+                        <label text="Leads from its forms: ${leadHandoffs?.summaryText}" type="p" condition="leadHandoffs"/>
                         <label text="${leadHandoffs?.captured} answers captured · ${leadHandoffs?.handedOff} handed to Sales" type="p" style="text-caption m-muted"
                                 condition="leadHandoffs?.captured"/>
                         <link url="${leadRulesPath}" text="Lead rules" link-type="anchor" condition="leadRulesPath"/>

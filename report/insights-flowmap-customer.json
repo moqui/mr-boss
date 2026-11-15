@@ -45,7 +45,9 @@
         "laneId": "customer",
         "title": "Finds us",
         "sequenceNum": 1,
-        "description": "Campaigns, the website and referrals bring a customer in. Marketing's campaigns and visits are not part of this installation yet, so this step is information only.",
+        "description": "Campaigns, the website and referrals bring a customer in. Marketing's campaigns, their visits and the orders attributed to them.",
+        "targetRegistrationId": "Marketing.Campaigns",
+        "catalogEntryId": "Marketing.CampaignPerformance",
         "next": [
           "quote",
           "shop"

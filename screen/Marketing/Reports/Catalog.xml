@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Reports › All reports (design-marketing §11 Reports ReportCatalog; style-guide §3.1; impl-marketing P20): the Marketing
+    reports the user may read, from Mantle's mantle.marketing.MarketingReportServices.get#ReportCatalog (the catalogue Insights' catalog
+    reads for Marketing's entries), each with what it answers and a link that opens it for the organization. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="All reports" default-menu-index="0" menu-image="sym_o_list" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || null"/>
+        <service-call name="mantle.marketing.MarketingReportServices.get#ReportCatalog" in-map="{appRoot:'Marketing'}" out-map="catalog"
+                transaction="force-new" ignore-error="true"/>
+        <set field="catalogRefused" from="ec.message.hasError()"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="reportRows" from="Array.from(catalog?.reports || []).map(row =&gt; Object.assign({}, row,
+                {reportPath: sharedLinks[row.path] || null, linkParameters: organizationPartyId ? {organizationPartyId} : {}}))"/>
+    </actions>
+    <widgets>
+        <label text="Marketing reports" type="h5"/>
+        <label text="Open a report for your organization; each states what its figures rest on and exports the same rows." type="p" style="text-caption m-muted"/>
+        <label text="No reports are available to you." type="p" condition="catalogRefused || !reportRows.length"/>
+        <form-list name="MarketingReportCatalog" list="reportRows" skip-form="true" paginate="false">
+            <field name="title">
+                <conditional-field title="Report" condition="reportPath">
+                    <link url="${reportPath}" text="${title}" link-type="anchor" parameter-map="linkParameters"/>
+                </conditional-field>
+                <default-field title="Report"><display/></default-field>
+            </field>
+            <field name="description"><default-field title="What it shows"><display/></default-field></field>
+            <field name="parameters"><default-field title="Options"><display/></default-field></field>
+            <columns type="mobile">
+                <column><field-ref name="title"/></column>
+                <column><field-ref name="description"/></column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

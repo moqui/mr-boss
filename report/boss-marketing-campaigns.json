@@ -1,0 +1,166 @@
+{
+  "id": "boss-marketing-campaigns",
+  "type": "dashboard",
+  "title": "Marketing campaigns",
+  "body": {
+    "folder": "Marketing",
+    "description": "Campaign deliveries by state and receipt over time, the failed, uncertain and complained deliveries, and list memberships by state, among the organizations of each viewer's Marketing report scope. Counts only: no person or address; campaign results by campaign are Marketing's Campaign performance and Delivery analysis reports.",
+    "panels": {
+      "deliveriesByState": {
+        "title": "Deliveries by state",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "boss-marketing-deliveries",
+            "aggregations": [
+              {
+                "id": "day",
+                "type": "date_histogram",
+                "role": "x-axis",
+                "params": {
+                  "field": "createdDate",
+                  "calendar_interval": "1d"
+                }
+              },
+              {
+                "id": "state",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "stateEnumId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "deliveries",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "deliveryId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "receipts": {
+        "title": "Receipts",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-marketing-deliveries",
+            "aggregations": [
+              {
+                "id": "receipt",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "receiptEnumId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "deliveries",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "deliveryId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "byOrganization": {
+        "title": "Deliveries by organization",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-marketing-deliveries",
+            "aggregations": [
+              {
+                "id": "organization",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "organizationPartyId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "state",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "stateEnumId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "deliveries",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "deliveryId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "memberships": {
+        "title": "List memberships by state",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-marketing-audience",
+            "aggregations": [
+              {
+                "id": "list",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "contactListName",
+                  "size": 20
+                }
+              },
+              {
+                "id": "state",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "statusId",
+                  "size": 10
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

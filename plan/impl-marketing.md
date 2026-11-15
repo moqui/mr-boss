@@ -5652,6 +5652,322 @@ MKT-TRACKING (attribution), MKT-REPORT.
   PASS is attributed once; a partial refund reduces attributed revenue once; an Insights reader opens
   CampaignPerformance from the catalog and a user without Marketing's report permission does not see it.
 
+**Built Nov 15 (P20).** mr-mantle and mr-boss on branch `mkt/p20` (hashes in the worker's reply), from master after P18's merge; mr-moqui
+unchanged, no Rust built. Built beside P19 (`mkt/p19`; the hot spots below).
+- Checked first (the code over the plan): P10's, P11's, P13's, P15's, P17's and P18's Built and Review notes, §4 (the one SECA and its
+  handler, the visitor key as built), F34, F85, F87 and F90–F348; impl-sales P19's Built note (the funnel's `count#SalesVisits` contract)
+  and P20's (the keyword typing of derived document fields); P11's `handle#OrderPlaced` and the SECA, P15's MarketingTracking.js (events,
+  visitor-key digests, `trackingAllowed`, the redirect declining its session so a click has no local visit), Sales' SalesAccess
+  (`isSalesOrder`, `orderOf`), SalesOpportunityOrder, OrderItemBilling and ReturnItem, the ledger's MessageDelivery (eventKey
+  `CampaignSend:{send}:…`, state and receipt), Mantle's BusinessEvents.js, Insights' Registry.js (catalogue, attention, flow targets,
+  metrics), the report engine's business datasets (Monitoring.md: admission, ReportScopePolicy), Maintenance's and Sales' shipped
+  datasets, alerts and digests. The code over the plan:
+  - "the most recent eligible consented tracking event of the order's visitor key or party": an order carries no visitor key today. Built
+    as its identity on the authority: the order's local visit (`OrderHeader.visitId`, set at cart creation) and the visitor keys that
+    visit's events carried (a landing page with the link's code, recorded in the same session), plus the customer as a send recipient who
+    allows tracking (PcpTracking, checked when deciding); eligible events are non-automated clicks and page visits of a link of the
+    seller within the link's `trackableLifetime` (30 days when it names none); never an open; ties by the lower tracking code id. A
+    remote PASS's checkout carries no key to the order, so through a remote frontend only the recipient path attributes (a finding);
+  - every placed order gets one decision in force, an unattributed one too (basis MobNone), so the job asks once; a purchase order, a
+    template or an internal customer's order gets none (`isSalesOrder`); the order row is locked while deciding;
+  - "TrackingCodeOrder (one row per order and type)": written beside a tracking-event decision, the code's type (INTERNAL when none),
+    never billable; MarketingOutcomeLink (new) keeps the decision, its basis, evidence (event, link, opportunity) and evidence time, and a
+    staff correction (`correct#OrderAttribution`, MARKETING_CONFIGURE, a reason, the decision read) ends it and starts a successor;
+  - "orders and invoiced revenue read from Sales' and Accounting's registered metrics": the reports read the attributed orders' own rows
+    (OrderHeader grandTotal as Sales.OrderValue counts it, OrderItemBilling amount × quantity as invoiced, completed ReturnItems as
+    returns), by currency, rather than calling the metrics' services, which answer organization totals, not an order set (a finding);
+  - "the incremental aggregation with its watermark": built as a whole recompute (rebuildable) of the open and recently closed campaigns'
+    numSent and qualifiedLeadCount, the stalest first, 500 a run, with a watermark row of the run; the reports themselves are live;
+  - "retention (expired import files and rows …)": P4's job already purges the files; this phase clears a purged import's row names and
+    masked addresses (outcomes kept), removes unconfirmed public requests a week past their expiry with their tokens, tracking events past
+    the organization's `statisticsRetentionDays` (none without it; never one an attribution names) and expired link tokens;
+  - "`report/boss-marketing-deliveries.json` and `boss-marketing-audience.json`": their documents are mr-boss
+    `data/BossMarketingReportData.xml` (as Maintenance's): campaign deliveries of the ledger (MessageDelivery, source MdsrcCampaignSend:
+    no recipient, address or parameters) and Marketing list memberships (ContactListParty, never a mailbox: no member); their row filter
+    is Mantle's `MarketingReportServices.get#ReportRowFilter`, the ReportScopePolicy `MantleMarketingScope` (a report reader's Marketing
+    organizations); no expression field (the keyword lesson does not arise);
+  - "alert templates (a failure or complaint spike, a bounce rate over a threshold, uncertain deliveries older than N hours)": counts
+    over the delivery dataset per organization (complaints in a day, hard bounces in a day, uncertain deliveries older than 24 hours); a
+    rate would need a ratio query the templates do not take (a finding);
+  - "attention providers (sends awaiting approval, failed and uncertain deliveries, held registrations)": one count service,
+    `get#AttentionCounts`, four providers; "held registrations" are those paid and waiting for the organizer (EvrPending) or for review
+    (EvrReview);
+  - "flow targets for the customer map's Marketing steps": `Marketing.Campaigns` and `Marketing.Sends`; the customer flow's "Finds us"
+    step now opens Campaigns with Campaign performance as its report (it was information only);
+  - "Assist: AgentToolExposure rows for get#CampaignPerformance and preview#Audience's aggregates": CampaignPerformance's alone
+    (Assistant Y, MCP N); `preview#Audience` answers names and whole addresses to an audience reader, so exposing it would hand Assist
+    addresses (a finding);
+  - "Commerce: conversion on Home and OnlineSales": Online sales gains "Visits and campaign orders" (visits, orders, orders per visit,
+    orders a campaign is the primary attribution of and their value by currency, the latest six periods) over `count#StoreVisits` and
+    the new `count#StoreConversions`; Home keeps P15's Visits card (a finding);
+  - "Home's cards complete": two cards for a report reader, the last 30 days' visits and orders from campaigns; "ExperimentDetail's
+    conversions": each variant's conversions (orders attributed to its tracked recipients' own clicks or visits), and the measure
+    "Conversion rate" now compares them;
+  - the campaign-sent annotation: Mantle's business event `CampaignSent` (BusinessEvents.js), registered by `release#Send` and
+    `release#ExperimentWinner` (recordId `{send}:winner`) after their commit, the marker at the release (or its scheduled time);
+  - Reports sits before Settings in the menu (menu-index 11; Settings moved to 12), as design §1.2 orders them.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P20 block at the end): MarketingOutcomeLink (MokOrder; MobTrackingEvent, MobOpportunity, MobStaff,
+    MobNone), MarketingCampaign `qualifiedLeadCount` and `summaryDate`, MarketingReportWatermark.
+  - `service/mantle/marketing/MarketingAttribution.js` (new) under `TrackingServices.xml` (`handle#OrderPlaced` now files the automation
+    events and then calls `record#OrderAttribution` as a probe, each failure logged apart; a P20 block at the end: `record#`,
+    `correct#OrderAttribution`, `run#OrderAttributions` with `operation`).
+  - `service/mantle/marketing/MarketingReports.js` and `MarketingReportServices.xml` (new): `get#ReportCatalog`, `get#CampaignPerformance`,
+    `get#DeliveryAnalysis`, `get#AudienceGrowth`, `get#Attribution`, `get#TrackingLinkResults`, `count#Visits`, `count#SalesVisits`,
+    `count#StoreConversions`, `get#ReportRowFilter`, `get#AttentionCounts`, `run#MarketingAggregation` and `run#MarketingRetention` (with
+    `operation`), all `allow-remote="false"`; past a limit TOO_MANY_RECORDS.
+  - `MarketingExperiments.js` (conversions, the measure), `MarketingDispatch.js` and `MarketingExperiments.js` (the CampaignSent
+    registration), `MarketingWorkspace.js` (Home's two cards, the `marketingReports` route), `party/BusinessEvents.js` and
+    `BusinessEventServices.xml` (CampaignSent).
+  - Data: `data/MarketingSeedData.xml` (a P20 block: the ReportScopePolicy MantleMarketingScope), `data/MarketingReportSetupData.xml`
+    (new: the jobs run_MarketingOrderAttributions every 15 minutes, run_MarketingAggregation hourly and run_MarketingRetention nightly,
+    their JobRegistrations, the attribution's RecoveryDescriptor).
+  - `test/sales/SalesPipelineReports.spec.js`: the funnel's visit step is now 0 (Marketing records none for that organization), not
+    "not available".
+- BOSS:
+  - Screens: `Marketing/Reports.xml` (the area, BOSS_MKT_REPORTS) with `Reports/Catalog.xml`, `CampaignPerformance.xml`,
+    `DeliveryAnalysis.xml`, `AudienceGrowth.xml` and `Attribution.xml` (options, the basis, CSV of each list, print; Attribution's Correct
+    for the administrator); `Marketing.xml` (Reports, the key g r, Settings at 12); `Campaigns/CampaignDetail.xml` (Results: the campaign's
+    performance from its start, children once, for a report reader); `Home.xml` (the reports route); `Sends/ExperimentDetail.xml` (its
+    comment); Commerce `Reports/OnlineSales.xml` and `service/ironstone/commerce/Reporting.js` (`trafficOf`).
+  - `Marketing.js` (a P20 entry in areas, areaReads, linkPaths; choices `reportCampaigns` and `reportSends`); Insights `Registry.js`
+    (Marketing among the owner names).
+  - Data: `BossSetupMarketingData.xml` (a P20 block at the end: BOSS_MKT_REPORTS; BOSS_MKT_DATASETS with the report readers' and Insights
+    groups' grants, the documents' groups, the admissions, classes, readiness and refresh rows; the four catalog entries; the metrics
+    `Marketing.Visits` and `Marketing.AttributedOrders`; four attention providers; the flow targets; Assist's tool and its grant);
+    `BossMarketingReportData.xml` (new: the documents and the BossMarketingReports feed).
+  - Reports: `boss-marketing-deliveries.json`, `boss-marketing-audience.json` (datasets), `boss-marketing-campaigns.json` (dashboard),
+    `boss-marketing-complaint-spike.json`, `boss-marketing-bounce-rate.json`, `boss-marketing-uncertain-backlog.json` (alert templates),
+    `boss-marketing-weekly-digest.json`; `insights-flowmap-customer.json` ("Finds us").
+- Specs:
+  - Mantle `test/marketing/Attribution` (new, 3 features, about 1.2 s: a Shop order by its visit and the key that visit carried (the
+    scanner's later fetch no evidence; a second call answers the first; TrackingCodeOrder once, not billable; the order still placed), a
+    Sales acceptance by its source opportunity, a direct order by a consenting recipient's click, a recipient without tracking consent and a
+    ticket whose only event is past the link's lifetime unattributed, a purchase order no decision; an order the call missed decided once
+    by the job; a later link edit changes nothing, and a correction refused to an analyst, another organization's administrator, without a
+    reason, for another seller's campaign and on a stale decision, then a successor with its user and reason). `test/marketing/MarketingReports`
+    (new, 7 features, about 1.8 s: a send's recipient and variant counts reconcile, accepted is not delivered, the untracked and the
+    automated out of the rates, the conversion; a parent counts its child once, ROI unavailable without a cost and across currencies, two
+    currencies never summed, a refund reduces the net once; attribution by campaign with unattributed apart and an order's row only for a
+    Sales reader; audience growth reconciling opening to closing with a merge apart and the reasons; another organization, a campaign of
+    it and a reader without the report permission refused, Sales' funnel visits for a Sales report reader and another organization's
+    refused, the row filter, the catalogue for Marketing's root only; the campaign-sent marker; the aggregation job's summaries).
+    `test/marketing/MarketingRetention` (new, 1 feature, about 0.1 s: an expired request and its token removed once and a confirmed one
+    kept, a request an import row names named as not removed while the rest is done, an import row cleared with its outcome kept, an old
+    event removed and one an attribution names kept, an expired token removed; a second run removes nothing).
+  - mr-boss `test/Marketing/MarketingReports` (new, 3 features, about 1.0 s: CampaignPerformance's one qvt render for the analyst; the
+    Reports tabs, the area refused to an author and open to a reader, Insights' catalog showing the four entries to an analyst who reads
+    Insights and none to an author; the registrations name existing services and screens, every shipped definition loads, no person field
+    in a document, and the audience dataset read through the engine is the analyst's own organization's whatever they ask).
+    Changed: `MarketingAccess` and `MarketingSpecLib` (the menus with Reports), `MarketingSends` (ExperimentDetail's conversions),
+    `test/Insights/InsightsHome` (the four providers), `InsightsAlerts` (the three templates), `test/Sales/SalesReports` (the funnel's
+    visits).
+  - Acceptance, written and not run: `test/acceptance/Marketing/MarketingReportsScenario` (3 features, stepwise: a Shop order from the
+    campaign's link and a Sales order from its lead each attributed once at placement; a partial refund reducing the net once and the four
+    reports reconciling; Campaign performance in the catalog for the instance administrator and not for an Insights reader, rendered for
+    the analyst); `test/acceptance/Insights/InsightsFlowMapsUsable` changed ("Finds us" now opens Campaigns).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Attribution, MarketingReports, MarketingRetention,
+  Experiments, Dispatch, Automations, BusinessEvents, SalesPipelineReports, Campaigns, MarketingScope (46 of 46), Tracking, Sends (11 of
+  11); mr-boss MarketingReports, MarketingAccess, MarketingSends, MarketingCampaigns, MarketingTracking, MarketingAutomations,
+  MarketingEvents, InsightsAlerts, InsightsCatalog, InsightsFlowMaps, InsightsHome, InsightsDashboards, InsightsAccess, InsightsDatasets,
+  CommerceReports, CommerceAccess, SalesReports (all passing after the changes named). `moqui lint --screens` (release): 143 flagged
+  sites as on master after P18, none in a new or changed screen; parse failures 0. Prettier (mr-moqui's config) clean on the new and
+  changed JavaScript that was clean before (Insights' Registry.js and Commerce's Reporting.js were not and are left so). Not run:
+  test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P20" table; ss-inventory has no row for these screens.
+- Design edits: design-marketing §11 (as built, before §12); design-sales §8 (the funnel's visit step built); design-commerce §3
+  (OnlineSales' Traffic list); design-crosscut §1.3's register (the handler's P20 part).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the order's identity is its local visit, the key that visit carried and the customer as a consenting
+    recipient; an unattributed decision recorded; amounts read from the attributed orders' own rows; the aggregation a whole recompute;
+    the datasets' documents in mr-boss; counts, not rates, in the alert templates; one attention count service; Reports before Settings;
+  - a remote PASS frontend's checkout carries no visitor key to the order (and its session no visit on the authority), so an order through
+    a remote frontend is attributed only through its customer as a consenting recipient, not "through its visitor key" as scenario 18
+    asks; PASS's checkout operation would need to pass the key's digest for the order (mr-pass and the facade's schema; not in this
+    phase's repositories);
+  - attribution through the visit needs the landing page (with the link's code) and the checkout in one session on the authority's host:
+    the redirect itself declines its session, so a click followed by a Shop page without the code links nothing;
+  - `preview#Audience` is not exposed to Assist: it answers names and whole addresses to an audience reader; an aggregate-only operation
+    (bucket counts) would be the tool;
+  - invoiced revenue is the attributed orders' OrderItemBilling (amount × quantity), returns their completed ReturnItems; design §11's
+    invoice-line allocation of split lines and credits beyond returns are not built;
+  - Audience growth counts the evidenced consent records of each list: a legacy member with no consent record is in "members now" and in
+    no opening or closing count;
+  - the delivery dataset has no campaign or send dimension (a delivery names its send only in its event key): campaign results by
+    campaign are the reports';
+  - Commerce's Home keeps P15's Visits card with no conversion figure; Online sales shows visits and campaign orders;
+  - the report readers see campaign totals (orders and their value by currency) without a Sales or Commerce read; an order's own row needs
+    one (design §2: R for the reports, source rights for drill-down);
+  - the demo has no campaign deliveries, events or attributed orders, so the reports read nearly empty on the demo; the acceptance scenario
+    makes its own;
+  - `get#TrackingLinkResults` is built and on no screen (TrackingLinkDetail keeps get#TrackingLink's observations);
+  - a pending request with an expiry that an import row names cannot be removed (its foreign key) and is named each night; imports file
+    requests without an expiry, so none is expected.
+- For the lead:
+  - budget share: mr-mantle about 3.1 s (Attribution 1.2 s, MarketingReports 1.8 s, MarketingRetention 0.1 s; SalesPipelineReports
+    unchanged); mr-boss server about 1.0 s (MarketingReports; MarketingAccess and InsightsHome unchanged in time); no client spec;
+  - merge hot spots (P19 on `mkt/p19` beside): mr-mantle `entity/MarketingEntities.xml` and `data/MarketingSeedData.xml` (P20 blocks at the
+    ends), `TrackingServices.xml` (handle#OrderPlaced, a P20 block at the end), `MarketingDispatch.js` (release#Send's registration),
+    `MarketingExperiments.js` (conversionsOf, the measure, the winner's registration), `MarketingWorkspace.js` (routes, two cards before
+    P3's audience card), `party/BusinessEvents.js`, `BusinessEventServices.xml`, `test/sales/SalesPipelineReports.spec.js`; new files
+    MarketingAttribution.js, MarketingReports.js, MarketingReportServices.xml, MarketingReportSetupData.xml, the three specs. mr-boss
+    `data/BossSetupMarketingData.xml` (a P20 block at the end), `screen/Marketing.xml` (the Reports item before QuickCreate, Settings'
+    menu-index, the key, the header comment), `service/ironstone/marketing/Marketing.js` (areas, areaReads, linkPaths, two choices at the
+    end), `screen/Marketing/Campaigns/CampaignDetail.xml` (actions' end, the Results box), `screen/Marketing/Home.xml` (places),
+    `test/Marketing/MarketingSpecLib.js` (the menus: P19's Promotions and Customers entries meet these lists) and `MarketingAccess.spec.js`,
+    `MarketingSends.spec.js`, `screen/Marketing/Sends/ExperimentDetail.xml` (comment), Commerce's `Reports/OnlineSales.xml` and
+    `Reporting.js`, Insights' `Registry.js`, `report/insights-flowmap-customer.json`, `test/Insights/InsightsHome.spec.js`,
+    `InsightsAlerts.spec.js`, `test/Sales/SalesReports.spec.js`, `test/acceptance/Insights/InsightsFlowMapsUsable.spec.js`,
+    `plan/usl-inventory.md` (a table before Order), `plan/design-marketing.md` (§11's as built), `design-sales.md`, `design-commerce.md`,
+    `design-crosscut.md`, this file;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`; no mr-moqui worktree), beside Marketing's tracking paragraph: "Marketing's
+    attribution and reports (`mantle.marketing.TrackingServices` record#OrderAttribution, correct#OrderAttribution, run#OrderAttributions;
+    `mantle.marketing.MarketingReportServices`, all `allow-remote="false"`). The decision is made by the order SECA's handler after the
+    placement commits and by the job, as the system, never from a request: the order's local visit and the visitor-key digests that visit's
+    events carried, or its customer as a recipient who allows tracking (PcpTracking) when deciding; never an automated fetch, an open or
+    a cross-device guess; a purchase order or an internal customer's order is never attributed. A correction needs MARKETING_CONFIGURE in
+    the seller's organization, the decision read and a reason, and ends the decision rather than changing it. The reports answer a report
+    reader (MARKETING_REPORT_VIEW) of the organizations of their Marketing scope with aggregates only (no person, address or token); an
+    attributed order's own row only to a reader who may see the order in Sales (SalesAccess orderOf) or as the store's Commerce order
+    reader; amounts never added across currencies; past a limit TOO_MANY_RECORDS. `count#Visits` and `count#SalesVisits` answer a
+    Marketing reader or a Sales report reader of the organization a count; `count#StoreConversions` checks each store through StoreAdmin.
+    Marketing's datasets (`boss-marketing-deliveries`, `boss-marketing-audience`) carry no recipient, member or address and are scoped by
+    `get#ReportRowFilter` (the ReportScopePolicy MantleMarketingScope: a report reader's Marketing organizations; another userId refused).
+    Assist's `marketing_campaign_performance` reads get#CampaignPerformance as the user (Assistant only). Retention removes unconfirmed
+    requests, old tracking events (never one an attribution names) and expired link tokens, and clears purged import rows' names.";
+  - the user's calls: the remote PASS visitor key (mr-pass's checkout passing the key to the order: a follow-up, or accept attribution
+    through a remote frontend by recipient only); an aggregate-only audience tool for Assist (or none); whether report readers without a
+    Sales or Commerce read should see campaign order totals (built: yes, aggregates).
+
+**Review Nov 15 (P20).** A fresh review of `mkt/p20` (mr-mantle 0134660b, mr-boss ccf19891) against P20, §2, §4 (Nov 11, Nov 15) and
+design §11, §15.3, §18; master merged in twice (P18's follow-ups 1 and 2 cleanly, then P19 in both repositories: mr-mantle cleanly,
+mr-boss with both sides kept in `screen/Marketing.xml`, `CampaignDetail.xml`, `Marketing.js`, `MarketingSpecLib.js` and
+usl-inventory; the menu indexes made distinct: Promotions 6, Content 7, Events 8, Surveys 9, Leads 10, Reports 11, Settings 12). Fixes
+in one commit per repository ("Marketing P20 review: …"); the user's two calls of Nov 15 recorded in §4, the audience tool built here.
+- Checked and sound:
+  - the writer never fails or holds a placement: the SECA is `tx-commit` with `force-new` and `ignore-error`, `handle#OrderPlaced`
+    runs the automation part and the attribution apart, each in its own try and the attribution as a probe (its own transaction and
+    error frame), so neither undoes the other or the order; one decision per order: `record#OrderAttribution` locks the order row
+    (`forUpdate`) before reading the decision in force, so the SECA's call and the job serialize and the second answers the first;
+    every placed sales order gets a row (MobNone included), so the job asks once; `isSalesOrder` keeps out purchase orders, templates
+    and internal customers (the spec's purchase order);
+  - the rule as built: non-automated clicks and page visits of a link of the seller with a campaign, within the link's lifetime (30 days
+    by default), never an open or a fetch, ties by code id, else the source opportunity's campaign of the seller (the order's or its
+    quote's), never a cross-device guess; TrackingCodeOrder once per order and type, `isBillable` N; the decision keeps its evidence, so
+    the spec's later link edit changes nothing; `correct#OrderAttribution` needs MARKETING_CONFIGURE in the seller (an analyst
+    PERMISSION_DENIED before any lookup, another organization RECORD_UNAVAILABLE), a reason, the decision read (STALE_REVISION), a
+    campaign of the seller, and ends the old row (thruDate, supersededByLinkId) rather than changing it;
+  - reports: every service starts with `reportScope` (MARKETING_REPORT_VIEW, an organization of the scope, ORGANIZATION_DENIED) and
+    checks a named campaign, send, list or link against it (RECORD_UNAVAILABLE); aggregates only (no party, name or address in any
+    answer; the reasons are the withdrawal's own comments, as design §11 asks); amounts are lists by currency and ROI needs one currency
+    equal to the cost's; an order's own row only through SalesAccess `orderOf` or the store's Commerce order read; past each limit
+    TOO_MANY_RECORDS, never a cut (the 200-row outcome page counts the rest as hidden);
+  - Sales' contract: `count#SalesVisits` takes and answers exactly impl-sales P19's parameters (SalesPipelineReports.js `visitService`,
+    through a probe as the user), a Sales report reader of the organization or a Marketing reader; `count#StoreConversions` checks each
+    store through StoreAdmin first; SalesPipelineReports, SalesReports and CommerceReports pass;
+  - the datasets: the row filter answers the signed-in user only (another `userId` PERMISSION_DENIED), match-none without the report
+    permission or organizations, and the field name is checked; both documents' organization field is a plain id field (keyword), no
+    expression field, so Sales P20's typing lesson does not arise; the analyst's forged query string still reads only their own
+    organization's totals (MarketingReports' third feature, now through `run#Query`); alert templates and the digest are engine
+    definitions that render as their owner over the owner's row filter (Insights' rule, unchanged here);
+  - Assist: `marketing_campaign_performance` is Assistant Y, MCP N, granted to the report readers alone, and the service checks the
+    permission and organization itself; the campaign-sent marker reads the send as stored (released, its organization), keyed by event
+    and record id so the winner's marker is its own.
+- Fixed:
+  - R1 (high; mr-boss `report/boss-marketing-audience.json`): the audience dataset's records were open to every reader (Marketing's
+    report readers and five Insights groups), and a membership record's key is ContactListParty's primary key, `contactListId::partyId::
+    fromDate`: `query#Documents` returned each member's party id as `_id`, whatever the document's fields left out. The dataset is now
+    `"rows": "restricted"` (no group holds `org.moqui.report.rows.boss-marketing-audience`), so readers get totals and
+    ROWS_RESTRICTED for the records. MarketingReports' third feature asserts the key's three parts and the refusal; it fails without the
+    change. The delivery dataset's key is the delivery id, no person, and stays open.
+  - R2 (medium; mr-mantle `MarketingAttribution.js`): tracking consent was read only on the recipient path, so an event recorded for a
+    recipient while they allowed tracking still attributed through the order's visit after they withdrew, and a customer who had
+    withdrawn tracking was attributed by their own visit's events. Now an event that names a recipient counts only while that
+    recipient's person allows tracking, and an order whose customer has withdrawn tracking with the seller takes no tracking event at
+    all (its source opportunity still counts). Attribution's first feature adds Eve (granted, then withdrawn: her own visit) and Dee's
+    visit carrying only Ben's recipient event: both MobNone; the check fails on the unfixed code.
+  - R3 (medium; `MarketingAttribution.js` `runOrderAttributions`): the job took the first 200 undecided orders of the last 30 days, and
+    purchase orders and internal customers' orders are never decided, so once 200 of them sat newest a run decided nothing, every run.
+    They are now passed over without taking a place (`skippedCount`; `maxOrders` caps the places). Attribution's second feature: with
+    two newer purchase orders and `maxOrders` 1 the missed order is decided; fails on the unfixed code.
+  - R4 (medium; mr-mantle `entity/MarketingEntities.xml`): `record#OrderAttribution` runs synchronously after every placement's commit
+    and reads MarketingTrackingEvent by `visitId` and by `visitorKeyHash`, neither indexed (nor retention's organization and date): a
+    table scan per order as the events grow. Indexes MKT_TRK_EVT_VISIT, MKT_TRK_EVT_KEY (key, date) and MKT_TRK_EVT_ORG (organization,
+    date) added to P15's entity.
+  - R5 (medium; mr-mantle `MarketingReports.js`; the worker's open question): small-cell disclosure is real. A report reader needs no
+    Sales or Commerce read, but may name a campaign's few recipients (an audience reader, a send to one or two people, an automation
+    step) and then reads one person's purchase from "1 order, $480". Built: an amount of fewer than 3 orders (one currency's orders of a
+    campaign, a link or the unattributed row) is withheld ("USD withheld (fewer than 3 orders)", amounts null, `withheld` true) unless
+    the reader may see each of those orders in Sales or Commerce; the order count is kept so the reports still reconcile; ROI over a
+    withheld net is "Too few orders to show". CampaignPerformance (and CampaignDetail's Results over it), Attribution's summary and
+    TrackingLinkResults; Commerce's `count#StoreConversions` answers store readers who see those orders already. MarketingReports' second
+    and third features read the same campaigns as the analyst (withheld) and the Sales reader (shown); they fail on the unfixed code.
+    Counts are not suppressed: they are what reconciles, and a conversion count without an amount was judged acceptable.
+  - R6 (the user's call of Nov 15, built): Assist's aggregate-only audience tool. Mantle `SegmentServices.count#Audience`
+    (MarketingEligibility.js `countAudience`): preview#Audience's matched, membership, excluded, eligible and untracked counts and each
+    bucket and reason with its count, never a row, name, address, party id or the preview's digests; MARKETING_AUDIENCE_VIEW in a Marketing
+    read (an author with send edit, who may preview, is refused) and preview#Audience's own scope checks of the topic and every source.
+    mr-boss: the AgentToolExposure `marketing_audience_counts` (Assistant Y, MCP N, AgclRead) and the artifact group
+    BOSS_MKT_ASSIST_AUDIENCE for the audience managers and the administrator. Counts are shown as they are: R5's rule withholds what a
+    reader could not see, and an audience reader can open the same people in Audience preview. Eligibility gains a feature (the buckets
+    equal the preview's, no address or party id in the answer, an author and a report reader refused, another organization's reader
+    RECORD_UNAVAILABLE).
+- Provisional findings (for the lead to number):
+  - R1 to R6 above;
+  - the worker's list stands (the order's identity by its local visit, its key and the consenting customer; the unattributed
+    decision; amounts from the attributed orders' own rows; the aggregation a whole recompute; the datasets' documents in mr-boss; counts,
+    not rates, in the alerts; one attention service; Reports before Settings; split-line allocation and credits beyond returns not built;
+    the legacy member outside Audience growth's opening and closing; no campaign dimension in the delivery dataset; Commerce Home without
+    a conversion figure; the demo's empty reports; `get#TrackingLinkResults` on no screen; the import-row request named each night);
+  - amounts in the reports are summed as JavaScript numbers and rounded only for display (decimals per JS-Globals would be exact);
+    invoiced counts OrderItemBilling whatever its invoice's status (a cancelled invoice's billing still counts); neither fixed here;
+  - the remote PASS checkout's visitor key (the user's call of Nov 15) is the lead's follow-up: see "For the lead".
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the second merge): mr-mantle Attribution, MarketingReports,
+  MarketingRetention, Eligibility, SalesPipelineReports, Experiments, Tracking, BusinessEvents: 27 of 27 features, 33 s (feature time
+  6.6 s); mr-boss MarketingReports, MarketingAccess, MarketingPromotions, MarketingSends, MarketingCampaigns, InsightsHome,
+  InsightsAlerts, InsightsSettings, SalesReports, CommerceReports: 46 of 46, 40 s (feature time 15.7 s). Each new check run against the
+  unfixed code first and seen to fail. `moqui lint --screens` (release): parse failures 0, no new flagged site. Not run: test-apps, the
+  acceptance suite (MarketingReportsScenario unchanged, still not run).
+- For the lead:
+  - budget share: mr-mantle Attribution about 0.7 s (was 0.6), MarketingReports about 0.9 s (unchanged), Eligibility +0.2 s for count#Audience;
+    mr-boss MarketingReports unchanged (about 1.0 s);
+  - merge hot spots beyond the worker's list: mr-mantle `entity/MarketingEntities.xml` (three indexes inside P15's
+    MarketingTrackingEvent), `SegmentServices.xml` and `MarketingEligibility.js` (count#Audience at their ends); mr-boss
+    `data/BossSetupMarketingData.xml` (the audience tool at the end of P20's block), `screen/Marketing.xml`'s menu indexes (now 1 to 12,
+    each distinct);
+  - the user's call 1 (follow-up, mr-pass and mr-mantle): what `record#OrderAttribution` needs from a remote checkout is the visitor key's
+    digest on the order. The field: `visitorKeyHash`, the same digest P15 stores on events (MarketingTracking.js `digest("mkt-visitor:"
+    + visitorKey)`, to be exported), kept with the order, e.g. an extend-entity field `OrderHeader.marketingVisitorKeyHash` (or a
+    MarketingOrderVisitor row keyed by orderId). Where it arrives: PASS's checkout operation sends the raw visitor key (the frontend's
+    first-party cookie, `^[A-Za-z0-9_-]{16,64}$`) in the facade's checkout call to the authority (the facade's schema gains the
+    parameter), and the authority's checkout service writes the digest in the placement's own transaction, before `place#Order`, so
+    the SECA's call sees it; the raw key is never stored. The consent check, made by the authority when it stores the digest: the key is
+    kept only where P15 would have recorded it, the seller's MarketingPolicy `visitorKeys` Y or the customer allowing tracking with the
+    seller (`trackingAllowed(customer, null, seller)`), and never for a customer who has withdrawn tracking (R2's `trackingWithdrawn`);
+    `record#OrderAttribution` then reads events by that digest with identity "visitorKey" (one more `eventsWhere` call beside the visit's
+    keys), R2's recipient check still applying. The acceptance scenario's remote-PASS order then attributes by key;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`; no mr-moqui worktree), the worker's paragraph corrected: "Marketing's
+    attribution and reports (`mantle.marketing.TrackingServices` record#OrderAttribution, correct#OrderAttribution,
+    run#OrderAttributions; `mantle.marketing.MarketingReportServices`; `SegmentServices.count#Audience`; all `allow-remote="false"`). The
+    decision is made by the order SECA's handler after the placement commits and by the job, as the system, never from a request: the
+    order's local visit and the visitor-key digests that visit's events carried, or its customer as a recipient who allows tracking
+    (PcpTracking), consent read when deciding (an event of a recipient who no longer allows tracking is no evidence; a customer who
+    withdrew tracking is attributed by no tracking event); never an automated fetch, an open or a cross-device guess; a purchase order
+    or an internal customer's order is never attributed. A correction needs MARKETING_CONFIGURE in the seller's organization, the
+    decision read and a reason, and ends the decision rather than changing it. The reports answer a report reader
+    (MARKETING_REPORT_VIEW) of the organizations of their Marketing scope with aggregates only (no person, address or token); an amount
+    of fewer than three orders is withheld unless the reader may see each order in Sales (SalesAccess orderOf) or Commerce, and an
+    attributed order's own row needs the same read; amounts never added across currencies; past a limit TOO_MANY_RECORDS.
+    `count#Visits` and `count#SalesVisits` answer a Marketing reader or a Sales report reader of the organization a count;
+    `count#StoreConversions` checks each store through StoreAdmin. Marketing's datasets (`boss-marketing-deliveries`,
+    `boss-marketing-audience`) carry no recipient, member or address and are scoped by `get#ReportRowFilter` (the ReportScopePolicy
+    MantleMarketingScope: a report reader's Marketing organizations; another userId refused); the audience dataset's records are
+    restricted (a membership's key names its member), its readers get totals. Assist's `marketing_campaign_performance` reads
+    get#CampaignPerformance as the user and `marketing_audience_counts` reads `count#Audience` (bucket and reason counts only, an
+    audience reader of the topic's organization), both Assistant only, never MCP. Retention removes unconfirmed requests, old tracking
+    events (never one an attribution names) and expired link tokens, and clears purged import rows' names.";
+  - the user's calls: none open from this review (both of Nov 15 recorded in §4).
+
 ### P21 — Calendar, shell providers and Assist
 
 Design §3 Calendar, §1.3 (CX-ASSIST, CX-SYNC, the Comms hooks), §14.3 (Today, palette, notifications), QuickCreate;
@@ -6306,6 +6622,8 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | Mantle's OrderToCashBasicFlow and ReturnToResponseBasicFlow keep suspending Retail's Utah nexus during their run (test/order/DemoTaxNexus.js) rather than move the chain to a Mantle-owned seller | The user's call (follow-up 1's review) |
 | Nov 15, 2026 | Demo data dates that specs depend on are made relative to load time (or far future) and the specs read as of a fixed date, starting with BOSS_PRICE_SALES/BOSS_PRICE_NEXT; built in follow-up 2 with the framework hmac member | The user's call |
 | Nov 15, 2026 | The 2027 demo dates specs depend on become load-relative: the Marketing webinar and workshop (their events, offers' occurrences and the workshop's closing, together), the Sales demo quotes' validity, and PeopleLeave's request days; built in follow-up 3 | The user's call (Nov 15), after follow-up 2's F366 and F369 |
+| Nov 15, 2026 | A remote PASS frontend forwards the consented visitor key with the checkout, so an order placed through it is attributed like a local one; a follow-up the lead runs in mr-pass and mr-mantle after P20's review (what record#OrderAttribution needs: P20's Review note, For the lead) | The user's call (P20) |
+| Nov 15, 2026 | Assist gets an aggregate-only audience tool: counts per bucket and reason only (classify#Recipients' buckets), never names, addresses or party ids; Assistant only, not MCP; the reader's audience permission and organization scope. Built in P20's review (SegmentServices count#Audience, marketing_audience_counts) | The user's call (P20) |
 
 ## 5. Open questions
 

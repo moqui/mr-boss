@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing's shipped datasets (design-marketing §11 Shipped definitions, CX-OPS-REPORTS; impl-marketing P20), on Maintenance's pattern
+    (BossMaintenanceReportData.xml): two DataDocuments indexed by the BossMarketingReports push feed as their records are written, each
+    carrying its organization (organizationPartyId), on which Marketing's row filter (MarketingReportServices get#ReportRowFilter, the
+    ReportScopePolicy MantleMarketingScope: a report reader's Marketing organizations) scopes the datasets. Aggregates only: no person, no
+    address, no token.
+    - BossMarketingDelivery: a campaign delivery of the ledger (MessageDelivery of the source MdsrcCampaignSend) with its organization,
+      channel, sending profile, state, receipt and times, read by report/boss-marketing-deliveries.json and the bounce, complaint and
+      uncertain-backlog alert templates; never its recipient, address or parameters;
+    - BossMarketingMembership: a Marketing list membership (ContactListParty, never a mailbox's) with its list, the list's organization,
+      its state and dates, read by report/boss-marketing-audience.json; never the member.
+    Granted here to ADMIN; Marketing's report readers and the Insights groups, the admission, the dataset classes and the readiness and
+    refresh rows are in BossSetupMarketingData.xml. -->
+<entity-facade-xml type="seed-initial">
+    <dataDocuments dataDocumentId="BossMarketingDelivery" indexName="boss_marketing" documentName="Marketing Delivery"
+            primaryEntityName="mantle.party.MessageDelivery" documentTitle="${deliveryId}">
+        <fields fieldSeqId="01" fieldPath="deliveryId"/>
+        <fields fieldSeqId="02" fieldPath="sourceEnumId"/>
+        <fields fieldSeqId="03" fieldPath="organizationPartyId"/>
+        <fields fieldSeqId="04" fieldPath="channelEnumId"/>
+        <fields fieldSeqId="05" fieldPath="sendingProfileId"/>
+        <fields fieldSeqId="06" fieldPath="stateEnumId"/>
+        <fields fieldSeqId="07" fieldPath="receiptEnumId"/>
+        <fields fieldSeqId="08" fieldPath="attempts"/>
+        <fields fieldSeqId="09" fieldPath="createdDate"/>
+        <fields fieldSeqId="10" fieldPath="sentDate"/>
+        <fields fieldSeqId="11" fieldPath="receiptDate"/>
+        <conditions conditionSeqId="01" fieldNameAlias="sourceEnumId" fieldValue="MdsrcCampaignSend"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossMarketingMembership" indexName="boss_marketing" documentName="Marketing Membership"
+            primaryEntityName="mantle.marketing.contact.ContactListParty" documentTitle="${contactListId}">
+        <fields fieldSeqId="01" fieldPath="contactListId"/>
+        <fields fieldSeqId="02" fieldPath="statusId"/>
+        <fields fieldSeqId="03" fieldPath="fromDate"/>
+        <fields fieldSeqId="04" fieldPath="thruDate"/>
+        <fields fieldSeqId="11" fieldPath="ContactList:ownerPartyId" fieldNameAlias="organizationPartyId"/>
+        <fields fieldSeqId="12" fieldPath="ContactList:contactListName"/>
+        <fields fieldSeqId="13" fieldPath="ContactList:contactListTypeEnumId"/>
+        <conditions conditionSeqId="01" fieldNameAlias="contactListTypeEnumId" operator="not-equals" fieldValue="MAILBOX"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossMarketingReports" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Marketing reports" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossMarketingDelivery"/>
+        <documents dataDocumentId="BossMarketingMembership"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="ADMIN"/>
+</entity-facade-xml>

@@ -18,8 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     action by state (Set up the test for a draft's editor, Choose the winner for a dispatcher once the observation period has passed,
     Release the winner once chosen), the others in More (Back to the send, Edit the setup, Choose again, Remove the test). The boxes:
     Setup; Variants (each the parts it changes over the send's content, with Edit and Test in its row for an editor); Results (each
-    variant's assigned, accepted and delivered counts with their denominators and tracking coverage, clicks and conversions not
-    available until tracking records them; the remainder; the decision shown, never acted on); Winner (who chose it, why, and its
+    variant's assigned, accepted and delivered counts with their denominators and tracking coverage, unique clicks (P15) and
+    conversions, the orders attributed to a tracked recipient's own click or visit (P20); the remainder; the decision shown, never acted on); Winner (who chose it, why, and its
     release). Every change is Mantle's guarded service (store#Experiment, store#ExperimentVariant at the send's revision read; a change
     ends the send's approval; choose#ExperimentWinner, release#ExperimentWinner a dispatcher's). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"

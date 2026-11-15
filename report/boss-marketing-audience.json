@@ -1,0 +1,29 @@
+{
+  "id": "boss-marketing-audience",
+  "type": "dataset",
+  "title": "Marketing list memberships",
+  "body": {
+    "folder": "Marketing",
+    "description": "Memberships of the Marketing lists (never a mailbox) with their list, the list's organization, state (pending, accepted, unsubscribed and the others) and dates, by when each began. Each viewer reads the lists of the organizations of their Marketing report scope (MARKETING_REPORT_VIEW). No member: counts only (a membership record's key names its member, so the records themselves are no reader's). The evidenced growth of a list (grants, withdrawals, reasons) is Marketing's Audience growth report.",
+    "documentType": "BossMarketingMembership",
+    "timeField": "fromDate",
+    "signal": "business",
+    "rows": "restricted",
+    "rowFilterService": "mantle.marketing.MarketingReportServices.get#ReportRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "statusId": {
+        "statusTypeId": "ContactListParty"
+      }
+    }
+  }
+}

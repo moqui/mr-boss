@@ -1,0 +1,65 @@
+{
+  "id": "boss-marketing-complaint-spike",
+  "type": "alert",
+  "title": "Campaign complaints or failures spike",
+  "body": {
+    "description": "Fires when an organization's campaign deliveries of the last day have more complaints than the threshold (5 by default), among the organizations its owner reads. A template: copy it in Insights \u203a Business alerts, set the threshold and the audience, then activate it; it tells its subscribers when it starts firing, not at every check.",
+    "query": {
+      "datasetId": "boss-marketing-deliveries",
+      "from": "now-1d",
+      "thru": "now",
+      "aggregations": [
+        {
+          "id": "organization",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "organizationPartyId",
+            "size": 50
+          }
+        },
+        {
+          "id": "deliveries",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "deliveryId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "field": {
+              "name": "receiptEnumId",
+              "op": "eq",
+              "value": "MdrComplaint"
+            }
+          },
+          "label": "Complaints"
+        }
+      ]
+    },
+    "field": "deliveries",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 5
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "marketing",
+      "severity": "warning"
+    }
+  }
+}

@@ -1098,6 +1098,29 @@ impl-marketing P19), called by built screens and merge#Parties:
 | marketing/CampaignServices | store#CampaignAssociation | Marketing/Promotions/PromotionDetail, CampaignDetail (Promotions) | Shared/PromotionDetail's linkCampaign and endCampaignLink, CampaignDetail's Link a promotion; a promotion link asks Commerce's COMMERCE_PROMOTION_EDIT and the store's scope too (Marketing P19) |
 | marketing/AudienceServices | request#Subscriptions | Marketing/Contacts/ContactDetail (Add to list) | Marketing/Contacts/ContactDetail's addContactToList (Marketing P19) |
 | party/DuplicateServices | merge#Parties | Commons Duplicates (X15 guards) | Marketing's refusals (PartyMerge.js rules: ENROLLMENT_ACTIVE, ENROLLMENT_CONFLICT, REGISTRATION_ACTIVE, RECIPIENT_PENDING) and moves (mantle/marketing/MarketingPartyMerge.js: a withdrawal wins on a membership or consent collision) (Marketing P19) |
+
+Added in Marketing P20 (Nov 15, 2026; attribution in `mantle.marketing.TrackingServices` over MarketingAttribution.js, the reports in
+`mantle.marketing.MarketingReportServices` over MarketingReports.js, the campaign-sent business event, impl-marketing P20), called by
+built screens, the order SECA, jobs and Insights' registries:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/TrackingServices | record#OrderAttribution | design §11 Attribution (X10) | handle#OrderPlaced (the SECA OrderPlacedRecordAttribution), run#OrderAttributions (job run_MarketingOrderAttributions) (Marketing P20) |
+| marketing/TrackingServices | correct#OrderAttribution | Marketing/Reports/Attribution (OutcomeRows: staff correction) | Marketing/Reports/Attribution (Correct, the administrator's) (Marketing P20) |
+| marketing/MarketingReportServices | get#ReportCatalog | Marketing/Reports (ReportCatalog) | Marketing/Reports/Catalog; Insights' catalog (Marketing's entries' catalogueService) (Marketing P20) |
+| marketing/MarketingReportServices | get#CampaignPerformance | Marketing/Reports/CampaignPerformance (PerformanceFind, Performance) | Marketing/Reports/CampaignPerformance, Marketing/Campaigns/CampaignDetail (Results); Assist's marketing_campaign_performance (Marketing P20) |
+| marketing/MarketingReportServices | get#DeliveryAnalysis | Marketing/Reports/DeliveryAnalysis (DeliveryCohort, DeliveryMeasures, EngagementMeasures) | Marketing/Reports/DeliveryAnalysis (Marketing P20) |
+| marketing/MarketingReportServices | get#AudienceGrowth | Marketing/Reports/AudienceGrowth (AudiencePeriod, AudienceChanges, OptOutReasons) | Marketing/Reports/AudienceGrowth (Marketing P20) |
+| marketing/MarketingReportServices | get#Attribution | Marketing/Reports/Attribution (AttributionBasis, OutcomeRows, AttributionSummary) | Marketing/Reports/Attribution; Insights' metric Marketing.AttributedOrders (Marketing P20) |
+| marketing/MarketingReportServices | get#TrackingLinkResults | Marketing/Content/TrackingLinkDetail (LinkObservations R) | (the links' results by period; TrackingLinkDetail keeps get#TrackingLink's observations) (Marketing P20) |
+| marketing/MarketingReportServices | count#Visits, count#SalesVisits | design §11 metric owners (Marketing.Visits); Sales/Reports/PipelineAnalysis (funnel) | Insights' metric Marketing.Visits; mantle.sales.ForecastServices get#PipelineAnalysis's visit step (Marketing P20) |
+| marketing/MarketingReportServices | count#StoreConversions | Commerce/Reports/OnlineSales (impl-commerce §7) | ironstone.commerce.ReportingServices get#OnlineSales (Visits and campaign orders) (Marketing P20) |
+| marketing/MarketingReportServices | get#ReportRowFilter | design §11 shipped datasets (L6) | the ReportScopePolicy MantleMarketingScope of report/boss-marketing-deliveries.json and boss-marketing-audience.json (Marketing P20) |
+| marketing/MarketingReportServices | get#AttentionCounts | Insights attention (design-insights §7) | the AttentionProviders Marketing.SendsAwaitingApproval, .FailedDeliveries, .UncertainDeliveries, .HeldRegistrations (Marketing P20) |
+| marketing/MarketingReportServices | run#MarketingAggregation, run#MarketingRetention | §15.3 Reporting and retention | jobs run_MarketingAggregation, run_MarketingRetention (Marketing P20) |
+| party/BusinessEventServices | record#BusinessEvent (CampaignSent) | design-insights §4 business annotations (F85) | CampaignSendServices release#Send and release#ExperimentWinner, after their commit (Marketing P20) |
+| marketing/SegmentServices | count#Audience | Assist (CX-ASSIST; the user's call of Nov 15) | the AgentToolExposure marketing_audience_counts (Assistant only; the P20 review) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

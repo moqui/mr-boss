@@ -1,0 +1,65 @@
+{
+  "id": "boss-marketing-uncertain-backlog",
+  "type": "alert",
+  "title": "Uncertain campaign deliveries waiting",
+  "body": {
+    "description": "Fires when campaign deliveries created more than 24 hours ago (within the last 30 days) are still uncertain, waiting for a dispatcher to reconcile them in Campaign delivery, among the organizations its owner reads; never resent blindly. A template: copy it in Insights \u203a Business alerts, set the threshold and the audience, then activate it; it tells its subscribers when it starts firing, not at every check.",
+    "query": {
+      "datasetId": "boss-marketing-deliveries",
+      "from": "now-30d",
+      "thru": "now-24h",
+      "aggregations": [
+        {
+          "id": "organization",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "organizationPartyId",
+            "size": 50
+          }
+        },
+        {
+          "id": "deliveries",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "deliveryId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "field": {
+              "name": "stateEnumId",
+              "op": "eq",
+              "value": "MdsUncertain"
+            }
+          },
+          "label": "Uncertain"
+        }
+      ]
+    },
+    "field": "deliveries",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "marketing",
+      "severity": "warning"
+    }
+  }
+}

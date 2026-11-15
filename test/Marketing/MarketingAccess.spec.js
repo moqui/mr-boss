@@ -168,9 +168,13 @@ feature("the Marketing menu and keys follow the groups; the launcher shows Marke
         if (JSON.stringify(sendsTabs.names) !== JSON.stringify(ids.sendsMenu))
             problems.push(`the author's Sends tabs: ${sendsTabs.status} ${sendsTabs.names}`)
         if (!author.apps.includes("Marketing")) problems.push(`the author's launcher has no Marketing: ${author.apps}`)
-        for (const user of [users.events, users.reader]) {
+        // P20: the reader opens Reports, the events manager does not
+        for (const [user, menu] of [
+            [users.events, ids.staffMenu],
+            [users.reader, ids.readerMenu]
+        ]) {
             const names = shell(user, true).names
-            if (JSON.stringify(names) !== JSON.stringify(ids.staffMenu)) problems.push(`${user}'s menu: ${names}`)
+            if (JSON.stringify(names) !== JSON.stringify(menu)) problems.push(`${user}'s menu: ${names}`)
         }
         // P12: the analyst opens Surveys (the responses)
         const analystNames = shell(users.analyst, true).names

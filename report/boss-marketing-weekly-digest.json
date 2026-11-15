@@ -1,0 +1,19 @@
+{
+  "id": "boss-marketing-weekly-digest",
+  "type": "report",
+  "title": "Weekly campaign digest",
+  "body": {
+    "kind": "digest",
+    "folder": "Marketing",
+    "description": "The Marketing campaigns dashboard for the last seven days, as a digest a Marketing analyst schedules for themselves or for recipients who read the same organizations: it renders as its owner, over the owner's Marketing report scope, and reaches only a recipient who would see the same rows. Campaign results by campaign are in Marketing \u203a Reports.",
+    "commentary": "",
+    "layout": "rows",
+    "dashboards": [
+      {
+        "dashboardRef": "boss-marketing-campaigns",
+        "from": "now-7d",
+        "thru": "now"
+      }
+    ]
+  }
+}

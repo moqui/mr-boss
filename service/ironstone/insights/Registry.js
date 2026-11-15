@@ -24,6 +24,8 @@ const ownerNames = {
     Commerce: "Commerce",
     CustomerService: "Customer Service",
     Manufacturing: "Manufacturing",
+    // impl-marketing P20: Marketing's reports and measures
+    Marketing: "Marketing",
     Products: "Products",
     Projects: "Projects",
     Purchasing: "Purchasing",

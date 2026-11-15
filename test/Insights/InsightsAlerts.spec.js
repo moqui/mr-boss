@@ -469,7 +469,7 @@ feature(
             deleted,
             left
         }) {
-            // the shipped business rules: Mantle's daily sales floor, Customer Service's breaches, Commerce's three, Maintenance's overdue PM and resource down (impl-maintenance P17; its generation failure reads the server log) People's qualifications expiring (impl-people P29) and Sales' expiring quotes and stalled deals (impl-sales P19, P20); not
+            // the shipped business rules: Mantle's daily sales floor, Customer Service's breaches, Commerce's three, Maintenance's overdue PM and resource down (impl-maintenance P17; its generation failure reads the server log) People's qualifications expiring (impl-people P29), Sales' expiring quotes and stalled deals (impl-sales P19, P20) and Marketing's bounces, complaints and uncertain backlog (impl-marketing P20); not
             // Tools' telemetry rules, nor Admin's over the job runs' spans
             templates.map(template => template.definitionId).sort() ==
                 [
@@ -478,6 +478,9 @@ feature(
                     "boss-commerce-payment-unresolved",
                     "boss-maintenance-overdue-pm",
                     "boss-maintenance-resource-down",
+                    "boss-marketing-bounce-rate",
+                    "boss-marketing-complaint-spike",
+                    "boss-marketing-uncertain-backlog",
                     "boss-people-qualification-expiring",
                     "boss-sales-quotes-expiring",
                     "boss-sales-stalled-deals",
