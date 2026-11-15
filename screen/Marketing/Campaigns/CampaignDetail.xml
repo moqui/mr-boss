@@ -25,7 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
     to review. Sends lists its sends with QuickSend (P8), Automations its automations (P11), Results the lead forms' handoffs to Sales
     (P13, any Marketing reader), Content its planned content with Link content (P14: blog posts, landing pages and files; linking
     publishes nothing), Tracking links its links with New link (P15), Events its events with New event (P16: an events manager who also edits
-    campaigns) and Link an event (the campaign's editor); the Audience and Promotions boxes join with their phases. -->
+    campaigns) and Link an event (the campaign's editor); Promotions its store promotions with Link a promotion (P19: the campaign's editor
+    who also holds Commerce's promotion permission). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
@@ -147,6 +148,9 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="campaignResults" from="(resultsFound?.campaignRows || [])[0] || null"/>
         <set field="performancePath" from="marketing.capabilities.reports ? (sharedLinks['Reports/CampaignPerformance'] || null) : null"/>
+        <!-- P19: the campaign's store promotions (design §3 CampaignDetail's Promotions, §7): its current CakPromotion links -->
+        <set field="campaignPromotionList" from="associationList.filter(link =&gt; link.associationKindEnumId == 'CakPromotion')"/>
+        <set field="promotionPath" from="marketing.capabilities.promotionRead ? (sharedLinks['Promotions/PromotionDetail'] || null) : null"/>
     </actions>
     <widgets>
         <section name="CampaignNotFound" condition="!recordFound">
@@ -697,6 +701,53 @@ along with this software (see the LICENSE.md file). If not, see
                             <columns type="mobile">
                                 <column><field-ref name="label"/><field-ref name="destinationText"/></column>
                                 <column><field-ref name="stateText"/><field-ref name="clickCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <!-- P19: the campaign's store promotions; linked by the campaign's editor who also holds Commerce's promotion permission
+                    (C.store#CampaignAssociation, CakPromotion, asks both again) -->
+                <container-box condition="marketing.capabilities.promotionRead || campaignPromotionList.length">
+                    <box-header title="Promotions"/>
+                    <box-toolbar>
+                        <container-dialog id="LinkPromotionDialog" button-text="Link a promotion" icon="sym_o_local_offer"
+                                title="Link a promotion to ${campaign.campaignName}" width="560"
+                                condition="can.canEdit &amp;&amp; marketing.capabilities.promotionEdit">
+                            <form-single name="LinkPromotion" transition="storeAssociation"
+                                    map="{marketingCampaignId:marketingCampaignId, associationKindEnumId:'CakPromotion'}">
+                                <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
+                                <field name="associationKindEnumId"><default-field><hidden/></default-field></field>
+                                <field name="sourceId">
+                                    <default-field title="Promotion">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'promotions', organizationPartyId:campaign.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="purpose"><default-field title="Purpose"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Link"/></default-field></field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted"
+                                    text="A store promotion of the campaign's organization; its rule, limits and codes stay Commerce's."/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No promotion linked yet." type="p" style="m-muted" condition="!campaignPromotionList.length"/>
+                        <form-list name="CampaignPromotionList" list="campaignPromotionList" skip-form="true" paginate="false"
+                                condition="campaignPromotionList.length">
+                            <field name="label">
+                                <default-field title="Promotion">
+                                    <link url="${promotionPath}" text="${label}" link-type="anchor" parameter-map="{storePromotionId:sourceId}"
+                                            condition="promotionPath"/>
+                                    <label text="${label}" type="span" condition="!promotionPath"/>
+                                </default-field>
+                            </field>
+                            <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/><field-ref name="purpose"/></column>
+                                <column><field-ref name="fromDateText"/></column>
                             </columns>
                         </form-list>
                     </box-body>

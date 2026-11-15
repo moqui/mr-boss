@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ContactDetail in Marketing (design-marketing §10 Customer360 and ContactDetail, Context passed; crosscut §3.1; impl-marketing P19):
+    the Commons contact record (template/ContactRecord.xml's ContactRecordSection and its transitions, as Sales' ContactDetail includes
+    it) for a party of the user's audiences (ironstone.marketing.ContextServices check#Record, kind contact: an audience reader's
+    directory party, shared or of their organizations); anyone else is "not available". Above it, Marketing's own bar: back to the
+    contact's engagement (Customer360) and Add to list for a holder of MARKETING_AUDIENCE_EDIT, which files the evidenced subscription
+    request (mantle.marketing.AudienceServices.request#Subscriptions: pending until the person confirms, never a raw membership).
+    Identity and channels are maintained under the record's own party checks (ContactServices.check#ContactAccess and the shared
+    party-write and file permissions); the record's Consent tab links a holder of MARKETING_CONSENT_EDIT to Marketing's Consent mount
+    (P3, template/ContactRecord.xml). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Contact" default-menu-include="false">
+    <parameter name="partyId" required="true"/>
+    <parameter name="tab"/>
+    <parameter name="showExpired"/>
+    <transition-include name="contactUpdate" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactOrganization" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactInfoStore" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactInfoPurpose" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactRelationshipAdd" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactNote" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatarUpload" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatarRemove" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactFavorite" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactBooks" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactLink" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactDelete" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactExport" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatar" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactSearch" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactGeoRegions" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactBookGroups" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="consentRecord" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <transition-include name="consentListSet" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <!-- Add to list: one evidenced subscription request (P3's filing), and the lists the caller may file to -->
+    <transition-include name="audienceListChoices" location="component://mr-boss/template/MarketingAudiences.xml"/>
+    <transition name="addContactToList">
+        <actions>
+            <service-call name="mantle.marketing.AudienceServices.request#Subscriptions" out-map="filed"
+                    in-map="{contactListId:addToListId, partyIdList:[partyId], sourceEnumId:(sourceEnumId || null),
+                        evidenceText:(evidenceText || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="info">${filed.pendingCount ? 'Filed a subscription request, pending the person\'s confirmation' : filed.existingCount ? 'Already on the list or waiting for confirmation' : 'Not filed: ' + filed.results.map(r =&gt; r.reasonCode).join(', ')}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="marketingContact" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'contact', recordId:partyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="contactFound" from="!!marketingContact?.recordId"/>
+        <set field="canAddToList" from="contactFound &amp;&amp; !!marketing.capabilities.audienceEdit"/>
+        <set field="recordPartyId" from="partyId"/>
+        <set field="inSplit" from="false"/>
+        <set field="recordBase" from="'/qapps' + sharedLinks['Contacts/ContactDetail'].slice(1)"/>
+    </actions>
+    <widgets>
+        <section name="MarketingContactMissing" condition="!contactFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Contact not available"/>
+                    <box-body>
+                        <label type="p" text="This contact is not available: it does not exist, or it is not a contact of your organizations' audiences."/>
+                        <link url="${sharedLinks['Audiences/Lists']}" text="Back to lists" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MarketingContactFound" condition="contactFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-xs">
+                    <container style="col">
+                        <link url="${sharedLinks['Customers/Customer360']}" link-type="anchor" text="${marketingContact.label}: engagement"
+                                icon="arrow_back" parameter-map="{customerPartyId:partyId}"/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="AddContactToListDialog" button-text="Add to list" icon="sym_o_playlist_add" width="560"
+                                title="Add ${marketingContact.label} to a list" condition="canAddToList === true">
+                            <form-single name="AddContactToList" transition="addContactToList" map="{partyId:partyId, sourceEnumId:'PcsStaff'}">
+                                <field name="partyId"><default-field><hidden/></default-field></field>
+                                <field name="addToListId">
+                                    <default-field title="List">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="audienceListChoices" server-search="true" min-length="0"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sourceEnumId">
+                                    <default-field title="Evidence source">
+                                        <drop-down><option key="PcsStaff" text="Staff"/><option key="PcsForm" text="Form"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="evidenceText">
+                                    <default-field title="Evidence" tooltip="What the person asked for, and where"><text-area rows="2" cols="50"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title=""><submit text="Add to list" icon="sym_o_playlist_add"
+                                            confirmation="File a subscription request? It waits for the person's confirmation."/></default-field>
+                                </field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted"
+                                    text="The person is on the list once they confirm; a withdrawal or suppression is never cleared here."/>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section-include name="ContactRecordSection" location="component://mr-boss/template/ContactRecord.xml"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

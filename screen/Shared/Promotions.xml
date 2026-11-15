@@ -16,22 +16,29 @@ along with this software (see the LICENSE.md file). If not, see
     PromotionFind (store, description, rule, code required, state), the promotion list
     (mantle.product.StorePromotionServices.find#Promotions: the user's stores' promotions with their rule, dates, limits and
     placed uses) and NewPromotion for a promotion manager (store#Promotion: a store of the user's, a registered rule, never a
-    service name from the browser). Commerce's context only (ironstone.commerce.ContextServices.get#SharedContext, which refuses
-    another app root); Marketing adds its context when it mounts this screen. -->
+    service name from the browser). The context is the mounting app's registration (service/ironstone/shared/PromotionApps.js; impl-marketing
+    P19, F22): Commerce's (its Promotions area) and Marketing's (its Promotions area: the stores of the user's Marketing organizations
+    within Commerce's store scope); Mantle's promotion services check Commerce's permissions and the store's scope again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Promotions" default-menu-index="1">
-    <parameter name="appRoot"/>
     <parameter name="productStoreId"/>
     <parameter name="term"/>
     <parameter name="serviceRegisterId"/>
     <parameter name="requireCode"/>
     <parameter name="state"/>
     <always-actions>
-        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <!-- the mounting app's registration and context (design-commerce §7's per-app table; PromotionApps.js; impl-marketing P19) -->
+        <set field="sharedMountContext" from="ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').context(appRoot)"/>
         <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
     </always-actions>
-    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <!-- the mounting app's drop-downs (its stores and customers: Commerce's, or Marketing's within Commerce's store scope) -->
+    <transition name="choices" read-only="true">
+        <actions>
+            <script>ec.web.sendJsonResponse(ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').choices(appRoot,
+                    {choice: choice, term: term, selected: selected}))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <transition-include name="promotionOptions" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="createPromotion">
         <actions>

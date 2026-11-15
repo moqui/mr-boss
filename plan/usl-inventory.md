@@ -1087,6 +1087,18 @@ triggers of automations and lead rules, impl-marketing P18), called by built scr
 | marketing/AutomationServices | create#Automation, store#EnrollmentRule, run#AutomationAdmission | Marketing/Automations (NewAutomation, EnrollmentRule: registration and attendance triggers) | template/MarketingAutomations.xml NewAutomation, AutomationDetail's EnrollmentRule (the Event choice), the admission job's cursors over confirmed places and attendances (Marketing P18) |
 | marketing/MarketingFormServices | get#LeadRule, store#LeadRule, preview#LeadRule, run#LeadCaptures, capture#EventRegistration | Marketing/Leads/LeadRules, LeadRuleDetail (registration and attendance triggers) | Marketing/Leads/LeadRules (New lead rule › an event's attendees), LeadRuleDetail with an event offer, the capture job (Marketing P18) |
 | sales/OpportunityServices | store#LeadIntake | Sales §3 Leads (X16, intake sources) | the source kinds eventRegistration and eventAttendance (SlisEventRegistration, SlisEventAttendance) for Marketing's event lead rules (Marketing P18) |
+
+Added in Marketing P19 (Nov 15, 2026; a party's engagement, the campaign links of a store promotion and Marketing's part of a party merge,
+impl-marketing P19), called by built screens and merge#Parties:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingWorkspaceServices | get#Engagement | Marketing/Customers/Customer360 (Engagement, W.get#Engagement) | Shared/Customer360's Marketing branch (template/MarketingCustomer360.xml), each source with its own permission (Marketing P19) |
+| marketing/CampaignServices | find#CampaignAssociations | Marketing/Promotions/PromotionDetail (campaign links) | Shared/PromotionDetail's Campaigns box in Marketing's registration (Marketing P19) |
+| marketing/CampaignServices | store#CampaignAssociation | Marketing/Promotions/PromotionDetail, CampaignDetail (Promotions) | Shared/PromotionDetail's linkCampaign and endCampaignLink, CampaignDetail's Link a promotion; a promotion link asks Commerce's COMMERCE_PROMOTION_EDIT and the store's scope too (Marketing P19) |
+| marketing/AudienceServices | request#Subscriptions | Marketing/Contacts/ContactDetail (Add to list) | Marketing/Contacts/ContactDetail's addContactToList (Marketing P19) |
+| party/DuplicateServices | merge#Parties | Commons Duplicates (X15 guards) | Marketing's refusals (PartyMerge.js rules: ENROLLMENT_ACTIVE, ENROLLMENT_CONFLICT, REGISTRATION_ACTIVE, RECIPIENT_PENDING) and moves (mantle/marketing/MarketingPartyMerge.js: a withdrawal wins on a membership or consent collision) (Marketing P19) |
+
 Added in Marketing P20 (Nov 15, 2026; attribution in `mantle.marketing.TrackingServices` over MarketingAttribution.js, the reports in
 `mantle.marketing.MarketingReportServices` over MarketingReports.js, the campaign-sent business event, impl-marketing P20), called by
 built screens, the order SECA, jobs and Insights' registries:
@@ -1107,6 +1119,7 @@ built screens, the order SECA, jobs and Insights' registries:
 | marketing/MarketingReportServices | get#AttentionCounts | Insights attention (design-insights §7) | the AttentionProviders Marketing.SendsAwaitingApproval, .FailedDeliveries, .UncertainDeliveries, .HeldRegistrations (Marketing P20) |
 | marketing/MarketingReportServices | run#MarketingAggregation, run#MarketingRetention | §15.3 Reporting and retention | jobs run_MarketingAggregation, run_MarketingRetention (Marketing P20) |
 | party/BusinessEventServices | record#BusinessEvent (CampaignSent) | design-insights §4 business annotations (F85) | CampaignSendServices release#Send and release#ExperimentWinner, after their commit (Marketing P20) |
+| marketing/SegmentServices | count#Audience | Assist (CX-ASSIST; the user's call of Nov 15) | the AgentToolExposure marketing_audience_counts (Assistant only; the P20 review) |
 
 ## Order (89 services)
 

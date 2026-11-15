@@ -118,6 +118,7 @@ along with this software (see the LICENSE.md file). If not, see
                 lists (P15: and whose organization's values vocabulary lists)</description></parameter>
             <parameter name="vocabularyKindEnumId"><description>P15: the kind of value vocabulary lists (a UTM source, medium or content,
                 a tracking code type)</description></parameter>
+            <parameter name="productStoreId"><description>P19: the store whose organization's open campaigns promotionCampaigns lists</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
