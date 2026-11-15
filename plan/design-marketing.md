@@ -1388,7 +1388,9 @@ check#OrderPreApprove's new-customer and shipping-address checks (nothing ships,
 stop it (impl-marketing P17, the user's call to confirm). A cancellation releases the place once, revokes the entry code and hands a
 paid place's refund to the payment services after the commit (release of an authorization once none of its places is left, else
 refund#SinglePayment of its line and tax), shown pending until the provider's answer and Accounting's to finish when it fails; then the
-waitlist is offered in order with a hold of its own. The entry code is never stored: its digest and revision are, and each new code (a
+waitlist is offered in order with a hold of its own, a reservation's waiting places together (none split, none passed; a completed
+free one confirmed at once). The payment step shows the tickets' prices now and Pay sends that amount's key: a price changed since is
+refused with the new amount (PRICE_CHANGED), never charged unseen (P17 review). The entry code is never stored: its digest and revision are, and each new code (a
 ticket notice, Show my entry code, a substitution) revokes the last. Jobs: run_EventRegistrations (payment results, placement retries,
 waiting refunds, hold expiry, waitlist offers) and run_EventRegistrationNotices (the time-driven notices), each with its operation and
 JobRegistration.
@@ -2065,8 +2067,12 @@ As built (impl-marketing P17): `Marketing/Register?offer=` (the Event page's Reg
 `reserveRegistration` (POST `marketing/registration`, an anonymous write: PASS's request key, ten requests per client in ten minutes,
 500 per site an hour and five per buyer address an hour, refused alike and holding nothing), `completeRegistration`,
 `startRegistrationPayment` and `getRegistration` (POSTs by the reservation's capability, kept in the visitor's session, never in an
-address); the provider returns to `?ref=&key=`, whose key reads the state alone. Only a provider page by address is followed; a gateway
-whose hosted step is a posted form (Accept Hosted) is not offered here yet.
+address); the provider returns to `?ref=&key=`, whose key reads the state alone. A provider page by address is followed; one whose
+hosted step is a posted form (Accept Hosted) is reached through `Marketing/RegistrationRelay` (`getRegistrationPaymentForm`: a fresh
+token on each visit by the capability, never the return key, while the places are held; the return key made anew for the page's
+return address; only that route's CSP allows the provider's form-action), as Shop's PaymentRelay (P17 review, the user's call Nov 15).
+RegistrationPayment shows the amount due (the tickets'
+prices now, before tax) and Pay sends its key (`priceKey`), so a price changed since is shown again, not charged (P17 review).
 
 **Source:** research §7; Odoo event tickets, Dolibarr public registration and native order/form records.
 

@@ -50,7 +50,14 @@ const reserve = (siteId, registrationPolicyId, ticketTypeId, email) =>
     })
 const complete = (siteId, token, name) =>
     visitor("complete#Registration", {siteId, token, attendees: JSON.stringify([{name}]), acceptTerms: "Y", operationId: key()})
-const pay = (siteId, token) => visitor("start#RegistrationPayment", {siteId, token, operationId: key()})
+// Pay as the page does: with the key of the amount the payment step showed (getRegistration's priceKey)
+const pay = (siteId, token) =>
+    visitor("start#RegistrationPayment", {
+        siteId,
+        token,
+        priceKey: visitor("get#Registration", {siteId, token}).registration?.priceKey,
+        operationId: key()
+    })
 const result = (siteId, token) => visitor("get#Registration", {siteId, token, returned: "true"})
 function post(path, parameters) {
     const out = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Marketing.xml").render(path, parameters, "post")

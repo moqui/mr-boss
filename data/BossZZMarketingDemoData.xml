@@ -766,4 +766,13 @@ along with this software (see the LICENSE.md file). If not, see
             priceSourceEnumId="EtpProduct" productId="BOSS_MKT_TICKET_MEMBER" capacity="4" perOrderLimit="2" sequenceNum="2" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
     <ironstone.marketing.DemoServices.load-EventDemo/>
     <!-- ===== end of Marketing P16 ===== -->
+
+    <!-- ===== Marketing P17 (impl-marketing P17 review; §4 Nov 15, the user's call): Ziziwork Industries' accounting preference names
+        Mantle's LOCAL tax gateway, which every Ziziwork organization without one of its own inherits by its rollup (find#PartyAcctgPreference),
+        so a storeless order of Retail, Services or another of them (a ticket order among them) is taxed by X1 through it. The local gateway
+        taxes only where the seller or one it rolls up to has nexus and a rate (TaxAuthorityParty.isNexus), and X1 a storeless part only at
+        an address: Ziziwork Sales has its own preference and Utah nexus (Sales P7), no other Ziziwork organization has a nexus, so no
+        total changes until one is given (the review's note). -->
+    <mantle.ledger.config.PartyAcctgPreference organizationPartyId="ORG_ZIZI_CORP" taxGatewayConfigId="LOCAL"/>
+    <!-- ===== end of Marketing P17 ===== -->
 </entity-facade-xml>
