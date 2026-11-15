@@ -2,11 +2,14 @@
 // text of a new outside number (SmsServices receive#Sms, as the provider's webhook hands it over) is filed on the one party
 // the number's user may see with that number (ChatServices.file#ExternalConversation: File on a record, so the party's
 // Chatter shows it), and the mapping is marked filed so the next text is not filed again; a number no party has files
-// nothing, and its next text tries again. The webhook and the provider themselves are moqui-channels' tests.
+// nothing, and its next text tries again. The webhook and the provider themselves are moqui-channels' tests. The outside party
+// is the spec's own personal contact of John's with a number of its own (not the demo Mary, whose number Commons' Contacts
+// changes, so a run with Contacts first found no party for it; Sales follow-up 4).
 // Run: ./moq test mr-boss --spec TextFiling
 const BRIDGE = "BOSS_TEXT_FILING_SMS"
 const OURS = "+15550004100"
-const MARY = "+15550100161"
+const THEIRS = "+15550104161"
+const PARTY = "BOSS_TEXT_FILING_PARTY"
 const UNKNOWN = "+15550104199"
 const RECORD = "mantle.party.communication.CommunicationEventRecord"
 
@@ -48,6 +51,18 @@ spec({
             const number = ec.entity.makeValue("moqui.call.PhoneNumber")
             number.setFields({phoneNumber: OURS, messagingBridgeId: BRIDGE, routeTypeEnumId: "PnrUser", routeId: "EX_JOHN_DOE"}, true, null, null)
             number.createOrUpdate()
+            // the outside party: a personal contact of John's (the number's user) with that number, as the demo's contacts are
+            const make = (entityName, fields) => {
+                const row = ec.entity.makeValue(entityName)
+                row.setFields(fields, true, null, null)
+                row.createOrUpdate()
+            }
+            make("mantle.party.Party", {partyId: PARTY, pseudoId: PARTY, partyTypeEnumId: "PtyPerson", privateOwnerUserId: "EX_JOHN_DOE", disabled: "N"})
+            make("mantle.party.Person", {partyId: PARTY, firstName: "Text", lastName: "Filing"})
+            make("mantle.party.contact.ContactMech", {contactMechId: PARTY + "_TN", contactMechTypeEnumId: "CmtTelecomNumber"})
+            make("mantle.party.contact.TelecomNumber", {contactMechId: PARTY + "_TN", countryCode: "1", areaCode: "555", contactNumber: "010-4161"})
+            make("mantle.party.contact.PartyContactMech", {partyId: PARTY, contactMechId: PARTY + "_TN", contactMechPurposeId: "PhoneMobile",
+                fromDate: ec.l10n.parseTimestamp("2026-10-01 09:00:00", "yyyy-MM-dd HH:mm:ss")})
         })
     },
     cleanupSpec() {
@@ -65,19 +80,19 @@ spec({
 
 feature("a new outside number's first text is filed on the party with that number, once; a number nobody has files nothing and tries again", {
     when() {
-        const first = text(MARY, "Is the gutter job still on for Monday?")
-        const filed = mapping(MARY)
-        const second = text(MARY, "Also, bring the ladder")
+        const first = text(THEIRS, "Is the gutter job still on for Monday?")
+        const filed = mapping(THEIRS)
+        const second = text(THEIRS, "Also, bring the ladder")
         const stranger = text(UNKNOWN, "Who is this?")
         const strangerMapping = mapping(UNKNOWN)
         login("john.doe")
-        return {first, filed, second, stranger, strangerMapping, onMary: filed ? filedOn("BOSS_DEMO_PC_MARY", filed.chatRoomId) : []}
+        return {first, filed, second, stranger, strangerMapping, onParty: filed ? filedOn(PARTY, filed.chatRoomId) : []}
     },
-    then({first, filed, second, stranger, strangerMapping, onMary}) {
+    then({first, filed, second, stranger, strangerMapping, onParty}) {
         first.outcome == "accepted"
         filed.filedDate != null
         second.outcome == "accepted"
-        onMary.length == 1
+        onParty.length == 1
         stranger.outcome == "accepted"
         strangerMapping.filedDate == null
     }

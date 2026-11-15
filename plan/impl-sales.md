@@ -5914,6 +5914,55 @@ before `./moq test-apps` (4 workers), no product code changed.
     master since this branch was made, touches none of them (MarketingAccess only).
   - Nothing needs the user's call.
 
+**Review Nov 14 (follow-up 4).** Master was newer in both repositories (Marketing P12 and its numbering); merged into `sal/fix4`
+without conflicts.
+- Checked and sound:
+  - The three splits: every feature name of master's CustomerServiceAccess (22), PeopleAccessLater (21) and PurchasingAccess (25)
+    is in exactly one of the two halves, none added, and each body is master's apart from prettier's wrapping of the feedback
+    feature (compared block by block with whitespace removed). The top-level helpers and constants each half uses are declared in
+    it (the names a moved feature uses that the old spec declared at top level are its own locals); nothing unused is left. The
+    spec-local accounts moved with their features (P14's and P15's stay in PeopleAccessLater, P31's payroll finance account and
+    P26's `state26` went to PeoplePayrollAccess with P26 and P27 together and in order), and each half's cleanup removes only its own
+    accounts. PurchasingAccess keeps its spec requests and the features that read them; PurchasingRecordAccess reads none.
+    No module-level state is shared, and each pair passes in either order on one database.
+  - The headers say which spec a later phase's case goes in; the 21 changed header lines are comments only.
+- Fixed (the order-dependent failures of the full runs; each spec passed alone):
+  - R1 (low, test, mr-mantle): SmithyMirrors and SmithyIssues both made PublicSite `SMI_SITE` and the accounts `SMI_OWNER` and
+    `SMI_MAINT` (SmithyIssues through `lib.tracker(SITE, "SMI", ...)`), so SmithyMirrors' setup failed on the duplicate key
+    whenever SmithyIssues ran first on the database. SmithyMirrors' site, accounts, handles, group path and operation ids are now its
+    own (`SPM_`, `spm`); no other Smithy spec shares a site id. The two run together failed before and pass after.
+  - R2 (low, test, mr-mantle): SalesRecurrence's base feature read the account's open orders from find#Accounts' first page:
+    20 rows by name, holding the organization's accounts and every shared one (owner `_NA_`). In the full serial run, 22 shared
+    accounts from the Accounting specs (`ACCT_..._CUSTOMER`) sort before "Account a" (a probe read index 22 of 125), so the row
+    was missing and `openOrders` was undefined. Not a worker race. The feature now asks for its account by id (`text`). The
+    product's paging is correct.
+  - R3 (low, test, mr-boss): TextFiling's outside party was the demo's Mary, and Commons' Contacts changes her mobile from
+    010-0161 to 010-0162 (it sorts first in a serial run). get#CallContext then found no party for the number, and nothing was
+    filed (`filedDate` null). Not a post-commit race: receive#Sms files synchronously. TextFiling now makes its own personal contact
+    of John's with its own number (+1 555 010-4161), as Contacts' spec-local contact does. Contacts then TextFiling failed before
+    and passes after.
+- Provisional findings (for the lead to number):
+  - Two specs used the same spec-local ids (R1), and two read shared demo or list data that other specs change or grow (R2, R3).
+    These pass alone and fail only in a full serial run. A spec-local id prefix, and a lookup by id rather than a first page,
+    keep them apart.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, load about 4):
+  - Each split pair, three times on one database (both orders): CustomerService 22 of 22 (32 s a run), People 21 of 21
+    (34 to 36 s), Purchasing 25 of 25 (32 to 33 s).
+  - SmithyMirrors, SalesRecurrence and TextFiling, each three times alone: all pass.
+  - The neighbour groups: SmithyMirrors with SmithyIssues, GithubImport, DevAide, HeldReports and MergeRequests (38 of 38).
+    SalesRecurrence with the 15 Accounting specs that make shared customers, SalesAccounts and SalesWorkspace (153 of 153).
+    TextFiling with Contacts, ContactImport, EventDetail, CallTarget, Chat, Compose, Consent, Inbox and CommsHome (138 of 138).
+  - The whole mr-mantle run, serial: 2650 of 2650, 583.2 s of feature time against a budget of 555 (by load: the same run read
+    655.5 s at load 15 to 23).
+  - The whole mr-boss run, serial: 1665 of 1665, 287.1 s of 338. In it the halves' feature times were CustomerServiceAccess 3.6 s,
+    CustomerServiceRecordAccess 4.5 s, PeopleAccessLater 5.8 s, PeoplePayrollAccess 4.1 s, PurchasingAccess 3.3 s and
+    PurchasingRecordAccess 3.6 s; the highest was AccountingAccess at 8.4 s.
+  - Not run: test-apps, test-framework, acceptance.
+- For the lead:
+  - Budget: no change. mr-mantle ran over its budget at load 4 (583 s of 555), as the Built note's loaded run did. Whether to cut
+    it or raise it is the user's call.
+  - Merge hot spots: those of the Built note, plus SmithyMirrors' ids, SalesRecurrence's account lookup and TextFiling's setup.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or
