@@ -30,32 +30,42 @@ feature("Home's counters open the lists they count", {
         const counters = asUser(users.rep, () =>
             system(() => Array.from(invoke("mantle.sales.SalesWorkspaceServices.get#SalesHome", {}).counters || []))
         ).filter(counter => counter.state === "ready")
-        // each counter's list, opened with the counter's own parameters, counts the same rows
+        // each counter's list, opened with the counter's own parameters, counts the same rows through the list's own service: the
+        // pipeline's (P6), the requests for quote (P8), the quotes and the orders (P11)
+        const listCount = counter => {
+            const call = (service, parameters, field) =>
+                asUser(users.rep, () => system(() => invoke(service, Object.assign({pageSize: 1}, parameters))))[field]
+            if (counter.listPath === "Pipeline/Leads" || counter.listPath === "Pipeline/Opportunities")
+                return call(
+                    "mantle.sales.OpportunityServices.find#Opportunities",
+                    Object.assign(
+                        {
+                            statusId: "SalesOppOpen",
+                            typeEnumId: counter.listPath === "Pipeline/Leads" ? "SotLead" : "SotOpportunity"
+                        },
+                        counter.parameters
+                    ),
+                    "opportunityListCount"
+                )
+            if (counter.listPath === "Quotes/QuoteRequests")
+                return call("mantle.order.SalesQuoteServices.find#QuoteRequests", counter.parameters, "quoteRequestListCount")
+            if (counter.listPath === "Quotes/Quotes")
+                return call("mantle.order.SalesQuoteServices.find#Quotes", counter.parameters, "quoteListCount")
+            if (counter.listPath === "Orders/Orders")
+                return call("mantle.sales.SalesWorkspaceServices.find#SalesOrders", counter.parameters, "orderListCount")
+            return "no list service for " + counter.listPath
+        }
         const lists = counters.map(counter => {
             const listed = asUser(users.rep, () => page(counter.listPath, counter.parameters, "html"))
-            const found = asUser(users.rep, () =>
-                system(() =>
-                    invoke(
-                        "mantle.sales.OpportunityServices.find#Opportunities",
-                        Object.assign(
-                            {
-                                pageSize: 1,
-                                statusId: "SalesOppOpen",
-                                typeEnumId: counter.listPath === "Pipeline/Leads" ? "SotLead" : "SotOpportunity"
-                            },
-                            counter.parameters
-                        )
-                    )
-                )
-            )
-            return {key: counter.counterKey, count: counter.count, listed: found.opportunityListCount, opened: opened(listed)}
+            return {key: counter.counterKey, count: counter.count, listed: Number(listCount(counter)), opened: opened(listed)}
         })
         return {home, lists}
     },
     then({home, lists}) {
         opened(home)
         home.output.includes("Leads to work")
-        lists.length == 3
+        lists.map(list => list.key).join() ==
+            "leads,myOpportunities,pastClose,quoteRequests,quotesToSend,quotesExpiring,ordersBlocked"
         lists.every(list => list.opened && list.count === list.listed)
     }
 })

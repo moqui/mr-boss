@@ -127,19 +127,22 @@ feature("scenario 2: the same stage move through the board, the row action and t
                     .parameters({salesOpportunityId: call, opportunityStageId: "SalesProposal", expectedRevision: revision(call)})
                     .call()
             )
-            return [board, row, call].map(id => {
-                const found = deal(id)
-                return (
-                    found.opportunityStageId +
-                    ":" +
-                    Number(String(found.estimatedProbability)) +
-                    ":" +
-                    found.probabilityModeEnumId
-                )
-            })
+            // an object: then() takes the result's fields, not an array's
+            return {
+                results: [board, row, call].map(id => {
+                    const found = deal(id)
+                    return (
+                        found.opportunityStageId +
+                        ":" +
+                        Number(String(found.estimatedProbability)) +
+                        ":" +
+                        found.probabilityModeEnumId
+                    )
+                })
+            }
         })
     },
-    then(results) {
+    then({results}) {
         results[0] == "SalesProposal:50:SpmStage"
         results[1] == results[0]
         results[2] == results[0]

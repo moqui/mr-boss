@@ -35,6 +35,8 @@ spec({
     setupSpec() {
         capture.enable()
         login("john.doe")
+        // Ziziwork Sales holds no stock in the demo: its storeless order reserves this
+        lib.sellerStock(ids.otherOrganizationId, "DEMO_1_1", 20)
         // Fabrikam's contact gets an email, so its confirmation has somewhere to go
         system(() => {
             const mech = invoke("create#mantle.party.contact.ContactMech", {

@@ -18,7 +18,7 @@ const transition = (user, path, name, parameters) =>
     asUser(user, () => {
         const out = ec.screen
             .makeTest()
-            .baseScreenPath("Sales")
+            .rootScreen("component://mr-boss/screen/Sales.xml")
             .render(path + "/" + name, parameters, "POST")
         return {errors: Array.from(out.errorMessages || []), messages: Array.from(out.messages || [])}
     })
@@ -40,6 +40,10 @@ function approvedOrder(name, quantity) {
     )
     return orderId
 }
+// the order part ships from Retail's warehouse: a Sales order part names no facility, and Warehouse picks only a shipment with an
+// origin of its scope (the dispatcher's choice, made here as the system)
+const fromWarehouse = orderId =>
+    system(() => invoke("update#mantle.order.OrderPart", {orderId, orderPartSeqId: "01", facilityId: "ZIRET_WH"}))
 const state = {}
 
 spec({
@@ -57,7 +61,8 @@ feature("a price change filed in Customer Service is approved in Sales and appli
     when() {
         const orderId = approvedOrder("Change scenario " + run, 4)
         const before = one("mantle.order.OrderHeader", {orderId})
-        const filed = asService("customerservice.orderdesk", () =>
+        // filed by a Customer Service agent (ORDER_CHANGE_REQUEST; the order desk applies changes, it does not file them)
+        const filed = asService("customerservice.agent", () =>
             invoke(C + "save#OrderChange", {
                 orderId,
                 orderChangeKindEnumId: "OckPrice",
@@ -118,6 +123,7 @@ feature("a price change filed in Customer Service is approved in Sales and appli
 feature("a change against a picked line waits with its conflict", {
     when() {
         const orderId = approvedOrder("Picked change " + run, 3)
+        fromWarehouse(orderId)
         const shipment = system(() =>
             invoke("mantle.shipment.ShipmentServices.create#OrderPartShipment", {orderId, orderPartSeqId: "01"})
         )
@@ -182,7 +188,8 @@ feature(
                 order,
                 shipmentId: shipment.shipmentId,
                 invoiceIds,
-                billed: rows("mantle.order.OrderItemBilling", {orderId}).reduce(
+                // the product line's billed quantity (its tax line is billed with it)
+                billed: rows("mantle.order.OrderItemBilling", {orderId, orderItemSeqId: "01"}).reduce(
                     (sum, row) => sum + Number(String(row.quantity)),
                     0
                 ),

@@ -57,8 +57,10 @@ function rfqMail(kind, withFile) {
     })
     return emailMessageId
 }
+// a user's own service call, as Sales' screens make it: the services check the user's permissions and scope themselves
+const asCall = (user, action) => asUser(user, () => system(action))
 const detail = (requestId, user = users.rep) =>
-    asUser(user, () => invoke("mantle.order.SalesQuoteServices.get#QuoteRequest", {requestId}))
+    asCall(user, () => invoke("mantle.order.SalesQuoteServices.get#QuoteRequest", {requestId}))
 
 spec({
     stepwise: true,
@@ -145,7 +147,7 @@ feature("a declined request tells its requester at the address the preview showe
     when() {
         const emailMessageId = rfqMail("DECLINE", false)
         const requestId = requestOf(emailMessageId).requestId
-        const preview = asUser(users.rep, () =>
+        const preview = asCall(users.rep, () =>
             invoke("mantle.order.SalesQuoteServices.preview#QuoteRequestDecline", {requestId})
         )
         const declined = asUser(users.rep, () =>
@@ -208,11 +210,11 @@ feature("a warranty claim's chargeable line becomes a quote without its fault, w
                 }),
             false
         )
-        const repairs = asUser(users.rep, () =>
+        const repairs = asCall(users.rep, () =>
             invoke("mantle.order.SalesQuoteServices.find#QuoteRequests", {kind: "repair"})
         ).quoteRequestList
         const source = detail(claim.requestId)
-        const quote = asUser(users.rep, () =>
+        const quote = asCall(users.rep, () =>
             invoke("mantle.order.SalesQuoteServices.create#QuoteFromRequest", {
                 requestId: claim.requestId,
                 requestRevision: source.quoteRequest.requestRevision,
@@ -220,7 +222,7 @@ feature("a warranty claim's chargeable line becomes a quote without its fault, w
                 items: [{requestItemSeqId: source.items[0].requestItemSeqId, unitAmount: "95", overrideReason: "Repair charge"}]
             })
         )
-        const quoteRead = asUser(users.rep, () => invoke("mantle.order.SalesQuoteServices.get#Quote", {orderId: quote.orderId}))
+        const quoteRead = asCall(users.rep, () => invoke("mantle.order.SalesQuoteServices.get#Quote", {orderId: quote.orderId}))
         const serviceRead = cs.asUser(
             cs.users.agent,
             () => invoke("mantle.request.WarrantyServices.get#WarrantyClaim", {requestId: claim.requestId}),

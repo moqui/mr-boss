@@ -54,7 +54,8 @@ const retailUsers = [
     marketingSales
 ]
 const groupUsers = retailUsers.concat([users.otherRep, users.bothManager, users.admin])
-const refusedText = /RECORD_UNAVAILABLE|ORGANIZATION_DENIED|PERMISSION_DENIED|HOLD_UNAVAILABLE|not available|not authorized/
+const refusedText =
+    /RECORD_UNAVAILABLE|ORGANIZATION_DENIED|PERMISSION_DENIED|ACCESS_DENIED|HOLD_UNAVAILABLE|not available|not authorized/
 const state = {}
 
 // the two sides: the organization, its representative, the account and contact its records are for, and (made in setup) its records,
@@ -368,6 +369,8 @@ spec({
     setupSpec() {
         login("john.doe")
         state.setupErrors = []
+        // Ziziwork Sales holds no stock in the demo: its side's orders reserve this
+        lib.sellerStock(ids.otherOrganizationId, "DEMO_1_1", 20)
         for (const s of Object.values(sides)) makeRecords(s)
     },
     cleanupSpec() {
@@ -942,7 +945,18 @@ feature("finance: no Sales group reads an invoice or a payment, nor sends the in
             if (!sendDirect.error) problems.push(`${user} sends the invoice through Accounting's service`)
         }
         const control = render("john.doe", "Orders/InvoiceDetail", {invoiceId: s.invoiceId})
+        // get#SalesOrder lists invoices for a holder of RECEIVABLE_VIEW or ACCOUNTING_VIEW, which ADMIN is not given: john.doe reads
+        // the order as an Accounting reader for the while
+        const member = {userGroupId: "BOSS_ACCOUNTING_READ", userId: "EX_JOHN_DOE", fromDate: ec.user.nowTimestamp}
+        system(() => ec.service.sync().name("create#moqui.security.UserGroupMember").parameters(member).call())
         const controlOrder = direct("john.doe", SO + "get#SalesOrder", {orderId: s.orderId})
+        system(() =>
+            ec.service
+                .sync()
+                .name("update#moqui.security.UserGroupMember")
+                .parameters(Object.assign({thruDate: ec.user.nowTimestamp}, member))
+                .call()
+        )
         return {
             problems,
             control: opens(control) && !control.output.includes("Invoice not available"),

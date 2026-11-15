@@ -104,7 +104,8 @@ feature("a rep drafts a storeless quote at the customer's price, its tax through
         return {created, orderId, firstTax, secondTax, shippingTax, shipping, header, part}
     },
     then({created, orderId, firstTax, secondTax, shippingTax, header, part}) {
-        opened(created)
+        // the transition answers with its redirect to the new quote
+        created.errors.length == 0 && [200, 302].includes(created.status)
         orderId != null
         header.productStoreId == null
         header.orderPurposeEnumId == "OrpSalesQuote"
@@ -128,15 +129,24 @@ feature("the quote shows Products' explanation of the price, an unavailable pric
         const explained = asUser(users.otherRep, () =>
             page("Products/PriceExplain", {orderId, orderItemSeqId: line.orderItemSeqId}, "html")
         )
+        // the rep's own calls, as OrderDetail's line dialog makes them (the service checks the rep's permissions and scope itself)
         const zeroAdded = asUser(users.otherRep, () =>
-            lib.refusal("mantle.order.SalesQuoteServices.store#QuoteLine", {orderId, orderRevision: revision(), productId: zero})
+            system(() =>
+                lib.refusal("mantle.order.SalesQuoteServices.store#QuoteLine", {
+                    orderId,
+                    orderRevision: revision(),
+                    productId: zero
+                })
+            )
         )
         const unpricedAdded = asUser(users.otherRep, () =>
-            lib.refusal("mantle.order.SalesQuoteServices.store#QuoteLine", {
-                orderId,
-                orderRevision: revision(),
-                productId: unpriced
-            })
+            system(() =>
+                lib.refusal("mantle.order.SalesQuoteServices.store#QuoteLine", {
+                    orderId,
+                    orderRevision: revision(),
+                    productId: unpriced
+                })
+            )
         )
         const zeroLine = system(() =>
             Array.from(ec.entity.find("mantle.order.OrderItem").condition({orderId, productId: zero}).list())
