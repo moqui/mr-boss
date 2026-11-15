@@ -250,6 +250,42 @@ feature("the organization scope: AR's reads of the selected organization pass, o
     }
 })
 
+// ACC-UI-009: the picker's choice is not checked against the scope it replaces, and a refused scope ends the render
+feature("an administrator switches the active organization both ways and clears it; a refused scope ends the render", {
+    when() {
+        const post = (organizationPartyId, extra = {}) => {
+            const result = ec.screen
+                .makeTest()
+                .rootScreen("component://mr-boss/screen/Accounting.xml")
+                .render("Home/selectOrganization", Object.assign({activeOrganizationPartyId: organizationPartyId}, extra), "post")
+            return {errors: Array.from(result.errorMessages || []), active: ec.user.getPreference("ACTIVE_ORGANIZATION") || ""}
+        }
+        return as(
+            "finance.admin",
+            () => {
+                const toCompany = post(org)
+                const back = post("BOSS_ACCT_NEWCO")
+                // a request still naming the organization in view does not hold the switch back
+                const named = post(org, {organizationPartyId: "BOSS_ACCT_NEWCO"})
+                const cleared = post("")
+                lib.selectOrganization("BOSS_ACCT_NEWCO")
+                const outside = lib.page("PeriodClose/PeriodCloseDetail", {timePeriodId: ids.closePeriodId, organizationPartyId: org})
+                return {toCompany, back, named, cleared, outside}
+            },
+            "BOSS_ACCT_NEWCO"
+        )
+    },
+    then({toCompany, back, named, cleared, outside}) {
+        toCompany.errors == [] && toCompany.active == org
+        back.errors == [] && back.active == "BOSS_ACCT_NEWCO"
+        named.errors == [] && named.active == org
+        cleared.errors == [] && cleared.active == ""
+        outside.status != 200
+        outside.errors.some(error => /organization is not available/.test(error))
+        !/TypeError|of undefined|of null/.test(outside.errors.join(" ") + outside.output)
+    }
+})
+
 feature("another organization's records are refused in lists, exports, search, links, files, reports and record reads", {
     when() {
         const content = ec.entity

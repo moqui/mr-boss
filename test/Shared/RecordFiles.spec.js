@@ -260,3 +260,20 @@ feature("the record folder's versions and files: refused outside the record's fo
         climb.status == 500
     },
 })
+
+// ACC-UI-006: in the terminal a record screen's record-files element loads the app root's RecordFiles panel on its record, as the
+// qvt client does, rather than a placeholder whose browser key followed the focused link
+feature("a record's Files tab in the terminal loads the app's RecordFiles panel on that record", {
+    when() {
+        const out = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Projects.xml").renderMode("tui")
+            .render("Projects/ProjectDetail/Files", { workEffortId: "IRON", lastStandalone: "true" }, null)
+        return { status: out.status, output: String(out.output || "") }
+    },
+    then({ status, output }) {
+        status == 200
+        /"t":"dynamicContainer"/.test(output)
+        /RecordFiles\?[^"]*recordEntity=mantle\.work\.effort\.WorkEffort/.test(output)
+        /recordId=IRON/.test(output)
+        !/"t":"placeholder"[^}]*record-files/.test(output)
+    }
+})

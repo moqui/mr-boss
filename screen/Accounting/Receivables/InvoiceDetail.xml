@@ -518,7 +518,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </field>
                                     </form-single>
                                 </container-dialog>
-                                <link url="/fop${printPath}" text="Download PDF" url-type="plain" target-window="_blank"/>
+                                <link url="/fop/apps${printPath}" text="Download PDF" url-type="plain" target-window="_blank"/>
                             </button-menu>
                         </container>
                     </container>

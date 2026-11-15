@@ -29,7 +29,7 @@ feature("AP prints a bill as the supplier issued it; the printed page has no for
         missing.output.includes("Bill not available")
         // BillDetail's Print and Download PDF open the bill's print
         detail.output.includes("Payables/BillPrint?invoiceId=BOSS_ACCT_BILL")
-        detail.output.includes("/fop/Accounting/Payables/BillPrint")
+        detail.output.includes("/fop/apps/Accounting/Payables/BillPrint")
         !arPrint.output.includes("Another Company Making Everything")
     }
 })

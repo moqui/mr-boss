@@ -294,7 +294,7 @@ feature("an invoice's header colors its status, links its print and leaves the w
         draft.output.includes("m-tonal text-grey-7")
         finalizedColored
         finalized.output.includes("/apps/Accounting/Receivables/InvoicePrint?invoiceId=" + ids.finalizedInvoiceId)
-        finalized.output.includes("/fop/Accounting/Receivables/InvoicePrint?invoiceId=" + ids.finalizedInvoiceId)
+        finalized.output.includes("/fop/apps/Accounting/Receivables/InvoicePrint?invoiceId=" + ids.finalizedInvoiceId)
         !finalized.output.includes("Back to invoices")
         customer.errors == []
         customer.output.includes("Open receivable")

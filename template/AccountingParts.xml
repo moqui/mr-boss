@@ -32,10 +32,12 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
+    <!-- the picker sends its choice as activeOrganizationPartyId: under organizationPartyId the root's always-actions would
+        check the new organization against the current scope (the active one) and refuse it before the select runs -->
     <transition name="selectOrganization">
         <actions>
             <service-call name="ironstone.accounting.AccessServices.select#Organization"
-                    in-map="{organizationPartyId:organizationPartyId}"
+                    in-map="{organizationPartyId:activeOrganizationPartyId || null}"
                     out-map="context"/>
         </actions>
         <default-response url=".">
@@ -57,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="OrganizationPicker">
             <widgets>
                 <form-single name="Organization" transition="selectOrganization" map="context">
-                    <field name="organizationPartyId">
+                    <field name="activeOrganizationPartyId" from="organizationPartyId">
                         <default-field title="Organization">
                             <drop-down allow-empty="true">
                                 <dynamic-options transition="choices"
@@ -75,7 +77,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field-layout>
                         <field-row>
-                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="activeOrganizationPartyId"/>
                             <field-ref name="submit"/>
                         </field-row>
                     </field-layout>

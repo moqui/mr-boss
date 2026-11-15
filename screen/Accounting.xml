@@ -20,9 +20,14 @@ along with this software (see the LICENSE.md file). If not, see
     <always-actions>
         <set field="appRoot" value="Accounting"/>
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
-        <service-call name="ironstone.accounting.AccessServices.get#SharedContext"
-                in-map="{organizationPartyId:organizationPartyId}"
-                out-map="accounting"/>
+        <!-- a refusal (no finance read, an organization outside the scope) ends the render with its reason: past it a
+            subscreen would run without the shared context, and one that reads its record with ignore-error would clear the
+            refusal and fail on its links -->
+        <script><![CDATA[
+            accounting = ec.service.sync().name('ironstone.accounting.AccessServices.get#SharedContext')
+                .parameters({organizationPartyId: organizationPartyId}).call()
+            if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+        ]]></script>
         <set field="sharedLinks" from="accounting.sharedLinks"/>
         <set field="organizationPartyId"
                 from="organizationPartyId || accounting.activeOrganizationPartyId
