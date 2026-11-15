@@ -5667,6 +5667,98 @@ no Rust built.
     cancellation as the offer's choice, off by default; Mantle's classic flows insulated from the demo's Retail nexus rather than
     taking BOSS's tax into Mantle's figures; whether a framework `hmac` member should replace the nested digest (one function).
 
+**Review Nov 15 (follow-up 1).** A fresh review of `mkt/fix1` (mr-mantle 2eb94b4b, mr-boss cfe34a6d, mr-pass 99e3932) against the
+user's four calls (§4 Nov 15), §2 and design §9, §13, §14.1; master (P18, check-in) merged into mr-mantle and mr-boss (design §14.1's
+EventAttendance row and usl-inventory's P18 table kept beside follow-up 1's), mr-pass unchanged. Fixes committed per repository as
+"Marketing follow-up 1 review: …"; mr-pass and mr-moqui unchanged.
+- Checked and sound:
+  - capture: the tx-commit SECA (any order returns at once unless OrpEventRegistration), each part in its own transaction under its
+    row lock with the billing read again there (two approvals bill once), the cancelled places' lines left off, errors logged and
+    the approval untouched (it has committed); a refund waiting on the capture handed over after; Accounting's and Shop's specs
+    untouched (no shared code changed). Capturing the whole authorization and refunding a place cancelled before the approval is
+    apply#OrderPaymentsToInvoice's documented behaviour (its TODO) and the user's "through Accounting's path": kept, a finding
+    (the buyer sees a charge and a refund rather than a smaller charge; a provider fee may apply);
+  - the rule: the accepted revision's rule (EventRegistrationTerms per revision, termsRevision raised by a rule change after
+    publication), confirmed places only, the decision made before the lock and applied under it; past the deadline
+    CANCELLATION_CLOSED before anything is written (a named closed place refuses the whole request); staff's percentage validated
+    (0–100, two decimals), an override (a figure other than the terms') recorded as EraRefundOverride with the reason, staff free
+    after the deadline and the start. The refund is the percentage of the place's line and its tax: sound (the tax follows the
+    revenue kept), rounded to the currency; Accounting still sees a refund payment beside a paid invoice, never a credit memo (P17);
+  - the entry code: inner = SHA-256(key "\n" registrationId "\n" revision), code = "EV" + the first 24 hex of SHA-256(key "\n"
+    inner-hex). The key is 64 URL-safe base64 characters (384 random bits, `ec.user.randomString`: no "\n"), the registration id
+    a sequenced id and the revision an integer, so both inputs parse one way; the outer input is fixed-length; the inner digest is
+    never shown and the outer is truncated, so a length extension yields nothing usable (H(K‖H(K‖m)), a sound keyed construction
+    for this use). 96 bits of code, stored as `singleUseCodeHash` only. The key is in `encrypt="true"`, not audited, never in a
+    view (policyView, publicView, getRegistration, exports and the PASS answers list their fields), Assist, Marketing.js's palette
+    or a DataDocument; revocation by revision (a correction, substitution or reissue raises it, a cancellation clears the digest);
+    codeOf is one function, ready for the framework `hmac` member (the user's call below). The lazy secret (an offer published
+    before follow-up 1, the demo's workshop, a spec's `make`d offer such as P18's EventCheckIn) changes the offer's row once: a
+    staff form opened before is refused as stale once (the Built note's finding stands);
+  - access: reissue#RegistrationCode and the staff cancel's refundPercent behind MARKETING_EVENT_MANAGE at the revision read; the
+    code never answered to staff; PASS's canCancel per place from the same cancelTermsOf as the write.
+- Fixed:
+  - R1 (high) the capture was never applied: create#FulfillmentInvoice leaves the invoice InvoiceInProcess, so
+    apply#OrderPaymentsToInvoice captured the payment and then applied nothing ("Not applying payment … in status
+    InvoiceInProcess"); the spec checked the capture and the invoice total, not the application. invoiceOrder now finalizes each new
+    invoice and applies the order part's payments, as Shop's finalize step and create#SalesShipmentInvoices do, in a transaction of
+    its own after the invoice's, so a finalization Accounting refuses (posting not set up; the spec's organizations) keeps the
+    invoice and the capture and is logged for Accounting. Spec: the invoice kept in process when its finalization is refused;
+  - R2 (medium) a capture that failed or never ran at the approval was never retried: the holds job (reconcile) now invoices an
+    approved ticket order with nothing billed while its payment is still only authorized (the authorized payments with an order,
+    bounded), once under the part lock; a declined capture moves the payment out of Authorized and ends the retries. Spec: an
+    approval made without the order's services (no SECA) invoiced and captured by the job once, a second run billing nothing
+    (fails on the unfixed code: no `invoiced`);
+  - R3 (low) an entry code typed in lower case named no one (the digest is of the exact text): registrationOfCode tries the
+    upper-cased code after the exact one (a pre-follow-up random code still matches exactly). Spec: the lower-case code; the
+    reissued code naming no one after a correction (P18's substitution expectation);
+  - R4 (the user's call, Nov 15) OrderBulk and PayTraceGateway sell as spec-local internal organizations (OBULK_SELLER,
+    PT_SPEC_SELLER: no nexus, no organization above them, so no inherited gateway), their figures unchanged; OrderBulk's generated
+    order names that seller. DemoTaxNexus.js is kept, nexus only, for OrderToCashBasicFlow and ReturnToResponseBasicFlow: those are
+    one chain over POPC_DEFAULT (Retail's store, LOCAL) with OrderProcureToPayBasicFlow's stock received into Retail's ZIRET_WH and
+    posted to Retail's ledger, its customers (CustJqp owned by Retail), bank account and promotions, about 100 Retail references in
+    2,400 lines of data checks, and four specs depending on the chain's data (FinancialReports, AssetReservationMisc,
+    WorkPlanToCashBasicFlow, ShipmentReturnMisc); moving it needs a new organization with its own preference and ledger, a store
+    and warehouse with stock, and the chain's expected rows rewritten: not done here. Its suspension is safe meanwhile: cleanupSpec
+    runs even when setupSpec or a feature fails, a run's specs share a database serially (each `--workers` worker its own copy),
+    so no other spec sees the nexus missing; only a killed process leaves it off, on that run's database.
+- Provisional findings (for the lead to number):
+  - the capture is made inside the invoice's transaction under the part's lock (the provider is asked while the part is locked;
+    Shop captures apart first); a slow provider holds that order part only;
+  - a ticket invoice is finalized at the approval: its InvoiceFinalized SECAs post it and may send the invoice email where the
+    organization has one, beside the registration's own receipt;
+  - the finalize-and-apply path's success is not covered by a regression spec (the spec's organizations have no posting); a demo
+    organization's ticket order (Retail's workshop) exercises it;
+  - the whole authorization captured and a place cancelled before the approval refunded from it (above);
+  - OrderToCashBasicFlow and ReturnToResponseBasicFlow still suspend Retail's nexus (R4);
+  - ProductsPriceLists and ProductsPricing (mr-boss) fail on master too (the main checkout, release): BossProductsDemoData's
+    BOSS_PRICE_SALES (15.00) ends and BOSS_PRICE_NEXT (16.00, "Scheduled next price") starts 2026-11-15 00:00, today, so the price
+    list's explanation reads 14.40 (16.00 less 10 %) for the expected 13.50 and the REST read lists BOSS_PRICE_NEXT, not
+    BOSS_PRICE_SALES: a date in the demo data, not tax and not this follow-up.
+- Tests (release, `--nobuild`, this worktree's runtime, after the merge): mr-mantle EventRegistrations, EventCheckIn, Automations,
+  LeadCapture (32 of 32; EventRegistrations 16 features, about 4.5 s), ReturnToResponseBasicFlow with its chain, OrderBulk,
+  PayTraceGateway (72 of 72, 7 specs); mr-boss MarketingRegistrations, MarketingAccess, MarketingEvents (12 of 12); mr-boss
+  ProductsPriceLists, ProductsPricing on the main checkout (21 of 23, the two date failures above). Prettier (mr-moqui's config)
+  on the changed JavaScript. Not run: test-apps, acceptance.
+- For the lead:
+  - budget share: mr-mantle EventRegistrations about +0.4 s over the Built note's (one feature); OrderBulk and PayTraceGateway
+    unchanged;
+  - merge hot spots: mr-mantle `EventRegistrationPayments.js` (invoiceOrder, reconcile), `EventRegistrationServices.xml`
+    (run#RegistrationHolds' `invoiced`), `EventRegistrationPlaces.js` (registrationOfCode), `test/order/OrderBulk.spec.js`,
+    `test/ext/PayTraceGateway.spec.js`, `test/order/DemoTaxNexus.js`; mr-boss this file and §4;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, PASS Marketing's registration paragraph), the Built note's two
+    replacements corrected: "A cancellation needs the RegistrationCancel scope, a confirmation and a request key, before the
+    occurrence starts and as the cancellation rule of the terms the registration accepted allows (a confirmed place until its
+    deadline, after it with no refund only where the rule allows; else CANCELLATION_CLOSED and nothing changes); a confirmed
+    place's refund is the rule's percentage of its price and tax, a place not yet confirmed is refunded in full, never a value from
+    the request." and "An entry code is shown only in a confirmed place's ticket or by Show my entry code (a POST with a fresh
+    request key); it is derived from the registration and its credential revision with the offer's secret (an encrypted field,
+    never shown or listed), stored only as a digest with the revision, the same for a revision; a correction, a substitution or a
+    staff reissue (MARKETING_EVENT_MANAGE, with a reason) raises the revision and a cancellation clears it, each revoking the
+    earlier code;";
+  - the user's calls made (§4 Nov 15): the classic flows on a Mantle-owned seller (OrderBulk and PayTraceGateway done; the
+    OrderToCash chain left, R4); the framework `hmac` member for codeOf, the lead's in mr-moqui;
+  - the user's call open: whether the OrderToCash chain's move (R4) is worth its size, or the nexus suspension stays for it.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -5733,6 +5825,8 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | An offer's cancellation terms become a structured rule: a cancellation deadline (days before the start) and a refund percentage; online cancellation and refunds follow it; staff may override with a reason. Built in follow-up 1 | The user's call (P17's review) |
 | Nov 15, 2026 | An attendee's entry code is stable per registration revision, re-shown from a keyed derivation with no plaintext stored; it changes only on a correction or a staff reissue. Built in follow-up 1 | The user's call (P17's review) |
 | Nov 15, 2026 | The demo's Retail organization gets a Utah nexus and an address, so its ticket orders, and ZIZI_RETAIL's Shop orders, are taxed through the LOCAL gateway named on ORG_ZIZI_CORP; the specs whose totals change are updated. Built in follow-up 1 | The user's call (P17's review) |
+| Nov 15, 2026 | Mantle's classic flow specs (OrderToCashBasicFlow, ReturnToResponseBasicFlow, OrderBulk, PayTraceGateway) move to a Mantle-owned seller with no nexus and no inherited tax gateway rather than suspending the demo's Retail nexus, their expected figures kept; DemoTaxNexus.js removed. Built in follow-up 1's review for OrderBulk and PayTraceGateway (spec-local sellers); the OrderToCash chain's move is left (its size, in the review note) and suspends the nexus meanwhile | The user's call (follow-up 1's review) |
+| Nov 15, 2026 | A framework `hmac` host member replaces the nested digest of the entry code (EventRegistrationPlaces.js codeOf, one function); the lead builds it in mr-moqui after follow-up 1's review | The user's call (follow-up 1's review) |
 
 ## 5. Open questions
 
