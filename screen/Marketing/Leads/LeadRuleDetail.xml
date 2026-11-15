@@ -83,7 +83,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="preview" from="previewed?.preview || null"/>
         <set field="previewValues" from="(preview?.values || []).filter(item =&gt; item.valueText)"/>
         <set field="ruleValues" from="rule ? Object.assign({}, rule, {expectedRevision: rule.revision, noteFieldNames: rule.noteFieldNames ? rule.noteFieldNames.split(',') : []})
-                : {publicationId: publication.publicationId}"/>
+                : {publicationId: publication.publicationId, teamPartyId: (choices.defaultTeamPartyId || null)}"/>
         <set field="titleText" from="rule ? (rule.ruleName || publication.publicationText) : publication.publicationText"/>
         <set field="captionText" from="[publication.organizationName, publication.campaignName ? 'campaign ' + publication.campaignName : 'no campaign',
                 rule ? 'to ' + rule.teamName : null, rule ? 'from ' + rule.fromText : null, rule?.thruText ? 'until ' + rule.thruText : null].filter(Boolean).join(' · ')"/>
@@ -154,7 +154,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="leadRuleId"><default-field><hidden/></default-field></field>
                                     <field name="publicationId"><default-field><hidden/></default-field></field>
                                     <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <!-- the team is a sales manager's choice (SALES_TEAM_MANAGE; the user's call of Nov 14, 2026): shown, not chosen,
+                                        for anyone else, whose rule keeps its team or takes Sales' default -->
                                     <field name="teamPartyId">
+                                        <conditional-field title="Sales team" condition="!choices.canChooseTeam"
+                                                tooltip="A sales manager chooses the team; otherwise the rule keeps its team or takes Sales' default team">
+                                            <display text="${choices.teamText || ''}"/>
+                                        </conditional-field>
                                         <default-field title="Sales team" tooltip="Each lead goes to this team's queue">
                                             <drop-down allow-empty="false"><list-options list="choices.teamOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>

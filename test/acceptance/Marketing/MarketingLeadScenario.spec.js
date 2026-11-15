@@ -103,26 +103,39 @@ feature("an author builds a lead form, routes it to Retail East with a lead rule
         )
         const fields = all("moqui.screen.form.DbFormField", {formId})
         const fieldOf = title => fields.find(field => field.title === title)?.fieldName
-        const routed = asUser(users.author, () =>
-            post("Leads/LeadRuleDetail/storeLeadRule", {
-                publicationId: state.publicationId,
-                teamPartyId: ids.eastTeamId,
-                dataSourceId: "BOSS_SAL_SRC_WEB",
-                nameFieldName: fieldOf("Your name"),
-                emailFieldName: fieldOf("Email"),
-                noteFieldNames: fieldOf("Garden size"),
-                noticeText: "Retail East will call you about your shade garden."
-            })
-        )
+        const route = () =>
+            asUser(users.author, () =>
+                post("Leads/LeadRuleDetail/storeLeadRule", {
+                    publicationId: state.publicationId,
+                    teamPartyId: ids.eastTeamId,
+                    dataSourceId: "BOSS_SAL_SRC_WEB",
+                    nameFieldName: fieldOf("Your name"),
+                    emailFieldName: fieldOf("Email"),
+                    noteFieldNames: fieldOf("Garden size"),
+                    noticeText: "Retail East will call you about your shade garden."
+                })
+            )
+        // the team is a sales manager's choice (SALES_TEAM_MANAGE; the user's call of Nov 14, 2026): the author alone is refused East,
+        // and routes it while also a Retail sales manager (for this step only)
+        const unmanaged = route()
+        const membership = {userGroupId: "BOSS_SALES_MANAGER", userId: "BOSS_MKT_AUTHOR", fromDate: new Date(Date.now() - 1000)}
+        system(() => ec.service.sync().name("create#moqui.security.UserGroupMember").parameters(membership).call())
+        let routed
+        try {
+            routed = route()
+        } finally {
+            update("moqui.security.UserGroupMember", Object.assign({thruDate: new Date()}, membership))
+        }
         const opened = asUser(users.author, () =>
             post("Surveys/SurveyDistribution/publishPublication", {publicationId: state.publicationId})
         )
         state.fields = {name: fieldOf("Your name"), email: fieldOf("Email"), size: fieldOf("Garden size")}
-        return {published, stored, unrouted, routed, opened}
+        return {published, stored, unrouted, unmanaged, routed, opened}
     },
     then(r) {
         r.published.errors === "" && r.stored.errors === "" && state.publicationId != null
         r.unrouted.errors.includes("NOT_READY")
+        r.unmanaged.errors.includes("TEAM_PERMISSION")
         r.routed.errors === "" && r.opened.errors === ""
         one("mantle.party.FormPublication", {publicationId: state.publicationId}).fromDate != null
     }

@@ -254,7 +254,7 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml | Read one historical response | FormResponse | Commons owner; Customer Service §7 | authorized response readers | parity | response ID |
 | Leads | Marketing/Leads | list | xml | Follow campaign lead handoff | SalesOpportunity | Sales §3 | Sales readers | new | campaign/source filters |
 | Accounts | Marketing/Leads/Accounts | list | xml | Add a Sales account's contacts to a list with evidence | Party (account) | Sales §4 | Sales readers; Add to list with A-audience | new | Sales scope |
-| LeadRules | Marketing/Leads/LeadRules | settings | xml | Route explicitly captured interest | N MarketingLeadRule | own | A, S; Sales routing grant | new | rule ID |
+| LeadRules | Marketing/Leads/LeadRules | settings | xml | Route explicitly captured interest | N MarketingLeadRule | own | A, S; Sales routing grant (SALES_TEAM_MANAGE chooses the team) | new | rule ID |
 | Customer360 | Marketing/Customers/Customer360 | 360 | xml | Inspect authorized engagement | Party | crosscut §3.2 | U | parity | party ID |
 | ContactDetail | Marketing/Contacts/ContactDetail | detail | xml | Inspect contact data and subscription links | Party | crosscut §3.1, Commons §6 | U | parity | party ID |
 | Reports | Marketing/Reports | landing | xml | Choose measures and drill-downs | R.get#ReportCatalog | own | R | new | organization/period |
@@ -1499,8 +1499,11 @@ operation key (`mkt-lead:<id>`), with the publication's organization and campaig
 questions published when it was submitted, and `verified` only when an invitation's or the signed-in account's address equals the email
 answered; a failed handoff keeps the answer and its reason and is tried again by the job `run_MarketingLeadCaptures` (every five
 minutes, a wait doubling from five minutes to a day, for 30 days) or an author's Try again with a reason; a duplicate joins the open lead
-of the same email as Sales' review item. Neither subscribes anyone. The Sales routing grant is not asked: a content author picks among
-the organization's current teams (impl-marketing P13, the user's call).
+of the same email as Sales' review item. Neither subscribes anyone. The Sales routing grant is `SALES_TEAM_MANAGE` in the organization
+(a sales manager), who chooses or changes a rule's team among its current teams; a content author without it saves a rule only with
+the organization's default team of Sales' SalesPolicy, or with no team, which hands each lead to the default team in effect at the
+handoff (refused when Sales has none), and LeadRuleDetail shows the team read-only (the user's call of Nov 14, 2026; impl-marketing P13
+review).
 
 ### Customer360 and ContactDetail — Context passed
 
