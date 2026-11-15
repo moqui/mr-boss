@@ -7674,6 +7674,41 @@ failing run's log (`wave-logs/sm-final-apps.log`) and its worker logs (`runtime/
   - the user's calls: the container-box condition (honour it in the framework's four renderers, or lint it and move the 58 boxes to
     sections), and the client budget (about 93 s of 90), as the Built note says.
 
+### Follow-up 8 — The re-run's EventRegistrations failure
+
+The re-run of `./moq test-apps --release --nobuild` after follow-up 7 (`wave-logs/sm-final2-apps.log`) failed one feature: mr-mantle
+EventRegistrations' "a ticket payment's visitor key: its digest kept only where allowed, read again before placement, attributed by
+it" (follow-up 5), its attribution read as `[]` (line 1391), though it passed alone. A fix branch, `mkt/fix8` in mr-mantle and mr-boss
+(the plan only).
+
+**Built Nov 15 (follow-up 8): The attribution read waits for the placement SECA.**
+- Checked first (the code over the plan): the root cause before any change. The suite's worker log (`runtime/tmp/test-workers-49306`,
+  worker 4: AudienceImport, CalendarChanges, CalendarServices, CampaignPromotions, CaseFeedback, DropShip, EdiX12, Eligibility,
+  Engagement and EventRegistrationSetup before EventRegistrations) shows no error for the order and no data a predecessor leaves on
+  the spec's own organizations (every row is MKRG_*): an empty list means no MarketingOutcomeLink at all, not a MobNone decision. The
+  decision is the SECA OrderPlacedRecordAttribution's, `when="tx-commit"`, and the framework runs tx-commit rules on a service worker
+  once the transaction commits (`register_tx_rules` in crates/moqui-core/src/service/call.rs: the outbox row, then
+  `spawn_rules` on the pool), as design §11 and MarketingAttribution.js say (after the placement commits, in a transaction of its
+  own, the retry job for one it missed). The feature read the links at once after the provider's return placed the order, so on a
+  loaded run it read before the worker had decided; the log shows that worker-thread chain for the spec's orders (the approval's
+  invoice on moqui-worker threads) still running after the feature's result was printed. Not a policy, a withdrawal, retention, the
+  attribution window (the event an hour old, its link 30 days) or another worker's data. The code is right; the spec's read was
+  timing-dependent.
+- Built: mr-mantle `test/work/EventRegistrations.spec.js`: the feature reads the order's links in force again until one is there, up
+  to five seconds (the spec's `waitFor`, as its capture and refund reads already do), then asserts as before: exactly one, by the
+  tracking event, the spec's event and campaign. Nothing it proves is weakened.
+- Tests run (release, `--nobuild`, this worktree's runtime): worker 4's mr-mantle predecessors, EventRegistrations, Attribution,
+  ShopCheckout and MarketingRetention in one run: 107 of 107, 26.9 s of feature time; EventRegistrations alone: 17 of 17, the feature
+  0.86 s. The race does not reproduce on an idle machine (the feature passed alone before the fix too). Not run: test-apps,
+  test-framework, acceptance.
+- Findings (provisional, numbered by the lead):
+  - a spec that reads what a tx-commit SECA writes must wait for it (the service worker runs it after the commit); this one read at
+    once (fixed here, low). The other attribution specs call handle#OrderPlaced directly and are not affected.
+- For the lead:
+  - budget share: none (the wait ends when the decision is there, normally at once);
+  - merge hot spots: mr-mantle `test/work/EventRegistrations.spec.js`; this file;
+  - the user's call: none.
+
 ### Framework fix — Container-box conditions (fix/boxcond)
 
 The user's call of Nov 15 (§4, follow-up 7's review). **Built Nov 15.** mr-moqui 8b8747c9c on `fix/boxcond`: `sri.checkCondition`
