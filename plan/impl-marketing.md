@@ -7250,6 +7250,13 @@ section, follow-up 4's Built and Review notes, §2 and design-marketing §11 and
   - Attack-Surface: the Built note's replacement stands;
   - the user's calls: none.
 
+### Follow-up 6 — The demo's campaign sends dated relative to the load
+
+The user's call of Nov 15 (§4, P21's review): the demo's campaign sends (Retail's December send, 2026-12-01, and the others with
+fixed dates) get dates relative to the load, as follow-up 2 and follow-up 3 did for prices and events, so the specs and the P21
+calendar walk's projected collection (30 days back, 180 ahead) hold them on any run day. Every regression and acceptance spec that
+reads those dates is updated. Branch `mkt/fix6` in mr-boss (mr-mantle if a Mantle spec reads the dates).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -7325,6 +7332,9 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | Assist gets an aggregate-only audience tool: counts per bucket and reason only (classify#Recipients' buckets), never names, addresses or party ids; Assistant only, not MCP; the reader's audience permission and organization scope. Built in P20's review (SegmentServices count#Audience, marketing_audience_counts) | The user's call (P20) |
 | Nov 15, 2026 | Customer360 and ContactDetail under Marketing open only a party Marketing has a record of in the user's organizations (a list member, subscription request, segment member, recipient, registrant or form submitter), since the contact's notes and files open on the same check; Sales and Commons still open any party they admit | The user's call (P19's review) |
 | Nov 15, 2026 | Register's ticket checkout (completeRegistration) forwards a remote PASS frontend's visitor key as Shop's checkout does (follow-up 4): the digest kept only where an event would keep the key, read again before place#Order; follow-up 5 | The user's call (follow-up 4's review) |
+| Nov 15, 2026 | The promotional SMS day limit stays one VoicePolicy value for every sending number (smsMaxPromotionalPerNumber); a per-number override, with a deployment-wide promotional cap beside it, is later (§7) | The user's call (P22's review) |
+| Nov 15, 2026 | PASS Email preferences may leave a text message topic but not join one; a join confirmed by the number itself ("Reply YES") needs an inbound keyword hook and is later (§7); joining is through an import or staff with evidence | The user's call (P22's review) |
+| Nov 15, 2026 | The demo's campaign sends get dates relative to the load, as follow-up 3 did for events, so the calendar walk's projected collection holds them on any run day; follow-up 6 | The user's call (P21's review) |
 
 ## 5. Open questions
 
@@ -7784,6 +7794,9 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 
 Designed, not in this build:
 
+- **SMS after the first release** (P22's review, the user's call of Nov 15): a per-number promotional day limit on
+  moqui.call.PhoneNumber falling back to the policy value, with a deployment-wide promotional cap; a text topic joined from PASS
+  and confirmed by a reply from the number ("Reply YES"), on an inbound keyword hook the framework would give Mantle.
 - **The design's later capabilities** (§17, §21): cross-store promotion programs, loyalty and referrals; the
   Publishing app's editorial workflow, taxonomy and public blog rendering; social and channel campaign sync; a
   branching journey canvas; multi-touch attribution; conference tracks and booths; attendance from call legs; camera
