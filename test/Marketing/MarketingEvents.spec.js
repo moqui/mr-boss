@@ -1,8 +1,9 @@
 // Marketing's events (impl-marketing P16; design-marketing §9 Events, EventDetail, RegistrationSetup): RegistrationSetup's one qvt render of
 // Retail's demo workshop for the events manager, with all of its checks on that render (the header, its offer, readiness, the two ticket
 // types priced by their products, its questions and notices, the actions by state); and through the services the events list of the
-// running campaign for a reader, the event record kind, the ticket product choice, a reader kept from the setup and another organization's
-// author refused. The rules are Mantle's (test/work/EventRegistrationSetup); the scenario is the acceptance MarketingEventSetupWalk.
+// running campaign for a reader, the event record kind, the ticket product choice, a reader kept from the setup, another organization's
+// author refused and New event's campaign link refused to an events manager who does not edit campaigns. The rules are Mantle's
+// (test/work/EventRegistrationSetup); the scenario is the acceptance MarketingEventSetupWalk.
 // Run: ./moq test mr-boss --spec MarketingEvents
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
 const {ids, users, asUser, invoke, page, system} = lib
@@ -68,9 +69,49 @@ feature(
             const context = asUser(users.events, () =>
                 invoke("ironstone.marketing.ContextServices.get#SharedContext", {appRoot: "Marketing"})
             )
-            return {list, record, products, readerSetup, other, context}
+            // New event with a campaign by an events manager who does not edit campaigns: refused before any calendar event is made
+            const campaignRefused = asUser(users.events, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Marketing.xml")
+                    .render(
+                        "Events/Events/createEvent",
+                        {
+                            workEffortName: "Spec refused event",
+                            organizationPartyId: ids.organizationId,
+                            marketingCampaignId: ids.runningCampaignId,
+                            startDate: new Date(Date.now() + 10 * 86400000),
+                            endDate: new Date(Date.now() + 10 * 86400000 + 3600000)
+                        },
+                        "post"
+                    )
+                const errors = Array.from(result.errorMessages || []).join(" | ")
+                ec.message.clearErrors()
+                return errors
+            })
+            const madeNone = system(
+                () =>
+                    ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortName: "Spec refused event"}).count() == 0
+            )
+            // the campaign's author links an event (CampaignDetail's Link an event): the organization's registration events, none for
+            // an events manager who does not edit campaigns
+            const eventChoice = user =>
+                asUser(user, () =>
+                    invoke("ironstone.marketing.ContextServices.get#Choices", {
+                        appRoot: "Marketing",
+                        choice: "registrationEvents",
+                        organizationPartyId: ids.organizationId
+                    })
+                )
+            const authorEvents = eventChoice(users.author)
+            const managerEvents = eventChoice(users.events)
+            return {list, record, products, readerSetup, other, context, campaignRefused, madeNone, authorEvents, managerEvents}
         },
-        then({list, record, products, readerSetup, other, context}) {
+        then({list, record, products, readerSetup, other, context, campaignRefused, madeNone, authorEvents, managerEvents}) {
+            authorEvents.options.map(option => option.value).includes(ids.workshopEventId)
+            authorEvents.options.map(option => option.value).includes(ids.webinarEventId)
+            managerEvents.options.length == 0
+            campaignRefused.includes("campaign's edit permission") && madeNone
             list.eventList
                 .map(event => event.workEffortId)
                 .sort()

@@ -24,8 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     guarded service at the revision read; a material change (organization, parent, dates, budget, managers) returns an approved plan
     to review. Sends lists its sends with QuickSend (P8), Automations its automations (P11), Results the lead forms' handoffs to Sales
     (P13, any Marketing reader), Content its planned content with Link content (P14: blog posts, landing pages and files; linking
-    publishes nothing), Tracking links its links with New link (P15), Events its events with New event (P16); the Audience and Promotions boxes join
-    with their phases. -->
+    publishes nothing), Tracking links its links with New link (P15), Events its events with New event (P16: an events manager who also edits
+    campaigns) and Link an event (the campaign's editor); the Audience and Promotions boxes join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
@@ -686,8 +686,28 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Events"/>
                     <box-toolbar>
                         <container-dialog id="NewEventDialog" button-text="New event" icon="sym_o_event" title="New event for ${campaign.campaignName}"
-                                width="760" condition="marketing.capabilities.eventManage &amp;&amp; ['MKTG_CAMP_PLANNED', 'MKTG_CAMP_APPROVED', 'MKTG_CAMP_INPROGRESS'].includes(campaign.statusId)">
+                                width="760" condition="marketing.capabilities.eventManage &amp;&amp; marketing.capabilities.campaignEdit &amp;&amp; ['MKTG_CAMP_PLANNED', 'MKTG_CAMP_APPROVED', 'MKTG_CAMP_INPROGRESS'].includes(campaign.statusId)">
                             <section-include name="NewEventForm" location="component://mr-boss/template/MarketingEvents.xml"/>
+                        </container-dialog>
+                        <!-- P16 review: the link is a change of the campaign (C.store#CampaignAssociation, CakEvent): its editor links a
+                            registration event of the organization an events manager made -->
+                        <container-dialog id="LinkEventDialog" button-text="Link an event" icon="sym_o_link" title="Link an event to ${campaign.campaignName}"
+                                width="560" condition="can.canEdit">
+                            <form-single name="LinkEvent" transition="storeAssociation"
+                                    map="{marketingCampaignId:marketingCampaignId, associationKindEnumId:'CakEvent', purpose:'Event'}">
+                                <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
+                                <field name="associationKindEnumId"><default-field><hidden/></default-field></field>
+                                <field name="purpose"><default-field><hidden/></default-field></field>
+                                <field name="sourceId">
+                                    <default-field title="Event">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'registrationEvents', organizationPartyId:campaign.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Link"/></default-field></field>
+                            </form-single>
                         </container-dialog>
                     </box-toolbar>
                     <box-body>

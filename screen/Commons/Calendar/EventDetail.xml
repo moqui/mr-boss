@@ -239,8 +239,9 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.commons.EventServices.get#EventDetail" in-map="{workEffortId:workEffortId, instanceStart:instanceStart}" out-map="detail"/>
         <set field="recordFound" from="!!detail.visible"/>
         <!-- the mounting app's links above the tabs (impl-marketing P16: Marketing's Registration setup): eventAppLinks, a list its own area
-            sets in its always-actions, data and never a right (a request parameter is text and is left out); each target checks again -->
-        <set field="appLinkList" from="(ec.context.eventAppLinks &amp;&amp; typeof ec.context.eventAppLinks !== 'string' ? Array.from(ec.context.eventAppLinks) : [])
+            sets in its always-actions, data and never a right (a request carrying eventAppLinks, text or a JSON body's list, shows none);
+            each target checks again -->
+        <set field="appLinkList" from="(ec.context.eventAppLinks &amp;&amp; typeof ec.context.eventAppLinks !== 'string' &amp;&amp; ec.web?.parameters?.eventAppLinks == null ? Array.from(ec.context.eventAppLinks) : [])
                 .filter((link) =&gt; link &amp;&amp; typeof link === 'object' &amp;&amp; link.label &amp;&amp; /^\/(?!\/)/.test(String(link.url || '')))"/>
         <script><![CDATA[
             if (!recordFound) return

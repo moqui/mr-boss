@@ -4630,6 +4630,95 @@ mr-moqui unchanged, no Rust built. Built beside the framework follow-up reservin
   - the user's call (none blocking): the events manager linking an event to a campaign without the campaign edit permission (the link changes
     no plan); the offer changed in place with its revisions rather than a dated row a change; the eventAppLinks hook on Commons' EventDetail.
 
+**Review Nov 15 (P16).** A fresh review of `mkt/p16` (mr-mantle f52b6209, mr-pass 09572f6, mr-boss 689a53f5) against P16, §2, §4 and
+design §3, §9, §13; master (Marketing P15's close, the reserved-paths follow-up, Smithy's search at `-/search`, the wiki names
+follow-ups) merged into all three first: mr-mantle and mr-boss clean, mr-pass one conflict in `docs/Deployment.md` (P15's reserved
+`/trk` sentence beside P16's Events paragraph, both kept). Schema and route copies byte-identical after the merge. Fixes mr-mantle
+5c0a0bb7, mr-boss (this note's commit); mr-pass only the merge.
+- Checked and sound:
+  - the Event page: `getMarketingEvent` reads only (allow-remote false, in no TOKEN_WRITES list); `served` asks a published site whose
+    `marketing` mount targets an internal organization, then publicView asks the offer published, on that site, of that organization,
+    for an occurrence of an event not cancelled that has not ended: every miss (unpublished site, no mount, draft, closed, past, another
+    site's or organization's, unknown, malformed at the page's own pattern) is the one NotFound; the answer is allow-listed (spec'd by its
+    keys): no attendee, organizer, room, campaign, budget, party or call link, availability as words, never a count; `Event.html.fancy`
+    escapes every `${}` (the `.html.fancy` renderer), the description and terms as text paragraphs, no form or script, PASS's default
+    no-store and CSP; a landing page's `[[event ID]]` is a card only when the same operation answers for that site;
+  - scope: every E service asks MARKETING_EVENT_MANAGE (writes) or a Marketing read, and the event's organization from RegistrationEvent
+    (made only by a manager who may edit the event, an internal organization of the caller's), missing and another organization's one
+    RECORD_UNAVAILABLE; each named record is the organization's (site by an enabled Marketing mount targeting it, store, ticket product,
+    template, sending profile, registration form); writes at the revision read under the offer's row lock; CakEvent in
+    store#CampaignAssociation by RegistrationEvent's organization against the campaign's;
+  - capacity: SEAT_STATES (held while its hold lasts, pending, confirmed) counted per offer and per ticket type, a waitlisted, expired or
+    cancelled place never; the offer's seats and a ticket's capacity never below them; publish readiness names each missing check;
+    close#Registration once, closing the question publication, the places kept;
+  - the registration questions' publication written by E is confined to a published DbfpRegistration form owned by the offer's
+    organization, on the offer's site, its context the offer, open only while the offer is published, closed with it;
+  - the eventAppLinks hook on Commons' EventDetail: links only from the mounting area's context (Marketing's Events always-actions, after
+    check#Record), relative URLs only; People's and Commons' mounts set none; EventDetail, Calendar and PeopleRecruiting pass unchanged;
+  - the demo: rows in the demo data file only; `load#EventDemo` allow-remote false, refusing a signed-in user who is not a system
+    administrator (MarketingDemo.js asDemoAdministrator), idempotent;
+  - specs test what they claim; RegistrationSetup one qvt render, PASS Event one html render.
+- Fixed:
+  - R1 (medium; mr-mantle EventRegistrations.js storeRegistrationEvent, mr-boss MarketingEvents.xml, CampaignDetail.xml, Marketing.js):
+    an events manager linked an event to a campaign without MARKETING_CAMPAIGN_EDIT, a change of the campaign by someone the design
+    gives no campaign right (design §9 NewEvent names C.store#CampaignAssociation; §1.1 E is registration and attendees only). The link
+    is now made through C.store#CampaignAssociation (its scope, open campaign and organization checks, once) for a caller who also holds
+    MARKETING_CAMPAIGN_EDIT, else CAMPAIGN_EDIT_REQUIRED and nothing kept. NewEvent shows the campaign field only to a campaign editor
+    and createEvent refuses a campaign before any calendar event is made; CampaignDetail's New event is for a manager who also edits
+    campaigns, and a new "Link an event" (the campaign's editor; choice `registrationEvents`) links a registration event of the
+    organization. Specs: Mantle (an events manager refused with nothing kept, the author's link, a manager who edits campaigns linking
+    once), mr-boss (createEvent with a campaign refused and no event made; the choice for the author and none for the manager); both fail
+    on the unfixed code. The acceptance walk's first step now makes the event without the campaign and has the author link it (changed,
+    not run);
+  - R2 (medium; mr-mantle MarketingPortal.js publicationOfPage): a published offer's question publication (FppRegistration, anonymous,
+    on the site) was also served by PASS SubmitForm and a landing page's `[[form ID]]`, so anyone could answer an offer's questions with
+    no registration, answers P17 could not tie to an attendee (design §9: a response belongs to its attendee registration). A
+    publication whose context is an EventRegistrationPolicy is now NotFound there. Spec (get#Form on the offer's publication NotFound);
+    fails on the unfixed code;
+  - R3 (low; EventRegistrations.js storeRegistrationForm): the questions' consent text, which a registrant accepts with the terms,
+    changed after publication without raising termsRevision. It now does; spec (terms then consent after publication: revision 2);
+  - R4 (low; EventRegistrations.js getEventSetup): the event's own notes (WorkEffort.description) went to any Marketing reader of the
+    organization whatever the calendar's visibility; now only to a viewer of the event (check#EventAccess canView);
+  - R5 (low; Commons EventDetail.xml): a request carrying `eventAppLinks` as a JSON body's list passed the "not text" test; a request
+    carrying the name now shows no app links.
+- Provisional findings (for the lead to number):
+  - the Built note's findings stand but the first: the campaign link is the campaign's change (R1), not E's;
+  - an offer changed in place keeps only a counter of its terms (termsRevision); the accepted words survive only in the policy row and
+    the audit log. P17 should keep on each registration the termsRevision it accepted and the accepted text (or a snapshot row per terms
+    revision written when it rises), not rely on EntityAuditLog as evidence;
+  - the capacity checks lock the offer's row (forUpdate); P17's reservation must take the same lock (offer, then ticket type) so a
+    capacity change and a reservation serialize;
+  - after publication store#RegistrationPolicy accepts a closing date past the occurrence's end, and store#TicketType a ticket capacity
+    above the offer's seats (its description says "within the offer's seats"); the readiness checks the window at publish only;
+  - the public availability says "Full: join the waitlist" when the waitlist is on even when its limit is reached;
+  - a ticket type with places taken may be ended (its places stay counted in the offer); P17 decides what its holders see;
+  - find#Events and get#EventSetup give a registration event's name, dates and place to every Marketing reader of the organization,
+    whatever the calendar's visibility (its notes now follow it, R4);
+  - an author may still publish registration questions alone through Commons (P12's registration purpose); only an offer's own
+    publication is kept off SubmitForm.
+- Tests (release binary, `--nobuild`, this worktree's runtime, after the master merge): mr-mantle EventRegistrationSetup (3 of 3, about
+  1.9 s of features), Campaigns (7 of 7), CalendarServices, MarketingForms, FormPublications, MarketingContent (all passed); mr-pass
+  MarketingEvents, MarketingPages, SubmitForm, MarketingAccess (10 of 10); mr-boss MarketingEvents (2 of 2), EventDetail, Calendar,
+  MarketingCampaigns, MarketingAccess, PeopleRecruiting (53 of 53 with MarketingEvents); each run about 24-32 s with startup.
+  EventRegistrationSetup with R2 reverted failed on its get#Form check. `moqui lint --screens` (release): parse failures 0, no flagged
+  site in a changed screen. Prettier (mr-moqui's config) on the changed JavaScript. Not run: test-apps, the acceptance suite (the
+  changed MarketingEventSetupWalk included).
+- For the lead:
+  - budget share: mr-mantle EventRegistrationSetup about 1.9 s (was 1.3); mr-boss MarketingEvents about 0.9 s (was 0.5); mr-pass
+    unchanged;
+  - run mr-boss `MarketingEventSetupWalk` (changed by R1) with the acceptance suite;
+  - merge hot spots: as the Built note's, plus mr-mantle `MarketingPortal.js` publicationOfPage, mr-boss `CampaignDetail.xml` (the
+    Events box's Link an event), `Marketing.js` (choice `registrationEvents`), `template/MarketingEvents.xml` (createEvent's campaign
+    guard), `screen/Commons/Calendar/EventDetail.xml` (the hook's guard);
+  - Attack-Surface: the worker's paragraph is right but for its last sentence's staff part; replace "Staff set registration up through
+    `mantle.work.EventRegistrationServices`, which asks MARKETING_EVENT_MANAGE ... for every write and a Marketing read for every read,"
+    with the same words and then add, after "each write at the revision read;": "an event's campaign link is the campaign's own write
+    (`CampaignServices.store#CampaignAssociation`, MARKETING_CAMPAIGN_EDIT); an offer's registration questions are a form publication of
+    the organization that SubmitForm never serves on its own (answered only with a registration);";
+  - the user's calls: R1 reverses the worker's choice (an events manager linking a campaign without its edit permission): the user may
+    prefer the worker's, which is one line back in storeRegistrationEvent; the offer changed in place with its revisions is sound for
+    capacity if P17 keeps the accepted terms (above); the eventAppLinks hook is an owner contract that adds no right.
+
 ### P17 — Registrations, tickets and payment, with PASS Register and Registration
 
 Design §9 RegistrationSetup's order rules, Registrations and RegistrationDetail, §13 Register and Registration,

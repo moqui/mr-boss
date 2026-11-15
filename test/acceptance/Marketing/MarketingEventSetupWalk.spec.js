@@ -1,7 +1,8 @@
 // Marketing P16's "usable when" (impl-marketing P16; design-marketing §9 Events, EventDetail, RegistrationSetup, §13 Event), as an
-// acceptance walk through the screens' transitions with artifact authorization on: marketing.events makes an event with the running
-// campaign (the calendar's create#Event, the user its organizer), adds its offer with twenty seats on the shop's site, two ticket types
-// (a free one and one priced by the demo's ticket product) and registration questions an author built and published, publishes it, and
+// acceptance walk through the screens' transitions with artifact authorization on: marketing.events makes an event (the calendar's
+// create#Event, the user its organizer; the running campaign's link refused without the campaign's edit, and made by its author),
+// adds its offer with twenty seats on the shop's site, two ticket types (a free one and one priced by the demo's ticket product) and
+// registration questions an author built and published, publishes it, and
 // the PASS Event page shows the offer to a visitor; the calendar's own permissions still decide who edits the event (another events
 // manager who is not its organizer and edits none of its calendars cannot change it in the calendar, nor offer it again for another
 // organization). The rules are Mantle's EventRegistrationSetup, the renders MarketingEvents and mr-pass's MarketingEvents.
@@ -55,28 +56,38 @@ spec({
     }
 })
 
-feature("an events manager makes an event with a campaign through New event", {
+feature("an events manager makes an event through New event, and the campaign's author links it to the campaign", {
     when() {
         const start = new Date(Date.now() + 20 * dayMs)
-        const created = asUser(users.events, () =>
-            post("Events/Events/createEvent", {
-                workEffortName: "Summer bulbs evening",
-                organizationPartyId: ids.organizationId,
-                marketingCampaignId: ids.runningCampaignId,
-                startDate: start,
-                endDate: new Date(start.getTime() + 2 * 3600000),
-                location: "Ziziwork garden centre, Orem"
-            })
+        const fields = {
+            workEffortName: "Summer bulbs evening",
+            organizationPartyId: ids.organizationId,
+            startDate: start,
+            endDate: new Date(start.getTime() + 2 * 3600000),
+            location: "Ziziwork garden centre, Orem"
+        }
+        // the campaign link is a change of the campaign: the events manager (no campaign edit) is refused before any event is made
+        const withCampaign = asUser(users.events, () =>
+            post("Events/Events/createEvent", Object.assign({marketingCampaignId: ids.runningCampaignId}, fields))
         )
+        const madeNone = all("mantle.work.effort.WorkEffort", {workEffortName: "Summer bulbs evening"}).length == 0
+        const created = asUser(users.events, () => post("Events/Events/createEvent", fields))
         const event = all("mantle.work.effort.WorkEffort", {workEffortName: "Summer bulbs evening"})[0]
         state.workEffortId = event?.workEffortId
-        return {created, event}
+        const linked = as(users.author, "mantle.marketing.CampaignServices.store#CampaignAssociation", {
+            marketingCampaignId: ids.runningCampaignId,
+            associationKindEnumId: "CakEvent",
+            sourceId: state.workEffortId
+        })
+        return {withCampaign, madeNone, created, event, linked}
     },
-    then({created, event}) {
+    then({withCampaign, madeNone, created, event, linked}) {
+        withCampaign.errors.includes("campaign's edit permission") && madeNone
         created.errors == ""
         !!event && event.ownerPartyId == "BOSS_MKT_EVENTS"
         one("mantle.work.registration.RegistrationEvent", {workEffortId: state.workEffortId}).organizationPartyId ==
             ids.organizationId
+        !!linked.campaignAssociationId
         all("mantle.marketing.campaign.CampaignAssociation", {sourceId: state.workEffortId, associationKindEnumId: "CakEvent"})[0]
             .marketingCampaignId == ids.runningCampaignId
     }

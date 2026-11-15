@@ -1001,6 +1001,33 @@ const choiceSources = {
         )
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
+    // P16 review: the registration events of the organization named, by name, for a campaign author's "Link an event" (the link is
+    // C.store#CampaignAssociation's, which checks the campaign's edit and the event's organization again)
+    registrationEvents: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.campaignEdit) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const eventIds = Array.from(
+            find("mantle.work.registration.RegistrationEvent")
+                .condition("organizationPartyId", "in", ids)
+                .orderBy("-createdDate")
+                .limit(500)
+                .list()
+        ).map(row => row.workEffortId)
+        if (!eventIds.length) return []
+        let query = find("mantle.work.effort.WorkEffort")
+            .condition("workEffortId", "in", eventIds)
+            .condition("statusId", "not-equals", "WeCancelled")
+            .orderBy("-estimatedStartDate")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["workEffortId", "workEffortName"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.workEffortId,
+            label:
+                (row.workEffortName || row.workEffortId) +
+                (row.estimatedStartDate ? " · " + lib.dateText(row.estimatedStartDate) : "")
+        }))
+    },
     // P16: the ticket products an event's organization sells (not kept in inventory), by name
     ticketProducts: (userScope, term, selected, p) => {
         if (!userScope.capabilities.eventManage) return []

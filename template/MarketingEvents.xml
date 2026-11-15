@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.work.EventRegistrationServices), which checks MARKETING_EVENT_MANAGE, the event's organization and, for the event itself, the
     calendar's own rule, so a screen that includes one adds no authority. A screen includes each transition it uses by name.
     - createEvent: NewEvent (Events, CampaignDetail, QuickEvent): the calendar event (create#Event: its organizer the user, in the
-      calendar chosen) and its registration organization and campaign (store#RegistrationEvent); it opens RegistrationSetup.
+      calendar chosen) and its registration organization and campaign (store#RegistrationEvent; the campaign only for a user who
+      also edits campaigns, the link being the campaign's change); it opens RegistrationSetup.
     - storeOffer, storeTicket, storeQuestions, storeNotice, publishOffer, closeOffer, addVideoCall: RegistrationSetup's.
     - NewEventForm: over the map newEventValues (campaignFixed keeps the campaign). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -30,6 +31,10 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
             <if condition="!organizationPartyId || !Array.from(marketing.organizationPartyIds || []).includes(organizationPartyId)">
                 <return error="true" message="Choose an organization of yours"/>
+            </if>
+            <!-- the campaign link is a change of the campaign (its edit permission, Mantle's store#RegistrationEvent asks again) -->
+            <if condition="marketingCampaignId &amp;&amp; !marketing.capabilities.campaignEdit">
+                <return error="true" message="Linking the event to a campaign needs the campaign's edit permission; make the event and ask the campaign's author to link it"/>
             </if>
             <service-call name="mantle.work.EventServices.create#Event" out-map="created"
                     in-map="{workEffortName:workEffortName, description:(description || null), location:(location || null),
@@ -140,6 +145,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field name="marketingCampaignId">
                         <conditional-field condition="newEventValues.campaignFixed"><hidden/></conditional-field>
+                        <conditional-field condition="!marketing.capabilities.campaignEdit"><ignored/></conditional-field>
                         <default-field title="Campaign" tooltip="An open campaign of the organization; optional">
                             <drop-down allow-empty="true">
                                 <dynamic-options transition="choices" server-search="true" min-length="0"

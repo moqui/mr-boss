@@ -1265,9 +1265,11 @@ placement the attribution writer of §11 reads these events. **Needs:** MKT-TRAC
 
 As built (impl-marketing P16): an event's organization is kept by `mantle.work.registration.RegistrationEvent` (a Commons event's
 owner is a person, F107), made once by E.`store#RegistrationEvent` for an events manager of the organization who may edit the event
-under the calendar's rule; NewEvent calls `create#Event` (the user its organizer, in a calendar they edit) and then it, which also
-makes the campaign link (CampaignAssociation CakEvent, now a kind CampaignServices admits by that organization). Events is every
-Marketing reader's; a row opens RegistrationSetup for an events manager, else EventDetail.
+under the calendar's rule; NewEvent calls `create#Event` (the user its organizer, in a calendar they edit) and then it. The campaign
+link stays C.`store#CampaignAssociation`'s (CakEvent, now a kind it admits by that organization), called through E for a user who
+also holds MARKETING_CAMPAIGN_EDIT: an events manager without it makes the event with no campaign (NewEvent shows no campaign field)
+and the campaign's author links it (P16 review). Events is every Marketing reader's; a row opens RegistrationSetup for an events
+manager, else EventDetail.
 
 **Source:** research §7; Odoo Events and Commons Calendar/MyCalendar NewEventForm.
 
