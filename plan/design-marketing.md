@@ -1866,9 +1866,10 @@ and `get#Attribution` (each placed order once by its primary campaign, unattribu
 an order's own row only for a reader who may see it in Sales or Commerce). Nothing past a limit is cut: TOO_MANY_RECORDS. The decision
 is `TrackingServices.record#OrderAttribution`, called by `handle#OrderPlaced` after each placement (MarketingOutcomeLink, one in force
 an order, with its basis, evidence and evidence time; TrackingCodeOrder beside a tracking event, never billable); the order's identity
-is its local visit and the visitor key that visit's events carried, the visitor key's digest a Shop checkout kept with the order
-(`OrderHeader.marketingVisitorKeyHash`: a remote PASS frontend sends its first-party key with `submitCheckout`, kept only where an
-event would have kept it and never for a customer who withdrew tracking; impl-marketing follow-up 4), or its customer as a recipient
+is its local visit and the visitor key that visit's events carried, the visitor key's digest a Shop checkout or a ticket's payment
+kept with the order (`OrderHeader.marketingVisitorKeyHash`: a remote PASS frontend sends its first-party key with `submitCheckout`,
+impl-marketing follow-up 4, or with Register's `startRegistrationPayment`, follow-up 5; kept only where an event would have kept it
+and never for a customer who withdrew tracking, read again before `place#Order`), or its customer as a recipient
 who allows tracking now, never inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
 (and Sales' `count#SalesVisits`). Retention (`run#MarketingRetention`, nightly): a purged import's row names and masked addresses,
 unconfirmed public requests a week past their expiry, tracking events past the organization's statistics retention (never one an
@@ -2193,6 +2194,9 @@ token on each visit by the capability, never the return key, while the places ar
 return address; only that route's CSP allows the provider's form-action), as Shop's PaymentRelay (P17 review, the user's call Nov 15).
 RegistrationPayment shows the amount due (the tickets'
 prices now, before tax) and Pay sends its key (`priceKey`), so a price changed since is shown again, not charged (P17 review).
+Pay also sends the browser's Marketing visitor key (`visitorKey`, the `mkt_vk` cookie unless the browser sends Do Not Track or Global
+Privacy Control), whose digest the authority keeps with the ticket order where Marketing may keep it, for attribution (impl-marketing
+follow-up 5; with the payment's start rather than `completeRegistration`, as the order is made there).
 
 **Source:** research §7; Odoo event tickets, Dolibarr public registration and native order/form records.
 
