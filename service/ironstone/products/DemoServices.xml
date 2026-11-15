@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Products demo's dates relative to the load (data/BossProductsDemoData.xml calls load#ScheduledPriceDemo). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="ScheduledPriceDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Moves the switch from BOSS_PRICE_SALES (15.00) to BOSS_PRICE_NEXT (16.00, "Scheduled next price") to the
+            first day of the month after next at 00:00, so the demo's next price is always ahead of the load; loading again moves
+            it. Specs that assert a price read it as of a fixed date. Only data loading or a system administrator may run it.</description>
+        <out-parameters><parameter name="switchDate" type="Timestamp"/></out-parameters>
+        <actions><script><![CDATA[
+            if (ec.user.userId && !ec.user.isInGroup('ADMIN')) throw new Error('Demo loading requires system administration')
+            const find = (productPriceId) => ec.entity.find('mantle.product.ProductPrice').condition('productPriceId', productPriceId).disableAuthz().one()
+            if (find('BOSS_PRICE_SALES') == null || find('BOSS_PRICE_NEXT') == null) {
+                ec.logger.warn('The scheduled price demo needs BOSS_PRICE_SALES and BOSS_PRICE_NEXT; nothing moved')
+                return
+            }
+            // the server's local day, as the demo data's fixed dates are read
+            const now = new Date(ec.user.timestampMillis(ec.user.nowTimestamp))
+            switchDate = String(new Date(now.getFullYear(), now.getMonth() + 2, 1).getTime())
+            const update = (fields) => ec.service.sync().name('update#mantle.product.ProductPrice').parameters(fields).disableAuthz().call()
+            update({productPriceId: 'BOSS_PRICE_SALES', thruDate: switchDate})
+            update({productPriceId: 'BOSS_PRICE_NEXT', fromDate: switchDate})
+        ]]></script></actions>
+    </service>
+</services>

@@ -51,11 +51,13 @@ feature("shared list and explanation services enforce direction owner and trace 
                     direction: "sales"
                 })
             ),
+            // as of a fixed date: the demo's next price (BOSS_PRICE_NEXT) starts relative to the load
             explained: as("catalog.price.read", () =>
                 call(S + "get#PriceExplanation", {
                     productId: "BOSS_PRD_OWN",
                     organizationPartyId: "ORG_ZIZI_SERVICES",
-                    direction: "sales"
+                    direction: "sales",
+                    validDate: "2026-06-01 00:00:00"
                 })
             )
         }

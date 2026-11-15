@@ -1413,7 +1413,8 @@ As built (impl-marketing follow-up 1; §4 Nov 15, the user's calls):
   registration. Register, Event and Registration state the rule in words. An authorization never captured is released whole.
 - Entry code: one code per credential revision, derived again whenever it is shown (a ticket, Send again, Show my entry code) from a
   keyed digest of the registration and its revision with the offer's secret (EventRegistrationPolicy.entryCodeKey, made at publication,
-  encrypted by the server's key, never shown); only its digest and revision are kept. A correction, a substitution, a cancellation or a
+  encrypted by the server's key, never shown): HMAC-SHA256 through the script host's `ec.resource.hmac` since follow-up 2; only its
+  digest and revision are kept. A correction, a substitution, a cancellation or a
   staff reissue (E.reissue#RegistrationCode, RegistrationDetail's New entry code, with a reason: EraCodeReissued) raises the revision,
   so the earlier code stops matching.
 
