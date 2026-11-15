@@ -41,6 +41,10 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="${document.partyLabel || ''} ${document.partyName || ''}" type="p"/>
                 <label text="Payment date ${document.paymentDateText || ''}" type="p" style="text-caption m-muted"/>
                 <label text="${document.methodLabel || ''}" type="p" condition="!!document.methodLabel"/>
+                <label text="From ${document.fromMethodLabel || ''} to ${document.toMethodLabel || ''}" type="p"
+                        condition="!!document.transfer"/>
+                <label text="Fee ${document.feeAmountText || ''} · total paid out ${document.totalAmountText || ''}" type="p"
+                        condition="!!document.feeAmountText"/>
                 <label text="Reference ${document.referenceNumber || ''}" type="p" condition="!!document.referenceNumber"/>
                 <label text="Check ${document.checkNumber || ''}" type="p" condition="!!document.checkNumber"/>
                 <html-view html="${paymentOutput.documentHtml || ''}"

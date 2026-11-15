@@ -38,13 +38,23 @@ feature("AP prints a bill as the supplier issued it; the printed page has no for
 feature("the record screens print their record as evidence: a journal entry and a period's close", {
     when() {
         return lib.asUser("finance.gl", () => ({
-            entry: lib.page("GeneralLedger/JournalEntryDetail", {recordId: "BOSS_ACCT_ENTRY"}, "html"),
+            // with its posting review open: the review and its confirmation name the books, the day and the amounts (ACC-UI-003)
+            entry: lib.page(
+                "GeneralLedger/JournalEntryDetail",
+                {
+                    recordId: "BOSS_ACCT_ENTRY",
+                    previewId: lib.call("mantle.ledger.JournalServices.preview#Entry", {acctgTransId: "BOSS_ACCT_ENTRY"}).previewId
+                },
+                "html"
+            ),
             entryPrint: lib.page("GeneralLedger/JournalEntryDetail", {recordId: "BOSS_ACCT_ENTRY"}, "html-print"),
             closePrint: lib.page("PeriodClose/PeriodCloseDetail", {timePeriodId: lib.ids.closePeriodId}, "html-print")
         }))
     },
     then({entry, entryPrint, closePrint}) {
         entry.output.includes("GeneralLedger/JournalEntryDetail?renderMode=html-print&amp;recordId=BOSS_ACCT_ENTRY")
+        entry.output.includes("Posts to the books of Accounting Demo Company on ")
+        /Post Office expense review to Accounting Demo Company on \d{4}-\d{2}-\d{2}, \$[\d,.]+ each side\?/.test(entry.output)
         entryPrint.errors == []
         entryPrint.output.includes("Office expense review")
         !entryPrint.output.includes("<form")

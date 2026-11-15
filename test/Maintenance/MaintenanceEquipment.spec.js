@@ -84,7 +84,9 @@ feature("EquipmentDetail under Maintenance shows the resource administrator its 
         rendered.output.includes("Edit equipment")
         !rendered.output.includes("Net book value") && !rendered.output.includes(">Book<")
         resourcesBook == null
-        finance.book != null && finance.book.rows.some(row => row.label == "Net book value")
+        // the demo compressor is not capitalized: its book has no net book value (ACC-UI-012)
+        finance.book != null && finance.book.stateText == "Not capitalized" && finance.book.rows.length > 0
+        !finance.book.rows.some(row => row.label == "Net book value")
         !finance.canEdit
         other.output.includes("This equipment is not available in this app.")
         !other.output.includes("AC200-0042")

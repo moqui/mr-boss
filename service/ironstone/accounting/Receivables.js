@@ -63,6 +63,7 @@ function invoiceContext(parameters) {
         ),
         sources: plainRows(output.sourceRows),
         orders: plainRows(output.sourceRows).filter(row => !!row.orderId),
+        submittedOrderId: output.submittedOrderId || null,
         shipments: plainRows(output.shipmentRows),
         ledger: plainRows(output.ledgerRows),
         content: plainRows(output.contentRows),

@@ -74,6 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response url="${sharedLinks['Receivables/InvoiceDetail']}">
             <parameter name="recordId" from="financeResult.invoiceId"/>
+            <!-- the new credit under invoiceId too, which InvoiceDetail reads first: the context's is the original's -->
+            <parameter name="invoiceId" from="financeResult.invoiceId"/>
             <parameter name="organizationPartyId" from="organizationPartyId"/>
         </default-response>
         <error-response url="."/>

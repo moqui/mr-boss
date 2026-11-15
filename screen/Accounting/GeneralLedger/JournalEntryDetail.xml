@@ -145,6 +145,17 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="postingPreview"/>
         </if>
         <set field="postingPreviewFindings" from="postingPreview?.findings || []"/>
+        <!-- what the post changes, in the review and its confirmation: the books, the day and the amounts (ACC-UI-003) -->
+        <if condition="isDraft &amp;&amp; previewId">
+            <entity-find-one entity-name="mantle.party.Organization" value-field="postingOrganization" disable-authz="true">
+                <field-map field-name="partyId" from="record.organizationPartyId"/>
+            </entity-find-one>
+            <set field="postingOrganizationName"
+                    from="postingOrganization?.organizationName || record.organizationPartyId || ''"/>
+            <set field="postingDayText" from="record.transactionDateText ? String(record.transactionDateText).slice(0, 10) : ''"/>
+            <set field="postingDebitText" from="record.amountUomId ? ec.l10n.formatCurrency(debitTotal ?? 0, record.amountUomId)
+                    : String(debitTotal ?? 0)"/>
+        </if>
         <!-- the printed record, its evidence (design-accounting §17): this screen in html-print -->
         <set field="printScreen" value="GeneralLedger/JournalEntryDetail"/>
         <set field="printOptions" from="{recordId:recordId, organizationPartyId:organizationPartyId}"/>
@@ -433,6 +444,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Posting review"/>
                             <box-body>
+                                <label text="Posts to the books of ${postingOrganizationName} on ${postingDayText || 'its transaction day'}, in ${
+                                    record.amountUomId || 'no currency'}: ${totalsText}."
+                                        type="p"/>
                                 <label text="No findings: the entry is ready to post."
                                         type="p"
                                         condition="!postingPreviewFindings.length"/>
@@ -484,7 +498,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="submit">
                                         <default-field title="">
-                                            <submit text="Post entry" type="primary" confirmation="Post ${entryName}?"/>
+                                            <submit text="Post entry" type="primary"
+                                                    confirmation="Post ${entryName} to ${postingOrganizationName} on ${postingDayText || 'its transaction day'}, ${postingDebitText} each side?"/>
                                         </default-field>
                                     </field>
                                 </form-single>

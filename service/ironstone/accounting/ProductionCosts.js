@@ -96,6 +96,8 @@ function rowOf(run, kind) {
         reviewStatusText: statusText(run.productionCostReviewStatusId) || "Not requested",
         reviewDateText: lib.policy.lib.dateText(run.productionCostReviewDate),
         accountingDate: run.productionCostAccountingDate || null,
+        // the day as text: a SQL date reaches a screen as epoch millis (ACC-UI-014)
+        accountingDateText: run.productionCostAccountingDate ? policy.calendarDateText(run.productionCostAccountingDate) : "",
         reviewNote: run.productionCostReviewNote || null,
         unvaluedCount: unvalued,
         awaitingCount: awaiting,

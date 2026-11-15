@@ -112,7 +112,7 @@ along with this software (see the LICENSE.md file). If not, see
                         classText: enumText[row.classEnumId] || '', typeText: enumText[row.assetTypeEnumId] || '',
                         methodText: enumText[row.depreciationTypeEnumId] || '',
                         inServiceText: inService &amp;&amp; row.acquiredDate ? lib.day(row.acquiredDate) : '',
-                        accumulated: accumulated, netBook: cost.subtract(accumulated),
+                        accumulated: accumulated, netBook: inService ? cost.subtract(accumulated) : null,
                         currencyUomId: row.acquireCostUomId || currency,
                         facilityText: Array.from(facilityList).find((f) =&gt; f.facilityId === row.facilityId)?.facilityName
                             || row.facilityId || '',

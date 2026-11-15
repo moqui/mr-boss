@@ -120,9 +120,15 @@ function reader() {
         unavailable,
         reads(entry) {
             try {
+                // an entry offers its route only to a viewer who can open the route's app: an owner's catalogue answers by
+                // permission, and a grant below the app root (a report screen's ALWAYS) does not open the root's own check
+                // (ACC-UI-020: a finance reader without Accounting was offered its Trial balance, which refused at the root)
+                if (!blank(entry.routePath)) {
+                    grants = grants || insights.grants()
+                    if (!admin.destinationOpens(grants, appOf(entry))) return false
+                }
                 if (!blank(entry.catalogueService)) return catalogueKeys(entry).has(entry.catalogueKey || entry.entryId)
                 if (blank(entry.routePath)) return false
-                grants = grants || insights.grants()
                 return admin.destinationOpens(grants, entry.routePath)
             } catch (error) {
                 ec.logger.error("Insights catalog entry " + entry.entryId + " was not checked: " + error.message)

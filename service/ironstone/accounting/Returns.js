@@ -99,9 +99,11 @@ function returnContext(parameters) {
             lineAmount: toDecimal(row.quantity ?? 1).multiply(row.amount ?? 0),
             currencyUomId,
             creditPath: invoiceRoute(row.invoiceId),
-            creditParameters: lib.recordParameters(organizationPartyId, row.invoiceId),
+            // each names its invoice under invoiceId too: InvoiceDetail declares it, so a link would otherwise take the row's
+            // invoiceId (the credit) from the context, and InvoiceDetail reads invoiceId first (ACC-UI-017)
+            creditParameters: lib.recordParameters(organizationPartyId, row.invoiceId, {invoiceId: row.invoiceId}),
             originalPath: invoiceRoute(row.originalInvoiceId),
-            originalParameters: lib.recordParameters(organizationPartyId, row.originalInvoiceId),
+            originalParameters: lib.recordParameters(organizationPartyId, row.originalInvoiceId, {invoiceId: row.originalInvoiceId}),
             creditStatus: lib.statusText(invoices[row.invoiceId]?.statusId),
             kindText: row.receiptless === "Y" ? "Without receipt" : "Received"
         })

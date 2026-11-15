@@ -48,5 +48,16 @@ feature("AR settles the received part of a return, and a reader sees it without 
         waitText(ar, "Credits and refunds")
         ar.waitFor(() => !document.body.innerText.includes("Nothing on this return is credited yet."))
         ar.getByRole("button", {name: "Settle", exact: true}).count() == 0
+        // the credit's and the original invoice's links each open their own invoice (ACC-UI-017: the original's carried
+        // the credit's invoiceId, which InvoiceDetail reads first)
+        const invoiceLinks = ar.evaluate(() =>
+            Array.from(document.querySelectorAll("a[href*='Receivables/InvoiceDetail']")).map(a => {
+                const query = new URL(a.href, location.href).searchParams
+                return {recordId: query.get("recordId"), invoiceId: query.get("invoiceId")}
+            })
+        )
+        invoiceLinks.length >= 2
+        invoiceLinks.every(link => !link.invoiceId || link.invoiceId === link.recordId)
+        new Set(invoiceLinks.map(link => link.recordId)).size >= 2
     }
 })

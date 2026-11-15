@@ -281,8 +281,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
                         <container style="col-12 col-md">
-                            <label text="${asset.ownerText}${asset.facilityText ? ' · ' + asset.facilityText : ''} · net book ${
-                                ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId)}"
+                            <label text="${asset.ownerText}${asset.facilityText ? ' · ' + asset.facilityText : ''}${asset.netBook != null
+                                ? ' · net book ' + ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId) : ''}"
                                     type="p"
                                     style="q-mb-none"/>
                         </container>

@@ -69,6 +69,25 @@ spec({
     }
 })
 
+// ACC-UI-020: an entry is offered only to a viewer who can open its route's app; the financial reader without the Accounting
+// app (its read permissions alone) is offered none of Accounting's reports, which its root would refuse
+feature("a financial reader without the Accounting app is offered none of its reports", {
+    when() {
+        const member = {userGroupId: "BOSS_ACCOUNTING", userId: "BOSS_INS_FINANCE", fromDate: 0}
+        const setThru = thruDate =>
+            system(() => ec.entity.makeValue("moqui.security.UserGroupMember").setAll(member).set("thruDate", thruDate).update())
+        setThru(ec.user.nowTimestamp)
+        try {
+            return {without: entryIds(users.finance)}
+        } finally {
+            setThru(null)
+        }
+    },
+    then({without}) {
+        !without.some(id => id.startsWith("Accounting."))
+    }
+})
+
 feature("a reader sees only the entries their owner grants; SalesAnalysis is Sales' entry and Accounting's mount's", {
     when() {
         const salesAnalysis = system(() =>

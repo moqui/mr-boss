@@ -225,7 +225,15 @@ along with this software (see the LICENSE.md file). If not, see
                             <widgets>
                                 <label text="The stock value and the inventory accounts agree as of ${asOfDay}."
                                         type="p"
-                                        style="text-positive"/>
+                                        style="text-positive"
+                                        condition="!summary.unpricedCount"/>
+                                <!-- stock with no cost is valued at none, in neither total (ACC-UI-013) -->
+                                <label text="The value of the priced stock and the inventory accounts agree as of ${asOfDay}.
+                                    Stock on hand with no cost (quantity ${ec.l10n.format(summary.unpricedQuantity, '#,##0.###')})
+                                    is in neither: see Valuation exceptions."
+                                        type="p"
+                                        style="text-warning"
+                                        condition="summary.unpricedCount"/>
                             </widgets>
                             <fail-widgets>
                                 <container-box type="warning">

@@ -126,7 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </container>
                 </container>
-                <label text="${review.statusText} on ${review.requestedDateText} at revision ${review.revision}${review.accountingDate ? ', for ' + review.accountingDate : ''}${review.note ? ': ' + review.note : ''}"
+                <label text="${review.statusText} on ${review.requestedDateText} at revision ${review.revision}${review.accountingDateText ? ', for ' + review.accountingDateText : ''}${review.note ? ': ' + review.note : ''}"
                         type="p" style="text-caption" condition="review.statusId"/>
 
                 <section name="Estimate" condition="estimate">

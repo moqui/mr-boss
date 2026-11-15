@@ -547,6 +547,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
+    <!-- the Accounting app too: a finance reader follows its reports into Accounting (ACC-UI-020) -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <!-- Manufacturing P5b: an operator who also issues stock (Warehouse's BOSS_WAREHOUSE_ISSUE grants STOCK_ISSUE; an
         operator's assignment grants none, impl-manufacturing §2) and moves it to the line (BOSS_WAREHOUSE_MOVE, Stage) -->
@@ -1180,6 +1182,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_FINANCE" fromDate="0"/>
+    <!-- the Accounting app too: a finance reader follows its reports into Accounting (ACC-UI-020) -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING" userId="BOSS_INS_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_INS_FINANCE" fromDate="0"/>
     <!-- Admin P3 (impl-admin P3): the delegated access administrators' custom group opens the Access area (Groups, GroupDetail),
         as BOSS_ADMIN_ACCESS does; the framework's AccessServices then let admin.delegate assign registered bundles and refuse the

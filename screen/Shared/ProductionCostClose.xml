@@ -141,7 +141,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="accountingDate">
                                         <default-field title="Proposed date">
-                                            <display/>
+                                            <display text="${accountingDateText ?? ''}"/>
                                         </default-field>
                                     </field>
                                     <field name="exceptionText">
@@ -478,7 +478,12 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Proposed journal entry"/>
                             <box-body-nopad>
                                 <label text="Nothing to post: the work order closes with no journal entry." type="p" style="q-pa-md"
-                                        condition="!previewed.ledgerRows.length"/>
+                                        condition="!previewed.ledgerRows.length &amp;&amp; !closeInfo.closed"/>
+                                <!-- after the close the preview is of an adjustment: none due is not "no journal entry" (ACC-UI-015) -->
+                                <label text="No adjustment to post: the cost close is posted below, and nothing has changed since."
+                                        type="p"
+                                        style="q-pa-md"
+                                        condition="!previewed.ledgerRows.length &amp;&amp; closeInfo.closed"/>
                                 <section name="LedgerList" condition="previewed.ledgerRows.length">
                                     <widgets>
                                         <form-list name="LedgerProposal" list="previewed.ledgerRows" skip-form="true" paginate="false">
@@ -532,7 +537,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="accountingDate">
                                         <default-field title="Date">
-                                            <display/>
+                                            <display text="${accountingDateText ?? ''}"/>
                                         </default-field>
                                     </field>
                                     <field name="allocatedAmount" hide="!closeInfo.financialRead">
