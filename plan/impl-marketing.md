@@ -5620,7 +5620,7 @@ no Rust built.
   hostedAuthorize#PaymentAuthorization.
 - Design edits: design-marketing §9 RegistrationPolicy and RegistrationChange rows and the order rules' "As built (follow-up 1)", §13
   Registration as built, §14.1 EventRegistrationTerms.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F349 to F356 in order:
   - the code over the plan above: the keyed derivation over digestText with an encrypted per-offer secret (no host member), the rule
     in hours, lateCancelAllowed as the offer's choice, the rule binding confirmed places only, the authorize-only test gateway;
   - P17's code: the last place of an approved, paid ticket order was refunded nothing (cancel#Order zeroed its lines); fixed here by
@@ -5721,7 +5721,7 @@ EventAttendance row and usl-inventory's P18 table kept beside follow-up 1's), mr
     and warehouse with stock, and the chain's expected rows rewritten: not done here. Its suspension is safe meanwhile: cleanupSpec
     runs even when setupSpec or a feature fails, a run's specs share a database serially (each `--workers` worker its own copy),
     so no other spec sees the nexus missing; only a killed process leaves it off, on that run's database.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F357 to F362 in order:
   - the capture is made inside the invoice's transaction under the part's lock (the provider is asked while the part is locked;
     Shop captures apart first); a slow provider holds that order part only;
   - a ticket invoice is finalized at the approval: its InvoiceFinalized SECAs post it and may send the invoice email where the
@@ -6194,6 +6194,20 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F346 | P18 (Review Nov 15): the worker's list stands (EventAttendance its own record, the window, overrides for held and pending only, first name and initial, staff-only search, the device by the fixed parameter, attempt buckets, the offer triggers and Sales source kinds; an overridden held place may still expire and free its seat while the attendee is in, so a sold-out door can admit one more than its seats; P12's form trigger has no screen choice; no answers to Sales; one occurrence per trigger; no demo door) | P18: as its Review note says |
 | F347 | P18 (Review Nov 15): the offer triggers' cursor, as P12's, stalls if more than 200 places share one `confirmedDate` (or attendances one `checkInDate`) to the millisecond: each run re-reads the same 200, all filed. Unreachable today (a reservation has ten places at most, confirmations and check-ins are one at a time); a tie-break on the registration id would close it for both triggers | P18: as its Review note says |
 | F348 | P18 (Review Nov 15): no spec runs two check-ins of one place concurrently; the row lock and EventAttendance's key make it safe by construction | P18: as its Review note says |
+| F349 | Follow-up 1 (Built Nov 15): the code over the plan above: the keyed derivation over digestText with an encrypted per-offer secret (no host member), the rule in hours, lateCancelAllowed as the offer's choice, the rule binding confirmed places only, the authorize-only test gateway | Follow-up 1: as its Built note says |
+| F350 | Follow-up 1 (Built Nov 15): P17's code: the last place of an approved, paid ticket order was refunded nothing (cancel#Order zeroed its lines); fixed here by not cancelling an invoiced order and by counting a zeroed line's billed quantity; such an order now stays approved with its invoice and refund payments, and Accounting settles the invoice (a credit memo), which nothing does automatically | Follow-up 1: as its Built note says |
+| F351 | Follow-up 1 (Built Nov 15): P17's code: a corrected or substituted attendee's ticket reused the first ticket's ledger key, so the new code was never mailed; fixed (its own key) | Follow-up 1: as its Built note says |
+| F352 | Follow-up 1 (Built Nov 15): a capture that fails at the approval (a declined capture, an invoice Accounting refuses) is logged and leaves the order approved, uninvoiced and the payment authorized; nothing retries it (the job does not look for approved, unbilled ticket orders), and a partial cancellation's refund then waits | Follow-up 1: as its Built note says |
+| F353 | Follow-up 1 (Built Nov 15): apply#OrderPaymentsToInvoice captures the whole payment, so a place cancelled before the approval is captured and refunded rather than released; and a later cancellation's refund is a refund payment beside a paid invoice, never a credit memo | Follow-up 1: as its Built note says |
+| F354 | Follow-up 1 (Built Nov 15): an offer published before follow-up 1 gets its secret at its first code, which changes the offer's row and so its revision: a staff member saving the offer form opened before then is refused as stale once | Follow-up 1: as its Built note says |
+| F355 | Follow-up 1 (Built Nov 15): the online refund percentage applies to a confirmed place's whole share, its tax included; a fee kept by the organizer is not shown as a fee line anywhere (the refund is smaller) | Follow-up 1: as its Built note says |
+| F356 | Follow-up 1 (Built Nov 15): PayTraceGateway was failing on master since P17's review (its storeless Retail order retaxed by the inherited Corp gateway); now insulated in the spec | Follow-up 1: as its Built note says |
+| F357 | Follow-up 1 (Review Nov 15): the capture is made inside the invoice's transaction under the part's lock (the provider is asked while the part is locked; Shop captures apart first); a slow provider holds that order part only | Follow-up 1: as its Review note says |
+| F358 | Follow-up 1 (Review Nov 15): a ticket invoice is finalized at the approval: its InvoiceFinalized SECAs post it and may send the invoice email where the organization has one, beside the registration's own receipt | Follow-up 1: as its Review note says |
+| F359 | Follow-up 1 (Review Nov 15): the finalize-and-apply path's success is not covered by a regression spec (the spec's organizations have no posting); a demo organization's ticket order (Retail's workshop) exercises it | Follow-up 1: as its Review note says |
+| F360 | Follow-up 1 (Review Nov 15): the whole authorization captured and a place cancelled before the approval refunded from it (above) | Follow-up 1: as its Review note says |
+| F361 | Follow-up 1 (Review Nov 15): OrderToCashBasicFlow and ReturnToResponseBasicFlow still suspend Retail's nexus (R4) | Follow-up 1: as its Review note says |
+| F362 | Follow-up 1 (Review Nov 15): ProductsPriceLists and ProductsPricing (mr-boss) fail on master too (the main checkout, release): BossProductsDemoData's BOSS_PRICE_SALES (15.00) ends and BOSS_PRICE_NEXT (16.00, "Scheduled next price") starts 2026-11-15 00:00, today, so the price list's explanation reads 14.40 (16.00 less 10 %) for the expected 13.50 and the REST read lists BOSS_PRICE_NEXT, not BOSS_PRICE_SALES: a date in the demo data, not tax and not this follow-up | Follow-up 1: as its Review note says |
 
 ## 7. Later
 
