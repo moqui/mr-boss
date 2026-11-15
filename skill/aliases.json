@@ -114,6 +114,12 @@
         "email blast",
         "campaign email"
     ],
+    "list": [
+        "mailing list",
+        "distribution list",
+        "subscriber list",
+        "newsletter list"
+    ],
     "opportunity": [
         "deal",
         "pipeline deal",

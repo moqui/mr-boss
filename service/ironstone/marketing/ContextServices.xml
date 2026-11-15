@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Marketing app's context (impl-marketing §2, P1; design-marketing §1.1, §14.2; Marketing.js), the only ironstone.marketing
     services (§4): the shared context every Marketing screen reads in the root's always-actions, the record check a screen or mount
-    runs before a Mantle service, the drop-downs and the palette. A user may open Marketing through an authorization of their
+    runs before a Mantle service, the drop-downs and the palette; P21 the shell's registrations (design §14.2: "shell registrations"):
+    the today-source, the record-lookup and the call-context. A user may open Marketing through an authorization of their
     groups on its root (BOSS_MARKETING, the root user group, or BOSS_MARKETING_ADMIN); the capabilities and organizations are
     Mantle's (mantle/marketing/MarketingAccess.js, from the MARKETING_* and MESSAGE_* permissions), and the menu areas'
     authorizations add theirs. Disabled artifact authorization widens nothing here; each Mantle marketing service checks again.
@@ -148,4 +149,64 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="rows" from="found.rows"/>
         </actions>
     </service>
+
+    <!-- ===== Marketing P21: the shell's registrations (design §1.3 Comms hooks, §14.3 Today; impl-marketing P21) ===== -->
+    <service verb="get" noun="TodayItems" allow-remote="false" read-only="true">
+        <description>The Marketing today-source (Marketing.xml shell-providers; Commons' get#UserTodayItems calls it): Mantle's
+            sources (mantle.marketing.MarketingWorkspaceServices.get#TodayItems: the sends due, the approvals awaiting the approver, the
+            sends with failed or uncertain deliveries, the registrations to review) as Today's items, each opening its Marketing screen
+            and with no Mark done (canUpdate false); a source that could not be read is an item that says so by name, the others still
+            shown. Another user's Today, and a user who reads nothing of Marketing, get none. No recipient, attendee, address or
+            token.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/marketing/Marketing.js"/>
+            <set field="found" from="ec.resource.script(module).execute('today', context)"/>
+            <set field="items" from="found.items"/>
+            <set field="label" from="found.label"/>
+        </actions>
+    </service>
+    <service verb="lookup" noun="Records" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>
+        <description>Marketing's record-lookup provider (Marketing.xml shell-providers, marketing.records): a campaign, a send and an
+            event registration the user may see in Marketing (Marketing.js recordKinds: a Marketing reader of the campaign's or send's
+            organization, an events manager of the registration's offer's). info and card: its name, kind, state and organization with
+            its Marketing link (a registration by its id and offer, never its attendee); a record Marketing does not show the user is
+            left to the other providers. search: the campaigns, sends and a registration by its id, as optionList {value: entity|id,
+            label}. links: the records a message's CampaignDetail, SendDetail and RegistrationDetail links name, up to five. No
+            address or token.</description>
+        <out-parameters>
+            <parameter name="recordList" type="List"/>
+            <parameter name="card" type="Map"/>
+            <parameter name="optionList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js').execute('lookup', context)"/>
+            <set field="recordList" from="found.recordList"/>
+            <set field="card" from="found.card"/>
+            <set field="optionList" from="found.optionList"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CallContext" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
+        <description>Marketing's call-context provider (Marketing.xml shell-providers, marketing.registrations): for the number ringing,
+            the caller's upcoming registrations (as attendee or buyer) of the offers of the user's organizations, for an events manager,
+            each with its RegistrationDetail link, at most 20; Comms' own provider answers who the caller is. No address, token or
+            payment.</description>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js').execute('callContext', context)"/>
+            <set field="contactList" from="found.contactList"/>
+            <set field="recordList" from="found.recordList"/>
+        </actions>
+    </service>
+    <!-- ===== end of Marketing P21 ===== -->
 </services>

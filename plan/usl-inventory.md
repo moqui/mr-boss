@@ -1121,6 +1121,32 @@ built screens, the order SECA, jobs and Insights' registries:
 | party/BusinessEventServices | record#BusinessEvent (CampaignSent) | design-insights §4 business annotations (F85) | CampaignSendServices release#Send and release#ExperimentWinner, after their commit (Marketing P20) |
 | marketing/SegmentServices | count#Audience | Assist (CX-ASSIST; the user's call of Nov 15) | the AgentToolExposure marketing_audience_counts (Assistant only; the P20 review) |
 
+Added in Marketing P21 (Nov 15, 2026; the campaign schedule, its projected CalDAV collection and Today in
+`mantle.marketing.MarketingWorkspaceServices` over MarketingCalendar.js, impl-marketing P21), called by built screens, the shell and the
+CalDAV server:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingWorkspaceServices | get#CalendarItems | Marketing/Calendar (W.get#CalendarItems: campaign windows, send schedules, sequence milestones, publication dates) | Marketing/Calendar (calendarEvents), Marketing/CalendarTui (Marketing P21) |
+| marketing/MarketingWorkspaceServices | check#CalendarEvent | Marketing/Calendar (only an event drags) | Marketing/Calendar (moveEvent, cancelEvent) (Marketing P21) |
+| marketing/MarketingWorkspaceServices | get#CampaignCalendar | design §1.3 CX-SYNC, §19 MKT-SYNC (the "Campaign calendar" projected collection) | the CalendarProjection MarketingCampaigns (mantle.work.CalendarDavServices' projected kind) (Marketing P21) |
+| marketing/MarketingWorkspaceServices | get#TodayItems | design §14.3 Today (W providers) | ironstone.marketing.ContextServices get#TodayItems, Marketing's today-source (Marketing P21) |
+| work/EventServices | update#EventOccurrence | Marketing/Calendar (event drag/resize) | Marketing/Calendar (moveEvent, after check#CalendarEvent) (Marketing P21) |
+
+Added in Marketing P22 (Nov 15, 2026; Comms' text messages in `mantle.party.MessageSmsServices` over MessageSms.js, the SMS branches of
+the ledger, sending profiles, sends, dispatch and automations, impl-marketing P22), called by the framework's sms-consent hook (Mantle's
+MoquiConf.xml), the SmsOptOut EECA and built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| party/MessageSmsServices | check#SmsConsent | design §12 SendingProfiles (the sms-consent answer, F57) | the framework's sms-consent hook, registered in Mantle's MoquiConf.xml screen-facade shell-providers (asked for every sender, the system's dispatch included) (Marketing P22) |
+| party/MessageSmsServices | note#SmsKeyword | design §12 (a STOP becomes a PcpSms withdrawal and a suppression) | the EECA SmsStopWithdrawsConsent on moqui.call.SmsOptOut (Marketing P22) |
+| party/MessageServices | store#SendingProfile, get#SendingProfile, find#SendingProfiles (an SMS profile) | Shared/SendingProfiles (SendingProfile, SenderReadiness: SMS readiness) | Shared/SendingProfiles (New text message profile, its readiness), at Marketing/Settings/SendingProfiles (Marketing P22) |
+| party/MessageServices | attempt#Delivery (the SMS channel) | design-crosscut CX-DELIVERY (X8), design §12 | the ledger's attempt through org.moqui.SmsServices.send#SmsMessage (Marketing P22) |
+| marketing/CampaignSendServices | create#Send, store#SendContent, get#Send, preview#Send, test#Send (a text message send) | Marketing/Sends (NewSend), Sends/Compose (MessageContent: SMS body, counter), Sends/SendDetail (SendSummary) | Marketing/Sends/Sends (NewSend's topics of phone numbers once an SMS profile is ready), Sends/Compose (the text, its estimate), Sends/SendDetail (the estimate in the Summary and the approver's dialog) (Marketing P22) |
+| marketing/AutomationServices | create#Automation, store#Steps (Send SMS) | Marketing/Automations/AutomationDetail (the Send SMS step, design §6) | Marketing/Automations/AutomationDetail (Add step: Send SMS for an automation of a list of phone numbers) (Marketing P22) |
+| public/AccountHubServices | get#EmailPreferences, store#EmailPreferences (SMS topics) | PASS:Account/EmailPreferences (design §13 SMS scope) | PASS:Account/EmailPreferences (a text message topic shown; left, never turned on there) (Marketing P22) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

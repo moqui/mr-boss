@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     approver) and the others in More (Edit the enrollment rule, Enroll a person for a staff trigger, Pause, End, the campaign). The
     boxes: Enrollment rule, Steps (add a step; move or remove one in its row: the whole set is stored again and the approval ends),
     Simulation (a dry run from a start time, for a person an audience reader chooses: no message, no record), Enrollments (each
-    opening EnrollmentDetail) and Decisions. Every change is Mantle's guarded service at the revision read. -->
+    opening EnrollmentDetail) and Decisions. Every change is Mantle's guarded service at the revision read. P22: an automation of a list of phone numbers offers Send SMS
+    in place of Send email (a template's text alternative as the text). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Automation" default-menu-include="false">
     <parameter name="marketingAutomationId" required="true"/>
@@ -85,8 +86,10 @@ along with this software (see the LICENSE.md file). If not, see
                 triggerEnumId:automation.triggerEnumId, triggerSegmentId:automation.triggerSegmentId, productStoreId:automation.productStoreId,
                 registrationPolicyId:automation.registrationPolicyId, goalSegmentId:automation.goalSegmentId, reentryEnumId:automation.reentryEnumId, reentryCooldownDays:automation.reentryCooldownDays,
                 timeZone:automation.timeZone}"/>
+        <!-- P22: an automation of a list of phone numbers sends text messages: its send steps are Send SMS -->
+        <set field="isSms" from="automation.channelEnumId == 'MdcSms'"/>
         <set field="stepValues" from="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, stepAction:'add',
-                position:stepList.length, kind:'send', waitUnitEnumId:'AwuDays', conditionFalseEnumId:'AcfSkipNextSend'}"/>
+                position:stepList.length, kind:(isSms ? 'sms' : 'send'), waitUnitEnumId:'AwuDays', conditionFalseEnumId:'AcfSkipNextSend'}"/>
         <set field="simulateValues" from="{marketingAutomationId:marketingAutomationId, simulatePartyId:simulatePartyId,
                 simulateFrom:simulateFrom || ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')}"/>
         <set field="enrollValues" from="{marketingAutomationId:marketingAutomationId, operationKey:ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + marketingAutomationId}"/>
@@ -327,11 +330,15 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-dialog id="AddStepDialog" button-text="Add step" icon="sym_o_add" title="Add a step to ${automation.automationName}"
                                 width="640" condition="can.canEdit &amp;&amp; stepList.length &lt; automation.maxSteps">
                             <label text="A send copies its template's published content now. Any change of the steps ends an approval." type="p" style="m-muted"/>
+                            <label text="Send SMS sends the template's text alternative as the text, with Reply STOP to opt out." type="p" style="m-muted" condition="isSms"/>
                             <form-single name="AddStep" transition="changeSteps" map="stepValues">
                                 <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
                                 <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                 <field name="stepAction"><default-field><hidden/></default-field></field>
                                 <field name="kind">
+                                    <conditional-field title="Step" condition="isSms">
+                                        <radio><option key="sms" text="Send SMS"/><option key="wait" text="Wait"/><option key="condition" text="Condition"/></radio>
+                                    </conditional-field>
                                     <default-field title="Step">
                                         <radio><option key="send" text="Send email"/><option key="wait" text="Wait"/><option key="condition" text="Condition"/></radio>
                                     </default-field>

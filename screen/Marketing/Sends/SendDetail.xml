@@ -25,7 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
     none of its authors nor its approver, but under the one-person-team flag), Resume of a paused one, and Pause and Cancel in More,
     each Mantle's guarded service; the Delivery box (the release, the counts from the delivery ledger, what is in flight) links
     CampaignDelivery. P10: the Experiment box (design §5 SendDetail's Experiment): the A/B test's sample, variants and state with
-    ExperimentDetail's link, or Set up an A/B test for a draft's editor (Mantle's store#Experiment, which ends an approval). -->
+    ExperimentDetail's link, or Set up an A/B test for a draft's editor (Mantle's store#Experiment, which ends an approval). P22: a text
+    message send shows its text in place of the subject and body, and its characters, encoding, segments and the profile's cost
+    estimate (get#Send smsEstimate) in the Summary and the approver's dialog. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Send" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
@@ -74,7 +76,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
         <set field="previewPath" from="marketing.capabilities.previewRead ? sharedLinks['Audiences/AudiencePreview'] : null"/>
         <set field="captionText" from="[send.campaignName, 'topic ' + send.topicName, send.organizationName, 'revision ' + send.sendRevision].filter(Boolean).join(' · ')"/>
-        <set field="factsText" from="[send.subject ? 'subject ' + send.subject : 'no subject yet', send.profileName ? 'from ' + send.profileName : 'no sending profile',
+        <!-- P22: a text message send has no subject; its segments and cost estimate show before approval -->
+        <set field="isSms" from="send.channelEnumId == 'MdcSms'"/>
+        <set field="smsEstimateText" from="detail?.smsEstimate?.estimateText || ''"/>
+        <set field="factsText" from="[isSms ? 'text message' : send.subject ? 'subject ' + send.subject : 'no subject yet', send.profileName ? 'from ' + send.profileName : 'no sending profile',
                 'schedule: ' + send.scheduledText].join(' · ')"/>
         <set field="preparedText" from="send.prepared ? 'Prepared ' + send.preparedDateText + ' by ' + (send.preparedByName || 'an author') + ': ' + send.eligibleCount + ' eligible, ' + send.untrackedCount + ' untracked'
                 : send.preparedStale ? 'Prepared at revision ' + send.preparedRevision + '; changed since: prepare again' : 'Not prepared yet'"/>
@@ -155,7 +160,8 @@ along with this software (see the LICENSE.md file). If not, see
                             </container-dialog>
                             <container-dialog id="SendDecisionDialog" button-text="Approve" icon="sym_o_check_circle" type="primary"
                                     title="Decide on ${send.sendName}, revision ${send.sendRevision}" width="560" condition="can.canDecide">
-                                <label text="${send.eligibleCount} eligible recipients, prepared ${send.preparedDateText}; subject: ${send.subject}" type="p"/>
+                                <label text="${send.eligibleCount} eligible recipients, prepared ${send.preparedDateText}; subject: ${send.subject}" type="p" condition="!isSms"/>
+                                <label text="${send.eligibleCount} eligible recipients, prepared ${send.preparedDateText}; ${smsEstimateText}" type="p" condition="isSms"/>
                                 <form-single name="SendDecision" transition="decideSendApproval" map="decisionRef">
                                     <field name="campaignSendId"><default-field><hidden/></default-field></field>
                                     <field name="targetRevision"><default-field><hidden/></default-field></field>
@@ -300,6 +306,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="p"/>
                         <label text="Content from ${send.templateName}, copied when the send was started: a later change of the template does not reach it." type="p" style="m-muted"
                                 condition="send.templateName"/>
+                        <label text="Text message: ${smsEstimateText}. A reply of STOP withdraws the person's consent and suppresses the number." type="p"
+                                condition="isSms &amp;&amp; smsEstimateText"/>
                         <label text="Content time ${send.contentDateText}; policy in effect since ${send.policyFromDateText || 'none: the defaults'}." type="p" style="m-muted"
                                 condition="send.prepared"/>
                         <section name="ApprovalNeeds" condition="problemList.length &amp;&amp; send.statusId == 'CsDraft'">
@@ -320,13 +328,18 @@ along with this software (see the LICENSE.md file). If not, see
                                 parameter-map="{campaignSendId:campaignSendId}"/>
                     </box-toolbar>
                     <box-body>
-                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium"/>
+                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium" condition="!isSms"/>
                         <label text="${preview?.renderedPreheader}" type="p" style="m-muted" condition="preview?.renderedPreheader"/>
                         <label text="${preview?.sampleText}: a recipient's own first and last name take their place" type="p" style="text-caption m-muted"/>
-                        <render-mode>
-                            <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 640px">${safeBody}</div>]]></text>
-                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
-                        </render-mode>
+                        <section name="ContentBody" condition="!isSms">
+                            <widgets>
+                                <render-mode>
+                                    <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 640px">${safeBody}</div>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
+                                </render-mode>
+                            </widgets>
+                        </section>
+                        <label text="${preview?.renderedText}" type="p" condition="isSms"/>
                         <form-list name="ContentFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
                             <field name="text"><default-field title="To check"><display/></default-field></field>
                         </form-list>

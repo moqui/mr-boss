@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Calendar (design-marketing §3 Calendar, Context passed; design-crosscut §3.13 Marketing's row; impl-marketing P21): the
+    Commons Calendar component (screen/Commons/Calendar.qvue) in its resource mode, as Projects' Plan and People's team calendar mount
+    it, with the transitions it calls answered for the campaign schedule of the user's organizations
+    (mantle.marketing.MarketingWorkspaceServices.get#CalendarItems): the campaign windows, scheduled sends, automation milestones and
+    approved publication dates, read only, each opening its record (a send its SendDetail, where a new schedule needs a new approval),
+    and the events Marketing offers (a registration event of the user's organizations or an event linked to one of their campaigns),
+    the one kind a drag moves, through the calendar's own mantle.work.EventServices.update#EventOccurrence, which decides who may change
+    it (its organizer, an editor of a calendar that holds it); check#CalendarEvent refuses any other item. An event opens Marketing's
+    EventDetail (Commons'). Nothing is created here: a new event is NewEvent's (Events, quick create). The same items are the
+    "Campaign calendar" projected CalDAV collection on phones (CalendarProjection MarketingCampaigns, read only). The terminal: an agenda
+    of the next four weeks (CalendarTui). Every Marketing reader's; the calendar shortcut of design §1.2 (Home's Calendar and the key
+    g k), hidden from the menu. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Calendar" default-menu-include="false" menu-image="sym_o_calendar_month" menu-image-type="icon"
+        render-modes="vue,qvue,tui,html,qvt" server-static="vue,qvue">
+
+    <parameter name="view"/>
+    <parameter name="date"/>
+
+    <transition name="calendarSetup" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarSetup').call() || {}
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse({calendarList: [], defaultCalendarId: null, defaults: out.defaults || {}, timeZone: out.timeZone,
+                todayText: out.todayText, nowText: out.nowText, me: out.me, roomOptions: [], failedSources: [],
+                resource: {title: ec.l10n.localize('Campaign calendar'), readOnly: false}})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the campaign schedule as Calendar.qvue takes events: an event movable by who may change it, every other item read only with
+        its record's link -->
+    <transition name="calendarEvents" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('mantle.marketing.MarketingWorkspaceServices.get#CalendarItems').parameters({start: start || '',
+                end: end || ''}).call() || {}
+            if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
+            const links = ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js')
+            const editable = {}
+            const canEdit = (workEffortId) => {
+                if (!Object.hasOwn(editable, workEffortId)) {
+                    const access = ec.service.sync().name('ironstone.commons.CalendarServices.get#EventAccessInfo').parameters({workEffortId: workEffortId,
+                        need: 'check'}).call() || {}
+                    ec.message.clearErrors()
+                    editable[workEffortId] = !!access.canEdit
+                }
+                return editable[workEffortId]
+            }
+            const eventList = Array.from(out.items || []).map((item) => {
+                const isEvent = item.kind === 'event'
+                return {kind: item.kind, key: item.key, title: item.title + (!isEvent && item.stateText ? ' · ' + item.stateText : ''),
+                    start: item.startText, end: item.endText, allDay: !!item.allDay, statusId: null, done: false,
+                    workEffortId: isEvent ? item.workEffortId : null, recurring: isEvent && !!item.recurring,
+                    recurringEventId: isEvent ? item.seriesWorkEffortId : null, instanceStart: isEvent ? item.instanceStart : null,
+                    location: item.location || null, color: null, freeBusyOnly: false,
+                    canEdit: isEvent ? canEdit(item.workEffortId) : false,
+                    url: links.placeOf(appRoot, item.route, item.recordParameter, item.recordId)}
+            })
+            ec.web.sendJsonResponse({eventList: eventList, failedSources: out.failedSources || [], skippedCalendarIdList: []})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="eventSummary" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#EventSummary').parameters({workEffortId: workEffortId || '',
+                instanceStart: instanceStart || null}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() || !out.visible ? {visible: false} : {visible: true, event: out.event})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a drag: only an event of the campaign calendar (check#CalendarEvent), as Commons Calendar moves it; a send or any other item is
+        refused -->
+    <transition name="moveEvent">
+        <actions><script><![CDATA[
+            const id = workEffortId || ''
+            ec.service.sync().name('mantle.marketing.MarketingWorkspaceServices.check#CalendarEvent').parameters({workEffortId: id}).call()
+            if (!ec.message.hasError()) ec.service.sync().name('ironstone.commons.CalendarServices.get#EventAccessInfo').parameters({workEffortId: id,
+                need: 'edit'}).call()
+            if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
+            const theScope = scope || 'all'
+            const out = ec.service.sync().name('mantle.work.EventServices.update#EventOccurrence').parameters({workEffortId: id,
+                instanceStart: instanceStart || null, scope: theScope, start: start || null, end: end || null, allDay: allDay || null,
+                notify: notify || 'N', eventUrl: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(id),
+                allowConflicts: allowConflicts === 'Y' || allowConflicts === 'true'}).call()
+            if (ec.message.hasError()) { ec.web.sendJsonResponse({bookingClash: / is booked then: /.test(ec.message.getErrorsString())}); return }
+            ec.web.sendJsonResponse({targetWorkEffortId: out.targetWorkEffortId, messageInfos: [{type: 'success', message: out.message}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="cancelEvent">
+        <actions><script><![CDATA[
+            const id = workEffortId || ''
+            ec.service.sync().name('mantle.marketing.MarketingWorkspaceServices.check#CalendarEvent').parameters({workEffortId: id}).call()
+            if (!ec.message.hasError()) ec.service.sync().name('ironstone.commons.CalendarServices.get#EventAccessInfo').parameters({workEffortId: id,
+                need: 'edit'}).call()
+            if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
+            const out = ec.service.sync().name('mantle.work.EventServices.cancel#EventOccurrence').parameters({workEffortId: id,
+                instanceStart: instanceStart || null, scope: scope || 'all', notify: notify || 'N',
+                eventUrl: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(id)}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: out.message}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="respond">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CalendarServices.respond#Invitation').parameters({workEffortId: workEffortId || '',
+                response: response || '', message: message || null}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {statusId: out.statusId, messageInfos: [{type: 'success', message: out.resultMessage}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commons/Calendar.qvue" template="false"/>
+            <!-- the terminal: CalendarTui, the plain screen beside this one, an agenda of the next four weeks -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "MarketingCalendarTui",
+                url: sri.buildUrl("../CalendarTui").addParameters({date: date || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">The campaign calendar is a .qvue screen: open it under /qapps.</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

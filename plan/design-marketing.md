@@ -318,6 +318,18 @@ crosscut §3.13 row:
 
 **Source:** research §§1, 11; Commons §7. **Needs:** MKT-SHELL, MKT-SYNC.
 
+As built (impl-marketing P21): Commons' Calendar.qvue in its resource mode (no rail, no New), at `Marketing/Calendar`, hidden from
+the menu and opened by Home's Calendar and the key g k (§1.2's shortcut), every Marketing reader's. One W service,
+`get#CalendarItems`, answers every row by source, a failing one named: campaign windows (all day, not cancelled), sends with a
+schedule (not cancelled, not an automation's step), automation milestones (activation and end, for a reader of automations),
+approved publication dates (a campaign's blog post whose page has a published version, on its publish date; its landing page live
+or with a version scheduled) and the events Marketing offers (a registration event of the user's organizations or an event linked
+to one of their campaigns, series expanded by `get#EventInstances`), rather than `get#FullCalendarData`, which reads calendars and
+parties, not a campaign's events. Only an event drags, after `W.check#CalendarEvent` (an event the scope's calendar holds) and
+Commons' edit rule; a send opens SendDetail. The terminal twin is `CalendarTui`, four weeks. The projected collection is
+`get#CampaignCalendar` over the same sources (CalendarProjection `MarketingCampaigns`, MARKETING_VIEW), events and publication
+dates included.
+
 ### Campaigns
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -1854,11 +1866,14 @@ and `get#Attribution` (each placed order once by its primary campaign, unattribu
 an order's own row only for a reader who may see it in Sales or Commerce). Nothing past a limit is cut: TOO_MANY_RECORDS. The decision
 is `TrackingServices.record#OrderAttribution`, called by `handle#OrderPlaced` after each placement (MarketingOutcomeLink, one in force
 an order, with its basis, evidence and evidence time; TrackingCodeOrder beside a tracking event, never billable); the order's identity
-is its local visit and the visitor key that visit's events carried, or its customer as a recipient who allows tracking now, never
-inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
+is its local visit and the visitor key that visit's events carried, the visitor key's digest a Shop checkout or a ticket's payment
+kept with the order (`OrderHeader.marketingVisitorKeyHash`: a remote PASS frontend sends its first-party key with `submitCheckout`,
+impl-marketing follow-up 4, or with Register's `startRegistrationPayment`, follow-up 5; kept only where an event would have kept it
+and never for a customer who withdrew tracking, read again before `place#Order`), or its customer as a recipient
+who allows tracking now, never inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
 (and Sales' `count#SalesVisits`). Retention (`run#MarketingRetention`, nightly): a purged import's row names and masked addresses,
 unconfirmed public requests a week past their expiry, tracking events past the organization's statistics retention (never one an
-attribution names) and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
+attribution names) and the visitor-key digest of its orders placed before then (follow-up 4 review), and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
 `Marketing.AttributedOrders`, the datasets `boss-marketing-deliveries` and `boss-marketing-audience` (their row filter Marketing's
 scope, `MantleMarketingScope`), the dashboard `boss-marketing-campaigns`, the alert templates for complaints, hard bounces and the
 uncertain backlog, the weekly campaign digest, four attention providers, the flow targets `Marketing.Campaigns` and `Marketing.Sends`
@@ -1987,6 +2002,24 @@ out through its relay from its sender with `bounces+<deliveryId>@` the bounce do
 profile not ready is a retryable outcome. Receipt support is the bounce intake (§15.1): a DSN or ARF to the VERP address, or the edge
 relay's `ES_BOUNCED`, becomes a receipt fact and one suppression; Marketing's readiness (`marketing.sending`) warns of an organization
 with no ready profile.
+
+As built (impl-marketing P22): an SMS profile (channel text message) is bound to one of the organization's messaging numbers, a
+current telecom number of the organization that is one of our numbers (System, Voice, Numbers) with a messaging bridge; it has no relay,
+sender or bounce domain, and keeps its purpose, throttle, quiet hours and a configured cost a segment. Its readiness: in effect; the
+number one of the organization's, its bridge there and not disabled (not connected is a warning); STOP handling. The ledger hands a
+text to the framework's `send#SmsMessage` as the system, promotional, from the profile's number, after `PcpSms` consent on the topic
+and the SMS suppression; the answer is the outcome (the number's day of promotional texts waits for the next day untried; a STOP or the
+hook's no suppresses; a lost answer is uncertain and never resent). Mantle's `sms-consent` answer is registered in its `MoquiConf.xml`
+(the framework asks a component's conf provider for every sender, the system included) and says yes only for a number whose party has
+`PcpSms` granted with an organization that owns the sending number (its row, the global one, or one of its topics' latest rows) and no
+SMS suppression there. A STOP the framework keeps becomes one `PcpSms` withdrawal with that organization (source text message reply) and
+one SMS suppression (reason replied STOP); START ends neither. A send's channel is its topic's: a list of phone numbers makes a text
+message send, offered in NewSend once an SMS profile is ready; its content is one text (at most 1600 characters, "Reply STOP to opt
+out" added when it has no STOP), its estimate (characters, GSM-7 or UCS-2, segments, cost a message and for the prepared recipients)
+shown in Compose, SendDetail and the approver's dialog; no subject, attachment, tracking or unsubscribe link. An automation of a list of
+phone numbers has Send SMS steps (a template's text alternative). PASS Email preferences shows an organization's text message topics:
+one the person is on may be left there, never turned on (it needs a phone number's own evidence). Not built: a receipt after the
+hand-off (the framework keeps no row of a direct text, F73), a per-number override of the day's limit.
 
 ## 13. PASS Marketing participation
 
@@ -2179,6 +2212,9 @@ token on each visit by the capability, never the return key, while the places ar
 return address; only that route's CSP allows the provider's form-action), as Shop's PaymentRelay (P17 review, the user's call Nov 15).
 RegistrationPayment shows the amount due (the tickets'
 prices now, before tax) and Pay sends its key (`priceKey`), so a price changed since is shown again, not charged (P17 review).
+Pay also sends the browser's Marketing visitor key (`visitorKey`, the `mkt_vk` cookie unless the browser sends Do Not Track or Global
+Privacy Control), whose digest the authority keeps with the ticket order where Marketing may keep it, for attribution (impl-marketing
+follow-up 5; with the payment's start rather than `completeRegistration`, as the order is made there).
 
 **Source:** research §7; Odoo event tickets, Dolibarr public registration and native order/form records.
 
@@ -2340,6 +2376,14 @@ Independent shell providers fail visibly by name while other sources continue.
 
 These are shell provider mounts of the original forms, not independently maintained copies.
 **Source:** Commons QuickCreate; research §§1, 11. **Needs:** MKT-SHELL.
+
+As built (impl-marketing P21): QuickSend is `Marketing/QuickCreate/NewSend` over the Sends list's NewSend form, the campaign fixed
+when opened from a campaign Marketing shows the user (the shell's recordEntity and recordId, check#Record), else chosen. Today's
+source is `ironstone.marketing.ContextServices.get#TodayItems` over `W.get#TodayItems` (sends due, approvals, failed or uncertain
+deliveries, registrations to review), a source that could not be read an item naming it; the Comms hooks are
+`ContextServices.lookup#Records` (campaign, send, registration: never an attendee's name) and `get#CallContext` (the caller's
+upcoming registrations, an events manager's); "Log as note" files on the page's campaign or send, "Send as message" is Comms'
+internal message. These are "shell registrations" of §14.2's ContextServices row.
 
 ## 15. Automation and operations
 
