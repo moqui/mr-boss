@@ -117,6 +117,8 @@ feature("the author's later budget change returns it to review", {
             post("Campaigns/CampaignDetail/storeBudget", {
                 marketingCampaignId: campaignId,
                 expectedRevision: revision(campaignId),
+                // the form sends the currency it shows with the budget
+                costUomId: "USD",
                 budgetedCost: "6500",
                 explanation: "Radio added"
             })
@@ -136,8 +138,11 @@ feature("a cost linked to an Accounting line shows in the actual cost once", {
         const linked = asUser(users.author, () =>
             post("Campaigns/CampaignDetail/storeCost", Object.assign({marketingCampaignId: campaignId, amount: "750"}, ledger))
         )
+        // Mantle's service as the user with the artifact check off, as CampaignDetail's grant calls it (its own rules deciding)
         const again = asUser(users.author, () =>
-            refusal(C + "store#CampaignCost", Object.assign({marketingCampaignId: campaignId, amount: "750"}, ledger))
+            system(() =>
+                refusal(C + "store#CampaignCost", Object.assign({marketingCampaignId: campaignId, amount: "750"}, ledger))
+            )
         )
         return {linked, again, row: campaignRow(campaignId)}
     },
@@ -153,8 +158,9 @@ feature("the Ziziwork Services author can open none of it", {
             detail: page("Campaigns/CampaignDetail", {marketingCampaignId: campaignId}, "html"),
             list: page("Campaigns/Campaigns", {text: "Walk autumn"}, "html"),
             palette: invoke("ironstone.marketing.ContextServices.search#Records", {text: "Walk autumn"}).rows,
-            direct: refusal(C + "get#Campaign", {marketingCampaignId: campaignId}),
-            costs: refusal(C + "find#CampaignCosts", {marketingCampaignId: campaignId})
+            // Mantle's services with the artifact check off, as a screen's grant calls them: the organization check refuses
+            direct: system(() => refusal(C + "get#Campaign", {marketingCampaignId: campaignId})),
+            costs: system(() => refusal(C + "find#CampaignCosts", {marketingCampaignId: campaignId}))
         }))
     },
     then({detail, list, palette, direct, costs}) {

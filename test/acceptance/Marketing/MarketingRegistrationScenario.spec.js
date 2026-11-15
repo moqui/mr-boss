@@ -311,6 +311,9 @@ feature(
     "an events manager cancels it from RegistrationDetail: the refund shows pending from Accounting and the waitlisted place is offered",
     {
         when() {
+            // the confirmation's tx-commit rules run on the service workers (the order's approval and invoice) and touch the
+            // registration: the events manager reads it once they are done, as the page would after its load
+            ec.factory.waitWorkerPoolEmpty(50)
             const before = one("mantle.work.registration.EventRegistration", {registrationId: state.registrationId})
             // RegistrationDetail's cancel as the instance administrator (ADMIN: every organization; the scenario organization has no
             // demo events manager)

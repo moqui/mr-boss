@@ -139,9 +139,30 @@ feature("a visitor scans it and lands on the page, counted once by visitor key w
 
 feature("a consenting recipient's click shows on the send; a refusing recipient's direct link names no one", {
     when() {
-        // two recipients of the running campaign's November newsletter: one who allows tracking, one who does not
+        // two recipients of the running campaign's November newsletter: one who allows tracking, one who does not (the demo prepared
+        // it for Maya alone: Pete, the legacy member, is its second here)
         const send = one("mantle.marketing.campaign.CampaignSend", {campaignSendId: ids.approvedSendId})
-        const recipients = all("mantle.marketing.campaign.CampaignRecipient", {campaignSendId: ids.approvedSendId}).slice(0, 2)
+        const demoRecipient = all("mantle.marketing.campaign.CampaignRecipient", {campaignSendId: ids.approvedSendId})[0]
+        system(() =>
+            ec.service
+                .sync()
+                .name("create#mantle.marketing.campaign.CampaignRecipient")
+                .parameters({
+                    campaignRecipientId: "MKT_TRK_SCN_R2",
+                    campaignSendId: ids.approvedSendId,
+                    preparedRevision: demoRecipient.preparedRevision,
+                    partyId: ids.legacyPartyId,
+                    channelEnumId: "MdcEmail",
+                    tracked: "N",
+                    executionKey: "MKT_TRK_SCN_EXEC2",
+                    statusId: demoRecipient.statusId
+                })
+                .call()
+        )
+        const recipients = [
+            demoRecipient,
+            one("mantle.marketing.campaign.CampaignRecipient", {campaignRecipientId: "MKT_TRK_SCN_R2"})
+        ]
         system(() => {
             ec.service
                 .sync()

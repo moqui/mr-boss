@@ -1,7 +1,7 @@
 // Marketing P12's "usable when" (impl-marketing P12; design-marketing §16.3 scenarios 11, its form half, and 12, historical responses),
 // as an acceptance walk through the screens' transitions with artifact authorization on: marketing.author builds a survey, publishes
 // its questions, publishes it by invitation to the running campaign's garden newsletter and makes the invitation send, which
-// marketing.approver approves and marketing.dispatch releases; Maya, the newsletter's consenting member, answers from her invitation
+// marketing.approver approves and marketing.dispatch releases; Mira, a consenting member of the newsletter, answers from her invitation
 // once (a second answer from the same link keeps nothing); an anonymous visitor answers its public publication; a later change of an
 // option leaves both responses reading as submitted; and a case's feedback on the same form stays out of Marketing. The rules are
 // Mantle's FormPublications and MarketingForms, the renders MarketingSurveys, the public page mr-pass's SubmitForm.
@@ -17,7 +17,10 @@ const PORTAL = "mantle.marketing.MarketingPortalServices."
 const capture = ec.factory.getTool("MailCapture")
 const settle = () => ec.factory.waitWorkerPoolEmpty(50)
 const site = "ZIZI_SHOP"
-const maya = "maya.lindqvist@zizi-customers.example"
+// the walk's own consenting member of the garden newsletter: the demo's Maya reaches Retail's frequency cap (three in seven days) when
+// the other Marketing specs of a shared run have sent to her, and a capped member is rightly skipped
+const invitee = "MKT_SURVEY_WALK_MIRA"
+const inviteeEmail = "mira.surveywalk@zizi-customers.example"
 const state = {}
 const key = () => "msw" + ec.user.randomString(12).replace(/[^A-Za-z0-9]/g, "x")
 
@@ -59,9 +62,47 @@ spec({
         capture.enable()
         login("john.doe")
         // the shop's site is published for the walk (the demo leaves it to be published)
-        system(() =>
+        system(() => {
             ec.service.sync().name("update#mantle.public.PublicSite").parameters({siteId: site, state: "published"}).call()
-        )
+            const make = (entity, values) =>
+                ec.service
+                    .sync()
+                    .name("create#" + entity)
+                    .parameters(values)
+                    .call()
+            const since = new Date(Date.now() - 20 * 86400000)
+            make("mantle.party.Party", {partyId: invitee, partyTypeEnumId: "PtyPerson"})
+            make("mantle.party.Person", {partyId: invitee, firstName: "Mira", lastName: "Surveywalk"})
+            make("mantle.party.contact.ContactMech", {
+                contactMechId: invitee + "_EM",
+                contactMechTypeEnumId: "CmtEmailAddress",
+                infoString: inviteeEmail
+            })
+            make("mantle.party.contact.PartyContactMech", {
+                partyId: invitee,
+                contactMechId: invitee + "_EM",
+                contactMechPurposeId: "EmailPrimary",
+                fromDate: since
+            })
+            make("mantle.marketing.contact.ContactListParty", {
+                contactListId: ids.gardenListId,
+                partyId: invitee,
+                fromDate: since,
+                statusId: "CLPT_ACCEPTED",
+                preferredContactMechId: invitee + "_EM"
+            })
+            make("mantle.party.PartyConsent", {
+                partyConsentId: invitee + "_PC",
+                partyId: invitee,
+                contactMechId: invitee + "_EM",
+                contactListId: ids.gardenListId,
+                purposeEnumId: "PcpMarketingEmail",
+                statusId: "PconGranted",
+                consentDate: since,
+                sourceEnumId: "PcsForm",
+                evidenceText: "Garden newsletter sign-up card"
+            })
+        })
     },
     cleanupSpec() {
         settle()
@@ -126,7 +167,7 @@ feature("an author builds a survey, publishes its questions, and publishes it by
     }
 })
 
-feature("the invitation send is approved and released apart; Maya answers from her own link once", {
+feature("the invitation send is approved and released apart; Mira answers from her own link once", {
     when() {
         const made = asUser(users.author, () =>
             post("Surveys/SurveyDistribution/createInvitations", {
@@ -161,15 +202,21 @@ feature("the invitation send is approved and released apart; Maya answers from h
         })
         capture.clear()
         as(users.dispatch, D + "release#Send", {campaignSendId, expectedRevision: sendRevision(campaignSendId)})
-        settle()
-        system(() =>
-            ec.service
-                .sync()
-                .name(D + "dispatch#Send")
-                .parameters({campaignSendId})
-                .call()
-        )
-        const mail = Array.from(capture.getMessages()).find(m => Array.from(m.toList || []).includes(maya)) || {}
+        // the dispatcher's runs, a page at a time, until the send completes (the garden newsletter holds the members other specs of a
+        // shared run add, so Mira's page need not be the first)
+        for (let run = 0; run < 30; run++) {
+            settle()
+            system(() =>
+                ec.service
+                    .sync()
+                    .name(D + "dispatch#Send")
+                    .parameters({campaignSendId})
+                    .call()
+            )
+            settle()
+            if (one("mantle.marketing.campaign.CampaignSend", {campaignSendId}).statusId === "CsCompleted") break
+        }
+        const mail = Array.from(capture.getMessages()).find(m => Array.from(m.toList || []).includes(inviteeEmail)) || {}
         const token = decodeURIComponent(/SubmitForm\?token=([A-Za-z0-9_%-]+)/.exec(String(mail.body || ""))?.[1] || "")
         const scanned = visitor("get#Form", {siteId: site, token})
         const fieldName = one("moqui.screen.form.DbFormField", {formId: state.formId})?.fieldName
@@ -184,7 +231,7 @@ feature("the invitation send is approved and released apart; Maya answers from h
         r.scanned.form.access === "invited"
         // a second answer from the same link answers the same receipt and keeps nothing
         r.answered.receipt != null && r.again.receipt?.message === r.answered.receipt.message
-        r.submissions.length === 1 && r.submissions[0].partyId === ids.acceptedPartyId
+        r.submissions.length === 1 && r.submissions[0].partyId === invitee
     }
 })
 
@@ -237,7 +284,10 @@ feature(
             const answers = responses.rows.map(
                 row => as(users.audience, M + "get#Response", {formResponseId: row.formResponseId}).response
             )
-            const caseRead = asUser(users.audience, () => lib.refusal(M + "get#Response", {formResponseId: caseResponse}))
+            // as a screen's grant calls Mantle (the artifact check off): the service's own record check refuses the case's response
+            const caseRead = asUser(users.audience, () =>
+                system(() => lib.refusal(M + "get#Response", {formResponseId: caseResponse}))
+            )
             return {anonymous, responses, answers, caseResponse, caseRead}
         },
         then(r) {
